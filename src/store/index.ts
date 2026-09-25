@@ -20,4 +20,5 @@ export {useFlows, useFlow, useRules, type FlowFilter} from './flows';
 export {smallerOnRefusal, useDnsLog, useDnsCacheUsage, useDnsControl, useDnsFlush} from './dns';
 export {useConfig, useConfigEditor} from './config';
 export {useLogFeed, useEventFeed, EVENT_FEED_LIMIT} from './logs';
+export {historyLost} from './events';
 export {useNow} from './clock';

@@ -113,6 +113,8 @@ export type LogOptions = {
   signal?: AbortSignal;
   onRecord: (record: LogRecord & {id: string}) => void;
   onConnectionChange?: (connected: boolean) => void;
+  /** The backend no longer held the resume cursor; what it sent meanwhile is lost and the stream restarts at the head. */
+  onCursorExpired?: () => void;
 };
 export type EventOptions = {
   kinds?: EventKind[];
@@ -122,4 +124,6 @@ export type EventOptions = {
   signal?: AbortSignal;
   onEvent: (event: ApiEvent) => void;
   onConnectionChange?: (connected: boolean) => void;
+  /** The backend no longer held the resume cursor; what it sent meanwhile is lost and the stream restarts at the head. */
+  onCursorExpired?: () => void;
 };

@@ -6,10 +6,10 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string};
 // An event never changes once received, so its row is built once per locale and the table sees the same object.
 const rows = new WeakMap<ApiEvent, {locale: string; row: EventRow}>();
-function eventRow(event: ApiEvent, locale: string, t: LabelFn): EventRow {
+function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): EventRow {
   const hit = rows.get(event);
   if (hit && hit.locale === locale) return hit.row;
-  const summary = eventSummary(event, t);
+  const summary = lost ? {key: 'event.lostHistory' as const} : eventSummary(event, t);
   const row = {
     id: event.id,
     timestamp: localTime(event.data.observed_at, locale),
@@ -31,7 +31,8 @@ export function eventsView(
   locale: string,
   t: LabelFn,
   advertised: EventKind[],
-  failed = false
+  failed = false,
+  lost: (event: ApiEvent) => boolean = () => false
 ) {
   const kind = selected === 'without-runtime' || advertised.includes(selected as EventKind) ? selected : 'all';
   const shown = events
@@ -39,7 +40,7 @@ export function eventsView(
     .slice(0, limit);
   return {
     kind,
-    rows: shown.map(event => eventRow(event, locale, t)),
+    rows: shown.map(event => eventRow(event, locale, t, lost(event))),
     kinds: [
       {id: 'without-runtime', label: t('event.withoutRuntime')},
       {id: 'all', label: t('event.allKinds')},

@@ -249,10 +249,12 @@ describe('native transport', () => {
       .mockResolvedValueOnce(stream())
       .mockResolvedValueOnce(stream());
     vi.stubGlobal('fetch', request);
+    const expired = vi.fn();
     const result = createApi('https://honk.test', 'secret').subscribeEvents({
       kinds: ['runtime.updated'],
       lastEventId: 'instance:1',
       signal: controller.signal,
+      onCursorExpired: expired,
       onEvent: event => {
         events.push(event);
         if (events.length === 2) controller.abort();
@@ -265,6 +267,8 @@ describe('native transport', () => {
       ['instance:9', 'runtime.updated', 'instance']
     ]);
     expect(request.mock.calls.map(call => new Headers(call[1].headers).get('Last-Event-ID'))).toEqual(['instance:1', null, 'instance:9']);
+    // Only the refused cursor lost history; resuming after EOF did not.
+    expect(expired).toHaveBeenCalledOnce();
     expect(new Headers(request.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer secret');
     expect(String(request.mock.calls[0][0])).toBe('https://honk.test/api/v1/events?kinds=runtime.updated');
   });

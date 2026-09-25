@@ -1,4 +1,4 @@
-import {downloadText, expect, fulfillStream, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, test} from './fixtures';
 
 test('logs filter the stream, pause incoming rows, export and clear', async ({page}) => {
   const {api} = await mockBackend(page);
@@ -90,4 +90,21 @@ test('phone logs keep the message visible and reveal its full text and fields', 
     await expect(page.getByRole('tooltip')).toContainText(message, {timeout: 1500});
   }).toPass();
   await expect(page.getByRole('tooltip')).toContainText('attempts=2');
+});
+
+test('logs mark the records a reconnect could not recover', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  const ready = {id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}};
+  const log = (id: string, message: string) => ({id, event: 'log', data: {ts: runtime.observed_at, level: 'info', target: 'dns', message, fields: null}});
+  expectLoadFailures(page, /\/api\/v1\/logs/);
+  let opened = 0;
+  await page.route('**/api/v1/logs?*', async route => {
+    const cursor = route.request().headers()['last-event-id'];
+    if (cursor === 'log:1') return route.fulfill({status: 409, json: {error: {code: 'event_cursor_expired', message: 'Cursor expired'}, request_id: 'e2e'}});
+    await fulfillStream(route, cursor ? [ready] : opened++ ? [ready, log('log:9', 'After the gap')] : [ready, log('log:1', 'Before the gap')]);
+  });
+  await page.goto('/#/logs');
+  const rows = page.getByRole('grid', {name: 'Logs'}).getByRole('rowheader');
+  await expect(rows).toHaveText(['After the gap', 'Logs lost: records sent while disconnected cannot be recovered', 'Before the gap']);
 });

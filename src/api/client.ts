@@ -122,6 +122,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     lastEventId: string | undefined,
     signal: AbortSignal | undefined,
     onConnectionChange: ((ready: boolean) => void) | undefined,
+    onCursorExpired: (() => void) | undefined,
     onFrame: (event: string, data: unknown, cursor: string) => void,
     heartbeatSeconds = HEARTBEAT_SECONDS
   ): Promise<void> {
@@ -148,6 +149,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
             const error = await responseError(response);
             if (cursor && error.status === 409 && error.code === 'event_cursor_expired') {
               cursor = undefined;
+              onCursorExpired?.();
               continue;
             }
             pause = retryAfter(response);
@@ -195,7 +197,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       onConnectionChange?.(false);
     }
   }
-  function subscribeEvents({kinds, lastEventId, heartbeatSeconds, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
+  function subscribeEvents({kinds, lastEventId, heartbeatSeconds, signal, onEvent, onConnectionChange, onCursorExpired}: EventOptions): Promise<void> {
     const url = new URL(baseUrl + '/api/v1/events', globalThis.location?.href);
     if (kinds?.length) url.searchParams.set('kinds', kinds.join(','));
     return subscribeStream(
@@ -203,17 +205,18 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       lastEventId,
       signal,
       onConnectionChange,
+      onCursorExpired,
       (event, data, cursor) => {
         if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
       },
       heartbeatSeconds
     );
   }
-  function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange}: LogOptions): Promise<void> {
+  function subscribeLogs({level, target, lastEventId, signal, onRecord, onConnectionChange, onCursorExpired}: LogOptions): Promise<void> {
     const url = new URL(baseUrl + '/api/v1/logs', globalThis.location?.href);
     if (level) url.searchParams.set('level', level);
     if (target) url.searchParams.set('target', target);
-    return subscribeStream(url, lastEventId, signal, onConnectionChange, (event, data, cursor) => {
+    return subscribeStream(url, lastEventId, signal, onConnectionChange, onCursorExpired, (event, data, cursor) => {
       if (event === 'log') onRecord({id: cursor, ...(data as LogRecord)});
     });
   }

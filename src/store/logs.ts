@@ -66,6 +66,9 @@ export function useLogFeed({level, target, paused}: {level?: LogLevel; target?: 
                 },
                 onRecord: record => {
                   if (!signal.aborted) feed.append(record);
+                },
+                onCursorExpired: () => {
+                  if (!signal.aborted) feed.markGap();
                 }
               })
               .catch((reason: unknown) => {
