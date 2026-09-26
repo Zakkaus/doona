@@ -209,7 +209,10 @@ export function overviewView(
                 id,
                 label: t(resourceLabels[id]),
                 tone: available ? ('ok' as const) : ('muted' as const),
-                text: t(available ? 'ov.available' : 'ov.notAvailable')
+                text: t(available ? 'ov.available' : 'ov.notAvailable'),
+                // Most rows are available, so their status is the dot alone and only the exceptions are spelled out;
+                // the text still reaches assistive technology.
+                dotOnly: available
               };
             })
             .sort((a, b) => Number(a.tone === 'muted') - Number(b.tone === 'muted'))

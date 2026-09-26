@@ -123,7 +123,8 @@
 }
 .rp-capabilities {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
+  /* Fits the longest English label after its dot, and two columns in the card's narrowest desktop width. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
   gap: 4px 12px;
   flex: 1 1 auto;
   align-content: space-between;
@@ -136,20 +137,17 @@
   min-width: 0;
   min-height: 40px;
 }
-.rp-capability > span:first-child {
-  min-width: 0;
+.rp-capability .rp-light > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rp-capability .rp-light {
+.rp-capability-status {
   flex: none;
   white-space: nowrap;
+  font-size: var(--rp-text-xs);
 }
 .rp-capability.unavailable {
-  color: var(--rp-negative-text);
-}
-.rp-capability.unavailable .rp-light {
   color: var(--rp-negative-text);
   --dot: var(--rp-negative);
 }
