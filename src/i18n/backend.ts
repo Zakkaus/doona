@@ -42,7 +42,9 @@ const known: Record<string, Key> = {
   supervisor_stopped: 'ui.backend.supervisorStopped',
   probe_cancelled: 'ui.backend.probeCancelled',
   probe_deadline: 'ui.backend.probeDeadline',
-  probe_failed: 'ui.backend.probeFailed'
+  probe_failed: 'ui.backend.probeFailed',
+  // Codes honk sets on config diagnostics.
+  'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };
 
 // honk names the step that failed in details.stage. A stage with its own words says more than the code; any other
@@ -53,6 +55,8 @@ export function backendMessage(code: string, message: string, t: Translator, det
   const text = known[code] ? t(known[code]) : t('ui.backendMessage', {message});
   return typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
 }
+
+export const knownCode = (code: string) => Object.hasOwn(known, code);
 
 // A bare code without a message of its own: its words when known, else the code itself.
 export const backendCode = (code: string, t: Translator) => (known[code] ? t(known[code]) : code);

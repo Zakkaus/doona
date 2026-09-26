@@ -108,6 +108,34 @@ test('the validation tab lists kept diagnostics and opens the source at the line
   await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
 });
 
+test('identical diagnostics share one row with their count, and a known code keeps the backend words as detail', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const duplicate = {
+    level: 'warning',
+    source_id: 'src-main',
+    line: null,
+    column: null,
+    span: null,
+    code: 'duplicate-subscription-entry',
+    message: 'duplicate endpoint identity; retaining the first usable entry'
+  } as const;
+  config.diagnostics = [duplicate, duplicate, duplicate];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=validate');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 3 warnings');
+  await expect(page.getByRole('radio', {name: 'All 3', exact: true})).toBeVisible();
+  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('Duplicate node in the subscription; the first usable entry is kept (3 times)');
+  await rows.click();
+  await expect(page.locator('.rp-config-diagnostics')).toContainText(
+    'kept (3 times). Backend message: duplicate endpoint identity; retaining the first usable entry'
+  );
+  await page.goto('/#/config?tab=source&source=src-main');
+  await expect(page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem')).toHaveCount(1);
+});
+
 test.describe('without configuration readback', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 

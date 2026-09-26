@@ -261,7 +261,8 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
     () => diagnosticRows(run?.diagnostics ?? config.diagnostics, config.sources, locale, t),
     [run, config.diagnostics, config.sources, locale, t]
   );
-  const count = (which: ConfigDiagnostic['level']) => rows.filter(item => item.level === which).length;
+  // Counts stay per diagnostic; a row may stand for several identical ones.
+  const count = (which: ConfigDiagnostic['level']) => rows.reduce((sum, item) => sum + (item.level === which ? item.count : 0), 0);
   const errors = count('error');
   const warnings = count('warning');
   const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
@@ -297,7 +298,7 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
     blocked: !!editor.busy || !candidates,
     tip: !candidates ? t('config.incomplete') : undefined,
     levels: [
-      ['all', t('config.levelAll', {n: n(rows.length)})],
+      ['all', t('config.levelAll', {n: n(errors + warnings + count('info'))})],
       ['error', t('config.levelErrors', {n: n(errors)})],
       ['warning', t('config.levelWarnings', {n: n(warnings)})],
       ['info', t('config.levelInfo', {n: n(count('info'))})]
