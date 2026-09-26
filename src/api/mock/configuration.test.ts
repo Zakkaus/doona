@@ -1,5 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
+import {geodataPreset} from '../../dae/geodata';
 
 afterEach(() => vi.useRealTimers());
 
@@ -177,6 +178,26 @@ routing { domain(geosite: category-ads-all@ads) -> block
   await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.geodata()).required_codes).toEqual({geosite: ['category-ads-all'], geoip: ['private']});
+});
+
+it('fails a geodata update whose file lacks a used category the way honk does, keeping the files', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const lite = geodataPreset('metacubex-lite');
+  const before = (await api.geodata()).assets;
+  await api.patchRuntimeSettings({geodata: {geosite: {urls: [...lite.urls.geosite]}, geoip: {urls: [...lite.urls.geoip]}}});
+  const accepted = await api.updateGeodata();
+  await vi.advanceTimersByTimeAsync(1000);
+  const operation = await api.operation(accepted.operation_id);
+  expect(operation.status).toBe('failed');
+  expect(operation.error).toMatchObject({
+    code: 'geodata_update_failed',
+    message: 'Geodata update did not complete successfully',
+    details: {stage: 'asset_validation_failed', committed: false}
+  });
+  const data = await api.geodata();
+  expect(data.last_error).toEqual({code: 'asset_validation_failed', message: 'Geodata update did not complete successfully', details: null});
+  expect(data.assets).toEqual(before);
 });
 
 it('shows a custom geodata URL without its query once an update downloads it', async () => {

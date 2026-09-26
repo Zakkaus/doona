@@ -5,7 +5,7 @@ import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {errorText} from '../../api/error';
-import {geodataPresets, type GeodataPresetId} from '../../dae/geodata';
+import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
 import {
   assetDetails,
@@ -15,6 +15,7 @@ import {
   geodataKinds,
   hostOf,
   intervalChoices,
+  lackingCodes,
   matchPreset,
   presetLabels,
   presetNote,
@@ -43,6 +44,8 @@ export function useGeodataSettings() {
   const [pending, setPending] = useState<Patch | null>(null);
   const [custom, setCustom] = useState<GeodataUrls | null>(null);
   const [routeChoice, setRouteChoice] = useState<Route | null>(null);
+  // A preset lacking categories the rules use, waiting for confirmation; the shown source stays as it was.
+  const [lacking, setLacking] = useState<{preset: GeodataPreset; codes: string} | null>(null);
   const busy = settings.busy || geodata.busy;
   const canUpdate = !!caps.data?.resources.geodata.can_update;
 
@@ -97,6 +100,8 @@ export function useGeodataSettings() {
       locale,
       t
     );
+  const savePreset = (chosen: GeodataPreset) => void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
+  const saveLabel = t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources');
   const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t);
 
   return {
@@ -120,8 +125,20 @@ export function useGeodataSettings() {
         if (id === 'custom') setCustom(urls ? {geosite: [...urls.geosite], geoip: [...urls.geoip]} : null);
         else if (id !== preset?.id) {
           const chosen = geodataPresets.find(item => item.id === id)!;
-          void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
+          const codes = lackingCodes(chosen, geodata.data?.required_codes, t);
+          if (codes) setLacking({preset: chosen, codes});
+          else savePreset(chosen);
         }
+      }
+    },
+    lacking: lacking && {
+      title: t('settings.geodataLackingTitle', {preset: t(presetLabels[lacking.preset.id])}),
+      text: t('settings.geodataLackingHelp', {preset: t(presetLabels[lacking.preset.id]), codes: lacking.codes}),
+      confirm: saveLabel,
+      cancel: () => setLacking(null),
+      save: () => {
+        setLacking(null);
+        savePreset(lacking.preset);
       }
     },
     customHosts: urls && !preset ? formatList(lang, [...new Set([...urls.geosite, ...urls.geoip].map(hostOf))]) : null,
@@ -166,7 +183,7 @@ export function useGeodataSettings() {
             empty: !custom[kind].some(url => url.trim())
           })),
           blocked: customInvalid(custom),
-          confirm: t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources'),
+          confirm: saveLabel,
           pending: settings.busy,
           cancel: () => setCustom(null),
           save: () => {

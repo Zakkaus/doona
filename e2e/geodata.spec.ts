@@ -67,11 +67,25 @@ test('a failed update keeps the old files and shows the reason in the status row
   const option = page.getByRole('option', {name: t('settings.geodataPreset.metacubexLite')});
   await expect(option).toContainText('geosite:discord');
   await option.click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'discord'})).toBeVisible();
+  // Choosing it asks first; cancelling stores nothing and keeps the source shown.
+  const lite = t('settings.geodataPreset.metacubexLite');
+  const dialog = page.getByRole('dialog', {name: t('settings.geodataLackingTitle', {preset: lite})});
+  await expect(dialog).toContainText(t('settings.geodataLackingHelp', {preset: lite, codes: 'geosite:discord'}));
+  await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    section(page)
+      .getByRole('button', {name: t('settings.geodataSource')})
+      .first()
+  ).toContainText(t('settings.geodataPreset.metacubex'));
+  expect(sent).toEqual([]);
+  await pick(page, 'settings.geodataSource', lite, false);
+  await dialog.getByRole('button', {name: t('settings.geodataSaveUpdate'), exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: t('ui.backend.geodataUpdateFailed')})).toBeVisible();
   expect(sent).toEqual(['patch', 'update']);
   const status = row(page, 'settings.geodataStatus').getByRole('status');
   await expect(status).toContainText(t('settings.geodataLastError'));
-  await expect(status).toContainText('lacks categories the configuration uses: discord');
+  await expect(status).toContainText(t('ui.backend.assetValidationFailed'));
   await expect(status).toHaveClass(/negative/);
   // The files are the ones loaded before.
   await section(page)

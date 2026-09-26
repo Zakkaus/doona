@@ -105,7 +105,11 @@ export function createLifecycle(
           status: 'failed',
           finished_at: new Date().toISOString(),
           result: null,
-          error: {code: 'operation_failed', message: error instanceof Error ? error.message : String(error)}
+          // An ApiError carries the operation error honk would set; anything else is a generic failure.
+          error:
+            error instanceof ApiError
+              ? {code: error.code, message: error.message, details: error.details}
+              : {code: 'operation_failed', message: error instanceof Error ? error.message : String(error)}
         } as OperationState);
       }
       const terminal = operations.get(operation_id)!;

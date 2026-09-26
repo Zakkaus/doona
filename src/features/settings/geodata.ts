@@ -66,14 +66,17 @@ export const cleanUrls = (urls: GeodataUrls): GeodataUrls => ({
   geoip: urls.geoip.map(url => url.trim()).filter(Boolean)
 });
 
+// The categories a preset lacks as `kind:code` names, or null when it lacks none or its list is unknown. Choosing a
+// preset that lacks some asks first, since the backend refuses its files on update.
+export function lackingCodes(preset: GeodataPreset, required: GeoData['required_codes'] | undefined, t: Translator): string | null {
+  const missing = missingCategories(preset, required);
+  return missing && geodataKinds.flatMap(kind => (missing[kind] ?? []).map(code => `${kind}:${code}`)).join(t('ui.separator'));
+}
+
 // A preset's secondary line: the categories the rules use that it lacks, else its approximate sizes.
 export function presetNote(preset: GeodataPreset, required: GeoData['required_codes'] | undefined, locale: string, t: Translator) {
-  const missing = missingCategories(preset, required);
-  if (missing)
-    return {
-      text: t('settings.geodataMissing', {codes: geodataKinds.flatMap(kind => (missing[kind] ?? []).map(code => `${kind}:${code}`)).join(t('ui.separator'))}),
-      notice: true
-    };
+  const codes = lackingCodes(preset, required, t);
+  if (codes) return {text: t('settings.geodataMissing', {codes}), notice: true};
   return {
     text: t('settings.geodataPresetSize', {geosite: formatBytes(preset.sizes.geosite, locale), geoip: formatBytes(preset.sizes.geoip, locale)}),
     notice: false

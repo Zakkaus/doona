@@ -92,7 +92,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
     follow(conditions: string[]) {
       data.required_codes = requiredCodes(conditions);
     },
-    // Downloads from the first URL of each asset; a file lacking a category the rules use fails the whole update.
+    // Downloads from the first URL of each asset; a file lacking a category the rules use fails the whole update the
+    // way honk does, naming the stage but not the categories, and nothing is written.
     update(): GeoData {
       const now = Date.now();
       const at = new Date(now).toISOString();
@@ -104,9 +105,10 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         const known = presetAt(kind, lists[kind][0])?.categories?.[kind];
         const missing = known ? (data.required_codes?.[kind] ?? []).filter(code => !known.includes(code)) : [];
         if (missing.length) {
-          const message = `The new ${kind} file lacks categories the configuration uses: ${missing.join(', ')}.`;
+          const message = 'Geodata update did not complete successfully';
           data.last_error = {code: 'asset_validation_failed', message, details: null};
-          throw new Error(message);
+          const assets = data.assets.map(asset => ({kind: asset.kind, written: false, durability_confirmed: false}));
+          throw new ApiError(500, 'geodata_update_failed', message, null, {stage: 'asset_validation_failed', assets, committed: false});
         }
       }
       for (const asset of data.assets) {

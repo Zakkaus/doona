@@ -113,6 +113,11 @@ export function GeodataSettingsCard() {
           {m.seededFromConfig && <span className="rp-label">{t('settings.geodataConfigSeeded')}</span>}
         </div>
       )}
+      {m.lacking && (
+        <ConfirmDialog title={m.lacking.title} tone="accent" isOpen onCancel={m.lacking.cancel} confirmLabel={m.lacking.confirm} onConfirm={m.lacking.save}>
+          <p className="rp-label">{m.lacking.text}</p>
+        </ConfirmDialog>
+      )}
       {m.dialog && (
         <ConfirmDialog
           title={t('settings.geodataCustomUrls')}
