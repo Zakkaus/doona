@@ -338,6 +338,8 @@ test('activity draws all six charts without loading a chart vendor', async ({pag
   await expect(traffic.getByRole('status')).toBeVisible();
   await page.keyboard.press('ArrowLeft');
   await expect(traffic.getByRole('status')).toBeVisible();
+  // The tip changes on every arrow key, so it waits for the screen reader instead of interrupting it.
+  await expect(traffic.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   await page.emulateMedia({reducedMotion: 'no-preference'});
   await expect(traffic.locator('.rp-charttip-bounded')).toHaveCSS('transition-duration', '0.4s');
   await page.emulateMedia({reducedMotion: 'reduce'});

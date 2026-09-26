@@ -100,7 +100,7 @@ function BoundedTip({tip}: {tip: Tip}) {
     >
       <div
         role="status"
-        aria-live="assertive"
+        aria-live="polite"
         style={{
           margin: 0,
           padding: '8px 12px',
