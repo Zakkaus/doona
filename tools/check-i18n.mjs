@@ -83,10 +83,24 @@ for (const path of sources.filter(path => path.endsWith('/messages.ts'))) {
   });
   if (!catalog || !ts.isObjectLiteralExpression(catalog)) throw new Error(`${path}: expected defineMessages with literal language tables`);
   const sets = new Map();
+  // Each key's placeholders per language, from every string in its value (a plural's forms included).
+  const slots = new Map();
   for (const property of catalog.properties) {
     if (!ts.isPropertyAssignment(property) || !ts.isObjectLiteralExpression(property.initializer)) throw new Error(`${path}: expected a language table`);
     sets.set(property.name.text, property.initializer.properties.map(entry => entry.name.text).sort());
+    for (const entry of property.initializer.properties) {
+      const names = new Set();
+      visit(entry, node => {
+        if (ts.isStringLiteralLike(node) && node !== entry.name) for (const [, name] of node.text.matchAll(/\{(\w+)\}/g)) names.add(name);
+      });
+      if (!slots.has(entry.name.text)) slots.set(entry.name.text, new Map());
+      slots.get(entry.name.text).set(property.name.text, [...names].sort().join(','));
+    }
   }
+  // A placeholder renamed or dropped in one language renders `{name}` on screen or loses the value.
+  for (const [key, byLang] of slots)
+    if (new Set(byLang.values()).size > 1)
+      failures.push(`${path}: ${key} placeholders differ: ${[...byLang].map(([lang, names]) => `${lang} {${names}}`).join(' ')}`);
   const expected = sets.get('zh-TW');
   if (sets.size !== languages.length || !expected || languages.some(lang => JSON.stringify(sets.get(lang)) !== JSON.stringify(expected))) {
     failures.push(`${path}: language key sets differ`);
