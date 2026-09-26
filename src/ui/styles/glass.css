@@ -179,6 +179,29 @@
     );
   }
 }
+/* Right to left, the sidebar is on the right, so the clip is the same shape mirrored. */
+@media (min-width: 1024px) {
+  :root[data-family='glass'][dir='rtl'] .rp-shell::after {
+    clip-path: polygon(
+      100% 0,
+      0 0,
+      0 100%,
+      calc(var(--rp-shell-inset) + 16px) 100%,
+      calc(var(--rp-shell-inset) + 16px) 80px,
+      calc(var(--rp-shell-inset) + 17.22px) 73.88px,
+      calc(var(--rp-shell-inset) + 20.69px) 68.69px,
+      calc(var(--rp-shell-inset) + 25.88px) 65.22px,
+      calc(var(--rp-shell-inset) + 32px) 64px,
+      calc(100% - var(--rp-shell-inset) - 256px) 64px,
+      calc(100% - var(--rp-shell-inset) - 249.88px) 65.22px,
+      calc(100% - var(--rp-shell-inset) - 244.69px) 68.69px,
+      calc(100% - var(--rp-shell-inset) - 241.22px) 73.88px,
+      calc(100% - var(--rp-shell-inset) - 240px) 80px,
+      calc(100% - var(--rp-shell-inset) - 240px) 100%,
+      100% 100%
+    );
+  }
+}
 :root[data-family='glass'] .rp-top,
 :root[data-family='glass'] .rp-side {
   background: transparent;

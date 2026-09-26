@@ -195,7 +195,7 @@
 }
 .rp-markerplot .scale > span {
   position: absolute;
-  translate: -50% 0;
+  translate: calc(-50% * var(--rp-dir)) 0;
   white-space: nowrap;
 }
 /* The end labels stay inside the axis. */
@@ -203,7 +203,7 @@
   translate: 0 0;
 }
 .rp-markerplot .scale > span:last-child {
-  translate: -100% 0;
+  translate: calc(-100% * var(--rp-dir)) 0;
 }
 .rp-markerplot .row {
   min-height: 28px;
@@ -232,7 +232,9 @@
   z-index: 1;
 }
 .rp-markerplot .track .at.over .rp-marker.dot {
-  border-radius: 2px 50% 50% 2px;
+  border-radius: 50%;
+  border-start-start-radius: 2px;
+  border-end-start-radius: 2px;
 }
 .rp-markerplot .row.more {
   min-height: 0;
@@ -258,7 +260,7 @@
 .rp-markerplot .track .at {
   position: absolute;
   top: 50%;
-  translate: -50% -50%;
+  translate: calc(-50% * var(--rp-dir)) -50%;
   display: flex;
 }
 .rp-markerplot h4 {
