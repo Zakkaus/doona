@@ -146,6 +146,8 @@ test('a hidden cache tab stops walking the cache until it is shown again', async
   await page.clock.fastForward(16000);
   await expect.poll(walks).toBeGreaterThan(shown);
   await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
+  // A walk the timers had already started may still reach the route; count from after it lands.
+  await page.waitForTimeout(500);
   const hidden = walks();
   await page.clock.fastForward(46000);
   // A walk the timers started would reach the route within this real-time pause.
