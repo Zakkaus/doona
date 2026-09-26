@@ -265,7 +265,7 @@ export const messages = defineMessages({
     'config.incomplete': 'The text is incomplete or redacted; it cannot be edited here',
     'config.unquotable': 'Cannot write this value losslessly as a single-quoted string: it contains an apostrophe, line break, or trailing backslash.',
     'config.contentHidden': 'This backend does not provide the configuration text',
-    'config.contentWithheld': 'The backend did not return this source’s text, so it cannot be edited here. Check the backend’s content visibility policy.',
+    'config.contentWithheld': "The backend did not return this source's text, so it cannot be edited here. Check the backend's content visibility policy.",
     'config.valid': 'Validation passed',
     'config.invalid': {one: 'Validation found {n} error', other: 'Validation found {n} errors'},
     'config.saved': '{path} written, configuration reloaded',
