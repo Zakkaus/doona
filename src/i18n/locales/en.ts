@@ -835,7 +835,7 @@ export const messages = {
   'rule.lineOnly': 'Line {n}',
   'rule.add': 'Add rule',
   'rule.must': 'Require this outbound',
-  'rule.addHelp': "Adds the rule to the source file's routing section, then validates, saves and reloads the configuration.",
+  'rule.addHelp': "Adds the rule to the source file's routing section, then saves and reloads after validation passes.",
   'rule.condition': 'Condition',
   'rule.conditionMode': 'Condition form',
   'rule.pick': 'Select',
