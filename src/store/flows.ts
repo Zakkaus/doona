@@ -3,7 +3,7 @@ import {poll} from './cadence';
 import type {Api} from '../api/api';
 import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
 import {clientError} from '../api/error';
-import {pageSize, useResource, walk} from './resource';
+import {gated, pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
 
 export async function routingTrace(
@@ -72,7 +72,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined && !capabilitiesError}
+    gated(capabilities, capabilitiesError, enabled)
   );
 }
 

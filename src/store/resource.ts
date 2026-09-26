@@ -69,3 +69,9 @@ export async function walk<P extends {next_cursor: string | null}, T>(
 // The page size a resource advertises, capped at the wire ceiling; undefined until the capabilities are known,
 // which leaves the backend's own default in force rather than guessing above its ceiling.
 export const pageSize = (capabilities: Capabilities | undefined, max: number | undefined) => (capabilities ? Math.min(MAX_PAGE, max ?? MAX_PAGE) : undefined);
+// A list sized by the capabilities waits for them and shows loading meanwhile; once they fail it stops waiting, so
+// the page does not stay pending for good.
+export const gated = (capabilities: Capabilities | undefined, error: Error | null, enabled: boolean) => ({
+  enabled: enabled && capabilities !== undefined,
+  pending: enabled && capabilities === undefined && !error
+});
