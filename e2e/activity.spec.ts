@@ -482,6 +482,9 @@ test('local traffic renders without history and duplicate node names retain inde
   await expect(card.locator('.rp-big')).toHaveText('—');
   await expect(card.getByText('Unavailable', {exact: true})).toBeVisible();
   await expect(card.getByText('Timed out', {exact: true})).toHaveCount(0);
+  // The failure code honk sends reads as words.
+  await card.getByText('Unavailable', {exact: true}).hover();
+  await expect(page.getByRole('tooltip')).toHaveText('The probe failed');
   await trigger.click();
   await expect(page.getByRole('menuitemradio').filter({hasText: 'provider-b'})).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('menuitemradio').filter({hasText: 'provider-a'}).click();

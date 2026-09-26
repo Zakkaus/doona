@@ -12,11 +12,11 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     sample_source: 'probe',
     state: latency === null ? 'unavailable' : 'healthy',
     latency_ms: latency,
-    // The averages differ from the latest sample, as they do on a live backend.
-    moving_avg_ms: latency === null ? null : Math.round(latency * (0.8 + (latency % 7) / 15)),
-    avg10_ms: latency === null ? null : Math.round(latency * (0.85 + (latency % 5) / 10)),
+    // honk does not compute averages, and names a failed probe with this code.
+    moving_avg_ms: null,
+    avg10_ms: null,
     observed_at: observedAt,
-    error: latency === null ? 'timeout' : null
+    error: latency === null ? 'probe_failed' : null
   };
 }
 function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string, protocol: Node['protocol'] = 'shadowsocks'): Node {

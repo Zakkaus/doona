@@ -35,10 +35,13 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(fact(page, 'Highest').locator('.rp-fact-caption')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Unavailable')).toHaveText(/^\d+ nodes?$/);
   const plot = page.getByRole('group', {name: 'Node latency'});
-  for (const label of ['Latest latency', 'Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
-  const row = plot.getByRole('img', {name: /^.+, latest: \d+ ms, moving average: \d+ ms, average of the last 10: \d+ ms$/}).first();
+  // The mock, like honk, reports no averages, so only the latest latency is named.
+  await expect(plot.getByText('Latest latency', {exact: true})).toBeVisible();
+  for (const label of ['Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toHaveCount(0);
+  const row = plot.getByRole('img', {name: /^.+, Latest latency: \d+ ms$/}).first();
   await row.hover();
-  await expect(page.locator('.rp-charttip')).toContainText('Moving average');
+  await expect(page.locator('.rp-charttip')).toContainText('Latest latency');
+  await expect(page.locator('.rp-charttip')).not.toContainText('Moving average');
   const showAll = plot.getByRole('button', {name: /^Show all \d+$/});
   await expect(showAll).toBeVisible();
   const before = await plot.getByRole('img').count();

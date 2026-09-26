@@ -44,7 +44,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
         const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
         const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
         const state = latency_ms === null ? 'unavailable' : 'healthy';
-        const error = state === 'unavailable' ? (previous?.error ?? 'unavailable') : null;
+        const error = state === 'unavailable' ? 'probe_failed' : null;
         const observation: HealthObservation = {
           transport,
           purpose: request.purpose,
@@ -54,8 +54,8 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           sample_source: 'probe',
           state,
           latency_ms,
-          moving_avg_ms: latency_ms,
-          avg10_ms: latency_ms,
+          moving_avg_ms: null,
+          avg10_ms: null,
           observed_at,
           error
         };

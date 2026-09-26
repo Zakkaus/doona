@@ -29,7 +29,9 @@ it('chooses measured nodes and preserves an explicitly selected unavailable node
   expect(unavailable.tone).toBe('err');
   expect(unavailable.latency).toBe('—');
   expect(unavailable.status).toBe(t('act.unavailable'));
-  expect(unavailable.healthError).toBe(nodes.find(node => node.id === 'jp-01')?.health[0].error);
+  // honk's failure code reads as words in the page language.
+  expect(nodes.find(node => node.id === 'jp-01')?.health[0].error).toBe('probe_failed');
+  expect(unavailable.healthError).toBe(t('ui.backend.probeFailed'));
   expect(nodeView([], '', t).tone).toBe('muted');
 });
 

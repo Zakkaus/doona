@@ -23,12 +23,11 @@ const known: Record<string, Key> = {
   setup_required: 'ui.backend.setupRequired',
   setup_already_completed: 'ui.backend.setupAlreadyCompleted',
   invalid_credentials: 'ui.backend.invalidCredentials',
-  // Codes honk sets on operation.error and provider.last_error; the contract leaves these to the adapter.
+  // Codes honk sets on operation.error, provider.last_error and health.error; the contract leaves these to the adapter.
   reload_rejected: 'ui.backend.reloadRejected',
   reload_degraded: 'ui.backend.reloadDegraded',
   engine_unavailable: 'ui.backend.engineUnavailable',
   request_exhausted: 'ui.backend.requestExhausted',
-  lifecycle_failed: 'ui.backend.lifecycleFailed',
   geodata_update_failed: 'ui.backend.geodataUpdateFailed',
   // geodata.last_error carries the failed stage as its code.
   asset_validation_failed: 'ui.backend.assetValidationFailed',
@@ -37,9 +36,18 @@ const known: Record<string, Key> = {
   publication_rejected: 'ui.backend.publicationRejected',
   fetch_failed: 'ui.backend.fetchFailed',
   provider_replaced: 'ui.backend.providerReplaced',
-  result_too_large: 'ui.backend.resultTooLarge'
+  result_too_large: 'ui.backend.resultTooLarge',
+  route_unavailable: 'ui.backend.routeUnavailable',
+  publication_unavailable: 'ui.backend.publicationUnavailable',
+  supervisor_stopped: 'ui.backend.supervisorStopped',
+  probe_cancelled: 'ui.backend.probeCancelled',
+  probe_deadline: 'ui.backend.probeDeadline',
+  probe_failed: 'ui.backend.probeFailed'
 };
 
 export function backendMessage(code: string, message: string, t: Translator): string {
   return known[code] ? t(known[code]) : t('ui.backendMessage', {message});
 }
+
+// A bare code without a message of its own: its words when known, else the code itself.
+export const backendCode = (code: string, t: Translator) => (known[code] ? t(known[code]) : code);

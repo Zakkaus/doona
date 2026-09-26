@@ -354,7 +354,7 @@ it('completes probes with fixture failures and publishes fresh health', async ()
   await vi.advanceTimersByTimeAsync(1);
   const result = await terminal;
   if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error('Probe did not succeed');
-  expect(result.result.results.find(r => r.member_id === 'jp-01')).toMatchObject({state: 'unavailable', latency_ms: null, error: 'timeout'});
+  expect(result.result.results.find(r => r.member_id === 'jp-01')).toMatchObject({state: 'unavailable', latency_ms: null, error: 'probe_failed'});
   expect(result.result.results.find(r => r.member_id === 'hk-01')).toMatchObject({state: 'healthy', latency_ms: 84, health_updated: true});
   expect(result.result.results.find(r => r.member_id === 'resilient')).toMatchObject({resolved_leaf_node_id: 'sg-01', state: 'healthy', latency_ms: 63});
   const health = preferredHealth((await api.nodes()).nodes.find(n => n.id === 'hk-01')!)!;

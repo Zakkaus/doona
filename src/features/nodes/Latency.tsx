@@ -6,13 +6,13 @@ import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
+import {latencyAverages, latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
 import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;
 
-// Every measured node on one axis, its latest latency beside its two averages, so a node that is slow now or
-// slow on average stands out; failed and unmeasured nodes are listed, not left out.
+// Every measured node on one axis, its latest latency beside the averages the backend reports, so a node that is slow
+// now or slow on average stands out; failed and unmeasured nodes are listed, not left out.
 export function NodeLatency() {
   const t = useT();
   const lang = useLang();
@@ -22,6 +22,7 @@ export function NodeLatency() {
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
   const tone = {ok: p.positive, warn: p.notice, err: p.negative};
+  const averages = latencyAverages(view);
   // One entry per node for the summary, whichever groups it sits in.
   const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
   const down = new Set(view.flatMap(group => group.missing.filter(row => row.state === 'unavailable').map(row => row.id))).size;
@@ -91,29 +92,28 @@ export function NodeLatency() {
           showAll={n => t('nodes.latency.showAll', {n})}
           legend={[
             {kind: 'dot', label: t('nodes.latency.latest')},
-            {kind: 'diamond', label: t('nodes.latency.moving')},
-            {kind: 'tick', label: t('nodes.latency.avg10')}
+            ...(averages.moving ? [{kind: 'diamond' as const, label: t('nodes.latency.moving')}] : []),
+            ...(averages.avg10 ? [{kind: 'tick' as const, label: t('nodes.latency.avg10')}] : [])
           ]}
           groups={view.map(group => ({
             id: group.id,
             label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
-            rows: group.rows.map(row => ({
-              id: row.id,
-              label: row.name,
-              values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
-              text: formatLatency(row.latest, t),
-              tone: tone[latencyTone(row.latest)],
-              description: t('nodes.latency.row', {
-                latest: formatLatency(row.latest, t),
-                moving: formatLatency(row.moving, t),
-                avg10: formatLatency(row.avg10, t)
-              }),
-              details: [
+            rows: group.rows.map(row => {
+              const details = [
                 t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
-                t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)}),
-                t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})
-              ]
-            })),
+                ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
+                ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : [])
+              ];
+              return {
+                id: row.id,
+                label: row.name,
+                values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
+                text: formatLatency(row.latest, t),
+                tone: tone[latencyTone(row.latest)],
+                description: details.join(t('ui.separator')),
+                details
+              };
+            }),
             notes: notes(group.missing)
           }))}
         />

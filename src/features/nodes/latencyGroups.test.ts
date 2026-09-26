@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
-import {latencyGroups, latencyMax} from './latencyGroups';
+import {latencyAverages, latencyGroups, latencyMax} from './latencyGroups';
 
 const observation = (patch: Partial<HealthObservation>): HealthObservation =>
   ({
@@ -52,4 +52,15 @@ it('keeps the axis clear of a lone outlier', () => {
   const nodes = [...Array(10)].map((_, i) => node('n' + i, [], [observation({latency_ms: 30 + i, moving_avg_ms: 30 + i, avg10_ms: 30 + i})], 'vless'));
   nodes.push(node('far', [], [observation({latency_ms: 2000, moving_avg_ms: 1900, avg10_ms: 1800})], 'vless'));
   expect(latencyMax(latencyGroups(nodes, [], 'protocol'))).toBe(60);
+});
+
+it('names only the averages some node reports', () => {
+  const none = latencyGroups([node('a', [], [observation({moving_avg_ms: null, avg10_ms: null})])], [], 'protocol');
+  expect(latencyAverages(none)).toEqual({moving: false, avg10: false});
+  const some = latencyGroups(
+    [node('a', [], [observation({moving_avg_ms: null, avg10_ms: null})]), node('b', [], [observation({moving_avg_ms: 40, avg10_ms: null})])],
+    [],
+    'protocol'
+  );
+  expect(latencyAverages(some)).toEqual({moving: true, avg10: false});
 });
