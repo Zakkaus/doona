@@ -4,6 +4,7 @@ import {useT} from '../../i18n';
 import {useContentSize} from '../hooks';
 import {ChartTip, useChartTip} from './tip';
 import {useSelection} from './interaction';
+import {donutAngles} from './layout';
 
 export function DonutPlot({label, rows}: {label: string; rows: Array<{name: string; value: number | null; text: string; color: string}>}) {
   const t = useT();
@@ -13,12 +14,11 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
   const data = rows.filter((row): row is typeof row & {value: number} => row.value !== null && row.value > 0);
   const width = size?.width ?? 0;
   const height = size?.height ?? 0;
-  const total = data.reduce((sum, row) => sum + row.value, 0);
-  const minimum = data.some(row => (row.value / total) * 360 < 6) ? 6 : 0;
+  const angles = donutAngles(data.map(row => row.value));
   // Preserve Recharts' minimum angle for every nonzero slice, without sorting the legend order.
   const sectors = pie<(typeof data)[number]>()
     .sort(null)
-    .value(row => minimum + (row.value / total) * (360 - data.length * minimum))(data);
+    .value((_, index) => angles[index])(data);
   const ring = arc<(typeof sectors)[number]>().innerRadius(44).outerRadius(56).digits(3);
   const select = (index: number) => setSelected(index);
   const clear = () => {
