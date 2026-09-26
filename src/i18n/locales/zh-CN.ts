@@ -372,6 +372,7 @@ export const messages = {
   'log.targetPlaceholder': '模块前缀',
   'log.pause': '暂停',
   'log.connected': '流式接收中',
+  'log.paused': '已暂停：{n} 条新记录',
   'log.reconnecting': '重新连接中',
   'log.disconnected': '已断开连接',
   'log.gap': '日志丢失：断开连接期间的记录无法取回',

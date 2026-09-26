@@ -371,6 +371,7 @@ export const messages = {
   'log.targetPlaceholder': '模組前綴',
   'log.pause': '暫停',
   'log.connected': '串流中',
+  'log.paused': '已暫停：{n} 筆新記錄',
   'log.reconnecting': '重新連線中',
   'log.disconnected': '已中斷連線',
   'log.gap': '日誌遺失：中斷連線期間的記錄無法取回',
