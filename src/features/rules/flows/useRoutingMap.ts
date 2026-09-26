@@ -31,8 +31,8 @@ export function useRoutingMap({go, query}: PageProps) {
     () => (pinned ? flowsThrough(resource.data?.flows ?? [], pinned, rules.data?.rules ?? []).length : 0),
     [resource.data, pinned, rules.data]
   );
-  // The tree waits for all three sources so it is laid out once rather than growing as each one lands.
-  const settled = [resource, rules, groups].every(item => item.data !== undefined || item.error || !item.loading);
+  // The tree waits for every source so it is laid out once rather than growing or renaming tiles as each one lands.
+  const settled = [resource, rules, groups, nodes].every(item => item.data !== undefined || item.error || !item.loading);
   return {
     ...routingMapView(tree, settled && !!(resource.data || rules.data || groups.data), !!resource.error, pinned, count, t),
     by,

@@ -211,7 +211,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
       <div className="rp-toolbar">
         <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} placeholder="10.0.0.12" width={160} />
+        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} isInvalid={!!vm.srcError} placeholder="10.0.0.12" width={160} />
         {vm.total && <span className="rp-label">{vm.total}</span>}
         {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
         <span className="rp-grow" />
@@ -224,6 +224,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         />
       </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
+      {vm.srcError && <p className="rp-note">{vm.srcError}</p>}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable

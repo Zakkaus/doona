@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -165,6 +165,24 @@ test('the tree draws every configured rule, follows a hover along its branch and
   await node.click();
   await expect(page).not.toHaveURL(/path=/);
   await expect(node).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('the tree waits for the nodes before it draws', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let release = () => {};
+  const pending = new Promise<void>(resolve => (release = resolve));
+  handlers['GET nodes'] = async () => {
+    await pending;
+    return api.nodes();
+  };
+  await page.goto('/#/rules?tab=map');
+  const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
+  await expect(topology).toBeVisible();
+  // Other requests have landed by now; only the nodes are still out.
+  await page.waitForTimeout(500);
+  await expect(topology.locator('[data-stage="rule"]')).toHaveCount(0);
+  release();
+  await expect(topology.locator('[data-stage="node"]').first()).toBeVisible();
 });
 
 test('the tree can be seen by device, with the toggle in the address and pins carrying over', async ({page}) => {

@@ -113,9 +113,11 @@ export function useConnectionsPage({go, query}: PageProps) {
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {
     if (!model.detail) return;
+    const {id} = model.detail;
     try {
-      if (!(await closing.close(model.detail.id))) return;
-      select(null);
+      if (!(await closing.close(id))) return;
+      // Another connection opened while the close was pending stays open.
+      if (new URLSearchParams(latest.current).get('id') === id) select(null);
       toast('positive', t('conn.closed', {name: model.detail.title}));
     } catch (error) {
       toast(

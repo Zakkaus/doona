@@ -148,7 +148,13 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const [src, setSrc] = useState('');
   const api = getApi();
   const capabilities = useCapabilities();
-  const filter = {name: useDebounced(name), type, src: ipLiteral(useDebounced(src))};
+  const typedSrc = useDebounced(src);
+  const parsedSrc = ipLiteral(typedSrc);
+  // A mistyped address keeps the last valid device filter and says so, rather than listing every device.
+  const srcInvalid = typedSrc.trim() !== '' && !parsedSrc;
+  const [validSrc, setValidSrc] = useState(parsedSrc);
+  if (!srcInvalid && parsedSrc !== validSrc) setValidSrc(parsedSrc);
+  const filter = {name: useDebounced(name), type, src: srcInvalid ? validSrc : parsedSrc};
   const key = JSON.stringify(filter);
   const log = useDnsLog(filter, enabled === true);
   const [held, setHeld] = useState<DnsLogList | null>(null);
@@ -198,6 +204,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     setType,
     src,
     setSrc,
+    srcError: srcInvalid ? t('dns.srcInvalid') : undefined,
     selected: detail ? selected : null,
     setSelected,
     wide,
