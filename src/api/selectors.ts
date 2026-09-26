@@ -159,13 +159,15 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
     }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
-    // A gap names no record when it spans the whole stream; the summary then starts at the reason.
+    // A gap names no record when it spans the whole stream; the summary then starts at the reason. A gap that
+    // dropped nothing, as when recording is switched, marks where history breaks off: the summary leaves the count
+    // out rather than report zero records lost. An unknown count is still shown.
     case 'flow.gap': {
-      const params = {
-        reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
-        n: droppedCount(event.data.dropped_records)
-      };
+      const reason = t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason;
       const id = event.data.resource_id;
+      if (parseU64(event.data.dropped_records) === 0n)
+        return id === null ? {key: 'event.gapUnscopedNoCount', params: {reason}} : {key: 'event.gapNoCount', params: {reason, id}};
+      const params = {reason, n: droppedCount(event.data.dropped_records)};
       return id === null ? {key: 'event.gapUnscoped', params} : {key: 'event.gap', params: {...params, id}};
     }
     // An event kind from a newer backend: the resource it names, when it names one.
