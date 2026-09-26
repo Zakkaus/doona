@@ -67,3 +67,35 @@ test('the page note does not promise pinning, which honk groups refuse', async (
   await page.goto('/#/policies');
   await expect(page.locator('.rp-note').first()).toHaveText('Manual groups switch members directly, and TCP and UDP can be selected separately.');
 });
+
+// Where a palette sets tone text to body text, the dot still carries the latency tone.
+for (const palette of ['rose-pine/dawn', 'rose-pine/moon'])
+  test(`member latencies carry a tone dot in ${palette}`, async ({page}) => {
+    await page.addInitScript(value => localStorage.setItem('doona-palette', value), palette);
+    await page.goto('/#/policies');
+    const tones = await page
+      .locator('.rp-node .ms')
+      .first()
+      .waitFor()
+      .then(() =>
+        page.$$eval('.rp-node .ms', spans => {
+          const resolve = (name: string) => {
+            const probe = document.createElement('span');
+            probe.style.color = `var(${name})`;
+            document.body.append(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            return color;
+          };
+          const expected = {ok: resolve('--rp-positive'), warn: resolve('--rp-notice'), err: resolve('--rp-negative')};
+          return spans
+            .map(span => {
+              const tone = (['ok', 'warn', 'err'] as const).find(name => span.classList.contains(name));
+              return tone ? {tone, dot: getComputedStyle(span, '::before').backgroundColor, want: expected[tone]} : null;
+            })
+            .filter(item => item !== null);
+        })
+      );
+    expect(tones.length).toBeGreaterThan(0);
+    for (const {tone, dot, want} of tones) expect(dot, tone).toBe(want);
+  });
