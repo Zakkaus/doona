@@ -30,6 +30,49 @@ export function useSlider(value: string, selector = '[data-selected]') {
   return [ref, pos] as const;
 }
 
+// A strip of items that scrolls within itself when it is wider than its box, as a tab bar on a phone. The selected
+// item is scrolled into view within the strip, never scrolling the page, when the selection changes and when the
+// strip resizes. `data-fade` names the ends with more to scroll to, `start` and `end`, for the CSS to fade them; it is
+// set on the element directly, so scrolling does not re-render the strip's owner.
+export function useScrollStrip(ref: RefObject<HTMLElement | null>, value: string, selector = '[data-selected]') {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fade = () => {
+      // scrollLeft runs negative in a right-to-left strip, so its magnitude is the distance from the start.
+      const from = Math.abs(el.scrollLeft);
+      const ends = [from > 1 && 'start', from < el.scrollWidth - el.clientWidth - 1 && 'end'].filter(Boolean).join(' ');
+      if (ends) el.dataset.fade = ends;
+      else delete el.dataset.fade;
+    };
+    const reveal = () => {
+      const sel = el.querySelector<HTMLElement>(selector);
+      if (!sel || !el.offsetWidth || el.scrollWidth <= el.clientWidth) return;
+      // Clear of the faded edge where the strip has room for it.
+      const box = el.getBoundingClientRect();
+      const item = sel.getBoundingClientRect();
+      const margin = Math.max(0, Math.min(24, (box.width - item.width) / 2));
+      const before = item.left - (box.left + margin);
+      const after = item.right - (box.right - margin);
+      if (before < 0) el.scrollLeft += before;
+      else if (after > 0) el.scrollLeft += Math.min(after, before);
+    };
+    const measure = () => {
+      reveal();
+      fade();
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of el.children) ro.observe(child);
+    el.addEventListener('scroll', fade, {passive: true});
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', fade);
+    };
+  }, [ref, value, selector]);
+}
+
 // Whether an element's content is wider than the element, tracked through resizes of it and of its children (a label
 // that changes, a web font that arrives). `key` names the children, so new ones are observed. A resize commits before
 // the browser paints, so no frame shows the content spilling out.
