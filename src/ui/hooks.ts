@@ -194,29 +194,31 @@ const nearMargin = 400;
 // Whether the element is within `nearMargin` of the viewport; `onNear` runs each time it comes near.
 export function useNearViewport(onNear?: () => void) {
   const [near, setNear] = useState(false);
-  const ref = useCallback(
-    (element: HTMLElement | null) => {
-      if (!element) return;
-      // An element that mounts on screen reads as near in the first frame; waiting for the observer's first report
-      // would paint the placeholder for a frame and make the page jump.
-      const box = element.getBoundingClientRect();
-      if (box.top < innerHeight + nearMargin && box.bottom > -nearMargin) {
-        setNear(true);
-        onNear?.();
-      }
-      const observer = new IntersectionObserver(
-        entries => {
-          const next = entries.at(-1)!.isIntersecting;
-          setNear(next);
-          if (next) onNear?.();
-        },
-        {rootMargin: `${nearMargin}px`}
-      );
-      observer.observe(element);
-      return () => observer.disconnect();
-    },
-    [onNear]
-  );
+  // Read when it fires, so an inline `onNear` keeps the same observer across renders.
+  const latest = useRef(onNear);
+  useLayoutEffect(() => {
+    latest.current = onNear;
+  }, [onNear]);
+  const ref = useCallback((element: HTMLElement | null) => {
+    if (!element) return;
+    // An element that mounts on screen reads as near in the first frame; waiting for the observer's first report
+    // would paint the placeholder for a frame and make the page jump.
+    const box = element.getBoundingClientRect();
+    if (box.top < innerHeight + nearMargin && box.bottom > -nearMargin) {
+      setNear(true);
+      latest.current?.();
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        const next = entries.at(-1)!.isIntersecting;
+        setNear(next);
+        if (next) latest.current?.();
+      },
+      {rootMargin: `${nearMargin}px`}
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   return [ref, near] as const;
 }
 
