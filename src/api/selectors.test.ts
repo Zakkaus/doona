@@ -53,6 +53,13 @@ it('groups dropped counts in gap summaries without rounding a large UInt64', () 
   expect(dropped(null).params?.n).toBe('—');
 });
 
+it('starts a gap summary at its reason when the gap names no record', () => {
+  const unscoped = eventSummary(gap('recording_changed', null));
+  expect(translate('en', unscoped.key, unscoped.params)).toBe('Reason: recording_changed, records dropped: 1');
+  const scoped = eventSummary(gap('buffer_overflow', 'flow-r03'));
+  expect(translate('en', scoped.key, scoped.params)).toMatch(/^flow-r03, reason: /);
+});
+
 it('files a node under its provider, or under the built-in or unattributed owner the nodes page lists', () => {
   expect(nodeOwner({provider_id: 'sub', protocol: 'vmess'}, [])).toBe('sub');
   expect(nodeOwner({provider_id: null, protocol: 'direct'}, [])).toBe('builtin');

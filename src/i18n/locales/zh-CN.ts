@@ -349,6 +349,7 @@ export const messages = {
   'event.operation': '{id}，状态：{status}',
   'event.generation': '{previous} 至 {current}',
   'event.gap': '{id}，原因：{reason}，丢弃记录：{n}',
+  'event.gapUnscoped': '原因：{reason}，丢弃记录：{n}',
   'event.gap.overflow': '缓冲区溢出',
   'event.gap.sampled': '采样跳过',
   'event.gap.evicted': '环形缓冲区淘汰',
