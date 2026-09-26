@@ -36,7 +36,8 @@ export function useConnectionRule(connection: Connection | undefined) {
   // Until the groups are read the outbound the connection took may not be listed yet, so nothing is written.
   const groupsRead = !hasGroups || !!groups.data;
   // The outbound the connection took, when the configuration names it, so the rule starts from what is routed now.
-  const outbound = draft?.outbound || outbounds.find(item => item.id === draft?.current)?.id || outbounds[0].id;
+  // Before the groups are read a group it took is not listed, so no fallback is preselected in its place.
+  const outbound = draft?.outbound || outbounds.find(item => item.id === draft?.current)?.id || (groupsRead ? outbounds[0].id : '');
   const generation = rules.data?.generation_id;
   const pinOf = (id: string | undefined): Pin | null => {
     const rule = rules.data?.rules.find(rule => rule.rule_id === id);
@@ -114,7 +115,7 @@ export function useConnectionRule(connection: Connection | undefined) {
       positions,
       before: before ?? '',
       setBefore: (value: string) => edit({pin: pinOf(value)}),
-      preview: target ? ruleLine(target.condition, outbound) : '',
+      preview: target ? (outbound ? ruleLine(target.condition, outbound) : target.condition) : '',
       busy: pending.busy,
       loadError: rules.error ?? config.error ?? groups.error,
       retry,

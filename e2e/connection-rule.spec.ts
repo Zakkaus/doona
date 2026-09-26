@@ -496,6 +496,25 @@ test('the dialog waits for the groups before it writes', async ({page}) => {
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
 
+test('the dialog preselects no outbound the groups may contradict before they are read', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const groups = gate();
+  handlers['GET groups'] = async () => {
+    await groups.wait();
+    return api.groups();
+  };
+  await page.goto('/#/connections?id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  // The connection went through the proxy group, which is not listed until the groups arrive.
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org)');
+  await expect(dialog.getByRole('button', {name: /Outbound$/})).not.toContainText('direct');
+  groups.open();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
+  await expect(dialog.getByRole('button', {name: /Outbound$/})).toContainText('proxy');
+});
+
 test('a failed groups read shows in the dialog and is retried there', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   let fail = true;
