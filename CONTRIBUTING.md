@@ -46,7 +46,20 @@ Some lists have one home, and everything else reads them:
 - Palettes: `src/shell/palettes.ts`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
-Use formal Traditional Chinese in `zh-TW`, idiomatic Simplified Chinese in `zh-CN`, and plain English in English messages.
+## Translations
+
+doona ships three languages: Traditional Chinese (`zh-TW`), Simplified Chinese (`zh-CN`) and English (`en`). Each feature keeps its strings in its own `messages.ts`, with the three tables side by side, so a translator sees every language of a key together. `src/i18n/locales/*.ts` is generated from those files; do not edit it.
+
+To correct a translation:
+
+1. Find the key. Search for the text in the `messages.ts` files, then search for the key under `src/` to see where it appears.
+2. Change the value in `messages.ts` and run `pnpm gen:locales`.
+3. Run `pnpm check`. `check:i18n` fails when a language lacks a key, when a key's placeholders such as `{n}` differ between languages, when a key is unused, and when a component writes interface text itself instead of taking it from a catalogue.
+4. In the pull request, say what was wrong. Add a screenshot when the new text is longer, since labels have to fit a phone.
+
+Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A count in English uses `{one, other}` forms; Chinese needs only one form.
+
+Every language must be complete: a key missing from one table fails `pnpm typecheck`, and there is no fallback to another language. To propose a new language, open an issue first, naming the language and who will review its strings.
 
 ## UI components
 

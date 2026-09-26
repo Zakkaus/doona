@@ -169,7 +169,7 @@ pnpm e2e                         # 重新构建，再对模拟后端运行浏览
 pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
 ```
 
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。对实际后端的测试、性能与截图工具、源码布局与契约钉点，见[使用指南](docs/guide.zh-CN.md#开发)；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+`pnpm dev` 以 Vite 开发服务器提供模拟后端。对实际后端的测试、性能与截图工具、源码布局与契约钉点，见[使用指南](docs/guide.zh-CN.md#开发)；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。修正翻译或提议新增语言，见其中的 [Translations](CONTRIBUTING.md#translations) 一节。
 
 ## 支持
 
