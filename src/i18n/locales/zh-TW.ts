@@ -947,6 +947,7 @@ export const messages = {
   'settings.network': '網路連線失敗：請確認後端網址與服務狀態。',
   'settings.cors': '網路或跨網域請求失敗：請確認後端可連線並允許此來源。',
   'settings.unauthorized': '需要 Token：請填寫有效的 Token 後重試。',
+  'settings.tokenRejected': '後端拒絕了此 Token：請填寫有效的 Token 後重試。',
   'settings.nonJson': '後端未回傳有效的 JSON：請確認後端根網址或反向代理前綴。',
   'settings.invalidResponse': '回應缺少 API 版本資訊：請確認後端網址。',
   'settings.httpError': '後端回傳 HTTP {status}：請檢查授權與後端組態。',

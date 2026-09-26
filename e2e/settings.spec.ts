@@ -1,5 +1,5 @@
 import {test as browserTest} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
 import {LANGS, loadLanguage, translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
@@ -103,6 +103,11 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   await page.goto('/#/settings');
   const origin = new URL(page.url()).origin;
   await page.locator('[name=api]').fill(origin + '/settings-backend/');
+  // A token the backend refuses is named as rejected, not as missing.
+  expectLoadFailures(page, /\/settings-backend\/api$/);
+  await page.locator('[name=token]').fill('wrong-token');
+  await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
+  await expect(page.locator('form')).toContainText(t('settings.tokenRejected'));
   await page.locator('[name=token]').fill('test-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await expect(page.locator('form').getByRole('status')).toContainText('API v1');

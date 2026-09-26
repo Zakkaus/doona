@@ -132,7 +132,8 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   await page.goto('/#/settings');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Sign out', exact: true}).click()]);
   expect(state.attempts.at(-1)).toMatchObject({path: 'logout', authorization: 'Bearer hnk1_session'});
-  await page.goto('/#/activity');
+  // The sign-in form follows at once, not a Settings page full of refused reads.
+  await expect(page).toHaveURL(/#\/activity$/);
   await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Sign in');
   // Signing out is not an ended session: no warning greets the next sign-in.
   await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);

@@ -123,12 +123,14 @@ export function probeFailure(
   error: unknown,
   signal: Pick<AbortSignal, 'aborted' | 'reason'>,
   base: string,
-  origin: string
+  origin: string,
+  token = ''
 ): {key: Key; params?: Params} | null {
   if (signal.aborted && (signal.reason as {name?: string} | undefined)?.name === 'TimeoutError') return {key: 'settings.timeout'};
   if (signal.aborted) return null;
   if (error instanceof ApiError) {
-    if (error.status === 401) return {key: 'settings.unauthorized'};
+    // The backend refuses a missing and a wrong token alike; which one it was is known here.
+    if (error.status === 401) return {key: token ? 'settings.tokenRejected' : 'settings.unauthorized'};
     if (error.code === 'empty_response') return {key: 'settings.nonJson'};
     if (error.code === 'invalid_discovery') return {key: 'settings.invalidResponse'};
     return {key: 'settings.httpError', params: {status: error.status}};

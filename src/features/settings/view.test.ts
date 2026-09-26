@@ -63,6 +63,7 @@ it('names why a connection test failed and ignores a cancelled test', () => {
   });
   expect(probeFailure(new DOMException('Aborted', 'AbortError'), {aborted: true, reason: new DOMException('Aborted', 'AbortError')}, base, origin)).toBeNull();
   expect(probeFailure(new ApiError(401, 'authentication_required', 'Token required'), idle, base, origin)).toEqual({key: 'settings.unauthorized'});
+  expect(probeFailure(new ApiError(401, 'authentication_required', 'Token required'), idle, base, origin, 'wrong')).toEqual({key: 'settings.tokenRejected'});
   expect(probeFailure(new ApiError(200, 'empty_response', 'Empty'), idle, base, origin)).toEqual({key: 'settings.nonJson'});
   expect(probeFailure(new ApiError(200, 'invalid_discovery', 'Missing API version'), idle, base, origin)).toEqual({key: 'settings.invalidResponse'});
   expect(probeFailure(new ApiError(502, 'bad_gateway', 'Bad gateway'), idle, base, origin)).toEqual({key: 'settings.httpError', params: {status: 502}});

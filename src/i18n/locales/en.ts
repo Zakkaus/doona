@@ -971,6 +971,7 @@ export const messages = {
   'settings.network': 'Network connection failed. Check the backend URL and service.',
   'settings.cors': 'Network or CORS request failed. Check that the backend is reachable and allows this origin.',
   'settings.unauthorized': 'Token required. Enter a valid token and retry.',
+  'settings.tokenRejected': 'The backend rejected the token. Enter a valid token and retry.',
   'settings.nonJson': 'The backend did not return valid JSON. Check the backend root or reverse-proxy prefix.',
   'settings.invalidResponse': 'The response has no API version information. Check the backend URL.',
   'settings.httpError': 'The backend returned HTTP {status}. Check authorization and the backend configuration.',
