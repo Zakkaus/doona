@@ -34,7 +34,7 @@ import {errorText} from '../api/error';
 import {cx} from './cx';
 import {Button} from './Button';
 import {InlineAlert} from './Feedback';
-import {useSlider, useScrollStrip, useMediaQuery, panelQuery} from './hooks';
+import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
 export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
   return (
@@ -358,7 +358,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   useEffect(() => {
     if (!showing || !wide) return;
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest('[role="dialog"], input, textarea, [role="listbox"], [role="menu"], .rp-toasts'))
+      if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest(`${escapeLayers}, input, textarea, [role="listbox"], [role="menu"], .rp-toasts`))
         onClose();
     };
     addEventListener('keydown', on);

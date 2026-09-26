@@ -268,6 +268,26 @@ test.describe('short connection lists', () => {
   });
 });
 
+test('a detail panel leaves Escape to an alert dialog above it', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  await page.locator('.rp-table [data-key="c-0002"]').click();
+  const panel = page.locator('.rp-panel');
+  await expect(panel.locator('.rp-h3')).toHaveText('cdn.bilibili.com');
+  // A locked dialog lets Escape through to the window, where the panel listens.
+  await page.evaluate(() => {
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'alertdialog');
+    dialog.append(document.createElement('button'));
+    document.body.append(dialog);
+    dialog.querySelector('button')!.focus();
+  });
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/[?&]id=c-0002/);
+  await page.evaluate(() => document.querySelector('[role="alertdialog"]')!.remove());
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+});
+
 test.describe('default view', () => {
   test.use({storage: {'doona-mock-big': '100'}, viewport: {width: 1024, height: 768}});
 

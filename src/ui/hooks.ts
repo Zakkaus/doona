@@ -163,6 +163,10 @@ export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
 export const isMac =
   (navigator as Navigator & {userAgentData?: {platform: string}}).userAgentData?.platform === 'macOS' || navigator.platform.startsWith('Mac');
 
+// One Escape closes one layer. A dialog takes its own Escape, so a layer under it that listens on the window (a
+// detail panel, the expanded toasts) leaves the key alone while one of these is open or holds focus.
+export const escapeLayers = '[role="dialog"], [role="alertdialog"]';
+
 // Below this breakpoint, detail drawers must not follow keyboard focus.
 export const panelQuery = '(min-width: 1200px)';
 // The phone breakpoint the stylesheets use, for a component whose markup, not only its layout, changes below it.
