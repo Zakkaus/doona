@@ -47,7 +47,7 @@
   box-shadow: var(--rp-shadow-lg);
   animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
-/* Toasts rise above a pending action bar rather than covering it. */
-body:has(.rp-actionbar) .rp-toasts {
+/* Toasts at the bottom rise above a pending action bar rather than covering it. */
+body:has(.rp-actionbar) .rp-toasts:not([data-placement='top']) {
   bottom: calc(32px + var(--rp-control) + 16px + var(--rp-dock));
 }
