@@ -293,10 +293,6 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     startReload: async signal => accepted(await client.POST('/api/v1/operations/reload', {body: {}, headers: once(), signal})),
     startSuspend: async signal => accepted(await client.POST('/api/v1/operations/suspend', {body: {}, headers: once(), signal})),
     startResume: async signal => accepted(await client.POST('/api/v1/operations/resume', {body: {}, headers: once(), signal})),
-    operation: async (id, signal) => {
-      const result = await client.GET('/api/v1/operations/{id}', {params: {path: {id}}, signal});
-      return {...read(result), retryAfter: retryAfter(result.response)} as OperationState;
-    },
     pollOperation,
     subscribeEvents,
     subscribeLogs
