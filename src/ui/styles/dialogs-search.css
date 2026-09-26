@@ -112,6 +112,9 @@
   border: 0;
   outline: 0;
   background: transparent;
+  /* A value or placeholder wider than the field fades to an ellipsis instead of an abrupt cut mid-word. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rp-input input::-webkit-search-cancel-button {
   display: none;
