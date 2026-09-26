@@ -2,7 +2,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
-import {backendMessage} from '../../i18n/backend';
+import {backendMessage, knownCode} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
@@ -206,14 +206,27 @@ type DiagnosticRow = {
   message: string;
   code: string;
   detail: string;
+  count: number;
 };
 type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
+// Identical diagnostics, such as one warning per duplicate entry at the same place, share one row with their count.
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
   const paths = new Map(sources.map(source => [source.id, fileName(source)]));
-  return diagnostics.map((item, index) => {
+  const groups = new Map<string, {item: ConfigDiagnostic; count: number}>();
+  for (const item of diagnostics) {
+    const key = JSON.stringify([item.level, item.source_id, item.line, item.column, item.code, item.message]);
+    const group = groups.get(key);
+    if (group) group.count++;
+    else groups.set(key, {item, count: 1});
+  }
+  return [...groups.values()].map(({item, count}, index) => {
     const path = paths.get(item.source_id) ?? item.source_id;
+    const text = backendMessage(item.code, item.message, t);
+    const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
+    // A translated code keeps the backend's own words in the detail, which names the entry the code cannot.
+    const described = knownCode(item.code) ? t('config.backendDetail', {text: message, message: item.message}) : message;
     return {
       id: String(index),
       level: item.level,
@@ -222,12 +235,10 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
       sourceId: item.source_id,
       line: item.line,
       where: item.line === null ? path : `${path}:${item.line}`,
-      message: backendMessage(item.code, item.message, t),
+      message,
       code: item.code,
-      detail:
-        item.line === null
-          ? backendMessage(item.code, item.message, t)
-          : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: backendMessage(item.code, item.message, t)})
+      detail: item.line === null ? described : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: described}),
+      count
     };
   });
 }
