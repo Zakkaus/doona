@@ -42,7 +42,8 @@
   z-index: 1;
   flex: none;
   white-space: nowrap;
-  min-height: 36px;
+  /* 34px under a pointer, the touch control height where fingers need more. */
+  min-height: max(34px, var(--rp-control));
   padding: 4px 12px;
   border-radius: var(--rp-r-md);
   display: inline-flex;
