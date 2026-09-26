@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {LANGS, LOCALE} from './index';
-import {textDirection} from './direction';
+import {pageDirection, textDirection} from './direction';
 
 const rtl = ['ar', 'ar-EG', 'he-IL', 'fa', 'ur-PK', 'ckb', 'az-Arab'];
 const ltr = ['zh-TW', 'zh-CN', 'en-US', 'ja', 'ar-Latn'];
@@ -30,4 +30,13 @@ it('falls back to the likely script where Intl.Locale has no text info', () => {
 it('reads a tag Intl cannot parse left to right', () => {
   expect(textDirection('')).toBe('ltr');
   expect(textDirection('not a tag')).toBe('ltr');
+});
+
+it('mirrors the page right to left without changing the language direction', () => {
+  for (const [lang] of LANGS) {
+    expect(pageDirection(LOCALE[lang], true)).toBe('rtl');
+    expect(pageDirection(LOCALE[lang], false)).toBe(textDirection(LOCALE[lang]));
+  }
+  expect(pageDirection('ar', false)).toBe('rtl');
+  expect(pageDirection('ar', true)).toBe('rtl');
 });

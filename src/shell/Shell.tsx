@@ -32,7 +32,8 @@ export function Shell({lang: initial}: {lang: Lang}) {
     useShellController(initial);
   return (
     <LangContext.Provider value={lang}>
-      <I18nProvider locale={LOCALE[lang]}>
+      {/* The mirrored layout turns React Aria right to left too; the locale keeps its strings and formats. */}
+      <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
         <RouterProvider navigate={navigate}>
           <DraftContext.Provider value={draft}>
             <ShellFrame settings={settings} lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={openSearch} mac={mac} />

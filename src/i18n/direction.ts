@@ -19,3 +19,8 @@ export function textDirection(locale: string): Dir {
     return 'ltr';
   }
 }
+
+// The page's direction: the mirrored layout runs right to left whatever the language, whose text keeps its own order.
+export function pageDirection(locale: string, mirrored: boolean): Dir {
+  return mirrored ? 'rtl' : textDirection(locale);
+}
