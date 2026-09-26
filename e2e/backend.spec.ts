@@ -12,8 +12,8 @@ test('the backend indicator shows the facts, opens About doona and closes on Esc
   await expect(indicator).toHaveText(engine);
   await expect(page.locator('.rp-side a[href*="github"]')).toHaveCount(0);
   await indicator.click();
-  const popover = page.getByRole('dialog', {name: 'Backend'});
-  for (const fact of ['Engine', engine, 'API', 'Built-in demo data', 'Status', 'Connected']) await expect(popover).toContainText(fact);
+  const popover = page.getByRole('dialog', {name: engine});
+  for (const fact of ['Connected', 'API', 'Build', 'Backend URL', 'Built-in demo data']) await expect(popover).toContainText(fact);
   await expect(popover.getByRole('link', {name: `${version.engine.name} project page`})).toHaveAttribute('href', new RegExp(`/${version.engine.name}$`));
   await page.keyboard.press('Escape');
   await expect(popover).toBeHidden();
@@ -34,7 +34,7 @@ test('below the side navigation the overflow menu opens the same popover', async
   const more = page.getByRole('button', {name: 'More options'});
   await more.click();
   await page.getByRole('menuitem', {name: 'Backend'}).click();
-  const popover = page.getByRole('dialog', {name: 'Backend'});
+  const popover = page.getByRole('dialog', {name: engine});
   await expect(popover).toContainText(engine);
   await expect(popover.getByRole('button', {name: 'About doona'})).toBeVisible();
   await page.keyboard.press('Escape');

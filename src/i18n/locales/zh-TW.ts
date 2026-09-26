@@ -1149,7 +1149,7 @@ export const messages = {
   'shell.backend.label': '後端：{engine}，{state}',
   'shell.backend.profile': '設定檔',
   'shell.backend.address': '後端網址',
-  'shell.backend.state': '狀態',
+  'shell.backend.build': '建置',
   'shell.backend.demo': '內建示範資料',
   'shell.backend.connected': '已連線',
   'shell.backend.connecting': '連線中',

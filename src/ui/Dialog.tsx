@@ -118,10 +118,13 @@ export function PopoverDialog({
   isOpen,
   onOpenChange,
   title,
+  subtitle,
   placement = 'top start',
   children
 }: {
   title: string;
+  // A line under the title, such as a status.
+  subtitle?: ReactNode;
   placement?: PopoverProps['placement'];
   children: (close: () => void) => ReactNode;
 } & (
@@ -133,7 +136,10 @@ export function PopoverDialog({
       <Dialog className="rp-popover-body">
         {({close}) => (
           <>
-            <Heading slot="title">{title}</Heading>
+            <div className="rp-popover-head">
+              <Heading slot="title">{title}</Heading>
+              {subtitle}
+            </div>
             {children(close)}
           </>
         )}
