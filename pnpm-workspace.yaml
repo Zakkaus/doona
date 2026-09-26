@@ -2,6 +2,11 @@ allowBuilds:
   esbuild: true
   # eslint-plugin-import-x's resolver; its postinstall only fetches a binding the optional deps already provide.
   unrs-resolver: false
+# I18nProvider takes an explicit direction, so the mirrored layout turns React Aria's keys, popovers and toasts right to
+# left while the locale, and so its strings and formats, stay as they are. Drop it once upstream accepts a direction
+# override.
+patchedDependencies:
+  react-aria@3.52.1: patches/react-aria@3.52.1.patch
 # The native build helpers (esbuild, rollup, lightningcss) for every Linux architecture they ship, so the
 # release deps tarball builds offline anywhere; lightningcss stops at x86_64, aarch64 and armv7, and
 # vite.config.ts falls back to esbuild's CSS minifier where it is missing.

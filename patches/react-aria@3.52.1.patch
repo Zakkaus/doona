@@ -1,0 +1,100 @@
+diff --git a/dist/private/i18n/I18nProvider.cjs b/dist/private/i18n/I18nProvider.cjs
+index d8adb311a53149f302730f90c6ce663188932321..496232d6b6c534806b81b260d9984f72a0a653d5 100644
+--- a/dist/private/i18n/I18nProvider.cjs
++++ b/dist/private/i18n/I18nProvider.cjs
+@@ -30,12 +30,13 @@ const $2522e612fa919664$var$I18nContext = /*#__PURE__*/ (0, ($parcel$interopDefa
+ /**
+  * Internal component that handles the case when locale is provided.
+  */ function $2522e612fa919664$var$I18nProviderWithLocale(props) {
+-    let { locale: locale, children: children } = props;
++    let { locale: locale, direction: direction, children: children } = props;
+     let value = (0, ($parcel$interopDefault($io5c7$react))).useMemo(()=>({
+             locale: locale,
+-            direction: (0, $064e661d2887db24$exports.isRTL)(locale) ? 'rtl' : 'ltr'
++            direction: direction || ((0, $064e661d2887db24$exports.isRTL)(locale) ? 'rtl' : 'ltr')
+         }), [
+-        locale
++        locale,
++        direction
+     ]);
+     return /*#__PURE__*/ (0, ($parcel$interopDefault($io5c7$react))).createElement($2522e612fa919664$var$I18nContext.Provider, {
+         value: value
+@@ -56,6 +57,7 @@ function $2522e612fa919664$export$a54013f0d02a8f82(props) {
+     // This is necessary because useDefaultLocale triggers a re-render.
+     if (locale) return /*#__PURE__*/ (0, ($parcel$interopDefault($io5c7$react))).createElement($2522e612fa919664$var$I18nProviderWithLocale, {
+         locale: locale,
++        direction: props.direction,
+         children: children
+     });
+     return /*#__PURE__*/ (0, ($parcel$interopDefault($io5c7$react))).createElement($2522e612fa919664$var$I18nProviderWithDefaultLocale, {
+diff --git a/dist/private/i18n/I18nProvider.js b/dist/private/i18n/I18nProvider.js
+index 1dde271ee9abeb61d2045dfe54b806cc62add855..0c17470c09f2fe2e7e71e23380c029b9430fdde8 100644
+--- a/dist/private/i18n/I18nProvider.js
++++ b/dist/private/i18n/I18nProvider.js
+@@ -19,12 +19,13 @@ const $4defb058003b3e05$var$I18nContext = /*#__PURE__*/ (0, $aMVKj$react).create
+ /**
+  * Internal component that handles the case when locale is provided.
+  */ function $4defb058003b3e05$var$I18nProviderWithLocale(props) {
+-    let { locale: locale, children: children } = props;
++    let { locale: locale, direction: direction, children: children } = props;
+     let value = (0, $aMVKj$react).useMemo(()=>({
+             locale: locale,
+-            direction: (0, $80de4f1e59ad92d4$export$702d680b21cbd764)(locale) ? 'rtl' : 'ltr'
++            direction: direction || ((0, $80de4f1e59ad92d4$export$702d680b21cbd764)(locale) ? 'rtl' : 'ltr')
+         }), [
+-        locale
++        locale,
++        direction
+     ]);
+     return /*#__PURE__*/ (0, $aMVKj$react).createElement($4defb058003b3e05$var$I18nContext.Provider, {
+         value: value
+@@ -45,6 +46,7 @@ function $4defb058003b3e05$export$a54013f0d02a8f82(props) {
+     // This is necessary because useDefaultLocale triggers a re-render.
+     if (locale) return /*#__PURE__*/ (0, $aMVKj$react).createElement($4defb058003b3e05$var$I18nProviderWithLocale, {
+         locale: locale,
++        direction: props.direction,
+         children: children
+     });
+     return /*#__PURE__*/ (0, $aMVKj$react).createElement($4defb058003b3e05$var$I18nProviderWithDefaultLocale, {
+diff --git a/dist/private/i18n/I18nProvider.mjs b/dist/private/i18n/I18nProvider.mjs
+index db245097e9e04afd6d7efd48655b4045ead42a1d..6d51c225f92fa5836598296471ba6232221e4503 100644
+--- a/dist/private/i18n/I18nProvider.mjs
++++ b/dist/private/i18n/I18nProvider.mjs
+@@ -19,12 +19,13 @@ const $2eb8e6d23f3d0cb0$var$I18nContext = /*#__PURE__*/ (0, $01Dwp$react).create
+ /**
+  * Internal component that handles the case when locale is provided.
+  */ function $2eb8e6d23f3d0cb0$var$I18nProviderWithLocale(props) {
+-    let { locale: locale, children: children } = props;
++    let { locale: locale, direction: direction, children: children } = props;
+     let value = (0, $01Dwp$react).useMemo(()=>({
+             locale: locale,
+-            direction: (0, $d805ff57cab8bee2$export$702d680b21cbd764)(locale) ? 'rtl' : 'ltr'
++            direction: direction || ((0, $d805ff57cab8bee2$export$702d680b21cbd764)(locale) ? 'rtl' : 'ltr')
+         }), [
+-        locale
++        locale,
++        direction
+     ]);
+     return /*#__PURE__*/ (0, $01Dwp$react).createElement($2eb8e6d23f3d0cb0$var$I18nContext.Provider, {
+         value: value
+@@ -45,6 +46,7 @@ function $2eb8e6d23f3d0cb0$export$a54013f0d02a8f82(props) {
+     // This is necessary because useDefaultLocale triggers a re-render.
+     if (locale) return /*#__PURE__*/ (0, $01Dwp$react).createElement($2eb8e6d23f3d0cb0$var$I18nProviderWithLocale, {
+         locale: locale,
++        direction: props.direction,
+         children: children
+     });
+     return /*#__PURE__*/ (0, $01Dwp$react).createElement($2eb8e6d23f3d0cb0$var$I18nProviderWithDefaultLocale, {
+diff --git a/dist/types/src/i18n/I18nProvider.d.ts b/dist/types/src/i18n/I18nProvider.d.ts
+index d3ab195e7063d7eb8d0a32666e6b2e631d2d1110..848c98ef2d4f039893d158b01622f2eecc74fdf1 100644
+--- a/dist/types/src/i18n/I18nProvider.d.ts
++++ b/dist/types/src/i18n/I18nProvider.d.ts
+@@ -11,6 +11,8 @@ export interface I18nProviderProps {
+     children: ReactNode;
+     /** The locale to apply to the children. */
+     locale?: string;
++    /** The layout direction, in place of the locale's own. Applies with a locale. */
++    direction?: Direction;
+ }
+ /**
+  * Provides the locale for the application to all child components.
