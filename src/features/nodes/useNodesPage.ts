@@ -105,14 +105,18 @@ export function useNodesPage({go, query}: PageProps) {
             guard.clear();
             close();
           }
-          void refreshing.refresh(created.id).then(
-            result => {
-              if (!result) return;
-              if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}));
-              else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
-            },
-            error => toastFailure(error, t, error => t('nodes.addedRefreshFailed', {name, error}))
-          );
+          // The person never pressed this refresh, so a failure offers it again from the toast.
+          const fetchAdded = () =>
+            void refreshing.refresh(created.id).then(
+              result => {
+                if (!result) return;
+                if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}));
+                else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
+              },
+              error =>
+                toastFailure(error, t, error => t('nodes.addedRefreshFailed', {name, error}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})
+            );
+          fetchAdded();
           return;
         }
         toast('positive', t('nodes.added', {name}));
