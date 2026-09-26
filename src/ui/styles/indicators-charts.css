@@ -22,7 +22,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.rp-light::before {
+/* The status dot, shared by a light and a toned latency. */
+.rp-light::before,
+.ms:is(.ok, .warn, .err)::before {
   content: '';
   width: 10px;
   height: 10px;
@@ -34,7 +36,8 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
 }
-.rp-light.sm::before {
+.rp-light.sm::before,
+.ms:is(.ok, .warn, .err)::before {
   width: 8px;
   height: 8px;
 }
