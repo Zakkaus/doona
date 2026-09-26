@@ -136,6 +136,22 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
 });
 
+for (const width of [320, 360])
+  test(`at ${width}px a subscription row keeps its remove button beside the name field`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/config?tab=setup');
+    const card = page.getByRole('region', {name: 'Quick setup'});
+    const name = card.getByLabel('Name', {exact: true});
+    const url = card.getByLabel('Subscription URL', {exact: true});
+    const remove = card.getByRole('button', {name: 'Remove sub-c', exact: true});
+    const [nameBox, urlBox, removeBox] = await Promise.all([name.boundingBox(), url.boundingBox(), remove.boundingBox()]);
+    // The name field and the remove button share a row; the URL field, always too wide for a phone, wraps below it.
+    expect(Math.abs(nameBox!.y - removeBox!.y)).toBeLessThanOrEqual(2);
+    expect(urlBox!.y).toBeGreaterThan(nameBox!.y + nameBox!.height);
+    expect(removeBox!.width).toBeGreaterThanOrEqual(44);
+    expect(removeBox!.height).toBeGreaterThanOrEqual(44);
+  });
+
 test('the quick setup guards unsaved changes like the editor', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const card = page.getByRole('region', {name: 'Quick setup'});
