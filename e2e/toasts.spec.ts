@@ -64,3 +64,32 @@ test('a repeated actionable toast replaces its earlier copy', async ({page}) => 
   await expect(failure.getByRole('button', {name: 'Retry', exact: true})).toBeVisible();
   await expect(page.getByRole('button', {name: /^Show all/})).toHaveCount(0);
 });
+
+test('the notification position setting moves the toasts and survives a reload', async ({page}) => {
+  await failingFirstFetch(page, 9);
+  await page.goto('/#/settings');
+  await page.getByRole('button', {name: /Notification position/}).click();
+  await page.getByRole('option', {name: 'Bottom corner', exact: true}).click();
+  await page.reload();
+  await expect(page.getByRole('button', {name: /Notification position/})).toContainText('Bottom corner');
+  await page.goto('/#/nodes?tab=list');
+  await addSubscription(page, 'sub-p');
+  const region = page.locator('.rp-toasts');
+  await expect(region).toHaveAttribute('data-placement', 'bottom');
+  await expect(region).toHaveAttribute('data-align', 'end');
+  const viewport = page.viewportSize()!;
+  const box = (await region.boundingBox())!;
+  expect(Math.round(viewport.width - (box.x + box.width))).toBe(16);
+  expect(box.y + box.height).toBeGreaterThan(viewport.height - 80);
+});
+
+test('toasts default to the bottom centre', async ({page}) => {
+  await failingFirstFetch(page, 1);
+  await page.goto('/#/nodes?tab=list');
+  await addSubscription(page, 'sub-d');
+  const region = page.locator('.rp-toasts');
+  await expect(region).toHaveAttribute('data-placement', 'bottom');
+  await expect(region).toHaveAttribute('data-align', 'center');
+  const box = (await region.boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
+});

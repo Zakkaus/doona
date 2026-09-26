@@ -6,7 +6,7 @@ import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
 import {readSettings, SettingsContext} from './preferences';
-import type {Settings} from './preferences';
+import type {Settings, ToastPlacement} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
 import {HubBar, HubPages} from './HubBar';
@@ -46,7 +46,7 @@ export function Shell({lang: initial}: {lang: Lang}) {
               </Suspense>
             </LoadBoundary>
           )}
-          <ToastHost />
+          <ToastHost placement={ap.toastPlacement} />
         </RouterProvider>
       </I18nProvider>
     </LangContext.Provider>
@@ -62,9 +62,9 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
   );
 }
 
-function ToastHost() {
+function ToastHost({placement}: {placement: ToastPlacement}) {
   useStartupToasts();
-  return <Toasts />;
+  return <Toasts placement={placement} />;
 }
 
 type FrameProps = {

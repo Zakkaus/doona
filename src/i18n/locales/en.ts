@@ -1007,6 +1007,11 @@ export const messages = {
   'settings.appearance': 'Appearance',
   'settings.scheme': 'Color scheme',
   'settings.mirror': 'Mirrored layout',
+  'settings.toastPlacement': 'Notification position',
+  'settings.toastTop': 'Top center',
+  'settings.toastTopEnd': 'Top corner',
+  'settings.toastBottom': 'Bottom center',
+  'settings.toastBottomEnd': 'Bottom corner',
   'settings.mirrorHelp': 'Flips the layout left to right for left-handed use.',
   'settings.runtime': 'Backend options',
   'settings.runtimeNote':
