@@ -82,3 +82,15 @@ it('retains each known cgroup measurement when the other is unknown', () => {
   expect(limit.fields).toContainEqual([t('ov.f.cgroupCurrent'), '—']);
   expect(limit.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('83886080', 'en')]);
 });
+
+it('shows process CPU as a percent of one core, and a dash when unmeasured', () => {
+  const cpu = (cpu_percent: number | null, locale = 'en-US', label = t) =>
+    overviewView({runtime: {...runtime, process: {...runtime.process, cpu_percent}}}, loading, locale, label).strip.find(
+      ([name]) => name === label('ov.cpu')
+    )?.[1];
+  expect(cpu(2.1)).toBe('2.1%');
+  expect(cpu(1234.56)).toBe('1,234.6%');
+  expect(cpu(1234.56, 'de-DE')).toBe('1.234,6%');
+  expect(cpu(null)).toBe('—');
+  expect(overviewView({}, loading, 'en-US', t).strip).toContainEqual([t('ov.cpu'), '—']);
+});

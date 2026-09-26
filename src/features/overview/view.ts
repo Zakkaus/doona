@@ -109,6 +109,8 @@ export function overviewView(
   const state = runtime?.lifecycle.state;
   const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
   const reload = runtime?.last_reload;
+  // Percent of one CPU, so a busy engine on several cores can pass 100.
+  const cpu = runtime?.process.cpu_percent;
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
@@ -120,6 +122,7 @@ export function overviewView(
     strip: [
       [t('ov.config'), shortId(revision), revision],
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
+      [t('ov.cpu'), cpu == null ? '—' : t('ui.percent', {n: formatNumber(cpu, locale, 1)})],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
     ] as Array<[string, string] | [string, string, string]>,
     reload: reload

@@ -567,6 +567,7 @@ export const messages = {
   'ov.f.ebpfBytes': 'eBPF kernel memory',
   'ov.config': 'Configuration version',
   'ov.uptime': 'Uptime',
+  'ov.cpu': 'CPU usage',
   'ov.lastReload': 'Last reload',
   'ov.datapath': 'Datapath',
   'ov.memory': 'Memory',
