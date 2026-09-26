@@ -8,25 +8,32 @@ import {parseU64} from '../api/u64';
 import {ApiError} from '../api/error';
 import {sourceIp} from '../api/selectors';
 import {useResource} from './resource';
+import {holds, snapshot} from './resourceCore';
 import {useAction} from './action';
-// The snapshot each connection list measures its next rates against, by resource key.
-const baselines = new Map<string, ConnectionList>();
-export function useConnections(src?: string, enabled = true, paused = false, every?: number) {
-  const api = getApi();
+// The snapshot each connection list measures its next rates against, by resource key. A list the store no longer
+// holds, such as a source filter left a minute ago, drops its baseline rather than keeping it for the life of the tab.
+const baselines = new WeakMap<Api, Map<string, ConnectionList>>();
+export function connectionsResource(api: Api, src?: string, every?: number) {
   const key: ResourceKey = ['connections', {src}];
   const name = normalizeResourceKey(key);
-  return useResource(
-    {
-      key,
-      every,
-      fetch: async signal => {
-        const {list, baseline} = withRates(baselines.get(name), await api.connections({type: 'all', detail: 'full', limit: MAX_PAGE, src}, signal));
-        baselines.set(name, baseline);
-        return list;
-      }
-    },
-    {enabled, paused}
-  );
+  return {
+    key,
+    every,
+    fetch: async (signal: AbortSignal) => {
+      const next = await api.connections({type: 'all', detail: 'full', limit: MAX_PAGE, src}, signal);
+      let held = baselines.get(api);
+      if (!held) baselines.set(api, (held = new Map()));
+      for (const other of held.keys()) if (other !== name && !holds(api, other)) held.delete(other);
+      // A list starting from nothing, first opened or back after it expired, measures nothing against an old baseline.
+      if (snapshot(api, name).data === undefined) held.delete(name);
+      const {list, baseline} = withRates(held.get(name), next);
+      held.set(name, baseline);
+      return list;
+    }
+  };
+}
+export function useConnections(src?: string, enabled = true, paused = false, every?: number) {
+  return useResource(connectionsResource(getApi(), src, every), {enabled, paused});
 }
 const RATE_WINDOW_MS = 1000;
 const rateFields = ['upload', 'download'] as const;

@@ -48,6 +48,9 @@ export async function refetchAll(): Promise<RefreshOutcome[]> {
   return Promise.all([...(stores.get(getApi())?.active.values() ?? [])].map(entry => entry.watcher.refetch()));
 }
 
+// Whether the store still holds the named resource, watched or kept after its last watcher left.
+export const holds = (api: Api, name: string) => !!stores.get(api)?.active.has(name) || !!stores.get(api)?.inactive.has(name);
+
 export function snapshot<T>(api: Api, name: string): ResourceState<T> {
   const store = stores.get(api);
   return (store?.active.get(name)?.snapshot ?? store?.inactive.get(name) ?? initialState) as ResourceState<T>;

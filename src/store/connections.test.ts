@@ -1,8 +1,10 @@
-import {expect, it} from 'vitest';
+import {afterEach, expect, it, vi} from 'vitest';
+import type {Api} from '../api/api';
 import {ApiError} from '../api/error';
 import type {BulkCloseQuery, Connection, ConnectionList} from '../api/model';
 import {connections as fixture} from '../api/mock/fixtures';
-import {closeInBatches, withRates} from './connections';
+import {closeInBatches, connectionsResource, withRates} from './connections';
+import {watchResource} from './resourceCore';
 
 type Row = {id: string; network: 'tcp' | 'udp'; src: string | null; owned: boolean};
 
@@ -182,4 +184,46 @@ it('keeps the baseline and the last rates over a window under a second', () => {
       ).list
     )
   ).toEqual({a: '3000', b: null});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+// A connections list read through the resource store; each read watches the list, lets its fetch finish and leaves.
+function watchedLists() {
+  vi.useFakeTimers();
+  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  const clock = {ms: 0};
+  const api = {connections: async () => snapshot(clock.ms, [['a', String(clock.ms)]])} as unknown as Api;
+  const read = async (src: string) => {
+    const watched = watchResource(api, connectionsResource(api, src, 0), () => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const data = watched.getSnapshot().data!;
+    watched.dispose();
+    return down(data);
+  };
+  return {clock, read};
+}
+
+it('drops the baseline of a list the store no longer holds', async () => {
+  const {clock, read} = watchedLists();
+  await read('10.0.0.1');
+  clock.ms = 5000;
+  // Still held for a minute after its page closed, so the list measures its next rate from it.
+  expect(await read('10.0.0.1')).toEqual({a: '1000'});
+  await vi.advanceTimersByTimeAsync(60000);
+  clock.ms = 70000;
+  await read('10.0.0.2');
+  clock.ms = 75000;
+  expect(await read('10.0.0.1')).toEqual({a: null});
+});
+
+it('measures no rate for a list reopened after it expired', async () => {
+  const {clock, read} = watchedLists();
+  await read('10.0.0.1');
+  await vi.advanceTimersByTimeAsync(60000);
+  clock.ms = 70000;
+  expect(await read('10.0.0.1')).toEqual({a: null});
 });
