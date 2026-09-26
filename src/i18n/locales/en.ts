@@ -1347,6 +1347,7 @@ export const messages = {
   'ui.retry': 'Retry',
   'ui.refreshed': 'Data refreshed.',
   'ui.newBuild': 'A new version is ready; reload the page to use it.',
+  'ui.reloadPage': 'Reload',
   'ui.refreshFailed': 'Could not refresh data: {error}',
   'ui.saved': 'Settings saved.',
   'ui.state': 'State',

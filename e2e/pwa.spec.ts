@@ -178,6 +178,29 @@ test('after an update the new build caches only the language in use and starts o
   expect(fetched.filter(path => unused.test(path))).toEqual([]);
 });
 
+test('a new build taking over offers Reload, which loads it', async ({page}) => {
+  await page.goto('http://127.0.0.1:4186/ui/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  // Only a page the old build already controls announces the new one.
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  await page.evaluate(async () => {
+    const taken = new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
+    document.cookie = 'doona-pwa-update=1; Path=/ui; SameSite=Lax';
+    await (await navigator.serviceWorker.ready).update();
+    await taken;
+  });
+  const notice = page.locator('.rp-toast.info', {hasText: 'A new version is ready'});
+  const reload = notice.getByRole('button', {name: 'Reload', exact: true});
+  await expect(reload).toBeVisible();
+  const loaded = page.waitForEvent('load');
+  await reload.click();
+  await loaded;
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  await expect(notice).toHaveCount(0);
+});
+
 test('an early install offer is consumed on dismissal and failures are reported', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();

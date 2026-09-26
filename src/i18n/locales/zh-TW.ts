@@ -1317,6 +1317,7 @@ export const messages = {
   'ui.retry': '重試',
   'ui.refreshed': '資料已重新整理。',
   'ui.newBuild': '新版本已就緒，重新載入頁面後生效。',
+  'ui.reloadPage': '重新載入',
   'ui.refreshFailed': '無法重新整理資料：{error}',
   'ui.saved': '設定已儲存。',
   'ui.state': '狀態',
