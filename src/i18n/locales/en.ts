@@ -1183,6 +1183,7 @@ export const messages = {
   'shell.backend.signIn': 'Sign-in required',
   'shell.backend.offline': 'Unreachable',
   'shell.backend.degraded': 'Connected, version unknown',
+  'shell.backend.edit': 'Edit backend',
   'shell.backend.project': '{engine} project page',
   'palette.rosePine': 'Rosé Pine',
   'palette.moon': 'Moon',

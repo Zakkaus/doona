@@ -41,3 +41,16 @@ test('below the side navigation the overflow menu opens the same popover', async
   await expect(popover).toBeHidden();
   await expect(more).toBeFocused();
 });
+
+test('Edit backend closes the popover and opens the backend card in Settings', async ({page}) => {
+  await page.goto('/#/activity');
+  await page
+    .locator('.rp-side')
+    .getByRole('button', {name: `Backend: ${engine}, Connected`})
+    .click();
+  const popover = page.getByRole('dialog', {name: engine});
+  await popover.getByRole('link', {name: 'Edit backend'}).click();
+  await expect(popover).toBeHidden();
+  await expect(page).toHaveURL(/#\/settings\?card=backend/);
+  await expect(page.locator('#settings-backend')).toBeInViewport();
+});
