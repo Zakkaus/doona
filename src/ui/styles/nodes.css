@@ -49,14 +49,6 @@ button.rp-node[data-focus-visible] {
   align-items: center;
   gap: 6px;
 }
-.ms:is(.ok, .warn, .err)::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--dot);
-  flex-shrink: 0;
-}
 .rp-node .s {
   display: flex;
   justify-content: space-between;
