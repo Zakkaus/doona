@@ -24,6 +24,14 @@
   min-height: 64px;
   background: var(--rp-base);
 }
+/* A landscape phone is too short for the top bar to stay pinned above the hub's own page switcher and tabs: pinned,
+   they would fill the whole height before any page content shows. It scrolls away with the page instead; portrait
+   phones have the height to keep it. */
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  .rp-top {
+    position: static;
+  }
+}
 @media (min-width: 1024px) {
   .rp-top {
     grid-template-columns: 216px minmax(0, 1fr) auto;
