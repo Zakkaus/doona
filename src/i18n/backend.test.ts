@@ -1,21 +1,26 @@
 import {expect, it} from 'vitest';
-import {backendMessage} from './backend';
+import {backendCode, backendMessage} from './backend';
 import {LANGS, translate, type Lang, type Translator} from './index';
 
-// The codes honk sets on operation.error and provider.last_error, which the contract leaves to the adapter.
+// The codes honk sets on operation.error, provider.last_error and health.error, which the contract leaves to the adapter.
 const operationCodes = [
   'reload_rejected',
   'reload_degraded',
   'engine_unavailable',
   'request_exhausted',
-  'lifecycle_failed',
   'geodata_update_failed',
   'probe_interrupted',
   'probe_cleanup_failed',
   'publication_rejected',
   'fetch_failed',
   'provider_replaced',
-  'result_too_large'
+  'result_too_large',
+  'route_unavailable',
+  'publication_unavailable',
+  'supervisor_stopped',
+  'probe_cancelled',
+  'probe_deadline',
+  'probe_failed'
 ];
 
 it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %s', (lang: Lang) => {
@@ -30,4 +35,10 @@ it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %
 it('falls back to the backend message for a code it does not know', () => {
   const t: Translator = (key, params) => translate('en', key, params);
   expect(backendMessage('adapter_specific', 'Something specific', t)).toBe(t('ui.backendMessage', {message: 'Something specific'}));
+});
+
+it('shows an unknown bare code as it is', () => {
+  const t: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(backendCode('probe_failed', t)).toBe(t('ui.backend.probeFailed'));
+  expect(backendCode('adapter_specific', t)).toBe('adapter_specific');
 });

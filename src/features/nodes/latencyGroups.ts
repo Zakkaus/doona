@@ -41,6 +41,12 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || (a.label ?? '').localeCompare(b.label ?? ''));
 }
 
+// Which averages the backend reports. honk sends neither, so a chart names only the ones some row has.
+export function latencyAverages(groups: LatencyGroup[]) {
+  const rows = groups.flatMap(group => group.rows);
+  return {moving: rows.some(row => row.moving !== null), avg10: rows.some(row => row.avg10 !== null)};
+}
+
 // The axis end: past most of the values rather than the single slowest, so one outlier does not push every other
 // node to the left edge; values beyond it are drawn on the edge with their number.
 export function latencyMax(groups: LatencyGroup[]): number {

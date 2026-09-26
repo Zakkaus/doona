@@ -1,5 +1,6 @@
 import type {ApiEvent, ConnectionList, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
+import {backendCode} from '../../i18n/backend';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {
   eventKindLabels,
@@ -107,7 +108,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
       tcp: healthMillis(health),
       alive: health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined,
       unavailable: health?.state === 'unavailable',
-      healthError: health?.error ?? undefined
+      healthError: health?.error ? backendCode(health.error, t) : undefined
     };
   });
   const node = options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => !isBuiltinOutbound(n.name)) ?? options[0];
