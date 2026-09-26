@@ -20,15 +20,19 @@
   d.dataset.flavour = parts[1];
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
   d.lang = lang === 'zh-CN' ? 'zh-CN' : lang === 'en' ? 'en-US' : 'zh-TW';
-  // The direction as textDirection in src/i18n/direction.ts decides it: the locale's text info, else its likely script.
+  // The direction as pageDirection in src/i18n/direction.ts decides it: right to left in the mirrored layout, else the
+  // locale's text info, else its likely script.
+  var mirrored = read('doona-mirror') === 'on';
   var rtlScripts = '__RTL_SCRIPTS__';
-  var dir = 'ltr';
-  try {
-    var tag = new Intl.Locale(d.lang);
-    var info = tag.getTextInfo ? tag.getTextInfo() : tag.textInfo;
-    if (info && info.direction ? info.direction === 'rtl' : rtlScripts.includes(tag.maximize().script)) dir = 'rtl';
-  } catch {
-    // Left to right.
-  }
+  var dir = mirrored ? 'rtl' : 'ltr';
+  if (!mirrored)
+    try {
+      var tag = new Intl.Locale(d.lang);
+      var info = tag.getTextInfo ? tag.getTextInfo() : tag.textInfo;
+      if (info && info.direction ? info.direction === 'rtl' : rtlScripts.includes(tag.maximize().script)) dir = 'rtl';
+    } catch {
+      // Left to right.
+    }
   d.dir = dir;
+  if (mirrored) d.dataset.mirror = '';
 })();

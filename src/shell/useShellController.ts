@@ -5,7 +5,7 @@ import {consumeProfileReadError} from '../api/profiles';
 import {storageKeys} from '../api/storage';
 import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
-import {LANGS, LOCALE, loadLanguage, textDirection, translate, useT, type Lang} from '../i18n';
+import {LANGS, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';
 import {warmAllPages} from './registry';
@@ -20,11 +20,14 @@ export function useShellController(initial: Lang) {
   const [lang, setLang] = useState<Lang>(initial);
   const shown = useRef(initial);
   const wanted = useRef(initial);
-  useLayoutEffect(() => {
-    document.documentElement.lang = LOCALE[lang];
-    document.documentElement.dir = textDirection(LOCALE[lang]);
-  }, [lang]);
   const ap = useAppearance(settings);
+  const {mirrored} = ap;
+  useLayoutEffect(() => {
+    const d = document.documentElement;
+    d.lang = LOCALE[lang];
+    d.dir = pageDirection(LOCALE[lang], mirrored);
+    d.toggleAttribute('data-mirror', mirrored);
+  }, [lang, mirrored]);
   const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
   const [searchOpen, setSearchOpen] = useState(false);
   // The page keeps its language until the new catalogue has loaded; of several quick choices, the last one wins.

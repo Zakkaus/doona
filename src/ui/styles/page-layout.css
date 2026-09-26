@@ -86,6 +86,25 @@
   direction: ltr;
   unicode-bidi: isolate;
 }
+/* The mirrored layout runs the page right to left while the language still reads left to right. Each box takes the
+   direction of its text from the text, so "Rules (3)", a time with its AM or PM and a count in a Chinese phrase keep their
+   order and punctuation. unicode-bidi is not inherited, so the rule names every box; :where() keeps it below the rules
+   above. start and end would then follow each line's text, so the mirrored start is set as the right, which the page
+   inherits, and a box that aligns to its start or end names the side; the source editor stays left aligned, as its code
+   runs left to right in either layout. Chrome computes match-parent as inherit, so it
+   cannot turn start into the right. */
+:root[data-mirror] {
+  text-align: right;
+}
+:where(:root[data-mirror] *) {
+  unicode-bidi: plaintext;
+}
+:root[data-mirror] :is(input, textarea, .rp-tree-tile, .rp-table [role='columnheader'], .rp-node, .rp-search, .rp-disclosure-trigger, .rp-drill-back) {
+  text-align: right;
+}
+:root[data-mirror] :is(.rp-table .end, .rp-markerplot .row .value, .rp-donut .r .p, .cm-editor) {
+  text-align: left;
+}
 .rp-dae-comment {
   color: var(--rp-code-comment);
 }

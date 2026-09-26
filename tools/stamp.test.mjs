@@ -3,7 +3,7 @@ import {runInNewContext} from 'node:vm';
 import {expect, it} from 'vitest';
 import {DEFAULT_PALETTE, palettes} from '../src/shell/palettes';
 import {LANGS, LOCALE} from '../src/i18n';
-import {rtlScripts, textDirection} from '../src/i18n/direction';
+import {pageDirection, rtlScripts, textDirection} from '../src/i18n/direction';
 
 // The same injection vite.config.ts makes at build.
 const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8')
@@ -60,4 +60,19 @@ it('reads the direction from the text info, or else from the likely script', () 
   expect(prepaint({}, false, engine(undefined, 'Hebr')).dir).toBe('rtl');
   expect(prepaint({}, false, engine(undefined, 'Hant')).dir).toBe('ltr');
   expect(prepaint({}, false, {}).dir).toBe('ltr');
+});
+
+it('stamps the mirrored layout right to left in every language before first paint', () => {
+  for (const [lang] of LANGS) {
+    const html = prepaint({'doona-lang': lang, 'doona-mirror': 'on'}, false);
+    expect(html).toMatchObject({lang: LOCALE[lang], dir: pageDirection(LOCALE[lang], true)});
+    expect(html.dataset.mirror).toBe('');
+  }
+  // Even where the engine's Intl would fail.
+  expect(prepaint({'doona-mirror': 'on'}, false, {}).dir).toBe('rtl');
+  for (const value of ['off', 'true', '', null]) {
+    const html = prepaint({'doona-lang': 'en', 'doona-mirror': value}, false);
+    expect(html.dir).toBe('ltr');
+    expect(html.dataset).not.toHaveProperty('mirror');
+  }
 });
