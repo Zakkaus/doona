@@ -73,6 +73,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
             label: t('ui.state'),
             minWidth: 96,
             grow: 0,
+            drop: 7,
             render: row =>
               row.status ? (
                 <Light small tone={row.tone}>
