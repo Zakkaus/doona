@@ -969,6 +969,8 @@ export const messages = {
   'settings.timeout': 'Connection test timed out after 5 seconds. Check the backend URL and network.',
   'settings.appearance': 'Appearance',
   'settings.scheme': 'Color scheme',
+  'settings.mirror': 'Mirrored layout',
+  'settings.mirrorHelp': 'Flips the layout left to right for left-handed use.',
   'settings.runtime': 'Backend options',
   'settings.runtimeNote':
     'Changes apply immediately and are not written to the configuration file. A restart, or any change that reloads the configuration, restores the configured values; switching the outbound mode, editing nodes, groups or rules, and updating geodata all reload it.',

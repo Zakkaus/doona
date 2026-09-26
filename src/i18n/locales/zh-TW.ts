@@ -945,6 +945,8 @@ export const messages = {
   'settings.timeout': '連線測試逾時（5 秒）：請確認後端網址與網路。',
   'settings.appearance': '外觀',
   'settings.scheme': '明暗模式',
+  'settings.mirror': '鏡像版面',
+  'settings.mirrorHelp': '將版面左右翻轉，方便左手操作。',
   'settings.runtime': '後端選項',
   'settings.runtimeNote':
     '變更立即生效，不寫回組態檔。重新啟動或任何會重載組態的變更，都會恢復組態檔中的值；切換出站模式、編輯節點、群組或規則、更新地理資料都會重載組態。',

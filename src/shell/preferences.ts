@@ -16,10 +16,11 @@ export type Settings = {
   scheme: Scheme;
   palette: PaletteId;
   wordmark: Wordmark;
+  mirrored: boolean;
 };
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
-export function writeSetting(key: 'lang' | 'scheme' | 'palette' | 'wordmark', value: string, storage?: StoragePort) {
+export function writeSetting(key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror', value: string, storage?: StoragePort) {
   try {
     (storage ?? localStorage).setItem(storageKeys[key], value);
   } catch {}
@@ -44,7 +45,8 @@ export function readSettings(storage?: StoragePort): Settings {
     lang: readLang(storage),
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
     palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
-    wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient'
+    wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient',
+    mirrored: read(storageKeys.mirror) === 'on'
   };
 }
 
@@ -61,6 +63,8 @@ type Appearance = {
   pickPalette: (value: PaletteId) => void;
   wordmark: Wordmark;
   pickWordmark: (value: Wordmark) => void;
+  mirrored: boolean;
+  pickMirrored: (value: boolean) => void;
 };
 export const SettingsContext = createContext<{
   lang: Lang;

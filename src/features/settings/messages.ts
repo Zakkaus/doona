@@ -39,6 +39,8 @@ export const messages = defineMessages({
     'settings.timeout': '連線測試逾時（5 秒）：請確認後端網址與網路。',
     'settings.appearance': '外觀',
     'settings.scheme': '明暗模式',
+    'settings.mirror': '鏡像版面',
+    'settings.mirrorHelp': '將版面左右翻轉，方便左手操作。',
     'settings.runtime': '後端選項',
     'settings.runtimeNote':
       '變更立即生效，不寫回組態檔。重新啟動或任何會重載組態的變更，都會恢復組態檔中的值；切換出站模式、編輯節點、群組或規則、更新地理資料都會重載組態。',
@@ -176,6 +178,8 @@ export const messages = defineMessages({
     'settings.timeout': '连接测试超时（5 秒）：请检查后端网址与网络。',
     'settings.appearance': '外观',
     'settings.scheme': '明暗模式',
+    'settings.mirror': '镜像布局',
+    'settings.mirrorHelp': '将布局左右翻转，方便左手操作。',
     'settings.runtime': '后端选项',
     'settings.runtimeNote':
       '更改立即生效，不写回配置文件。重启或任何会重载配置的更改，都会恢复配置文件中的值；切换出站模式、编辑节点、组或规则、更新地理数据都会重载配置。',
@@ -313,6 +317,8 @@ export const messages = defineMessages({
     'settings.timeout': 'Connection test timed out after 5 seconds. Check the backend URL and network.',
     'settings.appearance': 'Appearance',
     'settings.scheme': 'Color scheme',
+    'settings.mirror': 'Mirrored layout',
+    'settings.mirrorHelp': 'Flips the layout left to right for left-handed use.',
     'settings.runtime': 'Backend options',
     'settings.runtimeNote':
       'Changes apply immediately and are not written to the configuration file. A restart, or any change that reloads the configuration, restores the configured values; switching the outbound mode, editing nodes, groups or rules, and updating geodata all reload it.',

@@ -91,16 +91,18 @@ export function Switch({
   isSelected,
   onChange,
   isDisabled,
-  'aria-label': label
+  'aria-label': label,
+  'aria-describedby': describedBy
 }: {
   children?: ReactNode;
   isSelected: boolean;
   onChange: (v: boolean) => void;
   isDisabled?: boolean;
   'aria-label'?: string;
+  'aria-describedby'?: string;
 }) {
   return (
-    <RSwitch className="rp-switch" isSelected={isSelected} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+    <RSwitch className="rp-switch" isSelected={isSelected} onChange={onChange} isDisabled={isDisabled} aria-label={label} aria-describedby={describedBy}>
       <span className="track" />
       {children}
     </RSwitch>

@@ -946,6 +946,8 @@ export const messages = {
   'settings.timeout': '连接测试超时（5 秒）：请检查后端网址与网络。',
   'settings.appearance': '外观',
   'settings.scheme': '明暗模式',
+  'settings.mirror': '镜像布局',
+  'settings.mirrorHelp': '将布局左右翻转，方便左手操作。',
   'settings.runtime': '后端选项',
   'settings.runtimeNote':
     '更改立即生效，不写回配置文件。重启或任何会重载配置的更改，都会恢复配置文件中的值；切换出站模式、编辑节点、组或规则、更新地理数据都会重载配置。',
