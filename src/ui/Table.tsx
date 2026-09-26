@@ -151,7 +151,8 @@ export function DataTable<T extends {id: string}>({
   getTextValue,
   stream,
   fit,
-  tree
+  tree,
+  rowDetail
 }: {
   label: string;
   cols: TableColumn<T>[];
@@ -176,6 +177,9 @@ export function DataTable<T extends {id: string}>({
   // Tree mode (connections): `rows` may hold groups, which stay expanded and cannot be selected. The first visible
   // column heads each row and, once `grouped`, holds the tree. Home and End move between rows, never within one.
   tree?: {grouped: boolean};
+  // A row press opens a detail that shows every column's value in full, so a tap on cut text there opens the detail
+  // rather than a tip (TextTooltip).
+  rowDetail?: boolean;
 }) {
   const t = useT();
   // One set per selected key, so the table neither recomputes its selection nor re-renders every row.
@@ -259,6 +263,7 @@ export function DataTable<T extends {id: string}>({
         ref.current = element;
       }}
       className="rp-table"
+      data-row-detail={rowDetail ? '' : undefined}
       style={{height: fitted}}
       // RAC scopes Home/End to cells unless the row itself has focus. The container passes no key handlers, so a
       // tree renders its own div to catch the key first.

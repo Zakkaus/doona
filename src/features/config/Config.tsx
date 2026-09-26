@@ -285,6 +285,7 @@ function ValidateTab(props: ValidateTabProps) {
       <Segmented label={t('config.level')} value={level} onChange={setLevel} items={levels} />
       <DataTable
         label={t('config.diagnostics')}
+        rowDetail
         rows={shown}
         height={360}
         selected={selected}

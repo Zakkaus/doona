@@ -228,6 +228,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
         <DataTable
           label={t('dns.log')}
+          rowDetail
           height={520}
           rows={vm.rows}
           selected={vm.selected}
