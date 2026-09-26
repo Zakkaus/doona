@@ -169,7 +169,7 @@ pnpm e2e                         # rebuild, then test against the mock at the ro
 pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
 ```
 
-`pnpm dev` serves the mock on Vite's dev server. The live-backend test run, the performance and screenshot tools, the source layout and the contract pin are described in the [guide](docs/guide.md#development); see [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+`pnpm dev` serves the mock on Vite's dev server. The live-backend test run, the performance and screenshot tools, the source layout and the contract pin are described in the [guide](docs/guide.md#development); see [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Its [Translations](CONTRIBUTING.md#translations) section covers correcting a translation and proposing a language.
 
 ## Support
 
