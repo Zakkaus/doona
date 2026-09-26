@@ -124,11 +124,12 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
-// Suppress routine eviction and sampling gaps; report lost history or recording-scope changes.
+// Eviction, sampling and buffer overflow are routine: the backend drops records by design under load, so they stay
+// off the home card. A recording-scope change is still reported.
 export function routineGap(event: ApiEvent): boolean {
   if (event.event !== 'flow.gap') return false;
   const {reason} = event.data;
-  return reason === 'evicted' || reason === 'sampled';
+  return reason === 'evicted' || reason === 'sampled' || reason === 'buffer_overflow';
 }
 const gapReasons: Record<string, Key> = {
   buffer_overflow: 'event.gap.overflow',
