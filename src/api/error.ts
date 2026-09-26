@@ -82,6 +82,11 @@ export function errorText(error: unknown, t: Translator): string {
   return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
 }
 
+// The request note errorText appends, as every language words ui.requestNote: request_id in half- or full-width
+// brackets. A toast drops it; the places that stay on screen keep it for a bug report.
+const REQUEST_NOTE = /\s*[(（]request_id[:：][^)）]*[)）]/g;
+export const withoutRequestNote = (text: string) => text.replace(REQUEST_NOTE, '');
+
 // What to tell the person about a failed action, wrapped in that action's failure wording. An operation whose outcome
 // is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is reported on its own
 // too, since the action's wording would say the write failed.

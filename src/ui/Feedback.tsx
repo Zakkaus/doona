@@ -17,7 +17,7 @@ import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
 import ChevronDown from './icons/ChevronDown';
 import {useT, type Translator} from '../i18n';
-import {errorText, failureNotice} from '../api/error';
+import {errorText, failureNotice, withoutRequestNote} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 import {escapeLayers} from './hooks';
@@ -149,7 +149,11 @@ type ToastMessage = {kind: ToastKind; text: string; detail?: string; action?: To
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
 // A repeated message replaces its earlier copy at the front instead of stacking behind it.
 const queued = new Map<string, string>();
-export const toast = (kind: ToastKind, text: string, {detail, action}: ToastOptions = {}) => {
+// A toast leaves the request id out of its words and logs the failure with it instead, where a bug report can find it.
+export const toast = (kind: ToastKind, fullText: string, {detail: fullDetail, action}: ToastOptions = {}) => {
+  const text = withoutRequestNote(fullText);
+  const detail = fullDetail && withoutRequestNote(fullDetail);
+  if (text !== fullText || detail !== fullDetail) console.warn(fullDetail ? `${fullText}\n${fullDetail}` : fullText);
   const id = [kind, text, detail ?? ''].join('\n');
   const earlier = queued.get(id);
   if (earlier) toasts.close(earlier);
