@@ -106,6 +106,21 @@
   align-content: space-between;
   flex: 1 1 auto;
 }
+/* Rows of a label and a text: the labels share one column, so every text starts at the same edge and wraps under
+   itself however wide its row's label is. */
+.rp-list-labeled {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  column-gap: 12px;
+}
+.rp-list-labeled > .rp-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  /* The label sits on a wrapped summary's first line, not between its lines. */
+  align-items: first baseline;
+}
 .rp-capabilities {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
