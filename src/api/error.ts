@@ -68,13 +68,15 @@ export class LocalError extends Error {
   }
 }
 
+// The backend's part of a local failure, in its words when it sent a known code.
+const localDetail = (error: LocalError, t: Translator) =>
+  error.detail ? (error.code ? backendMessage(error.code, error.detail, t, error.details) : error.detail) : undefined;
+
 // The words for a failure: doona's own errors in the current language, the backend's message as it sent it.
 export function errorText(error: unknown, t: Translator): string {
   if (error instanceof LocalError) {
-    const text = t(error.key);
-    return error.detail
-      ? t('ui.valuePair', {label: text, value: error.code ? backendMessage(error.code, error.detail, t, error.details) : error.detail})
-      : text;
+    const detail = localDetail(error, t);
+    return detail ? t('ui.valuePair', {label: t(error.key), value: detail}) : t(error.key);
   }
   if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
   const message =
@@ -87,11 +89,15 @@ export function errorText(error: unknown, t: Translator): string {
 const REQUEST_NOTE = /\s*[(（]request_id[:：][^)）]*[)）]/g;
 export const withoutRequestNote = (text: string) => text.replace(REQUEST_NOTE, '');
 
-// What to tell the person about a failed action, wrapped in that action's failure wording. An operation whose outcome
-// is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is reported on its own
-// too, since the action's wording would say the write failed.
-export function failureNotice(error: unknown, t: Translator, wrap: (error: string) => string) {
-  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral' as const, text: t(error.key)};
-  if (error instanceof LocalError && error.key === 'ui.writtenNotApplied') return {kind: 'negative' as const, text: errorText(error, t)};
-  return {kind: 'negative' as const, text: wrap(errorText(error, t))};
+// What to tell the person about a failed action: the action's summary, with the error as its detail. An operation
+// whose outcome is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is
+// reported under its own summary too, since the action's would say the write failed.
+export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string};
+export function failureNotice(error: unknown, t: Translator, summary: string): Notice {
+  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key)};
+  if (error instanceof LocalError && error.key === 'ui.writtenNotApplied') return {kind: 'negative', text: t(error.key), detail: localDetail(error, t)};
+  return {kind: 'negative', text: summary, detail: errorText(error, t)};
 }
+
+// A notice as one line, for a place that shows it inline rather than as a toast.
+export const noticeText = ({text, detail}: Notice, t: Translator) => (detail ? t('ui.valuePair', {label: text, value: detail}) : text);

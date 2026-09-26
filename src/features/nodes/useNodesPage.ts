@@ -15,7 +15,7 @@ import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
-import {errorText} from '../../api/error';
+import {errorText, noticeText} from '../../api/error';
 import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 
@@ -75,7 +75,7 @@ export function useNodesPage({go, query}: PageProps) {
       void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
         if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}));
         const problem = editProblem(result, t);
-        if (problem) toast(problem.kind, problem.text);
+        if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
       });
     },
     [apply, t]
@@ -113,8 +113,7 @@ export function useNodesPage({go, query}: PageProps) {
                 if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}));
                 else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
               },
-              error =>
-                toastFailure(error, t, error => t('nodes.addedRefreshFailed', {name, error}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})
+              error => toastFailure(error, t, t('nodes.addedRefreshFailed', {name}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})
             );
           fetchAdded();
           return;
@@ -134,7 +133,7 @@ export function useNodesPage({go, query}: PageProps) {
           ])
         );
         const problem = editProblem(result, t);
-        if (problem) refuse(problem.text);
+        if (problem) refuse(noticeText(problem, t));
         if (result.kind !== 'ok') return;
         toast('positive', t('nodes.joined', {name: node, group}));
       } else if (dialog.kind === 'removeProvider') {

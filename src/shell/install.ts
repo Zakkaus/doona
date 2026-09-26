@@ -52,7 +52,7 @@ export function useInstallOffer(): (() => Promise<boolean>) | null {
       await offer.prompt();
       return (await offer.userChoice).outcome === 'accepted';
     } catch (error) {
-      toast('negative', t('settings.installFailed', {error: errorText(error, t)}));
+      toast('negative', t('settings.installFailed'), {detail: errorText(error, t)});
       return false;
     }
   };

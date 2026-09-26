@@ -39,7 +39,7 @@ export function useProviderTable(input: ProviderTableInput) {
           if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name: item.name}));
           else toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
         },
-        error => toastFailure(error, t, error => t('nodes.refreshFailed', {name: item.name, error}))
+        error => toastFailure(error, t, t('nodes.refreshFailed', {name: item.name}))
       ),
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
     remove: () => {
@@ -53,7 +53,7 @@ export function useProviderTable(input: ProviderTableInput) {
         .then(result => {
           if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
           const problem = editProblem(result, t);
-          if (problem) toast(problem.kind, problem.text);
+          if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
         });
     }
   }));

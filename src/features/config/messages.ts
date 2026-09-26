@@ -131,7 +131,7 @@ export const messages = defineMessages({
     'config.level.error': '錯誤',
     'config.level.warning': '警告',
     'config.level.info': '提示',
-    'config.previewFailed': '無法產生組態：{error}'
+    'config.previewFailed': '無法產生組態'
   },
   'zh-CN': {
     'config.tabModules': '模块',
@@ -263,7 +263,7 @@ export const messages = defineMessages({
     'config.level.error': '错误',
     'config.level.warning': '警告',
     'config.level.info': '提示',
-    'config.previewFailed': '无法生成配置：{error}'
+    'config.previewFailed': '无法生成配置'
   },
   en: {
     'config.tabModules': 'Modules',
@@ -406,6 +406,6 @@ export const messages = defineMessages({
     'config.level.error': 'Error',
     'config.level.warning': 'Warning',
     'config.level.info': 'Info',
-    'config.previewFailed': 'Could not generate the configuration: {error}'
+    'config.previewFailed': 'Could not generate the configuration'
   }
 });

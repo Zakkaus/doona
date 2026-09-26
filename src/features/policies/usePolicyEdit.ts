@@ -5,7 +5,7 @@ import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
-import {errorText} from '../../api/error';
+import {errorText, noticeText} from '../../api/error';
 import {groupEditSafe} from '../shared/policyText';
 export type PolicyEditView = {
   title: string;
@@ -57,8 +57,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
         const problem = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
         if (problem) {
-          if (open) refuse(problem.text);
-          else toast(problem.kind, problem.text);
+          if (open) refuse(noticeText(problem, t));
+          else toast(problem.kind, problem.text, {detail: problem.detail});
         }
       });
   };

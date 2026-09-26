@@ -121,10 +121,8 @@ export function useConnectionsPage({go, query}: PageProps) {
       if (new URLSearchParams(latest.current).get('id') === id) select(null);
       toast('positive', t('conn.closed', {name: model.detail.title}));
     } catch (error) {
-      toast(
-        'negative',
-        error instanceof ApiError && error.code === 'state_conflict' ? t('conn.notClosable') : t('conn.closeFailed', {error: errorText(error, t)})
-      );
+      if (error instanceof ApiError && error.code === 'state_conflict') toast('negative', t('conn.notClosable'));
+      else toast('negative', t('conn.closeFailed'), {detail: errorText(error, t)});
     }
   };
   const closeAll = async () => {
@@ -135,7 +133,7 @@ export function useConnectionsPage({go, query}: PageProps) {
       select(null);
       toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
     } catch (error) {
-      return t('conn.closeFailed', {error: errorText(error, t)});
+      return t('ui.valuePair', {label: t('conn.closeFailed'), value: errorText(error, t)});
     }
   };
   // Picking the chosen device or rule again lifts it, as does an empty value (the menu's "all" entry).

@@ -68,7 +68,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const apply = async () => {
     if (busy || !valid) return;
     if (preview.error) {
-      toast('negative', t('config.previewFailed', {error: errorText(preview.error, t)}));
+      toast('negative', t('config.previewFailed'), {detail: errorText(preview.error, t)});
       return;
     }
     const result = await editor.apply(origin, text);

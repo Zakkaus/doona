@@ -50,15 +50,12 @@ export function useBackendActions() {
           // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
           if (done === undefined) return;
           const counts = {n: done, total: subscriptions.length};
-          toast(
-            done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
-            failures.length
-              ? t('settings.refreshedAllFailed', {...counts, failed: failures.length, error: errorText(failures[0], t)})
-              : t('settings.refreshedAll', counts)
-          );
+          const kind = done === subscriptions.length ? 'positive' : done ? 'info' : 'negative';
+          if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), {detail: errorText(failures[0], t)});
+          else toast(kind, t('settings.refreshedAll', counts));
           if (degraded) toast('info', t('settings.refreshedDegraded'));
         },
-        error => toast('negative', t('settings.refreshAllFailed', {error: errorText(error, t)}))
+        error => toast('negative', t('settings.refreshAllFailed'), {detail: errorText(error, t)})
       );
   };
   const closeAll = () =>
@@ -66,7 +63,7 @@ export function useBackendActions() {
       tally => {
         if (tally) toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
       },
-      error => t('conn.closeFailed', {error: errorText(error, t)})
+      error => t('ui.valuePair', {label: t('conn.closeFailed'), value: errorText(error, t)})
     );
   return {
     runtimeError: runtime.error,
@@ -120,7 +117,7 @@ export function useBackendActions() {
         result => {
           if (result) toast('positive', t('settings.geodataUpdated'));
         },
-        error => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
+        error => toast('negative', t('settings.geodataFailed'), {detail: errorText(error, t)})
       )
   };
 }

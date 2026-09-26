@@ -40,7 +40,7 @@ function useConfigEditorController(refetch: () => void) {
     if (diagnostics) {
       const restart = restartRequired(diagnostics);
       toast('negative', restart ? t('config.writeRestart', {n: restart}) : t('ui.writeInvalid', {n: diagnostics.filter(d => d.level === 'error').length}));
-    } else toastFailure(editor.error, t, error => t('ui.writeFailed', {error}));
+    } else toastFailure(editor.error, t, t('ui.writeFailed'));
   }, [editor.error, diagnostics, t]);
   return {...editor, diagnostics};
 }

@@ -25,7 +25,7 @@ export function useSignOut() {
       } catch (error) {
         // The session stays usable on the backend, so it is kept here too rather than silently orphaned.
         setBusy(false);
-        toast('negative', t('settings.signOutFailed', {error: errorText(error, t)}));
+        toast('negative', t('settings.signOutFailed'), {detail: errorText(error, t)});
         return;
       }
       clearSession();

@@ -72,7 +72,7 @@ export function useRuleList({go, query}: PageProps) {
     rules.refetch();
   };
   const editor = useConfigEditor(retry);
-  const report = useEffectEvent((error: Error) => toastFailure(error, t, error => t('ui.writeFailed', {error})));
+  const report = useEffectEvent((error: Error) => toastFailure(error, t, t('ui.writeFailed')));
   useEffect(() => {
     if (editor.error) report(editor.error);
   }, [editor.error]);

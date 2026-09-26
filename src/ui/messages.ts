@@ -98,7 +98,7 @@ export const messages = defineMessages({
     'ui.refreshed': '資料已重新整理。',
     'ui.newBuild': '新版本已就緒，重新載入頁面後生效。',
     'ui.reloadPage': '重新載入',
-    'ui.refreshFailed': '無法重新整理資料：{error}',
+    'ui.refreshFailed': '無法重新整理資料',
     'ui.saved': '設定已儲存。',
     'ui.state': '狀態',
     'ui.actions': '操作',
@@ -156,7 +156,7 @@ export const messages = defineMessages({
     'toast.showAllCount': '顯示全部（{n}）',
     'ui.device': '裝置',
     'ui.writeInvalid': '驗證發現 {n} 個錯誤，未寫入',
-    'ui.writeFailed': '無法寫入組態：{error}'
+    'ui.writeFailed': '無法寫入組態'
   },
   'zh-CN': {
     'ui.separator': '，',
@@ -255,7 +255,7 @@ export const messages = defineMessages({
     'ui.refreshed': '数据已刷新。',
     'ui.newBuild': '新版本已就绪，重新加载页面后生效。',
     'ui.reloadPage': '重新加载',
-    'ui.refreshFailed': '无法刷新数据：{error}',
+    'ui.refreshFailed': '无法刷新数据',
     'ui.saved': '设置已保存。',
     'ui.state': '状态',
     'ui.actions': '操作',
@@ -313,7 +313,7 @@ export const messages = defineMessages({
     'toast.showAllCount': '显示全部（{n}）',
     'ui.device': '设备',
     'ui.writeInvalid': '校验发现 {n} 个错误，未写入',
-    'ui.writeFailed': '无法写入配置：{error}'
+    'ui.writeFailed': '无法写入配置'
   },
   en: {
     'ui.separator': ', ',
@@ -413,7 +413,7 @@ export const messages = defineMessages({
     'ui.refreshed': 'Data refreshed.',
     'ui.newBuild': 'A new version is ready; reload the page to use it.',
     'ui.reloadPage': 'Reload',
-    'ui.refreshFailed': 'Could not refresh data: {error}',
+    'ui.refreshFailed': 'Could not refresh data',
     'ui.saved': 'Settings saved.',
     'ui.state': 'State',
     'ui.actions': 'Actions',
@@ -472,6 +472,6 @@ export const messages = defineMessages({
     'toast.showAllCount': 'Show all ({n})',
     'ui.device': 'Device',
     'ui.writeInvalid': {one: 'Validation found {n} error; nothing written', other: 'Validation found {n} errors; nothing written'},
-    'ui.writeFailed': 'Could not write the configuration: {error}'
+    'ui.writeFailed': 'Could not write the configuration'
   }
 });

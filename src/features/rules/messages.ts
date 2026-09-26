@@ -100,7 +100,7 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': '沒有路由規則',
     'rule.dnsHeading': 'DNS：{name}',
     'rule.droppedUnknown': '遺失記錄數未知',
-    'rule.traceFailed': '無法執行追蹤：{error}'
+    'rule.traceFailed': '無法執行追蹤'
   },
   'zh-CN': {
     'rule.dictionaryCaption': '{n} 条规则，代次 {generation}',
@@ -201,7 +201,7 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': '暂无路由规则',
     'rule.dnsHeading': 'DNS：{name}',
     'rule.droppedUnknown': '丢失记录数未知',
-    'rule.traceFailed': '无法执行追踪：{error}'
+    'rule.traceFailed': '无法执行追踪'
   },
   en: {
     'rule.dictionaryCaption': {one: '{n} rule, generation {generation}', other: '{n} rules, generation {generation}'},
@@ -307,6 +307,6 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': 'No routing rules',
     'rule.dnsHeading': 'DNS: {name}',
     'rule.droppedUnknown': 'Dropped record count unknown',
-    'rule.traceFailed': 'Could not run the trace: {error}'
+    'rule.traceFailed': 'Could not run the trace'
   }
 });

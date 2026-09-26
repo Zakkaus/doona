@@ -168,10 +168,11 @@ export const toast = (kind: ToastKind, fullText: string, {detail: fullDetail, ac
   );
   queued.set(id, key);
 };
-// A failed action's toast; `wrap` words the failure. An unknown operation outcome is shown on its own, neutrally.
-export const toastFailure = (error: unknown, t: Translator, wrap: (error: string) => string, action?: ToastAction) => {
-  const notice = failureNotice(error, t, wrap);
-  toast(notice.kind, notice.text, {action});
+// A failed action's toast: its summary, with the error as the detail. An unknown operation outcome is shown on its own,
+// neutrally.
+export const toastFailure = (error: unknown, t: Translator, summary: string, action?: ToastAction) => {
+  const notice = failureNotice(error, t, summary);
+  toast(notice.kind, notice.text, {detail: notice.detail, action});
 };
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
