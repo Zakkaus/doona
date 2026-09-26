@@ -239,6 +239,33 @@ export function connectionsView(
     visibility: data && data.visibility !== 'full' ? t(data.visibility === 'none' ? 'conn.visibilityNone' : 'conn.visibilityPartial') : null
   };
 }
+// A phone folds the secondary filters into one menu: a row per filter showing its choice, each opening that filter's
+// choices, and each with an entry that lifts it. The count of filters in force labels the menu's button.
+export function filterMenu(
+  lists: ReturnType<typeof connectionsView>,
+  filters: {network: string; out: string; src: string | undefined; rule: string},
+  t: LabelFn
+) {
+  const [devices, rules] = lists.picks;
+  const one = (title: string, items: Array<{id: string; label: string; desc?: string}>, value: string) => ({
+    label: title,
+    sections: [{title, items, value}]
+  });
+  return {
+    active: [filters.network !== 'all', filters.out !== 'all', !!filters.src, filters.rule !== 'all'].filter(Boolean).length,
+    submenus: [
+      one(
+        t('ui.network'),
+        lists.networks.map(([id, label]) => ({id, label})),
+        filters.network
+      ),
+      one(t('ui.outbound'), lists.outbounds, filters.out),
+      one(devices.title, [{id: tagId('src', ''), label: t('conn.allDevices')}, ...devices.items], devices.value),
+      one(rules.title, [{id: tagId('rule', 'all'), label: t('conn.allRules')}, ...rules.items], rules.value)
+    ]
+  };
+}
+
 export function connectionDetail(
   current: (Connection & {network: string}) | undefined,
   locale: string,
