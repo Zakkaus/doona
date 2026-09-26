@@ -1,9 +1,10 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
+import {normalizeResourceKey} from '../api/inflight';
 import {capabilities} from '../api/mock/fixtures';
-import {eventStatus, historyLost, subscribeEvents} from './events';
-import {watchResource} from './resourceCore';
+import {eventStatus, historyLost, reopenEvents, subscribeEvents} from './events';
+import {refetchResource, watchResource} from './resourceCore';
 import type {ApiEvent, EventOptions} from '../api/model';
 
 const disposers: Array<() => void> = [];
@@ -192,4 +193,62 @@ it('marks the ready event that follows an expired cursor as lost history, also f
   const late: ApiEvent[] = [];
   disposers.push(subscribeEvents(api, event => late.push(event), undefined, true));
   expect(late.map(historyLost)).toEqual([false, true, true, false]);
+});
+
+it('clears a recovered capabilities error when events are unavailable', async () => {
+  const api = createMockApi();
+  const unavailable = structuredClone(capabilities);
+  unavailable.resources.events.available = false;
+  api.capabilities = vi
+    .fn()
+    .mockResolvedValueOnce(unavailable)
+    .mockRejectedValueOnce(new ApiError(500, 'internal', 'boom'))
+    .mockResolvedValue(structuredClone(unavailable));
+  api.subscribeEvents = vi.fn();
+  disposers.push(subscribeEvents(api, () => {}));
+  await vi.advanceTimersByTimeAsync(0);
+  void refetchResource(api, normalizeResourceKey(['capabilities']));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(eventStatus(api).error).toMatchObject({status: 500});
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(api.capabilities).toHaveBeenCalledTimes(3);
+  expect(eventStatus(api)).toMatchObject({available: false, error: null});
+});
+
+it('reopens a refused stream on retry after the capabilities are read again', async () => {
+  const api = createMockApi();
+  api.capabilities = vi.fn().mockResolvedValue(capabilities);
+  api.subscribeEvents = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(403, 'permission_denied', 'forbidden'))
+    .mockImplementation(({signal}: EventOptions) => new Promise(resolve => signal?.addEventListener('abort', resolve)));
+  disposers.push(subscribeEvents(api, () => {}));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(eventStatus(api).error).toMatchObject({status: 403});
+  await refetchResource(api, normalizeResourceKey(['capabilities']));
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  reopenEvents(api);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
+  expect(eventStatus(api).error).toBeNull();
+});
+
+it('keeps a stream refusal that follows a capabilities error once the capabilities recover', async () => {
+  const api = createMockApi();
+  api.capabilities = vi
+    .fn()
+    .mockResolvedValueOnce(structuredClone(capabilities))
+    .mockRejectedValueOnce(new ApiError(500, 'internal', 'boom'))
+    .mockResolvedValue(structuredClone(capabilities));
+  let refuse: (reason: Error) => void = () => {};
+  api.subscribeEvents = vi.fn(() => new Promise<void>((_, reject) => (refuse = reject)));
+  disposers.push(subscribeEvents(api, () => {}));
+  await vi.advanceTimersByTimeAsync(0);
+  void refetchResource(api, normalizeResourceKey(['capabilities']));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(eventStatus(api).error).toMatchObject({status: 500});
+  refuse(new ApiError(403, 'permission_denied', 'forbidden'));
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(api.capabilities).toHaveBeenCalledTimes(3);
+  expect(eventStatus(api).error).toMatchObject({status: 403});
 });

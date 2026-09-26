@@ -1,10 +1,12 @@
 import {useMemo, useState} from 'react';
-import {EVENT_FEED_LIMIT, historyLost, refetchAll, useCapabilities, useEventFeed} from '../../store';
+import {EVENT_FEED_LIMIT, historyLost, refetchAll, reopenEvents, useCapabilities, useEventFeed} from '../../store';
+import {getApi} from '../../api';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useLinked} from '../../ui/ui';
 import {eventsExport, eventsView} from './view';
 
 export function useEventsPage() {
+  const api = getApi();
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
@@ -23,7 +25,7 @@ export function useEventsPage() {
     setKind,
     cursor: feed.cursor,
     error: feed.error,
-    retry: () => void refetchAll(),
+    retry: () => void refetchAll().then(() => reopenEvents(api)),
     loading: !feed.error && !feed.connected && feed.available !== false && !feed.events.length,
     export: () => downloadFile(exportName('doona-events', 'json'), eventsExport(view.shown), 'application/json')
   };

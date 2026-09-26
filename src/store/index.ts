@@ -20,6 +20,6 @@ export {useFlows, useFlow, useRules, type FlowFilter} from './flows';
 export {smallerOnRefusal, queryTypes, useDnsLog, useDnsCacheUsage, useDnsControl, useDnsFlush} from './dns';
 export {useConfig, useConfigCreate, useConfigEditor} from './config';
 export {useLogFeed, useEventFeed, LOG_FEED_LIMIT} from './logs';
-export {historyLost, EVENT_FEED_LIMIT} from './events';
+export {historyLost, reopenEvents, EVENT_FEED_LIMIT} from './events';
 export {pendingRules, usePendingRules, type PendingRule, type PendingFailure} from './pendingRules';
 export {poll} from './cadence';

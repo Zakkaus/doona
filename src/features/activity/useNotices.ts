@@ -2,7 +2,7 @@ import {useMemo, useSyncExternalStore} from 'react';
 import {getApi} from '../../api';
 import type {Api} from '../../api/api';
 import type {ApiEvent} from '../../api/model';
-import {EVENT_FEED_LIMIT, refetchAll} from '../../store';
+import {EVENT_FEED_LIMIT, refetchAll, reopenEvents} from '../../store';
 import {useEvents} from '../../store/events';
 import {createFeed} from '../../store/feed';
 import {useT} from '../../i18n';
@@ -18,7 +18,8 @@ function noticeBuffer(api: Api) {
 
 export function useNotices() {
   const t = useT();
-  const buffer = noticeBuffer(getApi());
+  const api = getApi();
+  const buffer = noticeBuffer(api);
   const snapshot = useSyncExternalStore(buffer.subscribe, buffer.getSnapshot);
   const feed = useEvents(event => {
     if (interestingNotice(event)) buffer.append(event);
@@ -29,7 +30,7 @@ export function useNotices() {
     total: snapshot.records.length,
     error: feed.error,
     // A failed stream reopens once the capabilities are read again.
-    retry: () => void refetchAll(),
+    retry: () => void refetchAll().then(() => reopenEvents(api)),
     loading: !feed.error && feed.available === null,
     empty: t(feed.available === false ? 'event.unavailable' : 'act.noIssues')
   };
