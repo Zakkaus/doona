@@ -164,6 +164,12 @@ describe('native API conformance', () => {
     expect(failures(validateResponse({operationId: 'startReload', ...fixture}))).toEqual(['startReload.retry-after']);
   });
 
+  it('accepts a 204 without a body or Content-Type where the contract lists one', () => {
+    const headers = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'};
+    for (const operationId of ['closeConnection', 'logout']) expect(failures(validateResponse({operationId, status: 204, headers}))).toEqual([]);
+    expect(failures(validateResponse({operationId: 'closeConnection', status: 204, headers, body: {closed: 1}}))).toEqual(['closeConnection.body']);
+  });
+
   it('keeps UInt64 precision, rejects overflow and noncanonical strings, and validates calendar dates', () => {
     const fixture = example('/api/v1/runtime');
     fixture.body.traffic.bytes.upload = '18446744073709551615';

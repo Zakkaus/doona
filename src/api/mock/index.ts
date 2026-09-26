@@ -1,4 +1,5 @@
 import type {Api} from '../api';
+import type {OperationReader} from './lifecycle';
 import {capabilities as fullCapabilities, capabilitiesBase, capabilitiesM1} from './fixtures/capabilities';
 import {createConfiguration} from './configuration';
 import {createInventory} from './inventory';
@@ -7,7 +8,9 @@ import {createNetwork} from './network';
 import {createRuntime} from './runtime';
 import {createGeodataState} from './geodata';
 
-export function createMockApi(): Api {
+export type MockApi = Api & OperationReader;
+
+export function createMockApi(): MockApi {
   let count = 120;
   let big = false;
   // A busy backend for tools/perf.mjs: byte counters move on every poll and logs arrive every 20 ms.

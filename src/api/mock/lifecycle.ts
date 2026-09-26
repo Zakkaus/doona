@@ -18,7 +18,9 @@ import {found} from './common';
 import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
 
-type LifecycleApi = Pick<Api, 'operation' | 'pollOperation' | 'subscribeEvents' | 'subscribeLogs'>;
+// `operation` answers GET /operations/{id} for the e2e backend and the tests; doona itself only polls.
+export type OperationReader = {operation(id: string, signal?: AbortSignal): Promise<OperationState>};
+type LifecycleApi = Pick<Api, 'pollOperation' | 'subscribeEvents' | 'subscribeLogs'> & OperationReader;
 export interface MockLifecycle {
   api: LifecycleApi;
   enqueue<K extends OperationAccepted['kind']>(kind: K, finish: () => Extract<Operation, {kind: K; status: 'succeeded'}>['result']): OperationAccepted;

@@ -102,7 +102,6 @@ export interface Api {
   startReload(signal?: AbortSignal): Promise<OperationAccepted>;
   startSuspend(signal?: AbortSignal): Promise<OperationAccepted>;
   startResume(signal?: AbortSignal): Promise<OperationAccepted>;
-  operation(id: string, signal?: AbortSignal): Promise<OperationState>;
   pollOperation(accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState>;
   /** Resolves when the stream ends or the signal aborts; reconnects on its own until then. */
   subscribeEvents(options: EventOptions): Promise<void>;

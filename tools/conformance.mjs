@@ -88,8 +88,10 @@ export function validateResponse({operationId, status, headers, body, variant = 
   report('status', Boolean(listed), `HTTP ${status}${listed ? ' is listed' : ' is not listed'}`);
   const response = resolve(listed ?? (status === 202 ? contract.components.responses.OperationAccepted : contract.components.responses.ErrorResponseCommon));
   const streaming = status === 200 && Boolean(response.content?.['text/event-stream']);
+  // A listed response without content, such as a 204, has no body to type or validate.
+  const empty = Boolean(listed) && !response.content;
   const mediaType = streaming ? 'text/event-stream' : 'application/json';
-  report('content-type', headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() === mediaType, `Content-Type must be ${mediaType}`);
+  if (!empty) report('content-type', headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() === mediaType, `Content-Type must be ${mediaType}`);
   const requiredHeaders = {...response.headers};
   if (status === 202) Object.assign(requiredHeaders, resolve(contract.components.responses.OperationAccepted).headers, response.headers);
   for (const [name, definition] of Object.entries(requiredHeaders)) {
@@ -106,7 +108,8 @@ export function validateResponse({operationId, status, headers, body, variant = 
     if (status === 202 && name.toLowerCase() === 'location' && raw !== null && raw !== body?.href) errors.push('must equal body href');
     report(name.toLowerCase(), errors.length === 0, `${name}${errors.length ? ` ${errors.join('; ')}` : ' matches the contract'}`);
   }
-  if (!streaming) {
+  if (empty) report('body', body === undefined && !bodyError, 'the contract defines no response body');
+  else if (!streaming) {
     const schema = response.content?.['application/json']?.schema ?? (status >= 400 && status < 500 ? {$ref: '#/components/schemas/ErrorResponse'} : undefined);
     if (!listed && status !== 202 && !(status >= 400 && status < 500)) {
       checks.push(check(operationId, 'body', 'SKIP', 'no response schema for this status', variant));
@@ -285,7 +288,8 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
       let body, bodyError;
       if (!streaming) {
         try {
-          body = JSON.parse(await response.text());
+          const text = await response.text();
+          if (text) body = JSON.parse(text);
         } catch {
           bodyError = controller.signal.aborted ? 'response body timed out' : 'response body is not JSON';
         }
