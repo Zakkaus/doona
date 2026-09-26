@@ -159,14 +159,15 @@
   gap: 4px;
   margin-inline-start: 16px;
 }
+/* The down chevron turned to point at the inline end or start; --rp-dir turns it the other way right to left. */
 .rp-chev-end.rp-icon,
 .rp-chev-start.rp-icon {
   width: 16px;
   height: 16px;
-  transform: rotate(-90deg);
+  transform: rotate(calc(-90deg * var(--rp-dir)));
 }
 .rp-chev-start.rp-icon {
-  transform: rotate(90deg);
+  transform: rotate(calc(90deg * var(--rp-dir)));
 }
 .rp-drill {
   outline: none;
