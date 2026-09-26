@@ -39,7 +39,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
       <h3 className="rp-h3">{t('config.wizardSubscriptions')}</h3>
       <div className="rp-list">
         {rows.map(item => (
-          <div className="rp-toolbar top" key={item.index}>
+          <div className={item.raw === null ? 'rp-toolbar top rp-sub-row' : 'rp-toolbar top'} key={item.index}>
             {item.raw !== null ? (
               // A line in a form the wizard does not model (a file, a multi-line entry) stays as written.
               <DaeCode text={item.raw} className="rp-grow rp-config-raw" />
@@ -55,6 +55,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
                 />
                 <TextField
                   isDisabled={busy}
+                  className="rp-sub-url"
                   label={t('config.wizardSubscription')}
                   value={item.url}
                   width={520}
@@ -65,7 +66,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
                 />
               </>
             )}
-            <span className={item.raw === null ? 'rp-field-row' : undefined}>
+            <span className={item.raw === null ? 'rp-field-row rp-sub-remove' : undefined}>
               <Button isDisabled={busy} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
                 <Close />
               </Button>

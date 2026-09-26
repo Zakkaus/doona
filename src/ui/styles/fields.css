@@ -58,6 +58,21 @@
 .rp-toolbar.top > .rp-field-row {
   margin-top: 20px;
 }
+/* A subscription row on a phone: the URL field is always too wide for the row and wraps to one of its own below the
+   name field, so the remove button moves ahead of it in visual order to stay on the name field's row instead of
+   trailing onto an orphan line of its own; a 44px target replaces its usual compact size. */
+@media (max-width: 599.98px) {
+  .rp-sub-row .rp-sub-url {
+    order: 1;
+  }
+  .rp-sub-row .rp-sub-remove {
+    width: 44px;
+  }
+  .rp-sub-row .rp-sub-remove .rp-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
 /* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge.
    The icon and weight carry it where a palette's negative text is the body colour. */
 .rp-field-error {
