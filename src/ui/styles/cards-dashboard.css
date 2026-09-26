@@ -129,13 +129,25 @@
   grid-template-columns: 1fr;
   gap: 12px;
 }
-/* A phone fits two tiles side by side; an odd last tile fills its row. */
-@media (min-width: 360px) and (max-width: 599.98px) {
+/* A phone fits two tiles side by side; an odd last tile fills its row. A tile head's picker gives way to the tile:
+   it shrinks past its content width, and its chrome (padding, gap, chevron) shrinks with it so the chevron stays on
+   screen; the name ellipsises first via .rp-truncate, down to nothing before the chevron is touched. */
+@media (max-width: 599.98px) {
   .rp-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .rp-strip > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
+  }
+  .rp-tile-head .rp-select {
+    min-width: 0;
+    gap: 2px;
+    padding: 0 3px;
+  }
+  .rp-tile-head .rp-select > svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
   }
 }
 /* An odd fifth tile fills its row until all five fit at 1280px. */
