@@ -1158,7 +1158,6 @@ export const messages = {
   'shell.backend.offline': '无法连接',
   'shell.backend.degraded': '已连接，版本未知',
   'shell.backend.edit': '编辑后端',
-  'shell.backend.project': '{engine} 项目页面',
   'palette.rosePine': 'Rosé Pine',
   'palette.moon': 'Moon',
   'palette.dawnMain': 'Dawn / Main',

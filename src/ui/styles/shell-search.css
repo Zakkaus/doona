@@ -393,14 +393,10 @@
 /* The actions read as menu rows: full width, their text at the start edge, in line with the facts. */
 .rp-backend-actions {
   display: flex;
-  flex-direction: column;
-  margin-inline: -8px;
-  margin-block-end: -8px;
-}
-.rp-backend-actions > .rp-btn {
-  justify-content: flex-start;
-  inline-size: 100%;
-  padding-inline: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 8px;
 }
 .rp-main {
   margin-inline-end: 0;

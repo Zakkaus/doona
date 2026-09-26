@@ -1184,7 +1184,6 @@ export const messages = {
   'shell.backend.offline': 'Unreachable',
   'shell.backend.degraded': 'Connected, version unknown',
   'shell.backend.edit': 'Edit backend',
-  'shell.backend.project': '{engine} project page',
   'palette.rosePine': 'Rosé Pine',
   'palette.moon': 'Moon',
   'palette.dawnMain': 'Dawn / Main',
