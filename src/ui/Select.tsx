@@ -14,6 +14,7 @@ import {
   ListBox,
   ListBoxItem,
   Label,
+  useLocale,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
@@ -189,11 +190,13 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 );
 
 // On a phone a submenu beside its row would leave the screen, so the submenu replaces the menu in the same popover,
-// with a back row on top, as S2's menus do on mobile. ArrowRight or Enter opens a submenu, ArrowLeft or Escape goes back.
+// with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
+// text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
 const phone = '(max-width: 639px)';
 function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[]}) {
   const t = useT();
   const inline = useMediaQuery(phone);
+  const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
   // The open submenu, and the row just left, which takes focus back.
   const [{open, left}, setView] = useState<{open: number | null; left: number | null}>({open: null, left: null});
   const root = useRef<HTMLDivElement>(null);
@@ -232,7 +235,7 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
   if (submenu) {
     const leave = () => go(null);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'Escape') return;
+      if (e.key !== back && e.key !== 'Escape') return;
       e.preventDefault();
       e.stopPropagation();
       leave();
@@ -250,7 +253,7 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
   }
   const onKey = (e: KeyboardEvent) => {
     const key = (e.target as HTMLElement).dataset.key;
-    if (e.key !== 'ArrowRight' || key == null) return;
+    if (e.key !== into || key == null) return;
     e.preventDefault();
     go(Number(key));
   };

@@ -8,7 +8,7 @@
   text-align: start;
 }
 .rp-disclosure-trigger > svg {
-  rotate: -90deg;
+  rotate: calc(-90deg * var(--rp-dir));
   transition: rotate var(--rp-duration-panel) var(--rp-ease-out);
 }
 .rp-disclosure[data-expanded] > h3 > .rp-disclosure-trigger > svg {
