@@ -85,6 +85,14 @@ export function waffleCells(counts: number[]): number[] {
   return whole;
 }
 
+// Degrees for each nonzero donut slice, in order. A slice under six degrees is drawn at six, as Recharts' minimum
+// angle does, and the rest share what is left in proportion; past sixty slices the minimum shrinks to an equal share.
+export function donutAngles(values: number[]): number[] {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const minimum = values.some(value => (value / total) * 360 < 6) ? Math.min(6, 360 / values.length) : 0;
+  return values.map(value => minimum + (value / total) * (360 - values.length * minimum));
+}
+
 // Tone step 0 (empty) to 5 (the busiest cell) for a heatmap; any non-zero count is at least step 1.
 export function heatTone(count: number, max: number): number {
   if (count <= 0 || max <= 0) return 0;

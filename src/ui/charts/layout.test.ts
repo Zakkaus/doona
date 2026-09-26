@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  donutAngles,
   linearPosition,
   visibleTicks,
   nearestIndex,
@@ -58,6 +59,17 @@ describe('chart layout', () => {
     expect(waffleCells([999, 1])).toEqual([99, 1]);
     expect(waffleCells([0, 0])).toEqual([0, 0]);
     expect(waffleCells([70, 20, 7, 3]).reduce((a, b) => a + b)).toBe(100);
+  });
+
+  it('keeps every donut slice at a non-negative angle when too many slices need the minimum', () => {
+    for (const values of [
+      [1000, ...Array<number>(60).fill(1)],
+      [1000, ...Array<number>(99).fill(1)]
+    ]) {
+      const angles = donutAngles(values);
+      for (const angle of angles) expect(angle).toBeGreaterThanOrEqual(0);
+      expect(angles.reduce((a, b) => a + b)).toBeCloseTo(360);
+    }
   });
 
   it('steps heatmap tones from empty to busiest', () => {
