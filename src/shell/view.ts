@@ -41,7 +41,9 @@ export type BackendView = {
   state: string;
   // The indicator's accessible name: what it is, and the state.
   label: string;
+  // The overflow menu's row, and the popover's title when the engine is not known yet.
   title: string;
+  heading: string;
   facts: Array<[string, string]>;
   about: string;
   project: {href: string; label: string};
@@ -143,13 +145,13 @@ export function shellView(
       state: t(stateKey),
       label: t('shell.backend.label', {engine: engineText, state: t(stateKey)}),
       title: t('shell.backend.title'),
+      heading: version ? engineText : t('shell.backend.title'),
       facts: [
-        [t('about.engine'), engineText + build],
         [t('about.api'), apiText],
-        // The built-in demo data runs without a profile.
-        ...(profile ? [[t('shell.backend.profile'), profile.name] as [string, string]] : []),
+        ...fact(t('shell.backend.build'), version?.build?.revision?.slice(0, 12)),
         [t('shell.backend.address'), address],
-        [t('shell.backend.state'), t(stateKey)]
+        // The built-in demo data runs without a profile.
+        ...fact(t('shell.backend.profile'), profile?.name)
       ],
       about: t('about.title'),
       project: {href: version ? `${org}/${version.engine.name}` : org, label: t('shell.backend.project', {engine: engineName})}
@@ -178,6 +180,7 @@ export function shellView(
     }
   };
 }
+const fact = (label: string, value: string | undefined): Array<[string, string]> => (value ? [[label, value]] : []);
 // The connection as the shell already knows it from discovery and the version read; no read of its own. A refused
 // credential needs a sign-in, a failed discovery means the backend cannot be reached, and a backend that answers
 // discovery but not the version read works with less than the shell expects.

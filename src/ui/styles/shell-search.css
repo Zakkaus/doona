@@ -250,6 +250,12 @@
     display: none;
   }
 }
+.rp-hrule {
+  block-size: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rp-hl-med);
+}
 .rp-vrule {
   width: 2px;
   height: 32px;
@@ -375,14 +381,26 @@
 .rp-version .rp-light > span:empty {
   display: none;
 }
-.rp-popover-body .rp-kv {
-  grid-template-columns: 1fr;
-  gap: 10px;
+/* The facts as a hover card's: a label column and a value column, each value wrapping in its own cell. */
+.rp-popover-body .rp-kv.row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
 }
+.rp-popover-body .rp-kv.row > div {
+  display: contents;
+}
+/* The actions read as menu rows: full width, their text at the start edge, in line with the facts. */
 .rp-backend-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  margin-inline: -8px;
+  margin-block-end: -8px;
+}
+.rp-backend-actions > .rp-btn {
+  justify-content: flex-start;
+  inline-size: 100%;
+  padding-inline: 8px;
 }
 .rp-main {
   margin-inline-end: 0;

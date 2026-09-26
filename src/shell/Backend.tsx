@@ -1,16 +1,15 @@
 import {useState, type ReactElement, type RefObject} from 'react';
-import Data from '../ui/icons/Data';
-import InfoCircle from '../ui/icons/InfoCircle';
-import {Button, Kv, Light, Link, PopoverDialog} from '../ui/ui';
+import {Button, Divider, Kv, Light, Link, PopoverDialog} from '../ui/ui';
 import {About} from './About';
 import type {BackendView} from './view';
 
-// What the shell knows about the backend, with About doona and the engine's project page. The About action closes the
-// popover before the dialog opens, so focus has one place to return to.
+// A hover card of what the shell knows about the backend, then About doona and the engine's project page as menu rows.
+// The About action closes the popover before the dialog opens, so focus has one place to return to.
 function BackendFacts({backend, close, openAbout}: {backend: BackendView; close: () => void; openAbout: () => void}) {
   return (
     <>
-      <Kv items={backend.facts} />
+      <Kv row items={backend.facts} />
+      <Divider orientation="horizontal" />
       <div className="rp-backend-actions">
         <Button
           quiet
@@ -19,7 +18,6 @@ function BackendFacts({backend, close, openAbout}: {backend: BackendView; close:
             openAbout();
           }}
         >
-          <InfoCircle />
           {backend.about}
         </Button>
         <Link appearance="button" quiet href={backend.project.href} external>
@@ -35,7 +33,15 @@ function BackendPopover({backend, honk, popover}: {backend: BackendView; honk: (
   const [about, setAbout] = useState(false);
   return (
     <>
-      <PopoverDialog title={backend.title} {...popover}>
+      <PopoverDialog
+        title={backend.heading}
+        subtitle={
+          <Light tone={backend.tone} small>
+            {backend.state}
+          </Light>
+        }
+        {...popover}
+      >
         {close => <BackendFacts backend={backend} close={close} openAbout={() => setAbout(true)} />}
       </PopoverDialog>
       <About isOpen={about} onOpenChange={setAbout} onHonk={honk} />
@@ -43,7 +49,7 @@ function BackendPopover({backend, honk, popover}: {backend: BackendView; honk: (
   );
 }
 
-// The side navigation's corner, like an editor's remote indicator: the connection's light, the engine and its version.
+// The side navigation's corner, like an editor's remote indicator: the connection's light, then the engine and its version.
 export function BackendIndicator({backend, honk}: {backend: BackendView; honk: () => void}) {
   return (
     <BackendPopover
@@ -55,7 +61,6 @@ export function BackendIndicator({backend, honk}: {backend: BackendView; honk: (
             <Light tone={backend.tone} small>
               {null}
             </Light>
-            <Data />
             {backend.text}
           </Button>
         )

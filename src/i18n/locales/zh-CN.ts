@@ -1146,7 +1146,7 @@ export const messages = {
   'shell.backend.label': '后端：{engine}，{state}',
   'shell.backend.profile': '连接方案',
   'shell.backend.address': '后端网址',
-  'shell.backend.state': '状态',
+  'shell.backend.build': '构建',
   'shell.backend.demo': '内置演示数据',
   'shell.backend.connected': '已连接',
   'shell.backend.connecting': '连接中',

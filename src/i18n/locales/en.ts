@@ -1172,7 +1172,7 @@ export const messages = {
   'shell.backend.label': 'Backend: {engine}, {state}',
   'shell.backend.profile': 'Profile',
   'shell.backend.address': 'Backend URL',
-  'shell.backend.state': 'Status',
+  'shell.backend.build': 'Build',
   'shell.backend.demo': 'Built-in demo data',
   'shell.backend.connected': 'Connected',
   'shell.backend.connecting': 'Connecting',
