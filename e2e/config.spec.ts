@@ -951,3 +951,108 @@ httpTest('a reload refused after the write says the file was written but not app
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Written to the configuration file but not applied');
 });
+
+test('a new file in the include directory is created empty and opens in the source editor', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  const name = dialog.getByLabel('Name', {exact: true});
+  const create = dialog.getByRole('button', {name: 'Create', exact: true});
+  // The one include pattern fixes the directory and the extension; only the name its `*` stands for is typed.
+  await expect(dialog.locator('.rp-input .affix')).toHaveText(['config.d/', '.dae']);
+  await expect(dialog.getByRole('button', {name: 'Include pattern'})).toHaveCount(0);
+  await expect(dialog.getByLabel('Path', {exact: true})).toHaveCount(0);
+  await expect(name).toHaveValue('');
+  await expect(create).toBeDisabled();
+  await name.fill('work');
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('config.d/work.dae created, configuration reloaded');
+  await expect(page).toHaveURL(/tab=source&source=src-new-1$/);
+  const editor = page.locator('.cm-content[aria-label="/etc/honk/config.d/work.dae"]');
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await editor.click();
+  await page.keyboard.type('domain(geosite: netflix) -> proxy');
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
+  await expect(editor).toContainText('domain(geosite: netflix) -> proxy');
+  // The backend's refusal of an existing name stays in the dialog.
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  await name.fill('work');
+  await create.click();
+  await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
+});
+
+test('a new file name is checked for what the path rules refuse', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  const name = dialog.getByLabel('Name', {exact: true});
+  const create = dialog.getByRole('button', {name: 'Create', exact: true});
+  await name.fill('sub/work');
+  await expect(dialog).toContainText('The name cannot contain /');
+  await expect(create).toBeDisabled();
+  await name.fill('bad\u0007name');
+  await expect(dialog).toContainText('The name cannot contain control characters');
+  await expect(create).toBeDisabled();
+  await name.fill('work');
+  await expect(dialog.locator('.rp-field-error')).toHaveCount(0);
+  await expect(create).toBeEnabled();
+});
+
+// The main source's include section as given, with every create request answered by a refusal and kept for checking.
+async function newSourceBackend(page: Page, include: string) {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  main.content = main.content!.replace(/include \{[^}]*\}/, include);
+  main.content_sha256 = await sha256(main.content);
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  const created: {path: string; content: string}[] = [];
+  expectLoadFailures(page, /\/config\/sources$/);
+  await page.route('**/api/v1/config/sources', async route => {
+    created.push(route.request().postDataJSON());
+    await route.fulfill({status: 409, json: {request_id: 'config-test', error: {code: 'state_conflict', message: 'Refused for the test'}}});
+  });
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  return {dialog: page.getByRole('dialog', {name: 'New configuration file'}), created};
+}
+
+test('several include patterns are picked from before the name is typed', async ({page}) => {
+  const {dialog, created} = await newSourceBackend(page, 'include {\n  config.d/*.dae\n  ./rules/r-*.rule.dae\n  extra.dae\n}');
+  await expect(dialog.locator('.rp-input .affix')).toHaveText(['config.d/', '.dae']);
+  await dialog.getByRole('button', {name: 'Include pattern'}).click();
+  await expect(page.getByRole('option')).toHaveText(['config.d/*.dae', 'rules/r-*.rule.dae']);
+  await page.getByRole('option', {name: 'rules/r-*.rule.dae', exact: true}).click();
+  await expect(dialog.locator('.rp-input .affix')).toHaveText(['rules/r-', '.rule.dae']);
+  await dialog.getByLabel('Name', {exact: true}).fill('home');
+  await dialog.getByRole('button', {name: 'Create', exact: true}).click();
+  await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
+  expect(created).toEqual([{path: 'rules/r-home.rule.dae', content: ''}]);
+});
+
+test('without a pattern to fill, the whole relative path is typed', async ({page}) => {
+  const {dialog, created} = await newSourceBackend(page, 'include {\n  config.d/**.dae\n}');
+  const path = dialog.getByLabel('Path', {exact: true});
+  const create = dialog.getByRole('button', {name: 'Create', exact: true});
+  await expect(dialog.locator('.rp-input .affix')).toHaveCount(0);
+  await expect(dialog.getByLabel('Name', {exact: true})).toHaveCount(0);
+  await expect(path).toHaveValue('config.d/');
+  await expect(create).toBeDisabled();
+  await path.fill('config.d/../work.dae');
+  await expect(dialog).toContainText('Path segments cannot be empty, . or ..');
+  await expect(create).toBeDisabled();
+  await path.fill('config.d/work');
+  await expect(dialog).toContainText('The file name must end in .dae');
+  // A path no include pattern matches is warned about, and the backend's refusal stays in the dialog.
+  await path.fill('work.dae');
+  await expect(dialog.getByRole('status')).toContainText('No include pattern of the main configuration matches this path');
+  await path.fill('config.d/work.dae');
+  await expect(dialog.getByRole('status')).toHaveCount(0);
+  await create.click();
+  await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
+  expect(created).toEqual([{path: 'config.d/work.dae', content: ''}]);
+});

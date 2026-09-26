@@ -3,6 +3,7 @@ import {ApiError} from '../error';
 import {sha256} from '../hash';
 import * as vocab from '../../dae/vocab';
 import {blockEntries, scanConfig, uncomment, unquote, type TextBlock} from '../../dae/text';
+import {globMatch, isGlob} from '../../dae/newSource';
 
 // `onDisk` is the text the digest and size describe when the served content is a redacted copy of it.
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};
@@ -44,6 +45,9 @@ export function includePaths(text: string) {
 }
 
 export const resolveIncludePath = (base: string | undefined, path: string) => new URL(path, new URL(base ?? '', 'file:///')).pathname;
+// The files an include of `path` in the file at `base` loads: every match of a glob, or the one file named.
+export const includedFiles = <T extends {path: string}>(files: T[], base: string, path: string) =>
+  files.filter(file => globMatch(resolveIncludePath(base, path), resolveIncludePath(undefined, file.path)));
 
 // Demo-only validation checks braces, sections, routing syntax, and outbound references.
 export function diagnose(sourceId: string, text: string, groups: Set<string>, mode: 'syntax' | 'full'): ConfigDiagnostic[] {
@@ -108,6 +112,15 @@ export function validate(
       const source = sources[index];
       for (const {path, line} of includePaths(source.content)) {
         const resolved = resolveIncludePath(source.path, path);
+        // A glob may match no file yet; a plain path names one that must exist.
+        if (isGlob(path)) {
+          for (const [file, dependency] of byPath)
+            if (globMatch(resolved, file) && !visited.has(file)) {
+              visited.add(file);
+              sources.push({...dependency, id: dependency.id ?? `source-${sources.length + 1}`});
+            }
+          continue;
+        }
         const dependency = byPath.get(resolved);
         if (!dependency) {
           diagnostics.push({

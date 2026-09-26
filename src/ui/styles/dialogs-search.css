@@ -116,6 +116,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Fixed text around the value, such as a path's directory and extension: muted, inside the border, and close enough
+   to the value to read as one string. */
+.rp-input.affixed {
+  gap: 0;
+}
+.rp-input.affixed input {
+  padding-inline: 0;
+}
+.rp-input .affix {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rp-subtle);
+}
 .rp-input input::-webkit-search-cancel-button {
   display: none;
 }

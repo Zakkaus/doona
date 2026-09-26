@@ -285,6 +285,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
           signal
         })
       ),
+    createConfigSource: async (path, content, signal) =>
+      accepted(await client.POST('/api/v1/config/sources', {headers: once(), body: {path, content}, signal})),
     patchRuntimeSettings: async (body, signal) => read(await client.PATCH('/api/v1/runtime/settings', {body, headers: once(), signal})),
     deleteDnsEntry: async (entry_id, signal) => read(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
     flushDnsCache: async signal => read(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),

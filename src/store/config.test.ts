@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {ApiError, LocalError} from '../api/error';
-import {closestLimit, refusalOutcome, withinLimits} from './config';
+import {closestLimit, createSource, refusalOutcome, withinLimits} from './config';
+import {createMockApi} from '../api/mock';
 
 const source = {id: 'main', content_sha256: 'aaa'};
 const refused = new ApiError(412, 'precondition_failed', 'Precondition failed');
@@ -50,4 +51,14 @@ it('names the limit a 413 most likely hit, which is not always the smaller one, 
   expect(await withinLimits({}, 'x', {content: 'x'}, reject(refused)).catch((error: unknown) => error)).toBe(refused);
   const other = new ApiError(422, 'unsupported_value', 'Invalid');
   expect(await withinLimits({body: 65536}, 'x', {content: 'x'}, reject(other)).catch((error: unknown) => error)).toBe(other);
+});
+
+it('creates an empty source through a reload and returns the id the configuration lists it under', async () => {
+  const api = createMockApi();
+  const id = await createSource(api, 'config.d/work.dae', new AbortController().signal);
+  const created = (await api.config()).sources.find(source => source.id === id);
+  expect(created).toMatchObject({kind: 'include', writable: true, content: ''});
+  expect(created!.path.endsWith('/config.d/work.dae')).toBe(true);
+  await expect(createSource(api, 'config.d/work.dae', new AbortController().signal)).rejects.toMatchObject({status: 409, code: 'state_conflict'});
+  await expect(createSource(api, 'elsewhere/work.dae', new AbortController().signal)).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
 });

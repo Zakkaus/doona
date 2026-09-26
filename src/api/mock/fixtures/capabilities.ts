@@ -32,7 +32,8 @@ export const capabilities: Capabilities = {
     },
     geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], configurable_sources: true},
     rules: {available: true, max_rules: 4096},
-    config: {available: true, content: true, writable: true, create: false, max_bytes: 1048576, max_sources: 32},
+    // create is true because the demo's main source includes config.d/*.dae.
+    config: {available: true, content: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},

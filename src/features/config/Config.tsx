@@ -1,13 +1,33 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Badge, Button, Card, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Link, Loading, Segmented, Tabs, TextTooltip, Empty} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  ErrorMessage,
+  InlineAlert,
+  Kv,
+  LabeledSelect,
+  Light,
+  Link,
+  Loading,
+  ModalDialog,
+  Segmented,
+  Tabs,
+  TextField,
+  TextTooltip,
+  Empty
+} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import AddCircle from '../../ui/icons/AddCircle';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
 import {useModules, type ModulesProps} from './useModules';
+import {useNewSource, type NewSourceProps} from './useNewSource';
 export function Config(props: PageProps) {
   const t = useT();
   const {
@@ -23,6 +43,7 @@ export function Config(props: PageProps) {
     selectedId,
     select,
     sourceProps,
+    newSourceProps,
     wizardProps,
     validateProps,
     modulesProps,
@@ -48,9 +69,10 @@ export function Config(props: PageProps) {
               <span className="rp-label">{sourceModel.facts}</span>
             </>
           )}
+          {(newSourceProps || sourceModel?.hasContent) && <span className="rp-grow" />}
+          {newSourceProps && <NewSource {...newSourceProps} />}
           {sourceModel?.hasContent && (
             <>
-              <span className="rp-grow" />
               <Button onPress={exportSource}>
                 <Download />
                 {t('config.export')}
@@ -83,6 +105,77 @@ export function Config(props: PageProps) {
       )}
       {ready && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
     </div>
+  );
+}
+
+function NewSource(props: NewSourceProps) {
+  const t = useT();
+  const vm = useNewSource(props);
+  return (
+    <>
+      <Button onPress={vm.show}>
+        <AddCircle />
+        {t('config.newSource')}
+      </Button>
+      <ModalDialog
+        title={t('config.newSourceTitle')}
+        narrow
+        isOpen={vm.isOpen}
+        onOpenChange={isOpen => {
+          if (!isOpen) vm.hide();
+        }}
+        footer={close => (
+          <>
+            <Button onPress={close}>{t('ui.cancel')}</Button>
+            <Button accent isDisabled={!vm.canSubmit} isPending={vm.busy} onPress={() => void vm.submit(close)}>
+              {t('config.newSourceCreate')}
+            </Button>
+          </>
+        )}
+      >
+        {vm.problem && (
+          <InlineAlert key={vm.problem.id} takeFocus>
+            {vm.problem.text}
+          </InlineAlert>
+        )}
+        <div className="rp-list">
+          <span className="rp-label">{t(vm.choice ? 'config.newSourceNameHelp' : 'config.newSourceHelp')}</span>
+          {vm.choices.length > 1 && (
+            <LabeledSelect
+              label={t('config.newSourcePattern')}
+              items={vm.choices.map(item => ({id: item.pattern, label: item.pattern}))}
+              value={vm.choice?.pattern ?? ''}
+              onChange={vm.setChoice}
+              isDisabled={vm.busy}
+            />
+          )}
+          {vm.choice ? (
+            <TextField
+              isDisabled={vm.busy}
+              label={t('config.newSourceName')}
+              value={vm.text}
+              prefix={vm.choice.prefix}
+              suffix={vm.choice.suffix}
+              placeholder="extra"
+              spellCheck={false}
+              error={vm.error}
+              onChange={vm.setText}
+            />
+          ) : (
+            <TextField
+              isDisabled={vm.busy}
+              label={t('config.newSourcePath')}
+              value={vm.text}
+              placeholder="config.d/extra.dae"
+              spellCheck={false}
+              error={vm.error}
+              onChange={vm.setText}
+            />
+          )}
+          {vm.unmatched && <InlineAlert tone="informative">{t('config.newSourceUnmatched')}</InlineAlert>}
+        </div>
+      </ModalDialog>
+    </>
   );
 }
 
