@@ -1,7 +1,7 @@
 import {useId} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
-import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
+import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
@@ -174,6 +174,17 @@ export function Settings({query}: PageProps) {
             items={[
               {id: 'gradient', label: t('wordmark.gradient')},
               {id: 'plain', label: t('wordmark.plain')}
+            ]}
+          />
+          <LabeledSelect
+            label={t('settings.toastPlacement')}
+            value={ap.toastPlacement}
+            onChange={value => ap.pickToastPlacement(value as ToastPlacement)}
+            items={[
+              {id: 'top', label: t('settings.toastTop')},
+              {id: 'top end', label: t('settings.toastTopEnd')},
+              {id: 'bottom', label: t('settings.toastBottom')},
+              {id: 'bottom end', label: t('settings.toastBottomEnd')}
             ]}
           />
         </div>

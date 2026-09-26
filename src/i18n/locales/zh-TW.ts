@@ -981,6 +981,11 @@ export const messages = {
   'settings.appearance': '外觀',
   'settings.scheme': '明暗模式',
   'settings.mirror': '鏡像版面',
+  'settings.toastPlacement': '通知位置',
+  'settings.toastTop': '上方置中',
+  'settings.toastTopEnd': '上方角落',
+  'settings.toastBottom': '下方置中',
+  'settings.toastBottomEnd': '下方角落',
   'settings.mirrorHelp': '將版面左右翻轉，方便左手操作。',
   'settings.runtime': '後端選項',
   'settings.runtimeNote':
