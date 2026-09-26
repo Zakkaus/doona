@@ -116,10 +116,10 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           </TextTooltip>
         )
       },
-      {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, render: entry => entry.type},
+      {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: entry => entry.type},
       {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
-      {id: 'e', label: t('dns.expires'), minWidth: 96, render: entry => <TimeCell at={entry.expiresAt} />},
-      {id: 'st', label: t('dns.staleUntil'), minWidth: 104, render: entry => <TimeCell at={entry.staleUntil} />},
+      {id: 'e', label: t('dns.expires'), minWidth: 96, drop: 2, render: entry => <TimeCell at={entry.expiresAt} />},
+      {id: 'st', label: t('dns.staleUntil'), minWidth: 104, drop: 1, render: entry => <TimeCell at={entry.staleUntil} />},
       {
         id: 'a',
         label: t('ui.delete'),

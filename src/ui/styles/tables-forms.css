@@ -84,6 +84,12 @@
   outline: none;
   transition: border-color var(--rp-duration) var(--rp-ease);
 }
+/* A finger needs a wider handle: the hit area grows inward from the column edge, where the line stays. */
+@media (pointer: coarse) {
+  .rp-resizer {
+    width: 24px;
+  }
+}
 .rp-resizer[data-hovered],
 .rp-resizer[data-resizing],
 .rp-resizer[data-focus-visible] {

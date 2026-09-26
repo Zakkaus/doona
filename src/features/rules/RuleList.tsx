@@ -57,6 +57,7 @@ function Dictionary({view}: {view: Model}) {
         label: t('ui.outbound'),
         minWidth: 100,
         grow: 0,
+        drop: 4,
         render: row => (
           <span className="rp-chain">
             {row.outbound}
