@@ -1,9 +1,9 @@
 import {useCallback, useState} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
-import type {Capabilities, Group, GroupSelectionRequest, ProbeResult} from '../api/model';
+import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
-import {LocalError} from '../api/error';
+import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
 import {etag, finished, settle, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
@@ -43,6 +43,11 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
   }
   return result!;
 }
+// Applies patch ops at the group's current configuration revision and waits for the reload that applies them.
+export async function patchConfig(api: Api, group: Group, ops: JsonPatch, signal?: AbortSignal): Promise<void> {
+  const result = await api.patchGroup(group.id, ops, etag(group.config_revision), signal);
+  if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
+}
 export function useGroups(enabled = true) {
   const api = getApi();
   return useResource({key: ['groups'], every: poll.inventory, fetch: signal => api.groups(signal)}, {enabled});
@@ -78,6 +83,21 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     limits.max_results_per_job >= (request.ip_version === 'any' ? 2 : 1) &&
     !!resource.data?.members.length &&
     resource.data.capabilities.probe_transports.includes('tcp');
+  const patch = useCallback(
+    (ops: JsonPatch) =>
+      run('config', async signal => {
+        if (!resource.data) throw new LocalError('ui.groupNotLoaded');
+        try {
+          await patchConfig(api, resource.data, ops, signal);
+        } catch (error) {
+          // Someone else changed the group first: fetch it, so the next attempt carries the current revision.
+          if (error instanceof ApiError && error.status === 412) refetch();
+          throw error;
+        }
+        return true as const;
+      }),
+    [api, resource.data, run, refetch]
+  );
   return {
     ...resource,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
@@ -105,15 +125,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
         }),
       [api, capabilities, resource.data, canProbe, run, refetch, refetchGroups, refetchNodes]
     ),
-    setInterrupt: useCallback(
-      (value: boolean) =>
-        run('config', async signal => {
-          if (!resource.data) throw new LocalError('ui.groupNotLoaded');
-          const result = await api.patchGroup(id, [{op: 'replace', path: '/config/interrupt_connections', value}], etag(resource.data.config_revision), signal);
-          if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
-          return true;
-        }),
-      [api, id, resource.data, run]
-    )
+    patchConfig: patch,
+    setInterrupt: useCallback((value: boolean) => patch([{op: 'replace', path: '/config/interrupt_connections', value}]), [patch])
   };
 }
