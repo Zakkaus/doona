@@ -1,7 +1,7 @@
 {
   "name": "doona",
   "private": true,
-  "version": "0.1.0-beta.5",
+  "version": "0.1.0-beta.6",
   "description": "Web UI for the daeuniverse engines (honk, and dae once it speaks the same API).",
   "repository": {
     "type": "git",

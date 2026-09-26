@@ -2,6 +2,42 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.6] - 2026-09-26
+
+### Added
+
+- The side navigation shows the connected backend's name and version with a connection light. It opens a card with the connection state, API, build and backend URL, and buttons for About doona and for editing the backend in Settings. On phones the same card opens from the overflow menu.
+- About states that doona talks only to the backend it is connected to and sends nothing elsewhere.
+- Settings offers a mirrored layout for left-handed use.
+- A right-to-left language lays the page out right to left; adding one needs only its catalogue.
+- Node latencies carry a green, yellow or red dot, which keeps the tone visible in palettes that show latency text in the body colour.
+- Hovering or tapping an Activity sparkline shows the sample's value and time.
+- On touch screens, a tap reveals the full text of a truncated table cell.
+
+### Changed
+
+- On phones, the Connections filter field takes the toolbar row and the other filters fold into one menu.
+- On phones, the busiest connection takes a row of its own, and a host too long for it keeps its end visible.
+- On small phones, key-value facts use two columns, truncated drawer values wrap, table row actions stay reachable, and the column resizer is wider.
+- On phones, the Activity node picker stays inside its tile, custom geodata URL fields use the full width, and the subscription remove button stays on its row.
+- On short landscape phones, the top bar scrolls away instead of covering the page.
+- A tab bar that overflows scrolls the selected tab into view and fades its cut edge.
+- The Arrange hint no longer says the tray is on the right when it is below the groups.
+- Heatmap time marks are larger.
+- Translations use one term per concept, the English copy is tidier, several mistranslations are corrected, and Simplified Chinese distinguishes blocking from DNS interception.
+- CONTRIBUTING describes how to correct a translation and how to propose a new language.
+
+### Fixed
+
+- A routing trace simulates the first IPv4 and first IPv6 answer and shows the full resolution, instead of refusing a name with several addresses.
+- Buffer overflow gaps no longer appear on the Activity home card; Events still lists them.
+- A configuration write the backend accepted is reported as unknown, not failed, when the following status poll fails.
+- The add-rule dialog preselects no outbound until the groups are read, instead of showing a wrong one.
+- Donut charts with more than sixty slices no longer draw a slice with a negative angle.
+- Chart tooltips are announced politely, so moving through a chart does not interrupt the screen reader.
+- A gap summary that names no record starts at its reason instead of a dash.
+- Chart tooltips stay inside their card on narrow phones.
+
 ## [0.1.0-beta.5] - 2026-09-26
 
 ### Added
@@ -185,6 +221,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
+[0.1.0-beta.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.5...v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.4...v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.3...v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.2...v0.1.0-beta.3
