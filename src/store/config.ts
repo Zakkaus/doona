@@ -7,6 +7,7 @@ import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {etag, finished, settle, useAction} from './action';
+import {refetchAll} from './resourceCore';
 
 export function useConfig(enabled = true) {
   const api = getApi();
@@ -149,7 +150,13 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           });
           lastRefused.current = null;
           signal.throwIfAborted();
-          const operation = await settle(api, accepted, signal);
+          // The backend accepted the write, so the file holds it: a poll that fails from here on leaves the outcome
+          // unknown, as a forgotten operation does, rather than the write failed.
+          const operation = await settle(api, accepted, signal).catch(error => {
+            if (signal.aborted || error instanceof LocalError) throw error;
+            void refetchAll();
+            throw new LocalError('ui.operationUnknown');
+          });
           signal.throwIfAborted();
           refetch();
           return {result: finished(operation, 'reload', {written: true})};

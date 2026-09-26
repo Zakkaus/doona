@@ -1,4 +1,4 @@
-import {detail, expect, mockBackend, test} from './fixtures';
+import {detail, expect, expectLoadFailures, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
@@ -429,6 +429,34 @@ test('a rule written whose operation the backend forgot is not held again', asyn
   };
   await hold(page, '1');
   await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast', {hasText: 'Could not confirm the result of the operation'})).toBeVisible();
+  // The write was accepted, so the rule is in the file and is not offered for a second write.
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+});
+
+test('a rule written whose operation poll kept failing is not held again', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['PUT config/sources/src-main'] = async request => ({
+    ...(await api.replaceConfigSource('src-main', request.postDataJSON().content, request.headers()['if-match'])),
+    operation_id: 'op-unreachable',
+    href: '/api/v1/operations/op-unreachable'
+  });
+  let polls = 0;
+  await page.route('**/api/v1/operations/op-unreachable', route => {
+    polls++;
+    return route.abort();
+  });
+  expectLoadFailures(page, /\/operations\/op-unreachable$/);
+  await page.clock.install();
+  await hold(page, '1');
+  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await expect.poll(() => requests.filter(request => request.method() === 'PUT').length).toBe(1);
+  // The poll gives up after its retries, which back off from one second.
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    await page.clock.fastForward(2 ** attempt * 1000);
+    await expect.poll(() => polls).toBe(attempt);
+  }
   await expect(page.locator('.rp-toast', {hasText: 'Could not confirm the result of the operation'})).toBeVisible();
   // The write was accepted, so the rule is in the file and is not offered for a second write.
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
