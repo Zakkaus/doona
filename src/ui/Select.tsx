@@ -100,8 +100,16 @@ type MenuButtonProps = {
   isDisabled?: boolean;
   appearance?: 'select';
   placement?: PopoverProps['placement'];
+  // How many of the menu's choices are in force, as S2 badges an ActionButton; zero shows none. The label must say
+  // it too, since the badge is hidden from assistive technology.
+  count?: number;
 };
-export function MenuButton({children, content, label, quiet, chevron = true, isDisabled, appearance, placement = 'bottom end'}: MenuButtonProps) {
+export function MenuButton({children, content, label, quiet, chevron = true, isDisabled, appearance, placement = 'bottom end', count}: MenuButtonProps) {
+  const badge = count ? (
+    <span className="rp-count" aria-hidden="true">
+      {count}
+    </span>
+  ) : null;
   return (
     <MenuTrigger>
       {appearance ? (
@@ -112,6 +120,7 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
       ) : (
         <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} isDisabled={isDisabled}>
           {children}
+          {badge}
           {chevron && <ChevronDown />}
         </RButton>
       )}

@@ -16,6 +16,7 @@ import {
   connectionsView,
   connectionDetail,
   connectionTableView,
+  filterMenu,
   type CloseSelection,
   type ConnectionView
 } from './view';
@@ -43,6 +44,8 @@ export function useConnectionsPage({go, query}: PageProps) {
     }
   });
   const wide = useMediaQuery(panelQuery);
+  // Below 600px the secondary filters fold into one menu beside the filter field.
+  const compact = useMediaQuery('(max-width: 599.98px)');
   const updateView = (patch: Partial<ConnectionView>) => {
     const next = {...view, ...patch};
     setView(next);
@@ -132,6 +135,23 @@ export function useConnectionsPage({go, query}: PageProps) {
       return t('conn.closeFailed', {error: errorText(error, t)});
     }
   };
+  // Picking the chosen device or rule again lifts it, as does an empty value (the menu's "all" entry).
+  const pick = (key: string | number) => {
+    const picked = readTag(String(key), ['src', 'rule'] as const);
+    if (picked?.kind === 'src') {
+      setText('');
+      go('connections', stay(query, {src: !picked.value || src === picked.value ? null : picked.value, q: null}));
+    } else if (picked?.kind === 'rule') setFilter('rule', rule === picked.value ? 'all' : picked.value);
+  };
+  const menu = filterMenu(lists, {network, out, src, rule}, t);
+  const pickFrom = [(value: string) => setFilter('network', value), (value: string) => setFilter('out', value), pick, pick];
+  const compactMenu = {
+    active: menu.active,
+    submenus: menu.submenus.map((submenu, index) => ({
+      ...submenu,
+      sections: submenu.sections.map(section => ({...section, onChange: pickFrom[index]}))
+    }))
+  };
   const fallback = connectionsFallback(query);
   const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   return {
@@ -158,13 +178,9 @@ export function useConnectionsPage({go, query}: PageProps) {
     retryLatency: nodes.refetch,
     setNetwork: (value: string) => setFilter('network', value),
     setOut: (value: string) => setFilter('out', value),
-    pick: (key: string | number) => {
-      const picked = readTag(String(key), ['src', 'rule'] as const);
-      if (picked?.kind === 'src') {
-        setText('');
-        go('connections', stay(query, {src: src === picked.value ? null : picked.value, q: null}));
-      } else if (picked?.kind === 'rule') setFilter('rule', rule === picked.value ? 'all' : picked.value);
-    },
+    pick,
+    compact,
+    filterMenu: compactMenu,
     columns: columns.map(column => ({id: column.id, label: t(column.label)})),
     visibleColumns: columns.filter(column => !view.hidden.includes(column.id)).map(column => column.id),
     toggleColumn: (key: string | number) => {

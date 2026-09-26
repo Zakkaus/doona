@@ -7,6 +7,7 @@ import {
   connectionDetails,
   connectionsExport,
   connectionsView,
+  filterMenu,
   connectionTableView,
   readView,
   sortByKey,
@@ -233,4 +234,20 @@ it('reuses a projected row until the connection or a label input changes', () =>
   expect(project([row], 'en-US', false)[0]).not.toBe(first);
   const other: Translator = (key, params) => translate('zh-CN', key, params);
   expect(project([row], 'en-US', true, other)[0]?.state).toBe(other(`conn.state.${row.state}`));
+});
+
+it('folds the secondary filters into one menu that counts the ones in force', () => {
+  const rows = connections.tcp.map(row => ({...row, network: 'tcp'}));
+  const src = connections.tcp[0]!.src!.split(':')[0];
+  const lists = connectionsView(rows, connections, src, 'all', 'en-US', t);
+  const menu = filterMenu(lists, {network: 'tcp', out: 'all', src, rule: 'all'}, t);
+  expect(menu.active).toBe(2);
+  expect(menu.submenus.map(submenu => submenu.label)).toEqual(['Network protocol', 'Outbound', 'Device', 'Rule']);
+  const [network, , device, rule] = menu.submenus.map(submenu => submenu.sections[0]);
+  expect(network.value).toBe('tcp');
+  expect(device.items[0]).toEqual({id: 'src:', label: 'All devices'});
+  expect(device.items.some(item => item.id === device.value)).toBe(true);
+  expect(rule.items[0]).toEqual({id: 'rule:all', label: 'All rules'});
+  expect(rule.value).toBe('rule:all');
+  expect(filterMenu(lists, {network: 'all', out: 'all', src: undefined, rule: 'all'}, t).active).toBe(0);
 });

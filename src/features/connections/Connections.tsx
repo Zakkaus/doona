@@ -31,12 +31,27 @@ export function Connections(props: PageProps) {
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
-        <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
-        <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
-        <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
-        <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick}>
-          {t('conn.pick')}
-        </ChoiceMenu>
+        {vm.compact ? (
+          <span className="rp-filter-row">
+            <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
+            <ChoiceMenu
+              label={vm.filterMenu.active ? t('conn.filtersActive', {n: vm.filterMenu.active}) : t('conn.filters')}
+              count={vm.filterMenu.active}
+              submenus={vm.filterMenu.submenus}
+            >
+              {t('conn.filters')}
+            </ChoiceMenu>
+          </span>
+        ) : (
+          <>
+            <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
+            <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
+            <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
+            <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick}>
+              {t('conn.pick')}
+            </ChoiceMenu>
+          </>
+        )}
         <LabeledSelect
           label={t('conn.group')}
           side

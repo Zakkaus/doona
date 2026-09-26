@@ -26,6 +26,18 @@
     width: 100%;
   }
 }
+/* A phone's filter row: the field takes what the button beside it leaves. */
+.rp-filter-row {
+  display: flex;
+  flex: 1 1 100%;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-toolbar .rp-filter-row .rp-filter {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
 /* Fields with descriptions differ in height; align them by their labels instead of their middles. */
 .rp-toolbar.top {
   align-items: flex-start;
@@ -167,6 +179,21 @@
   font-weight: 500;
   border: 1px solid var(--rp-hl-high);
   color: var(--rp-subtle);
+}
+/* The count on a menu button whose choices are in force. */
+.rp-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-accent);
+  color: var(--rp-on-accent);
+  font-size: var(--rp-text-xs);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .rp-badge.warn {
   border-color: transparent;

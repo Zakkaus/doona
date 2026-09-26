@@ -1,7 +1,8 @@
 import {expect, test} from './fixtures';
 
-// The filter field: a fixed 240px box on desktop, the full toolbar row on phones, and an ellipsis rather than an
-// abrupt cut mid-word when its placeholder or value still does not fit (src/features/connections/Connections.tsx).
+// The filter field: a fixed 240px box on desktop, the toolbar row beside the filters menu on phones, and an ellipsis
+// rather than an abrupt cut mid-word when its placeholder or value still does not fit
+// (src/features/connections/Connections.tsx).
 test.describe('320px', () => {
   test.use({viewport: {width: 320, height: 700}});
 
@@ -10,14 +11,15 @@ test.describe('320px', () => {
     const field = page.getByRole('searchbox', {name: 'Filter'});
     await expect(field).toBeVisible();
     const box = await field.evaluate(el => el.closest('.rp-input')!.getBoundingClientRect());
+    const menu = (await page.getByRole('button', {name: 'Filters', exact: true}).boundingBox())!;
     const toolbar = await page
       .locator('.rp-toolbar')
       .first()
       .evaluate(el => el.getBoundingClientRect());
-    // Flexible now, not the fixed 240px box: it takes most of a 320px toolbar row instead of sharing it with, and
-    // being squeezed narrower by, the controls beside it.
-    expect(box.width).toBeGreaterThan(280);
-    expect(box.width).toBeLessThanOrEqual(toolbar.width + 1);
+    // Flexible now, not the fixed 240px box: it takes what the filters menu leaves of the row.
+    expect(box.x).toBeCloseTo(toolbar.x, 0);
+    expect(menu.x + menu.width).toBeCloseTo(toolbar.x + toolbar.width, 0);
+    expect(menu.x - (box.x + box.width)).toBeCloseTo(8, 0);
     expect(await field.evaluate(el => getComputedStyle(el).textOverflow)).toBe('ellipsis');
     // A value longer than any placeholder (a pasted domain, say) still must not fit; it fades to an ellipsis, not an
     // abrupt cut mid-character.
