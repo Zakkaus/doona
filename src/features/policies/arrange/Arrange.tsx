@@ -62,7 +62,13 @@ export function Arrange({source, groups}: {source: Source; groups: GroupSummary[
   return (
     <div className="rp-arrange">
       <div className="rp-row">
-        <p className="rp-note rp-grow">{t('arrange.note')}</p>
+        <p className="rp-note rp-grow">
+          {/* Below 1024px the tray sits under the groups, not to their right, and rows have no drop target beside
+              them to name; the narrow hint reuses the tray's own selection hint instead of pointing at a panel that
+              is not there. */}
+          <span className="rp-wide-only">{t('arrange.note')}</span>
+          <span className="rp-narrow-only">{t('arrange.selectHint')}</span>
+        </p>
         <NewGroup m={m} />
       </div>
       {m.blocked && <InlineAlert tone="informative">{m.blocked}</InlineAlert>}

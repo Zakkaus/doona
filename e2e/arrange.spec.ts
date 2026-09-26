@@ -140,6 +140,21 @@ test('a failed node list is shown with a retry instead of loading forever', asyn
   await expect(page.getByRole('grid', {name: 'Nodes and subscriptions'})).toBeVisible();
 });
 
+test('a phone gets a hint that matches its single-column layout, not the desktop panel', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/policies?tab=arrange');
+  const note = page.locator('.rp-arrange > .rp-row .rp-note');
+  const wide = note.locator('.rp-wide-only');
+  const narrow = note.locator('.rp-narrow-only');
+  await expect(wide).toBeVisible();
+  await expect(wide).toContainText('Drag a node or subscription from the right');
+  await expect(narrow).toBeHidden();
+  await page.setViewportSize({width: 390, height: 844});
+  await expect(narrow).toBeVisible();
+  await expect(narrow).toHaveText('Select rows to add them together, or drag them.');
+  await expect(wide).toBeHidden();
+});
+
 test('the arrange and routing tree styles load with their pages', async ({page}) => {
   const styled = (selector: string) =>
     page.evaluate(
