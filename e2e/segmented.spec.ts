@@ -36,6 +36,8 @@ test.describe('360px', () => {
     await expect(options).toHaveText(ranges);
     await page.getByRole('option', {name: '24 小时'}).click();
     await expect(picker).toContainText('24 小时');
+    // Let the list finish closing, or the key that reopens it can land while it is still on its way out.
+    await expect(page.getByRole('listbox')).toHaveCount(0);
     await picker.focus();
     await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('option', {name: '24 小时'})).toBeFocused();
