@@ -185,6 +185,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/config/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create one configuration source and reload
+         * @description Requires control, resources.config.available, resources.config.writable,
+         *     and resources.config.create. When create is absent or false, return 404
+         *     capability_not_supported; a disabled write switch returns 403
+         *     permission_denied. The body names one new dae file by path and supplies
+         *     its complete UTF-8 text. path is relative to the directory of the main
+         *     source, uses only normal segments (no empty, `.`, or `..` segment and no
+         *     leading `/`), ends in `.dae`, has at most 1024 UTF-8 bytes, and contains
+         *     no control characters; otherwise return 400 invalid_request. Resolve it
+         *     inside the configuration root; a path whose parent resolves outside it,
+         *     including through a symlink, returns 400.
+         *     A path that names an existing file or an accepted source returns 409
+         *     state_conflict; never overwrite it.
+         *     Enforce resources.config.max_bytes on content UTF-8 bytes and the shared
+         *     limits.max_json_body_bytes independently; excess returns 413.
+         *     Validate the resulting source set with the same full-mode checks as
+         *     PUT /config/sources/{source_id}, with the new file added at path, and
+         *     resolve dependencies under the same rules. The new file must be loaded
+         *     by an include pattern of that source set; if no pattern matches, return
+         *     422 unsupported_value with a source-not-included error diagnostic.
+         *     Content that sets or changes API listener settings or secrets returns
+         *     403 permission_denied. If any diagnostic has level error, return 422
+         *     unsupported_value with error.details.diagnostics; never create a file or
+         *     start a reload. Diagnostics about the new file use the source ID it has
+         *     in the validated set; source-not-included names the main source with a
+         *     null location.
+         *     Otherwise create the file without replacing anything that appeared at
+         *     path meanwhile, using a temporary file in the target directory and a
+         *     rename that fails if path exists, with the main source's file mode.
+         *     Serialize validation and creation against concurrent API writes.
+         *     After the write, start a reload operation and return 202 OperationAccepted
+         *     with kind reload, Location, and Retry-After. This is not reload completion.
+         *     If reload fails, the previous generation remains active and the adapter
+         *     removes the file it created, unless the file at path is no longer the one
+         *     it wrote. The failed operation's error.details.written is false when the
+         *     file was removed or never written and true when it remains.
+         *     After successful reload, GET /config lists the new source with path as
+         *     given. Idempotency-Key follows the same rules as for PUT.
+         */
+        post: operations["createConfigSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config/sources/{source_id}": {
         parameters: {
             query?: never;
@@ -1326,7 +1382,14 @@ export interface components {
                      *     and the optional dry-run endpoint.
                      */
                     writable?: boolean;
-                    /** @description Maximum UTF-8 bytes in replacement content; the shared JSON body ceiling applies independently. */
+                    /**
+                     * @description POST /config/sources is implemented: a control caller may add a new
+                     *     source file that an include pattern loads. False by default; true
+                     *     requires writable.
+                     * @default false
+                     */
+                    create: boolean;
+                    /** @description Maximum UTF-8 bytes in replacement or new source content; the shared JSON body ceiling applies independently. */
                     max_bytes?: components["schemas"]["SafeUInt"];
                     /** @description Maximum complete effective source set the adapter can expose; never silently truncate it. */
                     max_sources?: components["schemas"]["SafeUInt"];
@@ -1523,6 +1586,12 @@ export interface components {
             content?: string;
             /** @description Lines in the accepted source before redaction; empty text has zero lines, and a final newline does not add an empty line. */
             line_count: components["schemas"]["SafeUInt"];
+        };
+        ConfigSourceCreate: {
+            /** @description New file path relative to the main source's directory, as ConfigSource.path reports it. Normal segments only, ending in .dae, at most 1024 UTF-8 bytes, no control characters. An include pattern of the resulting source set must match it. */
+            path: string;
+            /** @description Complete UTF-8 dae source text; empty text is validated, not rejected as malformed. */
+            content: string;
         };
         /**
          * @description Safe diagnostic for an accepted or candidate source, never raw parser output.
@@ -3194,6 +3263,15 @@ export interface components {
             } | null;
             error: null | components["schemas"]["SafeError"];
         };
+        schema: components["schemas"]["ErrorResponse"] & {
+            error?: {
+                /** @constant */
+                code?: "unsupported_value";
+                details: {
+                    diagnostics: components["schemas"]["ConfigDiagnostic"][];
+                };
+            };
+        };
     };
     responses: {
         /** @description Unknown source ID or unavailable configuration readback */
@@ -3778,6 +3856,101 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+        };
+    };
+    createConfigSource: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Source file created and reload accepted */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"] & {
+                        /** @constant */
+                        kind?: "reload";
+                    };
+                };
+            };
+            /** @description Malformed request shape or source path; nothing is written */
+            400: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Control permission is absent, editing is disabled, or the content touches API listener settings */
+            403: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuration readback or source creation is unavailable */
+            404: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The path already names a file or an accepted source, or an Idempotency-Key was reused with a different body; nothing is written */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Full validation found error diagnostics or no include pattern loads the path; no file is written and no reload starts */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Unavailable"];
         };
     };
     getConfigSource: {

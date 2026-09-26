@@ -161,6 +161,7 @@ paths:
                         available: true
                         content: false
                         writable: true
+                        create: true
                         max_bytes: 65536
                         max_sources: 32
                       config_validate:
@@ -942,6 +943,250 @@ paths:
                     Cache-Control: no-store
                     X-Content-Type-Options: nosniff
                     Retry-After: 1
+  /api/v1/config/sources:
+    post:
+      operationId: createConfigSource
+      summary: Create one configuration source and reload
+      description: |
+        Requires control, resources.config.available, resources.config.writable,
+        and resources.config.create. When create is absent or false, return 404
+        capability_not_supported; a disabled write switch returns 403
+        permission_denied. The body names one new dae file by path and supplies
+        its complete UTF-8 text. path is relative to the directory of the main
+        source, uses only normal segments (no empty, `.`, or `..` segment and no
+        leading `/`), ends in `.dae`, has at most 1024 UTF-8 bytes, and contains
+        no control characters; otherwise return 400 invalid_request. Resolve it
+        inside the configuration root; a path whose parent resolves outside it,
+        including through a symlink, returns 400.
+        A path that names an existing file or an accepted source returns 409
+        state_conflict; never overwrite it.
+        Enforce resources.config.max_bytes on content UTF-8 bytes and the shared
+        limits.max_json_body_bytes independently; excess returns 413.
+        Validate the resulting source set with the same full-mode checks as
+        PUT /config/sources/{source_id}, with the new file added at path, and
+        resolve dependencies under the same rules. The new file must be loaded
+        by an include pattern of that source set; if no pattern matches, return
+        422 unsupported_value with a source-not-included error diagnostic.
+        Content that sets or changes API listener settings or secrets returns
+        403 permission_denied. If any diagnostic has level error, return 422
+        unsupported_value with error.details.diagnostics; never create a file or
+        start a reload. Diagnostics about the new file use the source ID it has
+        in the validated set; source-not-included names the main source with a
+        null location.
+        Otherwise create the file without replacing anything that appeared at
+        path meanwhile, using a temporary file in the target directory and a
+        rename that fails if path exists, with the main source's file mode.
+        Serialize validation and creation against concurrent API writes.
+        After the write, start a reload operation and return 202 OperationAccepted
+        with kind reload, Location, and Retry-After. This is not reload completion.
+        If reload fails, the previous generation remains active and the adapter
+        removes the file it created, unless the file at path is no longer the one
+        it wrote. The failed operation's error.details.written is false when the
+        file was removed or never written and true when it remains.
+        After successful reload, GET /config lists the new source with path as
+        given. Idempotency-Key follows the same rules as for PUT.
+      x-permission: control
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigSourceCreate'
+            examples:
+              include:
+                value:
+                  path: config.d/proxies.dae
+                  content: |
+                    node {
+                      hk: 'socks5://192.0.2.10:1080'
+                    }
+                x-headers:
+                  Content-Type: application/json
+              not_included:
+                value:
+                  path: extra/proxies.dae
+                  content: |
+                    node {
+                      hk: 'socks5://192.0.2.10:1080'
+                    }
+                x-headers:
+                  Content-Type: application/json
+      responses:
+        '202':
+          description: Source file created and reload accepted
+          headers:
+            Location:
+              description: Operation status URL; equal to body href.
+              required: true
+              schema:
+                type: string
+                pattern: ^/api/v1/operations/[^/]+$
+            Retry-After:
+              description: Positive polling floor in seconds.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/OperationAccepted'
+                  - type: object
+                    properties:
+                      kind:
+                        const: reload
+              examples:
+                queued:
+                  value:
+                    operation_id: op-config-02
+                    kind: reload
+                    status: queued
+                    href: /api/v1/operations/op-config-02
+                  x-headers:
+                    Content-Type: application/json
+                    Location: /api/v1/operations/op-config-02
+                    Retry-After: 1
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '400':
+          description: Malformed request shape or source path; nothing is written
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_request:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: Source path must be a relative .dae path.
+                    request_id: request-create-1
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Control permission is absent, editing is disabled, or the content touches API listener settings
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                permission_denied:
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Configuration editing is disabled.
+                    request_id: request-create-2
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '404':
+          description: Configuration readback or source creation is unavailable
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                capability_not_supported:
+                  value:
+                    error:
+                      code: capability_not_supported
+                      message: Configuration source creation is unavailable.
+                    request_id: request-create-3
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '409':
+          description: The path already names a file or an accepted source, or an Idempotency-Key was reused with a different body; nothing is written
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                state_conflict:
+                  value:
+                    error:
+                      code: state_conflict
+                      message: A configuration source already exists at this path.
+                    request_id: request-create-4
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Full validation found error diagnostics or no include pattern loads the path; no file is written and no reload starts
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema'
+              examples:
+                not_included:
+                  value:
+                    error:
+                      code: unsupported_value
+                      message: Configuration validation failed.
+                      details:
+                        diagnostics:
+                          - level: error
+                            source_id: source-main
+                            line: null
+                            column: null
+                            span: null
+                            code: source-not-included
+                            message: No include pattern loads this path.
+                    request_id: request-create-5
+                  x-headers:
+                    Content-Type: application/json
+                    Cache-Control: no-store
+                    X-Content-Type-Options: nosniff
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /api/v1/config/sources/{source_id}:
     parameters:
       - name: source_id
@@ -6627,6 +6872,15 @@ components:
                   - writable
                   - max_bytes
                   - max_sources
+              not:
+                required:
+                  - create
+                  - writable
+                properties:
+                  create:
+                    const: true
+                  writable:
+                    const: false
               properties:
                 available:
                   type: boolean
@@ -6642,10 +6896,17 @@ components:
                     validation and reload operations, including resources.reload.available
                     and resources.operations.available. Independent of content visibility
                     and the optional dry-run endpoint.
+                create:
+                  type: boolean
+                  default: false
+                  description: |
+                    POST /config/sources is implemented: a control caller may add a new
+                    source file that an include pattern loads. False by default; true
+                    requires writable.
                 max_bytes:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
-                  description: Maximum UTF-8 bytes in replacement content; the shared JSON body ceiling applies independently.
+                  description: Maximum UTF-8 bytes in replacement or new source content; the shared JSON body ceiling applies independently.
                 max_sources:
                   $ref: '#/components/schemas/SafeUInt'
                   minimum: 1
@@ -7355,6 +7616,22 @@ components:
         properties:
           writable:
             const: false
+    ConfigSourceCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - content
+      properties:
+        path:
+          type: string
+          minLength: 5
+          maxLength: 1024
+          pattern: ^(?!/)(?!.*//)(?!(?:.*/)?\.\.?(?:/|$))[^\u0000-\u001f\u007f-\u009f]*\.dae$
+          description: New file path relative to the main source's directory, as ConfigSource.path reports it. Normal segments only, ending in .dae, at most 1024 UTF-8 bytes, no control characters. An include pattern of the resulting source set must match it.
+        content:
+          type: string
+          description: Complete UTF-8 dae source text; empty text is validated, not rejected as malformed.
     ConfigDiagnostic:
       type: object
       required:
@@ -12255,6 +12532,34 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/SafeError'
+    schema:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              type: object
+              required:
+                - details
+              properties:
+                code:
+                  const: unsupported_value
+                details:
+                  type: object
+                  required:
+                    - diagnostics
+                  properties:
+                    diagnostics:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ConfigDiagnostic'
+                      contains:
+                        type: object
+                        required:
+                          - level
+                        properties:
+                          level:
+                            const: error
   examples:
     FlowUpdated:
       summary: Flow revision notification
