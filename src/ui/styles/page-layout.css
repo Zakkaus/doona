@@ -16,6 +16,16 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* A toolbar's primary text filter: the fixed width it always had, but on phones it takes the row instead of shrinking
+   to share it with the controls beside it, where a long placeholder used to be squeezed even shorter than the box. */
+.rp-toolbar .rp-filter {
+  width: 240px;
+}
+@media (max-width: 599.98px) {
+  .rp-toolbar .rp-filter {
+    width: 100%;
+  }
+}
 /* Fields with descriptions differ in height; align them by their labels instead of their middles. */
 .rp-toolbar.top {
   align-items: flex-start;
