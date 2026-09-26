@@ -1,6 +1,7 @@
 import type {Connection, Node} from '../../api/model';
 import {healthMillis, preferredObservation} from '../../api/selectors';
 import {percentile} from '../../ui/charts/layout';
+import {compareNames} from '../../i18n/format';
 
 export type NodeSample = {node: string; name: string; value: number; connections: number};
 
@@ -18,7 +19,7 @@ export function pathLatency(rows: Array<Pick<Connection, 'chain'>>, nodes: Array
     if (value === undefined) missing++;
     else samples.push({node: node.id, name: node.name, value, connections: 0});
   }
-  samples.sort((a, b) => a.value - b.value || a.name.localeCompare(b.name));
+  samples.sort((a, b) => a.value - b.value || compareNames(a.name, b.name));
   const byId = new Map(samples.map(sample => [sample.node, sample]));
   const chains = rows.some(row => row.chain?.length);
   let unplaced = 0;

@@ -67,5 +67,9 @@ export function formatRate(input: string | bigint | number | null, locale: strin
   const text = formatBytes(input, locale);
   return text === '—' ? text : text + '/s';
 }
+// Names sort Chinese first by pinyin, then numbers by value and text without regard to case, in every language, so a
+// node or group name sits in the same place on every page whatever the browser's own language.
+const names = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
+export const compareNames = (a: string, b: string) => names.compare(a, b);
 // Unknown or unmeasured latency is a dash, like any other missing value.
 export const formatLatency = (value: number | null | undefined, t: Translator) => (value == null ? '—' : t('ui.latency', {n: millis(value)}));

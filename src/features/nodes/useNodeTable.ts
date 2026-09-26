@@ -8,7 +8,8 @@ import type {OutboundNames} from '../../api/selectors';
 import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
-import {collator, nodeRows, nodeRowView} from './view';
+import {nodeRows, nodeRowView} from './view';
+import {compareNames} from '../../i18n/format';
 import {probeToast} from '../shared/probe';
 import {policyLabel} from '../shared/policyText';
 import {errorText} from '../../api/error';
@@ -43,7 +44,7 @@ export function useNodeTable(input: NodeTableInput) {
   const groups = useMemo(
     () =>
       [...new Set(nodes.flatMap(node => node.group_ids))]
-        .sort((a, b) => collator.compare(names.get(a) ?? a, names.get(b) ?? b))
+        .sort((a, b) => compareNames(names.get(a) ?? a, names.get(b) ?? b))
         .map(id => ({id, label: names.get(id) ?? id})),
     [nodes, names]
   );
@@ -51,7 +52,7 @@ export function useNodeTable(input: NodeTableInput) {
     () =>
       [...new Set(nodes.map(node => node.protocol ?? ''))]
         .filter(Boolean)
-        .sort(collator.compare)
+        .sort(compareNames)
         .map(id => ({id, label: id})),
     [nodes]
   );

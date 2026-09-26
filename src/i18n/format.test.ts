@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {formatBytes, formatRate} from './format';
+import {compareNames, formatBytes, formatRate} from './format';
 
 it('keeps low traffic ticks distinct and preserves the rate unit', () => {
   expect([600, 1200].map(value => formatRate(value, 'en'))).toEqual(['600 B/s', '1.2 KB/s']);
@@ -21,4 +21,9 @@ it('takes the next unit when rounding reaches a thousand', () => {
   expect(formatBytes(999_999, 'en')).toBe('1 MB');
   expect(formatBytes(999, 'en')).toBe('999 B');
   expect(formatRate(999_999_999, 'en')).toBe('1 GB/s');
+});
+
+it('sorts Chinese names first by pinyin, then numbers by value, whatever the case', () => {
+  expect(['上海 02', 'node10', '北京', 'Node2', '上海 01'].sort(compareNames)).toEqual(['北京', '上海 01', '上海 02', 'Node2', 'node10']);
+  expect(compareNames('Alpha', 'alpha')).toBe(0);
 });

@@ -14,7 +14,7 @@ import {
   type MessageRef,
   type OutboundNames
 } from '../../api/selectors';
-import {localTime, formatBytes, formatRate} from '../../i18n/format';
+import {compareNames, localTime, formatBytes, formatRate} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../../api/labels';
 import type {Key} from '../../i18n';
@@ -86,15 +86,9 @@ export function sortByKey<T, K>(items: T[], key: (item: T) => K, compare: (a: K,
     .sort((a, b) => compare(a.key, b.key))
     .map(entry => entry.item);
 }
-const collators = new Map<string, Intl.Collator>();
-function collatorFor(locale: string) {
-  let collator = collators.get(locale);
-  if (!collator) collators.set(locale, (collator = new Intl.Collator(locale, {numeric: true})));
-  return collator;
-}
 
 // Sorts and groups by what the table shows: a state sorts by its label, not the wire value.
-export function tableRows(rows: Connection[], view: ConnectionView, locale: string, t: LabelFn): TableRow[] {
+export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn): TableRow[] {
   let sorted = rows;
   if (view.sort) {
     const {column, direction} = view.sort;
@@ -116,11 +110,10 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
           return null;
       }
     };
-    const collator = collatorFor(locale);
     sorted = sortByKey(rows, value, (left, right) => {
       if (left == null) return right == null ? 0 : 1;
       if (right == null) return -1;
-      const order = typeof left === 'string' && typeof right === 'string' ? collator.compare(left, right) : left < right ? -1 : left > right ? 1 : 0;
+      const order = typeof left === 'string' && typeof right === 'string' ? compareNames(left, right) : left < right ? -1 : left > right ? 1 : 0;
       return direction === 'descending' ? -order : order;
     });
   }
@@ -187,7 +180,7 @@ export function connectionTableView(
     projected.set(c, {locale, names, rulesListed, t, row});
     return row;
   };
-  return tableRows(rows, view, locale, t).map(row =>
+  return tableRows(rows, view, t).map(row =>
     'connection' in row
       ? {id: row.id, connection: project(row.connection)}
       : {
