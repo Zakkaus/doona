@@ -2,7 +2,7 @@ import {useCallback, useMemo} from 'react';
 import {useCapabilities} from './runtime';
 import {useConfig, useConfigEditor, useSourceComplete} from './config';
 import type {ConfigSource} from '../api/model';
-import {LocalError, failureNotice} from '../api/error';
+import {LocalError, failureNotice, type Notice} from '../api/error';
 import type {Translator} from '../i18n';
 import {offered} from '../api/capabilities';
 
@@ -21,11 +21,11 @@ export type EditResult = {kind: 'ok'} | {kind: 'invalid'; errors: number} | {kin
 
 // What to tell the person about an edit that did not land; null when it was written or cancelled. An unknown
 // operation outcome is not a failure, so it reads neutrally.
-export const editProblem = (result: EditResult, t: Translator): {kind: 'neutral' | 'negative'; text: string} | null =>
+export const editProblem = (result: EditResult, t: Translator): Notice | null =>
   result.kind === 'invalid'
     ? {kind: 'negative', text: t('ui.writeInvalid', {n: result.errors})}
     : result.kind === 'failed'
-      ? failureNotice(result.error, t, error => t('ui.writeFailed', {error}))
+      ? failureNotice(result.error, t, t('ui.writeFailed'))
       : null;
 
 export function useMainSourceEdit(): MainSourceEdit {

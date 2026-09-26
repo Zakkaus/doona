@@ -15,7 +15,7 @@ export function useLifecycle(runtime: Runtime | undefined, capabilities: Capabil
       result => {
         if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
       },
-      error => toastFailure(error, t, error => t('ov.operationError', {error}))
+      error => toastFailure(error, t, t('ov.operationError'))
     );
   return {canRun: operations.canRun, busy: operations.busy, run, actions: lifecycleActions(operations.canRun, operations.busy, run, t)};
 }

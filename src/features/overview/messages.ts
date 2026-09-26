@@ -96,7 +96,7 @@ export const messages = defineMessages({
     'ov.unavailable': '此後端不提供該項資料',
     'ov.unknown': '未知',
     'ov.operationResult': '{action}：{status}（{id}）',
-    'ov.operationError': '無法執行操作：{error}'
+    'ov.operationError': '無法執行操作'
   },
   'zh-CN': {
     'ov.v.ebpf': 'eBPF',
@@ -193,7 +193,7 @@ export const messages = defineMessages({
     'ov.unavailable': '此后端不提供该项数据',
     'ov.unknown': '未知',
     'ov.operationResult': '{action}：{status}（{id}）',
-    'ov.operationError': '无法执行操作：{error}'
+    'ov.operationError': '无法执行操作'
   },
   en: {
     'ov.v.ebpf': 'eBPF',
@@ -290,6 +290,6 @@ export const messages = defineMessages({
     'ov.unavailable': 'This backend does not provide this data',
     'ov.unknown': 'Unknown',
     'ov.operationResult': '{action}: {status} ({id})',
-    'ov.operationError': 'Could not run the operation: {error}'
+    'ov.operationError': 'Could not run the operation'
   }
 });

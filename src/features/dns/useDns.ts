@@ -83,7 +83,7 @@ export function useDnsCacheTab(domain: string) {
     (id: string) =>
       void removeEntry(id).then(
         result => result && toast('positive', t('dns.deleted', {n: result.deleted})),
-        error => toast('negative', t('dns.deleteFailed', {error: errorText(error, t)}))
+        error => toast('negative', t('dns.deleteFailed'), {detail: errorText(error, t)})
       ),
     [removeEntry, t]
   );

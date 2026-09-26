@@ -53,6 +53,65 @@ test('a failed first fetch of a new subscription offers Retry, which stays until
   await expect(page.locator('.rp-toast')).toHaveCount(0);
 });
 
+// The boxes of a toast's parts, for the layout checks below.
+async function parts(toast: ReturnType<Page['locator']>) {
+  return toast.evaluate(toast => {
+    const box = (selector: string) => {
+      const rect = toast.querySelector(selector)?.getBoundingClientRect();
+      return rect ? {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, middle: rect.top + rect.height / 2} : null;
+    };
+    return {
+      summary: box('[slot="title"]')!,
+      detail: box('[slot="description"]'),
+      icon: box('.icon svg'),
+      close: box('.close')!,
+      foot: box('.foot'),
+      action: box('.action'),
+      more: box('.more')
+    };
+  });
+}
+
+for (const width of [1280, 390])
+  test(`a failure toast at ${width}px puts the error under its summary and the action on a footer row that ends where close ends`, async ({page}) => {
+    await page.setViewportSize({width, height: 844});
+    await failingFirstFetch(page, 1);
+    await page.goto('/#/nodes?tab=list');
+    await addSubscription(page, 'sub-w');
+    const failure = page.locator('.rp-toast.negative');
+    await expect(failure.locator('[slot="title"]')).toHaveText('sub-w was written to the configuration, but could not be refreshed');
+    await expect(failure.locator('[slot="description"]')).toContainText('Subscription server unreachable');
+    const boxes = await parts(failure);
+    expect(boxes.detail!.top).toBeGreaterThanOrEqual(boxes.summary.bottom);
+    // Icon and close sit on the first line of the summary.
+    for (const middle of [boxes.icon!.middle, boxes.close.middle]) expect(Math.abs(middle - (boxes.summary.top + 10))).toBeLessThanOrEqual(1);
+    expect(boxes.action!.top).toBeGreaterThanOrEqual(boxes.detail!.bottom);
+    expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
+    // A toast with neither an action nor a stack behind it has no footer row, and one without a detail only its summary.
+    await failure.getByRole('button', {name: 'Retry', exact: true}).click();
+    const success = page.locator('.rp-toast.positive');
+    await expect(success).toBeVisible();
+    await expect(success.locator('.foot')).toHaveCount(0);
+    await expect(success.locator('[slot="description"]')).toHaveCount(0);
+  });
+
+for (const width of [1280, 390])
+  test(`the front toast of a stack at ${width}px puts "show all" at the start of its footer row and the action at the end`, async ({page}) => {
+    await page.setViewportSize({width, height: 844});
+    await failingFirstFetch(page, 9);
+    await page.goto('/#/nodes?tab=list');
+    await addSubscription(page, 'sub-s');
+    await addSubscription(page, 'sub-u');
+    const front = page.locator('.rp-toast:not(.background)');
+    await expect(front.getByRole('button', {name: /^Show all/})).toBeVisible();
+    const boxes = await parts(front);
+    expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
+    expect(Math.abs(boxes.action!.middle - boxes.more!.middle)).toBeLessThanOrEqual(1);
+    expect(boxes.more!.right).toBeLessThan(boxes.action!.left);
+    expect(boxes.more!.top).toBeGreaterThanOrEqual(boxes.detail!.bottom);
+    expect(Math.abs(boxes.close.middle - (boxes.summary.top + 10))).toBeLessThanOrEqual(1);
+  });
+
 test('a repeated actionable toast replaces its earlier copy', async ({page}) => {
   await failingFirstFetch(page, 2);
   await page.goto('/#/nodes?tab=list');

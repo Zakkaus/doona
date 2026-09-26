@@ -54,7 +54,7 @@ export function useGeodataSettings() {
       result => {
         if (result) toast('positive', t('settings.geodataUpdated'));
       },
-      (error: unknown) => toast('negative', t('settings.geodataFailed', {error: errorText(error, t)}))
+      (error: unknown) => toast('negative', t('settings.geodataFailed'), {detail: errorText(error, t)})
     );
   // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
   // One save at a time: a second press while one is in flight, or while an update runs, does nothing.
@@ -76,7 +76,7 @@ export function useGeodataSettings() {
       (error: unknown) => {
         inflight.current = false;
         setPending(null);
-        toast('negative', t('settings.geodataSaveFailed', {error: errorText(error, t)}));
+        toast('negative', t('settings.geodataSaveFailed'), {detail: errorText(error, t)});
         return false;
       }
     );

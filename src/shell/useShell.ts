@@ -38,7 +38,8 @@ export function useShell(settings: Settings, route: string): ShellModel {
       const outcomes = await refetchAll();
       // A resource unsubscribed by navigating away mid-refresh did not fail.
       const failure = outcomes.flatMap(outcome => (outcome.ok || outcome.error.name === 'AbortError' ? [] : [outcome.error]))[0];
-      toast(failure ? 'negative' : 'positive', failure ? t('ui.refreshFailed', {error: errorText(failure, t)}) : t('ui.refreshed'));
+      if (failure) toast('negative', t('ui.refreshFailed'), {detail: errorText(failure, t)});
+      else toast('positive', t('ui.refreshed'));
     } finally {
       refreshLock.current = false;
       setSpinning(false);

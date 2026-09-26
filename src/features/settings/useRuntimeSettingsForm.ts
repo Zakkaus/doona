@@ -80,7 +80,7 @@ export function useRuntimeSettingsForm() {
         setDraft(current => (current === submitted ? null : current));
         toast('positive', t('settings.runtimeSaved'));
       },
-      (error: unknown) => toast('negative', t('settings.runtimeFailed', {error: errorText(error, t)}))
+      (error: unknown) => toast('negative', t('settings.runtimeFailed'), {detail: errorText(error, t)})
     );
   };
   return {

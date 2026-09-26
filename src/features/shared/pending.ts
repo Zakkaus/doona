@@ -1,5 +1,5 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
-import {ApiError, failureNotice} from '../../api/error';
+import {ApiError, failureNotice, noticeText} from '../../api/error';
 import {backendMessage} from '../../i18n/backend';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
@@ -36,7 +36,7 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   const found =
     diagnostics ??
     (error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? null) : null);
-  if (!found) return {text: failureNotice(error, t, error => t('ui.writeFailed', {error})).text, lines: []};
+  if (!found) return {text: noticeText(failureNotice(error, t, t('ui.writeFailed')), t), lines: []};
   const errors = found.filter(item => item.level === 'error').length;
   const restart = restartRequired(found);
   return {

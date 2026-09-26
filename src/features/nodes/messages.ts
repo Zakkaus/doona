@@ -34,7 +34,7 @@ export const messages = defineMessages({
     'nodes.cacheHelp': '保留最近一次取得的內容，啟動時無需連網即可載入。',
     'nodes.added': '{name} 已新增',
     'nodes.addedRefreshed': '{name} 已新增並重新整理，{n} 個節點',
-    'nodes.addedRefreshFailed': '{name} 已寫入組態，但無法重新整理：{error}',
+    'nodes.addedRefreshFailed': '{name} 已寫入組態，但無法重新整理',
     'nodes.remove': '移除 {name}',
     'nodes.removeProviderTitle': '移除來源 {name}',
     'nodes.removeProviderHelp': '從主組態刪除此來源及其節點，並重載。',
@@ -87,9 +87,9 @@ export const messages = defineMessages({
     'nodes.latency': '延遲',
     'nodes.groups': '所屬群組',
     'nodes.empty': '此來源沒有節點',
-    'nodes.refreshFailed': '無法重新整理 {name}：{error}',
+    'nodes.refreshFailed': '無法重新整理 {name}',
     'nodes.refreshedDegraded': '{name}：節點已套用，但執行期處於降級狀態',
-    'nodes.probeError': '無法測試 {name}：{error}'
+    'nodes.probeError': '無法測試 {name}'
   },
   'zh-CN': {
     'nodes.latency.lowest': '最低',
@@ -124,7 +124,7 @@ export const messages = defineMessages({
     'nodes.cacheHelp': '保留最近一次获取的内容，启动时无需联网即可加载。',
     'nodes.added': '{name} 已添加',
     'nodes.addedRefreshed': '{name} 已添加并刷新，{n} 个节点',
-    'nodes.addedRefreshFailed': '{name} 已写入配置，但无法刷新：{error}',
+    'nodes.addedRefreshFailed': '{name} 已写入配置，但无法刷新',
     'nodes.remove': '移除 {name}',
     'nodes.removeProviderTitle': '移除来源 {name}',
     'nodes.removeProviderHelp': '从主配置删除此来源及其节点，并重载。',
@@ -177,9 +177,9 @@ export const messages = defineMessages({
     'nodes.latency': '延迟',
     'nodes.groups': '所属组',
     'nodes.empty': '此来源暂无节点',
-    'nodes.refreshFailed': '无法刷新 {name}：{error}',
+    'nodes.refreshFailed': '无法刷新 {name}',
     'nodes.refreshedDegraded': '{name}：节点已应用，但运行时处于降级状态',
-    'nodes.probeError': '无法测试 {name}：{error}'
+    'nodes.probeError': '无法测试 {name}'
   },
   en: {
     'nodes.latency.lowest': 'Lowest',
@@ -215,7 +215,7 @@ export const messages = defineMessages({
     'nodes.cacheHelp': 'Keeps the last fetched copy so it loads at startup without the network.',
     'nodes.added': '{name} added',
     'nodes.addedRefreshed': {one: '{name} added and refreshed, {n} node', other: '{name} added and refreshed, {n} nodes'},
-    'nodes.addedRefreshFailed': '{name} was written to the configuration, but could not be refreshed: {error}',
+    'nodes.addedRefreshFailed': '{name} was written to the configuration, but could not be refreshed',
     'nodes.remove': 'Remove {name}',
     'nodes.removeProviderTitle': 'Remove source {name}',
     'nodes.removeProviderHelp': 'Deletes this source and its nodes from the main configuration and reloads.',
@@ -268,8 +268,8 @@ export const messages = defineMessages({
     'nodes.latency': 'Latency',
     'nodes.groups': 'Groups',
     'nodes.empty': 'This source has no nodes',
-    'nodes.refreshFailed': 'Could not refresh {name}: {error}',
+    'nodes.refreshFailed': 'Could not refresh {name}',
     'nodes.refreshedDegraded': '{name}: nodes applied, but the runtime is degraded',
-    'nodes.probeError': 'Could not test {name}: {error}'
+    'nodes.probeError': 'Could not test {name}'
   }
 });

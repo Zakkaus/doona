@@ -52,7 +52,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
-  const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed', {error: errorText(error, t)})));
+  const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed'), {detail: errorText(error, t)}));
   useEffect(() => {
     if (problem) report(problem);
   }, [problem]);
@@ -143,7 +143,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
       const {kind, text} = probeToast(result, id, node.name, t);
       toast(kind, text);
     } catch (error) {
-      toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}));
+      toastFailure(error, t, t('nodes.probeError', {name: node.name}));
     }
   };
   return {

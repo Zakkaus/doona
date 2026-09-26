@@ -84,7 +84,7 @@ export function useNodeTable(input: NodeTableInput) {
             const {kind, text} = probeToast(result, node.id, node.name, t);
             toast(kind, text);
           },
-          error => toastFailure(error, t, error => t('nodes.probeError', {name: node.name, error}))
+          error => toastFailure(error, t, t('nodes.probeError', {name: node.name}))
         ),
       menu: () => [
         ...entries
