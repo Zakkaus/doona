@@ -165,6 +165,8 @@ export const isMac =
 
 // Below this breakpoint, detail drawers must not follow keyboard focus.
 export const panelQuery = '(min-width: 1200px)';
+// The phone breakpoint the stylesheets use, for a component whose markup, not only its layout, changes below it.
+export const phoneQuery = '(max-width: 599.98px)';
 
 // Reset linked drafts during render so navigation cannot paint the previous value.
 export function useLinked<T>(linked: T, apply: (value: T) => void) {

@@ -1,4 +1,6 @@
 import type {ReactNode} from 'react';
+import {TextTooltip} from '../Button';
+import {phoneQuery, useMediaQuery} from '../hooks';
 
 // `icon` and `tint` as on the activity page's tiles: the icon takes a palette role colour, or the tone's.
 export type ChartFact = {
@@ -11,20 +13,29 @@ export type ChartFact = {
 };
 
 // The page's figures as the activity page shows its own: a strip of tiles, label above, value large.
-export function FactStrip({facts}: {facts: ChartFact[]}) {
+// `lead`: the first value is a name whose end tells most, as a host's domain. On a phone its tile takes the first row
+// alone, and a name still too long for it gives way at its start; a hover, keyboard focus or tap shows it whole.
+export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
+  const phone = useMediaQuery(phoneQuery);
   if (!facts.length) return null;
   return (
-    <dl className="rp-strip rp-facts" style={{['--facts' as string]: facts.length}}>
-      {facts.map(fact => (
+    <dl className={'rp-strip rp-facts' + (lead ? ' rp-facts-lead' : '')} style={{['--facts' as string]: facts.length}}>
+      {facts.map((fact, i) => (
         <div key={fact.label} className={'rp-card' + (fact.tone ? ' ' + fact.tone : '')}>
           <dt className={'rp-tile-head' + (fact.tint ? ' rp-tint-' + fact.tint : '')}>
             {fact.icon}
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
-            <span className="rp-big" title={fact.value}>
-              {fact.value}
-            </span>
+            {lead && phone && i === 0 ? (
+              <TextTooltip className="rp-big" cut="start">
+                {fact.value}
+              </TextTooltip>
+            ) : (
+              <span className="rp-big" title={fact.value}>
+                {fact.value}
+              </span>
+            )}
             {fact.caption && (
               <span className="rp-fact-caption" title={fact.caption}>
                 {fact.caption}

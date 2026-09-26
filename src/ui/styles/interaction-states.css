@@ -34,6 +34,14 @@
   white-space: nowrap;
   vertical-align: middle;
 }
+/* Cut at the start instead: the box runs right to left, so the overflow and its ellipsis fall at the text's start in
+   either page direction, while the text (a <bdi>) keeps its own order. isolate outranks the mirrored layout's
+   plaintext, which would take the box's direction from the text. Text shorter than the box aligns right, so a box
+   that can be wider than its text shrinks to it and lets its parent place it. */
+.rp-truncate-start {
+  direction: rtl;
+  unicode-bidi: isolate;
+}
 /* A drawer scrolls vertically already, so on phones a truncated value wraps to show it whole instead of relying on
    TextTooltip's reveal, which needs :focus-visible and so never opens on a tap. */
 @media (max-width: 599.98px) {

@@ -29,6 +29,11 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
 }
+/* Cut at its start (.rp-truncate-start), a lead value is only as wide as its text, up to the tile, so a short one
+   still sits at the tile's start. */
+.rp-facts .rp-big.rp-truncate-start {
+  align-self: flex-start;
+}
 /* A value is large text, but notice is under 3:1 in most light palettes; the icon beside it keeps the tone. */
 .rp-facts .negative .rp-big {
   color: var(--rp-negative-text);
@@ -437,6 +442,16 @@
 }
 .rp-sharebar .legend b {
   font-variant-numeric: tabular-nums;
+}
+/* On a phone a lead tile takes the first row alone and the rest pair up below it, so the odd last tile no longer fills
+   its row. */
+@media (max-width: 599.98px) {
+  .rp-strip.rp-facts-lead > :first-child {
+    grid-column: 1 / -1;
+  }
+  .rp-strip.rp-facts-lead > :nth-child(n + 2):last-child:nth-child(odd) {
+    grid-column: auto;
+  }
 }
 /* However many facts a page has, they share the row evenly, edge to edge with the cards below. */
 @media (min-width: 600px) {

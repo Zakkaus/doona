@@ -72,7 +72,7 @@ export const Traffic = memo(function Traffic({
   const sample = view.unknown ? t('conn.chart.sampleUnknown', {n: records.length, unknown: view.unknown}) : t('conn.chart.sample', {n: records.length});
   return (
     <div className="rp-chart-page">
-      <FactStrip facts={facts} />
+      <FactStrip facts={facts} lead />
       <Card title={t('conn.chart.title')} note={sample}>
         {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
         {view.placed > 0 && (

@@ -143,7 +143,8 @@ const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserve
 const REVEALS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"]';
 const STOPS = REVEALS + ', [role="row"]';
 
-export function TextTooltip({children, text, className}: {children: ReactNode; text?: string; className?: string}) {
+// `cut="start"` drops the start of a value whose end matters more, as a host name's registrable domain.
+export function TextTooltip({children, text, className, cut}: {children: ReactNode; text?: string; className?: string; cut?: 'start'}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(false);
   // Not a tab stop until measured: a focusable span inside a row would swallow the row's own press.
@@ -230,8 +231,13 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
     if (measure) enqueue(measure);
   }, [children, text, active]);
   const span = (
-    <span ref={ref} className={cx('rp-truncate', className)} tabIndex={active && !nested ? 0 : -1} data-tip={active ? '' : undefined}>
-      {children}
+    <span
+      ref={ref}
+      className={cx('rp-truncate', cut === 'start' && 'rp-truncate-start', className)}
+      tabIndex={active && !nested ? 0 : -1}
+      data-tip={active ? '' : undefined}
+    >
+      {cut === 'start' ? <bdi>{children}</bdi> : children}
     </span>
   );
   // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
