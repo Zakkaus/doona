@@ -141,7 +141,7 @@ export const messages = defineMessages({
     'dns.chart.outcomes': '响应结果',
     'dns.chart.medianKey': '各上游的中位数',
     'dns.outcome.cached': '缓存命中',
-    'dns.outcome.answered': '上游回答',
+    'dns.outcome.answered': '上游应答',
     'dns.outcome.nxdomain': '查无此名',
     'dns.outcome.failed': '失败',
     'dns.exportLog': '导出 CSV',

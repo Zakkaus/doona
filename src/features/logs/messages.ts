@@ -58,7 +58,7 @@ export const messages = defineMessages({
     'log.chart.sample': '根据最近的 {n} 条记录',
     'log.chart.cell': '{time}，{level}：{n} 条',
     'log.chart.minimum': '显示{level}及以上',
-    'log.chart.current': '{level}：当前的最低等级',
+    'log.chart.current': '{level}：当前的最低级别',
     'log.empty': '暂无日志'
   },
   en: {

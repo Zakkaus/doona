@@ -215,7 +215,7 @@ export const messages = defineMessages({
     'ui.backend.temporarilyUnavailable': '后端暂时不可用',
     'ui.backend.setupRequired': '需要完成初始设置',
     'ui.backend.setupAlreadyCompleted': '初始设置已完成',
-    'ui.backend.invalidCredentials': '凭证无效',
+    'ui.backend.invalidCredentials': '凭据无效',
     'ui.backend.reloadRejected': '后端拒绝重载配置',
     'ui.backend.reloadDegraded': '配置已应用，但数据路径处于降级状态',
     'ui.backend.engineUnavailable': '引擎不可用，或在完成前已停止',

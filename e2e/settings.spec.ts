@@ -257,7 +257,7 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: t('settings.runtime')});
   const recording = card.getByRole('group', {name: t('settings.recording')});
-  await expect(recording.getByText(t('settings.recordingActive'))).toHaveCount(3);
+  await expect(recording.getByText(t('settings.recordingActive'), {exact: true})).toHaveCount(3);
   const flows = recording.getByRole('button', {name: t('settings.recordFlows')});
   await flows.click();
   await page.getByRole('option', {name: t('settings.record.off'), exact: true}).click();

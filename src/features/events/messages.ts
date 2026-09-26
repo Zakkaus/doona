@@ -37,7 +37,7 @@ export const messages = defineMessages({
     'event.kind': '种类',
     'event.allKinds': '所有种类',
     'event.withoutRuntime': '排除运行状态更新',
-    'event.k.streamReady': '流就绪',
+    'event.k.streamReady': '事件流就绪',
     'event.k.runtimeUpdated': '运行状态更新',
     'event.k.flowUpdated': '流程更新',
     'event.k.flowGap': '流程记录丢失',

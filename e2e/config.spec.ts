@@ -661,7 +661,7 @@ test('source withholding does not certify exports or diagnose the hidden include
   include.writable = false;
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.rp-content')).toContainText('Listener secret values are masked');
+  await expect(page.locator('.rp-content')).toContainText('Listener secret values are redacted');
   await expect(page.locator('.rp-content')).toContainText('may contain credentials');
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export', exact: true}).click();
