@@ -2,6 +2,38 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.7] - 2026-09-27
+
+### Added
+
+- Overview shows the backend process's CPU usage.
+- Connections shows each connection's upload and download rates, calculated from successive samples.
+- Policies lets you edit a group's health-check URL.
+- Configuration can create a new source file when the backend supports it.
+- A failed first fetch of a new subscription offers Retry in its toast; a new build offers Reload. Toasts with actions remain until dismissed or used.
+- Settings lets you place notifications at the top or bottom, centred or aligned to the end.
+
+### Changed
+
+- Toasts keep their status colours and separate the summary from backend details. Show all and action buttons share a footer on desktop and phones; request IDs stay in the console instead of the toast.
+- Desktop tabs are 34 pixels tall, name lists use consistent sorting, and equally sized connection filter groups keep a stable order.
+- Configuration shows module sections from read-only includes and groups repeated diagnostics.
+- README screenshots reflect the current desktop and phone layouts in all three languages.
+
+### Fixed
+
+- Configuration completion reads groups from every source and preserves each group header's original quotes. Quick setup preserves the same names in generated routing rules.
+- After a conflicting source save, the editor keeps the draft and uses the refreshed source as its next save's base. Reloading clears validation results from the previous generation.
+- Activity finds the outbound mode line by its marker rather than its position in the file.
+- DNS rejects an invalid device address without dropping the last valid filter. Closing one connection no longer clears another connection opened while the request was pending.
+- The routing map waits for its nodes before settling. Connection rates discard baselines from lists no longer held by the store.
+- Retrying a refused event stream reconnects it, recovered capability errors clear, and a refused first-page request is not repeated without a cursor.
+- Settings can sign in again after signing out, distinguishes a rejected token from a connection failure, and reports unavailable session storage as a storage error.
+- Geodata preset changes ask for confirmation when they lack categories used by the configuration. Operation errors identify the failed stage when the backend provides it.
+- Paused logs show the held record count. Gap summaries omit a zero dropped count, and Activity notice summaries align in one column.
+- Long backend versions end with an ellipsis; available backend capabilities use a status dot.
+- A pending keyboard navigation prefix clears when the filter shortcut has no field to focus, and near-viewport content keeps its observer across callback changes.
+
 ## [0.1.0-beta.6] - 2026-09-26
 
 ### Added
@@ -221,6 +253,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
+[0.1.0-beta.7]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.6...v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.5...v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.4...v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.3...v0.1.0-beta.4
