@@ -104,6 +104,13 @@
   grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
   gap: 12px 16px;
 }
+/* A phone card is too narrow for two 176px columns, so it splits in two while each half keeps 128px and stacks
+   only below that; the half is a pixel short so rounding cannot drop a column. */
+@media (max-width: 599.98px) {
+  .rp-kv {
+    grid-template-columns: repeat(auto-fill, minmax(max(128px, calc((100% - 17px) / 2)), 1fr));
+  }
+}
 .rp-kv .k {
   display: block;
   font-size: var(--rp-text-xs);
