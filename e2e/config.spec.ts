@@ -871,6 +871,22 @@ test('a validation run gives way to the accepted diagnostics after a reload', as
   await expect(panel).not.toContainText('Last validation');
 });
 
+test('outbound completion offers groups defined in any source', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const include = config.sources.find(source => source.id === 'src-rules')!;
+  include.content += '\ngroup {\n  lab { policy: min }\n}\n';
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config');
+  const routing = page.getByRole('tabpanel', {name: 'Modules'}).getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\ndomain(example.org) -> la');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('lab');
+});
+
 httpTest('a module draft refused with 412 is rebased and saves on the next attempt', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config');

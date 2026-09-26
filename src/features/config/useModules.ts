@@ -4,7 +4,7 @@ import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/mo
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
 import type {EditorMark} from '../../ui/code/CodeEditor';
-import {groupNames} from '../../dae/sources';
+import {allGroupNames} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
@@ -60,7 +60,10 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const placed = useMemo(() => ({own, sectionId}), [own, sectionId]);
   const [marks, setMarks] = useState<EditorMark[]>([]);
   useLinked(placed, next => setMarks(draft ? sectionMarks(next.own, draft.section.source.id, draft.section.block, draft.text) : []));
-  const outbounds = useMemo(() => groupNames(fullText ?? config.sources.find(source => source.kind === 'main')?.content ?? ''), [fullText, config]);
+  const outbounds = useMemo(
+    () => allGroupNames(config.sources, sourceId && fullText !== null ? {id: sourceId, content: fullText} : undefined),
+    [sourceId, fullText, config]
+  );
   const cancel = () => {
     editor.cancel();
     clear();

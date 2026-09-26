@@ -3,6 +3,12 @@ import {readGroupEntries} from './groups';
 
 export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
 
+// The groups a rule in any source may name: every loaded source's, with the one being edited read from its draft.
+export function allGroupNames(sources: ConfigSource[], draft?: {id: string; content: string}): string[] {
+  const texts = sources.map(source => (source.id === draft?.id ? draft.content : source.content));
+  return [...new Set(texts.flatMap(text => (text === undefined ? [] : groupNames(text))))];
+}
+
 // Hidden paths use a source-kind label and an opaque ID for display and export.
 export const redacted = (source: {path: string}) => source.path === '<redacted>' || source.path === '';
 export const fileName = (source: {id: string; kind: string; path: string}) =>

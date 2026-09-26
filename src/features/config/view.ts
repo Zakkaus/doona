@@ -7,7 +7,8 @@ import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
-import {blockFields, isBareName, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {isWritableName} from '../../dae/groups';
 import {href as routeHref} from '../../shell/route';
 import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
@@ -249,7 +250,6 @@ export function wizardInitial(content: string): WizardState {
   return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
 // A value the file cannot hold is flagged on its own field, not on every row.
-const writableName = (name: string) => isBareName(name.trim()) || isQuotable(name.trim());
 export function wizardRows(state: WizardState, lang: Lang, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
   return {
     groupUsedText:
@@ -272,7 +272,7 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
               name: item.name,
               url: item.url,
               raw: item.raw !== undefined && !item.name ? item.raw.trim() : null,
-              nameError: item.raw === undefined && !writableName(item.name) ? t('config.unquotable') : undefined,
+              nameError: item.raw === undefined && !isWritableName(item.name.trim()) ? t('config.unquotable') : undefined,
               error:
                 item.url !== '' && !isSubscriptionUrl(item.url)
                   ? t('config.wizardSubscriptionHelp')
