@@ -18,6 +18,7 @@ import {useT, type Translator} from '../i18n';
 import {errorText, failureNotice} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
+import {escapeLayers} from './hooks';
 
 export function Empty({role, children}: {role?: 'alert'; children: ReactNode}) {
   return (
@@ -183,7 +184,7 @@ export function Toasts() {
     const on = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const inToasts = (e.target as Element | null)?.closest?.('.rp-toasts');
-      if (inToasts || !document.querySelector('[role="dialog"], [role="alertdialog"]')) setExpanded(false);
+      if (inToasts || !document.querySelector(escapeLayers)) setExpanded(false);
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
