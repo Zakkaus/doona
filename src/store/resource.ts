@@ -44,9 +44,9 @@ export async function walk<P extends {next_cursor: string | null}, T>(
   take: (acc: T | undefined, p: P) => T
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
+    let cursor: string | undefined;
     try {
       let acc: T | undefined;
-      let cursor: string | undefined;
       do {
         const result = await page(cursor);
         acc = take(acc, result);
@@ -54,7 +54,14 @@ export async function walk<P extends {next_cursor: string | null}, T>(
       } while (cursor);
       return acc!;
     } catch (error) {
-      if (attempt === 0 && error instanceof ApiError && (error.status === 410 || (error.status === 400 && error.code === 'invalid_request'))) continue;
+      // Only a request that carried a cursor can have had it refused; a failed head would fail the same way again.
+      if (
+        attempt === 0 &&
+        cursor !== undefined &&
+        error instanceof ApiError &&
+        (error.status === 410 || (error.status === 400 && error.code === 'invalid_request'))
+      )
+        continue;
       throw error;
     }
   }

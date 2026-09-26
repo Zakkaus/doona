@@ -6,7 +6,15 @@ import {refuseCredentials, watchResource} from './resourceCore';
 import {shouldRefetch} from '../api/invalidation';
 type Listener = (event: ApiEvent, reconnected: boolean) => void;
 type StreamStatus = {connected: boolean; cursor: string | null; error: Error | null; available: boolean | null};
-type Stream = {listeners: Set<Listener>; statuses: Set<() => void>; controller: AbortController; status: StreamStatus; ready?: ApiEvent; recent: ApiEvent[]};
+type Stream = {
+  listeners: Set<Listener>;
+  statuses: Set<() => void>;
+  controller: AbortController;
+  status: StreamStatus;
+  ready?: ApiEvent;
+  recent: ApiEvent[];
+  reopen?: () => void;
+};
 const streams = new Map<Api, Stream>();
 // The events a page's feed keeps, and so the recent events the stream replays to a feed opened late.
 export const EVENT_FEED_LIMIT = 200;
@@ -39,7 +47,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
         failed = true;
         capabilityError = true;
         update({error: state.error});
-      } else if (capabilityError && connection) {
+      } else if (capabilityError) {
         // A refetch that returns what was already held keeps the same object, so it is cleared here.
         capabilityError = false;
         update({error: null});
@@ -83,6 +91,7 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
         .catch(reason => {
           if (!controller.signal.aborted) {
             connection = undefined;
+            capabilityError = false;
             refuseCredentials(api, reason);
             update({connected: false, error: reason instanceof Error ? reason : new Error(String(reason))});
           }
@@ -90,6 +99,12 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
     };
     const capabilities = watchResource(api, {key: ['capabilities'], every: 0, retryErrors: true, fetch: signal => api.capabilities(signal)}, changed);
     changed();
+    // A refused stream stays closed; an unchanged capabilities read notifies nobody, so a retry reopens it here.
+    shared.reopen = () => {
+      if (connection || capabilities.getSnapshot().error) return;
+      current = undefined;
+      changed();
+    };
     shared.controller.signal.addEventListener(
       'abort',
       () => {
@@ -111,6 +126,10 @@ export function subscribeEvents(api: Api, listener: Listener, notify?: () => voi
       streams.delete(api);
     }
   };
+}
+// Reopens a stream the backend refused, once the capabilities have been read again.
+export function reopenEvents(api: Api) {
+  streams.get(api)?.reopen?.();
 }
 export function useEvents(onEvent: Listener, replayRecent = false) {
   const api = getApi();
