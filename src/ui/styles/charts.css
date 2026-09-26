@@ -327,10 +327,11 @@
 .rp-heatmap .cell.t5 {
   background: var(--tone);
 }
+/* Three HH:MM marks at 12px leave at least 40px between them on a 320px screen, in every language. */
 .rp-heatmap .times .ends {
   display: flex;
   justify-content: space-between;
-  font-size: var(--rp-text-2xs);
+  font-size: var(--rp-text-xs);
   color: var(--rp-subtle);
   white-space: nowrap;
 }
