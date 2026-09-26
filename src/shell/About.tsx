@@ -5,10 +5,28 @@ import night from '../duck-night.webp';
 import GitHub from '../ui/icons/GitHub';
 import {useAbout} from './useShell';
 
-export function About({trigger, onHonk}: {trigger: ReactElement; onHonk?: () => void}) {
+// Opened by its own trigger, or, without one, by the caller through `isOpen`, as the backend indicator does.
+export function About({
+  trigger,
+  isOpen,
+  onOpenChange,
+  onHonk
+}: {
+  trigger?: ReactElement;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onHonk?: () => void;
+}) {
   const view = useAbout(onHonk);
   return (
-    <ModalDialog title={view.title} narrow trigger={trigger} footer={close => <Button onPress={close}>{view.close}</Button>}>
+    <ModalDialog
+      title={view.title}
+      narrow
+      trigger={trigger}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      footer={close => <Button onPress={close}>{view.close}</Button>}
+    >
       <div className={cx('rp-about', view.honked && 'honked')}>
         <Button appearance="plain" className={cx('rp-about-duck', view.painted && 'painted')} onPress={view.tap} label={view.duck}>
           <img key={view.taps} src={logo} alt="" className={cx(view.hop && 'hop')} />

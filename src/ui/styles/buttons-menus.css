@@ -105,6 +105,23 @@
   width: max-content;
   max-width: calc(100vw - 24px);
 }
+/* A dialog in a popover, after S2's: a title over its content, with a dialog's inset rather than a menu's. */
+.rp-popover-dialog {
+  inline-size: min(320px, calc(100vw - 24px));
+}
+.rp-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px;
+  outline: none;
+}
+.rp-popover-body h2 {
+  margin: 0;
+  font-size: var(--rp-text-lg);
+  line-height: 24px;
+  font-weight: 700;
+}
 .rp-item {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;

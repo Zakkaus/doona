@@ -81,9 +81,10 @@ test('language, theme, palette and wordmark are each two taps away in the overfl
   const more = top.getByRole('button', {name: 'More options'});
   const box = (await more.boundingBox())!;
   expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
-  // The menu is four short rows, each naming its current value; a row opens its choices in the same popover.
+  // The menu is four short rows, each naming its current value, and the Backend row; a row opens its choices in the
+  // same popover.
   await more.click();
-  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient']);
+  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient', 'Backend']);
   await page.keyboard.press('Escape');
   const pick = async (row: string, item: string) => {
     await more.click();
@@ -112,7 +113,7 @@ test('the overflow menu draws every row icon at the same size, whatever the sche
     await page.goto('/#/overview');
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     const icons = page.locator('.rp-subitem .ic > *');
-    await expect(icons).toHaveCount(4);
+    await expect(icons).toHaveCount(5);
     for (const box of await icons.evaluateAll(els => els.map(el => el.getBoundingClientRect()))) expect([box.width, box.height]).toEqual([16, 16]);
     await page.keyboard.press('Escape');
   }

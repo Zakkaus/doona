@@ -371,6 +371,19 @@
 .rp-version[data-hovered] {
   background: var(--rp-fill);
 }
+/* The indicator's light is the dot alone; the state is in its name and in the popover. */
+.rp-version .rp-light > span:empty {
+  display: none;
+}
+.rp-popover-body .rp-kv {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.rp-backend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .rp-main {
   margin-inline-end: 0;
   padding: 32px 40px calc(48px + var(--rp-dock));

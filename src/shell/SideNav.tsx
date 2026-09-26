@@ -1,21 +1,20 @@
 import {memo, type CSSProperties, type RefObject} from 'react';
-import GitHub from '../ui/icons/GitHub';
-import {useT} from '../i18n';
 import {Link} from '../ui/ui';
+import {BackendIndicator} from './Backend';
 import {warmPage} from './registry';
-import type {NavGroup, ShellView} from './view';
+import type {BackendView, NavGroup} from './view';
 
 type SideNavProps = {
   groups: NavGroup[];
   busy: boolean;
-  engine: ShellView['engine'];
+  backend: BackendView;
+  honk: () => void;
   navRef: RefObject<HTMLElement | null>;
   navStyle: CSSProperties | undefined;
 };
 
 // Navigation follows the open page, not its query: a tab or filter change leaves it alone.
-export const SideNav = memo(function SideNav({groups, busy, engine, navRef, navStyle}: SideNavProps) {
-  const t = useT();
+export const SideNav = memo(function SideNav({groups, busy, backend, honk, navRef, navStyle}: SideNavProps) {
   return (
     <nav className="rp-side" ref={navRef} aria-busy={busy || undefined}>
       {navStyle && <span className="rp-nav-slider" style={navStyle} />}
@@ -40,10 +39,7 @@ export const SideNav = memo(function SideNav({groups, busy, engine, navRef, navS
         </div>
       ))}
       <div className="rp-side-grow" />
-      <Link appearance="version" href={engine.href} external label={t('github')}>
-        <GitHub />
-        {engine.text}
-      </Link>
+      <BackendIndicator backend={backend} honk={honk} />
     </nav>
   );
 });

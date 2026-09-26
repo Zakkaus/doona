@@ -1,9 +1,11 @@
-import {memo, useState} from 'react';
+import {memo, useRef, useState} from 'react';
 import {About} from './About';
+import {BackendMenuPopover} from './Backend';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import MoreVertical from '../ui/icons/MoreVertical';
+import Data from '../ui/icons/Data';
 import DataRefresh from '../ui/icons/DataRefresh';
 import Refresh from '../ui/icons/Refresh';
 import Search from '../ui/icons/Search';
@@ -13,7 +15,7 @@ import {useT, type Lang} from '../i18n';
 import {Button, ChoiceMenu, Divider} from '../ui/ui';
 import type {SettingsContext} from './preferences';
 import type {PaletteId, Scheme, Wordmark} from './preferences';
-import type {AppearanceMenu, PaletteSection} from './view';
+import type {AppearanceMenu, BackendView, PaletteSection} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
 
@@ -42,13 +44,14 @@ type TopBarProps = {
   held: number;
   reloadLabel: string;
   honk: () => void;
+  backend: BackendView;
   wordmark: string;
   versionText: string;
   paletteSections: PaletteSection[];
   menu: AppearanceMenu;
 };
 
-// The top bar depends on appearance, language and the engine's version, not on the open page or its query,
+// The top bar depends on appearance, language and the backend's version and state, not on the open page or its query,
 // so it is memoised: moving between pages or tabs leaves it alone.
 export const TopBar = memo(function TopBar({
   lang,
@@ -63,6 +66,7 @@ export const TopBar = memo(function TopBar({
   held,
   reloadLabel,
   honk,
+  backend,
   wordmark,
   versionText,
   paletteSections,
@@ -72,6 +76,8 @@ export const TopBar = memo(function TopBar({
   // The language and palette icons turn in when their value changes, like the scheme icon; not on first paint.
   const [first] = useState({lang, palette: ap.palette});
   const palettes = paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)}));
+  const narrowMenu = useRef<HTMLSpanElement>(null);
+  const [backendOpen, setBackendOpen] = useState(false);
   const wordmarks = {title: t('wordmark'), items: menu.wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)};
   return (
     <header className="rp-top">
@@ -122,7 +128,7 @@ export const TopBar = memo(function TopBar({
             <SchemeIcon dark={ap.dark} />
           </Button>
         </span>
-        <span className="rp-narrow-only">
+        <span className="rp-narrow-only" ref={narrowMenu}>
           <ChoiceMenu
             quiet
             chevron={false}
@@ -137,9 +143,11 @@ export const TopBar = memo(function TopBar({
               {label: t('palette'), icon: <Color />, sections: palettes},
               {label: t('wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
             ]}
+            actions={[{label: backend.title, icon: <Data />, onAction: () => setBackendOpen(true)}]}
           >
             <MoreVertical />
           </ChoiceMenu>
+          <BackendMenuPopover backend={backend} honk={honk} anchor={narrowMenu} isOpen={backendOpen} onOpenChange={setBackendOpen} />
         </span>
       </div>
     </header>

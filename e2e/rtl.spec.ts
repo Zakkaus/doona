@@ -172,15 +172,19 @@ test.describe('right to left at 390px', () => {
 
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     const rows = page.locator('.rp-subitem');
-    await expect(rows).toHaveCount(4);
+    // Four submenu rows and the Backend row, which opens a popover and has no chevron.
+    await expect(rows).toHaveCount(5);
     for (const row of await rows.all()) {
       const {x, width} = await box(row);
       expect(x).toBeGreaterThanOrEqual(0);
       expect(x + width).toBeLessThanOrEqual(390);
       // The row reads from the right: its icon comes before its label.
       expect((await box(row.locator('.ic'))).x).toBeGreaterThan((await box(row.locator('.rp-truncate'))).x);
-      expect(await turn(row.locator('.rp-chev-end'))).toBe(1);
     }
+    // Each submenu's chevron points left.
+    const chevrons = rows.locator('.rp-chev-end');
+    await expect(chevrons).toHaveCount(4);
+    for (const chevron of await chevrons.all()) expect(await turn(chevron)).toBe(1);
     // Into a submenu is the left arrow, and back out of it, which its chevron points to, the right.
     await page.getByRole('menuitem', {name: 'Theme'}).focus();
     await page.keyboard.press('ArrowLeft');
@@ -189,7 +193,7 @@ test.describe('right to left at 390px', () => {
     expect(await turn(back)).toBe(-1);
     await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(rows).toHaveCount(4);
+    await expect(rows).toHaveCount(5);
     await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
   });
 });
