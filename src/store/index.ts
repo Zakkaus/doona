@@ -19,7 +19,7 @@ export {useConnections, useConnectionClose, useConnectionTotals} from './connect
 export {useFlows, useFlow, useRules, type FlowFilter} from './flows';
 export {smallerOnRefusal, queryTypes, useDnsLog, useDnsCacheUsage, useDnsControl, useDnsFlush} from './dns';
 export {useConfig, useConfigEditor} from './config';
-export {useLogFeed, useEventFeed} from './logs';
+export {useLogFeed, useEventFeed, LOG_FEED_LIMIT} from './logs';
 export {historyLost, EVENT_FEED_LIMIT} from './events';
 export {pendingRules, usePendingRules, type PendingRule, type PendingFailure} from './pendingRules';
 export {poll} from './cadence';

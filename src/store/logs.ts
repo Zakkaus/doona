@@ -7,7 +7,7 @@ import {createFeed} from './feed';
 
 // A resumed stream's `stream.ready` carries the cursor it resumed from, the id of the last event already listed.
 export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', event => `${event.event} ${event.id}`);
-const LOG_FEED_LIMIT = 1000;
+export const LOG_FEED_LIMIT = 1000;
 // Runtime heartbeats arrive every second and would evict every other kind from one bounded ring, so they get a
 // ring of their own; the page merges both by time.
 const silent = () => () => {};

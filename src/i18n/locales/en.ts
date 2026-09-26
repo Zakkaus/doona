@@ -387,6 +387,7 @@ export const messages = {
   'log.targetPlaceholder': 'Module prefix',
   'log.pause': 'Pause',
   'log.connected': 'Streaming',
+  'log.paused': {one: 'Paused: {n} new record', other: 'Paused: {n} new records'},
   'log.reconnecting': 'Reconnecting',
   'log.disconnected': 'Disconnected',
   'log.gap': 'Logs lost: records sent while disconnected cannot be recovered',

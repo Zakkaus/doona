@@ -8,13 +8,14 @@ export function createFeed<T extends {id: string}, S extends object>(
   // Records after which the stream lost history; the list shows a marker above each.
   const gaps = new Set<T>();
   const listeners = new Set<() => void>();
-  let snapshot = {records: [] as T[], gaps: new Set(gaps) as ReadonlySet<T>, ...status};
+  let snapshot = {records: [] as T[], gaps: new Set(gaps) as ReadonlySet<T>, pending: 0, ...status};
   let dirty = false;
   let recordsDirty = false;
   let statusDirty = false;
-  // While held, records keep accumulating in the bounded ring but the published list stays as it was, and a
-  // record-only change publishes nothing: a paused 10 Hz stream causes no renders.
+  // While held, records keep accumulating in the bounded ring but the published list stays as it was; only the
+  // count of records appended since holding is published, so a paused stream re-renders no rows.
   let held = false;
+  let pending = 0;
   let timer: number | undefined;
   const publish = () => {
     timer = undefined;
@@ -26,7 +27,7 @@ export function createFeed<T extends {id: string}, S extends object>(
     const stale = held || !recordsDirty;
     const list = stale ? snapshot.records : [...records.values()].reverse();
     if (!held) recordsDirty = false;
-    snapshot = {records: list, gaps: stale ? snapshot.gaps : new Set(gaps), ...status};
+    snapshot = {records: list, gaps: stale ? snapshot.gaps : new Set(gaps), pending, ...status};
     listeners.forEach(notify => notify());
   };
   const schedule = () => {
@@ -69,6 +70,10 @@ export function createFeed<T extends {id: string}, S extends object>(
         gaps.delete(evicted);
       }
       recordsDirty = true;
+      if (held) {
+        pending++;
+        statusDirty = true;
+      }
       schedule();
     },
     update(change: Partial<S>) {
@@ -81,7 +86,8 @@ export function createFeed<T extends {id: string}, S extends object>(
     clear() {
       records.clear();
       gaps.clear();
-      snapshot = {...snapshot, records: [], gaps: new Set()};
+      pending = 0;
+      snapshot = {...snapshot, records: [], gaps: new Set(), pending};
       statusDirty = true;
       schedule();
     },
@@ -94,6 +100,7 @@ export function createFeed<T extends {id: string}, S extends object>(
     },
     hold(on: boolean) {
       held = on;
+      pending = 0;
       if (!on) schedule();
     }
   };

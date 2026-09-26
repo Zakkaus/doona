@@ -2,7 +2,7 @@ import {logLevelLabels} from '../../api/selectors';
 import {enumLabel} from '../../i18n/enum';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {localTime} from '../../i18n/format';
-import type {Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Translator as LabelFn} from '../../i18n';
 
 const severity: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error'];
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
@@ -45,11 +45,9 @@ function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): L
 export function logView(
   records: Array<LogRecord & {id: string}>,
   levels: LogLevel[],
-  connected: boolean,
   engine: string | undefined,
   locale: string,
   t: LabelFn,
-  failed = false,
   gaps: ReadonlySet<LogRecord> = new Set(),
   // The runtime log.level: the engine emits nothing below it, whatever the stream asks for.
   recorded?: LogLevel
@@ -66,12 +64,18 @@ export function logView(
       label: below(id) ? t('log.levelNotRecorded', {level: enumLabel(logLevelLabels, id, t)}) : enumLabel(logLevelLabels, id, t)
     })),
     recordedText: recorded ? t('log.recorded', {level: enumLabel(logLevelLabels, recorded, t)}) : null,
-    // A failed stream is not retried until asked, so it is not "connecting".
-    status: failed
-      ? {tone: 'err' as const, text: t('log.disconnected')}
-      : {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')},
     exportBase: `${engine || 'engine'}-log`
   };
+}
+
+// Kept apart from `logView` because the count of held records changes while the list does not.
+export function logStatus(connected: boolean, failed: boolean, paused: boolean, pending: number, limit: number, locale: string, t: LabelFn) {
+  // A failed stream is not retried until asked, so it is not "connecting".
+  if (failed) return {tone: 'err' as const, text: t('log.disconnected')};
+  // A paused list is not live either way, so a brief reconnect does not replace what the pause is holding back.
+  // The ring keeps only the newest `limit` records, so resuming never shows more than that.
+  if (paused) return {tone: 'neutral' as const, text: t('log.paused', {n: pending > limit ? `${formatNumber(limit, locale)}+` : pending})};
+  return {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')};
 }
 
 export function logLevel(level: LogLevel, levels: LogLevel[] = []): LogLevel | undefined {

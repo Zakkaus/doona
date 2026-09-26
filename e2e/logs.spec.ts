@@ -43,8 +43,9 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   records.push({id: 'log:4', level: 'warn', target: 'honk::dns', message: 'Held while paused'});
   const before = sent;
   await expect.poll(() => sent).toBeGreaterThan(before);
-  // Paused freezes the list; what arrived meanwhile shows on resume rather than being lost.
+  // Paused freezes the list and says how much arrived meanwhile; that shows on resume rather than being lost.
   await expect(rows).toHaveText(['DNS slow']);
+  await expect(page.getByText('Paused: 1 new record', {exact: true})).toBeVisible();
   await page.getByRole('switch', {name: 'Pause', exact: true}).press('Space');
   await expect(rows).toHaveText(['Held while paused', 'DNS slow']);
   records.push({id: 'log:5', level: 'warn', target: 'honk::dns', message: 'Received after resume'});
