@@ -46,6 +46,7 @@ export type BackendView = {
   heading: string;
   facts: Array<[string, string]>;
   about: string;
+  edit: {href: string; label: string};
   project: {href: string; label: string};
 };
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
@@ -154,6 +155,7 @@ export function shellView(
         ...fact(t('shell.backend.profile'), profile?.name)
       ],
       about: t('about.title'),
+      edit: {href: href('settings', {card: 'backend'}), label: t('shell.backend.edit')},
       project: {href: version ? `${org}/${version.engine.name}` : org, label: t('shell.backend.project', {engine: engineName})}
     },
     shortcuts,
