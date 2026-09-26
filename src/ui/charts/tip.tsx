@@ -81,8 +81,12 @@ function BoundedTip({tip}: {tip: Tip}) {
   }, [tip.x, tip.y]);
   if (dismissed && (dismissed.x !== tip.x || dismissed.y !== tip.y)) setDismissed(null);
   const bounds = tip.bounds!;
-  const place = (coordinate: number, dimension: number, start: number, length: number) =>
-    Math.max(start, coordinate + 10 + dimension > start + length ? coordinate - dimension - 10 : coordinate + 10);
+  // Open after the point, or before it when that runs past the end; then keep the whole tip inside the bounds,
+  // since with a tall tip in a short card neither side may fit.
+  const place = (coordinate: number, dimension: number, start: number, length: number) => {
+    const open = coordinate + 10 + dimension > start + length ? coordinate - dimension - 10 : coordinate + 10;
+    return Math.max(start, Math.min(open, start + length - dimension));
+  };
   const x = place(tip.x, size?.width ?? 0, bounds.x, bounds.width);
   const y = place(tip.y, size?.height ?? 0, bounds.y, bounds.height);
   return (
@@ -107,7 +111,12 @@ function BoundedTip({tip}: {tip: Tip}) {
           backgroundColor: 'var(--rp-text)',
           color: 'var(--rp-on-text)',
           border: 'none',
-          whiteSpace: 'nowrap',
+          // As wide as its longest line, but never wider than the bounds, so a narrow card wraps it instead of
+          // cutting it off.
+          boxSizing: 'border-box',
+          inlineSize: 'max-content',
+          maxInlineSize: bounds.width,
+          overflowWrap: 'anywhere',
           borderRadius: 8,
           fontSize: 12
         }}

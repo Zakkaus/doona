@@ -404,6 +404,25 @@ for (const [name, storage] of [
         }).toPass();
       }
     });
+
+    // Font metrics differ between machines, so force a tip wider than the card: it has to wrap, not overflow.
+    test('wraps inside its card when wider than it', async ({page}) => {
+      await page.goto('/#/activity');
+      await page.addStyleTag({content: '.rp-charttip-bounded [role=status] { padding-inline: 48px !important; }'});
+      const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
+      const spark = tile.locator('.rp-spark svg');
+      await expect(spark).toBeVisible();
+      const card = (await tile.boundingBox())!;
+      const line = (await spark.boundingBox())!;
+      await page.mouse.move(line.x + line.width - 1, line.y + line.height / 2);
+      const tip = tile.locator('.rp-charttip-bounded [role=status]');
+      await expect(tip).toBeVisible();
+      await expect(async () => {
+        const box = (await tip.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(card.x);
+        expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width);
+      }).toPass();
+    });
   });
 }
 
