@@ -196,6 +196,30 @@ test('mock notices include distinct operations and the recording gap, not routin
   }
 });
 
+test('notice summaries start at one edge however wide their labels are', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  // A phone's card is about as narrow as the card gets.
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/activity');
+    const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+    await expect(notices.locator('.rp-light.warn')).toHaveText('Warning');
+    const edges = await notices.locator('[role=listitem] .rp-note').evaluateAll(notes => notes.map(note => note.getBoundingClientRect().left));
+    expect(edges.length).toBeGreaterThan(1);
+    expect(new Set(edges).size).toBe(1);
+    // A label lines up with its summary's first line, also when the summary wraps.
+    const offsets = await notices.locator('[role=listitem]').evaluateAll(items =>
+      items.map(item => {
+        const label = item.querySelector('.rp-light')!.getBoundingClientRect();
+        const note = item.querySelector('.rp-note')!;
+        const line = parseFloat(getComputedStyle(note).lineHeight);
+        return Math.abs(label.top + label.height / 2 - (note.getBoundingClientRect().top + line / 2));
+      })
+    );
+    for (const offset of offsets) expect(offset).toBeLessThan(4);
+  }
+});
+
 test('housekeeping cannot evict notices while the page is hidden', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
