@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory} from '../../store';
-import {useT, useLang, LOCALE} from '../../i18n';
+import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
 import {useMemorySeries} from './useMemorySeries';
@@ -44,6 +44,7 @@ export function useActivity() {
   const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
   // Traffic series are in KB/s.
   const chartRate = useCallback((value: number | null | undefined) => formatRate(value == null ? null : value * 1000, locale), [locale]);
+  const count = useCallback((value: number) => formatNumber(value, locale), [locale]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value ?? null, locale), [locale]);
   const view = useMemo(
     () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
@@ -63,6 +64,7 @@ export function useActivity() {
     traffic,
     memorySeries,
     chartRate,
+    count,
     memoryBytes,
     trafficBounds,
     memoryBounds,
