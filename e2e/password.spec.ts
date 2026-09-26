@@ -122,6 +122,24 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
   expect(await page.evaluate(() => sessionStorage.getItem('doona-session'))).toBeNull();
 });
 
+test('a session the tab cannot store asks to allow storage instead of reporting a failed sign-in', async ({page}) => {
+  await passwordBackend(page, false);
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+      if (this === sessionStorage) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      setItem.call(this, key, value);
+    };
+  });
+  await page.goto('/#/activity');
+  const form = page.getByRole('dialog');
+  await form.getByLabel('Username', {exact: true}).fill('admin');
+  await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
+  await form.getByRole('button', {name: 'Sign in'}).click();
+  await expect(form.locator('.rp-alert')).toHaveText('Could not save settings: allow local storage for this site.');
+  await expect(form.getByRole('button', {name: 'Sign in'})).toBeEnabled();
+});
+
 test('signing out ends the session on the backend and in the tab', async ({page}) => {
   const state = await passwordBackend(page, false);
   const form = page.getByRole('dialog');

@@ -109,7 +109,14 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     setBusy(true);
     try {
       const session = await openSession(api, mode, {username, password});
-      saveSession(profileId, api, session.token, session.expires_at);
+      try {
+        saveSession(profileId, api, session.token, session.expires_at);
+      } catch {
+        // The sign-in succeeded; only the tab's storage refused the session.
+        setBusy(false);
+        setFailure({key: 'settings.saveError'});
+        return;
+      }
       location.reload();
     } catch (error) {
       setBusy(false);
