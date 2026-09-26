@@ -552,6 +552,7 @@ export const messages = {
   'ov.f.ebpfBytes': 'eBPF 核心記憶體',
   'ov.config': '組態版本',
   'ov.uptime': '運作時間',
+  'ov.cpu': 'CPU 使用率',
   'ov.lastReload': '上次重載',
   'ov.datapath': '資料路徑',
   'ov.memory': '記憶體',
