@@ -43,6 +43,7 @@ export function About({
         </div>
         <Kv items={view.items} />
         <p className="rp-label">{view.credits}</p>
+        <p className="rp-label">{view.privacy}</p>
         <div className="rp-cluster">
           {view.repositories.map(repository => (
             <Link key={repository.href} appearance="link" href={repository.href} external>
