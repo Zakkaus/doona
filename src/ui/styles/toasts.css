@@ -54,7 +54,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 8px 12px 16px;
+  padding-block: 12px;
+  padding-inline: 16px 8px;
   min-height: 56px;
   width: 336px;
   max-width: 90vw;

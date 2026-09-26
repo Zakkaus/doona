@@ -137,6 +137,15 @@
   --rp-duration-hue: 3s;
   --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
   --rp-ink-mix: #000;
+  /* The sign of the inline direction: a shift or turn along the line multiplies by it, so right to left mirrors it. */
+  --rp-dir: 1;
+}
+/* An element that sets its own direction, as React Aria's popovers and toasts do, sets the sign for what it holds. */
+[dir='rtl'] {
+  --rp-dir: -1;
+}
+[dir='ltr'] {
+  --rp-dir: 1;
 }
 /* A finger needs more than a pointer does; table rows are already 40px. */
 @media (pointer: coarse) {
@@ -191,7 +200,8 @@
 }
 .rp-segpick {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset-block: 0;
+  inset-inline: 0 auto;
   display: flex;
   align-items: center;
   max-width: 100%;
@@ -207,6 +217,7 @@
   position: absolute;
   top: 2px;
   bottom: 2px;
+  /* Physical on purpose: useSlider places it from offsetLeft, which counts from the left in either direction. */
   left: 0;
   border-radius: var(--rp-r-md);
   background: var(--rp-surface);

@@ -39,7 +39,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 8px 8px 16px;
+  padding-block: 8px;
+  padding-inline: 16px 8px;
   border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
   border: 1px solid var(--rp-hl-med);

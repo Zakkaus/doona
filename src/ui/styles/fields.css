@@ -42,7 +42,7 @@
   background: var(--rp-accent);
 }
 .rp-switch[data-selected] .track::after {
-  transform: translateX(16px);
+  transform: translateX(calc(16px * var(--rp-dir)));
 }
 .rp-switch[data-disabled] {
   opacity: 0.4;
@@ -107,7 +107,8 @@
   justify-content: space-between;
   gap: 8px;
   height: var(--rp-control);
-  padding: 0 8px 0 12px;
+  padding-block: 0;
+  padding-inline: 12px 8px;
   border-radius: var(--rp-r-md);
   background: var(--rp-overlay);
   border: 0;

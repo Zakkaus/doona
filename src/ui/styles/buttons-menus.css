@@ -70,7 +70,8 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
-  padding: 8px 8px 2px 32px;
+  padding-block: 8px 2px;
+  padding-inline: 32px 8px;
 }
 .rp-popover [role='menu'],
 .rp-popover [role='listbox'],

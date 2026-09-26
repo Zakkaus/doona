@@ -99,7 +99,9 @@
   width: min(480px, 100vw);
   height: 100%;
   max-height: none;
-  border-radius: var(--rp-r-xl) 0 0 var(--rp-r-xl);
+  border-radius: 0;
+  border-start-start-radius: var(--rp-r-xl);
+  border-end-start-radius: var(--rp-r-xl);
 }
 .rp-underlay[data-entering] .rp-modal.rp-drawer {
   animation: rp-drawer-in var(--rp-duration-modal-in) var(--rp-ease) both;
@@ -110,7 +112,7 @@
 }
 @keyframes rp-drawer-in {
   from {
-    translate: 24px 0;
+    translate: calc(24px * var(--rp-dir)) 0;
     opacity: 0;
   }
 }
