@@ -170,7 +170,7 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
 });
 
-test('mock notices include distinct operations and recording gaps', async ({page}) => {
+test('mock notices include distinct operations and the recording gap, not routine overflow', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/activity');
   for (const lang of ['zh-TW', 'en']) {
@@ -184,12 +184,13 @@ test('mock notices include distinct operations and recording gaps', async ({page
       );
       await page.reload();
       const notices = page.locator('.rp-feed');
-      await expect(notices.getByRole('listitem')).toHaveCount(6);
-      await expect(notices.locator('.rp-light.warn')).toHaveCount(2);
+      await expect(notices.getByRole('listitem')).toHaveCount(5);
+      await expect(notices.locator('.rp-light.warn')).toHaveCount(1);
       if (lang === 'en') {
         await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
         await expect(notices.getByRole('listitem').filter({hasText: 'Operation updated'})).toHaveCount(2);
-        await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(2);
+        await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(1);
+        await expect(notices.getByRole('listitem').filter({hasText: 'buffer overflow'})).toHaveCount(0);
       }
     }
   }
