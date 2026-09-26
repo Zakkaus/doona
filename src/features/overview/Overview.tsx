@@ -1,3 +1,4 @@
+import {VisuallyHidden} from 'react-aria';
 import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
 import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
@@ -141,10 +142,9 @@ export function Overview() {
             <div className="rp-capabilities">
               {vm.resources.rows.map(row => (
                 <div key={row.id} className={'rp-capability' + (row.tone === 'muted' ? ' unavailable' : '')}>
-                  <span>{row.label}</span>
-                  <Light small tone={row.tone}>
-                    {row.text}
-                  </Light>
+                  {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
+                  <Light tone={row.tone}>{row.label}</Light>
+                  {row.dotOnly ? <VisuallyHidden>{row.text}</VisuallyHidden> : <span className="rp-capability-status">{row.text}</span>}
                 </div>
               ))}
             </div>

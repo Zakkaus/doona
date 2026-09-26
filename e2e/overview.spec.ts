@@ -134,22 +134,23 @@ test('an accepted source reload respects Retry-After and retains the draft on te
   expect(write.headers()['if-match']).toBe(`"${source.content_sha256}"`);
 });
 
-test('backend features share columns with inline statuses', async ({page}) => {
+test('backend features lead with a dot, keep whole labels and share columns', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/overview');
   const card = page.getByRole('region', {name: 'Backend features', exact: true});
   await expect(card.getByText('Connections', {exact: true})).toBeVisible();
-  const rows = await card.locator('.rp-capabilities > div').evaluateAll(elements =>
+  const rows = await card.locator('.rp-capability').evaluateAll(elements =>
     elements.map(element => {
-      const [label, status] = [...element.children].map(child => child.getBoundingClientRect());
-      return {label: {left: label.left, top: label.top}, status: {left: status.left, top: status.top}};
+      const label = element.querySelector('.rp-light > span')!;
+      return {left: Math.round(element.getBoundingClientRect().left), cut: label.scrollWidth > label.clientWidth, text: element.textContent};
     })
   );
   expect(rows.length).toBeGreaterThan(10);
-  expect(new Set(rows.map(row => Math.round(row.label.left))).size).toBeGreaterThanOrEqual(2);
+  expect(new Set(rows.map(row => row.left)).size).toBeGreaterThanOrEqual(2);
   for (const row of rows) {
-    expect(Math.abs(row.status.top - row.label.top)).toBeLessThan(8);
-    expect(row.status.left).toBeGreaterThan(row.label.left);
+    expect(row.cut).toBe(false);
+    // The status stays in the text even where only the dot shows it.
+    expect(row.text).toMatch(/available/i);
   }
 });
 
