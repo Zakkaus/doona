@@ -62,6 +62,19 @@ test('g r opens Rules instead of refreshing, while a lone r still refreshes', as
   await expect(page).toHaveURL(/#\/rules$/);
 });
 
+test('/ on a page without a filter field cancels a pending g', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator('.rp-content input[type="search"]')).toHaveCount(0);
+  await page.keyboard.press('g');
+  await page.keyboard.press('/');
+  await page.keyboard.press('c');
+  // The refresh lands after `c` was handled, so the address below is the one `c` left.
+  await page.keyboard.press('r');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed');
+  await expect(page).toHaveURL(/#\/activity$/);
+});
+
 test('chart data tooltips are reachable without pointer interaction', async ({page}) => {
   await page.goto('/#/activity');
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});

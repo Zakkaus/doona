@@ -60,10 +60,10 @@ export function Shortcuts({
       }
       // The page's own filter field, where it has one.
       if (event.key === '/') {
+        reset();
         const field = document.querySelector<HTMLInputElement>('.rp-content input[type="search"]');
         if (field) {
           event.preventDefault();
-          reset();
           field.focus();
           field.select();
         }
