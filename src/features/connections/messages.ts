@@ -100,7 +100,7 @@ export const messages = defineMessages({
     'conn.state.dialing': '拨号中',
     'conn.state.active': '进行中',
     'conn.state.closed': '已关闭',
-    'conn.state.blocked': '已拦截',
+    'conn.state.blocked': '已屏蔽',
     'conn.state.failed': '失败',
     'conn.state.unknown': '未知',
     'conn.columns': '列',

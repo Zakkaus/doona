@@ -149,7 +149,7 @@ export const messages = defineMessages({
     'flow.userspaceTcp': '用户空间 TCP',
     'flow.userspaceUdp': '用户空间 UDP',
     'flow.kernelDirect': '内核直连',
-    'flow.kernelBlock': '内核拦截',
+    'flow.kernelBlock': '内核屏蔽',
     'flow.dnsIntercept': 'DNS 拦截',
     'flow.kernelBypass': '内核旁路',
     'flow.full': '完整',
