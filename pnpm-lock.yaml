@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  react-aria@3.52.1: afaafe13b387db59f48029c404a5ecba218431e815ff90f2480baf3e8004f19a
+
 importers:
 
   .:
@@ -43,7 +46,7 @@ importers:
         version: 19.3.0
       react-aria:
         specifier: 3.52.1
-        version: 3.52.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 3.52.1(patch_hash=afaafe13b387db59f48029c404a5ecba218431e815ff90f2480baf3e8004f19a)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react-aria-components:
         specifier: 1.21.1
         version: 1.21.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -4537,11 +4540,11 @@ snapshots:
       '@swc/helpers': 0.5.23
       client-only: 0.0.1
       react: 19.3.0
-      react-aria: 3.52.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react-aria: 3.52.1(patch_hash=afaafe13b387db59f48029c404a5ecba218431e815ff90f2480baf3e8004f19a)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react-dom: 19.3.0(react@19.3.0)
       react-stately: 3.50.0(react@19.3.0)
 
-  react-aria@3.52.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  react-aria@3.52.1(patch_hash=afaafe13b387db59f48029c404a5ecba218431e815ff90f2480baf3e8004f19a)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@internationalized/date': 3.12.4
       '@internationalized/number': 3.6.8
