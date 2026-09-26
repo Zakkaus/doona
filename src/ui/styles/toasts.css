@@ -1,5 +1,6 @@
-/* ---- Toasts, after S2 ToastContainer: bottom centre, the newest in front and older ones peeking out behind;
-   expanded, a list over an underlay. ---- */
+/* ---- Toasts, after S2's ToastContainer: fixed 16px from the chosen edge (clear of the top bar or the phone's bottom
+   navigation), centred or at the inline end; the newest in front and older ones peeking out behind; expanded, a list
+   over an underlay. ---- */
 .rp-toast-underlay {
   appearance: none;
   border: 0;
@@ -11,23 +12,39 @@
   animation: rp-fade-in var(--rp-duration-modal-in) var(--rp-ease);
 }
 .rp-toasts {
+  /* Where a new toast comes from: the edge it stacks against, or the inline end when aligned there. */
+  --rp-toast-from: 0 calc(100% + 12px);
+  --rp-toast-peek: -10px;
   position: fixed;
   inset-inline: 0;
   bottom: calc(16px + var(--rp-dock));
-  margin: 0 auto;
+  margin-inline: auto;
   width: fit-content;
-  max-width: 90vw;
+  max-height: 100%;
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
   z-index: 20;
   outline: none;
 }
+.rp-toasts[data-placement='top'] {
+  --rp-toast-from: 0 calc(-100% - 12px);
+  --rp-toast-peek: 10px;
+  top: calc(16px + var(--rp-topbar));
+  bottom: auto;
+  flex-direction: column;
+}
+.rp-toasts[data-align='end'] {
+  --rp-toast-from: calc(100% + 12px) 0;
+  margin-inline: auto 16px;
+}
+[dir='rtl'] .rp-toasts[data-align='end'] {
+  --rp-toast-from: calc(-100% - 12px) 0;
+}
 .rp-toasts.expanded {
   bottom: 0;
   top: 0;
   padding: 16px 8px;
-  max-height: 100vh;
 }
 /* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
 .rp-toast-list {
@@ -38,6 +55,9 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.rp-toasts[data-placement='top'] .rp-toast-list {
+  flex-direction: column;
 }
 .rp-toasts.expanded .rp-toast-list {
   overflow: auto;
@@ -50,15 +70,22 @@
   justify-content: flex-end;
   gap: 8px;
 }
+/* S2's toast: 12/16/8 padding and at least 56px tall, the icon, the message and close on a grid. The message is a
+   semibold summary with an optional smaller detail under it; icon and close sit on its first line. The footer row takes
+   "show all" at the start and the action at the end, which ends where close ends. A toast is as wide as its content
+   within 336px and 560px, so a typical message fits on one line; the widest toast sets the width of the stack. Margins
+   rather than column gaps space the columns, so a toast without an icon starts its message at the padding. */
 .rp-toast {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon msg close'
+    '. foot foot';
   padding-block: 12px;
   padding-inline: 16px 8px;
   min-height: 56px;
-  width: 336px;
-  max-width: 90vw;
+  min-width: min(336px, 100vw - 32px);
+  max-width: min(560px, 100vw - 32px);
   border-radius: var(--rp-r-lg);
   background: var(--rp-text);
   color: var(--rp-on-text);
@@ -75,46 +102,76 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
-.rp-toast .main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
+/* react-aria's content wrapper takes no box of its own: the icon and the message are the toast's grid items. */
 .rp-toast .body {
+  display: contents;
+}
+/* As tall as a button, so the icon centres on the first line whatever size the pointer gives it. */
+.rp-toast .body > .icon {
+  grid-area: icon;
+  display: flex;
+  align-items: center;
+  height: var(--rp-control);
+  margin-inline-end: 8px;
+}
+/* The padding makes one line as tall as a button. */
+.rp-toast .msg {
+  grid-area: msg;
+  min-width: 0;
+  margin-inline-end: 8px;
+  padding-block: calc((var(--rp-control) - 20px) / 2);
+  overflow-wrap: anywhere;
+}
+.rp-toast .summary {
+  font-weight: 600;
+}
+.rp-toast .detail {
+  margin-block-start: 2px;
+  font-size: var(--rp-text-sm);
+  line-height: 18px;
+  color: color-mix(in srgb, currentColor 82%, transparent);
+}
+.rp-toast .foot {
+  grid-area: foot;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  min-width: 0;
-  overflow-wrap: anywhere;
+  margin-block-start: 4px;
 }
-.rp-toast .body > svg {
-  flex: none;
-}
-.rp-toast .grow {
-  flex: 1;
-  min-width: 0;
-}
+/* The chevron lines up with the message. */
 .rp-toast .more {
-  color: inherit;
-  flex: none;
   margin-inline-start: -8px;
+  color: inherit;
+}
+.rp-toast .more > .up {
+  rotate: 180deg;
+}
+/* S2's secondary outline button in a static colour: it takes the toast's text colour on any tone. */
+.rp-toast .action {
+  margin-inline-start: auto;
+  border: 2px solid color-mix(in srgb, currentColor 40%, transparent);
+  border-radius: var(--rp-r-pill);
+  background: transparent;
+  color: inherit;
+}
+.rp-toast .action[data-focus-visible] {
+  outline-color: currentColor;
 }
 .rp-toast .more[data-hovered],
-.rp-toast .close[data-hovered] {
+.rp-toast .close[data-hovered],
+.rp-toast .action[data-hovered] {
   background: color-mix(in srgb, currentColor 16%, transparent);
 }
+.rp-toast .action[data-pressed] {
+  background: color-mix(in srgb, currentColor 24%, transparent);
+}
 .rp-toast > .close {
+  grid-area: close;
+  align-self: start;
   color: inherit;
   width: 32px;
   height: var(--rp-control);
   min-width: 0;
-  flex: none;
-  align-self: flex-start;
-  margin-top: -2px;
 }
 .rp-toast > .close > svg {
   width: 12px;
@@ -134,13 +191,14 @@
   color: var(--rp-on-accent);
 }
 
-/* Collapsed stack: toasts behind the main one sit on it, pushed up and shrunk by their depth; only three show. */
+/* Collapsed stack: toasts behind the main one sit on it, pushed away from the edge and shrunk by their depth; only
+   three show. */
 .rp-toast.background {
   position: absolute;
   inset: 0;
   width: 100%;
   min-height: 0;
-  translate: 0 calc(var(--i) * -10px);
+  translate: 0 calc(var(--i) * var(--rp-toast-peek));
   scale: calc(1 - var(--i) * 0.06);
   /* The fourth card back (--i 3) is fully faded; the ones in front stay opaque. */
   opacity: clamp(0, 3 - var(--i), 1);
@@ -151,13 +209,26 @@
 .rp-toasts:not(.expanded) .rp-toast-list {
   cursor: default;
 }
-/* Arrival runs once, when the toast mounts; a toast promoted from the background of the stack does not arrive again. */
+/* Arrival runs once, when the toast mounts, sliding in from its edge; a toast promoted from the background of the
+   stack does not arrive again. */
 .rp-toast {
   animation: rp-toast-in var(--rp-duration-toast) var(--rp-ease);
 }
 @keyframes rp-toast-in {
   from {
     opacity: 0;
-    translate: 0 calc(100% + 12px);
+    translate: var(--rp-toast-from);
+  }
+}
+
+/* Phone: 12px from the screen edges, with a 12px start. */
+@media (max-width: 599.98px) {
+  .rp-toasts[data-align='end'] {
+    margin-inline: auto 12px;
+  }
+  .rp-toast {
+    padding-inline-start: 12px;
+    min-width: min(336px, 100vw - 24px);
+    max-width: calc(100vw - 24px);
   }
 }
