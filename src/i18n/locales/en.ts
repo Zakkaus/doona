@@ -1029,6 +1029,8 @@ export const messages = {
   'settings.geodataSourcesNote': 'Changes save at once; a new source downloads right away.',
   'settings.geodataSourcesNoteStored': 'Changes save at once. This backend cannot update on request, so a new source downloads at the next automatic update.',
   'settings.geodataMissing': 'Lacks categories the rules use: {codes}',
+  'settings.geodataLackingTitle': 'Use {preset}',
+  'settings.geodataLackingHelp': '{preset} lacks categories the rules use: {codes}. The backend refuses such a file on update and keeps the current files.',
   'settings.geodataSaveUpdate': 'Save and update',
   'settings.geodataSaveSources': 'Save',
   'settings.geodataDetails': 'Details',
@@ -1287,6 +1289,8 @@ export const messages = {
   'ui.backend.requestExhausted': 'Reload request numbers are exhausted',
   'ui.backend.lifecycleFailed': 'The service state change failed',
   'ui.backend.geodataUpdateFailed': 'The geodata update failed',
+  'ui.backend.assetValidationFailed':
+    'The new geodata file failed validation: it could not be read or lacks categories the rules use. The current files are kept',
   'ui.backend.probeInterrupted': 'The probe stopped before finishing',
   'ui.backend.probeCleanupFailed': 'The probe finished, but its cleanup failed',
   'ui.backend.publicationRejected': 'The backend rejected the new nodes and kept the active ones',

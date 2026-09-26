@@ -8,6 +8,7 @@ import {
   customFields,
   customInvalid,
   intervalChoices,
+  lackingCodes,
   matchPreset,
   missingCategories,
   presetNote,
@@ -69,6 +70,12 @@ describe('lite pre-check', () => {
     expect(missingCategories(full, {geosite: ['geolocation-!cn'], geoip: []})).toBeNull();
     expect(missingCategories(lite, undefined)).toBeNull();
     expect(missingCategories(null, {geosite: ['x'], geoip: []})).toBeNull();
+  });
+  it('asks before choosing a preset only when it lacks a category the rules use', () => {
+    expect(lackingCodes(lite, {geosite: ['discord', 'cn'], geoip: ['us']}, t)).toBe('geosite:discord, geoip:us');
+    expect(lackingCodes(lite, {geosite: ['cn'], geoip: ['private']}, t)).toBeNull();
+    expect(lackingCodes(full, {geosite: ['discord'], geoip: []}, t)).toBeNull();
+    expect(lackingCodes(lite, undefined, t)).toBeNull();
   });
 });
 

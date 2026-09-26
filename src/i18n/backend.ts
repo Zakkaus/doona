@@ -30,6 +30,8 @@ const known: Record<string, Key> = {
   request_exhausted: 'ui.backend.requestExhausted',
   lifecycle_failed: 'ui.backend.lifecycleFailed',
   geodata_update_failed: 'ui.backend.geodataUpdateFailed',
+  // geodata.last_error carries the failed stage as its code.
+  asset_validation_failed: 'ui.backend.assetValidationFailed',
   probe_interrupted: 'ui.backend.probeInterrupted',
   probe_cleanup_failed: 'ui.backend.probeCleanupFailed',
   publication_rejected: 'ui.backend.publicationRejected',
