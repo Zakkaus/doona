@@ -5,7 +5,7 @@ import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigVali
 import {ApiError} from '../../api/error';
 import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
-import {fileName, groupNames, restartRequired} from '../../dae/sources';
+import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {sourceView, diagnosticRows, sourceMarks} from './view';
@@ -62,7 +62,6 @@ export function useConfigPage({go, query}: PageProps) {
     go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}));
   const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
-  const groupList = useMemo(() => groupNames(mainSource?.content ?? ''), [mainSource]);
   const sourceDiagnostics = useMemo(() => (config.data?.diagnostics ?? []).filter(item => item.source_id === selectedId), [config.data, selectedId]);
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
@@ -87,7 +86,6 @@ export function useConfigPage({go, query}: PageProps) {
         canWrite: resources?.config.writable === true && source.writable,
         contentOffered: resources?.config.content === true,
         editor,
-        groups: groupList,
         focusLine
       }
     : null;
@@ -156,11 +154,10 @@ export type SourceCardProps = {
   canWrite: boolean;
   contentOffered: boolean;
   editor: ConfigEditor;
-  groups: string[];
   focusLine: number | null;
 };
 
-export function useSourceCard({source, sources, diagnostics, canValidate, editor, groups, focusLine}: SourceCardProps) {
+export function useSourceCard({source, sources, diagnostics, canValidate, editor, focusLine}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   // If-Match uses the draft's original digest to reject changes made on disk while editing.
@@ -179,11 +176,8 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   const shown = saveErrors ?? found ?? diagnostics;
   const marks = useMemo(() => sourceMarks(shown, source.id), [shown, source.id]);
   const text = draft?.text ?? source.content ?? '';
-  // Names to complete after "->": the groups in the text being edited, else the running configuration's.
-  const outbounds = () => {
-    const own = groupNames(text);
-    return own.length ? own : groups;
-  };
+  // Names to complete after "->": the groups of every source, this one as edited.
+  const outbounds = () => allGroupNames(sources, {id: source.id, content: text});
   const [jump, setJump] = useState<number | null>(null);
   // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
