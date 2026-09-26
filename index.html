@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" dir="ltr">
 <head>
 <script>
 try{if(localStorage.getItem('doona-profiles')===null){localStorage.setItem('doona-profiles',JSON.stringify([{id:'demo',name:'Demo',api:'mock',token:''}]));localStorage.setItem('doona-profile','demo');}}catch(e){}
 addEventListener('DOMContentLoaded',function(){try{if(localStorage.getItem('doona-demo-badge')==='hidden')return;}catch(e){}var w=document.createElement('div');w.setAttribute('style','position:fixed;right:12px;top:12px;z-index:2147483647;display:flex;align-items:center;gap:2px;padding:2px 2px 2px 10px;border-radius:999px;font:12px/1.6 system-ui,sans-serif;background:rgba(0,0,0,.72);color:#fff');var a=document.createElement('a');a.href='https://github.com/Zakkaus/doona';a.textContent='Demo: sample data';a.setAttribute('style','color:#fff;text-decoration:none');var x=document.createElement('button');x.type='button';x.textContent='\u00d7';x.setAttribute('aria-label','Hide');x.setAttribute('style','border:0;background:none;color:#fff;font:16px/1 system-ui,sans-serif;padding:2px 8px;cursor:pointer;border-radius:999px');x.onclick=function(){w.remove();try{localStorage.setItem('doona-demo-badge','hidden');}catch(e){}};w.appendChild(a);w.appendChild(x);document.body.appendChild(w);});
-</script><script>// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts.
+</script><script>// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts, and
+// the right-to-left scripts from src/i18n/direction.ts.
 (function () {
   var read = function (key) {
     try {
@@ -25,11 +26,26 @@ addEventListener('DOMContentLoaded',function(){try{if(localStorage.getItem('doon
   d.dataset.flavour = parts[1];
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
   d.lang = lang === 'zh-CN' ? 'zh-CN' : lang === 'en' ? 'en-US' : 'zh-TW';
+  // The direction as pageDirection in src/i18n/direction.ts decides it: right to left in the mirrored layout, else the
+  // locale's text info, else its likely script.
+  var mirrored = read('doona-mirror') === 'on';
+  var rtlScripts = ["Adlm","Arab","Hebr","Mand","Nkoo","Rohg","Samr","Syrc","Thaa","Yezi"];
+  var dir = mirrored ? 'rtl' : 'ltr';
+  if (!mirrored)
+    try {
+      var tag = new Intl.Locale(d.lang);
+      var info = tag.getTextInfo ? tag.getTextInfo() : tag.textInfo;
+      if (info && info.direction ? info.direction === 'rtl' : rtlScripts.includes(tag.maximize().script)) dir = 'rtl';
+    } catch {
+      // Left to right.
+    }
+  d.dir = dir;
+  if (mirrored) d.dataset.mirror = '';
 })();
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-KVUbUqWeQLBvT8VlRVRjPoaHbO8mxYO4BJoVU+UTAJ8='; connect-src 'self' http: https: ws: wss:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-YWASLyBtVSX2dc4sQ2EIBJw0AXI/XMrMLfRLrwyt0N4='; connect-src 'self' http: https: ws: wss:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'">
 <title>doona</title>
 <link rel="icon" href="./logo.svg">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -39,9 +55,9 @@ addEventListener('DOMContentLoaded',function(){try{if(localStorage.getItem('doon
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="doona">
-  <script type="module" crossorigin src="./assets/index-BCoOz7L7.js"></script>
+  <script type="module" crossorigin src="./assets/index-CD6c9uGh.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-react-Bf71BWbF.js">
-  <link rel="stylesheet" crossorigin href="./assets/index-CsgqKws4.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-C0YvLycg.css">
 </head>
 <body><div id="root"></div></body>
 </html>
