@@ -134,6 +134,8 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
 export type ChoiceSection = {title: string; items: Item[]; value: string; onChange?: (key: string) => void};
 // A row that opens its own menu of choices, showing the current one, after S2's ActionMenu with submenus.
 export type ChoiceSubmenu = {label: string; icon?: ReactNode; sections: ChoiceSection[]};
+// A row after the submenus that runs a command and closes the menu, such as opening a dialog.
+export type ChoiceAction = {label: string; icon?: ReactNode; onAction: () => void};
 
 function SectionMenu({
   label,
@@ -187,6 +189,14 @@ function chosen(sections: ChoiceSection[]) {
   return '';
 }
 
+const ActionItem = ({id, label, icon, onAction}: ChoiceAction & {id: string}) => (
+  <MenuItem id={id} className="rp-item rp-subitem" textValue={label} onAction={onAction} shouldCloseOnSelect>
+    <span className="ic">{icon}</span>
+    <TextTooltip>{label}</TextTooltip>
+  </MenuItem>
+);
+const actionKey = (index: number) => `action-${index}`;
+
 const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string}) => (
   <MenuItem id={id} className="rp-item rp-subitem" textValue={label}>
     <span className="ic">{icon}</span>
@@ -202,7 +212,7 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
 // text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
 const phone = '(max-width: 639px)';
-function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[]}) {
+function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]}) {
   const t = useT();
   const inline = useMediaQuery(phone);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
@@ -238,6 +248,9 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
             </Popover>
           </SubmenuTrigger>
         ))}
+        {actions.map((action, index) => (
+          <ActionItem key={action.label} id={actionKey(index)} {...action} />
+        ))}
       </Menu>
     );
   const submenu = open == null ? null : submenus[open];
@@ -260,11 +273,13 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
       </div>
     );
   }
+  // An action row's key is not a submenu index; the row runs its own command.
+  const index = (key: string | undefined) => (key != null && submenus[Number(key)] ? Number(key) : null);
   const onKey = (e: KeyboardEvent) => {
-    const key = (e.target as HTMLElement).dataset.key;
+    const key = index((e.target as HTMLElement).dataset.key);
     if (e.key !== into || key == null) return;
     e.preventDefault();
-    go(Number(key));
+    go(key);
   };
   return (
     <div ref={root} className="rp-drill" tabIndex={-1} onKeyDownCapture={onKey}>
@@ -273,10 +288,16 @@ function SubmenuMenu({label, submenus}: {label: string; submenus: ChoiceSubmenu[
         // eslint-disable-next-line jsx-a11y/no-autofocus -- false only, on return: focus goes back to the row just left
         autoFocus={left == null ? undefined : false}
         shouldCloseOnSelect={false}
-        onAction={key => go(Number(key))}
+        onAction={key => {
+          const open = index(String(key));
+          if (open != null) go(open);
+        }}
       >
         {submenus.map((submenu, index) => (
           <SubmenuItem key={submenu.label} id={String(index)} {...submenu} />
+        ))}
+        {actions.map((action, index) => (
+          <ActionItem key={action.label} id={actionKey(index)} {...action} />
         ))}
       </Menu>
     </div>
@@ -318,6 +339,7 @@ function FlatMenu({
 }
 
 type NotFlat = {items?: never; selectionMode?: never; value?: never; onChange?: never};
+type NoActions = {actions?: never};
 // A menu of choices: flat, in titled sections each with its own selection, or as rows that each open a submenu of
 // sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
 // toggling one through `onAction`); with neither `value` nor `selectionMode` it is an action menu that only runs
@@ -330,6 +352,7 @@ export function ChoiceMenu({
   onChange,
   sections,
   submenus,
+  actions,
   onAction,
   ...props
 }: Omit<MenuButtonProps, 'content'> &
@@ -342,18 +365,27 @@ export function ChoiceMenu({
         onAction?: (key: string) => void;
         sections?: never;
         submenus?: never;
+        actions?: never;
       }
-    | {items: Items; selectionMode: 'multiple'; value: string[]; onAction: (key: string) => void; onChange?: never; sections?: never; submenus?: never}
-    | {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never}
-    | (NotFlat & {sections: ChoiceSection[]; onAction?: (key: string) => void; submenus?: never})
-    | (NotFlat & {submenus: ChoiceSubmenu[]; onAction?: never; sections?: never})
+    | (NoActions & {
+        items: Items;
+        selectionMode: 'multiple';
+        value: string[];
+        onAction: (key: string) => void;
+        onChange?: never;
+        sections?: never;
+        submenus?: never;
+      })
+    | (NoActions & {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never})
+    | (NotFlat & NoActions & {sections: ChoiceSection[]; onAction?: (key: string) => void; submenus?: never})
+    | (NotFlat & {submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; onAction?: never; sections?: never})
   )) {
   return (
     <MenuButton
       {...props}
       content={
         submenus ? (
-          <SubmenuMenu label={props.label} submenus={submenus} />
+          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
         ) : sections ? (
           <SectionMenu label={props.label} sections={sections} onAction={onAction} />
         ) : (

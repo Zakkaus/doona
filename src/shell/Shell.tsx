@@ -107,12 +107,13 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         held={view.reload.held}
         reloadLabel={view.reload.label}
         honk={view.honk}
+        backend={view.backend}
         wordmark={view.wordmark}
         versionText={view.about.versionText}
         paletteSections={paletteSections}
         menu={menu}
       />
-      <SideNav groups={view.groups} busy={view.busy} engine={view.engine} navRef={navRef} navStyle={navStyle} />
+      <SideNav groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">

@@ -17,8 +17,27 @@ it('uses the same capability policy for navigation, shortcuts and content', () =
   expect(view.groups.flatMap(group => group.items).find(item => item.path === 'connections')).toMatchObject({current: true, unavailable: true});
   expect(view.shortcutPaths.c).toBeUndefined();
   expect(view.content).toEqual({kind: 'unavailable'});
-  expect(view.engine.text).toContain(version.engine.version);
+  expect(view.backend.text).toContain(version.engine.version);
   expect(view.about.items.some(([, value]) => value.includes(version.api.name))).toBe(true);
+});
+it('reports the backend state from discovery and the version read alone', () => {
+  const refused = new ApiError(401, 'authentication_required', 'token required');
+  const unreachable = new ApiError(500, 'internal_error', 'Discovery failed');
+  const state = (capabilities: typeof capabilitiesBase | undefined, capabilityError: Error | null, versionError: Error | null) => {
+    const {tone, state, label} = shellView(settings, 'activity', capabilities, capabilityError, capabilities && version, versionError, t).backend;
+    return {tone, state, label};
+  };
+  expect(state(capabilitiesBase, null, null)).toEqual({
+    tone: 'ok',
+    state: 'Connected',
+    label: `Backend: ${version.engine.name} ${version.engine.version}, Connected`
+  });
+  expect(state(undefined, null, null)).toMatchObject({tone: 'neutral', state: 'Connecting'});
+  expect(state(undefined, refused, null)).toMatchObject({tone: 'warn', state: 'Sign-in required'});
+  expect(state(undefined, unreachable, null)).toMatchObject({tone: 'err', state: 'Unreachable'});
+  expect(state(capabilitiesBase, null, new Error('Version failed'))).toMatchObject({tone: 'warn', state: 'Connected, version unknown'});
+  const facts = shellView(settings, 'activity', capabilitiesBase, null, version, null, t).backend.facts;
+  expect(facts).toContainEqual(['Backend URL', 'Built-in demo data']);
 });
 it('waits for discovery and yields protected pages to login without blocking settings', () => {
   expect(shellView(settings, 'connections', undefined, null, undefined, null, t).content.kind).toBe('loading');

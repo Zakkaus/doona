@@ -147,11 +147,11 @@ test('shared controls distinguish a held press from hover without moving', async
   }
 });
 
-test('the engine version link is a styled control, not a bare anchor', async ({page}) => {
+test('the backend indicator is a styled control, not a bare button', async ({page}) => {
   await page.goto('/#/activity');
-  const link = page.locator('.rp-version');
-  await expect(link).toBeVisible();
-  expect(await link.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'flex']);
+  const indicator = page.locator('.rp-version');
+  await expect(indicator).toBeVisible();
+  expect(await indicator.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'flex']);
 });
 
 test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {

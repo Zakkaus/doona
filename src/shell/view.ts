@@ -1,6 +1,7 @@
 import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
+import {isDemoApi} from '../api/profiles';
 import type {Scheme, Settings} from './preferences';
 import {palettes, type PaletteId} from './palettes';
 import {defaultRoute, hubs, type PageProps} from './routes';
@@ -31,6 +32,19 @@ type NavItem = {
   description: string | undefined;
 };
 export type NavGroup = {id: string; label: string; items: NavItem[]};
+export type BackendTone = 'ok' | 'warn' | 'err' | 'neutral';
+export type BackendView = {
+  // The engine's name and version, as the indicator shows them.
+  text: string;
+  tone: BackendTone;
+  state: string;
+  // The indicator's accessible name: what it is, and the state.
+  label: string;
+  title: string;
+  facts: Array<[string, string]>;
+  about: string;
+  project: {href: string; label: string};
+};
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
@@ -39,7 +53,7 @@ export type ShellView = {
   content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
   error: Error | null;
-  engine: {text: string; href: string};
+  backend: BackendView;
   about: AboutView;
   shortcuts: ShortcutView[];
   shortcutPaths: Record<string, string>;
@@ -95,6 +109,10 @@ export function shellView(
   const build = version?.build?.revision ? ` (${version.build.revision.slice(0, 12)})` : '';
   const apiText = version ? t('ui.apiVersion', {name: version.api.name, major: version.api.major, status: version.api.status}) : '—';
   const contractText = import.meta.env.VITE_DOONA_CONTRACT_COMMIT;
+  const engineName = version?.engine.name ?? org.split('/').pop()!;
+  const api = profile?.api;
+  const address = isDemoApi(api) ? t('shell.backend.demo') : api;
+  const [tone, stateKey] = backendState(needsLogin, !capabilities && !capabilityError, capabilityError, versionError);
   const shortcuts = features.flatMap(item =>
     item.shortcut && item.nav && offered(item.path)
       ? [{id: item.id, path: item.path, key: item.shortcut, sequence: `g ${item.shortcut}`, label: t(item.nav.titleKey)}]
@@ -118,7 +136,23 @@ export function shellView(
           ? null
           : versionError
         : (capabilityError ?? versionError),
-    engine: {text: engineText, href: version ? `${org}/${version.engine.name}` : org},
+    backend: {
+      text: engineText,
+      tone,
+      state: t(stateKey),
+      label: t('shell.backend.label', {engine: engineText, state: t(stateKey)}),
+      title: t('shell.backend.title'),
+      facts: [
+        [t('about.engine'), engineText + build],
+        [t('about.api'), apiText],
+        // The built-in demo data runs without a profile.
+        ...(profile ? [[t('shell.backend.profile'), profile.name] as [string, string]] : []),
+        [t('shell.backend.address'), address],
+        [t('shell.backend.state'), t(stateKey)]
+      ],
+      about: t('about.title'),
+      project: {href: version ? `${org}/${version.engine.name}` : org, label: t('shell.backend.project', {engine: engineName})}
+    },
     shortcuts,
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),
     about: {
@@ -141,6 +175,21 @@ export function shellView(
       ]
     }
   };
+}
+// The connection as the shell already knows it from discovery and the version read; no read of its own. A refused
+// credential needs a sign-in, a failed discovery means the backend cannot be reached, and a backend that answers
+// discovery but not the version read works with less than the shell expects.
+export function backendState(
+  needsLogin: boolean,
+  connecting: boolean,
+  capabilityError: Error | null,
+  versionError: Error | null
+): [BackendTone, 'shell.backend.signIn' | 'shell.backend.connecting' | 'shell.backend.offline' | 'shell.backend.degraded' | 'shell.backend.connected'] {
+  if (needsLogin) return ['warn', 'shell.backend.signIn'];
+  if (connecting) return ['neutral', 'shell.backend.connecting'];
+  if (capabilityError) return ['err', 'shell.backend.offline'];
+  if (versionError) return ['warn', 'shell.backend.degraded'];
+  return ['ok', 'shell.backend.connected'];
 }
 export function wordmark(honked: boolean) {
   return honked ? 'doooooona' : 'doona';

@@ -1,4 +1,15 @@
-import {createContext, useContext, useDeferredValue, useEffect, useRef, useState, type ComponentProps, type ReactElement, type ReactNode} from 'react';
+import {
+  createContext,
+  useContext,
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+  type RefObject
+} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
@@ -12,7 +23,9 @@ import {
   Modal,
   ModalOverlay,
   Dialog,
-  Heading
+  Heading,
+  Popover,
+  type PopoverProps
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
@@ -93,6 +106,47 @@ export function ModalDialog({
     </DialogTrigger>
   ) : (
     modal
+  );
+}
+
+// A titled dialog in a popover beside its trigger, after S2's DialogTrigger with type="popover": no underlay, and
+// Escape or a press outside closes it. Without `trigger` it opens beside `triggerRef` while `isOpen`, for a caller
+// whose control is a menu row that is gone once the menu closes.
+export function PopoverDialog({
+  trigger,
+  triggerRef,
+  isOpen,
+  onOpenChange,
+  title,
+  placement = 'top start',
+  children
+}: {
+  title: string;
+  placement?: PopoverProps['placement'];
+  children: (close: () => void) => ReactNode;
+} & (
+  | {trigger: ReactElement; triggerRef?: never; isOpen?: never; onOpenChange?: never}
+  | {trigger?: never; triggerRef: RefObject<Element | null>; isOpen: boolean; onOpenChange: (open: boolean) => void}
+)) {
+  const popover = (
+    <Popover className="rp-popover rp-popover-dialog" placement={placement} {...(trigger ? {} : {triggerRef, isOpen, onOpenChange})}>
+      <Dialog className="rp-popover-body">
+        {({close}) => (
+          <>
+            <Heading slot="title">{title}</Heading>
+            {children(close)}
+          </>
+        )}
+      </Dialog>
+    </Popover>
+  );
+  return trigger ? (
+    <DialogTrigger>
+      {trigger}
+      {popover}
+    </DialogTrigger>
+  ) : (
+    popover
   );
 }
 
