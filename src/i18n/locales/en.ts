@@ -364,6 +364,7 @@ export const messages = {
   'event.operation': '{id}, status: {status}',
   'event.generation': '{previous} to {current}',
   'event.gap': '{id}, reason: {reason}, records dropped: {n}',
+  'event.gapUnscoped': 'Reason: {reason}, records dropped: {n}',
   'event.gap.overflow': 'buffer overflow',
   'event.gap.sampled': 'skipped by sampling',
   'event.gap.evicted': 'evicted from the ring buffer',

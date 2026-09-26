@@ -348,6 +348,7 @@ export const messages = {
   'event.operation': '{id}，狀態：{status}',
   'event.generation': '{previous} 至 {current}',
   'event.gap': '{id}，原因：{reason}，捨棄記錄：{n}',
+  'event.gapUnscoped': '原因：{reason}，捨棄記錄：{n}',
   'event.gap.overflow': '緩衝區溢位',
   'event.gap.sampled': '取樣略過',
   'event.gap.evicted': '環形緩衝區汰換',

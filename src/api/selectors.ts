@@ -158,15 +158,15 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
     }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
-    case 'flow.gap':
-      return {
-        key: 'event.gap',
-        params: {
-          id: event.data.resource_id ?? '—',
-          reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
-          n: droppedCount(event.data.dropped_records)
-        }
+    // A gap names no record when it spans the whole stream; the summary then starts at the reason.
+    case 'flow.gap': {
+      const params = {
+        reason: t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason,
+        n: droppedCount(event.data.dropped_records)
       };
+      const id = event.data.resource_id;
+      return id === null ? {key: 'event.gapUnscoped', params} : {key: 'event.gap', params: {...params, id}};
+    }
     // An event kind from a newer backend: the resource it names, when it names one.
     default: {
       const data = (event as {data?: {resource_id?: unknown; href?: unknown}}).data;
