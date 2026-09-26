@@ -47,7 +47,6 @@ export type BackendView = {
   facts: Array<[string, string]>;
   about: string;
   edit: {href: string; label: string};
-  project: {href: string; label: string};
 };
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
@@ -113,7 +112,6 @@ export function shellView(
   const build = version?.build?.revision ? ` (${version.build.revision.slice(0, 12)})` : '';
   const apiText = version ? t('ui.apiVersion', {name: version.api.name, major: version.api.major, status: version.api.status}) : '—';
   const contractText = import.meta.env.VITE_DOONA_CONTRACT_COMMIT;
-  const engineName = version?.engine.name ?? org.split('/').pop()!;
   const api = profile?.api;
   const address = isDemoApi(api) ? t('shell.backend.demo') : api;
   const [tone, stateKey] = backendState(needsLogin, !capabilities && !capabilityError, capabilityError, versionError);
@@ -155,8 +153,7 @@ export function shellView(
         ...fact(t('shell.backend.profile'), profile?.name)
       ],
       about: t('about.title'),
-      edit: {href: href('settings', {card: 'backend'}), label: t('shell.backend.edit')},
-      project: {href: version ? `${org}/${version.engine.name}` : org, label: t('shell.backend.project', {engine: engineName})}
+      edit: {href: href('settings', {card: 'backend'}), label: t('shell.backend.edit')}
     },
     shortcuts,
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),

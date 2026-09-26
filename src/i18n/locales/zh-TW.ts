@@ -1153,7 +1153,6 @@ export const messages = {
   'shell.backend.offline': '無法連線',
   'shell.backend.degraded': '已連線，版本不明',
   'shell.backend.edit': '編輯後端',
-  'shell.backend.project': '{engine} 專案頁面',
   'palette.rosePine': 'Rosé Pine',
   'palette.moon': 'Moon',
   'palette.dawnMain': 'Dawn / Main',

@@ -1,20 +1,16 @@
 import {useState, type ReactElement, type RefObject} from 'react';
-import {Button, Divider, Kv, Light, Link, PopoverDialog} from '../ui/ui';
+import {Button, Kv, Light, Link, PopoverDialog} from '../ui/ui';
 import {About} from './About';
 import type {BackendView} from './view';
 
-// A hover card of what the shell knows about the backend, then editing it in Settings, About doona and the engine's
-// project page as menu rows.
+// A hover card of what the shell knows about the backend, then two buttons: About doona, and editing the backend in
+// Settings as the main action. The engine's project page is in About, so it is not repeated here.
 // The About action closes the popover before the dialog opens, so focus has one place to return to.
 function BackendFacts({backend, close, openAbout}: {backend: BackendView; close: () => void; openAbout: () => void}) {
   return (
     <>
       <Kv row items={backend.facts} />
-      <Divider orientation="horizontal" />
       <div className="rp-backend-actions">
-        <Link appearance="button" quiet href={backend.edit.href} onPress={close}>
-          {backend.edit.label}
-        </Link>
         <Button
           quiet
           onPress={() => {
@@ -24,8 +20,8 @@ function BackendFacts({backend, close, openAbout}: {backend: BackendView; close:
         >
           {backend.about}
         </Button>
-        <Link appearance="button" quiet href={backend.project.href} external>
-          {backend.project.label}
+        <Link appearance="button" href={backend.edit.href} onPress={close}>
+          {backend.edit.label}
         </Link>
       </div>
     </>

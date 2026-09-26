@@ -14,7 +14,6 @@ test('the backend indicator shows the facts, opens About doona and closes on Esc
   await indicator.click();
   const popover = page.getByRole('dialog', {name: engine});
   for (const fact of ['Connected', 'API', 'Build', 'Backend URL', 'Built-in demo data']) await expect(popover).toContainText(fact);
-  await expect(popover.getByRole('link', {name: `${version.engine.name} project page`})).toHaveAttribute('href', new RegExp(`/${version.engine.name}$`));
   await page.keyboard.press('Escape');
   await expect(popover).toBeHidden();
   await expect(indicator).toBeFocused();
