@@ -32,12 +32,30 @@ button.rp-node[data-focus-visible] {
 }
 .ms.ok {
   color: var(--rp-positive-text);
+  --dot: var(--rp-positive);
 }
 .ms.warn {
   color: var(--rp-notice-text);
+  --dot: var(--rp-notice);
 }
 .ms.err {
   color: var(--rp-negative-text);
+  --dot: var(--rp-negative);
+}
+/* A palette sets tone text to body text where the tone is under 4.5:1 as text, so the tone would vanish from a latency.
+   A dot is a graphic, held to 3:1, and carries the tone in every palette. */
+.ms:is(.ok, .warn, .err) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ms:is(.ok, .warn, .err)::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
+  flex-shrink: 0;
 }
 .rp-node .s {
   display: flex;
