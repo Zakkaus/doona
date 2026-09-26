@@ -1,7 +1,7 @@
 import {useCapabilities, useConnectionClose, useConnectionTotals, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../store';
 import {useLifecycle} from '../shared/useLifecycle';
 import {closedAllTone} from '../../api/selectors';
-import {LOCALE, formatNumber, useLang, useT} from '../../i18n';
+import {LOCALE, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {geodataRows} from './view';
 import {geodataConfigurable} from './nav';
@@ -49,11 +49,11 @@ export function useBackendActions() {
         done => {
           // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
           if (done === undefined) return;
-          const counts = {n: formatNumber(done, locale), total: formatNumber(subscriptions.length, locale)};
+          const counts = {n: done, total: subscriptions.length};
           toast(
             done === subscriptions.length ? 'positive' : done ? 'info' : 'negative',
             failures.length
-              ? t('settings.refreshedAllFailed', {...counts, failed: formatNumber(failures.length, locale), error: errorText(failures[0], t)})
+              ? t('settings.refreshedAllFailed', {...counts, failed: failures.length, error: errorText(failures[0], t)})
               : t('settings.refreshedAll', counts)
           );
           if (degraded) toast('info', t('settings.refreshedDegraded'));
@@ -108,7 +108,7 @@ export function useBackendActions() {
     refreshingAll,
     refreshAll,
     refreshDisabled: !providersReady || !!refresh.busy || !subscriptions.length,
-    refreshLabel: t('settings.refreshAll', {n: providersReady ? formatNumber(subscriptions.length, locale) : '—'}),
+    refreshLabel: t('settings.refreshAll', {n: providersReady ? subscriptions.length : '—'}),
     canFlush: !!(resources?.dns_cache.available && resources.dns_cache.flush),
     canRefresh: !!resources?.providers.can_refresh,
     canClose: !!resources?.connections.can_close,

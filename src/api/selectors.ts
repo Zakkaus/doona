@@ -106,6 +106,8 @@ export const lifecycleStates: Record<Runtime['lifecycle']['state'], Key> = {
   failed: 'lifecycle.failed'
 };
 export const lifecycleTone = (state: Runtime['lifecycle']['state'] | undefined) => (state === 'running' ? 'ok' : state === 'failed' ? 'err' : 'warn');
+// Memory use as a share of the limit: past 90% it is near the limit, past 75% high.
+export const memoryTone = (percent: number): 'ok' | 'warn' | 'err' => (percent > 90 ? 'err' : percent > 75 ? 'warn' : 'ok');
 // Nothing closed is a failure; some skipped (already gone or not closable) is worth a look.
 export const closedAllTone = (tally: {closed: number; skipped: number}) => (!tally.closed ? 'negative' : tally.skipped ? 'info' : 'positive');
 export const connectionStates: Record<Connection['state'], Key> = {

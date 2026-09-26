@@ -2,7 +2,7 @@ import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../.
 import {enumLabel} from '../../i18n/enum';
 import type {Key} from '../../i18n';
 import {formatDuration, localTime, formatBytes} from '../../i18n/format';
-import {lifecycleStates, lifecycleTone, shortId} from '../../api/selectors';
+import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage} from '../../i18n/backend';
@@ -179,7 +179,7 @@ export function overviewView(
                 whole: formatBytes(memory?.cgroup?.limit_bytes ?? null, locale)
               }),
               pct: percent,
-              tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const)
+              tone: memoryTone(percent)
             }
     },
     datapath: {
