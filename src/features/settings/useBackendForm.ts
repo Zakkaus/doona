@@ -205,7 +205,7 @@ export function useBackendForm(query: string) {
       }
     } catch (error) {
       if (request.current !== controller) return;
-      const failure = probeFailure(error, controller.signal, base, location.origin);
+      const failure = probeFailure(error, controller.signal, base, location.origin, token);
       if (!failure) return;
       setResult({...failure, error: true, requestId: error instanceof ApiError ? error.requestId : null});
       // The failure is already named in the page language; the raw message (a DOMException, "Failed to fetch") is not.

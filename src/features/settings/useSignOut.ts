@@ -5,6 +5,8 @@ import {clearSession, sessionToken} from '../../api/session';
 import {readProfiles} from '../../api/profiles';
 import {toast} from '../../ui/ui';
 import {errorText} from '../../api/error';
+import {buildHash} from '../../shell/route';
+import {defaultRoute} from '../../shell/routes';
 
 // Offered only while this tab holds a password session for the saved active profile.
 export function useSignOut() {
@@ -27,6 +29,8 @@ export function useSignOut() {
         return;
       }
       clearSession();
+      // Settings stays open without a session, so the reload lands on a page that asks to sign in again.
+      history.replaceState(history.state, '', buildHash(defaultRoute));
       location.reload();
     }
   };
