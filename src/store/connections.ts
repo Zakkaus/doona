@@ -2,21 +2,62 @@ import {useCallback} from 'react';
 import {MAX_PAGE} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
-import type {BulkCloseQuery, BulkCloseResult} from '../api/model';
+import type {BulkCloseQuery, BulkCloseResult, Connection, ConnectionList} from '../api/model';
+import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
+import {parseU64} from '../api/u64';
 import {ApiError} from '../api/error';
 import {sourceIp} from '../api/selectors';
 import {useResource} from './resource';
 import {useAction} from './action';
+// The snapshot each connection list measures its next rates against, by resource key.
+const baselines = new Map<string, ConnectionList>();
 export function useConnections(src?: string, enabled = true, paused = false, every?: number) {
   const api = getApi();
+  const key: ResourceKey = ['connections', {src}];
+  const name = normalizeResourceKey(key);
   return useResource(
     {
-      key: ['connections', {src}],
+      key,
       every,
-      fetch: signal => api.connections({type: 'all', detail: 'full', limit: MAX_PAGE, src}, signal)
+      fetch: async signal => {
+        const {list, baseline} = withRates(baselines.get(name), await api.connections({type: 'all', detail: 'full', limit: MAX_PAGE, src}, signal));
+        baselines.set(name, baseline);
+        return list;
+      }
     },
     {enabled, paused}
   );
+}
+const RATE_WINDOW_MS = 1000;
+const rateFields = ['upload', 'download'] as const;
+// Fills the rates a backend leaves null from the byte counters of two snapshots of the same engine instance:
+// floor(Δbytes·1000/Δms) over the snapshots' observed_at. A connection new since `prev`, or whose counter went
+// down, has no rate. A snapshot less than a second after `prev`, such as a refetch an event triggered, keeps `prev`
+// as the baseline and repeats its rates rather than dividing by a short window.
+export function withRates(prev: ConnectionList | undefined, next: ConnectionList): {list: ConnectionList; baseline: ConnectionList} {
+  const base = prev?.instance_id === next.instance_id ? prev : undefined;
+  const span = base ? Date.parse(next.observed_at) - Date.parse(base.observed_at) : NaN;
+  const short = span < RATE_WINDOW_MS;
+  const before = new Map(base && Number.isFinite(span) ? [...base.tcp, ...base.udp].map(c => [c.id, c]) : []);
+  const rate = (c: Connection) => {
+    const old = before.get(c.id);
+    let out = c;
+    for (const field of rateFields) {
+      const key = `${field}_bytes_per_second` as const;
+      if (c[key] !== null) continue;
+      let value: string | null = null;
+      if (old && short) value = old[key];
+      else if (old) {
+        const from = parseU64(old[`${field}_bytes`]),
+          to = parseU64(c[`${field}_bytes`]);
+        if (from !== null && to !== null && to >= from) value = String(((to - from) * 1000n) / BigInt(span));
+      }
+      if (value !== null) out = {...out, [key]: value};
+    }
+    return out;
+  };
+  const list = {...next, tcp: next.tcp.map(rate), udp: next.udp.map(rate)};
+  return {list, baseline: base && short ? base : list};
 }
 type CloseApi = Pick<Api, 'closeConnections' | 'closeConnection' | 'connections'>;
 const tooLarge = (error: unknown) => error instanceof ApiError && error.status === 413;

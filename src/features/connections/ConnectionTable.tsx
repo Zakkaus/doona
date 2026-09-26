@@ -29,6 +29,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
       ),
       state: c => c.state,
       down: c => c.download,
+      downRate: c => c.downloadRate,
       age: c => <TimeCell at={c.startedAt} />
     };
     return columns.filter(c => !view.hidden.includes(c.id)).map(c => ({...c, label: t(c.label), grow: 1, render: renderers[c.id]}));

@@ -44,12 +44,13 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 // the target column always stays.
 export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; align?: 'end'; drop?: number}> = [
   {id: 'dst', label: 'ui.target', minWidth: 200, sortable: true},
-  {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 4},
-  {id: 'node', label: 'conn.node', minWidth: 120, drop: 2},
-  {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 1},
-  {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 6},
-  {id: 'down', label: 'ui.download', minWidth: 96, align: 'end', sortable: true, drop: 3},
-  {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 5}
+  {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 5},
+  {id: 'node', label: 'conn.node', minWidth: 120, drop: 3},
+  {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 2},
+  {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 7},
+  {id: 'down', label: 'ui.download', minWidth: 96, align: 'end', sortable: true, drop: 4},
+  {id: 'downRate', label: 'conn.f.downloadRate', minWidth: 128, align: 'end', sortable: true, drop: 1},
+  {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 6}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
 type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
@@ -107,6 +108,8 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
           return enumLabel(connectionStates, row.state, t);
         case 'down':
           return parseU64(row.download_bytes);
+        case 'downRate':
+          return parseU64(row.download_bytes_per_second);
         case 'age':
           return row.started_at ? Date.parse(row.started_at) : null;
         default:
@@ -149,6 +152,7 @@ export type ConnectionRowView = {
   recomputed: string | null;
   state: string;
   download: string;
+  downloadRate: string;
   startedAt: string | null;
 };
 type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
@@ -177,6 +181,7 @@ export function connectionTableView(
       recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,
       state: enumLabel(connectionStates, c.state, t),
       download: formatBytes(c.download_bytes, locale),
+      downloadRate: formatRate(c.download_bytes_per_second, locale),
       startedAt: c.started_at
     };
     projected.set(c, {locale, names, rulesListed, t, row});
