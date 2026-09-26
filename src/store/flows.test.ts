@@ -23,42 +23,35 @@ function query(addresses: string[]): DnsQueryResponse {
     ]
   };
 }
+function dual(v4: string[], v6: string[]): DnsQueryResponse {
+  const a = query(v4);
+  const aaaa = query(v6).results[0];
+  return {...a, results: [...a.results, {...aaaa, type: 'AAAA', answers: aaaa.answers!.map(answer => ({...answer, type: 'AAAA'}))}]};
+}
 const request = {input: {domain: 'example.org', network: 'tcp' as const, dst_port: 443}, resolve: 'query' as const, recordTypes: ['A']};
-it('simulates every distinct address rather than sampling the first answer', async () => {
+it('simulates the first IPv4 and the first IPv6 answer and keeps every answer', async () => {
   const api = createMockApi();
-  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '198.51.100.1', '192.0.2.1']));
+  api.dnsQuery = vi.fn().mockResolvedValue(dual(['192.0.2.1', '198.51.100.1', '192.0.2.1'], ['2001:db8::1', '2001:db8::2']));
   const trace = api.routingTrace;
   api.routingTrace = vi.fn(trace);
-  const result = await routingTrace(api, request, new AbortController().signal);
-  expect(result.evaluations.map(item => item.dst_ip)).toEqual(['192.0.2.1', '198.51.100.1']);
+  const result = await routingTrace(api, {...request, recordTypes: ['A', 'AAAA']}, new AbortController().signal);
+  expect(result.evaluations.map(item => item.dst_ip)).toEqual(['192.0.2.1', '2001:db8::1']);
   expect(api.routingTrace).toHaveBeenCalledTimes(2);
+  expect(result.dns.map(item => [item.qtype, item.addresses, item.selected_ip])).toEqual([
+    ['A', ['192.0.2.1', '198.51.100.1', '192.0.2.1'], '192.0.2.1'],
+    ['AAAA', ['2001:db8::1', '2001:db8::2'], '2001:db8::1']
+  ]);
 });
 it.each(['generation_id', 'instance_id'] as const)('rejects a batch spanning different %s values', async field => {
   const api = createMockApi();
-  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '198.51.100.1']));
+  api.dnsQuery = vi.fn().mockResolvedValue(dual(['192.0.2.1'], ['2001:db8::1']));
   const trace = await api.routingTrace({input: request.input, resolve: 'none'});
   api.routingTrace = vi
     .fn()
     .mockResolvedValueOnce(trace)
     .mockResolvedValueOnce({...trace, [field]: 'changed'});
-  await expect(routingTrace(api, request, new AbortController().signal)).rejects.toMatchObject({status: 409, code: 'snapshot_unavailable'});
-});
-it('rejects oversized answer sets explicitly without silently omitting addresses', async () => {
-  const api = createMockApi();
-  const caps = await api.capabilities();
-  caps.resources.routing_trace.max_addresses = 1;
-  api.capabilities = vi.fn().mockResolvedValue(caps);
-  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '192.0.2.2']));
-  api.routingTrace = vi.fn();
-  await expect(routingTrace(api, request, new AbortController().signal)).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
-  expect(api.routingTrace).not.toHaveBeenCalled();
-});
-
-it('uses a supplied capability limit without another discovery request', async () => {
-  const api = createMockApi();
-  api.capabilities = vi.fn();
-  api.dnsQuery = vi.fn().mockResolvedValue(query(['192.0.2.1', '192.0.2.2']));
-  const result = await routingTrace(api, {...request, maxAddresses: 2}, new AbortController().signal);
-  expect(result.evaluations.map(item => item.dst_ip)).toEqual(['192.0.2.1', '192.0.2.2']);
-  expect(api.capabilities).not.toHaveBeenCalled();
+  await expect(routingTrace(api, {...request, recordTypes: ['A', 'AAAA']}, new AbortController().signal)).rejects.toMatchObject({
+    status: 409,
+    code: 'snapshot_unavailable'
+  });
 });

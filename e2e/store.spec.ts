@@ -64,21 +64,38 @@ test('a hidden main-source path does not block a validated conditional replaceme
   expect((await api.config()).sources.find(source => source.kind === 'main')?.content).toContain('# updated');
 });
 
-test('query simulation refuses DNS fan-out above the advertised address limit', async ({page}) => {
+test('query simulation traces the first IPv4 and IPv6 answer and lists every answer', async ({page}) => {
   const {api, capabilities, handlers, requests} = await mockBackend(page);
+  // honk's own limit: one address per trace request.
   capabilities.resources.routing_trace.resolve_modes = ['none'];
   capabilities.resources.routing_trace.max_addresses = 1;
-  handlers['GET dns/query'] = request => {
+  const answers: Record<string, string[]> = {A: ['192.0.2.10', '192.0.2.11', '192.0.2.12'], AAAA: ['2001:db8::10', '2001:db8::11']};
+  handlers['GET dns/query'] = async request => {
     const params = new URL(request.url()).searchParams;
-    return api.dnsQuery(params.get('domain')!, params.getAll('type'));
+    const response = await api.dnsQuery(params.get('domain')!, params.getAll('type'));
+    return {
+      ...response,
+      results: response.results.map(result => ({
+        ...result,
+        status: 'NOERROR',
+        answers: (answers[result.type] ?? []).map(data => ({name: response.domain, type: result.type, class: 'IN', ttl: 60, data}))
+      }))
+    };
   };
   handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
   await page.getByLabel('Destination port', {exact: true}).fill('443');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
-  await expect(page.getByText(/DNS returned more than 1 distinct addresses/)).toBeVisible();
-  expect(requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))).toHaveLength(0);
+  await expect(page.getByText('Simulated address').first()).toBeVisible();
+  await expect(page.getByText(/192\.0\.2\.12/)).toBeVisible();
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  const traced = requests
+    .filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))
+    .map(request => request.postDataJSON().input.dst_ip);
+  expect(traced.every(ip => ip === '192.0.2.10' || ip === '2001:db8::10')).toBe(true);
+  expect(traced.length).toBeGreaterThan(0);
+  expect(traced.length).toBeLessThanOrEqual(2);
 });
 
 // Five-second polls are for what changes by the second; these lists and rings refresh far less often.
