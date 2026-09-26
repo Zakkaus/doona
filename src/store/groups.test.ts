@@ -75,8 +75,9 @@ it('writes a group check URL at its revision and refuses a stale revision or an 
   const url = 'https://cp.cloudflare.com/generate_204';
   let done = false;
   const saved = patchConfig(api, group, [{op: 'replace', path: '/config/check_url', value: url}]).finally(() => (done = true));
-  // The write passes through the mock's source validation before its operation starts, so time moves until it lands.
-  for (let i = 0; i < 20 && !done; i++) await vi.advanceTimersByTimeAsync(500);
+  // The write hashes the source before its operation starts, which takes real time; waitFor yields to the event loop
+  // between checks and moves the fake clock each time, so the operation's timer fires however long the hash takes.
+  await vi.waitFor(() => expect(done).toBe(true), {timeout: 4000, interval: 50});
   await saved;
   const after = await api.group('resilient');
   expect(after.config.check_url).toBe(url);
