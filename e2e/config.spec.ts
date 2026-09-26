@@ -375,7 +375,7 @@ test('leaving the editor aborts validation before any replacement', async ({page
   expect(writes).toBe(0);
 });
 
-httpTest('a stale original digest refuses replacement and retains the draft', async ({page}) => {
+httpTest('a stale original digest refuses replacement, retains the draft and rebases it', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config?source=src-rules');
   await page.getByRole('button', {name: 'Edit', exact: true}).click();
@@ -391,6 +391,14 @@ httpTest('a stale original digest refuses replacement and retains the draft', as
   await expect(editor).toContainText('# local draft');
   // The concurrent edit becomes the accepted text once its reload completes.
   await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
+  // The draft is rebased on the refetched source, so the next save carries the new digest and replaces it.
+  await expect(async () => {
+    await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+    await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded', {timeout: 2000});
+  }).toPass({timeout: 15000});
+  const saved = (await api.config()).sources.find(item => item.id === source.id)!.content!;
+  expect(saved).toContain('# local draft');
+  expect(saved).not.toContain('# concurrent edit');
 });
 
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
@@ -837,6 +845,31 @@ for (const appearance of ['light', 'dark', 'glass'] as const) {
     expect(await raw.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   });
 }
+
+test('a validation run gives way to the accepted diagnostics after a reload', async ({page}) => {
+  const {api, capabilities} = await configBackend(page);
+  capabilities.resources.events.available = true;
+  let changed!: () => void;
+  const generation = new Promise<void>(resolve => {
+    changed = resolve;
+  });
+  await page.route('**/api/v1/events**', async route => {
+    await generation;
+    await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
+  });
+  await page.goto('/#/config?tab=validate');
+  const panel = page.getByRole('tabpanel', {name: 'Validation'});
+  await panel.getByRole('button', {name: 'Validate again', exact: true}).click();
+  await expect(panel).toContainText('Last validation');
+  // Another client writes the file; the reload arrives while this tab is open.
+  const before = await api.config();
+  const source = before.sources.find(item => item.id === 'src-rules')!;
+  await api.replaceConfigSource(source.id, source.content + '\n# elsewhere\n', `"${source.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).generation_id).not.toBe(before.generation_id);
+  changed();
+  await expect(panel).toContainText('Diagnostics kept for the accepted configuration');
+  await expect(panel).not.toContainText('Last validation');
+});
 
 httpTest('a module draft refused with 412 is rebased and saves on the next attempt', async ({page}) => {
   const {api} = await configBackend(page);

@@ -169,6 +169,12 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   const isComplete = useCompleteness(sources);
   const complete = isComplete(source);
   const editing = draft !== null;
+  // A save refused because the file changed on disk: the refetched source becomes the base and the typed text stays,
+  // so the next save carries the new digest instead of failing with 412 again.
+  const stale = editor.error instanceof ApiError && editor.error.status === 412 && editor.errorSource === source.id && draft?.origin.id === source.id;
+  useLinked(stale && source.content_sha256 !== draft.origin.content_sha256 ? source : null, next => {
+    if (next) setDraft(current => current && {...current, origin: next});
+  });
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
   const shown = saveErrors ?? found ?? diagnostics;
   const marks = useMemo(() => sourceMarks(shown, source.id), [shown, source.id]);
@@ -263,6 +269,11 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
   const [level, setLevel] = useState('all');
   const [run, setRun] = useState<ConfigValidationResult | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // A run describes the configuration it checked; after a reload or a save the accepted diagnostics apply again.
+  useLinked(config.generation_id, () => {
+    setRun(null);
+    setSelected(null);
+  });
   const rows = useMemo(
     () => diagnosticRows(run?.diagnostics ?? config.diagnostics, config.sources, locale, t),
     [run, config.diagnostics, config.sources, locale, t]
