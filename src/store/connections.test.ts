@@ -1,7 +1,8 @@
 import {expect, it} from 'vitest';
 import {ApiError} from '../api/error';
 import type {BulkCloseQuery, Connection, ConnectionList} from '../api/model';
-import {closeInBatches} from './connections';
+import {connections as fixture} from '../api/mock/fixtures';
+import {closeInBatches, withRates} from './connections';
 
 type Row = {id: string; network: 'tcp' | 'udp'; src: string | null; owned: boolean};
 
@@ -100,4 +101,85 @@ it('passes on failures other than the limit', async () => {
     throw refused;
   };
   await expect(closeInBatches(api, {all: true})).rejects.toBe(refused);
+});
+
+// Two snapshots of one engine, `ms` apart, each carrying one connection per [id, download bytes] pair and no rates.
+const snapshot = (ms: number, rows: Array<[string, string | null]>, instance = 'engine-a'): ConnectionList => ({
+  ...fixture,
+  instance_id: instance,
+  observed_at: new Date(Date.UTC(2026, 0, 1) + ms).toISOString(),
+  tcp: rows.map(([id, bytes]) => ({
+    ...fixture.tcp[0],
+    id,
+    upload_bytes: '0',
+    download_bytes: bytes,
+    upload_bytes_per_second: null,
+    download_bytes_per_second: null
+  })),
+  udp: []
+});
+const down = (list: ConnectionList) => Object.fromEntries(list.tcp.map(c => [c.id, c.download_bytes_per_second]));
+
+it('derives each rate from the bytes between two snapshots, rounding down', () => {
+  const first = withRates(undefined, snapshot(0, [['a', '1000']]));
+  expect(down(first.list)).toEqual({a: null});
+  const next = withRates(
+    first.baseline,
+    snapshot(3000, [
+      ['a', '11000'],
+      ['b', '500']
+    ])
+  );
+  expect(down(next.list)).toEqual({a: '3333', b: null});
+  expect(next.list.tcp[0].upload_bytes_per_second).toBe('0');
+  expect(next.baseline).toBe(next.list);
+});
+
+it('keeps a rate the backend reports', () => {
+  const later = snapshot(5000, [['a', '9000']]);
+  later.tcp[0] = {...later.tcp[0], download_bytes_per_second: '42'};
+  expect(down(withRates(snapshot(0, [['a', '1000']]), later).list)).toEqual({a: '42'});
+});
+
+it('derives no rate across an engine restart, a counter that went down or unknown bytes', () => {
+  const prev = snapshot(0, [
+    ['a', '1000'],
+    ['b', '1000'],
+    ['c', null]
+  ]);
+  const restarted = withRates(prev, snapshot(5000, [['a', '2000']], 'engine-b'));
+  expect(down(restarted.list)).toEqual({a: null});
+  expect(restarted.baseline.instance_id).toBe('engine-b');
+  const next = snapshot(5000, [
+    ['a', '6000'],
+    ['b', '10'],
+    ['c', '10']
+  ]);
+  expect(down(withRates(prev, next).list)).toEqual({a: '1000', b: null, c: null});
+});
+
+it('keeps the baseline and the last rates over a window under a second', () => {
+  const measured = withRates(snapshot(0, [['a', '0']]), snapshot(2000, [['a', '4000']]));
+  const early = withRates(
+    measured.baseline,
+    snapshot(2400, [
+      ['a', '4800'],
+      ['b', '1']
+    ])
+  );
+  expect(down(early.list)).toEqual({a: '2000', b: null});
+  expect(early.baseline).toBe(measured.baseline);
+  // A response older than the baseline is a short window too.
+  expect(withRates(measured.baseline, snapshot(1000, [['a', '100']])).baseline).toBe(measured.baseline);
+  expect(
+    down(
+      withRates(
+        early.baseline,
+        snapshot(4000, [
+          ['a', '10000'],
+          ['b', '1']
+        ])
+      ).list
+    )
+  ).toEqual({a: '3000', b: null});
 });

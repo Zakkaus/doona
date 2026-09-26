@@ -16,6 +16,7 @@ import {
 } from './view';
 import {parseU64} from '../../api/u64';
 import {fitColumns} from '../../ui/ui';
+import {formatRate} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
 const t: Translator = (key, params) => translate('en', key, params);
 
@@ -85,6 +86,7 @@ it('sorts every column as comparing the displayed values pairwise would', () => 
     src: i % 11 === 0 ? undefined : `192.168.1.${(i * 3) % 8}:${1000 + i}`,
     state: states[i % states.length],
     download_bytes: i % 7 === 0 ? null : String((i * 7919) % 23),
+    download_bytes_per_second: i % 6 === 0 ? null : String((i * 104729) % 100003),
     started_at: i % 8 === 0 ? null : i % 13 === 0 ? 'not a time' : new Date(Date.UTC(2026, 0, 1, 0, (i * 17) % 29)).toISOString()
   }));
   const shown = (row: (typeof list)[number], column: string) =>
@@ -96,9 +98,11 @@ it('sorts every column as comparing the displayed values pairwise would', () => 
           ? t(`conn.state.${row.state}`)
           : column === 'down'
             ? parseU64(row.download_bytes)
-            : row.started_at
-              ? Date.parse(row.started_at)
-              : null;
+            : column === 'downRate'
+              ? parseU64(row.download_bytes_per_second)
+              : row.started_at
+                ? Date.parse(row.started_at)
+                : null;
   const collator = new Intl.Collator('en-US', {numeric: true});
   for (const column of columns.filter(column => column.sortable).map(column => column.id))
     for (const direction of ['ascending', 'descending'] as const) {
@@ -115,13 +119,26 @@ it('sorts every column as comparing the displayed values pairwise would', () => 
     }
 });
 
+it('sorts the download rate by value, with unknown rates last', () => {
+  const c = connections.tcp[0];
+  const list = ['900', null, '10000', '0'].map((rate, i) => ({...c, id: 'r' + i, download_bytes_per_second: rate}));
+  const order = (direction: 'ascending' | 'descending') =>
+    tableRows(list, {hidden: [], sort: {column: 'downRate', direction}, group: 'none'}, 'en-US', t).map(row => row.id);
+  expect(order('descending')).toEqual(['r2', 'r0', 'r3', 'r1']);
+  expect(order('ascending')).toEqual(['r3', 'r0', 'r2', 'r1']);
+  const [row] = connectionTableView(list.slice(2, 3), {hidden: [], sort: null, group: 'none'}, 'en-US', new Map(), false, t);
+  expect('connection' in row && row.connection.downloadRate).toBe(formatRate('10000', 'en-US'));
+});
+
 it('drops columns by priority until the minimum widths fit, keeping the target', () => {
   const ids = (width: number | null, hidden: string[] = []) =>
     fitColumns(
       columns.filter(column => !hidden.includes(column.id)),
       width
     ).map(column => column.id);
-  expect(ids(null)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'age']);
+  expect(ids(null)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'downRate', 'age']);
+  expect(ids(1112)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'downRate', 'age']);
+  // The rate goes first, before any column the table had without it.
   expect(ids(1032)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'age']);
   expect(ids(942)).toEqual(['dst', 'src', 'node', 'state', 'down', 'age']);
   expect(ids(726)).toEqual(['dst', 'src', 'state', 'down', 'age']);
