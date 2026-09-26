@@ -235,6 +235,13 @@
 .rp-icon.rp-up {
   rotate: 180deg;
 }
+/* On a phone the custom URL field takes its row alone, full width under the label; the move buttons wrap onto their
+   own row below it instead of squeezing the field down to a sliver beside them. */
+@media (max-width: 599.98px) {
+  .rp-url-field .rp-input {
+    min-width: 100%;
+  }
+}
 
 /* Configuration page: diagnostics and unmodelled subscription lines wrap instead of overflowing the card. */
 .rp-config-diagnostics .rp-light {

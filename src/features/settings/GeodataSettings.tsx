@@ -130,6 +130,7 @@ export function GeodataSettingsCard() {
                 <TextField
                   key={field.id}
                   type="url"
+                  className="rp-url-field"
                   spellCheck={false}
                   autoComplete="off"
                   label={field.label}
