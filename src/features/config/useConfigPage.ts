@@ -15,6 +15,7 @@ import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 import {offered} from '../../api/capabilities';
+import type {NewSourceProps} from './useNewSource';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
   error: unknown;
@@ -92,6 +93,10 @@ export function useConfigPage({go, query}: PageProps) {
     : null;
   const wizardProps =
     setup && mainSource ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id}))} : null;
+  const newSourceProps: NewSourceProps | null =
+    resources?.config.create === true && resources.config.writable === true
+      ? {sources, contentOffered: resources.config.content === true, refetch: config.refetch, open: id => openSource(id, null)}
+      : null;
   const validateProps: ValidateTabProps | null = config.data
     ? {
         config: config.data,
@@ -118,6 +123,7 @@ export function useConfigPage({go, query}: PageProps) {
     selectedId: selectedId ?? '',
     select,
     sourceProps,
+    newSourceProps,
     wizardProps,
     modulesProps: config.data
       ? {

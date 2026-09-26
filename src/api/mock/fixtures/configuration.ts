@@ -74,6 +74,10 @@ routing {
   include rules.dae
   fallback: resilient
 }
+
+include {
+  config.d/*.dae
+}
 `;
 const configRulesFile = `# Household exceptions, kept apart from config.dae.
 # The TV never leaves through a node.

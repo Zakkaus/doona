@@ -1,13 +1,15 @@
 import {ApiError, clientError} from '../api/error';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getApi} from '../api/index';
-import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
+import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult, OperationAccepted} from '../api/model';
 import {LocalError} from '../api/error';
 import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {etag, finished, settle, useAction} from './action';
 import {refetchAll} from './resourceCore';
+import type {Api} from '../api/api';
+import {sourceAt} from '../dae/newSource';
 
 export function useConfig(enabled = true) {
   const api = getApi();
@@ -92,6 +94,41 @@ export async function withinLimits<T>(limits: WriteLimits, content: string, body
   });
 }
 
+// The backend accepted the write, so the file holds it: a poll that fails from here on leaves the outcome unknown, as a
+// forgotten operation does, rather than the write failed.
+function settleWrite(api: Api, accepted: OperationAccepted, signal: AbortSignal) {
+  return settle(api, accepted, signal).catch(error => {
+    if (signal.aborted || error instanceof LocalError) throw error;
+    void refetchAll();
+    throw new LocalError('ui.operationUnknown');
+  });
+}
+
+// Creates an empty source at `path` and returns the id the reloaded configuration lists it under, or null when it
+// lists none there. A failed reload removes the new file, which the operation reports as not written.
+export async function createSource(api: Api, path: string, signal: AbortSignal): Promise<string | null> {
+  const operation = await settleWrite(api, await api.createConfigSource(path, '', signal), signal);
+  finished(operation, 'reload');
+  signal.throwIfAborted();
+  return sourceAt((await api.config(signal)).sources, path)?.id ?? null;
+}
+
+export function useConfigCreate(refetch: () => void) {
+  const api = getApi();
+  const {busy, run} = useAction<'create'>({rethrow: true});
+  return {
+    busy: busy !== null,
+    create: useCallback(
+      (path: string) =>
+        run('create', async signal => {
+          const id = await createSource(api, path, signal).finally(refetch);
+          return {id};
+        }),
+      [api, run, refetch]
+    )
+  };
+}
+
 export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
   const api = getApi();
   const capabilities = useCapabilities().data;
@@ -150,13 +187,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           });
           lastRefused.current = null;
           signal.throwIfAborted();
-          // The backend accepted the write, so the file holds it: a poll that fails from here on leaves the outcome
-          // unknown, as a forgotten operation does, rather than the write failed.
-          const operation = await settle(api, accepted, signal).catch(error => {
-            if (signal.aborted || error instanceof LocalError) throw error;
-            void refetchAll();
-            throw new LocalError('ui.operationUnknown');
-          });
+          const operation = await settleWrite(api, accepted, signal);
           signal.throwIfAborted();
           refetch();
           return {result: finished(operation, 'reload', {written: true})};

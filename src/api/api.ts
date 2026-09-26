@@ -95,6 +95,8 @@ export interface Api {
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;
   replaceConfigSource(sourceId: string, content: string, ifMatch: string, signal?: AbortSignal): Promise<OperationAccepted>;
+  /** A new source file at a path relative to the main source's directory that an include pattern matches. */
+  createConfigSource(path: string, content: string, signal?: AbortSignal): Promise<OperationAccepted>;
   patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;

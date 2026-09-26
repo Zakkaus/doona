@@ -1,4 +1,4 @@
-import {useCallback, useLayoutEffect, useRef, type ComponentProps, type ReactNode} from 'react';
+import {useCallback, useId, useLayoutEffect, useRef, type ComponentProps, type ReactNode} from 'react';
 import {
   Button as RButton,
   ToggleButton,
@@ -120,6 +120,8 @@ export function TextField({
   error,
   action,
   reveal,
+  prefix,
+  suffix,
   autoComplete,
   spellCheck,
   ...props
@@ -140,8 +142,12 @@ export function TextField({
     action?: ReactNode;
     // A secret's show or hide toggle, inside the field as in S2; `label` names what pressing it does now.
     reveal?: {shown: boolean; label: string; onToggle: () => void};
+    // Fixed text before and after the value, inside the field: the value is only the part between them.
+    prefix?: string;
+    suffix?: string;
   }) {
   const t = useT();
+  const affixId = useId();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
   const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   if (search) {
@@ -156,8 +162,18 @@ export function TextField({
     );
   }
   const input = (
-    <span className={cx('rp-input', (side || !!action) && 'rp-grow')}>
+    <span className={cx('rp-input', (side || !!action) && 'rp-grow', (prefix || suffix) && 'affixed')}>
+      {prefix && (
+        <span className="affix" id={`${affixId}-prefix`}>
+          {prefix}
+        </span>
+      )}
       <RInput placeholder={placeholder} autoComplete={autoComplete} spellCheck={spellCheck} />
+      {suffix && (
+        <span className="affix" id={`${affixId}-suffix`}>
+          {suffix}
+        </span>
+      )}
       {reveal && (
         <RButton className="reveal" aria-label={reveal.label} onPress={reveal.onToggle}>
           {reveal.shown ? <VisibilityOff /> : <Visibility />}
@@ -166,7 +182,14 @@ export function TextField({
     </span>
   );
   return (
-    <RTextField {...validity} {...props} className={cx(side ? 'rp-cluster' : 'rp-field', className)} style={width ? {width} : undefined}>
+    <RTextField
+      {...validity}
+      {...props}
+      // The fixed text is read with the field, so a screen reader hears the whole path, not only the value.
+      aria-describedby={[prefix && `${affixId}-prefix`, suffix && `${affixId}-suffix`].filter(Boolean).join(' ') || undefined}
+      className={cx(side ? 'rp-cluster' : 'rp-field', className)}
+      style={width ? {width} : undefined}
+    >
       <Label className="rp-label">{label}</Label>
       {action ? (
         <div className="rp-toolbar">

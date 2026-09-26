@@ -3,13 +3,23 @@ import type {Capabilities, ConfigSource, RuleList, Runtime} from '../model';
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
-import {diagnose, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
+import {diagnose, includedFiles, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
+import {includedBy, includePatterns, newSourcePathProblem} from '../../dae/newSource';
 import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
 
 type ConfigurationApi = Pick<
   Api,
-  'rules' | 'config' | 'validateConfig' | 'replaceConfigSource' | 'runtimeSettings' | 'patchRuntimeSettings' | 'startReload' | 'startSuspend' | 'startResume'
+  | 'rules'
+  | 'config'
+  | 'validateConfig'
+  | 'replaceConfigSource'
+  | 'createConfigSource'
+  | 'runtimeSettings'
+  | 'patchRuntimeSettings'
+  | 'startReload'
+  | 'startSuspend'
+  | 'startResume'
 >;
 type Effects = Pick<MockLifecycle, 'enqueue' | 'log' | 'publish' | 'eventData' | 'trimLogs'>;
 export function createConfiguration(
@@ -36,20 +46,18 @@ export function createConfiguration(
       return list;
     }));
   let configRevision = 40;
+  let created = 0;
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
-  function sourceSet(replacement?: {id: string; content: string}) {
+  function sourceSet(replacement?: {id: string; content: string}, files = disk) {
     const candidate: Array<{id: string; path: string; content: string}> = [];
     const include = (item: (typeof disk)[number]) => {
       if (candidate.some(source => source.id === item.id)) return;
       const content = item.id === replacement?.id ? replacement.content : item.content;
       candidate.push({id: item.id, path: item.path, content});
-      for (const {path} of includePaths(content)) {
-        const dependency = disk.find(source => resolveIncludePath(undefined, source.path) === resolveIncludePath(item.path, path));
-        if (dependency) include(dependency);
-      }
+      for (const {path} of includePaths(content)) includedFiles(files, item.path, path).forEach(include);
     };
-    const main = disk.find(source => source.kind === 'main');
+    const main = files.find(source => source.kind === 'main');
     if (main) include(main);
     return candidate;
   }
@@ -125,10 +133,7 @@ export function createConfiguration(
           kind: 'rule'
         });
       });
-      for (const {path} of includePaths(file.content)) {
-        const dependency = byPath.get(resolveIncludePath(file.path, path));
-        if (dependency) read(dependency, true);
-      }
+      for (const {path} of includePaths(file.content)) includedFiles(list, file.path, path).forEach(dependency => read(dependency, true));
     };
     const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
@@ -190,6 +195,38 @@ export function createConfiguration(
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
       disk = disk.map(item => (item.id === sourceId ? next : item));
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
+      return enqueue('reload', () => {
+        const generation = advance();
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
+    },
+    // The creation contract in order: capability, write switch, path shape, no existing file, an include that loads it,
+    // then full validation of the resulting set, the write and a reload.
+    createConfigSource: async (path, content, signal) => {
+      signal?.throwIfAborted();
+      const config = capabilities.resources.config;
+      if (!config.available || !config.create) throw new ApiError(404, 'capability_not_supported', 'Creating configuration sources is unavailable');
+      if (!config.writable) throw new ApiError(403, 'permission_denied', 'Configuration writes are disabled');
+      if (newSourcePathProblem(path) || new TextEncoder().encode(path).length > 1024)
+        throw new ApiError(400, 'invalid_request', 'path must be a relative .dae path with normal segments');
+      await loadSources();
+      const main = found(
+        disk.find(item => item.kind === 'main'),
+        'Main source'
+      );
+      const target = resolveIncludePath(main.path, path);
+      if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
+      if (!includedBy(includePatterns(main.content), path)) {
+        const diagnostic = {level: 'error', source_id: main.id, line: null, column: null, span: null, code: 'source-not-included'} as const;
+        throw new ApiError(422, 'unsupported_value', 'No include pattern matches the path; nothing was written', null, {
+          diagnostics: [{...diagnostic, message: `No include pattern matches ${path}`}]
+        });
+      }
+      const next = await stored({id: `src-new-${++created}`, path: target, kind: 'include', writable: true, loaded_at: new Date().toISOString(), content});
+      const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision));
+      if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
+      disk = [...disk, next];
+      log('info', 'honk::config', 'Configuration source created; reloading.', {source_id: next.id});
       return enqueue('reload', () => {
         const generation = advance();
         return {active_generation_id: generation, datapath_generation_id: generation};
