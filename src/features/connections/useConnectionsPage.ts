@@ -6,6 +6,7 @@ import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} fro
 import {downloadFile, exportName, panelQuery, phoneQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
+import {compareNames} from '../../i18n/format';
 import type {PageProps} from '../../shell/routes';
 import {
   columns,
@@ -88,7 +89,7 @@ export function useConnectionsPage({go, query}: PageProps) {
   const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data) : null), [nodesListed, nodes.data, rows]);
   // A failed read keeps the card, with the reason, so it does not pass for a backend without health samples.
   const latencyError = nodesListed && !nodes.data ? nodes.error : null;
-  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => (a ?? '').localeCompare(b ?? '')), [rows]);
+  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => compareNames(a ?? '', b ?? '')), [rows]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>

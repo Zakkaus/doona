@@ -1,6 +1,7 @@
 import type {GroupSummary, Node} from '../../api/model';
 import {preferredHealth} from '../../api/selectors';
 import {percentile} from '../../ui/charts/layout';
+import {compareNames} from '../../i18n/format';
 
 export type LatencyBy = 'group' | 'protocol';
 export type LatencyRow = {id: string; name: string; latest: number; moving: number | null; avg10: number | null};
@@ -34,11 +35,11 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   }
   const list = [...buckets.values()];
   for (const group of list) {
-    group.rows.sort((a, b) => a.latest - b.latest || a.name.localeCompare(b.name));
-    group.missing.sort((a, b) => a.name.localeCompare(b.name));
+    group.rows.sort((a, b) => a.latest - b.latest || compareNames(a.name, b.name));
+    group.missing.sort((a, b) => compareNames(a.name, b.name));
   }
   // Named groups in name order; the unnamed bucket (no group, unknown protocol) last.
-  return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || (a.label ?? '').localeCompare(b.label ?? ''));
+  return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || compareNames(a.label ?? '', b.label ?? ''));
 }
 
 // Which averages the backend reports. honk sends neither, so a chart names only the ones some row has.

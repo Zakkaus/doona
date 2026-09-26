@@ -1,5 +1,6 @@
 import type {DnsLogList, DnsLogRecord} from '../../api/model';
 import {percentile} from '../../ui/charts/layout';
+import {compareNames} from '../../i18n/format';
 
 // Mutually exclusive outcomes: a cache hit counts as that whatever its status, then uncached records by status.
 export const dnsOutcomes = ['cached', 'answered', 'nxdomain', 'failed'] as const;
@@ -32,7 +33,7 @@ export function dnsAnalysis(records: DnsLogRecord[]) {
     )!,
     samples: list
   }));
-  upstreams.sort((a, b) => b.samples.length - a.samples.length || a.upstream.localeCompare(b.upstream));
+  upstreams.sort((a, b) => b.samples.length - a.samples.length || compareNames(a.upstream, b.upstream));
   const uncached = records.length - counts.cached;
   return {
     domains: ranked(

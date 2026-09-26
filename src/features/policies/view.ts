@@ -1,4 +1,4 @@
-import {formatLatency} from '../../i18n/format';
+import {compareNames, formatLatency} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
@@ -178,7 +178,7 @@ export function nodeGridView(
       )
     : nodes;
   if (big && filter.sort === 'latency') shown.sort((a, b) => compareLatency(a.tcp, b.tcp));
-  else if (big && filter.sort === 'name') shown.sort((a, b) => a.name.localeCompare(b.name));
+  else if (big && filter.sort === 'name') shown.sort((a, b) => compareNames(a.name, b.name));
   const down = shown.filter(node => node.unavailable).length;
   return {
     big,

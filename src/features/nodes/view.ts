@@ -7,7 +7,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64} from '../../api/u64';
-import {formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
+import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 
@@ -33,8 +33,6 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
 }
 
 export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {displayName?: string; configTag?: string};
-// Names sort by pinyin, numeric value, then case-insensitive text.
-export const collator = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 
 export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translator) {
@@ -118,9 +116,9 @@ export function nodeRows(owned: Node[], search: string, group: string, protocol:
   const sign = sort.direction === 'ascending' ? 1 : -1;
   const latency = sort.column === 'latency' ? new Map(kept.map(node => [node.id, latencyOf(node)])) : new Map();
   const by: Record<string, (a: Node, b: Node) => number> = {
-    name: (a, b) => collator.compare(a.name, b.name),
-    protocol: (a, b) => collator.compare(a.protocol ?? '', b.protocol ?? ''),
-    latency: (a, b) => compareLatency(latency.get(a.id), latency.get(b.id)) || collator.compare(a.name, b.name)
+    name: (a, b) => compareNames(a.name, b.name),
+    protocol: (a, b) => compareNames(a.protocol ?? '', b.protocol ?? ''),
+    latency: (a, b) => compareLatency(latency.get(a.id), latency.get(b.id)) || compareNames(a.name, b.name)
   };
   return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
 }

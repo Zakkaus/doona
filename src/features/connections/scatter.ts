@@ -1,4 +1,5 @@
 import type {Connection} from '../../api/model';
+import {compareNames} from '../../i18n/format';
 
 export type TrafficPoint = {id: string; up: number; down: number; name: string};
 export type TrafficSeries = {outbound: string | null; points: TrafficPoint[]};
@@ -20,7 +21,7 @@ export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | '
   }
   const series: TrafficSeries[] = [...byOutbound]
     .map(([outbound, points]) => ({outbound, points}))
-    .sort((a, b) => (a.outbound ?? '').localeCompare(b.outbound ?? ''));
+    .sort((a, b) => compareNames(a.outbound ?? '', b.outbound ?? ''));
   // Totals are compared exactly: past 2^53 bytes two different totals can be the same Number.
   let heaviest: (TrafficPoint & {outbound: string | null}) | undefined;
   let most = -1n;
