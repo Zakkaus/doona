@@ -23,7 +23,7 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await expect(card('hkauto')).toContainText("name(keyword: 'hk')");
   await expect(card('hkauto')).toContainText('cannot be removed here');
   // The rule is explained by what it selects, with the evaluator honk's filters follow.
-  await expect(card('hkauto')).toContainText('Selects now: hk-01, hk-02');
+  await expect(card('hkauto')).toContainText('Currently selects: hk-01, hk-02');
   // The only filter of a group cannot be removed, since the group would then hold every node.
   await expect(card('skylink').getByRole('button', {name: /^Remove /})).toBeDisabled();
 

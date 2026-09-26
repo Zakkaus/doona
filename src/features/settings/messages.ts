@@ -337,7 +337,7 @@ export const messages = defineMessages({
     'settings.recordingEvents':
       "Event capture is running: a panel is attached or a recorder is pinned on. Each recorder's light shows whether it is recording.",
     'settings.recordingDetached': 'No panel is attached; recorders set to follow one are idle.',
-    'settings.recordingGrace': 'Recording continues for {n} s after the panel left.',
+    'settings.recordingGrace': 'Recording continues for {n} s after the panel detaches.',
     'settings.range': '{min} to {max}',
     'settings.rangeMin': 'At least {min}',
     'settings.apply': 'Apply',
@@ -378,7 +378,7 @@ export const messages = defineMessages({
     'settings.geodataRoute': 'Download route',
     'settings.geodataEdit': 'Edit',
     'settings.geodataCustomUrls': 'Custom URLs',
-    'settings.geodataConfigSeeded': 'When honk restarts, the config file sets the URLs it names again and replaces changes made to them here.',
+    'settings.geodataConfigSeeded': 'When honk restarts, the URLs in the config file replace any changes made to them here.',
     'settings.geodataPreset.metacubex': 'MetaCubeX full',
     'settings.geodataPreset.metacubexLite': 'MetaCubeX lite',
     'settings.geodataPreset.loyalsoldier': 'Loyalsoldier',

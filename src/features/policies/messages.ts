@@ -278,7 +278,7 @@ export const messages = defineMessages({
   en: {
     'arrange.drag': 'Drag {name}',
     'arrange.dropInto': 'Drop into group {group}',
-    'arrange.ruleSelectsMore': {one: 'Selects now: {names} and {n} more', other: 'Selects now: {names} and {n} more'},
+    'arrange.ruleSelectsMore': {one: 'Currently selects: {names} and {n} more', other: 'Currently selects: {names} and {n} more'},
     'arrange.failed': 'Could not apply: {error}',
     'arrange.memberCount': {one: '{n} node', other: '{n} nodes'},
     'arrange.show': 'Show',
@@ -290,7 +290,7 @@ export const messages = defineMessages({
     'arrange.addSelected': 'Add to group',
     'arrange.undoShort': 'Undo',
     'arrange.undoRemove': 'Undo removing {name}',
-    'arrange.ruleSelects': 'Selects now: {names}',
+    'arrange.ruleSelects': 'Currently selects: {names}',
     'policy.tab.groups': 'Groups',
     'policy.tab.arrange': 'Arrange',
     'arrange.note':
@@ -311,7 +311,7 @@ export const messages = defineMessages({
     'arrange.ruleNote': {one: 'Nodes this rule selects cannot be removed here.', other: 'Nodes these {n} rules select cannot be removed here.'},
     'arrange.editSource': 'Change them in the configuration source',
     'arrange.remove': 'Remove {name} from {group}',
-    'arrange.lastMember': 'This is the group’s last filter; removing it would make the group hold every node.',
+    'arrange.lastMember': "This is the group's last filter; removing it would make the group hold every node.",
     'arrange.stillIn': '{names} still match another rule of this group and stay in it after the name is removed.',
     'arrange.tray': 'Nodes and subscriptions',
     'arrange.search': 'Search nodes or subscriptions',
