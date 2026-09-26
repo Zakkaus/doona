@@ -1,5 +1,6 @@
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {tagId} from '../shared/taggedId';
+import {ranked} from '../shared/ranked';
 import {enumLabel} from '../../i18n/enum';
 import {addU64, parseU64} from '../../api/u64';
 import {storageKeys} from '../../api/storage';
@@ -203,10 +204,10 @@ export function connectionsView(
   locale: string,
   t: LabelFn
 ) {
+  // Equal counts keep one order across refreshes rather than the order the rows arrived in.
   const seen = (values: Array<string | null | undefined>) => {
-    const counts = new Map<string, number>();
-    for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    const present = values.flatMap(value => (value ? [value] : []));
+    return ranked(present, 12).top;
   };
   return {
     networks: [
@@ -222,15 +223,15 @@ export function connectionsView(
       {
         title: t('ui.device'),
         value: tagId('src', src ?? ''),
-        items: seen(rows.map(c => sourceIp(c.src))).map(([ip, n]) => ({id: tagId('src', ip), label: ip, desc: formatNumber(n, locale)}))
+        items: seen(rows.map(c => sourceIp(c.src))).map(({key: ip, count}) => ({id: tagId('src', ip), label: ip, desc: formatNumber(count, locale)}))
       },
       {
         title: t('conn.rule'),
         value: tagId('rule', rule),
-        items: seen(rows.map(c => c.rule_expression)).map(([expression, n]) => ({
+        items: seen(rows.map(c => c.rule_expression)).map(({key: expression, count}) => ({
           id: tagId('rule', expression),
           label: expression,
-          desc: formatNumber(n, locale)
+          desc: formatNumber(count, locale)
         }))
       }
     ],

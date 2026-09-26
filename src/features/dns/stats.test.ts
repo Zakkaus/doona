@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {DnsLogRecord} from '../../api/model';
-import {clientAddress, dnsAnalysis, ranked, shortPage} from './stats';
+import {clientAddress, dnsAnalysis, shortPage} from './stats';
 
 let n = 0;
 const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): DnsLogRecord => {
@@ -63,8 +63,6 @@ it('ranks domains without their trailing dot, and totals the rest', () => {
     {key: 'a.org', count: 2},
     {key: 'b.org', count: 1}
   ]);
-  expect(ranked(['x', 'y', 'y', 'z'], 1)).toEqual({top: [{key: 'y', count: 2}], rest: 2});
-  expect(ranked(['b', null, 'a'], 3).top.map(item => item.key)).toEqual(['a', 'b', null]);
   const devices = dnsAnalysis([record({src: '10.0.0.2:5353'}), record({src: '[fd00::1]:40000'}), record({src: null})]).devices.top;
   expect(devices.map(item => item.key)).toEqual(['10.0.0.2', '[fd00::1]', null]);
   expect(clientAddress('10.0.0.2:5353')).toBe('10.0.0.2');

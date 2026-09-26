@@ -265,3 +265,17 @@ it('folds the secondary filters into one menu that counts the ones in force', ()
   expect(rule.value).toBe('rule:all');
   expect(filterMenu(lists, {network: 'all', out: 'all', src: undefined, rule: 'all'}, t).active).toBe(0);
 });
+
+it('lists devices and rules with equal counts in the same order whatever order the rows arrive in', () => {
+  const c = {...connections.tcp[0], network: 'tcp'};
+  const rows = [
+    {...c, id: 'a', src: '10.0.0.9:1', rule_expression: 'domain(b)'},
+    {...c, id: 'b', src: '10.0.0.1:1', rule_expression: 'domain(a)'}
+  ];
+  const menus = (list: typeof rows) => connectionsView(list, connections, undefined, 'all', 'en-US', t).picks.map(pick => pick.items.map(item => item.label));
+  expect(menus(rows)).toEqual([
+    ['10.0.0.1', '10.0.0.9'],
+    ['domain(a)', 'domain(b)']
+  ]);
+  expect(menus([...rows].reverse())).toEqual(menus(rows));
+});
