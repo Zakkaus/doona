@@ -247,6 +247,30 @@ test('URLs written from the config file carry a note until the page stores its o
   expect((await api.runtimeSettings()).geodata!.geosite.urls).toEqual(full.urls.geosite);
 });
 
+for (const width of [320, 360])
+  test(`at ${width}px the custom URL field spans the dialog, and the move buttons sit below it`, async ({page}) => {
+    await page.setViewportSize({width, height: 800});
+    await mockBackend(page);
+    await page.goto('/#/settings');
+    await pick(page, 'settings.geodataSource', t('settings.geodataCustom'));
+    const dialog = page.getByRole('dialog', {name: t('settings.geodataCustomUrls')});
+    const first = dialog.getByLabel(t('settings.geodataUrlLabel', {kind: 'geosite', n: '1'}), {exact: true});
+    const {toolbarWidth, wrapWidth, buttonsBelowInput} = await first.evaluate(input => {
+      const toolbar = input.closest('.rp-toolbar')!;
+      const wrap = input.closest('.rp-input')!;
+      const wrapBox = wrap.getBoundingClientRect();
+      const buttons = [...toolbar.querySelectorAll('button')];
+      return {
+        toolbarWidth: toolbar.getBoundingClientRect().width,
+        wrapWidth: wrapBox.width,
+        buttonsBelowInput: buttons.every(b => b.getBoundingClientRect().top >= wrapBox.bottom - 1)
+      };
+    });
+    // The field fills its own row; the move buttons no longer share it, so they cannot squeeze the field to a sliver.
+    expect(wrapWidth).toBeCloseTo(toolbarWidth, 0);
+    expect(buttonsBelowInput).toBe(true);
+  });
+
 test('without configurable sources the page keeps the plain geodata table in the actions card', async ({page}) => {
   const {capabilities} = await mockBackend(page);
   delete capabilities.resources.geodata.configurable_sources;
