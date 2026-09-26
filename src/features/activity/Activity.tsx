@@ -16,7 +16,7 @@ import {RankingCard} from './RankingCard';
 export function Activity() {
   const t = useT();
   const vm = useActivity();
-  const {p, locale, range, setRange, traffic, spark, chartRate, memorySeries, memoryBytes, notices} = vm;
+  const {p, locale, range, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   if (!vm.ready) return alert || (vm.discoveryFailed ? null : <Loading>{t('ui.loading')}</Loading>);
   return (
@@ -41,7 +41,7 @@ export function Activity() {
               <span className="rp-big">{vm.download}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} />
+              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
             </span>
           </div>
         </Card>
@@ -51,7 +51,7 @@ export function Activity() {
               <span className="rp-big">{vm.upload}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} />
+              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
             </span>
           </div>
         </Card>
@@ -61,7 +61,7 @@ export function Activity() {
               <span className="rp-big">{vm.connections}</span>
             </span>
             <span className="rp-spark">
-              <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} />
+              <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />
             </span>
           </div>
         </CardLink>

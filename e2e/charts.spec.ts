@@ -361,16 +361,51 @@ for (const lang of ['zh-TW', 'zh-CN']) {
   });
 }
 
-test('decorative sparklines retain their pointer highlight without a tooltip or focus stop', async ({page}) => {
+test('a sparkline shows the hovered sample in a tip and stays out of the focus order', async ({page}) => {
   await page.goto('/#/activity');
-  const spark = page.locator('.rp-spark svg').first();
+  const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
+  const spark = tile.locator('.rp-spark svg');
   await spark.hover();
   await expect(spark.locator('circle')).toHaveAttribute('r', '4');
   await expect(spark).not.toHaveAttribute('tabindex');
-  await expect(page.locator('.rp-charttip-bounded')).toHaveCount(0);
+  const tip = tile.locator('.rp-charttip-bounded');
+  await expect(tip).toBeVisible();
+  await expect(tip.locator('li')).toHaveText(/^[\d.,]+ [KMGT]?B\/s$/);
+  await expect(tip.locator('p')).toHaveText(/\d{1,2}:\d{2}:\d{2}/);
   await page.mouse.move(0, 0);
   await expect(spark.locator('circle')).toHaveCount(0);
+  await expect(tip).toHaveCount(0);
 });
+
+// The card clips what overflows it, so the tip has to open inwards at both ends of the line.
+for (const [name, storage] of [
+  ['on a phone', {}],
+  ['mirrored on a phone', {'doona-mirror': 'on'}]
+] as const) {
+  test.describe(`the sparkline tip ${name}`, () => {
+    test.use({storage, viewport: {width: 320, height: 800}});
+    test('stays inside its card at both ends', async ({page}) => {
+      await page.goto('/#/activity');
+      const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
+      const spark = tile.locator('.rp-spark svg');
+      await expect(spark).toBeVisible();
+      const card = (await tile.boundingBox())!;
+      const line = (await spark.boundingBox())!;
+      for (const x of [1, line.width - 1]) {
+        await page.mouse.move(line.x + x, line.y + line.height / 2);
+        const tip = tile.locator('.rp-charttip-bounded');
+        await expect(tip).toBeVisible();
+        await expect(async () => {
+          const box = (await tip.locator('[role=status]').boundingBox())!;
+          expect(box.x).toBeGreaterThanOrEqual(card.x);
+          expect(box.y).toBeGreaterThanOrEqual(card.y);
+          expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width);
+          expect(box.y + box.height).toBeLessThanOrEqual(card.y + card.height);
+        }).toPass();
+      }
+    });
+  });
+}
 
 test('the donut keeps stepping after a refresh leaves fewer slices than the one selected', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
