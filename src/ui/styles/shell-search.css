@@ -250,12 +250,6 @@
     display: none;
   }
 }
-.rp-hrule {
-  block-size: 1px;
-  margin: 0;
-  border: 0;
-  background: var(--rp-hl-med);
-}
 .rp-vrule {
   width: 2px;
   height: 32px;
@@ -377,10 +371,6 @@
 .rp-version[data-hovered] {
   background: var(--rp-fill);
 }
-/* The indicator's light is the dot alone; the state is in its name and in the popover. */
-.rp-version .rp-light > span:empty {
-  display: none;
-}
 /* The facts as a hover card's: a label column and a value column, each value wrapping in its own cell. */
 .rp-popover-body .rp-kv.row {
   display: grid;
@@ -390,7 +380,7 @@
 .rp-popover-body .rp-kv.row > div {
   display: contents;
 }
-/* The actions read as menu rows: full width, their text at the start edge, in line with the facts. */
+/* The actions sit below the facts as buttons at the end edge, the main one last, as a dialog's footer. */
 .rp-backend-actions {
   display: flex;
   flex-wrap: wrap;

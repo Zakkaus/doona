@@ -89,12 +89,9 @@ export function ErrorMessage({error, onRetry, message}: {error: Error | null | u
   ) : null;
 }
 
-export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children: ReactNode; small?: boolean}) {
-  return (
-    <span className={cx('rp-light', tone, small && 'sm')}>
-      <span>{children}</span>
-    </span>
-  );
+// Without children the light is the dot alone, for a place that names the state elsewhere.
+export function Light({tone, children, small}: {tone: 'ok' | 'warn' | 'err' | 'info' | 'neutral' | 'muted'; children?: ReactNode; small?: boolean}) {
+  return <span className={cx('rp-light', tone, small && 'sm')}>{children != null && <span>{children}</span>}</span>;
 }
 export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
   return (
