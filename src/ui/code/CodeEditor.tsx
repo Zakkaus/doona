@@ -23,6 +23,7 @@ import {dae} from './dae';
 import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {toDiagnostics} from './diagnostics';
+import type {GroupEntry} from '../../dae/groups';
 
 // CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
@@ -186,7 +187,7 @@ export function CodeEditor({
   focusLine?: number | null;
   label: string;
   // Group names to offer after "->"; the caller keeps it current with the text.
-  outbounds?: () => string[];
+  outbounds?: () => Pick<GroupEntry, 'name' | 'written'>[];
   // Mod-S inside the editor; the caller decides what saving means.
   onSave?: () => void;
   compact?: boolean;

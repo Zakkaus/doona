@@ -3,6 +3,8 @@ import {isBuiltinOutbound} from './vocab';
 
 export type GroupEntry = {
   name: string;
+  // The header as written, quotes included: honk names the group by this text, so `->` must repeat it verbatim.
+  written: string;
   filters: string[];
   policy: string | null;
   from: number;
@@ -16,8 +18,10 @@ export function readGroupEntries(text: string): GroupEntry[] {
     .flatMap(block =>
       block.children.map(entry => {
         const fields = blockFields(text, entry, tokens);
+        const head = tokens.find(token => token.from === entry.from);
         return {
           name: entry.name,
+          written: head ? text.slice(head.from, head.to) : entry.name,
           filters: fields.filter(field => field.name === 'filter').map(field => field.value),
           policy: fields.filter(field => field.name === 'policy').at(-1)?.value ?? null,
           from: entry.line,

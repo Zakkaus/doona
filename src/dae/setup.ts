@@ -6,6 +6,7 @@ import {defaultTemplate, templates, type RuleTemplate} from './templates';
 type Subscription = {name: string; url: string; suffix?: string; raw?: string; section?: number; tag?: string};
 export type WizardState = {
   subscriptions: Subscription[];
+  // The first group's header as written, which is how a rule names it.
   group: string | null;
   rules: 'keep' | RuleTemplate;
   lanInterface: string;
@@ -51,7 +52,7 @@ export function readState(text: string): WizardState {
       else subscriptions.push({name: '', url: '', raw: line, section, ...(entry.block || field ? {tag: entry.block?.name ?? field!.name} : {})});
     }
   }
-  const group = readGroupEntries(text)[0]?.name ?? null;
+  const group = readGroupEntries(text)[0]?.written ?? null;
   const global = blocks.find(block => block.name === 'global');
   const lan = global ? blockFields(text, global, tokens).find(field => field.name === 'lan_interface')?.value : undefined;
   return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : '', ...networkDefaults};
@@ -63,9 +64,9 @@ function subscriptionBlock(state: WizardState): string[] {
 const subscriptionLine = (s: Subscription) => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}${s.suffix ?? ''}`;
 export const defaultGroup = 'proxy';
 function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
-  // The name as written: the templates must route to the group the file already has.
+  // The header as written: the templates must route to the group the file already has.
   const first = state.group ?? defaultGroup;
-  const fill = (line: string) => '  ' + line.replaceAll('{group}', quoteName(first));
+  const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
 function dnsBlock(state: WizardState): string[] {

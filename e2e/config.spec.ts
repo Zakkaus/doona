@@ -887,6 +887,23 @@ test('outbound completion offers groups defined in any source', async ({page}) =
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('lab');
 });
 
+test('outbound completion inserts a quoted group with its quotes', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const include = config.sources.find(source => source.id === 'src-rules')!;
+  include.content += "\ngroup {\n  'my lab' { policy: min }\n}\n";
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config');
+  const routing = page.getByRole('tabpanel', {name: 'Modules'}).getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\ndomain(example.org) -> my');
+  await page.locator('.cm-tooltip-autocomplete').getByText('my lab', {exact: true}).click();
+  await expect(editor).toContainText("domain(example.org) -> 'my lab'");
+});
+
 httpTest('a module draft refused with 412 is rebased and saves on the next attempt', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config');

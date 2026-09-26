@@ -128,6 +128,11 @@ describe('quick setup text transforms', () => {
     const written = writeState(odd, {...readState(odd), rules: 'global'});
     expect(written).toContain('  proxy.eu {\n    filter: name(hk-01, sg-01)');
     expect(written).toContain('fallback: proxy.eu');
+    // honk names a quoted group by its header text, quotes and all, so the template repeats it as written.
+    const quoted = main.replace('  proxy {', "  'proxy' {");
+    expect(writeState(quoted, {...readState(quoted), rules: 'global'})).toContain("fallback: 'proxy'");
+    const spaced = main.replace('  proxy {', '  "my group" {');
+    expect(writeState(spaced, {...readState(spaced), rules: 'gfw'})).toContain('domain(geosite:gfw) -> "my group"');
     const noGroup = main.replace(/group \{[\s\S]*?\n\}\n/, '');
     const state = readState(noGroup);
     expect(state.group).toBeNull();
