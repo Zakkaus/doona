@@ -31,7 +31,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Restart-only configuration refusals name the affected settings, and a file written without a successful reload is reported as unapplied.
 - Repeated configuration conflicts explain when the file on disk differs from the running configuration.
-- Runtime settings refresh after activation, and retries no longer replay writes without an idempotency key.
+- Runtime settings refresh after activation, and retries no longer replay writes without an idempotency key. Configuration validation and routing traces, which write nothing, still retry after a temporary refusal.
 - DNS statistics stay usable when a log page is refused for size. Failed reads show one retryable error, and early-ended pages show how many records loaded without assuming why they ended.
 - Close all handles connection sets above the backend's bulk limit in batches and reports connections left open when a batch stops.
 - Configuration validation and writes report the advertised size limit before sending an oversized request.
@@ -44,11 +44,16 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - The demo's traffic history advances with time, so Activity charts retain a full recent window after a tab has been in the background.
 - The demo keeps refused settings patches atomic, updates required geodata categories after configuration changes and redacts secret-bearing parts of geodata URLs.
 - Connection rules can be placed before the earliest writable rule. Rule creation waits for groups to load, and the matched-rule link remains available on read-only configurations.
+- A rule value containing parentheses or `&&` is refused, because honk would read it as rule syntax.
 - Held rules cannot be discarded or applied concurrently while an apply is running. Written rules leave the pending list even if reload fails or its result is unknown, and partial results count every written rule.
 - Geodata controls follow backend capabilities, including older backends without download-route settings. Custom URLs cannot be edited while saving, so later input is not lost.
 - DNS cache usage is read again after a flush or deletion; an older cache walk cannot restore stale usage afterward.
 - Chart arrow keys keep working after the data shrinks. The Outbound downloads chart has one named keyboard stop, and its tooltip no longer sits under the centre total.
 - Keyboard focus stays on a segmented control when resizing switches it between buttons and a picker.
+- On phones, the bottom bar and the hub page switcher replace the history entry, so Back no longer retraces every tap.
+- An arrow key pressed right after a phone submenu opens is no longer undone.
+- A popover opened near the right edge keeps its width instead of shifting while it is placed.
+- Screen readers announce a retry wait once instead of every second.
 - A failed node read shows an error in the Connections latency card instead of silently removing it.
 - Table columns and page width stay steady while rows load, tables change layout or pages change height.
 - Table lines, row hover and other quiet fills stay visible on cards in the Rosé Pine dark, Nord and Kary palettes, and touching a chart point no longer leaves a hover state stuck.
