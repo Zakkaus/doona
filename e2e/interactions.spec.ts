@@ -151,7 +151,8 @@ test('the backend indicator is a styled control, not a bare button', async ({pag
   await page.goto('/#/activity');
   const indicator = page.locator('.rp-version');
   await expect(indicator).toBeVisible();
-  expect(await indicator.evaluate(el => [getComputedStyle(el).textDecorationLine, getComputedStyle(el).display])).toEqual(['none', 'flex']);
+  // A bare button is inline-block with the UA's border; the indicator lays out its dot and name in a row.
+  expect(await indicator.evaluate(el => [getComputedStyle(el).display, getComputedStyle(el).borderStyle])).toEqual(['flex', 'none']);
 });
 
 test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {

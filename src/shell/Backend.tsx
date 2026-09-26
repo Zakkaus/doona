@@ -58,9 +58,7 @@ export function BackendIndicator({backend, honk}: {backend: BackendView; honk: (
       popover={{
         trigger: (
           <Button appearance="plain" className="rp-version" label={backend.label}>
-            <Light tone={backend.tone} small>
-              {null}
-            </Light>
+            <Light tone={backend.tone} small />
             {backend.text}
           </Button>
         )
