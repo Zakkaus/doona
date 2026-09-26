@@ -7,6 +7,7 @@ import {version, repository, config} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
 import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
+import {rtlScripts} from './src/i18n/direction';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -45,7 +46,8 @@ export default defineConfig({
       transformIndexHtml(html) {
         const stamp = readFileSync(new URL('tools/stamp.js', import.meta.url), 'utf8')
           .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
-          .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE));
+          .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
+          .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
         const digest = createHash('sha256').update(stamp).digest('base64');
         return html
           .replace("default-src 'self';", `default-src 'self'; script-src 'self' 'sha256-${digest}';`)

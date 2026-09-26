@@ -1,4 +1,5 @@
-// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts.
+// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts, and
+// the right-to-left scripts from src/i18n/direction.ts.
 (function () {
   var read = function (key) {
     try {
@@ -19,4 +20,15 @@
   d.dataset.flavour = parts[1];
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
   d.lang = lang === 'zh-CN' ? 'zh-CN' : lang === 'en' ? 'en-US' : 'zh-TW';
+  // The direction as textDirection in src/i18n/direction.ts decides it: the locale's text info, else its likely script.
+  var rtlScripts = '__RTL_SCRIPTS__';
+  var dir = 'ltr';
+  try {
+    var tag = new Intl.Locale(d.lang);
+    var info = tag.getTextInfo ? tag.getTextInfo() : tag.textInfo;
+    if (info && info.direction ? info.direction === 'rtl' : rtlScripts.includes(tag.maximize().script)) dir = 'rtl';
+  } catch {
+    // Left to right.
+  }
+  d.dir = dir;
 })();

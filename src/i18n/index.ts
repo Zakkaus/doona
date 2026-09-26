@@ -13,6 +13,7 @@ export const LANGS: Array<[Lang, string]> = [
   ['en', 'English']
 ];
 export const LOCALE: Record<Lang, string> = {'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US'};
+export {textDirection, type Dir} from './direction';
 
 export const LangContext = createContext<Lang>('zh-TW');
 export function useLang() {

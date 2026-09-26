@@ -5,7 +5,7 @@ import {consumeProfileReadError} from '../api/profiles';
 import {storageKeys} from '../api/storage';
 import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
-import {LANGS, LOCALE, loadLanguage, translate, useT, type Lang} from '../i18n';
+import {LANGS, LOCALE, loadLanguage, textDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';
 import {warmAllPages} from './registry';
@@ -22,6 +22,7 @@ export function useShellController(initial: Lang) {
   const wanted = useRef(initial);
   useLayoutEffect(() => {
     document.documentElement.lang = LOCALE[lang];
+    document.documentElement.dir = textDirection(LOCALE[lang]);
   }, [lang]);
   const ap = useAppearance(settings);
   const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
