@@ -5,24 +5,29 @@ import {scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};
 
 const MODE_MARK = '# doona: outbound mode';
-const modeLine = /^(\s*)l4proto\(tcp, udp\) -> (.+?)\s*# doona: outbound mode\s*$/;
-
+// The marker alone identifies the line, so a hand-edited condition or spacing still reads and is still removed.
 function modeRanges(text: string, blocks: TextBlock[], tokens: TextToken[]) {
   return tokens
     .filter(
       token =>
-        token.kind === 'comment' && blocks.some(block => block.name === 'routing' && token.from > block.open && token.to < block.close && token.depth === 1)
+        token.kind === 'comment' &&
+        text.slice(token.from, token.to).trim() === MODE_MARK &&
+        blocks.some(block => block.name === 'routing' && token.from > block.open && token.to < block.close && token.depth === 1)
     )
     .flatMap(token => {
       const from = text.lastIndexOf('\n', token.from - 1) + 1;
-      const found = modeLine.exec(text.slice(from, token.to));
-      return found ? [{from, to: token.to + (text[token.to] === '\n' ? 1 : 0), target: found[2]}] : [];
+      const line = tokens.filter(item => item.from >= from && item.to <= token.from);
+      // A line that also opens or closes a section is not doona's to remove.
+      if (line.some(item => item.depth !== 1)) return [];
+      const arrow = line.findIndex(item => item.parens === 0 && text.slice(item.from, item.to) === '->');
+      const target = arrow === -1 || arrow === line.length - 1 ? '' : text.slice(line[arrow + 1].from, token.from).trim();
+      return [{from, to: token.to + (text[token.to] === '\n' ? 1 : 0), target}];
     });
 }
 
 export function readMode(text: string): OutboundMode {
   const {blocks, tokens} = scanConfig(text);
-  const found = modeRanges(text, blocks, tokens)[0];
+  const found = modeRanges(text, blocks, tokens).find(range => range.target);
   return found ? (found.target === 'direct' ? {mode: 'direct'} : {mode: 'global', target: found.target}) : {mode: 'rule'};
 }
 
