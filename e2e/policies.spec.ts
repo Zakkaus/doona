@@ -91,11 +91,19 @@ for (const palette of ['rose-pine/dawn', 'rose-pine/moon'])
           return spans
             .map(span => {
               const tone = (['ok', 'warn', 'err'] as const).find(name => span.classList.contains(name));
-              return tone ? {tone, dot: getComputedStyle(span, '::before').backgroundColor, want: expected[tone]} : null;
+              const dot = getComputedStyle(span, '::before');
+              return tone
+                ? {tone, dot: dot.backgroundColor, want: expected[tone], size: [dot.display, parseFloat(dot.width), parseFloat(dot.height)] as const}
+                : null;
             })
             .filter(item => item !== null);
         })
       );
     expect(tones.length).toBeGreaterThan(0);
-    for (const {tone, dot, want} of tones) expect(dot, tone).toBe(want);
+    for (const {tone, dot, want, size} of tones) {
+      expect(dot, tone).toBe(want);
+      // A dot that is not drawn would carry the colour all the same.
+      expect(size[0], tone).not.toBe('none');
+      expect(Math.min(size[1], size[2]), tone).toBeGreaterThan(0);
+    }
   });
