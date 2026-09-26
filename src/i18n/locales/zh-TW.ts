@@ -353,6 +353,8 @@ export const messages = {
   'event.generation': '{previous} 至 {current}',
   'event.gap': '{id}，原因：{reason}，捨棄記錄：{n}',
   'event.gapUnscoped': '原因：{reason}，捨棄記錄：{n}',
+  'event.gapNoCount': '{id}，原因：{reason}',
+  'event.gapUnscopedNoCount': '原因：{reason}',
   'event.gap.overflow': '緩衝區溢位',
   'event.gap.sampled': '取樣略過',
   'event.gap.evicted': '環形緩衝區汰換',
