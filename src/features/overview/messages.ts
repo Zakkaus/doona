@@ -19,7 +19,7 @@ export const messages = defineMessages({
     'ov.v.attached': '已掛載',
     'ov.v.partiallyAttached': '部分掛載',
     'ov.v.published': '已發布',
-    'ov.v.notPublished': '未發佈',
+    'ov.v.notPublished': '未發布',
     'ov.v.healthy': '健康',
     'ov.v.ready': '就緒',
     'ov.v.error': '錯誤',
