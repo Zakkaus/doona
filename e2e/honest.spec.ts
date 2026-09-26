@@ -111,3 +111,31 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed.');
   await expect(actionError).toHaveText(actionFailure!);
 });
+
+test('a long backend version ends in an ellipsis in the side navigation and shows whole in its popover', async ({page}) => {
+  const api = createMockApi();
+  const long = 'debug.2026.9.26.native-api.3f079c7cc94724cfa4133ff90048c0e7c22f5e6f';
+  const capabilities = await api.capabilities();
+  for (const resource of Object.values(capabilities.resources)) resource.available = false;
+  await page.setViewportSize({width: 1280, height: 800});
+  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
+  await page.route('**/api/v1/version', async route => route.fulfill({json: {...(await api.version()), engine: {name: 'honk', version: long}}}));
+  await page.goto('/#/activity');
+  const indicator = page.locator('.rp-side .rp-version');
+  await expect(indicator).toHaveText(`honk ${long}`);
+  const fit = await indicator.evaluate(button => {
+    const nav = button.closest('.rp-side')!;
+    const text = button.querySelector('.rp-version-text')!;
+    return {
+      navFits: nav.scrollWidth <= nav.clientWidth,
+      inside: button.getBoundingClientRect().right <= nav.getBoundingClientRect().right,
+      clipped: text.scrollWidth > text.clientWidth
+    };
+  });
+  expect(fit).toEqual({navFits: true, inside: true, clipped: true});
+  await indicator.click();
+  const heading = page.getByRole('dialog').getByRole('heading');
+  await expect(heading).toHaveText(`honk ${long}`);
+  expect(await heading.evaluate(h => h.scrollWidth <= h.clientWidth)).toBe(true);
+});
