@@ -22,3 +22,9 @@ it('reports a file written but not applied without the failure wording that says
   const error = new LocalError('ui.writtenNotApplied', 'Reload rejected');
   expect(failureNotice(error, t, wrap)).toEqual({kind: 'negative', text: errorText(error, t)});
 });
+
+it('keeps the failed stage a backend operation names', () => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
+  const error = new LocalError('ui.operationFailed', 'Geodata update did not complete successfully', 'geodata_update_failed', {stage: 'destination_rejected'});
+  expect(errorText(error, t)).toBe('The operation did not succeed: The geodata update failed (destination_rejected)');
+});

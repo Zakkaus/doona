@@ -69,7 +69,7 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
   if (operation.status === 'failed' && kind === 'provider_refresh' && operation.kind === kind && details?.committed === true)
     return {degraded: true} as Finished<K>;
   const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written) && details?.committed !== true;
-  throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null);
+  throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null, details);
 }
 // A warm TCP data probe over every reachable IP version; a group target probes its direct members, a node target
 // must not name members.
