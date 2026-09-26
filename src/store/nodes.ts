@@ -2,7 +2,7 @@ import {useCallback} from 'react';
 import {MAX_PAGE, poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
-import {pageSize, useResource, walk} from './resource';
+import {gated, pageSize, useResource, walk} from './resource';
 import {finished, settle, tcpProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
@@ -42,7 +42,7 @@ export function useProviders(enabled = true) {
           }
         )
     },
-    {enabled: enabled && capabilities !== undefined, pending: enabled && capabilities === undefined && !capabilitiesError}
+    gated(capabilities, capabilitiesError, enabled)
   );
 }
 export function useProviderRefresh(refetch: () => void) {

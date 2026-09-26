@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {ApiError} from '../api/error';
-import {walk} from './resource';
+import {gated, walk} from './resource';
 
 type Page = {items: number[]; next_cursor: string | null};
 const take = (acc: number[] | undefined, page: Page) => [...(acc ?? []), ...page.items];
@@ -20,4 +20,12 @@ it('fails a refused head request without asking again', async () => {
   const page = vi.fn<(cursor: string | undefined) => Promise<Page>>().mockRejectedValue(new ApiError(400, 'invalid_request', 'bad filter'));
   await expect(walk(page, take)).rejects.toMatchObject({status: 400});
   expect(page).toHaveBeenCalledTimes(1);
+});
+
+it('holds a capability-sized list back until the capabilities arrive, and stops waiting once they fail', () => {
+  const capabilities = {} as Parameters<typeof gated>[0];
+  expect(gated(undefined, null, true)).toEqual({enabled: false, pending: true});
+  expect(gated(undefined, new Error('down'), true)).toEqual({enabled: false, pending: false});
+  expect(gated(capabilities, null, true)).toEqual({enabled: true, pending: false});
+  expect(gated(undefined, null, false)).toEqual({enabled: false, pending: false});
 });
