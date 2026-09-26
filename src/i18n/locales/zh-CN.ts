@@ -1318,6 +1318,7 @@ export const messages = {
   'ui.retry': '重试',
   'ui.refreshed': '数据已刷新。',
   'ui.newBuild': '新版本已就绪，重新加载页面后生效。',
+  'ui.reloadPage': '重新加载',
   'ui.refreshFailed': '无法刷新数据：{error}',
   'ui.saved': '设置已保存。',
   'ui.state': '状态',

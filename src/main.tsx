@@ -110,7 +110,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     void report();
     if (!running) return;
-    toast('info', translate(loadedLang(readLang()), 'ui.newBuild'));
+    const lang = loadedLang(readLang());
+    toast('info', translate(lang, 'ui.newBuild'), {action: {label: translate(lang, 'ui.reloadPage'), onAction: () => location.reload()}});
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);
