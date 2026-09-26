@@ -430,3 +430,21 @@ test.describe('360px actions', () => {
     expect((await download).suggestedFilename()).toMatch(/\.(json|jsonl|txt|log|csv)$/);
   });
 });
+
+// Key-value facts split into two columns on a phone as long as each keeps 128px, and stack only on a card too
+// narrow for that; wider screens keep the 176px columns.
+for (const [width, columns] of [
+  [360, 2],
+  [390, 2],
+  [1280, 1]
+] as const)
+  test.describe(`${width}px facts`, () => {
+    test.use({viewport: {width, height: 800}});
+    test(`the overview traffic counters use ${columns} columns`, async ({page}) => {
+      await page.goto('/#/overview');
+      const kv = page.locator('.rp-kv:not(.inline)').nth(1);
+      await expect(kv.locator('.v').first()).toBeVisible();
+      const tops = await kv.locator(':scope > div').evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
+      expect(tops.filter(top => top === tops[0])).toHaveLength(columns);
+    });
+  });
