@@ -108,7 +108,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
         can_select: kind === 'selector',
         can_override: kind !== 'selector',
         supports_nested_groups: true,
-        mutable_config: ['policy', 'default_member_id', 'check_interval', 'tolerance', 'interrupt_connections'],
+        mutable_config: ['policy', 'default_member_id', ...(kind === 'selector' ? [] : (['check_url'] as const)), 'tolerance', 'interrupt_connections'],
         probe_transports: ['tcp', 'udp']
       }
     };

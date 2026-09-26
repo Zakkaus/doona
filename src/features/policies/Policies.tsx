@@ -6,6 +6,7 @@ import Refresh from '../../ui/icons/Refresh';
 import {Badge, Button, Card, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
+import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
@@ -69,6 +70,7 @@ function PolicyDetail(props: PolicyGroupInput) {
             </span>
             <span className="rp-cluster">
               <PolicyEdit model={m.edit} />
+              <CheckEdit model={m.check} />
               <Button isPending={m.probing} isDisabled={m.probeDisabled} tip={m.probeTip} onPress={m.probe}>
                 <Refresh className="rp-spin-on-press" />
                 {m.probeText}

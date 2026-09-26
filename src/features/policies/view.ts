@@ -1,8 +1,8 @@
 import {formatLatency} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
-import type {Group, HealthObservation, ProbeResult} from '../../api/model';
+import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
-import {compareLatency, healthMillis, type MessageRef} from '../../api/selectors';
+import {compareLatency, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
 import {formatNumber, type Translator} from '../../i18n';
 import {latencyTone, type NodeStatus} from '../../ui/ui';
@@ -30,6 +30,34 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
       if (key === 'default_member_id') return [label, group.members.find(member => member.id === value)?.name ?? String(value)];
       return [label, String(value)];
     });
+}
+
+export type CheckField = 'check_url' | 'check_interval';
+export type CheckDraft = Record<CheckField, string>;
+// The check settings a group takes writes to. Honk does not probe a selector group's check URL, so a selector offers none.
+export function checkFields(g: Group): CheckField[] {
+  if (g.policy.kind === 'selector') return [];
+  return (['check_url', 'check_interval'] as const).filter(field => g.capabilities.mutable_config.includes(field));
+}
+export const checkDraft = (g: Group): CheckDraft => ({
+  check_url: g.config.check_url ?? '',
+  check_interval: g.config.check_interval === null ? '' : String(g.config.check_interval)
+});
+// An empty field is valid: it clears the group's own value, so the global one applies.
+export function checkInvalid(field: CheckField, value: string): boolean {
+  const text = value.trim();
+  if (!text) return false;
+  return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < 1;
+}
+// Replace ops for the offered fields whose value changed; an empty field sends null.
+export function checkPatch(g: Group, draft: CheckDraft): JsonPatch {
+  const fields = checkFields(g);
+  const ops: JsonPatch = [];
+  const url = draft.check_url.trim() || null;
+  if (fields.includes('check_url') && url !== g.config.check_url) ops.push({op: 'replace', path: '/config/check_url', value: url});
+  const interval = draft.check_interval.trim() ? Number(draft.check_interval.trim()) : null;
+  if (fields.includes('check_interval') && interval !== g.config.check_interval) ops.push({op: 'replace', path: '/config/check_interval', value: interval});
+  return ops;
 }
 
 // A partial probe says how far it got and why it stopped.

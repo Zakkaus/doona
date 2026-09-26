@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {tcpProbe} from './action';
-import {probeGroup} from './groups';
+import {patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
 
@@ -66,4 +66,23 @@ it('does not submit the next batch after cancellation', async () => {
   await vi.runAllTimersAsync();
   expect(await result).toMatchObject({name: 'AbortError'});
   expect(api.startProbe).toHaveBeenCalledTimes(1);
+});
+
+it('writes a group check URL at its revision and refuses a stale revision or an unsafe URL', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const group = await api.group('resilient');
+  const url = 'https://cp.cloudflare.com/generate_204';
+  let done = false;
+  const saved = patchConfig(api, group, [{op: 'replace', path: '/config/check_url', value: url}]).finally(() => (done = true));
+  // The write passes through the mock's source validation before its operation starts, so time moves until it lands.
+  for (let i = 0; i < 20 && !done; i++) await vi.advanceTimersByTimeAsync(500);
+  await saved;
+  const after = await api.group('resilient');
+  expect(after.config.check_url).toBe(url);
+  await expect(patchConfig(api, group, [{op: 'replace', path: '/config/check_url', value: null}])).rejects.toMatchObject({status: 412});
+  for (const value of ['ftp://a.example/', 'http://user@a.example/', 'http://a.example/a,b'])
+    await expect(patchConfig(api, after, [{op: 'replace', path: '/config/check_url', value}])).rejects.toMatchObject({status: 422});
+  // A selector group does not list the check URL as writable.
+  await expect(patchConfig(api, await api.group('proxy'), [{op: 'replace', path: '/config/check_url', value: url}])).rejects.toMatchObject({status: 422});
 });

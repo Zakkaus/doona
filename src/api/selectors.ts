@@ -4,6 +4,17 @@ import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummar
 import {addU64, parseU64, pctU64} from './u64';
 import {isBuiltinOutbound} from '../dae/vocab';
 
+// The contract's SafeHttpUrl as honk checks it: an explicit http or https scheme, a host, no user info, at most 2048
+// bytes, and no whitespace or comma.
+export function safeHttpUrl(value: string): boolean {
+  if (new TextEncoder().encode(value).length > 2048 || /[\s,]/.test(value) || !/^https?:\/\/[^/?#@]+(?:[/?#]|$)/i.test(value)) return false;
+  try {
+    return !!new URL(value).hostname;
+  } catch {
+    return false;
+  }
+}
+
 // Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {

@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
-import {actionErrorText, groupConfigFields, memberViews, nodeGridView, policyCardView, probeSummary} from './view';
+import {actionErrorText, checkFields, checkInvalid, checkPatch, groupConfigFields, memberViews, nodeGridView, policyCardView, probeSummary} from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
@@ -140,4 +140,46 @@ it('counts each probed member once, by the row that says most', () => {
     ]
   } as unknown as Parameters<typeof probeSummary>[0]);
   expect(summary).toEqual({key: 'policy.probeUnchanged', params: {healthy: 1, unavailable: 1, unknown: 1}});
+});
+const withInterval = <G extends ReturnType<typeof nodeFixtures>['groups'][number]>(g: G): G => ({
+  ...g,
+  capabilities: {...g.capabilities, mutable_config: [...g.capabilities.mutable_config, 'check_interval']}
+});
+it('offers only the writable check fields, and none on a selector group', () => {
+  const [proxy, resilient] = nodeFixtures(0).groups;
+  expect(checkFields(proxy)).toEqual([]);
+  // honk lists check_url only; a backend that also lists check_interval gets both fields.
+  expect(checkFields(resilient)).toEqual(['check_url']);
+  expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval']);
+});
+it('patches only the check fields that changed, sending null for an empty one', () => {
+  const g = withInterval(nodeFixtures(0).groups[1]);
+  expect(checkPatch(g, {check_url: '', check_interval: '30'})).toEqual([]);
+  expect(checkPatch(g, {check_url: ' https://cp.cloudflare.com/ ', check_interval: '30'})).toEqual([
+    {op: 'replace', path: '/config/check_url', value: 'https://cp.cloudflare.com/'}
+  ]);
+  expect(checkPatch(g, {check_url: '', check_interval: ''})).toEqual([{op: 'replace', path: '/config/check_interval', value: null}]);
+  const set = {...g, config: {...g.config, check_url: 'http://a.example/'}};
+  expect(checkPatch(set, {check_url: '', check_interval: '60'})).toEqual([
+    {op: 'replace', path: '/config/check_url', value: null},
+    {op: 'replace', path: '/config/check_interval', value: 60}
+  ]);
+  // A field the backend does not list is never sent.
+  const urlOnly = {...g, capabilities: {...g.capabilities, mutable_config: ['check_url' as const]}};
+  expect(checkPatch(urlOnly, {check_url: '', check_interval: '60'})).toEqual([]);
+});
+it('accepts only a safe http URL and a positive whole interval, or an empty field', () => {
+  for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1']) expect(checkInvalid('check_url', url)).toBe(false);
+  for (const url of [
+    'ftp://a.example/',
+    'a.example/',
+    'http://user@a.example/',
+    'http://a.example/a b',
+    'http://a.example/a,b',
+    'https://',
+    'https://a.example/' + 'x'.repeat(2048)
+  ])
+    expect(checkInvalid('check_url', url)).toBe(true);
+  for (const interval of ['', '1', ' 30 ']) expect(checkInvalid('check_interval', interval)).toBe(false);
+  for (const interval of ['0', '-1', '1.5', '1e3', 'x']) expect(checkInvalid('check_interval', interval)).toBe(true);
 });

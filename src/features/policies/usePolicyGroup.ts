@@ -7,6 +7,7 @@ import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
 import {actionErrorText, memberViews, policyCardView, probeSummary} from './view';
 import {usePolicyEdit} from './usePolicyEdit';
+import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 export type PolicyGroupInput = {
   id: string;
@@ -35,6 +36,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, entry);
+  const check = useCheckEdit(g, control.patchConfig, !!control.busy);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
   const probe = () =>
     void control.probe().then(result => {
@@ -80,6 +82,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   return {
     card,
     edit,
+    check,
     members,
     error: control.error,
     retry: control.refetch,
