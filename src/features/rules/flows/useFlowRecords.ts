@@ -34,7 +34,8 @@ export function useFlowRecords({go, query}: PageProps) {
     return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
   }, [resource.data, pinned, rules.data]);
   const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
-  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang), [detail.data, canAdd, t, lang]);
+  const row = view.rows.find(flow => flow.id === id);
+  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang, row), [detail.data, canAdd, t, lang, row]);
   return {
     ...view,
     detail: detailView,

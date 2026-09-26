@@ -187,6 +187,43 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
       setOpen(false);
     };
   }, [active, nested]);
+  // A finger has no hover and a tap is not :focus-visible, so on a coarse pointer a tap on the cut text shows it whole,
+  // unless the text sits in something the tap presses (a button, a link) or in a table whose row press opens a detail
+  // showing the value in full: that press wins. A row press that does something else still happens beside the tip.
+  // The tip then stays until a press elsewhere, Escape or a scroll.
+  const tapped = useRef(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !active) return;
+    const tap = () => {
+      if (!matchMedia('(pointer: coarse)').matches || el.closest(REVEALS) || el.closest('[data-row-detail]')) return;
+      tapped.current = true;
+      setOpen(true);
+    };
+    el.addEventListener('click', tap);
+    return () => el.removeEventListener('click', tap);
+  }, [active]);
+  useEffect(() => {
+    if (!open || !tapped.current) return;
+    const close = () => {
+      tapped.current = false;
+      setOpen(false);
+    };
+    const away = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) close();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', key, true);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
   // New content can overflow without resizing the box, so it is measured again; the observer stays attached.
   useEffect(() => {
     const measure = ref.current && measures.get(ref.current);
@@ -200,7 +237,7 @@ export function TextTooltip({children, text, className}: {children: ReactNode; t
   // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
   if (!active) return span;
   return (
-    <TooltipTrigger delay={400} isOpen={open} onOpenChange={setOpen}>
+    <TooltipTrigger delay={400} isOpen={open} onOpenChange={next => (tapped.current && !next ? undefined : setOpen(next))}>
       <Focusable>{span}</Focusable>
       <Tip>{text ?? children}</Tip>
     </TooltipTrigger>

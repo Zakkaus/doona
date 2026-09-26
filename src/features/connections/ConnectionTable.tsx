@@ -40,6 +40,7 @@ export function ConnectionTable({collection, view, loading, selected, onSelect, 
     <div ref={ref}>
       <DataTable
         label={t('nav.connections')}
+        rowDetail
         cols={definitions}
         rows={rows}
         height={height}

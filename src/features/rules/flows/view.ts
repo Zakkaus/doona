@@ -252,7 +252,14 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
   };
 }
 // Kept apart from the rows, so selecting a flow or an update to it does not remap the list.
-export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, t: Translator, lang: Lang): FlowDetailView | null {
+// `row` is the record's line in the list: the drawer repeats its node path and rule, which the list cuts short.
+export function flowDetailView(
+  detail: FlowDetail | undefined,
+  canAdd: boolean,
+  t: Translator,
+  lang: Lang,
+  row?: Pick<FlowRow, 'node' | 'path' | 'expression'>
+): FlowDetailView | null {
   if (!detail) return null;
   const locale = LOCALE[lang];
   const ip = sourceIp(detail.input.dst ?? undefined);
@@ -265,6 +272,8 @@ export function flowDetailView(detail: FlowDetail | undefined, canAdd: boolean, 
     fields: [
       [t('ui.state'), enumLabel(connectionStates, detail.state, t)],
       [t('ui.outbound'), outboundLabel(detail.outbound, t)],
+      ...(row ? [[t('conn.node'), row.path ?? row.node] as [string, string]] : []),
+      ...(row?.expression ? [[t('conn.rule'), row.expression] as [string, string]] : []),
       ...(detail.trace.missing.length
         ? [
             [

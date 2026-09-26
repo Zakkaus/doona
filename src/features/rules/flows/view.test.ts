@@ -40,6 +40,10 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(view.detail!.steps.map(step => step.id)).toEqual(detail.trace.steps.map(step => step.seq).sort((a, b) => a - b));
   expect(view.detail!.steps.find(step => step.stage === t('flow.stage.input'))?.fields).toContainEqual([t('conn.f.dst'), inputStep.data.values.dst]);
   expect(flowDetailView(detail, false, t, 'en')!.seedHref).toBeNull();
+  // The drawer repeats the node path and the rule that the list cuts short.
+  const fields = flowDetailView(detail, false, t, 'en', {node: 'hk-01', path: 'Proxy → hk-01', expression: 'domain(geosite:cn)'})!.fields;
+  expect(fields).toContainEqual([t('conn.node'), 'Proxy → hk-01']);
+  expect(fields).toContainEqual([t('conn.rule'), 'domain(geosite:cn)']);
   expect(flowDetailView(undefined, false, t, 'en')).toBeNull();
 });
 

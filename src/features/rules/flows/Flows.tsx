@@ -143,6 +143,7 @@ export function FlowRecords(props: PageProps) {
       <div className="rp-with-panel" data-open={view.panelOpen ? '' : undefined}>
         <DataTable
           label={t('rule.flows')}
+          rowDetail
           loading={view.loading}
           rows={view.rows}
           height={442}
