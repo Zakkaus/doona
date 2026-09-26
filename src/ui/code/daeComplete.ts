@@ -1,6 +1,7 @@
 import {autocompletion, type Completion, type CompletionContext, type CompletionResult} from '@codemirror/autocomplete';
 import * as vocab from '../../dae/vocab';
 import {scanConfig} from '../../dae/text';
+import type {GroupEntry} from '../../dae/groups';
 
 const sections = ['global', 'subscription', 'node', 'group', 'dns', 'routing'].map(label => ({label, type: 'keyword'}));
 const globalKeys = vocab.globalKeys.map(label => ({label, type: 'property', apply: label + ': '}));
@@ -17,7 +18,7 @@ const routingWords = [
   {label: 'include', type: 'keyword', apply: 'include '}
 ];
 
-export function completeDae(context: CompletionContext, outbounds: () => string[]): CompletionResult | null {
+export function completeDae(context: CompletionContext, outbounds: () => Pick<GroupEntry, 'name' | 'written'>[]): CompletionResult | null {
   const word = context.matchBefore(/[\w.-]*/);
   if (!word) return null;
   const line = context.state.doc.lineAt(context.pos);
@@ -32,7 +33,8 @@ export function completeDae(context: CompletionContext, outbounds: () => string[
   const section = blocks.find(block => block.close === context.pos)?.name;
   let options: Completion[];
   if (afterArrow) {
-    options = [...outbounds().map(label => ({label, type: 'variable'})), ...builtins];
+    // Listed by name; inserted as the header writes it, quotes included, since honk matches that text.
+    options = [...outbounds().map(group => ({label: group.name, apply: group.written, type: 'variable'})), ...builtins];
   } else if (/\b(domain|dip|sip|qname)\(\s*[\w.-]*$/.test(before)) {
     options = matchers;
   } else if (section === undefined) {
@@ -58,6 +60,6 @@ export function completeDae(context: CompletionContext, outbounds: () => string[
   return {from: word.from, options, validFor: /^[\w.-]*$/};
 }
 
-export function daeCompletion(outbounds: () => string[]) {
+export function daeCompletion(outbounds: () => Pick<GroupEntry, 'name' | 'written'>[]) {
   return autocompletion({override: [context => completeDae(context, outbounds)]});
 }

@@ -1,12 +1,14 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../api/model';
-import {readGroupEntries} from './groups';
+import {readGroupEntries, type GroupEntry} from './groups';
 
 export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
 
 // The groups a rule in any source may name: every loaded source's, with the one being edited read from its draft.
-export function allGroupNames(sources: ConfigSource[], draft?: {id: string; content: string}): string[] {
+// A rule names a group by its header as written, so two headers that unquote alike are still two groups.
+export function allGroupNames(sources: ConfigSource[], draft?: {id: string; content: string}): Pick<GroupEntry, 'name' | 'written'>[] {
   const texts = sources.map(source => (source.id === draft?.id ? draft.content : source.content));
-  return [...new Set(texts.flatMap(text => (text === undefined ? [] : groupNames(text))))];
+  const entries = texts.flatMap(text => (text === undefined ? [] : readGroupEntries(text)));
+  return [...new Map(entries.map(({name, written}) => [written, {name, written}])).values()];
 }
 
 // Hidden paths use a source-kind label and an opaque ID for display and export.
