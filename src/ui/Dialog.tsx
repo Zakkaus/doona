@@ -21,7 +21,7 @@ import {errorText} from '../api/error';
 import {cx} from './cx';
 import {Button} from './Button';
 import {InlineAlert} from './Feedback';
-import {useSlider, useMediaQuery, panelQuery} from './hooks';
+import {useSlider, useScrollStrip, useMediaQuery, panelQuery} from './hooks';
 
 export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
   return (
@@ -247,6 +247,8 @@ export function Tabs({
 }) {
   // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
+  // On a phone the bar scrolls: the selected tab stays in view and a faded end shows there are more tabs.
+  useScrollStrip(ref, value);
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
   // table of log rows) mounts in the deferred one, so the click never waits for it.
   const shown = useDeferredValue(value);

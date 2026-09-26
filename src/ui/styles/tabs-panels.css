@@ -17,6 +17,21 @@
   border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
 }
+/* While the bar scrolls, the end with more tabs fades out (useScrollStrip sets data-fade). */
+.rp-tabbar[data-fade] {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+}
+.rp-tabbar[data-fade]:dir(rtl) {
+  mask-image: linear-gradient(to left, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+}
+.rp-tabbar[data-fade~='start'] {
+  --fade-start: 24px;
+}
+.rp-tabbar[data-fade~='end'] {
+  --fade-end: 24px;
+}
 .rp-tablist {
   display: inline-flex;
   gap: 4px;
