@@ -355,6 +355,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
   white-space: nowrap;
   height: 32px;
   padding: 0 8px;
@@ -370,6 +371,12 @@
 }
 .rp-version[data-hovered] {
   background: var(--rp-fill);
+}
+/* A long build version ends in an ellipsis; the popover it opens shows it whole. */
+.rp-version-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* The facts as a hover card's: a label column and a value column, each value wrapping in its own cell. */
 .rp-popover-body .rp-kv.row {

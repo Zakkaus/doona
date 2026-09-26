@@ -59,7 +59,7 @@ export function BackendIndicator({backend, honk}: {backend: BackendView; honk: (
         trigger: (
           <Button appearance="plain" className="rp-version" label={backend.label}>
             <Light tone={backend.tone} small />
-            {backend.text}
+            <span className="rp-version-text">{backend.text}</span>
           </Button>
         )
       }}

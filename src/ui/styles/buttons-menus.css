@@ -126,6 +126,7 @@
   font-size: var(--rp-text-lg);
   line-height: 24px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .rp-item {
   display: grid;
