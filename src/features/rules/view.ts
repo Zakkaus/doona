@@ -103,7 +103,7 @@ export function dictionaryView(
   const fallback = rules.find(rule => rule.kind === 'fallback');
   return {
     rows,
-    caption: generation !== undefined ? t('rule.dictionaryCaption', {n: formatNumber(rules.length, locale), generation}) : null,
+    caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
     positions: [
       ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
       ...rules
@@ -152,7 +152,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         share: t('ui.percent', {n: formatNumber(row.share * 100, locale, 1)})
       })),
     choices: [['all', t('ui.all')], ...Object.entries(sources).map(([id, key]): [string, string] => [id, t(key)])],
-    caption: list ? t('rule.distributionCaption', {n: formatNumber(list.flows.length, locale)}) : null,
+    caption: list ? t('rule.distributionCaption', {n: list.flows.length}) : null,
     coverage: list ? coverageView(list, t, lang) : null,
     droppedUnknown: list?.dropped_records === null
   };

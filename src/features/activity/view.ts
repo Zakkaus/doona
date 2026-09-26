@@ -8,6 +8,7 @@ import {
   healthMillis,
   lifecycleStates,
   lifecycleTone,
+  memoryTone,
   outboundLabel,
   outboundUsage,
   preferredHealth,
@@ -123,8 +124,10 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     healthError: node?.healthError
   };
 }
+const memoryText = {ok: 'act.memoryOk', warn: 'act.memoryHigh', err: 'act.memoryNearLimit'} as const;
 export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en') {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
+  const memoryLevel = percent === null ? null : memoryTone(percent);
   return {
     status: {
       tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
@@ -134,13 +137,7 @@ export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),
     connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),
     rss: formatBytes(memory?.process?.rss_bytes ?? null, locale),
-    memoryBadge:
-      percent === null
-        ? null
-        : {
-            tone: percent > 90 ? ('err' as const) : percent > 75 ? ('warn' as const) : ('ok' as const),
-            text: t(percent > 90 ? 'act.memoryNearLimit' : percent > 75 ? 'act.memoryHigh' : 'act.memoryOk')
-          }
+    memoryBadge: memoryLevel === null ? null : {tone: memoryLevel, text: t(memoryText[memoryLevel])}
   };
 }
 

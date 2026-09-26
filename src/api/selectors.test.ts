@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent, GroupSummary} from './model';
-import {eventSummary, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
+import {eventSummary, memoryTone, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
 import {formatNumber, LOCALE, readLang, translate} from '../i18n';
 import {createMockApi} from './mock';
 
@@ -77,4 +77,8 @@ it('files a node under its provider, or under the built-in or unattributed owner
   expect(nodeOwner({provider_id: null, protocol: 'vmess'}, [])).toBe('unattributed');
   // A real provider that happens to use the pseudo owner's id keeps it; the pseudo owner moves aside.
   expect(nodeOwner({provider_id: null, protocol: 'block'}, [{id: 'builtin'}, {id: 'builtin-'}])).toBe('builtin--');
+});
+
+it('tones memory use by its share of the limit', () => {
+  expect([0, 75, 75.5, 90, 90.5].map(memoryTone)).toEqual(['ok', 'ok', 'warn', 'warn', 'err']);
 });

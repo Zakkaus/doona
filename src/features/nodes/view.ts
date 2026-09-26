@@ -128,7 +128,7 @@ export function intervalText(seconds: number, locale: string, t: Translator) {
   return seconds === 0
     ? t('nodes.manualOnly')
     : intervals.includes(seconds)
-      ? t('nodes.everyHours', {n: formatNumber(seconds / 3600, locale)})
+      ? t('nodes.everyHours', {n: seconds / 3600})
       : formatDuration(String(seconds), locale);
 }
 // The presets, with a value outside them kept so a select can show it.

@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
+import {useT, useLang, LOCALE} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
@@ -60,7 +60,6 @@ export function useConfigPage({go, query}: PageProps) {
   const select = (id: string | null) => go('config', within(query, {source: id, line: null}));
   const openSource = (sourceId: string, line: number | null) =>
     go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}));
-  const n = (value: number) => formatNumber(value, locale);
   const focusLine = Number(params.get('line')) || null;
   const sourceDiagnostics = useMemo(() => (config.data?.diagnostics ?? []).filter(item => item.source_id === selectedId), [config.data, selectedId]);
   const counts = useMemo(() => {
@@ -142,7 +141,7 @@ export function useConfigPage({go, query}: PageProps) {
       if (source?.content !== undefined) downloadFile(fileName(source), source.content, 'text/plain;charset=utf-8');
     },
     summaryTone: counts.error ? ('err' as const) : counts.warning ? ('warn' as const) : ('ok' as const),
-    summaryText: counts.error ? t('config.errors', {n: n(counts.error)}) : counts.warning ? t('config.warnings', {n: n(counts.warning)}) : t('config.clean')
+    summaryText: counts.error ? t('config.errors', {n: counts.error}) : counts.warning ? t('config.warnings', {n: counts.warning}) : t('config.clean')
   };
 }
 export type SourceCardProps = {
@@ -259,7 +258,6 @@ export type ValidateTabProps = {
 export function useValidateTab({config, editor}: ValidateTabProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const n = (value: number) => formatNumber(value, locale);
   const [level, setLevel] = useState('all');
   const [run, setRun] = useState<ConfigValidationResult | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -302,17 +300,17 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
     summary: errors
       ? t('config.failed', {errors: t('config.errors', {n: errors}), warnings: t('config.warnings', {n: warnings})})
       : warnings
-        ? t('config.passedWarnings', {n: n(warnings)})
+        ? t('config.passedWarnings', {n: warnings})
         : t('config.passed'),
     lastRun: run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id}),
     validating: editor.busy === 'validate',
     blocked: !!editor.busy || !candidates,
     tip: !candidates ? t('config.incomplete') : undefined,
     levels: [
-      ['all', t('config.levelAll', {n: n(errors + warnings + count('info'))})],
-      ['error', t('config.levelErrors', {n: n(errors)})],
-      ['warning', t('config.levelWarnings', {n: n(warnings)})],
-      ['info', t('config.levelInfo', {n: n(count('info'))})]
+      ['all', t('config.levelAll', {n: errors + warnings + count('info')})],
+      ['error', t('config.levelErrors', {n: errors})],
+      ['warning', t('config.levelWarnings', {n: warnings})],
+      ['info', t('config.levelInfo', {n: count('info')})]
     ] as Array<[string, string]>
   };
 }

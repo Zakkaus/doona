@@ -2,7 +2,7 @@ import type {ApiEvent, EventKind} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {eventKindLabels, eventSummary} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
-import {formatNumber, type Translator as LabelFn} from '../../i18n';
+import type {Translator as LabelFn} from '../../i18n';
 
 type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string};
 // An event never changes once received, so its row is built once per locale and the table sees the same object.
@@ -56,7 +56,7 @@ export function eventsView(
             tone: connected ? ('ok' as const) : available === null ? ('muted' as const) : ('warn' as const),
             text: t(available === false ? 'event.unavailable' : connected ? 'event.connected' : available === null ? 'ui.loading' : 'event.reconnecting')
           },
-    limitText: t('event.limit', {n: formatNumber(limit, locale)}),
+    limitText: t('event.limit', {n: limit}),
     shown
   };
 }
