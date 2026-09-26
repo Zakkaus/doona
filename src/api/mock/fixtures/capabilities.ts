@@ -32,7 +32,7 @@ export const capabilities: Capabilities = {
     },
     geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], configurable_sources: true},
     rules: {available: true, max_rules: 4096},
-    config: {available: true, content: true, writable: true, max_bytes: 1048576, max_sources: 32},
+    config: {available: true, content: true, writable: true, create: false, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
@@ -130,7 +130,7 @@ export const capabilitiesBase: Capabilities = {
     rules: {available: false},
     nodes: {available: true, can_manage: false},
     providers: {available: true, can_refresh: true, can_manage: false, max_page_size: 1000},
-    config: {available: false, content: false},
+    config: {available: false, content: false, create: false},
     config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},
@@ -146,6 +146,6 @@ export const capabilitiesM1: Capabilities = {
     ...Object.fromEntries(Object.keys(capabilities.resources).map(key => [key, {available: false}])),
     runtime: {available: true},
     connections: {available: true, can_close: false, max_bulk_close: 1000},
-    config: {available: false, content: false}
+    config: {available: false, content: false, create: false}
   } as Capabilities['resources']
 };
