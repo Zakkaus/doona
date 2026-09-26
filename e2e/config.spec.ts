@@ -454,6 +454,52 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   await expect(page.locator('.cm-activeLine')).toContainText('routing {');
 });
 
+test('modules show sections from read-only include files and open the file that defines them', async ({page}) => {
+  const {api} = await configBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  const source = async (id: string, path: string, kind: 'main' | 'include', content: string) => ({
+    ...main,
+    id,
+    path,
+    kind,
+    writable: false,
+    content,
+    content_sha256: await sha256(content),
+    bytes: new TextEncoder().encode(content).length,
+    line_count: content.split('\n').length - 1
+  });
+  config.sources = [
+    await source('src-main', '/etc/honk/config.dae', 'main', 'global {\n  tproxy_port: 12345\n}\ninclude {\n  config.d/*.dae\n}\n'),
+    await source(
+      'src-node',
+      '/etc/honk/config.d/node.dae',
+      'include',
+      "node {\n  hk1: 'socks5://hk1.example:1080'\n}\ngroup {\n  hk {\n    filter: name(hk1)\n    policy: min_moving_avg\n  }\n}\n"
+    ),
+    await source('src-dns', '/etc/honk/config.d/dns.dae', 'include', "dns {\n  upstream {\n    cf: 'udp://1.1.1.1:53'\n  }\n}\n"),
+    await source('src-route', '/etc/honk/config.d/route.dae', 'include', 'routing {\n  fallback: hk\n}\n')
+  ];
+  config.diagnostics = [];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  await expect(modules.getByRole('heading', {level: 3})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  // The read-only main file is not offered as the place to add a missing section.
+  await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('Section not configured.');
+  await expect(modules.getByRole('region', {name: 'subscription', exact: true})).not.toContainText('add it to');
+  await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('node.dae:1-3');
+  await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText('node.dae:4-9');
+  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('dns.dae:1-5');
+  const routing = modules.getByRole('region', {name: 'routing', exact: true});
+  await expect(routing).toContainText('route.dae:1-3');
+  await expect(routing).toContainText('0 rules, fallback: hk');
+  await expect(routing.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+  await routing.getByRole('button', {name: 'Edit by hand', exact: true}).click();
+  await expect(page).toHaveURL(/tab=source&source=src-route&line=1$/);
+  await expect(page.locator('.cm-activeLine')).toContainText('routing {');
+});
+
 test('cancelling a module discards its draft and navigation uses the draft guard', async ({page}) => {
   await page.goto('/#/config');
   const routing = page.getByRole('region', {name: 'routing', exact: true});

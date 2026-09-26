@@ -65,6 +65,7 @@ export const messages = {
   'config.moduleManual': 'Edit by hand',
   'config.moduleManualTip': 'Open the whole file in the Sources tab at this section',
   'config.moduleAbsent': 'Section not configured; add it to {file}.',
+  'config.moduleAbsentReadOnly': 'Section not configured.',
   'config.moduleSettings': {one: '{n} setting', other: '{n} settings'},
   'config.moduleSubscriptions': {one: '{n} subscription', other: '{n} subscriptions'},
   'config.moduleNodes': {one: '{n} node', other: '{n} nodes'},
