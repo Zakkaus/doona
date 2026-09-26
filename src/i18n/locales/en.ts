@@ -1215,6 +1215,7 @@ export const messages = {
   'about.close': 'Close',
   'about.credits':
     'Fonts Noto Sans TC/SC (OFL); icons Adobe Spectrum (Apache-2.0); palettes from Rosé Pine, Catppuccin, Nord, Kary Pro Colors, Ant Design, Arco Design and Semi Design.',
+  'about.privacy': 'doona talks only to the backend you connect it to. It collects no data and sends nothing anywhere else.',
   'palette.glassName': 'Glass',
   'ui.separator': ', ',
   'ui.aside': '{text} ({note})',

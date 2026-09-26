@@ -22,7 +22,7 @@ test('the backend indicator shows the facts, opens About doona and closes on Esc
   await indicator.click();
   await popover.getByRole('button', {name: 'About doona'}).click();
   const about = page.getByRole('dialog', {name: 'About doona'});
-  await expect(about).toBeVisible();
+  await expect(about).toContainText('doona talks only to the backend you connect it to. It collects no data and sends nothing anywhere else.');
   await expect(popover).toBeHidden();
   await page.keyboard.press('Escape');
   await expect(about).toBeHidden();

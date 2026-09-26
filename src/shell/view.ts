@@ -17,6 +17,7 @@ export type AboutView = {
   quack: string;
   tagline: string;
   credits: string;
+  privacy: string;
   versionText: string;
   items: Array<[string, string]>;
   repositories: Array<{href: string; label: string}>;
@@ -162,6 +163,7 @@ export function shellView(
       quack: t('about.quack'),
       tagline: t('about.tagline', {engine: org.split('/').pop()!}),
       credits: t('about.credits'),
+      privacy: t('about.privacy'),
       versionText: `v${import.meta.env.VITE_DOONA_VERSION}`,
       items: [
         [t('about.engine'), engineText + build],

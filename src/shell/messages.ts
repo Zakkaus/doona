@@ -140,6 +140,7 @@ export const messages = defineMessages({
     'about.close': '關閉',
     'about.credits':
       '字型 Noto Sans TC／SC（OFL）；圖示 Adobe Spectrum（Apache-2.0）；配色來自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 與 Semi Design。',
+    'about.privacy': 'doona 只與你連線的後端通訊，不收集資料，也不傳送到其他地方。',
     'palette.glassName': '玻璃'
   },
   'zh-CN': {
@@ -281,6 +282,7 @@ export const messages = defineMessages({
     'about.close': '关闭',
     'about.credits':
       '字体 Noto Sans TC／SC（OFL）；图标 Adobe Spectrum（Apache-2.0）；配色来自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 与 Semi Design。',
+    'about.privacy': 'doona 只与你连接的后端通信，不收集数据，也不发送到其他地方。',
     'palette.glassName': '玻璃'
   },
   en: {
@@ -422,6 +424,7 @@ export const messages = defineMessages({
     'about.close': 'Close',
     'about.credits':
       'Fonts Noto Sans TC/SC (OFL); icons Adobe Spectrum (Apache-2.0); palettes from Rosé Pine, Catppuccin, Nord, Kary Pro Colors, Ant Design, Arco Design and Semi Design.',
+    'about.privacy': 'doona talks only to the backend you connect it to. It collects no data and sends nothing anywhere else.',
     'palette.glassName': 'Glass'
   }
 });

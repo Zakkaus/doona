@@ -1189,6 +1189,7 @@ export const messages = {
   'about.close': '关闭',
   'about.credits':
     '字体 Noto Sans TC／SC（OFL）；图标 Adobe Spectrum（Apache-2.0）；配色来自 Rosé Pine、Catppuccin、Nord、Kary Pro Colors、Ant Design、Arco Design 与 Semi Design。',
+  'about.privacy': 'doona 只与你连接的后端通信，不收集数据，也不发送到其他地方。',
   'palette.glassName': '玻璃',
   'ui.separator': '，',
   'ui.aside': '{text}（{note}）',
