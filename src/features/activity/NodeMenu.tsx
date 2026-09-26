@@ -43,7 +43,8 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
         }
       >
         <span className="rp-il">
-          <span>{vm.name}</span>
+          {/* A narrow tile can ellipsise this; the menu it opens lists every node by its full name. */}
+          <span className="rp-truncate">{vm.name}</span>
         </span>
       </MenuButton>
     </span>

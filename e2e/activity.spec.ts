@@ -291,6 +291,50 @@ for (const width of [390, 1440]) {
   });
 }
 
+// A phone keeps two tiles to a row down to 320px; the Latency tile's node picker shrinks to its tile and ellipsises a
+// long name, which its own menu still lists in full.
+for (const [width, lang] of [
+  [320, 'en'],
+  [320, 'zh-TW'],
+  [360, 'en'],
+  [360, 'zh-TW']
+] as const)
+  test.describe(`${width}px ${lang} metric strip`, () => {
+    test.use({viewport: {width, height: 800}, storage: {'doona-lang': lang}});
+    test('keeps two tiles to a row and the node picker inside its tile', async ({page}) => {
+      const backend = await mockBackend(page);
+      backend.handlers['GET nodes'] = async () => {
+        const list = await backend.api.nodes({limit: 1000});
+        return {...list, nodes: list.nodes.map(node => ({...node, name: `${node.name}-relay-through-a-long-provider-name`}))};
+      };
+      await page.goto('/#/activity');
+      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-select')});
+      const picker = tile.locator('.rp-tile-head .rp-select');
+      await expect(picker).toContainText('-relay-through-a-long-provider-name');
+      const tops = await page.locator('.rp-strip > *').evaluateAll(tiles => tiles.map(el => Math.round(el.getBoundingClientRect().top)));
+      const rows = [...new Set(tops)].map(top => tops.filter(other => other === top).length);
+      expect(rows.slice(0, -1).every(count => count === 2) && rows.at(-1)! <= 2, `tiles per row: ${rows.join(', ')}`).toBe(true);
+      const {edge, parts, name} = await tile.evaluate(el => {
+        const box = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const button = el.querySelector('.rp-tile-head .rp-select')!;
+        const text = button.querySelector<HTMLElement>('.rp-truncate');
+        return {
+          edge: box.right - parseFloat(style.paddingInlineEnd),
+          parts: [button, button.querySelector('svg')!].map(part => part.getBoundingClientRect().right),
+          name: text && {full: text.scrollWidth, shown: text.clientWidth}
+        };
+      });
+      for (const right of parts) expect(right).toBeLessThanOrEqual(edge + 0.5);
+      expect(name, 'the name is ellipsised').not.toBeNull();
+      expect(name!.full).toBeGreaterThan(name!.shown);
+      // The trigger's own text can shrink to nothing on the narrowest phones; the menu it opens still names every
+      // node in full.
+      await picker.click();
+      await expect(page.getByRole('menuitemradio', {name: /-relay-through-a-long-provider-name/}).first()).toBeVisible();
+    });
+  });
+
 test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {
