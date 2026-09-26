@@ -45,8 +45,13 @@ const known: Record<string, Key> = {
   probe_failed: 'ui.backend.probeFailed'
 };
 
-export function backendMessage(code: string, message: string, t: Translator): string {
-  return known[code] ? t(known[code]) : t('ui.backendMessage', {message});
+// honk names the step that failed in details.stage. A stage with its own words says more than the code; any other
+// stage is added to the code's words.
+export function backendMessage(code: string, message: string, t: Translator, details?: unknown): string {
+  const stage = (details as {stage?: unknown} | null | undefined)?.stage;
+  if (typeof stage === 'string' && known[stage]) return t(known[stage]);
+  const text = known[code] ? t(known[code]) : t('ui.backendMessage', {message});
+  return typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
 }
 
 // A bare code without a message of its own: its words when known, else the code itself.

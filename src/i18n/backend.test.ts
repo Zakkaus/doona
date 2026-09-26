@@ -37,6 +37,15 @@ it('falls back to the backend message for a code it does not know', () => {
   expect(backendMessage('adapter_specific', 'Something specific', t)).toBe(t('ui.backendMessage', {message: 'Something specific'}));
 });
 
+it('names a failed stage: in its own words when known, else beside the code', () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'asset_validation_failed'})).toBe(t('ui.backend.assetValidationFailed'));
+  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'destination_rejected'})).toBe(
+    t('ui.aside', {text: t('ui.backend.geodataUpdateFailed'), note: 'destination_rejected'})
+  );
+  expect(backendMessage('geodata_update_failed', 'x', t, {committed: false})).toBe(t('ui.backend.geodataUpdateFailed'));
+});
+
 it('shows an unknown bare code as it is', () => {
   const t: Translator = (key, params) => translate('zh-TW', key, params);
   expect(backendCode('probe_failed', t)).toBe(t('ui.backend.probeFailed'));

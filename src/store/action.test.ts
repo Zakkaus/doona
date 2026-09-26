@@ -35,7 +35,7 @@ it.each([
   ['a committed but degraded activation', {written: true, committed: true}, true, 'ui.operationFailed'],
   ['an operation that writes nothing', null, undefined, 'ui.operationFailed']
 ])('a failed activation after %s', (_, details, written, key) => {
-  expect(failure(failed(details), written)).toMatchObject({key, detail: 'Reload rejected', code: 'reload_rejected'});
+  expect(failure(failed(details), written)).toMatchObject({key, detail: 'Reload rejected', code: 'reload_rejected', details});
 });
 
 it('reports an operation the backend no longer knows as an unknown result and re-reads the page', async () => {

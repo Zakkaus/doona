@@ -55,12 +55,13 @@ export async function send(input: RequestInfo | URL, init?: RequestInit): Promis
   }
 }
 
-// Local failures carry a message key; detail preserves backend text.
+// Local failures carry a message key; detail, code and details preserve the backend's error.
 export class LocalError extends Error {
   constructor(
     public key: Key,
     public detail: string | null = null,
-    public code: string | null = null
+    public code: string | null = null,
+    public details: unknown = null
   ) {
     super(key);
     this.name = 'LocalError';
@@ -71,10 +72,13 @@ export class LocalError extends Error {
 export function errorText(error: unknown, t: Translator): string {
   if (error instanceof LocalError) {
     const text = t(error.key);
-    return error.detail ? t('ui.valuePair', {label: text, value: error.code ? backendMessage(error.code, error.detail, t) : error.detail}) : text;
+    return error.detail
+      ? t('ui.valuePair', {label: text, value: error.code ? backendMessage(error.code, error.detail, t, error.details) : error.detail})
+      : text;
   }
   if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
-  const message = error instanceof ApiError ? backendMessage(error.code, error.message, t) : error instanceof Error ? error.message : String(error);
+  const message =
+    error instanceof ApiError ? backendMessage(error.code, error.message, t, error.details) : error instanceof Error ? error.message : String(error);
   return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
 }
 

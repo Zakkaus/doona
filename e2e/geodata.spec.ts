@@ -81,7 +81,8 @@ test('a failed update keeps the old files and shows the reason in the status row
   expect(sent).toEqual([]);
   await pick(page, 'settings.geodataSource', lite, false);
   await dialog.getByRole('button', {name: t('settings.geodataSaveUpdate'), exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: t('ui.backend.geodataUpdateFailed')})).toBeVisible();
+  // The toast names the failed stage, not only that the update failed.
+  await expect(page.locator('.rp-toast.negative', {hasText: t('ui.backend.assetValidationFailed')})).toBeVisible();
   expect(sent).toEqual(['patch', 'update']);
   const status = row(page, 'settings.geodataStatus').getByRole('status');
   await expect(status).toContainText(t('settings.geodataLastError'));
