@@ -3,7 +3,7 @@ import {readTag} from '../shared/taggedId';
 import {useCapabilities, useConnectionClose, useConnections, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
-import {downloadFile, exportName, panelQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, phoneQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {PageProps} from '../../shell/routes';
@@ -45,7 +45,7 @@ export function useConnectionsPage({go, query}: PageProps) {
   });
   const wide = useMediaQuery(panelQuery);
   // Below 600px the secondary filters fold into one menu beside the filter field.
-  const compact = useMediaQuery('(max-width: 599.98px)');
+  const compact = useMediaQuery(phoneQuery);
   const updateView = (patch: Partial<ConnectionView>) => {
     const next = {...view, ...patch};
     setView(next);
@@ -144,12 +144,12 @@ export function useConnectionsPage({go, query}: PageProps) {
     } else if (picked?.kind === 'rule') setFilter('rule', rule === picked.value ? 'all' : picked.value);
   };
   const menu = filterMenu(lists, {network, out, src, rule}, t);
-  const pickFrom = [(value: string) => setFilter('network', value), (value: string) => setFilter('out', value), pick, pick];
+  const pickFor = {network: (value: string) => setFilter('network', value), out: (value: string) => setFilter('out', value), src: pick, rule: pick};
   const compactMenu = {
     active: menu.active,
-    submenus: menu.submenus.map((submenu, index) => ({
+    submenus: menu.submenus.map(({filter, ...submenu}) => ({
       ...submenu,
-      sections: submenu.sections.map(section => ({...section, onChange: pickFrom[index]}))
+      sections: submenu.sections.map(section => ({...section, onChange: pickFor[filter]}))
     }))
   };
   const fallback = connectionsFallback(query);

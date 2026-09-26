@@ -247,7 +247,9 @@ export function filterMenu(
   t: LabelFn
 ) {
   const [devices, rules] = lists.picks;
-  const one = (title: string, items: Array<{id: string; label: string; desc?: string}>, value: string) => ({
+  // Each row names the filter it sets, so the page binds its handler by name rather than by position.
+  const one = (filter: 'network' | 'out' | 'src' | 'rule', title: string, items: Array<{id: string; label: string; desc?: string}>, value: string) => ({
+    filter,
     label: title,
     sections: [{title, items, value}]
   });
@@ -255,13 +257,14 @@ export function filterMenu(
     active: [filters.network !== 'all', filters.out !== 'all', !!filters.src, filters.rule !== 'all'].filter(Boolean).length,
     submenus: [
       one(
+        'network',
         t('ui.network'),
         lists.networks.map(([id, label]) => ({id, label})),
         filters.network
       ),
-      one(t('ui.outbound'), lists.outbounds, filters.out),
-      one(devices.title, [{id: tagId('src', ''), label: t('conn.allDevices')}, ...devices.items], devices.value),
-      one(rules.title, [{id: tagId('rule', 'all'), label: t('conn.allRules')}, ...rules.items], rules.value)
+      one('out', t('ui.outbound'), lists.outbounds, filters.out),
+      one('src', devices.title, [{id: tagId('src', ''), label: t('conn.allDevices')}, ...devices.items], devices.value),
+      one('rule', rules.title, [{id: tagId('rule', 'all'), label: t('conn.allRules')}, ...rules.items], rules.value)
     ]
   };
 }
