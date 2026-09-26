@@ -76,3 +76,32 @@ for (const width of [1280, 1024, 390, 320]) {
     }
   });
 }
+
+// A landscape phone (about 844x390) is too short for the sticky top bar to sit above the routing hub's own page
+// switcher and tabs without filling the whole height before any page content shows.
+test.describe('844x390 landscape', () => {
+  test.use({viewport: {width: 844, height: 390}});
+
+  for (const route of ['policies', 'nodes', 'rules'] as const)
+    test(`${route} lets the top bar scroll away instead of pinning above the tabs`, async ({page}) => {
+      await page.goto(`/#/${route}`);
+      // The page's own content, not just its heading, decides whether there is anything to scroll to.
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(390);
+      await expect(page.locator('.rp-top')).toHaveCSS('position', 'static');
+      const top = () => page.locator('.rp-top').evaluate(element => element.getBoundingClientRect().top);
+      expect(await top()).toBe(0);
+      await page.evaluate(() => window.scrollBy(0, 200));
+      expect(await top()).toBeLessThan(0);
+    });
+});
+
+// A portrait phone has the height to keep the top bar pinned, as it always has.
+test.describe('390x844 portrait', () => {
+  test.use({viewport: {width: 390, height: 844}});
+
+  test('policies keeps the top bar pinned', async ({page}) => {
+    await page.goto('/#/policies');
+    await expect(page.locator('.rp-content > *').first()).toBeVisible();
+    await expect(page.locator('.rp-top')).toHaveCSS('position', 'sticky');
+  });
+});
