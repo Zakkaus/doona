@@ -81,3 +81,12 @@ it('refuses an override when ordinary rules precede mandatory exceptions', () =>
   expect(() => writeMode(source, {mode: 'global', target: 'proxy'})).toThrow('act.modeInterleaved');
   expect(writeMode(source, {mode: 'rule'})).toBe(source);
 });
+
+it('finds a hand-edited marked line by its marker and replaces it rather than adding a second', () => {
+  const edited = 'routing {\n  l4proto(udp,tcp)  ->   proxy   # doona: outbound mode\n  fallback: direct\n}\n';
+  expect(readMode(edited)).toEqual({mode: 'global', target: 'proxy'});
+  const direct = writeMode(edited, {mode: 'direct'});
+  expect(direct.match(/doona: outbound mode/g)).toHaveLength(1);
+  expect(direct).not.toContain('proxy');
+  expect(writeMode(edited, {mode: 'rule'})).toBe('routing {\n  fallback: direct\n}\n');
+});
