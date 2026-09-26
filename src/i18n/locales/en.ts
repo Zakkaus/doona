@@ -354,6 +354,7 @@ export const messages = {
   'dns.exportLog': 'Export CSV',
   'dns.result': 'Result',
   'dns.logFilterHint': 'Name contains',
+  'dns.srcInvalid': 'Enter an IPv4 or IPv6 address.',
   'dns.logTotal': {one: '{n} record in the ring buffer', other: '{n} records in the ring buffer'},
   'dns.logLoaded': {one: '{n} loaded; the export covers loaded records only', other: '{n} loaded; the export covers loaded records only'},
   'dns.loadOlder': 'Load older records',

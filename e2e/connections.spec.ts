@@ -309,6 +309,28 @@ test('closing a connection removes it from the list and clears the selection', a
   await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
 });
 
+test('a connection opened while another closes stays selected', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const [closed, opened] = (await api.connections()).tcp;
+  let release = () => {};
+  const pending = new Promise<void>(resolve => (release = resolve));
+  handlers[`DELETE connections/${closed.id}`] = async () => {
+    await pending;
+    return api.closeConnection(closed.id);
+  };
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto(`/#/connections?id=${encodeURIComponent(closed.id)}`);
+  const panel = page.locator('.rp-panel');
+  await expect(panel.getByRole('heading')).toBeVisible();
+  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
+  await page.locator(`.rp-table [data-key="${opened.id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`[?&]id=${encodeURIComponent(opened.id)}(&|$)`));
+  release();
+  await expect(page.locator('.rp-toast.positive')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`[?&]id=${encodeURIComponent(opened.id)}(&|$)`));
+  await expect(panel.getByRole('heading')).toBeVisible();
+});
+
 test('phone details retain routing diagnostics and omit unsupported flow actions', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
   capabilities.resources.flows.available = false;

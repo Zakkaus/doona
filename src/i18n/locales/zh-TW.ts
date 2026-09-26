@@ -336,6 +336,7 @@ export const messages = {
   'dns.exportLog': '匯出 CSV',
   'dns.result': '結果',
   'dns.logFilterHint': '網域包含',
+  'dns.srcInvalid': '須為 IPv4 或 IPv6 位址。',
   'dns.logTotal': '環形緩衝區內有 {n} 筆記錄',
   'dns.logLoaded': '已載入 {n} 筆，匯出僅含已載入的記錄',
   'dns.loadOlder': '載入較舊記錄',

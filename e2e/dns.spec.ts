@@ -188,11 +188,47 @@ test('DNS source filters send IP literals only on head and older requests', asyn
         }).length
     )
     .toBe(1);
+  // An address with a port is not a literal: the last valid filter stays in force.
   await source.fill('10.0.0.12:53211');
+  await expect(source).toHaveAttribute('aria-invalid', 'true');
+  await page.getByRole('tabpanel', {name: 'Resolution log'}).getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect(page.getByRole('button', {name: 'Load older records'})).toBeVisible();
   await page.getByRole('button', {name: 'Load older records'}).click();
   const logRequests = requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/log');
   expect(logRequests.every(request => !new URL(request.url()).searchParams.get('src')?.includes('53211'))).toBe(true);
+  await expect
+    .poll(
+      () =>
+        requests.filter(request => {
+          const params = new URL(request.url()).searchParams;
+          return params.get('src') === '2001:db8::1' && params.has('cursor');
+        }).length
+    )
+    .toBe(2);
+});
+
+test('a mistyped device address keeps the last filter and says so', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  const src = () =>
+    requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/log').map(request => new URL(request.url()).searchParams.get('src'));
+  await page.goto('/#/dns?tab=log');
+  const source = page.getByRole('searchbox', {name: 'Device', exact: true});
+  await source.fill('10.0.0.12');
+  await expect.poll(() => src().at(-1)).toBe('10.0.0.12');
+  const before = src().length;
+  await source.fill('10.0.0.300');
+  await expect(page.getByText('Enter an IPv4 or IPv6 address.')).toBeVisible();
+  await expect(source).toHaveAttribute('aria-invalid', 'true');
+  await page.getByRole('tabpanel', {name: 'Resolution log'}).getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect.poll(() => src().length).toBeGreaterThan(before);
+  expect(
+    src()
+      .slice(before)
+      .every(value => value === '10.0.0.12')
+  ).toBe(true);
+  await source.fill('');
+  await expect(page.getByText('Enter an IPv4 or IPv6 address.')).toHaveCount(0);
+  await expect.poll(() => src().at(-1)).toBeNull();
 });
 
 test('the resolution log refresh shows its request pending', async ({page}) => {
