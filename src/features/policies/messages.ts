@@ -136,6 +136,12 @@ export const messages = defineMessages({
     'policy.memberPerNetwork': 'TCP：{tcp}，UDP：{udp}',
     'policy.editNoMain': '尚未取得主組態，無法編輯',
     'policy.editNoEntry': '主組態 group 區段中沒有此群組，無法編輯',
+    'policy.checkEdit': '檢測設定',
+    'policy.checkEditTitle': '{name} 的檢測設定',
+    'policy.checkUrlHelp': '後端經由各成員請求的 http 或 https 網址。留空則使用全域檢測網址。',
+    'policy.checkIntervalHelp': '兩次檢測之間的秒數。留空則使用全域間隔。',
+    'policy.checkUrlInvalid': '請輸入含主機名稱的 http 或 https 網址，長度不超過 2048 位元組，且不含使用者名稱、空白或逗號。',
+    'policy.checkIntervalInvalid': '請輸入不小於 1 的整數秒數。',
     'policy.actionFailed': '無法完成 {name} 的操作：{error}'
   },
   'zh-CN': {
@@ -273,6 +279,12 @@ export const messages = defineMessages({
     'policy.memberPerNetwork': 'TCP：{tcp}，UDP：{udp}',
     'policy.editNoMain': '尚未取得主配置，无法编辑',
     'policy.editNoEntry': '主配置 group 区段中没有此组，无法编辑',
+    'policy.checkEdit': '检测设置',
+    'policy.checkEditTitle': '{name} 的检测设置',
+    'policy.checkUrlHelp': '后端经由各成员请求的 http 或 https 网址。留空则使用全局检测网址。',
+    'policy.checkIntervalHelp': '两次检测之间的秒数。留空则使用全局间隔。',
+    'policy.checkUrlInvalid': '请输入含主机名的 http 或 https 网址，长度不超过 2048 字节，且不含用户名、空白或逗号。',
+    'policy.checkIntervalInvalid': '请输入不小于 1 的整数秒数。',
     'policy.actionFailed': '无法完成 {name} 的操作：{error}'
   },
   en: {
@@ -415,6 +427,12 @@ export const messages = defineMessages({
     'policy.memberPerNetwork': 'TCP: {tcp}, UDP: {udp}',
     'policy.editNoMain': 'The main configuration is not available yet',
     'policy.editNoEntry': 'This group is not defined in the group section of the main configuration',
+    'policy.checkEdit': 'Check settings',
+    'policy.checkEditTitle': 'Check settings for {name}',
+    'policy.checkUrlHelp': 'An http or https URL the backend requests through each member. Leave empty to use the global check URL.',
+    'policy.checkIntervalHelp': 'Seconds between checks. Leave empty to use the global interval.',
+    'policy.checkUrlInvalid': 'Enter an http or https URL with a host, up to 2048 bytes, without a user name, whitespace or commas.',
+    'policy.checkIntervalInvalid': 'Enter a whole number of seconds, 1 or more.',
     'policy.actionFailed': 'Could not complete the action on {name}: {error}'
   }
 });

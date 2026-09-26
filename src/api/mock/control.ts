@@ -1,5 +1,6 @@
 import type {Group, HealthObservation, JsonPatch, Node, ProbeRequest, ProbeResult} from '../model';
 import {ApiError} from '../error';
+import {safeHttpUrl} from '../selectors';
 
 export function resolveLeaf(id: string, network: 'tcp' | 'udp', nodes: Node[], groups: Group[], seen = new Set<string>()): Node | undefined {
   const node = nodes.find(n => n.id === id);
@@ -147,14 +148,6 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'unsupported_value', 'Invalid group configuration value');
   if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))
     throw new ApiError(422, 'unsupported_value', 'Default member is not in this group');
-  if (config.check_url !== null) {
-    let url: URL;
-    try {
-      url = new URL(config.check_url);
-    } catch {
-      throw new ApiError(422, 'unsupported_value', 'Invalid check URL');
-    }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new ApiError(422, 'unsupported_value', 'Invalid check URL');
-  }
+  if (config.check_url !== null && !safeHttpUrl(config.check_url)) throw new ApiError(422, 'unsupported_value', 'Invalid check URL');
   return {policy: policy as Group['policy'], config};
 }

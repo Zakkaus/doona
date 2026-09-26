@@ -107,3 +107,31 @@ for (const palette of ['rose-pine/dawn', 'rose-pine/moon'])
       expect(Math.min(size[1], size[2]), tone).toBeGreaterThan(0);
     }
   });
+
+test('a group check URL is edited in its dialog, refused inline when unsafe', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'resilient', exact: true});
+  await expect(page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: 'Check settings', exact: true})).toHaveCount(0);
+  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
+  const url = dialog.getByRole('textbox', {name: 'Check URL'});
+  await url.fill('http://user@cp.cloudflare.com/');
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(url).toHaveAttribute('aria-invalid', 'true');
+  await expect(dialog.getByText('Enter an http or https URL with a host')).toBeVisible();
+  const url204 = 'https://cp.cloudflare.com/generate_204';
+  await url.fill(url204);
+  await expect(dialog.getByText('Enter an http or https URL with a host')).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive').filter({hasText: 'Configuration for resilient written and reloaded'})).toBeVisible();
+  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
+  await expect(card.getByText(url204, {exact: true})).toBeVisible();
+  const patches = requests.filter(request => request.method() === 'PATCH');
+  expect(patches.map(request => [new URL(request.url()).pathname, request.postDataJSON()])).toEqual([
+    ['/api/v1/groups/resilient', [{op: 'replace', path: '/config/check_url', value: url204}]]
+  ]);
+  expect(patches[0].headers()['if-match']).toBe('"40"');
+});
