@@ -14,6 +14,7 @@ export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);
   const [palette, setPalette] = useState<PaletteId>(stored.palette);
   const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
+  const [mirrored, setMirrored] = useState(stored.mirrored);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
   useLayoutEffect(() => applyAppearance(dark, palette, wordmark), [dark, palette, wordmark]);
@@ -31,8 +32,12 @@ export function useAppearance(stored: Settings) {
     setWordmark(next);
     writeSetting('wordmark', next);
   }, []);
+  const pickMirrored = useCallback((next: boolean) => {
+    setMirrored(next);
+    writeSetting('mirror', next ? 'on' : 'off');
+  }, []);
   return useMemo(
-    () => ({scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark}),
-    [scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark]
+    () => ({scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark, mirrored, pickMirrored}),
+    [scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark, mirrored, pickMirrored]
   );
 }

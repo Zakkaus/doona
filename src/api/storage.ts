@@ -5,6 +5,7 @@ export const storageKeys = {
   scheme: 'doona-scheme',
   palette: 'doona-palette',
   wordmark: 'doona-wordmark',
+  mirror: 'doona-mirror',
   profiles: 'doona-profiles',
   profile: 'doona-profile',
   // The single-backend settings from before profiles, read once to migrate them.

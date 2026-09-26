@@ -1,5 +1,6 @@
+import {useId} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, TextField} from '../../ui/ui';
+import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -61,6 +62,7 @@ export function Settings({query}: PageProps) {
     dialogDiscards,
     deleteHelp
   } = useSettingsPage(query);
+  const mirrorHelpId = useId();
 
   return (
     <div className="rp-page">
@@ -174,6 +176,14 @@ export function Settings({query}: PageProps) {
               {id: 'plain', label: t('wordmark.plain')}
             ]}
           />
+        </div>
+        <div className="rp-field">
+          <Switch isSelected={ap.mirrored} onChange={ap.pickMirrored} aria-describedby={mirrorHelpId}>
+            {t('settings.mirror')}
+          </Switch>
+          <span id={mirrorHelpId} className="rp-label">
+            {t('settings.mirrorHelp')}
+          </span>
         </div>
       </Card>
       <Card level={2} title={t(cards.about.titleKey)} titleId={cards.about.headingId}>
