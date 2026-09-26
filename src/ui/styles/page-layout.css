@@ -74,6 +74,18 @@
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: var(--rp-text-sm);
 }
+/* Right to left, technical values keep their own order. A table cell or a detail value takes its direction from its
+   text, so a domain, address or path reads left to right while a name in the page's script does not; code, rule text
+   and keys are always left to right. unicode-bidi is not inherited, so the rule names each box that holds the text;
+   the value still lines up with the page, not with its own direction. */
+:root[dir='rtl'] :is(.rp-table :is([role='rowheader'], [role='gridcell'], .cell, .rp-truncate), .rp-kv :is(.v, .rp-truncate)):not(.rp-code) {
+  unicode-bidi: plaintext;
+  text-align: match-parent;
+}
+:root[dir='rtl'] :is(.rp-code, .rp-tree-tile[data-stage='rule'] .l, .cm-editor, code, kbd) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
 .rp-dae-comment {
   color: var(--rp-code-comment);
 }
