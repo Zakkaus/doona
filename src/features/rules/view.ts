@@ -280,6 +280,7 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
       [t('ui.source'), phrase(dns.source)],
       [t('ui.cache'), phrase(dns.cache)],
       [t('rule.address'), formatList(lang, dns.addresses) || '—'],
+      ...(dns.selected_ip ? [[t('rule.simulatedAddress'), dns.selected_ip] as [string, string]] : []),
       ...(dns.error ? [[t('ui.error'), dns.error] as [string, string]] : [])
     ]
   };

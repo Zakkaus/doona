@@ -11,18 +11,14 @@ export async function routingTrace(
   {
     input,
     resolve,
-    recordTypes,
-    maxAddresses
+    recordTypes
   }: Omit<RoutingTraceRequest, 'resolve'> & {
     resolve: RoutingTraceRequest['resolve'] | 'query';
     recordTypes: string[];
-    maxAddresses?: number;
   },
   signal: AbortSignal
 ): Promise<RoutingTraceResponse> {
   if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
-  const limit = maxAddresses ?? (await api.capabilities(signal)).resources.routing_trace.max_addresses;
-  if (limit === undefined) throw clientError(422, 'unsupported_value', 'Routing trace address limits are unavailable', 'ui.errTraceLimits');
   const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
   const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
     lookup_id: `query:${item.type}`,
@@ -40,12 +36,12 @@ export async function routingTrace(
     route_evaluation_ids: [],
     status: item.status,
     addresses: (item.answers ?? []).filter(answer => answer.type === item.type).map(answer => answer.data),
-    selected_ip: (item.answers ?? []).find(answer => answer.type === item.type)?.data ?? null,
+    selected_ip: item.type === 'A' || item.type === 'AAAA' ? ((item.answers ?? []).find(answer => answer.type === item.type)?.data ?? null) : null,
     error: null
   }));
-  const addresses = [...new Set(dns.filter(item => item.qtype === 'A' || item.qtype === 'AAAA').flatMap(item => item.addresses))];
-  if (addresses.length > limit)
-    throw clientError(422, 'unsupported_value', `DNS returned more than ${limit} distinct addresses`, 'ui.errTooManyAddresses', {limit});
+  // A client dials one address per family, so the first A and the first AAAA answer are simulated; every lookup
+  // keeps its full answer list, with the simulated address as its selected IP.
+  const addresses = [...new Set(['A', 'AAAA'].flatMap(type => dns.find(item => item.qtype === type && item.selected_ip)?.selected_ip ?? []))];
   const traces: RoutingTraceResponse[] = [];
   for (const address of addresses.length ? addresses : [null]) {
     traces.push(await api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal));
