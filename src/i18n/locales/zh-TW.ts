@@ -64,6 +64,7 @@ export const messages = {
   'config.moduleManual': '手動編輯',
   'config.moduleManualTip': '在來源分頁開啟整個檔案，游標位於此區段',
   'config.moduleAbsent': '未設定此區段；可加入 {file}。',
+  'config.moduleAbsentReadOnly': '未設定此區段。',
   'config.moduleSettings': '{n} 項設定',
   'config.moduleSubscriptions': '{n} 個訂閱',
   'config.moduleNodes': '{n} 個節點',

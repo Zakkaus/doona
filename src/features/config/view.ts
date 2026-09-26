@@ -113,8 +113,9 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
 }
 
 // Card ids count occurrences rather than offsets, so an edit elsewhere in the file keeps an open editor on its card.
+// A section counts wherever the main file or an include defines it; a read-only file still shows its sections.
 export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Translator): ModuleSection[] {
-  const eligible = sources.filter(source => source.kind === 'main' || (source.kind === 'include' && source.writable));
+  const eligible = sources.filter(source => source.kind === 'main' || source.kind === 'include');
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
   const main = sources.find(source => source.kind === 'main') ?? null;
   const sections = sectionKinds.flatMap<ModuleSection>(kind => {
@@ -143,7 +144,8 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
         block: null,
         href,
         range: main ? fileName(main) : 'config.dae',
-        summary: main?.content === undefined ? '' : t('config.moduleAbsent', {file: fileName(main)}),
+        // Only a writable main file is offered as the place to add the section.
+        summary: main?.content === undefined ? '' : main.writable ? t('config.moduleAbsent', {file: fileName(main)}) : t('config.moduleAbsentReadOnly'),
         note: main?.content === undefined ? t('config.contentWithheld') : null
       }
     ];
