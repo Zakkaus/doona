@@ -1,6 +1,6 @@
 import {cx} from './cx';
 import {TextTooltip} from './Button';
-import {ContextualHelp, type Help} from './ContextualHelp';
+import {HelpRow, type Help} from './ContextualHelp';
 
 // A label and its value, as a pair or, with more, an object: `full` is the full value, shown as a tooltip, and `help`
 // explains the label or the value in a help popover beside the label. `row` keeps label and value on one line.
@@ -12,16 +12,7 @@ export function Kv({items, inline, row}: {items: KvItem[]; inline?: boolean; row
         const {label: k, value: v, full, help} = Array.isArray(item) ? {label: item[0], value: item[1]} : item;
         return (
           <div key={k}>
-            <span className="k">
-              {help ? (
-                <span className="rp-help-row">
-                  {k}
-                  <ContextualHelp {...help} />
-                </span>
-              ) : (
-                k
-              )}
-            </span>
+            <span className="k">{help ? <HelpRow help={help}>{k}</HelpRow> : k}</span>
             {full ? (
               <TextTooltip className="v" text={full}>
                 {v}

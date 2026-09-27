@@ -5,7 +5,7 @@ import {
   Badge,
   Button,
   Card,
-  ContextualHelp,
+  HelpRow,
   DataTable,
   LabeledSelect,
   Light,
@@ -259,10 +259,9 @@ function Distribution({view}: {view: Model}) {
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
-        <span className="rp-help-row">
+        <HelpRow help={table.sourceHelp}>
           <Segmented label={t('rule.distributionSource')} value={view.source} onChange={view.setSource} items={table.choices} />
-          <ContextualHelp {...table.sourceHelp} />
-        </span>
+        </HelpRow>
         {table.caption && (
           <TextTooltip text={t('rule.distributionScope')} className="rp-label">
             {table.caption}

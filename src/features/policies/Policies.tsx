@@ -3,7 +3,7 @@ import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
-import {Badge, Button, Card, ContextualHelp, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
+import {Badge, Button, Card, HelpRow, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import {CheckEdit} from './CheckEdit';
@@ -63,12 +63,11 @@ function PolicyDetail(props: PolicyGroupInput) {
                 </Light>
               )}
               {g.untested && (
-                <span className="rp-help-row">
+                <HelpRow help={m.untestedHelp}>
                   <Light small tone="neutral">
                     {g.untested}
                   </Light>
-                  {m.untestedHelp && <ContextualHelp {...m.untestedHelp} />}
-                </span>
+                </HelpRow>
               )}
             </span>
             <span className="rp-cluster">
