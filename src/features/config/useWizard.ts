@@ -9,7 +9,7 @@ import {toast, useLinked} from '../../ui/ui';
 import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
 import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
-import {diagnosticRows, sourceView, wizardInitial, wizardRows, wizardUnder} from './view';
+import {diagnosticRows, saveReason, sourceView, wizardInitial, wizardRows, wizardUnder} from './view';
 import {useDraftGuard} from '../../shell/draft';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
@@ -61,7 +61,9 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   useLinked(under === 'follow' ? main : null, next => {
     if (next) reset();
   });
-  const valid = validSubscriptions(state.subscriptions) && (!!current.trim() || validNetwork(state));
+  const subscriptionsValid = validSubscriptions(state.subscriptions);
+  const networkValid = !!current.trim() || validNetwork(state);
+  const valid = subscriptionsValid && networkValid;
   const patch = (next: Partial<WizardState>) => {
     setFound(null);
     setState(prev => ({...prev, ...next}));
@@ -101,7 +103,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     chinaDnsError: dnsError(state.chinaDns),
     groupUsedText: rows.groupUsedText,
     templateHelp: state.rules === 'keep' ? null : t('config.wizardPresetHelp'),
-    networkError: !current.trim() && !validNetwork(state) ? t('config.wizardNetworkError') : undefined,
+    networkError: networkValid ? undefined : t('config.wizardNetworkError'),
     patch,
     setSubscription,
     apply,
@@ -110,7 +112,16 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     discard: reset,
     saveDisabled: !complete || !valid || busy || !pending || conflict,
     saving: editor.busy === 'save',
-    saveTip: complete === false ? t('config.incomplete') : undefined,
+    saveReason: saveReason(
+      {
+        busy,
+        complete,
+        conflict,
+        invalid: !subscriptionsValid ? t('config.wizardSubsInvalid') : !networkValid ? t('config.wizardNetworkError') : null,
+        changed: pending
+      },
+      t
+    ),
     writeHelp: current.trim() ? t('config.wizardWriteHelp', {path: label}) : null,
     showLan: !current.trim(),
     templates: [

@@ -4,7 +4,9 @@ import {createMockApi} from '../../api/mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
 import {
+  saveReason,
   saveView,
+  validateReason,
   sourceView,
   readOnlyBadge,
   diagnosticRows,
@@ -381,4 +383,26 @@ it('tips why a module cannot be edited: another draft first, then a change still
   expect(moduleEditTip(true, true, t)).toBe(t('config.moduleEditBlocked'));
   expect(moduleEditTip(false, true, t)).toBe('Another change is being applied');
   expect(moduleEditTip(false, false, t)).toBeUndefined();
+});
+
+it('says why Apply and reload is disabled, and nothing while it can run or another change is applied', () => {
+  const idle = {busy: false, conflict: false, changed: true};
+  expect(saveReason(idle, t)).toBeNull();
+  expect(saveReason({...idle, changed: false}, t)).toBe('No changes to apply');
+  expect(saveReason({...idle, changed: false, busy: true}, t)).toBeNull();
+  // The text is still being checked: no reason yet, rather than a wrong one.
+  expect(saveReason({...idle, complete: null}, t)).toBeNull();
+  expect(saveReason({...idle, complete: false, conflict: true}, t)).toBe(t('config.incomplete'));
+  expect(saveReason({...idle, conflict: true, invalid: 'bad'}, t)).toBe('Keep or discard your changes first');
+  expect(saveReason({...idle, invalid: 'bad', changed: false}, t)).toBe('bad');
+});
+
+it('says why Validate is disabled: the main file is not whole, or the file on show is not validated', () => {
+  const main = {id: 'main', kind: 'main', content: 'global {}'} as ConfigSource;
+  const sub = {id: 'sub', kind: 'subscription', content: 'node {}'} as ConfigSource;
+  expect(validateReason([], [main, sub], () => true, t)).toBeNull();
+  expect(validateReason(null, [main, sub], () => undefined, t)).toBeNull();
+  expect(validateReason(null, [main, sub], () => true, t)).toBe(t('config.validateOther'));
+  expect(validateReason(null, [main, sub], () => false, t)).toBe(t('config.validateNoMain'));
+  expect(validateReason(null, [{...main, content: undefined}], () => true, t)).toBe(t('config.validateNoMain'));
 });

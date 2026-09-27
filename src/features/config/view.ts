@@ -370,6 +370,40 @@ export function saveView(
   return {disabled: !!busy || !writable, tip};
 }
 
+// Why Apply and reload is disabled, shown under it; null while it can run, while another change is being applied (the
+// pending button shows that) or while the text is still being checked. A change on disk has its own banner above, so
+// the line names what to do about it.
+export function saveReason(
+  {
+    busy,
+    complete = true,
+    conflict,
+    invalid = null,
+    changed
+  }: {busy: boolean; complete?: boolean | null; conflict: boolean; invalid?: string | null; changed: boolean},
+  t: Translator
+): string | null {
+  if (busy || complete === null) return null;
+  if (!complete) return t('config.incomplete');
+  if (conflict) return t('config.saveConflict');
+  return invalid ?? (changed ? null : t('config.noChanges'));
+}
+
+// Why Validate is disabled: `candidates` is null when the sources cannot make a request. Null while their text is still
+// being checked; otherwise the main file is not whole, or the file on show is not one validation covers.
+export function validateReason(
+  candidates: unknown[] | null,
+  sources: ConfigSource[],
+  isComplete: (source: ConfigSource) => boolean | undefined,
+  t: Translator
+): string | null {
+  if (candidates) return null;
+  const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
+  if (authored.some(source => isComplete(source) === undefined)) return null;
+  const main = authored.find(source => source.kind === 'main');
+  return t(main?.content !== undefined && isComplete(main) ? 'config.validateOther' : 'config.validateNoMain');
+}
+
 // The generation and the revision of the active configuration; the generation is explained, since a reload can
 // change the revision and keep it.
 export function configMetadata(generation: string, revision: string, t: Translator): KvItem[] {

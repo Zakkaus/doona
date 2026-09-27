@@ -467,6 +467,20 @@ test.describe('on a touch screen', () => {
   });
 });
 
+test('quick setup says in view why Apply and reload is disabled', async ({page}) => {
+  await page.goto('/#/config?tab=setup&source=src-sub-c');
+  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  await expect(apply).toBeDisabled();
+  const reason = page.getByText('No changes to apply', {exact: true});
+  await expect(reason).toBeVisible();
+  await expect(apply).toHaveAccessibleDescription('No changes to apply');
+  const box = (await reason.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await page.getByLabel('Subscription URL', {exact: true}).first().fill('https://example.org/changed');
+  await expect(apply).toBeEnabled();
+  await expect(reason).toHaveCount(0);
+});
+
 // A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, line up
 // with each other and fit the demo's names whole, and the panel keeps the grid's 8px gap between its last column and
 // the scrollbar, which on a phone is drawn over the content.

@@ -8,7 +8,7 @@ import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {configMetadata, saveView, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
+import {configMetadata, saveReason, saveView, validateReason, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
 import {configTabs, setupAvailable} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
@@ -262,7 +262,15 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     saving: editor.busy === 'save',
     saveButton: conflict ? {disabled: true, tip: t('config.changedOnDisk')} : saveView(editor.busy, writable, readOnly?.note ?? null, isMac, t),
     validateDisabled: !!editor.busy || !candidates,
-    validateTip: !candidates ? t('config.incomplete') : undefined
+    // Save shows only with a draft; a refetch that made the source read-only while it was open says so here, since the
+    // draft's hint replaces the read-only line.
+    reason: dirty
+      ? !writable && readOnly
+        ? readOnly.note
+        : saveReason({busy: !!editor.busy, conflict: !!conflict, changed: true}, t)
+      : canValidate && !editor.busy
+        ? validateReason(candidates, sources, isComplete, t)
+        : null
   };
 }
 
@@ -321,7 +329,7 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
     lastRun: run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id}),
     validating: editor.busy === 'validate',
     blocked: !!editor.busy || !candidates,
-    tip: !candidates ? t('config.incomplete') : undefined,
+    reason: editor.busy ? null : validateReason(candidates, config.sources, isComplete, t),
     levels: [
       ['all', t('config.levelAll', {n: errors + warnings + count('info')})],
       ['error', t('config.levelErrors', {n: errors})],

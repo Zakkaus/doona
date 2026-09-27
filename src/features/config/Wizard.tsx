@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
-import {Button, Card, LabeledSelect, Light, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, LabeledSelect, Light, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from '../../dae/setup';
@@ -29,7 +29,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
     discard,
     saveDisabled,
     saving,
-    saveTip,
+    saveReason,
     writeHelp,
     showLan,
     templates,
@@ -147,12 +147,14 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
         </div>
       )}
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} discard={discard} />}
-      <div className="rp-toolbar">
-        <Button accent isDisabled={saveDisabled} isPending={saving} tip={saveTip} onPress={() => void apply()}>
-          {t('config.save')}
-        </Button>
-        {writeHelp && <span className="rp-label">{writeHelp}</span>}
-      </div>
+      <ActionHelp reason={saveReason}>
+        <div className="rp-toolbar">
+          <Button accent isDisabled={saveDisabled} isPending={saving} onPress={() => void apply()}>
+            {t('config.save')}
+          </Button>
+          {writeHelp && <span className="rp-label">{writeHelp}</span>}
+        </div>
+      </ActionHelp>
     </Card>
   );
 }
