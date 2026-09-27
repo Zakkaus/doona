@@ -61,9 +61,33 @@ test.describe('the demo', () => {
     expect(Math.abs(column.x + column.width / 2 - 180)).toBeLessThanOrEqual(1);
     await page.setViewportSize({width: 1280, height: 800});
     const showcase = page.locator('.rp-login-showcase');
-    await expect(showcase).toHaveAttribute('aria-hidden', 'true');
+    await expect(showcase.getByRole('button', {name: 'Mini game: press to make the duck flap'})).toBeVisible();
     const pane = (await page.locator('.rp-login-pane').boundingBox())!;
     expect((await showcase.boundingBox())!.x).toBeGreaterThanOrEqual(pane.x + pane.width);
+  });
+
+  test.describe('with motion allowed', () => {
+    test.use({reducedMotion: 'no-preference'});
+
+    test('plays the mini game beside the form on a wide screen, and leaves it out on a phone', async ({page}) => {
+      await page.setViewportSize({width: 1440, height: 900});
+      await page.goto('/#/activity');
+      const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
+      await expect(game.locator('canvas')).toBeVisible();
+      const result = page.locator('.rp-login-showcase [aria-live]');
+      await expect(result).toHaveText('');
+      // One flap and no more: the duck falls to the ground and the run ends with what it forwarded.
+      await game.click();
+      await expect(result).toHaveText(/^Link down, \d+\.\d MB forwarded, best \d+\.\d MB\. Click or press Space to restart\.$/);
+      // Typing in the form never reaches the game.
+      const username = page.getByLabel('Username', {exact: true});
+      await username.fill('');
+      await username.press('r');
+      await expect(username).toHaveValue('r');
+      await page.setViewportSize({width: 390, height: 844});
+      await expect(page.locator('.rp-login-showcase')).toHaveCount(0);
+      await expect(page.locator('canvas')).toHaveCount(0);
+    });
   });
 });
 
