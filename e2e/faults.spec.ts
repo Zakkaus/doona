@@ -5,8 +5,8 @@ test.use({storage: faults});
 
 test('a file saved on disk after the last reload refuses writes until honk reloads it', async ({page}) => {
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.fill((await editor.innerText()) + '\n# faults draft\n');
   const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
   await apply.click();
