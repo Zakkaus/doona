@@ -31,10 +31,20 @@ export function dnsQueryView(
   t: LabelFn
 ) {
   const types = resources?.dns_query.record_types ?? [];
+  const typeOffered = type === 'all' ? types.length > 0 : types.includes(type);
   return {
     types,
     choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
-    disabled: busy || !resources?.dns_query.available || !(type === 'all' ? types.length > 0 : types.includes(type)) || !domain.trim(),
+    disabled: busy || !resources?.dns_query.available || !typeOffered || !domain.trim(),
+    // Why Query is disabled, when the backend is the reason; an empty domain speaks for itself.
+    reason:
+      !resources || busy
+        ? null
+        : !resources.dns_query.available
+          ? t('dns.queryUnavailable')
+          : typeOffered
+            ? null
+            : t(type === 'all' ? 'dns.noTypes' : 'dns.typeUnsupported'),
     showCache: !!resources?.dns_cache.available,
     cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
     tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))
@@ -49,6 +59,8 @@ export function dnsCacheView(
   t: LabelFn
 ) {
   const filter = domain.toLowerCase();
+  const cache = resources?.dns_cache;
+  const rows = (data?.entries ?? []).filter(entry => !filter || entry.domain.toLowerCase().includes(filter));
   return {
     fields: [[t('dns.entries'), data ? formatNumber(data.total, locale) : '—']] as Array<[string, string]>,
     coverage: data
@@ -68,20 +80,21 @@ export function dnsCacheView(
     filterText: filter ? t('dns.cacheFilter', {domain}) : '',
     confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
+    // Why Clear all cache and the rows' Delete are disabled, when the backend does not support them.
+    flushReason: cache && !busy && (!cache.available || !cache.flush) ? t('dns.flushUnsupported') : null,
+    deleteReason: cache && !busy && rows.length > 0 && (!cache.available || !cache.delete_entry) ? t('dns.deleteUnsupported') : null,
     empty: t(resources?.dns_cache.available && resources.dns_cache.read ? 'dns.empty' : 'dns.cacheUnavailable'),
-    rows: (data?.entries ?? [])
-      .filter(entry => !filter || entry.domain.toLowerCase().includes(filter))
-      .map(entry => ({
-        id: entry.entry_id,
-        domain: entry.domain,
-        type: entry.type,
-        status: entry.status,
-        expiresAt: entry.expires_at,
-        staleUntil: entry.stale_until,
-        deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
-        pending: busy === entry.entry_id,
-        disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
-      }))
+    rows: rows.map(entry => ({
+      id: entry.entry_id,
+      domain: entry.domain,
+      type: entry.type,
+      status: entry.status,
+      expiresAt: entry.expires_at,
+      staleUntil: entry.stale_until,
+      deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
+      pending: busy === entry.entry_id,
+      disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
+    }))
   };
 }
 // The selected record's detail, apart from the rows, so a click does not reformat every loaded record.

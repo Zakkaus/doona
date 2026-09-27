@@ -31,6 +31,9 @@ export const messages = defineMessages({
     'dns.flushFailed': '無法清除快取：{error}',
     'dns.allTypes': '所有支援類型',
     'dns.query': '查詢',
+    'dns.queryUnavailable': '此後端目前無法執行 DNS 查詢',
+    'dns.typeUnsupported': '此後端不支援查詢此記錄類型',
+    'dns.noTypes': '此後端未提供可查詢的記錄類型',
     'dns.hit': '快取命中',
     'dns.miss': '快取未命中',
     'dns.routeSource': '路由來源',
@@ -49,6 +52,7 @@ export const messages = defineMessages({
     'dns.expires': '到期時間',
     'dns.staleUntil': '過期後仍可用至',
     'dns.deleteEntry': '刪除 {domain} 的 {type} 快取項目',
+    'dns.deleteUnsupported': '此後端不支援刪除快取項目',
     'dns.entries': '快取項目',
     'dns.viewCache': '查看快取',
     'dns.log': '解析記錄',
@@ -79,6 +83,7 @@ export const messages = defineMessages({
     'dns.flushConfirm': '將清除全部 {n} 筆快取項目，無法復原。',
     'dns.flushConfirmAll': '將清除全部快取項目，無法復原。',
     'dns.flushAll': '清除全部快取',
+    'dns.flushUnsupported': '此後端不支援清除快取',
     'dns.answer': '{name} {type}；TTL {ttl} 秒；{data}'
   },
   'zh-CN': {
@@ -111,6 +116,9 @@ export const messages = defineMessages({
     'dns.flushFailed': '无法清除缓存：{error}',
     'dns.allTypes': '所有支持类型',
     'dns.query': '查询',
+    'dns.queryUnavailable': '此后端当前无法执行 DNS 查询',
+    'dns.typeUnsupported': '此后端不支持查询此记录类型',
+    'dns.noTypes': '此后端未提供可查询的记录类型',
     'dns.hit': '缓存命中',
     'dns.miss': '缓存未命中',
     'dns.routeSource': '路由来源',
@@ -129,6 +137,7 @@ export const messages = defineMessages({
     'dns.expires': '到期时间',
     'dns.staleUntil': '过期后仍可用至',
     'dns.deleteEntry': '删除 {domain} 的 {type} 缓存项',
+    'dns.deleteUnsupported': '此后端不支持删除缓存项',
     'dns.entries': '缓存项',
     'dns.viewCache': '查看缓存',
     'dns.log': '解析记录',
@@ -159,6 +168,7 @@ export const messages = defineMessages({
     'dns.flushConfirm': '将清除全部 {n} 条缓存项，无法撤销。',
     'dns.flushConfirmAll': '将清除全部缓存项，无法撤销。',
     'dns.flushAll': '清除全部缓存',
+    'dns.flushUnsupported': '此后端不支持清除缓存',
     'dns.answer': '{name} {type}；TTL {ttl} 秒；{data}'
   },
   en: {
@@ -194,6 +204,9 @@ export const messages = defineMessages({
     'dns.flushFailed': 'Could not clear the cache: {error}',
     'dns.allTypes': 'All supported types',
     'dns.query': 'Query',
+    'dns.queryUnavailable': 'This backend cannot run DNS queries right now',
+    'dns.typeUnsupported': 'This backend cannot query this record type',
+    'dns.noTypes': 'This backend offers no record types to query',
     'dns.hit': 'Cache hit',
     'dns.miss': 'Cache miss',
     'dns.routeSource': 'Route source',
@@ -212,6 +225,7 @@ export const messages = defineMessages({
     'dns.expires': 'Expires',
     'dns.staleUntil': 'Stale until',
     'dns.deleteEntry': 'Delete the {type} cache entry for {domain}',
+    'dns.deleteUnsupported': 'This backend does not support deleting cache entries',
     'dns.entries': 'Cache entries',
     'dns.viewCache': 'View cache',
     'dns.log': 'Resolution log',
@@ -242,6 +256,7 @@ export const messages = defineMessages({
     'dns.flushConfirm': {one: 'This clears the {n} cache entry and cannot be undone.', other: 'This clears all {n} cache entries and cannot be undone.'},
     'dns.flushConfirmAll': 'This clears every cache entry and cannot be undone.',
     'dns.flushAll': 'Clear all cache',
+    'dns.flushUnsupported': 'This backend does not support clearing the cache',
     'dns.answer': '{name} {type}; TTL {ttl} s; {data}'
   }
 });

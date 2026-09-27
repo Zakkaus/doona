@@ -5,6 +5,7 @@ import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
 import {
   ActionGroup,
+  ActionHelp,
   Badge,
   Button,
   DataTable,
@@ -44,13 +45,15 @@ export function Dns(props: PageProps) {
           vm.submit();
         }}
       >
-        <div className="rp-toolbar">
-          <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
-          <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-          <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
-            {t('dns.query')}
-          </Button>
-        </div>
+        <ActionHelp reason={vm.reason}>
+          <div className="rp-toolbar">
+            <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
+            <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
+            <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
+              {t('dns.query')}
+            </Button>
+          </div>
+        </ActionHelp>
       </form>
       {vm.cards.length > 0 && (
         <div className="rp-col">
@@ -137,29 +140,33 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <div className="rp-toolbar">
-        <Kv row items={vm.fields} />
-        {vm.coverage.map(badge => (
-          <Badge key={badge.id} tone="warn">
-            {badge.text}
-          </Badge>
-        ))}
-        {vm.filterText && (
-          <Button small onPress={clearFilter}>
-            {vm.filterText}
-          </Button>
-        )}
-        <span className="rp-grow" />
-        <ConfirmButton
-          label={t('dns.flushAll')}
-          confirmationText={vm.confirmationText}
-          isPending={vm.flushPending}
-          isDisabled={vm.flushPending || vm.flushDisabled}
-          onConfirm={vm.flush}
-          onAbort={vm.abortFlush}
-        />
-      </div>
-      <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
+      <ActionHelp reason={vm.flushReason}>
+        <div className="rp-toolbar">
+          <Kv row items={vm.fields} />
+          {vm.coverage.map(badge => (
+            <Badge key={badge.id} tone="warn">
+              {badge.text}
+            </Badge>
+          ))}
+          {vm.filterText && (
+            <Button small onPress={clearFilter}>
+              {vm.filterText}
+            </Button>
+          )}
+          <span className="rp-grow" />
+          <ConfirmButton
+            label={t('dns.flushAll')}
+            confirmationText={vm.confirmationText}
+            isPending={vm.flushPending}
+            isDisabled={vm.flushPending || vm.flushDisabled}
+            onConfirm={vm.flush}
+            onAbort={vm.abortFlush}
+          />
+        </div>
+      </ActionHelp>
+      <ActionHelp reason={vm.deleteReason}>
+        <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
+      </ActionHelp>
     </>
   );
 }
