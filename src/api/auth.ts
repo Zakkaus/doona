@@ -11,10 +11,12 @@ export type SignIn = 'setup' | 'login' | 'token';
 
 const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + path, globalThis.location?.href);
 
-// Discovery is public, so it is read without a token; a backend that predates password login has no `auth`.
-// The demo backend signs in through the in-browser mock, loaded only when that backend is asked.
+// The demo backend signs in through the in-browser mock, loaded only when that backend is asked. Its one account is
+// published on the sign-in page, so it guards nothing.
 const demoAuth = () => import('./mock/auth');
+export const DEMO_ACCOUNT = {username: 'demo', password: 'demo'} as const;
 
+// Discovery is public, so it is read without a token; a backend that predates password login has no `auth`.
 export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery | null> {
   if (isDemoApi(base)) return (await demoAuth()).mockDiscovery();
   const response = await send(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});

@@ -1,11 +1,9 @@
 import {DUCK_BOX, DUCK_PATHS} from './loginDuck';
 
-// The showcase beside the sign-in form is "under construction": a sign, two cones and the duck in a hard hat. A press
-// turns it into Flappy Duck: flap through open ports in firewall walls while the forwarded traffic adds up. The link
-// rate climbs without end; speed, gap and wall spacing tighten with it but only ever approach the limits the flap
-// physics can still clear. A crash freezes the run and shows the result; the next press or R restarts. Space and R act
-// only while the panel has focus. Paused while hidden or off screen; the idle scene only, as a still, under reduced
-// motion.
+// The showcase beside the sign-in form: an "under construction" scene that a press turns into Flappy Duck, flying
+// through the gaps in firewall walls while the forwarded traffic adds up. Difficulty rises without end but only
+// approaches limits the flap physics can still clear. Paused while hidden or off screen; a still idle scene under
+// reduced motion.
 
 // Logical units, drawn at ZOOM css px each. DUCK_HEIGHT and IDLE_HEIGHT are the duck's height in flight and standing;
 // the physics runs in fixed STEP seconds. FLAP_HEIGHT is the height one flap gains, so a gap of DUCK_HEIGHT +
@@ -118,7 +116,6 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       cone: token('--rp-rose')
     };
   }
-  // Only called from the ResizeObserver, never inside the frame loop.
   function size() {
     scale = (window.devicePixelRatio || 1) * ZOOM;
     canvas.width = Math.round((canvas.clientWidth * scale) / ZOOM);
@@ -231,8 +228,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.lineJoin = 'round';
     g!.textAlign = 'center';
     if (!playing) {
-      // Under construction, centred in the panel: the duck in its hard hat stands under a sign on two legs, between
-      // two cones, on a short stretch of ground.
+      // Under construction: a sign on two legs over the duck, between two cones.
       const gi = Math.round(h / 2 + 64);
       const cx = Math.round(w / 2);
       g!.fillStyle = C.sub;
@@ -303,6 +299,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     run();
   }
   function run() {
+    if (reduce.matches) playing = false;
     if (!playing || down || reduce.matches || document.hidden || !seen) {
       last = 0;
       draw();
@@ -310,7 +307,6 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     }
     if (!raf) raf = requestAnimationFrame(frame);
   }
-  // The impulse lands at once; the next frame already shows it.
   function flap(restart: boolean) {
     if (reduce.matches) return;
     if (down && !restart && performance.now() - down < 900) return;
@@ -381,6 +377,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       );
     },
     destroy() {
+      text = undefined;
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
       button.removeEventListener('pointerdown', onPointer);
