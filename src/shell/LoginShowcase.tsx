@@ -4,7 +4,7 @@ import {CanvasButton} from '../ui/CanvasButton';
 import {VisuallyHidden} from '../ui/ui';
 import {startLoginGame, type GameText, type LoginGame} from './loginGame';
 
-// The panel beside the sign-in form on wide screens: a construction scene that a press turns into a mini game (see
+// The panel beside the sign-in form on wide screens: a loading bar stuck at 99% that a press turns into a mini game (see
 // loginGame.ts). The canvas is the button's content, so the panel has a name and works from the keyboard, and keys only
 // reach it while it has focus. Each result is read out once through the live region.
 export default function LoginShowcase() {
@@ -15,7 +15,8 @@ export default function LoginShowcase() {
   const [result, setResult] = useState<{amount: string; best: string} | null>(null);
   const text = useMemo<GameText>(
     () => ({
-      sign: t('login.gameSign'),
+      loading: t('login.gameLoading'),
+      progress: t('login.gameProgress'),
       start: t('login.gameStart'),
       restart: t('login.gameRestart'),
       result: amount => t('login.gameResult', {amount}),
