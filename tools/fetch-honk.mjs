@@ -1,6 +1,7 @@
 /** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url]; Node 22+; exits 0/1/2 for done/verification
  * failure/usage. Downloads every honk-core build from honk's rolling debug pre-release, checks each file against the sha256 digest the GitHub API
- * reports, downloads the source archive of the commit the binaries were built from, and writes HONK-SOURCE.txt naming that commit. GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API call.
+ * reports, checks the commit the release body names against the release target or its source tag, downloads the source archive of that commit,
+ * and writes HONK-SOURCE.txt naming it. GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API calls.
  * Temporary: the release workflow bundles these builds until honk publishes a release with the native API. */
 import {createHash} from 'node:crypto';
 import {createWriteStream} from 'node:fs';
@@ -73,6 +74,19 @@ async function download(url, path) {
   return hash.digest('hex');
 }
 
+// The commit a tag points to, through an annotated tag's object when there is one.
+async function tagCommit({api, repo, tag, headers}) {
+  const read = async path => {
+    const response = await fetch(`${api}/repos/${repo}/git/${path}`, {headers, signal: AbortSignal.timeout(60_000)});
+    if (!response.ok) throw new Error(`GET source tag ${repo}@${tag}: HTTP ${response.status}`);
+    return (await response.json()).object;
+  };
+  let object = await read(`ref/tags/${encodeURIComponent(tag)}`);
+  if (object?.type === 'tag') object = await read(`tags/${object.sha}`);
+  if (object?.type !== 'commit') throw new Error(`source tag ${tag} does not point to a commit`);
+  return object.sha;
+}
+
 export async function fetchHonk({
   out,
   repo = 'Glassyiris/honk',
@@ -88,8 +102,12 @@ export async function fetchHonk({
   if (!response.ok) throw new Error(`GET release ${repo}@${tag}: HTTP ${response.status}`);
   const release = await response.json();
   const source = parseBody(release.body);
-  if (/^[0-9a-f]{40}$/.test(release.target_commitish ?? '') && release.target_commitish !== source.commit)
-    throw new Error(`release body names commit ${source.commit}, the release targets ${release.target_commitish}`);
+  // The source shipped must be the commit the builds came from. A release that targets a commit names it; one that
+  // targets a branch does not, and the source tag the build ran on is checked instead.
+  const [target, named] = /^[0-9a-f]{40}$/.test(release.target_commitish ?? '')
+    ? [release.target_commitish, 'the release targets']
+    : [await tagCommit({api, repo, tag: source.tag, headers}), `source tag ${source.tag} points to`];
+  if (target !== source.commit) throw new Error(`release body names commit ${source.commit}, ${named} ${target}`);
 
   const expected = expectedAssets();
   const assets = new Map((release.assets ?? []).filter(asset => asset.name.startsWith('honk-core-')).map(asset => [asset.name, asset]));

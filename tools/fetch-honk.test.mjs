@@ -20,8 +20,8 @@ const dirs = [];
 const sha256 = data => createHash('sha256').update(data).digest('hex');
 
 // A GitHub stand-in for the release API, its downloads and commit archives: `edit` adjusts the release JSON, `served` the bytes
-// behind one asset name, and `source` the archive of the commit (null answers 404).
-async function serve({edit = release => release, served = {}, source = `source of ${commit}`} = {}) {
+// behind one asset name, `source` the archive of the commit (null answers 404), and `refs` the git objects by API path.
+async function serve({edit = release => release, served = {}, source = `source of ${commit}`, refs = {}} = {}) {
   const contents = Object.fromEntries(expectedAssets().map(name => [name, `tarball ${name}`]));
   const server = createServer((request, response) => {
     const {port} = server.address();
@@ -34,6 +34,11 @@ async function serve({edit = release => release, served = {}, source = `source o
       const release = edit({tag_name: 'debug', html_url: 'https://github.com/Glassyiris/honk/releases/tag/debug', target_commitish: commit, body, assets});
       response.writeHead(200, {'content-type': 'application/json'});
       response.end(JSON.stringify(release));
+      return;
+    }
+    if (request.url in refs) {
+      response.writeHead(200, {'content-type': 'application/json'});
+      response.end(JSON.stringify({object: refs[request.url]}));
       return;
     }
     if (request.url === `/Glassyiris/honk/archive/${commit}.tar.gz` && source !== null) {
@@ -144,6 +149,38 @@ describe('fetchHonk', () => {
   it('fails when the body and the release disagree on the commit', async () => {
     const {api, out} = await serve({edit: release => ({...release, target_commitish: 'f'.repeat(40)})});
     await expect(fetchHonk({api, out})).rejects.toThrow(`release body names commit ${commit}`);
+  });
+
+  describe('with a release that targets a branch', () => {
+    const branch = {edit: release => ({...release, target_commitish: 'main'})};
+    const ref = '/repos/Glassyiris/honk/git/ref/tags/debug.2026.9.26.native-api.4';
+
+    it('checks the commit through the source tag', async () => {
+      const {api, archive, out} = await serve({...branch, refs: {[ref]: {type: 'commit', sha: commit}}});
+      const {source} = await fetchHonk({api, archive, out});
+      expect(source.commit).toBe(commit);
+    });
+
+    it('follows an annotated source tag to its commit', async () => {
+      const tag = 'a'.repeat(40);
+      const refs = {[ref]: {type: 'tag', sha: tag}, [`/repos/Glassyiris/honk/git/tags/${tag}`]: {type: 'commit', sha: commit}};
+      const {api, archive, out} = await serve({...branch, refs});
+      await expect(fetchHonk({api, archive, out})).resolves.toMatchObject({source: {commit}});
+    });
+
+    it('fails when the source tag points elsewhere', async () => {
+      const {api, out} = await serve({...branch, refs: {[ref]: {type: 'commit', sha: 'f'.repeat(40)}}});
+      await expect(fetchHonk({api, out})).rejects.toThrow(
+        `release body names commit ${commit}, source tag debug.2026.9.26.native-api.4 points to ${'f'.repeat(40)}`
+      );
+      expect(existsSync(join(out, SOURCE_NOTE))).toBe(false);
+    });
+
+    it('fails when the source tag cannot be read', async () => {
+      const {api, out} = await serve(branch);
+      await expect(fetchHonk({api, out})).rejects.toThrow('GET source tag Glassyiris/honk@debug.2026.9.26.native-api.4: HTTP 404');
+      expect(readdirSync(out)).toEqual([]);
+    });
   });
 
   it('fails when a download is not found', async () => {
