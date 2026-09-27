@@ -16,6 +16,12 @@ export function useConfig(enabled = true) {
   return useResource({key: ['config'], every: 0, fetch: signal => api.config(signal)}, {enabled});
 }
 
+// The configuration as the backend holds it now, read past the watched resource, for a check that must see the
+// latest revision rather than the one last fetched. The watched resource is left as it is.
+export function readConfigFresh(api: Api, signal: AbortSignal) {
+  return api.config(signal);
+}
+
 async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sha256'>): Promise<boolean> {
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
 }
@@ -111,7 +117,7 @@ export async function createSource(api: Api, path: string, signal: AbortSignal):
   const operation = await settleWrite(api, await api.createConfigSource(path, '', signal), signal);
   finished(operation, 'reload');
   signal.throwIfAborted();
-  const config = await api.config(signal).catch(() => {
+  const config = await readConfigFresh(api, signal).catch(() => {
     signal.throwIfAborted();
     return null;
   });
@@ -184,7 +190,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           ).catch(async error => {
             if (!(error instanceof ApiError) || error.status !== 412) throw error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
-            const fresh = await api.config(signal).catch(() => null);
+            const fresh = await readConfigFresh(api, signal).catch(() => null);
             refetch();
             const outcome = refusalOutcome(error, source, fresh?.sources.find(item => item.id === source.id)?.content_sha256, lastRefused.current);
             lastRefused.current = outcome.lastRefused;

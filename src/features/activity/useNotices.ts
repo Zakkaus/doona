@@ -1,33 +1,17 @@
-import {useMemo, useSyncExternalStore} from 'react';
+import {useMemo} from 'react';
 import {getApi} from '../../api';
-import type {Api} from '../../api/api';
-import type {ApiEvent} from '../../api/model';
-import {EVENT_FEED_LIMIT, refetchAll, reopenEvents} from '../../store';
-import {useEvents} from '../../store/events';
-import {createFeed} from '../../store/feed';
+import {refetchAll, reopenEvents, useNoticeFeed} from '../../store';
 import {useT} from '../../i18n';
 import {interestingNotice, noticeRows} from './view';
-
-// Held per backend rather than per mount so returning to the home page keeps notices already shown.
-const buffers = new WeakMap<Api, ReturnType<typeof createFeed<ApiEvent, Record<string, never>>>>();
-function noticeBuffer(api: Api) {
-  let buffer = buffers.get(api);
-  if (!buffer) buffers.set(api, (buffer = createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace')));
-  return buffer;
-}
 
 export function useNotices() {
   const t = useT();
   const api = getApi();
-  const buffer = noticeBuffer(api);
-  const snapshot = useSyncExternalStore(buffer.subscribe, buffer.getSnapshot);
-  const feed = useEvents(event => {
-    if (interestingNotice(event)) buffer.append(event);
-  }, true);
-  const rows = useMemo(() => noticeRows(snapshot.records, t), [snapshot.records, t]);
+  const feed = useNoticeFeed(interestingNotice);
+  const rows = useMemo(() => noticeRows(feed.records, t), [feed.records, t]);
   return {
     rows,
-    total: snapshot.records.length,
+    total: feed.records.length,
     error: feed.error,
     // A failed stream reopens once the capabilities are read again.
     retry: () => void refetchAll().then(() => reopenEvents(api)),

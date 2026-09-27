@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createFeed} from './feed';
-import {eventFeed} from './logs';
+import {eventFeed, noticeFeed} from './logs';
+import {createMockApi} from '../api/mock';
 import type {ApiEvent} from '../api/model';
 
 beforeEach(() => {
@@ -159,4 +160,27 @@ it('marks lost records after the newest one held and forgets the mark with that 
   vi.advanceTimersByTime(100);
   expect(feed.getSnapshot().gaps.size).toBe(0);
   stop();
+});
+
+it('keeps one notice feed per backend, so a page opened again lists its notices once each', () => {
+  const api = createMockApi();
+  const feed = noticeFeed(api);
+  expect(noticeFeed(api)).toBe(feed);
+  expect(noticeFeed(createMockApi())).not.toBe(feed);
+  const notice = (id: string) => ({id, event: 'flow.gap', data: {instance_id: 'i', observed_at: '2026-09-23T00:00:01Z'}}) as unknown as ApiEvent;
+  const shown = () => feed.getSnapshot().records.map(event => event.id);
+  let off = feed.subscribe(() => {});
+  feed.append(notice('a'));
+  feed.append(notice('b'));
+  vi.advanceTimersByTime(100);
+  off();
+  // Opened again, the page subscribes anew and the shared stream replays what it already received.
+  off = noticeFeed(api).subscribe(() => {});
+  expect(shown()).toEqual(['b', 'a']);
+  feed.append(notice('a'));
+  feed.append(notice('b'));
+  feed.append(notice('c'));
+  vi.advanceTimersByTime(100);
+  expect(shown()).toEqual(['c', 'b', 'a']);
+  off();
 });
