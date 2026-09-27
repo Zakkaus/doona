@@ -39,6 +39,7 @@ export const messages = {
   'act.modeReadOnlyAction': '请确认 honk 对主配置文件有写入权限，并将 native_api 设置放在独立的 include 文件。',
   'act.readOnlyDocs': '只读的配置文件',
   'act.modeUnavailable': '此后端不提供',
+  'act.globalMissing': '全局模式须指定目标组',
   'act.viewAll': '查看全部',
   'act.noticeRepeat': '重复 {n} 次',
   'act.since': '自 {t} 起',

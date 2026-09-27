@@ -40,6 +40,7 @@ export const messages = {
   'act.modeReadOnlyAction': 'Make the main file writable by honk and keep native_api in its own include file.',
   'act.readOnlyDocs': 'Read-only sources',
   'act.modeUnavailable': 'Not provided by this backend',
+  'act.globalMissing': 'Global mode needs a target group',
   'act.viewAll': 'View all',
   'act.noticeRepeat': {one: '{n} time', other: '{n} times'},
   'act.since': 'Since {t}',

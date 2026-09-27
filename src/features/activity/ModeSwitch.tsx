@@ -15,6 +15,7 @@ type ModeCardsModel = {
   modes: Array<[string, string]>;
   targets: Array<{id: string; label: string}>;
   busy: boolean;
+  reasons: {mode: string | null; global: string | null};
   error: Error | null;
   retry: () => void;
   pick: (mode: string) => void;
@@ -31,6 +32,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
       <Card
         title={t('act.mode')}
         tile={{icon: <Shuffle />, tint: 3, kind: 'control'}}
+        reason={vm.reasons.mode}
         aside={
           <span className="rp-cluster">
             <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
@@ -69,6 +71,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
       <Card
         title={t('act.global')}
         tile={{icon: <Filter />, tint: 2, kind: 'control'}}
+        reason={vm.reasons.global}
         aside={
           <ChoiceMenu quiet isDisabled={vm.busy || !vm.writable} label={t('act.global')} value={vm.target} onChange={vm.pickTarget} items={vm.targets}>
             {vm.targetText}

@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
-import {activityOutbounds, activityRanking, activityView, interestingNotice, modeView, nodeView, noticeRows, trafficState} from './view';
+import {activityOutbounds, activityRanking, activityView, interestingNotice, modeReasons, modeView, nodeView, noticeRows, trafficState} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
@@ -91,4 +91,14 @@ it('reports a degraded or failed datapath in the status as Overview does, withou
     text: t('ov.status.datapathDegraded', {status: t('lifecycle.running')})
   });
   expect(activityView(runtime, undefined, t, true, 'en', 'active').status).toEqual({tone: 'ok', text: t('lifecycle.running')});
+});
+
+it('says why Apply or the global target is disabled, and nothing while a change is being applied', () => {
+  const view = {writable: true, dirty: false, incomplete: false, status: t('act.modeReadOnly')};
+  expect(modeReasons(view, false, t)).toEqual({mode: 'No changes to apply', global: null});
+  expect(modeReasons({...view, dirty: true}, false, t)).toEqual({mode: null, global: null});
+  expect(modeReasons({...view, dirty: true, incomplete: true}, false, t)).toEqual({mode: 'Global mode needs a target group', global: null});
+  // The mode card shows a read-only backend's status beside its switch; the global target repeats it.
+  expect(modeReasons({...view, writable: false}, false, t)).toEqual({mode: null, global: 'Read-only'});
+  expect(modeReasons(view, true, t)).toEqual({mode: null, global: null});
 });

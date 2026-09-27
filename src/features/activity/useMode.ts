@@ -6,7 +6,7 @@ import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
-import {modeLabels, modeView} from './view';
+import {modeLabels, modeReasons, modeView} from './view';
 import {offered} from '../../api/capabilities';
 import {LocalError} from '../../api/error';
 
@@ -40,6 +40,7 @@ export function useMode() {
   };
   return {
     ...view,
+    reasons: modeReasons(view, busy, t),
     error,
     retry,
     busy,
