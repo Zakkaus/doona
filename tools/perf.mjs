@@ -3,6 +3,7 @@
 // page, the long connection and node tables, a log burst, and hovering the routing tree. Numbers are medians
 // of PERF_RUNS runs, three by default. PERF_ONLY=regex runs only the scenarios whose name matches.
 import {chromium} from '@playwright/test';
+import {signInDemo} from './demo-session.mjs';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:4177';
 const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules?tab=map', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
@@ -10,13 +11,6 @@ const runs = Number(process.env.PERF_RUNS) || 3;
 const only = process.env.PERF_ONLY ? new RegExp(process.env.PERF_ONLY) : null;
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const ms = value => `${value.toFixed(0)} ms`;
-// The mock asks for the demo account like a password backend; a session already in the tab skips the sign-in page.
-function signInDemo() {
-  const session = {profileId: 'demo', api: 'mock', token: 'demo-session-tools', expiresAt: new Date(Date.now() + 3600_000).toISOString()};
-  localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
-  localStorage.setItem('doona-profile', 'demo');
-  sessionStorage.setItem('doona-session', JSON.stringify(session));
-}
 
 async function metrics(session) {
   const {metrics} = await session.send('Performance.getMetrics');
