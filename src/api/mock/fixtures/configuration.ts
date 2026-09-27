@@ -66,9 +66,9 @@ dns {
 }
 
 routing {
-  domain(suffix: doubleclick.net) -> block
   pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)
   dip(geoip: private) -> direct(must)
+  domain(suffix: doubleclick.net) -> block
   domain(geosite: cn) -> direct
   domain(geosite: telegram) -> proxy
   include rules.dae

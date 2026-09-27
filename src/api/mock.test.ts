@@ -478,7 +478,7 @@ it('keeps domain rules indeterminate for destination-IP-only input', async () =>
   const evaluation = result.evaluations[0];
   expect(evaluation).toMatchObject({decision: 'indeterminate', outbound: null});
   expect(evaluation.missing_inputs).toContain('domain');
-  expect(evaluation.rules.find(r => r.rule_id === 'r1')).toMatchObject({result: 'indeterminate', missing_inputs: ['domain']});
+  expect(evaluation.rules.find(r => r.rule_id === 'r3')).toMatchObject({result: 'indeterminate', missing_inputs: ['domain']});
   expect(evaluation.rules.find(r => r.rule_id === 'r2')).toMatchObject({result: 'not_matched', missing_inputs: []});
 });
 

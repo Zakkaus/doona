@@ -22,7 +22,7 @@ it('writes every held rule of a file in one text, each before its rule and in th
   const text = insertRules(main, [rule(2, 'r5', 'dip(1.1.1.1)'), rule(1, 'r5', 'domain(full: a.example)'), rule(3, 'r1', 'domain(full: b.example)')])!;
   const lines = text.split('\n');
   const at = (needle: string) => lines.findIndex(line => line.includes(needle));
-  expect(at('domain(full: b.example) -> proxy')).toBe(at('domain(suffix: doubleclick.net)') - 1);
+  expect(at('domain(full: b.example) -> proxy')).toBe(at('pname(NetworkManager') - 1);
   expect(at('domain(full: a.example) -> proxy')).toBe(at('domain(geosite: telegram)') - 2);
   expect(at('dip(1.1.1.1) -> proxy')).toBe(at('domain(geosite: telegram)') - 1);
   expect(lines).toHaveLength(main.content!.split('\n').length + 3);
