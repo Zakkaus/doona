@@ -44,11 +44,14 @@ test('a generated source names why it is read-only and offers no validation', as
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+  // What the file is and what can be done with it is said under the text, not only behind the help button.
+  await expect(page.locator('.rp-card')).toContainText('The engine generates this file and overwrites it when it regenerates');
   // The path is named once, by the picker; the card carries it only as its accessible name.
   await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveCount(0);
   await page.goto('/#/config?tab=source&source=src-main');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeVisible();
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveCount(0);
+  await expect(page.locator('.rp-card')).toContainText('Click the text to edit it; Validate checks it before you save.');
 });
 
 test('switching sources discards the draft after confirmation', async ({page}) => {
@@ -433,6 +436,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   });
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Redacted']);
+  await expect(page.locator('.rp-card')).toContainText('Writing it back would lose those values');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await page.getByRole('tab', {name: 'Quick setup'}).click();
@@ -859,9 +863,8 @@ test('source withholding does not certify exports or diagnose the hidden include
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-content')).toContainText('Listener secret values are redacted');
-  await page.getByRole('button', {name: 'About Export', exact: true}).click();
-  await expect(page.getByRole('dialog', {name: 'Export'})).toContainText('may contain credentials');
-  await page.keyboard.press('Escape');
+  await expect(page.locator('.rp-content')).toContainText('Exports preserve the displayed source bytes and may contain credentials');
+  await expect(page.getByRole('button', {name: 'About Export', exact: true})).toHaveCount(0);
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export', exact: true}).click();
   expect(await downloadText(await downloading)).toBe(main.content);

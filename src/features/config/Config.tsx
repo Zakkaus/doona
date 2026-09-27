@@ -77,15 +77,13 @@ export function Config(props: PageProps) {
           {(newSourceProps || sourceModel?.hasContent) && <span className="rp-grow" />}
           {newSourceProps && <NewSource {...newSourceProps} />}
           {sourceModel?.hasContent && (
-            <span className="rp-help-row">
-              <Button onPress={exportSource}>
-                <Download />
-                {t('config.export')}
-              </Button>
-              <ContextualHelp title={t('config.export')} text={t('config.exportWarning')} />
-            </span>
+            <Button onPress={exportSource}>
+              <Download />
+              {t('config.export')}
+            </Button>
           )}
         </div>
+        {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
         {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
       </>
     ),
@@ -267,10 +265,11 @@ function Modules(props: ModulesProps) {
 }
 
 function SourceCard(props: SourceCardProps) {
-  const {canValidate, canWrite, contentOffered} = props;
+  const {canValidate, contentOffered} = props;
   const t = useT();
   const {
     writable,
+    note,
     refused,
     shown,
     marks,
@@ -350,7 +349,7 @@ function SourceCard(props: SourceCardProps) {
           onSave={dirty && !busy ? () => void save() : undefined}
         />
       )}
-      {canWrite && <span className="rp-label">{t('config.editNote')}</span>}
+      {view.hasContent && <span className="rp-label">{note}</span>}
     </Card>
   );
 }

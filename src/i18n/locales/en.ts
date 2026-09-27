@@ -208,7 +208,15 @@ export const messages = {
   'config.loadedAt': 'Loaded: {time}',
   'config.unsaved': 'Unsaved',
   'config.unsavedHint': 'Reloading or closing the page loses the changes',
-  'config.editNote': 'If the file has changed on disk before saving, the backend refuses the save and does not overwrite the file.',
+  'config.editNote': 'Click the text to edit it. If the file changes on disk after loading, the backend refuses the save and does not overwrite the file.',
+  'config.editNoteValidate':
+    'Click the text to edit it; Validate checks it before you save. If the file changes on disk after loading, the backend refuses the save and does not overwrite the file.',
+  'config.generatedNote':
+    'The engine generates this file and overwrites it when it regenerates, so it can only be viewed here. To change it, change the configuration that produces it.',
+  'config.subscriptionNote': 'This file is downloaded from the subscription URL and replaced when the subscription updates, so it can only be viewed here.',
+  'config.readOnlyNote': 'The backend does not allow configuration writes, so this file can only be viewed. The help above explains how to turn writes on.',
+  'config.secretNote': 'This file holds a listener secret, so the backend does not write it back. Move the secret into its own included file to edit the rest.',
+  'config.redactedNote': 'The backend hid part of this file. Writing it back would lose those values, so it can only be viewed.',
   'config.level.error': 'Error',
   'config.level.warning': 'Warning',
   'config.level.info': 'Info',
