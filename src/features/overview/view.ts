@@ -7,7 +7,7 @@ import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
-import {backendLimits, resourceLabels} from '../shared/limits';
+import {resourceLabels, type LimitGroup} from '../shared/limits';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -108,12 +108,13 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
 }
 
 export function overviewView(
-  data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath},
+  // `limits` is backendLimits for the capabilities; the controller builds it because its links need the UI language.
+  data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath; limits?: LimitGroup[]},
   loading: {capabilities: boolean; runtime: boolean; version: boolean; memory: boolean; datapath: boolean},
   locale: string,
   t: LabelFn
 ) {
-  const {capabilities, runtime, version, memory, datapath} = data;
+  const {capabilities, runtime, version, memory, datapath, limits = []} = data;
   const state = runtime?.lifecycle.state;
   const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
   const reload = runtime?.last_reload;
@@ -121,7 +122,6 @@ export function overviewView(
   const cpu = runtime?.process.cpu_percent;
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
-  const limits = capabilities ? backendLimits(capabilities, version, t) : [];
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
   return {
     status: {
@@ -214,15 +214,14 @@ export function overviewView(
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),
-      // What is off or limited comes first with its reason; the rest are available and show as dots.
-      limits,
-      restart: limits.some(limit => limit.keys.length > 0),
+      // Only the features that are fully on, as dots; the ones that are off or limited have their own card.
       rows: capabilities
         ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>)
-            .filter(id => !limits.some(limit => limit.id === id))
+            .filter(id => !limits.some(group => group.items.some(item => item.id === id)))
             .map(id => ({id, label: t(resourceLabels[id]), text: t('ov.available')}))
         : []
     },
+    limits,
     canExport: !!runtime
   };
 }

@@ -1,10 +1,12 @@
 import {VisuallyHidden} from 'react-aria';
-import {useOverview} from './useOverview';
+import {limitsHeadingId, useOverview} from './useOverview';
 import {useT} from '../../i18n';
 import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, Link, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {tableLayout} from '../../ui/Table';
-import {nativeApiSection} from '../shared/limits';
+import {limitSnippet} from '../shared/limits';
+import {DaeCode} from '../../ui/DaeCode';
+import type {PageProps} from '../../shell/routes';
 
 // While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
 // card keeps its height when the values arrive; `extra` holds the lines below the grid.
@@ -26,9 +28,9 @@ function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
 }
 // The least the attachments table takes: its frame, heading and two rows.
 const attachmentsFloor = 2 + tableLayout.headingHeight + 2 * tableLayout.rowHeight;
-export function Overview() {
+export function Overview({query}: PageProps) {
   const t = useT();
-  const vm = useOverview();
+  const vm = useOverview(query);
   return (
     <div className="rp-page">
       <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
@@ -140,50 +142,16 @@ export function Overview() {
         </Card>
         <Card title={t('ov.resources')}>
           {vm.resources.state === 'ready' ? (
-            <>
-              {vm.resources.limits.length > 0 && (
-                <div className="rp-list" role="list" aria-label={t('ov.lim.title')}>
-                  {vm.resources.limits.map(limit => (
-                    <div key={limit.id} role="listitem" className="rp-limit">
-                      <div className="rp-limit-head">
-                        <Light tone="warn">{limit.label}</Light>
-                        <span className="rp-capability-status">{limit.state}</span>
-                      </div>
-                      <p className="rp-note">{limit.reason}</p>
-                      {limit.keys.length > 0 && (
-                        <p className="rp-limit-keys">
-                          {limit.keys.map(key => (
-                            <code key={key} className="rp-code">
-                              {key}
-                            </code>
-                          ))}
-                        </p>
-                      )}
-                      {limit.link && (
-                        <Link appearance="link" href={limit.link.href}>
-                          {limit.link.text}
-                        </Link>
-                      )}
-                    </div>
-                  ))}
+            <div className="rp-capabilities">
+              {vm.resources.rows.map(row => (
+                <div key={row.id} className="rp-capability">
+                  {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
+                  <Light tone="ok">{row.label}</Light>
+                  {/* The status is the dot alone; the text still reaches assistive technology. */}
+                  <VisuallyHidden>{row.text}</VisuallyHidden>
                 </div>
-              )}
-              {vm.resources.restart && (
-                <p className="rp-note rp-limit-note">
-                  {t('ov.lim.restart')} <code className="rp-code">{nativeApiSection}</code>
-                </p>
-              )}
-              <div className="rp-capabilities">
-                {vm.resources.rows.map(row => (
-                  <div key={row.id} className="rp-capability">
-                    {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
-                    <Light tone="ok">{row.label}</Light>
-                    {/* The status is the dot alone; the text still reaches assistive technology. */}
-                    <VisuallyHidden>{row.text}</VisuallyHidden>
-                  </div>
-                ))}
-              </div>
-            </>
+              ))}
+            </div>
           ) : vm.resources.state === 'loading' ? (
             <Loading />
           ) : vm.errors.capabilities ? null : (
@@ -191,6 +159,32 @@ export function Overview() {
           )}
         </Card>
       </div>
+      {vm.limits.length > 0 && (
+        <Card title={t('ov.lim.title')} titleId={limitsHeadingId}>
+          <div className="rp-limits">
+            {vm.limits.map(group => (
+              <div key={group.cause} className="rp-limit">
+                <p className="rp-limit-reason">{group.reason}</p>
+                <ul className="rp-limit-items">
+                  {group.items.map(item => (
+                    <li key={item.id} className="rp-capability">
+                      <Light tone="warn">{item.label}</Light>
+                      <span className="rp-capability-status">{item.state}</span>
+                    </li>
+                  ))}
+                </ul>
+                {group.keys && <DaeCode as="pre" className="rp-limit-snippet" text={limitSnippet(group.keys)} />}
+                {group.restart && <p className="rp-note">{t('ov.lim.restart')}</p>}
+                {group.link && (
+                  <Link appearance="link" external={group.link.external} href={group.link.href}>
+                    {group.link.text}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

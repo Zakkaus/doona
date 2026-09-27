@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
@@ -6,10 +6,15 @@ import {usePalette} from '../../ui/charts';
 import {overviewExport, overviewView} from './view';
 import {useLifecycle} from '../shared/useLifecycle';
 import {offered} from '../../api/capabilities';
+import {backendLimits} from '../shared/limits';
 
-export function useOverview() {
+// The heading of the card that lists the features that are off; `?card=limits` scrolls to it.
+export const limitsHeadingId = 'overview-limits';
+
+export function useOverview(query = '') {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
@@ -21,15 +26,20 @@ export function useOverview() {
     () => ({capabilities: capabilities.data, runtime: runtime.data, version: version.data, memory: memory.data, datapath: datapath.data}),
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
   );
+  const limits = useMemo(() => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang) : []), [capabilities.data, version.data, t, lang]);
+  const hasLimits = limits.length > 0;
+  useEffect(() => {
+    if (hasLimits && new URLSearchParams(query).get('card') === 'limits') document.getElementById(limitsHeadingId)?.scrollIntoView({block: 'start'});
+  }, [query, hasLimits]);
   const view = useMemo(
     () =>
       overviewView(
-        data,
+        {...data, limits},
         {capabilities: capabilities.loading, runtime: runtime.loading, version: version.loading, memory: memory.loading, datapath: datapath.loading},
         locale,
         t
       ),
-    [data, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t]
+    [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t]
   );
   const palette = usePalette();
   const tones = {err: palette.love, warn: palette.gold, ok: palette.cat[0]};
