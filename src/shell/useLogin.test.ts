@@ -1,7 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {credentialProblems, loginProfiles, predatesAuth, resolveSignInKind, signInRefusal} from './useLogin';
+import {credentialProblems, loginAlert, loginProfiles, predatesAuth, resolveSignInKind, signIn, signInRefusal, storeToken} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
+import {translate, type Translator} from '../i18n';
 
 const challenged = {id: 'router', name: 'Router', api: 'https://router.test/api-prefix', token: ''};
 
@@ -84,4 +85,88 @@ it('takes only a missing or protected discovery for a backend that predates pass
   expect(predatesAuth(new ApiError(0, 'network_error', 'Failed to fetch'))).toBe(false);
   expect(predatesAuth(new ApiError(502, '', 'Bad Gateway'))).toBe(false);
   expect(predatesAuth(new TypeError('Failed to fetch'))).toBe(false);
+});
+
+const t: Translator = (key, params) => translate('en', key, params);
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}});
+// A Storage stand-in; `refuse` makes every write throw, as a browser with storage blocked or full does.
+function storage(entries: Record<string, string> = {}) {
+  const store = new Map(Object.entries(entries));
+  const port = {
+    refuse: false,
+    store,
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      if (port.refuse) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      store.set(key, value);
+    },
+    removeItem: (key: string) => store.delete(key)
+  };
+  return port;
+}
+
+it('stores a pasted token in its profile, and names a stale profile or blocked storage', () => {
+  const local = storage({'doona-profiles': JSON.stringify([challenged]), 'doona-profile': challenged.id});
+  vi.stubGlobal('localStorage', local);
+  expect(storeToken(challenged.id, challenged.api, ' secret ')).toBeNull();
+  expect(JSON.parse(local.store.get('doona-profiles')!)).toEqual([{...challenged, token: 'secret'}]);
+  expect(storeToken(challenged.id, 'https://other.test', 'secret')).toBe('login.stale');
+  local.refuse = true;
+  expect(storeToken(challenged.id, challenged.api, 'another')).toBe('settings.saveError');
+});
+
+it('reports a rejected sign-in, then keeps the session a retry opens', async () => {
+  const session = storage();
+  vi.stubGlobal('sessionStorage', session);
+  const fetcher = vi.fn(async (_input: URL) => json({error: {code: 'invalid_credentials', message: 'Invalid credentials'}}, 401));
+  vi.stubGlobal('fetch', fetcher);
+  const credentials = {username: 'admin', password: 'wrong'};
+  expect(await signIn(challenged.id, challenged.api, 'login', credentials)).toEqual({key: 'login.invalidCredentials'});
+  expect(session.store.size).toBe(0);
+
+  fetcher.mockImplementation(async () => json({token: 'hnk1_x', expires_at: '2099-01-01T00:00:00Z'}));
+  expect(await signIn(challenged.id, challenged.api, 'login', {...credentials, password: 'right'})).toBeNull();
+  expect(JSON.parse(session.store.get('doona-session')!)).toMatchObject({profileId: challenged.id, token: 'hnk1_x'});
+  expect(fetcher.mock.calls.map(([input]) => String(input))).toEqual([
+    'https://router.test/api-prefix/api/v1/auth/login',
+    'https://router.test/api-prefix/api/v1/auth/login'
+  ]);
+});
+
+it('names a session the tab cannot store apart from a failed sign-in', async () => {
+  const session = storage();
+  session.refuse = true;
+  vi.stubGlobal('sessionStorage', session);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => json({token: 'hnk1_x', expires_at: '2099-01-01T00:00:00Z'}))
+  );
+  expect(await signIn(challenged.id, challenged.api, 'login', {username: 'admin', password: 'right'})).toEqual({key: 'settings.saveError'});
+  const down = new ApiError(502, '', 'Bad Gateway');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw down;
+    })
+  );
+  expect(await signIn(challenged.id, challenged.api, 'login', {username: 'admin', password: 'right'})).toEqual({error: down});
+});
+
+it('focuses a refusal anew on each attempt and shows the arrival notes only without one', () => {
+  const refused = {kind: 'login' as const, failure: {key: 'login.invalidCredentials' as const}, ended: false, rejected: false};
+  const first = loginAlert({...refused, attempt: 1}, t);
+  expect(first).toEqual({tone: 'negative', text: t('login.invalidCredentials'), focus: true, id: 1});
+  expect(loginAlert({...refused, attempt: 2}, t)?.id).toBe(2);
+  expect(loginAlert({...refused, failure: 'Sign-in failed', attempt: 3}, t)?.text).toBe('Sign-in failed');
+
+  const arrival = {failure: null, attempt: 0};
+  expect(loginAlert({...arrival, kind: 'login', ended: true, rejected: true}, t)).toEqual({
+    tone: 'informative',
+    text: t('login.sessionEnded'),
+    focus: false,
+    id: 0
+  });
+  expect(loginAlert({...arrival, kind: 'token', ended: false, rejected: true}, t)).toMatchObject({text: t('login.rejected'), focus: false});
+  expect(loginAlert({...arrival, kind: 'login', ended: false, rejected: true}, t)).toBeNull();
+  expect(loginAlert({...refused, kind: 'no-api', attempt: 1}, t)).toBeNull();
 });
