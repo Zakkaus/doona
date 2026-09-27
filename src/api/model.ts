@@ -2,7 +2,9 @@ import type {components, operations} from './types';
 
 type Schema = components['schemas'];
 export type Version = Schema['Version'];
-export type Capabilities = Schema['Capabilities'];
+// `unreported` lists the resources the backend left out, which the client fills in as unavailable; a resource the
+// backend reports as unavailable is off for a reason of its own, while an unreported one it does not know at all.
+export type Capabilities = Schema['Capabilities'] & {unreported?: ReadonlyArray<keyof Schema['Capabilities']['resources']>};
 export type Runtime = Schema['Runtime'];
 export type RuntimeOutbounds = Schema['RuntimeOutbounds'];
 export type TrafficHistory = Schema['TrafficHistory'];

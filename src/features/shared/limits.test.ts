@@ -178,6 +178,36 @@ describe('backendLimits', () => {
 });
 
 describe('limitSnippet', () => {
+  it('gives an older honk that leaves resources or fields out no honk reason for them', async () => {
+    const {normalizeCapabilities} = await import('../../api/capabilities');
+    const {logs: _logs, probes: _probes, geodata: _geodata, traffic_history: _traffic, ...kept} = capabilities.resources;
+    const older = normalizeCapabilities({
+      ...capabilities,
+      resources: {
+        ...kept,
+        config: {available: true, content: true, create: false},
+        flows: {...kept.flows, recording: 'off'},
+        runtime_settings: {available: true}
+      } as unknown as Resources
+    });
+    const groups = limits(older);
+    expect(group(groups, 'recordOff')).toBeUndefined();
+    expect(group(groups, 'notRunning')).toBeUndefined();
+    expect(group(groups, 'geodataUnreadable')).toBeUndefined();
+    expect(ids(group(groups, 'notProvided'))).toEqual(['probes', 'traffic_history', 'logs', 'geodata']);
+    // Writes are off, but a build that does not report the switch is not told to turn it on.
+    expect(group(groups, 'configReadOnly')?.help).toBeUndefined();
+    // Without its field list, flows that are off are idle rather than a recorder the configuration turned off.
+    expect(ids(group(groups, 'flowsIdle'))).toEqual(['flows']);
+    // The same resources reported as off keep honk's reasons.
+    const reported = limits(patched({logs: {available: false}, probes: {available: false}, geodata: {available: false}}));
+    expect([ids(group(reported, 'recordOff')), ids(group(reported, 'notRunning')), ids(group(reported, 'geodataUnreadable'))]).toEqual([
+      ['logs'],
+      ['probes'],
+      ['geodata']
+    ]);
+  });
+
   it('nests the keys in the native_api section', () => {
     expect(limitSnippet(['record_logs: true', 'record_dns_log: true'])).toBe(
       'experimental {\n  native_api {\n    record_logs: true\n    record_dns_log: true\n  }\n}'

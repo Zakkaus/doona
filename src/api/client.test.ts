@@ -616,4 +616,6 @@ it('fills resource keys a backend on an older contract pin leaves out as unavail
   expect(capabilities.resources.geodata.available).toBe(false);
   expect(capabilities.resources.nodes.available).toBe(false);
   expect(capabilities.resources.rules.available).toBe(false);
+  expect(capabilities.unreported).toContain('geodata');
+  expect(capabilities.unreported).not.toContain('connections');
 });

@@ -77,6 +77,9 @@ export type LimitHelp = {
 export function backendLimits(capabilities: Capabilities, version: Pick<Version, 'api'> | undefined, t: LabelFn, lang: Lang): LimitGroup[] {
   const resources = capabilities.resources;
   const honk = version?.api.name === 'dae/honk-native';
+  // honk's reasons for a resource that is off hold only for one it reports: a resource an older build leaves out is
+  // off because that build does not have it, which is all the page can say.
+  const reports = (id: Resource) => honk && !capabilities.unreported?.includes(id);
   const found = new Map<LimitCause, LimitGroup['items']>();
   const add = (cause: LimitCause, id: LimitId, label: Key = resourceLabels[id as Resource]) => {
     const items = found.get(cause) ?? [];
@@ -98,7 +101,9 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
   if (resources.nodes.can_manage === false || resources.providers.can_manage === false) add(configCause ?? 'mainReadOnly', 'manage', 'ov.lim.manage');
 
   // honk settings.rs capability: `flows.max_flows` is offered only while record_flows allows recording.
-  const flowsAllowed = !resources.runtime_settings.available || (resources.runtime_settings.fields ?? []).includes('flows.max_flows');
+  // A backend that does not list its fields does not say either way.
+  const fields = resources.runtime_settings.fields;
+  const flowsAllowed = !resources.runtime_settings.available || !fields || fields.includes('flows.max_flows');
   const flowsSwitch = resources.runtime_settings.available && (resources.runtime_settings.fields ?? []).includes('record_flows');
   const recordKeys: string[] = [];
   for (const id of Object.keys(resourceLabels) as Resource[]) {
@@ -107,7 +112,7 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
     if (id === 'config' || (id === 'config_validate' && validateUnloaded)) continue;
     const flowsOff = id === 'flows' && resource.available && resources.flows.recording === 'off';
     // Flows stay available with recording off, so their recorder is off only when honk no longer offers max_flows.
-    if (honk && recorder && (id === 'flows' ? flowsOff && !flowsAllowed : !resource.available)) {
+    if (reports(id) && recorder && (id === 'flows' ? flowsOff && !flowsAllowed : !resource.available)) {
       add('recordOff', id);
       recordKeys.push(recorder + ': true');
     } else if (flowsOff) add('flowsIdle', id);
@@ -115,9 +120,9 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
       if (id === 'geodata' && resources.geodata.can_update !== true) add(configCause ?? 'geodataUpdate', id);
       if (id === 'providers' && resources.providers.can_refresh === false) add('notRunning', 'subscriptions', 'ov.lim.subscriptions');
       if (id === 'connections' && resources.connections.can_close === false) add('notProvided', 'close', 'ov.lim.close');
-    } else if (honk && id === 'probes') add('notRunning', id);
+    } else if (reports(id) && id === 'probes') add('notRunning', id);
     // honk geodata.rs capability: unavailable only when routing and DNS loaded different files of one kind.
-    else if (honk && id === 'geodata') add('geodataUnreadable', id);
+    else if (reports(id) && id === 'geodata') add('geodataUnreadable', id);
     else add('notProvided', id);
   }
 
@@ -146,7 +151,11 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
         return {
           headline: t('ov.lim.h.configReadOnly'),
           named: ['config'],
-          help: honk ? howTo('ov.lim.configWrite', ['config_write: true'], docs('read-only', 'ov.lim.docsReadOnly')) : undefined
+          // A build that does not report the switch may not have it.
+          help:
+            honk && resources.config.writable === false
+              ? howTo('ov.lim.configWrite', ['config_write: true'], docs('read-only', 'ov.lim.docsReadOnly'))
+              : undefined
         };
       case 'mainReadOnly':
         return {
