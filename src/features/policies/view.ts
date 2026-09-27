@@ -200,3 +200,24 @@ export function nodeGridView(
 export function untestedHelp(untested: string | null, canProbe: boolean, t: Translator): Help | null {
   return untested ? {title: untested, text: [t('policy.untestedHelp'), t(canProbe ? 'policy.untestedProbe' : 'policy.untestedNoProbe')]} : null;
 }
+
+// Why a group's header actions are disabled, shown under them: Edit first, then Test all. Null while both can run, while
+// Edit is hidden, or while a change is in flight (the pending button shows that). A failed fetch explains a missing main
+// configuration better than its absence does.
+export function groupActionsReason(
+  edit: {shown: boolean; busy: boolean; main: boolean; entry: boolean; error: Error | null},
+  probe: {busy: boolean; canProbe: boolean},
+  t: Translator
+): string | null {
+  if (edit.shown && !edit.busy) {
+    if (!edit.main) return edit.error ? errorText(edit.error, t) : t('policy.editNoMain');
+    if (!edit.entry) return t('policy.editNoEntry');
+  }
+  return probe.busy || probe.canProbe ? null : t('policy.noProbe');
+}
+
+// Why a dialog's Save is disabled: nothing differs from what it opened with. Null while it can save or while a save is
+// in flight (the pending button shows that).
+export function noChangesReason(changed: boolean, busy: boolean, t: Translator): string | null {
+  return changed || busy ? null : t('policy.noChanges');
+}

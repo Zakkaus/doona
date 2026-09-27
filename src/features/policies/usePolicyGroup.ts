@@ -5,7 +5,7 @@ import type {HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
-import {actionErrorText, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
+import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
 import {usePolicyEdit} from './usePolicyEdit';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
@@ -92,6 +92,11 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     probing: control.busy === 'probe',
     probeDisabled: !!control.busy || !control.canProbe,
     probeTip: !control.canProbe ? t('policy.noProbe') : undefined,
+    actionsReason: groupActionsReason(
+      {shown: edit.available, busy: source.busy, main: !!source.main, entry: !!entry, error: source.error},
+      {busy: !!control.busy, canProbe: !!control.canProbe},
+      t
+    ),
     untestedHelp: untestedHelp(card?.untested ?? null, !!control.canProbe, t),
     probeText: t(control.busy === 'probe' ? 'policy.probing' : 'policy.probeAll'),
     probe,

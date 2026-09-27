@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../../api/mock/fixtures';
 import {translate, type Translator} from '../../../i18n';
-import {arrangeView, holds, parsePlaceable, stage, unstage} from './view';
+import {applyReason, arrangeView, holds, parsePlaceable, removeReason, stage, unstage} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
 const {nodes} = nodeFixtures(0);
@@ -47,4 +47,19 @@ it('accepts only a well-formed drop payload', () => {
   expect(parsePlaceable('{"kind":"group","value":"x"}')).toBeNull();
   expect(parsePlaceable('{"kind":"node","value":""}')).toBeNull();
   expect(parsePlaceable('not json')).toBeNull();
+});
+
+it("says why a group's last filter cannot be removed, and nothing while the page is locked", () => {
+  const view = arrangeView(text, [], [], nodes, t);
+  const solo = view.groups.find(group => group.name === 'solo')!;
+  const pair = view.groups.find(group => group.name === 'pair')!;
+  expect(removeReason(solo, false)).toBe(t('arrange.lastMember'));
+  expect(removeReason(solo, true)).toBeNull();
+  expect(removeReason(pair, false)).toBeNull();
+});
+
+it("says why the review's Apply is disabled: the page cannot write first, then a new group without members", () => {
+  expect(applyReason(null, [], t)).toBeNull();
+  expect(applyReason(null, ['fresh', 'other'], t)).toBe(t('arrange.emptyNew', {group: 'fresh'}));
+  expect(applyReason(t('arrange.readOnly'), ['fresh'], t)).toBe(t('arrange.readOnly'));
 });

@@ -9,7 +9,9 @@ import {
   checkInvalid,
   checkPatch,
   groupConfigFields,
+  groupActionsReason,
   memberViews,
+  noChangesReason,
   nodeGridView,
   policyCardView,
   probeSummary,
@@ -213,4 +215,24 @@ it('offers Test all for untested members only where the group takes a probe', ()
   expect(untestedHelp('2 untested', true, t)).toEqual({title: '2 untested', text: [t('policy.untestedHelp'), t('policy.untestedProbe')]});
   expect(untestedHelp('2 untested', false, t)?.text).toEqual([t('policy.untestedHelp'), t('policy.untestedNoProbe')]);
   expect(untestedHelp(null, true, t)).toBeNull();
+});
+
+it("says why a group's Edit or Test all is disabled, Edit first, and nothing while a change is in flight", () => {
+  const edit = {shown: true, busy: false, main: true, entry: true, error: null};
+  const probe = {busy: false, canProbe: true};
+  expect(groupActionsReason(edit, probe, t)).toBeNull();
+  expect(groupActionsReason({...edit, main: false}, probe, t)).toBe(t('policy.editNoMain'));
+  expect(groupActionsReason({...edit, main: false, error: new LocalError('ui.groupNotLoaded')}, probe, t)).toBe(t('ui.groupNotLoaded'));
+  expect(groupActionsReason({...edit, entry: false}, {...probe, canProbe: false}, t)).toBe(t('policy.editNoEntry'));
+  expect(groupActionsReason(edit, {...probe, canProbe: false}, t)).toBe('Test all is not available for this group');
+  // A hidden or busy Edit gives no reason of its own.
+  expect(groupActionsReason({...edit, shown: false, entry: false}, probe, t)).toBeNull();
+  expect(groupActionsReason({...edit, busy: true, entry: false}, {...probe, canProbe: false}, t)).toBe(t('policy.noProbe'));
+  expect(groupActionsReason(edit, {busy: true, canProbe: false}, t)).toBeNull();
+});
+
+it('says Save has nothing to save until a value changes, and nothing while a save is in flight', () => {
+  expect(noChangesReason(false, false, t)).toBe('No changes to save');
+  expect(noChangesReason(true, false, t)).toBeNull();
+  expect(noChangesReason(false, true, t)).toBeNull();
 });

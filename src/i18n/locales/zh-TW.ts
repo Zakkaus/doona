@@ -790,6 +790,7 @@ export const messages = {
   'policy.removeFilter': '移除篩選 {n}',
   'policy.addFilter': '新增篩選',
   'policy.save': '儲存',
+  'policy.noChanges': '沒有要儲存的修改',
   'policy.editUnsafe': '篩選或策略必須寫在同一行，括號成對，且不含註解或大括號。',
   'policy.cfg.millis': '{n} ms',
   'policy.probeChanged': '可用：{healthy}，無法使用：{unavailable}，狀態未知：{unknown}，選擇：已變更',

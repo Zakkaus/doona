@@ -17,6 +17,7 @@ import {href} from '../../../shell/route';
 import {DaeCode} from '../../../ui/DaeCode';
 import {
   ActionBar,
+  ActionHelp,
   Badge,
   Button,
   buttonClass,
@@ -46,7 +47,7 @@ import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupPolicyText} from '../../shared/policyText';
 import {newGroupPolicies} from '../../../dae/vocab';
 import {PolicyPicker} from '../../shared/PolicyPicker';
-import {holds, parsePlaceable, type ArrangeGroup, type Placeable} from './view';
+import {holds, parsePlaceable, removeReason, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
 
 type Model = ReturnType<typeof useArrange>;
@@ -123,7 +124,6 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
       icon
       small
       label={t('arrange.remove', {name: label, group: group.name})}
-      tip={blocked ?? undefined}
       isDisabled={locked || m.applying || !!blocked}
       onPress={() => m.unplace(group.name, item)}
     >
@@ -160,36 +160,38 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
             </span>
           </div>
           {group.holdsAll && <p className="rp-note">{t('arrange.holdsAll')}</p>}
-          {(group.names.length > 0 || group.removedNames.length > 0) && (
-            <Tags label={t('arrange.byName')}>
-              <span className="rp-label rp-tags-title">{t('arrange.byName')}</span>
-              {group.names.map(item => (
-                <Tag key={item.name} tone={item.isNew ? 'new' : undefined} action={remove(item.name, {kind: 'node', value: item.name}, item.blocked)}>
-                  {item.name}
-                </Tag>
-              ))}
-              {group.removedNames.map(name => (
-                <Tag key={name} tone="removed" action={undo(name, {kind: 'node', value: name})}>
-                  {name}
-                </Tag>
-              ))}
-            </Tags>
-          )}
-          {(group.subscriptions.length > 0 || group.removedSubscriptions.length > 0) && (
-            <Tags label={t('arrange.bySubscription')}>
-              <span className="rp-label rp-tags-title">{t('arrange.bySubscription')}</span>
-              {group.subscriptions.map(item => (
-                <Tag key={item.tag} tone={item.isNew ? 'new' : undefined} action={remove(item.label, {kind: 'subscription', value: item.tag}, item.blocked)}>
-                  {item.count === null ? item.label : t('arrange.subscriptionCount', {name: item.label, n: item.count})}
-                </Tag>
-              ))}
-              {group.removedSubscriptions.map(item => (
-                <Tag key={item.tag} tone="removed" action={undo(item.label, {kind: 'subscription', value: item.tag})}>
-                  {item.label}
-                </Tag>
-              ))}
-            </Tags>
-          )}
+          <ActionHelp reason={removeReason(group, locked || m.applying)}>
+            {(group.names.length > 0 || group.removedNames.length > 0) && (
+              <Tags label={t('arrange.byName')}>
+                <span className="rp-label rp-tags-title">{t('arrange.byName')}</span>
+                {group.names.map(item => (
+                  <Tag key={item.name} tone={item.isNew ? 'new' : undefined} action={remove(item.name, {kind: 'node', value: item.name}, item.blocked)}>
+                    {item.name}
+                  </Tag>
+                ))}
+                {group.removedNames.map(name => (
+                  <Tag key={name} tone="removed" action={undo(name, {kind: 'node', value: name})}>
+                    {name}
+                  </Tag>
+                ))}
+              </Tags>
+            )}
+            {(group.subscriptions.length > 0 || group.removedSubscriptions.length > 0) && (
+              <Tags label={t('arrange.bySubscription')}>
+                <span className="rp-label rp-tags-title">{t('arrange.bySubscription')}</span>
+                {group.subscriptions.map(item => (
+                  <Tag key={item.tag} tone={item.isNew ? 'new' : undefined} action={remove(item.label, {kind: 'subscription', value: item.tag}, item.blocked)}>
+                    {item.count === null ? item.label : t('arrange.subscriptionCount', {name: item.label, n: item.count})}
+                  </Tag>
+                ))}
+                {group.removedSubscriptions.map(item => (
+                  <Tag key={item.tag} tone="removed" action={undo(item.label, {kind: 'subscription', value: item.tag})}>
+                    {item.label}
+                  </Tag>
+                ))}
+              </Tags>
+            )}
+          </ActionHelp>
           {group.rules.length > 0 && (
             <div className="rp-arrange-rules">
               <span className="rp-label">{t('arrange.byRule')}</span>

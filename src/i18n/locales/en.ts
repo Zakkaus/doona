@@ -823,6 +823,7 @@ export const messages = {
   'policy.removeFilter': 'Remove filter {n}',
   'policy.addFilter': 'Add filter',
   'policy.save': 'Save',
+  'policy.noChanges': 'No changes to save',
   'policy.editUnsafe': 'Filters and the policy must stay on one line with balanced parentheses and no comment or brace.',
   'policy.cfg.millis': '{n} ms',
   'policy.probeChanged': 'Available: {healthy}, unavailable: {unavailable}, unknown: {unknown}, selection: changed',

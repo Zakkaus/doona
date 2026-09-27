@@ -143,12 +143,8 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   await page.goto('/#/policies');
   const probe = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: 'Test all', exact: true});
   await expect(probe).toBeDisabled();
-  // The disabled button's wrapper is its focus stop; reaching it by keyboard opens the tip at once, where a hover
-  // waits out the delay and closes if the card moves under the pointer.
-  const stop = probe.locator('xpath=..');
-  await stop.focus();
-  await page.keyboard.press('Shift+Tab');
-  await page.keyboard.press('Tab');
-  await expect(stop).toBeFocused();
-  await expect(page.getByRole('tooltip')).toHaveText('Test all is not available for this group');
+  // The reason is a line under the card's header, in view on every width, and the button's description.
+  const reason = 'Test all is not available for this group';
+  await expect(page.getByRole('region', {name: 'resilient', exact: true}).getByText(reason, {exact: true})).toBeVisible();
+  await expect(probe).toHaveAccessibleDescription(reason);
 });

@@ -95,6 +95,20 @@ export function arrangeView(text: string, changes: GroupChange[], subscriptions:
   };
 }
 
+// Why a member's remove action is disabled, shown under the group's members: it is the group's last filter, and removing
+// it would make the group hold every node. Null while the page is locked (its own notice says why) or a change is being
+// applied.
+export function removeReason(group: Pick<ArrangeGroup, 'names' | 'subscriptions'>, locked: boolean): string | null {
+  if (locked) return null;
+  return [...group.names, ...group.subscriptions].find(item => item.blocked)?.blocked ?? null;
+}
+
+// Why the review's Apply is disabled, in the notice above the changes: the page cannot write first, then a new group that
+// would hold every node. Null while the changes can be applied.
+export function applyReason(blocked: string | null, emptyNew: string[], t: Translator): string | null {
+  return blocked ?? (emptyNew.length ? t('arrange.emptyNew', {group: emptyNew[0]}) : null);
+}
+
 // Whether the staged group already holds the item exactly, so adding it again would stage an edit that writes nothing.
 export function holds(group: ArrangeGroup | undefined, item: Placeable): boolean {
   if (!group) return false;
