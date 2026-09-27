@@ -120,6 +120,7 @@ export const messages = {
   'config.newSourcePath': '路径',
   'config.newSourceCreate': '创建',
   'config.newSourceCreated': '{path} 已创建，配置已重载',
+  'config.newSourceFailed': '无法创建 {path}',
   'config.newSourceUnmatched': '主配置 include 区段中没有匹配此路径的模式，因此后端会拒绝创建。',
   'config.newSourceAbsolute': '请使用相对于主配置目录的路径',
   'config.newSourceSegments': '路径不能包含空段、. 或 ..',

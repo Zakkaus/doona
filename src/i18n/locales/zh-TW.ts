@@ -119,6 +119,7 @@ export const messages = {
   'config.newSourcePath': '路徑',
   'config.newSourceCreate': '建立',
   'config.newSourceCreated': '{path} 已建立，組態已重載',
+  'config.newSourceFailed': '無法建立 {path}',
   'config.newSourceUnmatched': '主組態 include 區段中沒有符合此路徑的樣式，因此後端會拒絕建立。',
   'config.newSourceAbsolute': '請使用相對於主組態目錄的路徑',
   'config.newSourceSegments': '路徑不可包含空段、. 或 ..',

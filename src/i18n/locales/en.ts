@@ -129,6 +129,7 @@ export const messages = {
   'config.newSourcePath': 'Path',
   'config.newSourceCreate': 'Create',
   'config.newSourceCreated': '{path} created, configuration reloaded',
+  'config.newSourceFailed': 'Could not create {path}',
   'config.newSourceUnmatched': 'No include pattern of the main configuration matches this path, so the backend will refuse it.',
   'config.newSourceAbsolute': "Use a path relative to the main configuration's directory",
   'config.newSourceSegments': 'Path segments cannot be empty, . or ..',

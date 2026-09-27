@@ -3,7 +3,8 @@ import {useT} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import {errorText} from '../../api/error';
 import {useConfigCreate} from '../../store';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
+import {useDialogSession} from '../../shell/draft';
 import {includeDirectory, includedBy, includePatterns, namePatterns, newSourceNameProblem, newSourcePathProblem} from '../../dae/newSource';
 
 export type NewSourceProps = {
@@ -25,29 +26,38 @@ export function useNewSource({sources, contentOffered, refetch, open}: NewSource
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
   const {busy, create} = useConfigCreate(refetch);
+  const session = useDialogSession();
   const text = draft?.text ?? '';
   const choice = choices.find(item => item.pattern === draft?.pattern) ?? null;
   const value = choice ? choice.prefix + text + choice.suffix : text;
   const invalid = !text ? null : choice ? newSourceNameProblem(text, choice) : newSourcePathProblem(text);
   const submit = async (close: () => void) => {
     if (!text || invalid || busy) return;
+    // The dialog can close while the create is pending; its outcome then leaves any dialog opened since alone.
+    const current = session.start();
     try {
       const created = await create(value);
       if (!created) return;
-      close();
       toast('positive', t('config.newSourceCreated', {path: value}));
+      if (!current()) return;
+      close();
       if (created.id) open(created.id);
     } catch (error) {
-      setProblem(prev => ({id: (prev?.id ?? 0) + 1, text: errorText(error, t)}));
+      if (current()) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text: errorText(error, t)}));
+      else toastFailure(error, t, t('config.newSourceFailed', {path: value}));
     }
   };
   return {
     isOpen: draft !== null,
     show: () => {
+      session.next();
       setProblem(null);
       setDraft({text: choices.length ? '' : includeDirectory(patterns ?? []), pattern: choices[0]?.pattern ?? ''});
     },
-    hide: () => setDraft(null),
+    hide: () => {
+      session.next();
+      setDraft(null);
+    },
     choices,
     choice,
     setChoice: (pattern: string) => setDraft(prev => prev && {...prev, pattern}),
