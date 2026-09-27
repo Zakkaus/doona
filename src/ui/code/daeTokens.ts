@@ -44,9 +44,13 @@ export function daeToken(stream: Stream, state: DaeState): DaeToken {
   return null;
 }
 
+// Plain fields rather than a parameter property, so Node can strip the types when the docs build imports this file.
 class LineStream implements Stream {
   pos = 0;
-  constructor(readonly string: string) {}
+  readonly string: string;
+  constructor(string: string) {
+    this.string = string;
+  }
   sol() {
     return this.pos === 0;
   }
