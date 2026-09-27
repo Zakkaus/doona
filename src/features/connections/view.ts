@@ -67,6 +67,10 @@ export function toggleGroup(state: GroupCollapse, group: string): GroupCollapse 
   if (!exceptions.delete(group)) exceptions.add(group);
   return {allCollapsed: state.allCollapsed, exceptions};
 }
+export const expandGroup = (state: GroupCollapse, group: string) => (isCollapsed(state, group) ? toggleGroup(state, group) : state);
+// Source groups key on the address without the port, so one client is one group.
+export const groupKey = (row: Connection, group: Exclude<ConnectionView['group'], 'none'>, t: LabelFn) =>
+  group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : outboundLabel(row.outbound, t);
 
 export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
@@ -129,10 +133,9 @@ export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn):
     });
   }
   if (view.group === 'none') return sorted.map(connection => ({id: connection.id, connection}));
-  // Source groups key on the address without the port, so one client is one group.
   const groups = new Map<string, Connection[]>();
   for (const row of sorted) {
-    const key = view.group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : outboundLabel(row.outbound, t);
+    const key = groupKey(row, view.group, t);
     const group = groups.get(key);
     if (group) group.push(row);
     else groups.set(key, [row]);
