@@ -39,7 +39,7 @@ export function Events() {
     ],
     [t]
   );
-  // A phone keeps only the summary column and cuts it; a pressed row shows the whole event.
+  // The summary column cuts a long summary; a pressed row shows the whole event.
   const detail = useCallback(
     (event: EventRow) => (
       <Kv

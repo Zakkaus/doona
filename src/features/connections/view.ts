@@ -42,7 +42,7 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
   ];
 }
 
-// `drop` orders which columns give way first when the table is narrower than the minima (see fitColumns);
+// `drop` orders which columns give way first when a table wider than a phone is narrower than the minima (see fitColumns);
 // the target column always stays.
 export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; align?: 'end'; drop?: number}> = [
   {id: 'dst', label: 'ui.target', minWidth: 200, sortable: true},

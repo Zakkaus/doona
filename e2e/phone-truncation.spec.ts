@@ -1,13 +1,16 @@
 import type {Locator, Page} from '@playwright/test';
-import {expect, fulfillStream, mockBackend, test} from './fixtures';
+import {expect, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixtures';
 
-// At phone width the Events and Logs tables keep one text column and cut it; a pressed row discloses the whole record
+// A column still cuts text wider than itself, on a phone as elsewhere; a pressed row discloses the whole record
 // under the table (DataTable `detail`), by pointer or by Enter and Space on the focused row.
 test.use({viewport: {width: 390, height: 844}, storage: {'doona-lang': 'en'}});
 
 const cut = (cell: Locator) => cell.locator('.rp-truncate').evaluate(el => el.scrollWidth > el.clientWidth);
 
 async function disclose(page: Page, grid: Locator, text: string) {
+  // The text column comes last; a phone scrolls to it before the grid renders it.
+  await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+  await scrollTableToEnd(grid);
   const row = grid.getByRole('row').filter({hasText: text.slice(0, 20)});
   await expect(row).toHaveCount(1);
   expect(await cut(row.getByRole('rowheader')), 'the message is cut in the table').toBe(true);
@@ -90,18 +93,19 @@ test.describe('by touch', () => {
   test.use({viewport: {width: 320, height: 640}, hasTouch: true, isMobile: true, storage: {'doona-lang': 'zh-CN'}});
   test('a tapped Logs row discloses its whole message', async ({page}) => {
     await logRow(page);
-    const row = page
-      .getByRole('grid', {name: '日志', exact: true})
-      .getByRole('row')
-      .filter({hasText: logText.slice(0, 20)});
+    const grid = page.getByRole('grid', {name: '日志', exact: true});
+    await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+    await scrollTableToEnd(grid);
+    const row = grid.getByRole('row').filter({hasText: logText.slice(0, 20)});
     await expect(row).toHaveCount(1);
     expect(await cut(row.getByRole('rowheader')), 'the message is cut in the table').toBe(true);
     const detail = page.locator('.rp-table-detail');
     await expect(detail).toBeEmpty();
-    await row.tap();
+    // Tap the message itself: a tap on the row's middle would scroll the grid back to where the message is not drawn.
+    await row.getByRole('rowheader').tap();
     await expect(row).toHaveAttribute('aria-selected', 'true');
     await expect(detail).toContainText(logText);
-    await row.tap();
+    await row.getByRole('rowheader').tap();
     await expect(detail).toBeEmpty();
   });
 });

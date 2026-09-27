@@ -1,4 +1,4 @@
-import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixtures';
 
 test('logs filter the stream, pause incoming rows, export and clear', async ({page}) => {
   const {api} = await mockBackend(page);
@@ -80,6 +80,8 @@ test('phone logs keep the message visible and reveal its full text and fields', 
   const grid = page.getByRole('grid', {name: 'Logs', exact: true});
   // The activity heatmap sits above the list; on a phone the list starts below it.
   await grid.scrollIntoViewIfNeeded();
+  await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+  await scrollTableToEnd(grid);
   await expect(grid.getByRole('columnheader', {name: /^Message /})).toBeInViewport({ratio: 1});
   // The truncated cell carries the tooltip once it has measured its overflow.
   const cell = grid.getByRole('rowheader').locator('.rp-truncate');

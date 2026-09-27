@@ -55,11 +55,17 @@ test('narrow tables retain readable columns and stop scrolling after a desktop r
   const table = page.locator('.rp-table');
   const domain = table.getByRole('rowheader').first();
   await expect(domain).toBeVisible();
-  await expect.poll(() => table.evaluate(el => el.scrollWidth - el.clientWidth)).toBeGreaterThan(0);
+  // Once virtualised, the grid scrolls itself rather than its container.
+  const overflow = () =>
+    table.evaluate(el => {
+      const scroller = el.querySelector<HTMLElement>(':scope > div[role=grid]') ?? el;
+      return scroller.scrollWidth - scroller.clientWidth;
+    });
+  await expect.poll(overflow).toBeGreaterThan(0);
   expect(await domain.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(160);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   await page.setViewportSize({width: 1024, height: 1400});
-  await expect.poll(() => table.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
+  await expect.poll(overflow).toBe(0);
   expect(await domain.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(160);
 });
 

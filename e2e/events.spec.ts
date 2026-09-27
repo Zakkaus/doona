@@ -1,4 +1,4 @@
-import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixtures';
 
 test('event kind selection exports only the visible records', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
@@ -47,6 +47,8 @@ test('runtime heartbeats cannot evict other events from the default feed or expo
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/events');
   const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+  await scrollTableToEnd(grid);
   const summary = grid.getByRole('columnheader', {name: /^Summary /});
   await expect(summary).toBeInViewport({ratio: 1});
   await expect(grid.getByRole('rowheader')).toHaveText([data.instance_id]);
@@ -97,7 +99,10 @@ test('a long gap summary on a phone keeps its help button in view', async ({page
   );
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/events');
-  const cell = page.getByRole('grid', {name: 'Events', exact: true}).getByRole('rowheader');
+  const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+  await scrollTableToEnd(grid);
+  const cell = grid.getByRole('rowheader');
   await expect(cell).toContainText(id);
   const help = cell.getByRole('button', {name: 'About records reached the retention limit', exact: true});
   await expect(help).toBeInViewport({ratio: 1});

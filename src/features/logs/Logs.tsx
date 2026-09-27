@@ -51,7 +51,7 @@ export function Logs() {
     ],
     [t]
   );
-  // A phone keeps the level and message and cuts the message; a pressed row shows the whole record.
+  // The message column cuts a long message; a pressed row shows the whole record.
   const detail = useCallback(
     (record: LogRow) => (
       <Kv

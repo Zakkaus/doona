@@ -83,6 +83,15 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
 export const faults = {'doona-mock-scenario': 'faults'};
 
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
+// A phone keeps every column and scrolls the table sideways, the container around a native table and the grid itself
+// once virtualised; this brings the trailing columns into view.
+export async function scrollTableToEnd(grid: Locator) {
+  await grid.evaluate(el => {
+    const scroller = el.tagName === 'TABLE' ? el.parentElement! : el;
+    scroller.scrollLeft = scroller.scrollWidth;
+  });
+}
+
 export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
 // The language and scheme the page takes from its next load.
 export const setAppearance = (page: Page, lang: string, scheme: string) =>
