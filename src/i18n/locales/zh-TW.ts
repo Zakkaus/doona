@@ -577,7 +577,7 @@ export const messages = {
   'ov.lim.title': '未開啟的功能',
   'ov.lim.why': '可能原因',
   'ov.lim.howTo': '開啟方法',
-  'ov.lim.h.configNotLoaded': '讀不到組態',
+  'ov.lim.h.configNotLoaded': '無法讀取組態',
   'ov.lim.h.configReadOnly': '組態為唯讀',
   'ov.lim.h.mainReadOnly': '無法編輯節點與來源',
   'ov.lim.h.recordOff': '組態中關閉了 {n} 項記錄',
