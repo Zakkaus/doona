@@ -46,6 +46,8 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 
 doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Extract them into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`.
 
+Until honk publishes a release with the native API, each doona release also attaches prebuilt `honk-core-debug-<target>[-stock].tar.gz` archives from that `debug` release, so no one needs to compile honk. `HONK-SOURCE.txt` names the honk commit they were built from. [Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which archive fits a gateway.
+
 The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
 ## Pages
