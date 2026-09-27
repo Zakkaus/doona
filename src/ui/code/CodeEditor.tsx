@@ -66,7 +66,9 @@ const theme = EditorView.theme({
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     lineHeight: '20px',
     maxHeight: '70vh',
-    fontVariantLigatures: 'none'
+    fontVariantLigatures: 'none',
+    // Clip the opaque gutter to the frame's corners; tooltips live outside the scroller and are not clipped.
+    borderRadius: 'calc(var(--rp-r-md) - 1px)'
   },
   '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
   '.cm-line': {padding: '0 12px'},
