@@ -55,6 +55,7 @@ export function level(stage: number) {
 
 export type GameText = {
   sign: string;
+  start: string;
   restart: string;
   result: (amount: string) => string;
   best: (amount: string) => string;
@@ -229,15 +230,17 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.lineJoin = 'round';
     g!.textAlign = 'center';
     if (!playing) {
-      // Under construction: a sign on two legs over the duck, between two cones.
+      // Under construction: a sign on two legs over a cone, a second cone to the right, and the duck on the left.
       const gi = Math.round(h / 2 + 64);
       const cx = Math.round(w / 2);
       g!.fillStyle = C.sub;
       g!.fillRect(cx - 213, gi, 426, 1.5);
       for (const x of [cx - 62, cx + 56]) shape(C.paper, () => g!.rect(x, gi - 76, 6, 76));
       shape(C.gold, () => g!.roundRect(cx - 96, gi - 128, 192, 52, 6));
-      say(text.sign, cx, gi - 96, C.ink, 16, 168);
-      for (const x of [cx - 139, cx + 139]) {
+      g!.textBaseline = 'middle';
+      say(text.sign, cx, gi - 102, C.ink, 16, 168);
+      g!.textBaseline = 'alphabetic';
+      for (const x of [cx, cx + 139]) {
         shape(C.cone, () => {
           g!.moveTo(x - 13, gi);
           g!.lineTo(x - 3, gi - 32);
@@ -247,7 +250,8 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
         });
         shape(C.paper, () => g!.rect(x - 8, gi - 18, 16, 5));
       }
-      duck(cx, gi - IDLE_HEIGHT / 2, IDLE_HEIGHT, 0);
+      duck(cx - 139, gi - IDLE_HEIGHT / 2, IDLE_HEIGHT, 0);
+      if (!reduce.matches) say(text.start, cx, gi + 40, C.sub);
       return;
     }
     g!.fillStyle = C.sub;
@@ -369,7 +373,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       restyle();
       // Canvas text doesn't fetch the web font's unicode-range subsets the page hasn't shown yet, so these strings would
       // draw in a fallback font; load the subsets they need and draw again.
-      const glyphs = [next.sign, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
+      const glyphs = [next.sign, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
       Promise.all([500, 600].map(weight => document.fonts.load(`${weight} 16px ${font}`, glyphs))).then(
         () => {
           if (text === next) draw();

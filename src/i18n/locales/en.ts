@@ -1269,6 +1269,7 @@ export const messages = {
   'login.demoNote': 'Demo account: {username}  Password: {password}',
   'login.gameLabel': 'Mini game: press to make the duck flap',
   'login.gameSign': 'Under construction',
+  'login.gameStart': 'Click to start',
   'login.gameRestart': 'Click or press Space to restart',
   'login.gameResult': 'Link down  {amount} forwarded',
   'login.gameBest': 'Best {amount}',
