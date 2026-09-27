@@ -188,6 +188,10 @@ test('a new build taking over offers Reload, which loads it', async ({context, p
   await page.reload();
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  // A chunk request that restarts the old build while the new one swaps it out keeps it running: Chromium stops an
+  // idle worker that DevTools is attached to, as Playwright's is, only while that swap is pending. So the new build
+  // would wait minutes for it.
+  await page.waitForLoadState('networkidle');
   await context.clearCookies({name: 'doona-pwa-update'});
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
