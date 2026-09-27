@@ -1,4 +1,4 @@
-import {ApiError, errorText} from '../../api/error';
+import {errorText} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -9,7 +9,7 @@ import {toast, useLinked} from '../../ui/ui';
 import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
 import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
-import {diagnosticRows, sourceView, wizardInitial, wizardRows} from './view';
+import {diagnosticRows, sourceView, wizardInitial, wizardRows, wizardUnder} from './view';
 import {useDraftGuard} from '../../shell/draft';
 const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
@@ -46,16 +46,20 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   // a draft to guard.
   const pending = dirty || (complete === true && !current.trim());
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
-  const guard = useDraftGuard(dirty, () => {
+  // Start over from the file as loaded now.
+  const reset = () => {
     setOrigin(main);
     setState(wizardInitial(main.content ?? ''));
     setFound(null);
-  });
+  };
+  const guard = useDraftGuard(dirty, reset);
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
-  // A save refused because the file changed on disk: the refetched file becomes the base, the form stays as typed.
-  const stale = editor.error instanceof ApiError && editor.error.status === 412;
-  useLinked(stale && main.content_sha256 !== origin.content_sha256 ? main : null, next => {
-    if (next) setOrigin(next);
+  // The file changed on disk under the form, whether a refetch or a refused save showed it. A changed form waits until
+  // the person keeps it over the new text or discards it.
+  const under = wizardUnder(dirty, origin, main);
+  const conflict = under === 'conflict';
+  useLinked(under === 'follow' ? main : null, next => {
+    if (next) reset();
   });
   const valid = validSubscriptions(state.subscriptions) && (!!current.trim() || validNetwork(state));
   const patch = (next: Partial<WizardState>) => {
@@ -66,7 +70,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const setSubscription = (index: number, value: Partial<WizardState['subscriptions'][number]>) =>
     patch({subscriptions: state.subscriptions.map((item, i) => (i === index ? {...item, ...value, raw: undefined} : item))});
   const apply = async () => {
-    if (busy || !valid) return;
+    if (busy || !valid || conflict) return;
     if (preview.error) {
       toast('negative', t('config.previewFailed'), {detail: errorText(preview.error, t)});
       return;
@@ -101,7 +105,10 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     patch,
     setSubscription,
     apply,
-    saveDisabled: !complete || !valid || busy || !pending,
+    conflict: conflict ? t('config.changedOnDisk') : null,
+    keep: () => setOrigin(main),
+    discard: reset,
+    saveDisabled: !complete || !valid || busy || !pending || conflict,
     saving: editor.busy === 'save',
     saveTip: complete === false ? t('config.incomplete') : undefined,
     writeHelp: current.trim() ? t('config.wizardWriteHelp', {path: label}) : null,

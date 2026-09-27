@@ -7,6 +7,7 @@ import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from '../../dae/setup';
 import {useWizard} from './useWizard';
+import {ChangedOnDisk} from './ChangedOnDisk';
 export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   const {
@@ -23,6 +24,9 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
     patch,
     setSubscription,
     apply,
+    conflict,
+    keep,
+    discard,
     saveDisabled,
     saving,
     saveTip,
@@ -142,6 +146,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
           ))}
         </div>
       )}
+      {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} discard={discard} />}
       <div className="rp-toolbar">
         <Button accent isDisabled={saveDisabled} isPending={saving} tip={saveTip} onPress={() => void apply()}>
           {t('config.save')}
