@@ -76,7 +76,14 @@ it('serves cumulative outbound counters independently of live connection bytes',
 
 it('serves a healthy honk by default and the seeded faults only in the faults scenario', async () => {
   const healthy = async (api: ReturnType<typeof createMockApi>) => {
-    const [datapath, nodes, flows, config, geodata] = await Promise.all([api.datapath(), api.nodes(), api.flows(), api.config(), api.geodata()]);
+    const [datapath, nodes, flows, config, geodata, dns] = await Promise.all([
+      api.datapath(),
+      api.nodes(),
+      api.flows(),
+      api.config(),
+      api.geodata(),
+      api.dnsLog({limit: 500})
+    ]);
     const levels = new Set<string>();
     const controller = new AbortController();
     const stream = api.subscribeLogs({level: 'trace', signal: controller.signal, onRecord: record => levels.add(record.level)});
@@ -89,10 +96,11 @@ it('serves a healthy honk by default and the seeded faults only in the faults sc
       flows: flows.dropped_records === '0',
       config: config.diagnostics.length === 0,
       logs: !levels.has('warn') && !levels.has('error'),
+      dns: dns.records.every(record => record.status === 'NOERROR' || record.status === 'NXDOMAIN'),
       geodata: geodata.required_codes!.geosite.every(code => lite.includes(code))
     };
   };
-  const all = {datapath: true, nodes: true, flows: true, config: true, logs: true, geodata: true};
+  const all = {datapath: true, nodes: true, flows: true, config: true, logs: true, dns: true, geodata: true};
   expect(await healthy(createMockApi())).toEqual(all);
   expect(await healthy(faultsApi())).toEqual(Object.fromEntries(Object.keys(all).map(key => [key, false])));
 });

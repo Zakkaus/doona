@@ -14,7 +14,8 @@ function dnsLogRecords(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows, faults)));
   return ring;
 }
-// Upstream timeouts and server failures belong to the faults scenario; NXDOMAIN and refused ad domains are answers.
+// Refused ad lookups, upstream timeouts and server failures belong to the faults scenario: the demo's dns section
+// rejects nothing, and its upstreams answer. NXDOMAIN is an answer.
 function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   let seed = 941;
   const next = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
@@ -24,7 +25,7 @@ function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   let age = 0;
   return Array.from({length: 480}, (_, i) => {
     age += 12 + Math.floor(next() * 24) + (i % 96 < 28 ? 4 : 32);
-    const denied = i % 73 === 0;
+    const denied = faults && i % 73 === 0;
     const domain = denied ? blocked[i % blocked.length] : domains[Math.floor(next() * (next() < 0.72 ? Math.min(domains.length, 16) : domains.length))];
     const name = domain.replace(/\.$/, '') + '.';
     const type = i % 4 === 0 ? 'AAAA' : 'A';
