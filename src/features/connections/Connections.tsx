@@ -2,7 +2,7 @@ import {
   Badge,
   Button,
   ConfirmButton,
-  ContextualHelp,
+  HelpRow,
   DetailPanel,
   Kv,
   LabeledSelect,
@@ -101,12 +101,11 @@ export function Connections(props: PageProps) {
         <DetailPanel open={!!cur} title={vm.detailTitle} onClose={() => vm.select(null)}>
           {cur && (
             <>
-              <span className="rp-help-row">
+              <HelpRow help={cur.stateHelp}>
                 <Light small tone={cur.tone}>
                   {cur.status}
                 </Light>
-                {cur.stateHelp && <ContextualHelp {...cur.stateHelp} />}
-              </span>
+              </HelpRow>
               {/* One button style for the actions; Close connection, the destructive one, always takes the last line. */}
               <div className="rp-cluster">
                 <div className="rp-cluster">

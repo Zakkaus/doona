@@ -1,7 +1,7 @@
 import {useId, type ReactNode, type Ref} from 'react';
 import {ChartDescription} from './charts/description';
 import {cx} from './cx';
-import {ContextualHelp, type Help} from './ContextualHelp';
+import {HelpRow, type Help} from './ContextualHelp';
 
 // The card surface's class, for a react-aria element that has to be the card itself (a drop zone) and a form that is
 // one. Extra classes lay out what the card holds.
@@ -65,24 +65,19 @@ export function Card({
   const headingId = titleId ?? ownTitleId;
   const Heading = level === 2 ? 'h2' : 'h3';
   const titled = title != null && !tile;
+  const named = title != null && (
+    <Heading className="rp-h3" id={headingId}>
+      {title}
+    </Heading>
+  );
   const heading = tile ? (
     <TileHead {...tile} label={title}>
       {tile.kind === 'metric' && aside}
     </TileHead>
+  ) : help && named ? (
+    <HelpRow help={help}>{named}</HelpRow>
   ) : (
-    title != null &&
-    (help ? (
-      <div className="rp-help-row">
-        <Heading className="rp-h3" id={headingId}>
-          {title}
-        </Heading>
-        <ContextualHelp {...help} />
-      </div>
-    ) : (
-      <Heading className="rp-h3" id={headingId}>
-        {title}
-      </Heading>
-    ))
+    named
   );
   return (
     <section

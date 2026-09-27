@@ -21,7 +21,7 @@ import {
   Empty,
   Card,
   cardClass,
-  ContextualHelp,
+  HelpRow,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
@@ -213,10 +213,9 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
         <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} isInvalid={!!vm.srcError} placeholder="10.0.0.12" width={160} />
         {vm.total && (
-          <span className="rp-help-row">
+          <HelpRow help={vm.totalHelp}>
             <span className="rp-label">{vm.total}</span>
-            {vm.totalHelp && <ContextualHelp {...vm.totalHelp} />}
-          </span>
+          </HelpRow>
         )}
         {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
         <span className="rp-grow" />
