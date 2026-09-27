@@ -1,7 +1,7 @@
-import {test as httpTest, type Locator, type Page} from '@playwright/test';
+import {test as httpTest, type Locator, type Page, type Route} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted} from './fixtures';
 import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -1195,6 +1195,49 @@ test('a new file in the include directory is created empty and opens in the sour
   await name.fill('work');
   await create.click();
   await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
+});
+
+// Holds every create request until `release` runs, then answers it with `answer`.
+async function heldCreate(page: Page, answer: (route: Route, body: {path: string; content: string}, api: ReturnType<typeof createMockApi>) => Promise<void>) {
+  const {api} = await configBackend(page);
+  let release!: () => void;
+  const held = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/config/sources', async route => {
+    await held;
+    await answer(route, route.request().postDataJSON(), api);
+  });
+  await page.goto('/#/config?tab=source');
+  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  await dialog.getByLabel('Name', {exact: true}).fill('work');
+  const sent = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/config/sources'));
+  await dialog.getByRole('button', {name: 'Create', exact: true}).click();
+  await sent;
+  // Closed while the create is pending, then opened again; its field waits until that create settles.
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  await expect(dialog.getByLabel('Name', {exact: true})).toBeDisabled();
+  release();
+  return dialog;
+}
+
+test('a create refused after its dialog closed reports in a toast, not in the dialog opened since', async ({page}) => {
+  expectLoadFailures(page, /\/config\/sources$/);
+  const dialog = await heldCreate(page, route =>
+    route.fulfill({status: 409, json: {request_id: 'config-test', error: {code: 'state_conflict', message: 'Refused for the test'}}})
+  );
+  await expect(page.locator('.rp-toast.negative')).toContainText('Could not create config.d/work.dae');
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+  await dialog.getByLabel('Name', {exact: true}).fill('other');
+});
+
+test('a create that succeeds after its dialog closed leaves the dialog opened since', async ({page}) => {
+  const dialog = await heldCreate(page, async (route, body, api) => fulfillAccepted(route, await api.createConfigSource(body.path, body.content)));
+  await expect(page.locator('.rp-toast.positive')).toContainText('config.d/work.dae created, configuration reloaded');
+  await dialog.getByLabel('Name', {exact: true}).fill('other');
+  await expect(dialog).toBeVisible();
+  await expect(page).not.toHaveURL(/source=/);
 });
 
 test('a new file name is checked for what the path rules refuse', async ({page}) => {
