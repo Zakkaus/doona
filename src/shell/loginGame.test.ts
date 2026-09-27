@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {DUCK_HEIGHT, FLAP_HEIGHT, GAP_MIN, SPACE_MIN, SPEED_MAX, amountText, level, rate, rateText} from './loginGame';
+import {DUCK_HEIGHT, FLAP_HEIGHT, GAP_MIN, SPACE_MIN, SPEED_MAX, amountText, level, loadingDots, rate, rateText} from './loginGame';
 
 const stages = Array.from({length: 200}, (_, stage) => stage);
 
@@ -64,5 +64,11 @@ describe('the traffic', () => {
       '7.25 PB',
       '3000.00 PB'
     ]);
+  });
+});
+
+describe('the idle scene', () => {
+  it('shows all three dots on a still, then steps through none to three every half second', () => {
+    expect([0, 0.49, 0.5, 1, 1.5, 2, 2.5].map(loadingDots)).toEqual([3, 3, 0, 1, 2, 3, 0]);
   });
 });

@@ -1,16 +1,17 @@
 import {DUCK_BOX, DUCK_PATHS} from './loginDuck';
 
-// The showcase beside the sign-in form: an "under construction" scene that a press turns into Flappy Duck, flying
-// through the gaps in firewall walls while the forwarded traffic adds up. Difficulty rises without end but only
-// approaches limits the flap physics can still clear. Paused while hidden or off screen; a still idle scene under
-// reduced motion.
+// The showcase beside the sign-in form: a loading bar stuck at 99% that a press turns into Flappy Duck, flying through
+// the gaps in firewall walls while the forwarded traffic adds up. Difficulty rises without end but only approaches
+// limits the flap physics can still clear. Paused while hidden or off screen; a still idle scene under reduced motion.
 
 // Logical units, drawn at ZOOM css px each. DUCK_HEIGHT and IDLE_HEIGHT are the duck's height in flight and standing;
 // the physics runs in fixed STEP seconds. FLAP_HEIGHT is the height one flap gains, so a gap of DUCK_HEIGHT +
 // FLAP_HEIGHT can always be held; SPEED_MAX leaves one whole flap between walls at the tightest spacing.
 const ZOOM = 1.4;
 export const DUCK_HEIGHT = 52;
-const IDLE_HEIGHT = 64;
+const IDLE_HEIGHT = 72;
+// The dots after the loading label step every DOT_STEP ms.
+const DOT_STEP = 500;
 const STEP = 1 / 120;
 const GRAVITY = 1500;
 const FLAP = 430;
@@ -53,8 +54,14 @@ export function level(stage: number) {
   };
 }
 
+// How many dots follow the loading label after the given seconds: 3, 0, 1, 2 and round again, so a still shows all three.
+export function loadingDots(seconds: number) {
+  return (Math.floor((seconds * 1000) / DOT_STEP) + 3) % 4;
+}
+
 export type GameText = {
-  sign: string;
+  loading: string;
+  progress: string;
   start: string;
   restart: string;
   result: (amount: string) => string;
@@ -62,7 +69,7 @@ export type GameText = {
 };
 export type LoginGame = {setText: (text: GameText) => void; destroy: () => void};
 type Wall = {x: number; ox: number; gap: number; c0: number; c: number; oc: number; a: number; f: number; ph: number; done: boolean};
-type Colors = {ink: string; paper: string; yellow: string; text: string; sub: string; accent: string; wall: string; base: string; gold: string; cone: string};
+type Colors = {ink: string; paper: string; yellow: string; text: string; sub: string; accent: string; wall: string; base: string; bar: string};
 
 // Runs the scene and the game on the canvas inside the button until destroy. The text arrives through setText, and
 // onCrash hears each result for the live region.
@@ -97,6 +104,8 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
   let now = 0;
   let seen = true;
   let timer = 0;
+  let idle = 0;
+  const born = performance.now();
 
   function look(): Colors {
     // The panel's own style carries the palette from <html> and the duck's ink, paper and yellow, which stay the same on
@@ -113,8 +122,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       accent: token('--rp-accent'),
       wall: token('--rp-negative'),
       base: token('--rp-base'),
-      gold: token('--rp-gold'),
-      cone: token('--rp-rose')
+      bar: token('--rp-positive')
     };
   }
   function size() {
@@ -196,13 +204,13 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.fill();
     g!.stroke();
   }
-  // The duck, mirrored to face right, centred on (x, yc) and s tall.
-  function duck(x: number, yc: number, s: number, rot: number) {
+  // The duck, centred on (x, yc) and s tall, mirrored to face right unless left is set.
+  function duck(x: number, yc: number, s: number, rot: number, left = false) {
     const k = s / DUCK_BOX.height;
     g!.save();
     g!.translate(x, yc);
     g!.rotate(rot);
-    g!.scale(-k, k);
+    g!.scale(left ? k : -k, k);
     g!.translate(-(DUCK_BOX.x + DUCK_BOX.width / 2), -(DUCK_BOX.y + DUCK_BOX.height / 2));
     for (const [fill, path] of drawing) {
       g!.fillStyle = colors[fill];
@@ -210,7 +218,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     }
     g!.restore();
   }
-  // A width, when given, shrinks the text to fit it, so a long translation stays inside the sign.
+  // A width, when given, shrinks the text to fit it, so a long translation stays in its place.
   function say(s: string, x: number, yy: number, color: string, px?: number, width?: number) {
     g!.fillStyle = color;
     g!.font = `${px ? 600 : 500} ${px ?? 13}px ${font}`;
@@ -230,28 +238,28 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.lineJoin = 'round';
     g!.textAlign = 'center';
     if (!playing) {
-      // Under construction: a sign on two legs over a cone, a second cone to the right, and the duck on the left.
-      const gi = Math.round(h / 2 + 64);
+      // Loading: a bar one notch short of full on a stretch of ground, the label and 99% over it, and the duck to the
+      // right, turned to stare at the gap. Only the dots after the label move.
+      const gi = Math.round(h / 2 + 56);
       const cx = Math.round(w / 2);
+      const x = cx - 170;
+      const top = gi - 62;
+      const width = 250;
       g!.fillStyle = C.sub;
-      g!.fillRect(cx - 213, gi, 426, 1.5);
-      for (const x of [cx - 62, cx + 56]) shape(C.paper, () => g!.rect(x, gi - 76, 6, 76));
-      shape(C.gold, () => g!.roundRect(cx - 96, gi - 128, 192, 52, 6));
-      g!.textBaseline = 'middle';
-      say(text.sign, cx, gi - 102, C.ink, 16, 168);
-      g!.textBaseline = 'alphabetic';
-      for (const x of [cx, cx + 139]) {
-        shape(C.cone, () => {
-          g!.moveTo(x - 13, gi);
-          g!.lineTo(x - 3, gi - 32);
-          g!.lineTo(x + 3, gi - 32);
-          g!.lineTo(x + 13, gi);
-          g!.closePath();
-        });
-        shape(C.paper, () => g!.rect(x - 8, gi - 18, 16, 5));
-      }
-      duck(cx - 139, gi - IDLE_HEIGHT / 2, IDLE_HEIGHT, 0);
-      if (!reduce.matches) say(text.start, cx, gi + 40, C.sub);
+      g!.fillRect(cx - 190, gi, 380, 1.5);
+      shape(C.paper, () => g!.roundRect(x, top, width, 22, 11));
+      g!.fillStyle = C.bar;
+      g!.beginPath();
+      g!.roundRect(x + 4, top + 4, (width - 8) * 0.97, 14, 7);
+      g!.fill();
+      const dots = loadingDots(reduce.matches ? 0 : (performance.now() - born) / 1000);
+      g!.textAlign = 'right';
+      say(text.progress, x + width, top - 12, C.text, 15);
+      g!.textAlign = 'left';
+      say(text.loading + '...'.slice(0, dots), x, top - 12, C.text, 15, width - 48);
+      g!.textAlign = 'center';
+      duck(x + width + 56, gi - IDLE_HEIGHT / 2, IDLE_HEIGHT, -0.06, true);
+      if (!reduce.matches) say(text.start, cx, gi + 40, C.sub, undefined, 360);
       return;
     }
     g!.fillStyle = C.sub;
@@ -304,9 +312,12 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     run();
   }
   function run() {
+    window.clearTimeout(idle);
     if (reduce.matches) playing = false;
     if (!playing || down || reduce.matches || document.hidden || !seen) {
       last = 0;
+      // The idle scene redraws on the next dot step, and only while it can be seen and motion is allowed.
+      if (!playing && !reduce.matches && !document.hidden && seen) idle = window.setTimeout(run, DOT_STEP - ((performance.now() - born) % DOT_STEP) + 5);
       draw();
       return;
     }
@@ -373,7 +384,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       restyle();
       // Canvas text doesn't fetch the web font's unicode-range subsets the page hasn't shown yet, so these strings would
       // draw in a fallback font; load the subsets they need and draw again.
-      const glyphs = [next.sign, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
+      const glyphs = [next.loading, '.', next.progress, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
       Promise.all([500, 600].map(weight => document.fonts.load(`${weight} 16px ${font}`, glyphs))).then(
         () => {
           if (text === next) draw();
@@ -385,6 +396,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       text = undefined;
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
+      window.clearTimeout(idle);
       button.removeEventListener('pointerdown', onPointer);
       button.removeEventListener('keydown', onKey);
       button.removeEventListener('click', onClick);
