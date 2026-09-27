@@ -1162,7 +1162,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/schema'
+                $ref: '#/components/schemas/ConfigDiagnosticsErrorResponse'
               examples:
                 not_included:
                   value:
@@ -1490,33 +1490,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/ErrorResponse'
-                  - type: object
-                    properties:
-                      error:
-                        type: object
-                        required:
-                          - details
-                        properties:
-                          code:
-                            const: unsupported_value
-                          details:
-                            type: object
-                            required:
-                              - diagnostics
-                            properties:
-                              diagnostics:
-                                type: array
-                                items:
-                                  $ref: '#/components/schemas/ConfigDiagnostic'
-                                contains:
-                                  type: object
-                                  required:
-                                    - level
-                                  properties:
-                                    level:
-                                      const: error
+                $ref: '#/components/schemas/ConfigDiagnosticsErrorResponse'
               examples:
                 invalid:
                   value:
@@ -7701,6 +7675,35 @@ components:
         end_column:
           $ref: '#/components/schemas/SafeUInt'
           minimum: 1
+    ConfigDiagnosticsErrorResponse:
+      description: unsupported_value error whose details.diagnostics holds at least one error-level diagnostic.
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              type: object
+              required:
+                - details
+              properties:
+                code:
+                  const: unsupported_value
+                details:
+                  type: object
+                  required:
+                    - diagnostics
+                  properties:
+                    diagnostics:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ConfigDiagnostic'
+                      contains:
+                        type: object
+                        required:
+                          - level
+                        properties:
+                          level:
+                            const: error
     ConfigValidationMode:
       type: string
       enum:
@@ -12532,34 +12535,6 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/SafeError'
-    schema:
-      allOf:
-        - $ref: '#/components/schemas/ErrorResponse'
-        - type: object
-          properties:
-            error:
-              type: object
-              required:
-                - details
-              properties:
-                code:
-                  const: unsupported_value
-                details:
-                  type: object
-                  required:
-                    - diagnostics
-                  properties:
-                    diagnostics:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/ConfigDiagnostic'
-                      contains:
-                        type: object
-                        required:
-                          - level
-                        properties:
-                          level:
-                            const: error
   examples:
     FlowUpdated:
       summary: Flow revision notification

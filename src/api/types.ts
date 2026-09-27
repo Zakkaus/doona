@@ -1624,6 +1624,16 @@ export interface components {
             end_line: components["schemas"]["SafeUInt"];
             end_column: components["schemas"]["SafeUInt"];
         };
+        /** @description unsupported_value error whose details.diagnostics holds at least one error-level diagnostic. */
+        ConfigDiagnosticsErrorResponse: components["schemas"]["ErrorResponse"] & {
+            error?: {
+                /** @constant */
+                code?: "unsupported_value";
+                details: {
+                    diagnostics: components["schemas"]["ConfigDiagnostic"][];
+                };
+            };
+        };
         /** @enum {string} */
         ConfigValidationMode: "syntax" | "full";
         ConfigValidationSource: {
@@ -3263,15 +3273,6 @@ export interface components {
             } | null;
             error: null | components["schemas"]["SafeError"];
         };
-        schema: components["schemas"]["ErrorResponse"] & {
-            error?: {
-                /** @constant */
-                code?: "unsupported_value";
-                details: {
-                    diagnostics: components["schemas"]["ConfigDiagnostic"][];
-                };
-            };
-        };
     };
     responses: {
         /** @description Unknown source ID or unavailable configuration readback */
@@ -3946,7 +3947,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["schema"];
+                    "application/json": components["schemas"]["ConfigDiagnosticsErrorResponse"];
                 };
             };
             429: components["responses"]["RateLimited"];
@@ -4081,15 +4082,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"] & {
-                        error?: {
-                            /** @constant */
-                            code?: "unsupported_value";
-                            details: {
-                                diagnostics: components["schemas"]["ConfigDiagnostic"][];
-                            };
-                        };
-                    };
+                    "application/json": components["schemas"]["ConfigDiagnosticsErrorResponse"];
                 };
             };
             /** @description If-Match is required; nothing is written */
