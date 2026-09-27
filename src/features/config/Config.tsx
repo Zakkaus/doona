@@ -60,27 +60,32 @@ export function Config(props: PageProps) {
     source: (
       <>
         <div className="rp-toolbar">
-          <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
-          {sourceModel && (
-            <>
-              {sourceModel.readOnly && (
-                <span className="rp-help-row">
-                  <Badge>{sourceModel.readOnly.label}</Badge>
-                  {sourceModel.readOnly.help && <ContextualHelp {...sourceModel.readOnly.help} />}
-                </span>
+          <span className="rp-cluster nowrap rp-source-pick">
+            <LabeledSelect side cut="start" label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
+            {sourceModel && (
+              <>
+                {sourceModel.readOnly && (
+                  <span className="rp-help-row">
+                    <Badge>{sourceModel.readOnly.label}</Badge>
+                    {sourceModel.readOnly.help && <ContextualHelp {...sourceModel.readOnly.help} />}
+                  </span>
+                )}
+                <TextTooltip className="rp-label" text={sourceModel.loaded}>
+                  {sourceModel.facts}
+                </TextTooltip>
+              </>
+            )}
+          </span>
+          {(newSourceProps || sourceModel?.hasContent) && (
+            <span className="rp-cluster nowrap">
+              {newSourceProps && <NewSource {...newSourceProps} />}
+              {sourceModel?.hasContent && (
+                <Button onPress={exportSource}>
+                  <Download />
+                  {t('config.export')}
+                </Button>
               )}
-              <TextTooltip className="rp-label" text={sourceModel.loaded}>
-                {sourceModel.facts}
-              </TextTooltip>
-            </>
-          )}
-          {(newSourceProps || sourceModel?.hasContent) && <span className="rp-grow" />}
-          {newSourceProps && <NewSource {...newSourceProps} />}
-          {sourceModel?.hasContent && (
-            <Button onPress={exportSource}>
-              <Download />
-              {t('config.export')}
-            </Button>
+            </span>
           )}
         </div>
         {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
@@ -291,7 +296,7 @@ function SourceCard(props: SourceCardProps) {
   } = useSourceCard(props);
   return (
     <Card aria-label={view.label}>
-      <div className="rp-row">
+      <div className="rp-row rp-source-note">
         <span className="rp-cluster">
           {dirty ? (
             <>
@@ -302,23 +307,25 @@ function SourceCard(props: SourceCardProps) {
             view.hasContent && <span className="rp-label">{note}</span>
           )}
         </span>
-        <span className="rp-cluster">
-          {canValidate && (
-            <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
-              {t('config.validate')}
-            </Button>
-          )}
-          {dirty && (
-            <>
-              <Button isDisabled={busy} onPress={cancel}>
-                {t('ui.cancel')}
+        {(canValidate || dirty) && (
+          <span className="rp-cluster nowrap">
+            {canValidate && (
+              <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
+                {t('config.validate')}
               </Button>
-              <Button accent isPending={saving} isDisabled={saveButton.disabled} tip={saveButton.tip} onPress={() => void save()}>
-                {t('config.save')}
-              </Button>
-            </>
-          )}
-        </span>
+            )}
+            {dirty && (
+              <>
+                <Button isDisabled={busy} onPress={cancel}>
+                  {t('ui.cancel')}
+                </Button>
+                <Button accent isPending={saving} isDisabled={saveButton.disabled} tip={saveButton.tip} onPress={() => void save()}>
+                  {t('config.save')}
+                </Button>
+              </>
+            )}
+          </span>
+        )}
       </div>
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>

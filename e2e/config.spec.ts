@@ -48,6 +48,28 @@ test('the editor starts at the same height for writable and read-only sources', 
   expect(Math.abs(writable - readOnly)).toBeLessThanOrEqual(1);
 });
 
+// The badge, the facts and the Validate button must not move a line break above the editor; the note's own text is
+// per-source copy that wraps as it needs, so its height is taken out.
+for (const width of [390, 768, 1440])
+  test(`at ${width}px the rows above the editor keep their lines for writable and read-only sources`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/config?tab=source');
+    const bar = page.locator('.rp-toolbar').filter({has: page.locator('.rp-selectbtn')});
+    const rows = async (path: string) => {
+      await expect(page.locator(`.cm-content[aria-label="${path}"]`)).toBeVisible();
+      const toolbar = (await bar.boundingBox())!;
+      const note = (await page.locator('.rp-card > .rp-row').first().boundingBox())!;
+      const text = (await page.locator('.rp-card > .rp-row > :first-child').first().boundingBox())!;
+      return {toolbar: toolbar.height, note: note.height - text.height};
+    };
+    const writable = await rows('/etc/honk/config.dae');
+    await page.getByRole('button', {name: /Source/}).click();
+    await page.getByRole('option', {name: /sub-c\.dae/}).click();
+    const readOnly = await rows('/var/lib/honk/subscriptions/sub-c.dae');
+    expect(Math.abs(readOnly.toolbar - writable.toolbar)).toBeLessThanOrEqual(1);
+    expect(Math.abs(readOnly.note - writable.note)).toBeLessThanOrEqual(1);
+  });
+
 test('a generated source names why it is read-only and offers no validation', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-generated');
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]')).toContainText('skylink');

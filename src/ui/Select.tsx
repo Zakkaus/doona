@@ -25,10 +25,10 @@ import {useMediaQuery} from './hooks';
 import {useT} from '../i18n';
 
 type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
-const ItemLabel = ({i}: {i: Item}) => (
+const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
   <span className="rp-il">
     {i.icon && <span className="ic">{i.icon}</span>}
-    <TextTooltip>{i.label}</TextTooltip>
+    <TextTooltip cut={cut}>{i.label}</TextTooltip>
   </span>
 );
 const ItemBody = ({i}: {i: Item}) => (
@@ -46,8 +46,9 @@ function SelectBody({
   label,
   isDisabled,
   className,
-  layout
-}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'}) {
+  layout,
+  cut
+}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start'}) {
   return (
     <Select
       aria-label={layout ? undefined : label}
@@ -60,7 +61,7 @@ function SelectBody({
     >
       {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
       <RButton className={className}>
-        <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} /> : value)}</SelectValue>
+        <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} cut={cut} /> : value)}</SelectValue>
         <ChevronDown />
       </RButton>
       <Popover className="rp-popover" placement="bottom start">
@@ -413,7 +414,8 @@ export function LabeledSelect({
   onChange,
   isDisabled,
   side,
-  bare
+  bare,
+  cut
 }: {
   label: string;
   items: Item[];
@@ -422,6 +424,8 @@ export function LabeledSelect({
   isDisabled?: boolean;
   side?: boolean;
   bare?: boolean;
+  // Where the shown value ellipsises when the picker is narrower than it, as TextTooltip's `cut`.
+  cut?: 'start';
 }) {
   return (
     <SelectBody
@@ -432,6 +436,7 @@ export function LabeledSelect({
       isDisabled={isDisabled}
       className="rp-selectbtn"
       layout={bare ? undefined : side ? 'side' : 'field'}
+      cut={cut}
     />
   );
 }
