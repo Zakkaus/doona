@@ -47,7 +47,7 @@ test('an Events row discloses its whole summary', async ({page}) => {
   await disclose(page, page.getByRole('grid', {name: 'Events', exact: true}), 'flows-recorder-primary, reason: buffer overflow, records dropped: 12');
 });
 
-test('a Logs row discloses its whole message', async ({page}) => {
+async function logRow(page: Page) {
   const {api} = await mockBackend(page);
   const runtime = await api.runtime();
   const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
@@ -73,7 +73,33 @@ test('a Logs row discloses its whole message', async ({page}) => {
     ]);
   });
   await page.goto('/#/logs');
-  await disclose(page, page.getByRole('grid', {name: 'Logs', exact: true}), 'Health check failed. node=jp-01 error=connect timeout after 5000 ms');
+}
+const logText = 'Health check failed. node=jp-01 error=connect timeout after 5000 ms';
+
+test('a Logs row discloses its whole message', async ({page}) => {
+  await logRow(page);
+  await disclose(page, page.getByRole('grid', {name: 'Logs', exact: true}), logText);
+});
+
+// A phone has no pointer: the narrowest supported width, a CJK locale, and a tap.
+test.describe('by touch', () => {
+  test.use({viewport: {width: 320, height: 640}, hasTouch: true, isMobile: true, storage: {'doona-lang': 'zh-CN'}});
+  test('a tapped Logs row discloses its whole message', async ({page}) => {
+    await logRow(page);
+    const row = page
+      .getByRole('grid', {name: '日志', exact: true})
+      .getByRole('row')
+      .filter({hasText: logText.slice(0, 20)});
+    await expect(row).toHaveCount(1);
+    expect(await cut(row.getByRole('rowheader')), 'the message is cut in the table').toBe(true);
+    const detail = page.locator('.rp-table-detail');
+    await expect(detail).toBeEmpty();
+    await row.tap();
+    await expect(row).toHaveAttribute('aria-selected', 'true');
+    await expect(detail).toContainText(logText);
+    await row.tap();
+    await expect(detail).toBeEmpty();
+  });
 });
 
 test('the DNS log keeps its relative time whole', async ({page}) => {
