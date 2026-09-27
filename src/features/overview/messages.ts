@@ -76,7 +76,6 @@ export const messages = defineMessages({
       '在組態加入以下設定，並在 password_auth: true 與 secret 中擇一設定，然後重新啟動 honk。honk 載入組態期間或儲存區阻擋寫入時，仍無法寫入。',
     'ov.lim.recordOff': '這些記錄預設為開啟。在組態加入以下設定，然後重新啟動 honk。',
     'ov.lim.mainReadOnly': '主組態檔案含有 native API 或監聽器的密鑰，honk 不會寫回含密鑰的檔案。請將密鑰移至獨立的 include 檔案。',
-    'ov.lim.mainReadOnlyOther': '後端不允許編輯主組態檔案。',
     'ov.lim.geoNoAssets': '組態未載入任何 geosite 或 geoip 檔案。',
     'ov.lim.geoNoStateDb': 'honk 的狀態資料庫未開啟，因此沒有內建的下載網址。在組態加入以下兩個網址，然後重新啟動 honk。載入的檔案沒有磁碟路徑時，仍無法更新。',
     'ov.lim.geoNoUrl': '有載入的檔案沒有下載網址或磁碟路徑。',
@@ -219,7 +218,6 @@ export const messages = defineMessages({
     'ov.lim.configWrite': '在配置中加入以下设置，并在 password_auth: true 与 secret 中任选其一，然后重启 honk。honk 加载配置期间或存储阻止写入时，仍无法写入。',
     'ov.lim.recordOff': '这些记录默认为开启。在配置中加入以下设置，然后重启 honk。',
     'ov.lim.mainReadOnly': '主配置文件含有 native API 或监听器的密钥，honk 不会写回含密钥的文件。请将密钥移至单独的 include 文件。',
-    'ov.lim.mainReadOnlyOther': '后端不允许编辑主配置文件。',
     'ov.lim.geoNoAssets': '配置未加载任何 geosite 或 geoip 文件。',
     'ov.lim.geoNoStateDb': 'honk 的状态数据库未打开，因此没有内置的下载网址。在配置中加入以下两个网址，然后重启 honk。加载的文件没有磁盘路径时，仍无法更新。',
     'ov.lim.geoNoUrl': '有加载的文件没有下载网址或磁盘路径。',
@@ -364,7 +362,6 @@ export const messages = defineMessages({
     'ov.lim.recordOff': 'These recorders are on by default. Add the settings below to the configuration, then restart honk.',
     'ov.lim.mainReadOnly':
       'The main configuration file contains the native API secret or a listener secret, and honk does not write back a file with secrets. Move the secrets into their own include file.',
-    'ov.lim.mainReadOnlyOther': 'The backend does not allow editing the main configuration file.',
     'ov.lim.geoNoAssets': 'The configuration loads no geosite or geoip file.',
     'ov.lim.geoNoStateDb':
       "honk's state database did not open, so it has no built-in download URLs. Add the two URLs below to the configuration, then restart honk. A loaded file without a path on disk still cannot be updated.",

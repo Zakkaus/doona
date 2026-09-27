@@ -637,7 +637,6 @@ export const messages = {
   'ov.lim.recordOff': 'These recorders are on by default. Add the settings below to the configuration, then restart honk.',
   'ov.lim.mainReadOnly':
     'The main configuration file contains the native API secret or a listener secret, and honk does not write back a file with secrets. Move the secrets into their own include file.',
-  'ov.lim.mainReadOnlyOther': 'The backend does not allow editing the main configuration file.',
   'ov.lim.geoNoAssets': 'The configuration loads no geosite or geoip file.',
   'ov.lim.geoNoStateDb':
     "honk's state database did not open, so it has no built-in download URLs. Add the two URLs below to the configuration, then restart honk. A loaded file without a path on disk still cannot be updated.",

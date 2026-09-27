@@ -119,7 +119,8 @@ describe('backendLimits', () => {
       help: why('ov.lim.mainReadOnly', {href: docsHref('en', 'read-only'), text: t('ov.lim.docsReadOnly'), external: true}),
       items: [{id: 'manage', label: t('ov.lim.manage')}]
     });
-    expect(limits(patched({nodes: {can_manage: false}}), other)[0].help).toEqual(why('ov.lim.mainReadOnlyOther'));
+    // Another engine gives no reason, and can_manage false can also mean the endpoints are not implemented, so no cause is named.
+    expect(limits(patched({nodes: {can_manage: false}}), other)[0].help).toBeUndefined();
   });
 
   it('lists the geodata causes the capabilities cannot rule out', () => {
