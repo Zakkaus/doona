@@ -34,6 +34,23 @@ test('configuration sources list with the main source open, read-only ones canno
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toContainText('redacted');
 });
 
+test('a generated source names why it is read-only and offers no validation', async ({page}) => {
+  await page.goto('/#/config?tab=source&source=src-generated');
+  await expect(page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]')).toContainText('skylink');
+  const toolbar = page.locator('.rp-toolbar').nth(1);
+  await expect(toolbar.locator('.rp-badge')).toHaveText(['Generated']);
+  await toolbar.getByRole('button', {name: 'About Generated', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Generated'})).toContainText('The engine writes this file');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+  // The path is named once, by the picker; the card carries it only as its accessible name.
+  await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveCount(0);
+  await page.goto('/#/config?tab=source&source=src-main');
+  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeVisible();
+  await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveCount(0);
+});
+
 test('switching sources discards the draft after confirmation', async ({page}) => {
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
@@ -86,7 +103,7 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toHaveAttribute('contenteditable', 'false');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Lines: 8,');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('8 lines,');
 });
 
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
@@ -764,7 +781,9 @@ test('source withholding does not certify exports or diagnose the hidden include
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-content')).toContainText('Listener secret values are redacted');
-  await expect(page.locator('.rp-content')).toContainText('may contain credentials');
+  await page.getByRole('button', {name: 'About Export', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Export'})).toContainText('may contain credentials');
+  await page.keyboard.press('Escape');
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export', exact: true}).click();
   expect(await downloadText(await downloading)).toBe(main.content);
@@ -772,7 +791,7 @@ test('source withholding does not certify exports or diagnose the hidden include
   await page.getByRole('option', {name: /Include/}).click();
   await expect(page.locator('.rp-content')).toContainText('The backend did not return this source');
   await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
 });
 
 test('first-run setup writes the chosen listener and DNS endpoints', async ({page}) => {
