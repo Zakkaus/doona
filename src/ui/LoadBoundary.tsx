@@ -1,7 +1,9 @@
 import {Component, type ReactNode} from 'react';
 import {ErrorMessage} from './Feedback';
 
-export class LoadBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
+// A lazy part that fails to load reports it with a retry. `fallback` stands in silently instead, for a part the page
+// works without.
+export class LoadBoundary extends Component<{children: ReactNode; fallback?: ReactNode}, {error: Error | null}> {
   override state: {error: Error | null} = {error: null};
 
   static getDerivedStateFromError(error: unknown) {
@@ -10,6 +12,7 @@ export class LoadBoundary extends Component<{children: ReactNode}, {error: Error
 
   override render() {
     // Reload clears both React.lazy's rejected promise and the browser's failed module entry.
-    return this.state.error ? <ErrorMessage error={this.state.error} onRetry={() => location.reload()} /> : this.props.children;
+    if (!this.state.error) return this.props.children;
+    return this.props.fallback ?? <ErrorMessage error={this.state.error} onRetry={() => location.reload()} />;
   }
 }

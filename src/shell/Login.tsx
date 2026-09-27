@@ -3,13 +3,16 @@ import {useT, type Lang} from '../i18n';
 import {useLogin} from './useLogin';
 import {Button, ErrorMessage, InlineAlert, Link, Loading, TextField} from '../ui/ui';
 import {useMediaQuery} from '../ui/hooks';
+import {LoadBoundary} from '../ui/LoadBoundary';
 import LinkOut from '../ui/icons/LinkOut';
 import logo from '../logo.svg';
 import {href} from './route';
 import {LanguageMenu, SchemeToggle} from './AppearanceControls';
 
-// The panel beside the form loads only where it is shown, so the sign-in chunk stays the same size on a phone.
+// The panel beside the form loads only where it is shown, so the sign-in chunk stays the same size on a phone. Until it
+// arrives, or if it never does, the panel stays empty and the form works as before.
 const LoginShowcase = lazy(() => import('./LoginShowcase'));
+const emptyShowcase = <div className="rp-login-showcase" aria-hidden="true" />;
 
 type LoginProps = {
   profileId: string;
@@ -149,9 +152,11 @@ export function Login({profileId, api, backend, rejected, lang, pickLang, dark, 
         </main>
       </div>
       {wide && (
-        <Suspense fallback={<div className="rp-login-showcase" aria-hidden="true" />}>
-          <LoginShowcase />
-        </Suspense>
+        <LoadBoundary fallback={emptyShowcase}>
+          <Suspense fallback={emptyShowcase}>
+            <LoginShowcase />
+          </Suspense>
+        </LoadBoundary>
       )}
     </div>
   );
