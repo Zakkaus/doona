@@ -67,8 +67,9 @@ export const test = base.extend<{storage: Record<string, string>}>({
   }
 });
 
-// The mock backend's faults scenario: a degraded datapath, unavailable nodes, dropped flow records, warnings and
-// errors in the logs, a failed operation and a rule the lite geodata files cannot serve. The default demo has none.
+// The mock backend's faults scenario: every error state the UI can show from backend data, and actions that fail the
+// way honk refuses them (a stale rules.dae, a failing subscription host, a rule the lite geodata files cannot serve).
+// The default demo has none.
 export const faults = {'doona-mock-scenario': 'faults'};
 
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
