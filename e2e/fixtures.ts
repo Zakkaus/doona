@@ -1,4 +1,4 @@
-import {test as base, expect, type Download, type Page, type Request, type Route} from '@playwright/test';
+import {test as base, expect, type Download, type Locator, type Page, type Request, type Route} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import type {OperationAccepted} from '../src/api/model';
@@ -84,6 +84,22 @@ export const faults = {'doona-mock-scenario': 'faults'};
 
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
 export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
+// The language and scheme the page takes from its next load.
+export const setAppearance = (page: Page, lang: string, scheme: string) =>
+  page.evaluate(
+    ({lang, scheme}) => {
+      localStorage.setItem('doona-lang', lang);
+      localStorage.setItem('doona-scheme', scheme);
+    },
+    {lang, scheme}
+  );
+export const box = async (locator: Locator) => (await locator.boundingBox())!;
+// The sine of an element's turn. The down chevron turned to the right has -1, turned to the left 1.
+export const turn = (locator: Locator) =>
+  locator.evaluate(el => {
+    const m = new DOMMatrix(getComputedStyle(el).transform);
+    return Math.round(m.b);
+  });
 
 export {expect};
 

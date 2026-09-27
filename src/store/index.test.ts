@@ -5,16 +5,7 @@ import {createMockApi} from '../api/mock';
 import {capabilities} from '../api/mock/fixtures';
 import type {ApiEvent, Capabilities, EventKind} from '../api/model';
 import {tcpProbe} from './index';
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: Error) => void;
-  const promise = new Promise<T>((yes, no) => {
-    resolve = yes;
-    reject = no;
-  });
-  return {promise, resolve, reject};
-}
+import {deferred} from './testHelpers';
 
 it('normalizes query order and omitted undefined fields without merging different resources or values', () => {
   const key = normalizeResourceKey(['connections', {src: '10.0.0.1', limit: 1000}]);

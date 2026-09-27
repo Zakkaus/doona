@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, test} from './fixtures';
+import {expect, faults, mockBackend, setAppearance, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -177,13 +177,7 @@ test.describe(() => {
     await page.goto('/#/activity');
     for (const lang of ['zh-TW', 'en']) {
       for (const scheme of ['light', 'dark']) {
-        await page.evaluate(
-          ({lang, scheme}) => {
-            localStorage.setItem('doona-lang', lang);
-            localStorage.setItem('doona-scheme', scheme);
-          },
-          {lang, scheme}
-        );
+        await setAppearance(page, lang, scheme);
         await page.reload();
         const notices = page.locator('.rp-feed');
         await expect(notices.getByRole('listitem')).toHaveCount(5);

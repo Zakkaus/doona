@@ -4,6 +4,17 @@ import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 900}});
+// A reload the engine refused after the files were written.
+const rejectedReload = () => ({
+  operation_id: 'op-rejected',
+  kind: 'reload',
+  status: 'failed',
+  created_at: new Date().toISOString(),
+  started_at: new Date().toISOString(),
+  finished_at: new Date().toISOString(),
+  result: null,
+  error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
+});
 
 test('a rule added from a connection is written before the rule it matched, in one request', async ({page}) => {
   const {api, requests} = await mockBackend(page);
@@ -343,16 +354,7 @@ test('a rule written whose reload failed is not held again and not offered for a
     operation_id: 'op-rejected',
     href
   });
-  handlers['GET operations/op-rejected'] = async () => ({
-    operation_id: 'op-rejected',
-    kind: 'reload',
-    status: 'failed',
-    created_at: new Date().toISOString(),
-    started_at: new Date().toISOString(),
-    finished_at: new Date().toISOString(),
-    result: null,
-    error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
-  });
+  handlers['GET operations/op-rejected'] = async () => rejectedReload();
   // From the dialog: the rule is in the file, so the dialog closes rather than offering to insert it again.
   await page.goto('/#/connections?id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
@@ -488,16 +490,7 @@ test('an apply whose later file is written but not reloaded counts every rule wr
     href: '/api/v1/operations/op-rejected',
     retryAfter: 0
   });
-  handlers['GET operations/op-rejected'] = async () => ({
-    operation_id: 'op-rejected',
-    kind: 'reload',
-    status: 'failed',
-    created_at: new Date().toISOString(),
-    started_at: new Date().toISOString(),
-    finished_at: new Date().toISOString(),
-    result: null,
-    error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
-  });
+  handlers['GET operations/op-rejected'] = async () => rejectedReload();
   const connections = await createMockApi().connections();
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await hold(page, '1');

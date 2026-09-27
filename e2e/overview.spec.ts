@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, mockBackend, setAppearance, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
@@ -157,13 +157,7 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
   await page.goto('/#/overview');
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
-      await page.evaluate(
-        ({lang, scheme}) => {
-          localStorage.setItem('doona-lang', lang);
-          localStorage.setItem('doona-scheme', scheme);
-        },
-        {lang, scheme}
-      );
+      await setAppearance(page, lang, scheme);
       for (const width of [1024, 1280, 1440]) {
         await page.setViewportSize({width, height: 900});
         await page.reload();
