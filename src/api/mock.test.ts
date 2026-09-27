@@ -75,7 +75,7 @@ it('serves cumulative outbound counters independently of live connection bytes',
   expect(near(runtime.traffic.rates!.upload_bytes_per_second, history.samples.at(-1)!.upload_bytes_per_second!)).toBe(true);
 });
 
-it('keeps the faults scenario\'s memory high but not critical at both ends of the drift', () => {
+it("keeps the faults scenario's memory high but not critical at both ends of the drift", () => {
   // memoryValues in mock/runtime.ts moves usage by at most 4% + 3% + 1% either way.
   const current = Number(runtimeMemory.cgroup!.current_bytes);
   for (const drift of [0.92, 1.08]) expect(memoryTone(((current * drift) / Number(faultMemoryLimit)) * 100)).toBe('warn');
@@ -110,6 +110,31 @@ it('serves a healthy honk by default and the seeded faults only in the faults sc
   const all = {datapath: true, nodes: true, flows: true, config: true, logs: true, dns: true, geodata: true};
   expect(await healthy(createMockApi())).toEqual(all);
   expect(await healthy(faultsApi())).toEqual(Object.fromEntries(Object.keys(all).map(key => [key, false])));
+});
+
+it('turns the faults scenario on and off from the page address, and keeps the choice', async () => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  const healthy = async () => {
+    const datapath = await createMockApi().datapath();
+    return datapath.state === 'active' && datapath.errors.length === 0;
+  };
+  try {
+    vi.stubGlobal('location', {search: '?scenario=faults'});
+    expect(await healthy()).toBe(false);
+    expect(storage.get('doona-mock-scenario')).toBe('faults');
+    vi.stubGlobal('location', {search: ''});
+    expect(await healthy()).toBe(false);
+    vi.stubGlobal('location', {search: '?scenario='});
+    expect(await healthy()).toBe(true);
+    expect(storage.has('doona-mock-scenario')).toBe(false);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
 
 it('keeps the fuller demo history, cache and rankings internally consistent', async () => {

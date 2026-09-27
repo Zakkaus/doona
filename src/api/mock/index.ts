@@ -29,6 +29,11 @@ export function createMockApi(options: {faults?: boolean} = {}): MockApi {
   // The default demo is a healthy honk; the faults scenario seeds the degraded states that specs need.
   let faults = options.faults ?? false;
   try {
+    // ?scenario=faults in the page address turns the scenario on for this browser, and an empty ?scenario= turns it
+    // off, so the public demo can show the error states from a link.
+    const scenario = new URLSearchParams(globalThis.location?.search).get('scenario');
+    if (scenario === 'faults') localStorage.setItem('doona-mock-scenario', 'faults');
+    else if (scenario === '') localStorage.removeItem('doona-mock-scenario');
     faults ||= localStorage.getItem('doona-mock-scenario') === 'faults';
     profile = localStorage.getItem('doona-mock-profile');
     if (profile === 'base') capabilities = capabilitiesBase;
