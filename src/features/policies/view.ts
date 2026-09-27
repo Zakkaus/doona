@@ -49,14 +49,17 @@ export function checkInvalid(field: CheckField, value: string): boolean {
   if (!text) return false;
   return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < 1;
 }
-// Replace ops for the offered fields whose value changed; an empty field sends null.
-export function checkPatch(g: Group, draft: CheckDraft): JsonPatch {
+// Replace ops for the offered fields the user changed from `base`, the values the dialog opened with; an empty field sends null.
+// A field the user left alone is not sent, so a change another client made in the meantime is kept.
+export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonPatch {
   const fields = checkFields(g);
   const ops: JsonPatch = [];
-  const url = draft.check_url.trim() || null;
-  if (fields.includes('check_url') && url !== g.config.check_url) ops.push({op: 'replace', path: '/config/check_url', value: url});
-  const interval = draft.check_interval.trim() ? Number(draft.check_interval.trim()) : null;
-  if (fields.includes('check_interval') && interval !== g.config.check_interval) ops.push({op: 'replace', path: '/config/check_interval', value: interval});
+  const url = (text: string) => text.trim() || null;
+  const interval = (text: string) => (text.trim() ? Number(text.trim()) : null);
+  if (fields.includes('check_url') && url(draft.check_url) !== url(base.check_url))
+    ops.push({op: 'replace', path: '/config/check_url', value: url(draft.check_url)});
+  if (fields.includes('check_interval') && interval(draft.check_interval) !== interval(base.check_interval))
+    ops.push({op: 'replace', path: '/config/check_interval', value: interval(draft.check_interval)});
   return ops;
 }
 
