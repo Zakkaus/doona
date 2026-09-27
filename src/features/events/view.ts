@@ -2,9 +2,19 @@ import type {ApiEvent, EventKind} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {eventKindLabels, eventSummary} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
-import type {Translator as LabelFn} from '../../i18n';
+import type {Key, Translator as LabelFn} from '../../i18n';
+import type {Help} from '../../ui/ui';
 
-type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string};
+type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string; help?: Help};
+// The gaps that lose flow records under load are explained: whether anything needs doing depends on the reason.
+const gapHelp: Record<string, [Key, Key]> = {
+  buffer_overflow: ['event.gap.overflow', 'event.gapHelp.overflow'],
+  evicted: ['event.gap.evicted', 'event.gapHelp.evicted']
+};
+export function eventHelp(event: ApiEvent, t: LabelFn): Help | undefined {
+  const keys = event.event === 'flow.gap' && Object.hasOwn(gapHelp, event.data.reason) ? gapHelp[event.data.reason] : undefined;
+  return keys && {title: t(keys[0]), text: t(keys[1])};
+}
 // An event never changes once received, so its row is built once per locale and the table sees the same object.
 const rows = new WeakMap<ApiEvent, {locale: string; row: EventRow}>();
 function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): EventRow {
@@ -17,7 +27,8 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     iso: event.data.observed_at,
     kind: event.event,
     kindText: enumLabel(eventKindLabels, event.event, t),
-    summary: t(summary.key, summary.params)
+    summary: t(summary.key, summary.params),
+    help: lost ? undefined : eventHelp(event, t)
   };
   rows.set(event, {locale, row});
   return row;

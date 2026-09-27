@@ -30,7 +30,9 @@ export const messages = defineMessages({
     'log.chart.cell': '{time}，{level}：{n} 筆',
     'log.chart.minimum': '顯示{level}及以上',
     'log.chart.current': '{level}：目前的最低等級',
-    'log.empty': '尚無日誌'
+    'log.empty': '尚無日誌',
+    'log.emptyNotRecorded': '請先在設定頁開啟日誌記錄',
+    'log.emptyFiltered': '沒有符合篩選條件的日誌'
   },
   'zh-CN': {
     'log.chart.errors': '错误',
@@ -61,7 +63,9 @@ export const messages = defineMessages({
     'log.chart.cell': '{time}，{level}：{n} 条',
     'log.chart.minimum': '显示{level}及以上',
     'log.chart.current': '{level}：当前的最低级别',
-    'log.empty': '暂无日志'
+    'log.empty': '暂无日志',
+    'log.emptyNotRecorded': '请先在设置页开启日志记录',
+    'log.emptyFiltered': '没有符合筛选条件的日志'
   },
   en: {
     'log.chart.errors': 'Errors',
@@ -92,6 +96,8 @@ export const messages = defineMessages({
     'log.chart.cell': {one: '{time}, {level}: {n} record', other: '{time}, {level}: {n} records'},
     'log.chart.minimum': 'Show {level} and above',
     'log.chart.current': '{level}: the current minimum',
-    'log.empty': 'No log records yet'
+    'log.empty': 'No log records yet',
+    'log.emptyNotRecorded': 'Turn on log recording in Settings first',
+    'log.emptyFiltered': 'No log records match the filters'
   }
 });

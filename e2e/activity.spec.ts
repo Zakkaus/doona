@@ -190,7 +190,7 @@ test('mock notices include distinct operations and the recording gap, not routin
         await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
         await expect(notices.getByRole('listitem').filter({hasText: 'Operation updated'})).toHaveCount(2);
         await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(1);
-        await expect(notices.getByRole('listitem').filter({hasText: 'buffer overflow'})).toHaveCount(0);
+        await expect(notices.getByRole('listitem').filter({hasText: 'records reached the retention limit'})).toHaveCount(0);
       }
     }
   }

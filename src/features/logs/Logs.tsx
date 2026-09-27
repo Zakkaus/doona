@@ -73,7 +73,7 @@ export function Logs() {
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
-      <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={t('log.empty')} cols={columns} />
+      <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={vm.empty} cols={columns} />
     </div>
   );
 }

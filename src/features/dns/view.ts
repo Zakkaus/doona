@@ -60,7 +60,8 @@ export function dnsCacheView(
               label: t(
                 {positive: 'dns.positive', negative: 'dns.negative', persistent: 'dns.persistent'}[key] as 'dns.positive' | 'dns.negative' | 'dns.persistent'
               ),
-              value: t('dns.notCovered')
+              // The backend has no persistent cache: the records are only held in memory.
+              value: t(key === 'persistent' ? 'dns.chart.memoryOnly' : 'dns.notCovered')
             })
           }))
       : [],
@@ -107,6 +108,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
   return {
     choices: [{id: 'all', label: t('dns.allTypes')}, ...[...new Set([...types, ...records.map(record => record.question.type)])].map(id => ({id, label: id}))],
     total: data ? t('dns.logTotal', {n: data.total}) : '',
+    totalHelp: data ? {title: t('dns.logTotal', {n: data.total}), text: t('dns.logTotalHelp')} : null,
     // The loaded count only matters while older records remain on the backend.
     loaded: data?.next_cursor ? t('dns.logLoaded', {n: records.length}) : '',
     empty: t(enabled === undefined ? 'ui.loading' : enabled ? 'dns.logEmpty' : 'dns.logUnavailable'),

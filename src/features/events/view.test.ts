@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ApiEvent} from '../../api/model';
 import {localTime} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
-import {eventsExport, eventsView} from './view';
+import {eventHelp, eventsExport, eventsView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('exports only the selected event kind while preserving raw data', () => {
@@ -50,4 +50,15 @@ it('shows an event kind from a newer backend as sent, with the resource it names
   const view = eventsView([event], 'all', true, true, 200, 'en-US', t, ['policy.updated' as ApiEvent['event']]);
   expect(view.rows.map(row => [row.kindText, row.summary])).toEqual([['policy.updated', 'proxy']]);
   expect(view.kinds.at(-1)).toEqual({id: 'policy.updated', label: 'policy.updated'});
+});
+
+it('explains the gaps that lose flow records and leaves other events alone', () => {
+  const gap = (reason: 'buffer_overflow' | 'evicted' | 'sampled'): ApiEvent => ({
+    id: '1',
+    event: 'flow.gap',
+    data: {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z', resource_id: null, reason, dropped_records: '4'}
+  });
+  expect(eventHelp(gap('buffer_overflow'), t)).toEqual({title: t('event.gap.overflow'), text: t('event.gapHelp.overflow')});
+  expect(eventHelp(gap('evicted'), t)).toEqual({title: t('event.gap.evicted'), text: t('event.gapHelp.evicted')});
+  expect(eventHelp(gap('sampled'), t)).toBeUndefined();
 });

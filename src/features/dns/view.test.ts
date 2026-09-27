@@ -102,3 +102,11 @@ it('names the route source and the cache entry a delete button removes', () => {
   expect(entry.deleteLabel).toBe(t('dns.deleteEntry', {domain: entry.domain, type: entry.type}));
   expect(entry.deleteLabel).not.toContain(entry.id);
 });
+
+it('says the persistent cache is memory only rather than not covered, and explains the kept log records', () => {
+  const view = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t);
+  expect(view.coverage.find(badge => badge.id === 'persistent')?.text).toBe(t('ui.valuePair', {label: t('dns.persistent'), value: t('dns.chart.memoryOnly')}));
+  const log = dnsLogView({observed_at: '2026-01-01T00:00:00Z', records: [], total: 3, next_cursor: null}, true, t);
+  expect(log.totalHelp).toEqual({title: t('dns.logTotal', {n: 3}), text: t('dns.logTotalHelp')});
+  expect(dnsLogView(undefined, true, t).totalHelp).toBeNull();
+});

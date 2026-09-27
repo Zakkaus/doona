@@ -55,7 +55,7 @@ it('groups dropped counts in gap summaries without rounding a large UInt64', () 
 
 it('starts a gap summary at its reason when the gap names no record', () => {
   const unscoped = eventSummary(gap('recording_changed', null));
-  expect(translate('en', unscoped.key, unscoped.params)).toBe('reason: recording_changed, records dropped: 1');
+  expect(translate('en', unscoped.key, unscoped.params)).toBe('reason: recording_changed, records dropped since recording started: 1');
   const scoped = eventSummary(gap('buffer_overflow', 'flow-r03'));
   expect(translate('en', scoped.key, scoped.params)).toMatch(/^flow-r03, reason: /);
 });
@@ -68,7 +68,7 @@ it('leaves the count out of a gap that dropped no records, but keeps an unknown 
   };
   expect(summary(null, '0')).toBe('reason: recording_changed');
   expect(summary('flow-r03', '0')).toBe('flow-r03, reason: recording_changed');
-  expect(summary(null, null)).toBe('reason: recording_changed, records dropped: —');
+  expect(summary(null, null)).toBe('reason: recording_changed, records dropped since recording started: —');
 });
 
 it('files a node under its provider, or under the built-in or unattributed owner the nodes page lists', () => {
