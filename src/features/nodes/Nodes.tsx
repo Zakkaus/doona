@@ -24,6 +24,7 @@ export function Nodes(props: PageProps) {
     removing,
     dialogTitle,
     formValid,
+    formReason,
     submit,
     pending,
     submitting,
@@ -64,6 +65,7 @@ export function Nodes(props: PageProps) {
         title={dialogTitle}
         narrow
         isOpen={dialog !== null && !removing}
+        reason={pending ? null : formReason}
         onOpenChange={isOpen => {
           if (!isOpen) setDialog(null);
         }}

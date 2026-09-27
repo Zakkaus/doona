@@ -10,7 +10,7 @@ import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
-import {intervalItems, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
+import {intervalItems, isNodeLink, nodeFormReason, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
@@ -173,7 +173,7 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'provider'
       ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
       : dialog?.kind === 'node'
-        ? form.name.trim() !== '' && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(form.value.trim())
+        ? form.name.trim() !== '' && isNodeLink(form.value)
         : dialog?.kind === 'group'
           ? nameError === null
           : true;
@@ -238,6 +238,7 @@ export function useNodesPage({go, query}: PageProps) {
     removing,
     dialogTitle,
     formValid,
+    formReason: nodeFormReason(dialog?.kind, form.name, form.value, t),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.

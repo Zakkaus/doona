@@ -10,6 +10,8 @@ import {addU64} from '../../api/u64';
 import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
+import {isBareName} from '../../dae/text';
+import {isSubscriptionUrl} from '../../dae/setup';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -192,4 +194,18 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     refreshLabel: t('nodes.refresh', {name}),
     removeLabel: t('nodes.remove', {name})
   };
+}
+
+// A node link as the add dialog accepts it: a URL scheme, then the rest without spaces.
+export const isNodeLink = (value: string) => /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(value.trim());
+
+// Why the add dialog's submit is disabled, first applicable. Null while every required field is still empty, which
+// speaks for itself, and for a problem its own field already shows (the User-Agent, a group name).
+export function nodeFormReason(kind: string | undefined, name: string, value: string, t: Translator): string | null {
+  const bare = name.trim();
+  if ((kind !== 'provider' && kind !== 'node') || (!bare && !value.trim())) return null;
+  if (!bare) return t('nodes.nameMissing');
+  if (kind === 'node') return isNodeLink(value) ? null : t('nodes.linkInvalid');
+  if (!isBareName(bare)) return t('nodes.nameInvalid');
+  return isSubscriptionUrl(value) ? null : t('nodes.urlInvalid');
 }
