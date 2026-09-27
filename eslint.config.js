@@ -21,6 +21,16 @@ const outsideUi = [
   {selector: 'Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch)\\(/]', message: 'Colours come from tokens.'},
   {selector: `ImportExpression[source.value=/${heavy.replaceAll('/', '\\/')}/]`, message: 'Chart and editor libraries live in src/ui/charts and src/ui/code.'}
 ];
+// G8: pages never ask which engine is running; src/api/engines turns engine knowledge into neutral data and reasons.
+const engineBlind = 'Engine-specific behaviour belongs in src/api/engines; ask the adapter instead of the engine name.';
+const engineRead =
+  ":matches(MemberExpression[property.name=/^(name|id)$/][object.property.name=/^(engine|api)$/], MemberExpression[property.name='id'][object.name='engine'])";
+const compared = 'BinaryExpression[operator=/^[!=]==?$/]';
+const engineChecks = [
+  {selector: `${compared} > ${engineRead}, ${compared} > ChainExpression > ${engineRead}`, message: engineBlind},
+  {selector: `SwitchStatement > ${engineRead}.discriminant, SwitchStatement > ChainExpression.discriminant > ${engineRead}`, message: engineBlind},
+  {selector: `${compared} > Literal[value=/^(honk|dae.honk-native)$/], SwitchCase > Literal.test[value=/^(honk|dae.honk-native)$/]`, message: engineBlind}
+];
 
 export default [
   {
@@ -65,6 +75,12 @@ export default [
             {target: './src/ui', from: ['./src/features', './src/store', './src/shell'], message: 'src/ui takes data as props.'},
             {target: './src/store', from: ['./src/features', './src/shell', './src/ui']},
             {target: ['./src/api', './src/dae', './src/i18n'], from: ['./src/features', './src/shell', './src/store', './src/ui']},
+            {
+              target: ['./src/dae', './src/features', './src/i18n', './src/shell', './src/store', './src/ui'],
+              from: './src/api/engines',
+              except: ['./index.ts'],
+              message: 'Import the engines adapter through src/api/engines, not its modules.'
+            },
             ...features.map(f => ({
               target: `./src/features/${f}`,
               from: './src/features',
@@ -109,6 +125,12 @@ export default [
       ],
       'no-restricted-syntax': ['error', ...outsideUi]
     }
+  },
+  {
+    // G8 on top of the rules above; catalogues and tests may name an engine.
+    files: ['src/{features,shell,store}/**/*.{ts,tsx}'],
+    ignores: ['src/**/messages.ts', 'src/**/*.test.*'],
+    rules: {'no-restricted-syntax': ['error', ...outsideUi, ...engineChecks]}
   },
   {
     // Inside the kit, colour literals and heavy libraries stay in their homes.
