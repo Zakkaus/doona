@@ -65,6 +65,13 @@ const tour = [
 ];
 // Mock timestamps derive from the clock; a fixed one keeps the tour and phone images the same from run to run.
 const fixedTime = new Date('2026-09-01T09:30:00Z');
+// The mock asks for the demo account like a password backend; a session already in the tab skips the sign-in page.
+function signInDemo() {
+  const session = {profileId: 'demo', api: 'mock', token: 'demo-session-tools', expiresAt: new Date(Date.now() + 3600_000).toISOString()};
+  localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
+  localStorage.setItem('doona-profile', 'demo');
+  sessionStorage.setItem('doona-session', JSON.stringify(session));
+}
 execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
 execFileSync('img2webp', ['-version'], {stdio: 'ignore'});
 async function screenshot(page, path, options = {}, lossy = false) {
@@ -81,8 +88,8 @@ async function openPage(browser, lang, route, ready, options = {}) {
     ...options
   });
   await context.clock.setFixedTime(fixedTime);
+  await context.addInitScript(signInDemo);
   await context.addInitScript(lang => {
-    localStorage.setItem('doona-api', 'mock');
     localStorage.setItem('doona-lang', lang);
     localStorage.setItem('doona-scheme', 'light');
     localStorage.setItem('doona-palette', 'rose-pine/moon');
@@ -259,9 +266,9 @@ try {
       reducedMotion: 'reduce',
       serviceWorkers: 'block'
     });
+    await context.addInitScript(signInDemo);
     await context.addInitScript(
       ([palette, scheme]) => {
-        localStorage.setItem('doona-api', 'mock');
         localStorage.setItem('doona-lang', 'en');
         localStorage.setItem('doona-scheme', scheme);
         localStorage.setItem('doona-palette', palette);
@@ -293,9 +300,9 @@ try {
     mkdirSync(join(dir, lang), {recursive: true});
     for (const [name, scheme, route] of shots) {
       const context = await browser.newContext({viewport: {width: 1440, height: 920}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});
+      await context.addInitScript(signInDemo);
       await context.addInitScript(
         ([lang, scheme]) => {
-          localStorage.setItem('doona-api', 'mock');
           localStorage.setItem('doona-lang', lang);
           localStorage.setItem('doona-scheme', scheme);
           localStorage.setItem('doona-palette', 'rose-pine/moon');

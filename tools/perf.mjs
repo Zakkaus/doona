@@ -10,6 +10,13 @@ const runs = Number(process.env.PERF_RUNS) || 3;
 const only = process.env.PERF_ONLY ? new RegExp(process.env.PERF_ONLY) : null;
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const ms = value => `${value.toFixed(0)} ms`;
+// The mock asks for the demo account like a password backend; a session already in the tab skips the sign-in page.
+function signInDemo() {
+  const session = {profileId: 'demo', api: 'mock', token: 'demo-session-tools', expiresAt: new Date(Date.now() + 3600_000).toISOString()};
+  localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
+  localStorage.setItem('doona-profile', 'demo');
+  sessionStorage.setItem('doona-session', JSON.stringify(session));
+}
 
 async function metrics(session) {
   const {metrics} = await session.send('Performance.getMetrics');
@@ -28,7 +35,7 @@ async function ready(page) {
   await page.locator('.rp-content').getByRole('heading').first().waitFor();
   const route = new URL(page.url()).hash.slice(2).split('?')[0];
   const content = {
-    activity: '.rp-donut .recharts-sector',
+    activity: '.rp-donut path',
     overview: '.rp-kv',
     connections: '.rp-scatter circle',
     dns: '[role=tabpanel]',
@@ -52,9 +59,9 @@ async function run(scenario, {big = false, busy = false, storage = {}} = {}) {
   for (let i = 0; i < runs; i++) {
     const browser = await chromium.launch();
     const context = await browser.newContext({viewport: {width: 1280, height: 800}, reducedMotion: 'reduce', serviceWorkers: 'block'});
+    await context.addInitScript(signInDemo);
     await context.addInitScript(
       ({big, busy, storage}) => {
-        localStorage.setItem('doona-api', 'mock');
         localStorage.setItem('doona-lang', 'en');
         if (big) localStorage.setItem('doona-mock-big', '3000');
         if (busy) localStorage.setItem('doona-mock-busy', '1');
