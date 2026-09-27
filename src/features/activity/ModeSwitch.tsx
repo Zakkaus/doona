@@ -1,7 +1,6 @@
 import {useLang, useT} from '../../i18n';
 import {docsHref} from '../shared/docs';
-import {Dialog, DialogTrigger, Popover} from 'react-aria-components';
-import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, Segmented} from '../../ui/ui';
+import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -40,20 +39,25 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
                 {t('act.apply')}
               </Button>
             ) : vm.readOnly ? (
-              <DialogTrigger>
-                <Button small quiet label={t('act.modeWhyReadOnly')}>
-                  {vm.status}
-                </Button>
-                <Popover className="rp-popover" placement="bottom end">
-                  <Dialog className="rp-mode-help" aria-label={t('act.modeWhyReadOnly')}>
+              <PopoverDialog
+                label={t('act.modeWhyReadOnly')}
+                placement="bottom end"
+                trigger={
+                  <Button small quiet label={t('act.modeWhyReadOnly')}>
+                    {vm.status}
+                  </Button>
+                }
+              >
+                {() => (
+                  <>
                     <p>{t('act.modeReadOnlyReason')}</p>
                     <p>{t('act.modeReadOnlyAction')}</p>
                     <Link external appearance="link" href={docsHref(lang, 'read-only')}>
                       {t('act.readOnlyDocs')}
                     </Link>
-                  </Dialog>
-                </Popover>
-              </DialogTrigger>
+                  </>
+                )}
+              </PopoverDialog>
             ) : (
               <Light small tone="muted">
                 {vm.status}
