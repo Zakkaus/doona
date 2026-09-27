@@ -72,7 +72,7 @@ const theme = EditorView.theme({
   // Opaque, so a line scrolled sideways passes under the numbers rather than through them.
   '.cm-gutters': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-muted)', border: 'none'},
   '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
-  '.cm-activeLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
+  '.cm-activeLine, .cm-focusLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {backgroundColor: 'var(--rp-hl-high)'},
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
@@ -168,6 +168,26 @@ const lineMarks = StateField.define<DecorationSet>({
 const noMarks: EditorMark[] = [];
 // Marks a document replacement that came from the `value` prop rather than from typing.
 const external = Annotation.define<boolean>();
+// The line a read-only source was opened at, marked in place of the active line it no longer draws.
+const setFocusLine = StateEffect.define<number>();
+const focusDecoration = Decoration.line({class: 'cm-focusLine'});
+const focusMark = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, transaction) {
+    let next = value.map(transaction.changes);
+    for (const effect of transaction.effects) {
+      if (effect.is(setFocusLine)) next = Decoration.set(focusDecoration.range(transaction.state.doc.line(effect.value).from));
+    }
+    return next;
+  },
+  provide: field => EditorView.decorations.from(field)
+});
+// A read-only source draws no caret or active line, so it does not look editable; the browser's own selection still copies.
+const editMode = (readOnly: boolean) => [
+  EditorState.readOnly.of(readOnly),
+  EditorView.editable.of(!readOnly),
+  readOnly ? focusMark : [drawSelection(), highlightActiveLine(), highlightActiveLineGutter()]
+];
 
 export function CodeEditor({
   value,
@@ -215,12 +235,9 @@ export function CodeEditor({
         doc: value,
         extensions: [
           lineNumbers(),
-          highlightActiveLineGutter(),
           highlightSpecialChars(),
           history(),
-          drawSelection(),
           rectangularSelection(),
-          highlightActiveLine(),
           lineMarks,
           highlightSelectionMatches(),
           bracketMatching(),
@@ -249,7 +266,7 @@ export function CodeEditor({
             ...searchKeymap,
             indentWithTab
           ]),
-          editable.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+          editable.current.of(editMode(readOnly)),
           language.current.of(phrasesFor(t)),
           // Read-only sources remain focusable for keyboard scrolling and search.
           naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
@@ -270,7 +287,7 @@ export function CodeEditor({
   useEffect(() => {
     const instance = view.current;
     if (!instance) return;
-    instance.dispatch({effects: editable.current.reconfigure([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)])});
+    instance.dispatch({effects: editable.current.reconfigure(editMode(readOnly))});
   }, [readOnly]);
   useEffect(() => {
     view.current?.dispatch({effects: language.current.reconfigure(phrasesFor(t))});
@@ -298,7 +315,7 @@ export function CodeEditor({
     const instance = view.current;
     if (!instance || !focusLine || focusLine < 1 || focusLine > instance.state.doc.lines) return;
     const line = instance.state.doc.line(focusLine);
-    instance.dispatch({selection: {anchor: line.from}, effects: EditorView.scrollIntoView(line.from, {y: 'center'})});
+    instance.dispatch({selection: {anchor: line.from}, effects: [setFocusLine.of(focusLine), EditorView.scrollIntoView(line.from, {y: 'center'})]});
     instance.focus();
   }, [focusLine]);
   return <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />;

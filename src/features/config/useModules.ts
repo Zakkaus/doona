@@ -100,6 +100,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
       editing: draft?.section.id === section.id,
       canEdit: canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true,
       editDisabled: dirty || !!editor.busy,
+      editTip: dirty ? t('config.moduleEditBlocked') : undefined,
       note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
       muted: !section.block,
       // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.

@@ -55,7 +55,7 @@ export function RuntimeSettingsCard() {
                 ))}
               </div>
               {m.recorders.length > 0 && (
-                <div className="rp-toolbar rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
+                <div className="rp-toolbar top rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
                   {m.recorders.map(recorder => (
                     <div key={recorder.id} className="rp-field">
                       <LabeledSelect

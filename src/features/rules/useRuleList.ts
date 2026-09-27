@@ -37,6 +37,7 @@ export type RuleListModel = {
   canWrite: boolean;
   busy: boolean;
   addDisabled: boolean;
+  addTip: string | undefined;
   editHelp: string | null;
   loading: boolean;
   error: Error | null;
@@ -207,6 +208,7 @@ export function useRuleList({go, query}: PageProps) {
     canWrite,
     busy: !!editor.busy,
     addDisabled: !table.positions.length || !!editor.busy,
+    addTip: rules.data && config.data && !table.positions.length ? t('conn.ruleNoPosition') : undefined,
     editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
