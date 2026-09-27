@@ -363,7 +363,7 @@ function SourceCard(props: SourceCardProps) {
 function ValidateTab(props: ValidateTabProps) {
   const {canValidate, open} = props;
   const t = useT();
-  const {level, setLevel, selected, setSelected, shown, cur, validate, summaryTone, summary, lastRun, validating, blocked, tip, levels} = useValidateTab(props);
+  const {level, setLevel, selected, setSelected, shown, validate, summaryTone, summary, lastRun, validating, blocked, tip, levels} = useValidateTab(props);
   return (
     <>
       <div className="rp-toolbar">
@@ -383,11 +383,20 @@ function ValidateTab(props: ValidateTabProps) {
       <Segmented label={t('config.level')} value={level} onChange={setLevel} items={levels} />
       <DataTable
         label={t('config.diagnostics')}
-        rowDetail
         rows={shown}
         height={360}
         selected={selected}
         onSelect={setSelected}
+        detail={cur => (
+          <div className="rp-cluster rp-config-diagnostics">
+            <Light small tone={cur.tone}>
+              {cur.detail}
+            </Light>
+            <Button label={t('config.openSourceAt', {where: cur.where})} onPress={() => open(cur.sourceId, cur.line)}>
+              {t('config.openSource')}
+            </Button>
+          </div>
+        )}
         empty={t('config.noDiagnostics')}
         cols={[
           {
@@ -412,16 +421,6 @@ function ValidateTab(props: ValidateTabProps) {
           {id: 'code', label: t('config.code'), minWidth: 140, drop: 1, render: item => <DaeCode text={item.code} />}
         ]}
       />
-      {cur && (
-        <div className="rp-cluster rp-config-diagnostics">
-          <Light small tone={cur.tone}>
-            {cur.detail}
-          </Light>
-          <Button label={t('config.openSourceAt', {where: cur.where})} onPress={() => open(cur.sourceId, cur.line)}>
-            {t('config.openSource')}
-          </Button>
-        </div>
-      )}
     </>
   );
 }

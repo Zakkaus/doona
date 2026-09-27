@@ -8,8 +8,8 @@ const firstCut = (page: Page) => page.locator('.rp-table [role="row"]:not([data-
 test.describe('on a phone', () => {
   test.use({viewport: {width: 360, height: 780}, hasTouch: true, isMobile: true});
 
-  test('a tap on a truncated log cell shows it whole until a tap elsewhere', async ({page}) => {
-    await page.goto('/#/logs');
+  test('a tap on a truncated rule cell shows it whole until a tap elsewhere', async ({page}) => {
+    await page.goto('/#/rules?tab=list');
     const cell = firstCut(page);
     const full = (await cell.textContent())!.trim();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
@@ -30,6 +30,15 @@ test.describe('on a phone', () => {
     await page.goto('/#/dns?tab=log');
     await firstCut(page).tap();
     await expect(detail(page)).toBeVisible();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  });
+
+  test('a tap on a cut log cell discloses the record under the table, not a tip', async ({page}) => {
+    await page.goto('/#/logs');
+    const cell = firstCut(page);
+    const full = (await cell.textContent())!.trim();
+    await cell.tap();
+    await expect(page.locator('.rp-table-detail')).toContainText(full);
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   });
 

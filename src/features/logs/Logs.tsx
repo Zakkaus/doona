@@ -1,7 +1,7 @@
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {ActionGroup, DataTable, ErrorMessage, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
+import {ActionGroup, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
 
@@ -51,6 +51,25 @@ export function Logs() {
     ],
     [t]
   );
+  // A phone keeps the level and message and cuts the message; a pressed row shows the whole record.
+  const detail = useCallback(
+    (record: LogRow) => (
+      <Kv
+        inline
+        items={
+          record.gap
+            ? [[t('log.message'), record.message]]
+            : [
+                [t('ui.time'), record.timestamp],
+                [t('log.level'), record.levelText],
+                [t('log.target'), record.target],
+                [t('log.message'), record.message]
+              ]
+        }
+      />
+    ),
+    [t]
+  );
   return (
     <div className="rp-page">
       <div className="rp-toolbar">
@@ -73,7 +92,7 @@ export function Logs() {
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
-      <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={vm.empty} cols={columns} />
+      <DataTable label={t('nav.logs')} stream rows={vm.rows} height={640} loading={vm.loading} empty={vm.empty} cols={columns} detail={detail} />
     </div>
   );
 }

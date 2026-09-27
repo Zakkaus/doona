@@ -1,6 +1,6 @@
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, DataTable, HelpRow, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn} from '../../ui/ui';
+import {Button, DataTable, HelpRow, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn, Kv} from '../../ui/ui';
 import {useEventsPage} from './useEventsPage';
 import Download from '../../ui/icons/Download';
 
@@ -39,6 +39,20 @@ export function Events() {
     ],
     [t]
   );
+  // A phone keeps only the summary column and cuts it; a pressed row shows the whole event.
+  const detail = useCallback(
+    (event: EventRow) => (
+      <Kv
+        inline
+        items={[
+          [t('ui.time'), event.timestamp],
+          [t('event.kind'), event.kindText],
+          [t('event.summary'), event.summary]
+        ]}
+      />
+    ),
+    [t]
+  );
   return (
     <div className="rp-page">
       <div className="rp-toolbar">
@@ -59,7 +73,7 @@ export function Events() {
         </Button>
       </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <DataTable label={t('nav.events')} stream fit height={442} loading={vm.loading} rows={vm.rows} empty={t('event.empty')} cols={columns} />
+      <DataTable label={t('nav.events')} stream fit height={442} loading={vm.loading} rows={vm.rows} empty={t('event.empty')} cols={columns} detail={detail} />
     </div>
   );
 }

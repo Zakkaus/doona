@@ -141,8 +141,8 @@ export function DataTable<T extends {id: string}>({
   cols,
   rows,
   height = 442,
-  selected,
-  onSelect,
+  selected: selectedProp,
+  onSelect: onSelectProp,
   selectOnFocus,
   reveal,
   empty,
@@ -153,7 +153,8 @@ export function DataTable<T extends {id: string}>({
   stream,
   fit,
   tree,
-  rowDetail
+  rowDetail,
+  detail
 }: {
   label: string;
   cols: TableColumn<T>[];
@@ -182,8 +183,16 @@ export function DataTable<T extends {id: string}>({
   // A row press opens a detail that shows every column's value in full, so a tap on cut text there opens the detail
   // rather than a tip (TextTooltip).
   rowDetail?: boolean;
+  // A row press discloses `detail(row)` under the table, the place for text the columns cut or drop; Enter or Space on
+  // the focused row does the same, and a second press closes it. `selected` and `onSelect` may still drive the row.
+  detail?: (row: T) => ReactNode;
 }) {
   const t = useT();
+  // A detail without an owner keeps its open row here.
+  const [own, setOwn] = useState<string | null>(null);
+  const owned = !!detail && onSelectProp === undefined;
+  const selected = owned ? own : selectedProp;
+  const onSelect = owned ? setOwn : onSelectProp;
   // One set per selected key, so the table neither recomputes its selection nor re-renders every row.
   const keys: Selection = useMemo(() => (selected ? new Set([selected]) : new Set()), [selected]);
   const [ref, containerWidth] = useContentWidth<HTMLElement>();
@@ -256,12 +265,12 @@ export function DataTable<T extends {id: string}>({
       selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
       selectedKeys={keys}
       // The selection is never emptied from inside: focusing a group row asks to replace it with nothing, which leaves
-      // the selected connection and its detail as they were.
+      // the selected connection and its detail as they were. A disclosed detail closes on a second press.
       onSelectionChange={keys => {
         const id = selectedRow(keys);
-        if (id !== null) onSelect?.(id);
+        if (id !== null || detail) onSelect?.(id);
       }}
-      disallowEmptySelection={!!onSelect}
+      disallowEmptySelection={!!onSelect && !detail}
       sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
       onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
     >
@@ -285,7 +294,7 @@ export function DataTable<T extends {id: string}>({
         ref.current = element;
       }}
       className="rp-table"
-      data-row-detail={rowDetail ? '' : undefined}
+      data-row-detail={rowDetail || detail ? '' : undefined}
       style={{height: fitted}}
       // RAC scopes Home/End to cells unless the row itself has focus. The container passes no key handlers, so a
       // tree renders its own div to catch the key first.
@@ -312,5 +321,15 @@ export function DataTable<T extends {id: string}>({
       )}
     </ResizableTableContainer>
   );
-  return container;
+  if (!detail) return container;
+  const open = selected ? flat.find(row => row.id === selected && !isGroup(row)) : undefined;
+  return (
+    <>
+      {container}
+      {/* Always mounted, so the text it takes is announced; empty, it takes no room. */}
+      <div className="rp-table-detail" aria-live="polite">
+        {open && detail(open as T)}
+      </div>
+    </>
+  );
 }

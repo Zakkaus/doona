@@ -170,7 +170,8 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
-      {id: 't', label: t('ui.time'), minWidth: 96, grow: 0, render: record => <TimeCell at={record.observedAt} />},
+      // Wide enough for the longest relative time, English "59 seconds ago" (about 101px), with the cell's padding.
+      {id: 't', label: t('ui.time'), minWidth: 140, grow: 0, render: record => <TimeCell at={record.observedAt} />},
       {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
       {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
       {id: 's', label: t('ui.device'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
