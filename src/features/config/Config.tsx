@@ -199,7 +199,7 @@ function Modules(props: ModulesProps) {
                 </Link>
               )}
               {card.canEdit && !card.editing && (
-                <Button isDisabled={card.editDisabled} onPress={card.edit}>
+                <Button isDisabled={card.editDisabled} tip={card.editTip} onPress={card.edit}>
                   {t('config.edit')}
                 </Button>
               )}

@@ -97,7 +97,7 @@ function Dictionary({view}: {view: Model}) {
         {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
         <span className="rp-grow" />
         {view.canWrite && (
-          <Button small isDisabled={view.addDisabled} onPress={view.openAdd}>
+          <Button small isDisabled={view.addDisabled} tip={view.addTip} onPress={view.openAdd}>
             {t('rule.add')}
           </Button>
         )}

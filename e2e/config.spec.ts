@@ -105,7 +105,7 @@ test('the validation tab lists kept diagnostics and opens the source at the line
   await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
-  await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
+  await expect(page.locator('.cm-focusLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
 });
 
 test('identical diagnostics share one row with their count, and a known code keeps the backend words as detail', async ({page}) => {
@@ -408,6 +408,8 @@ test('rule writes require a stable source ID even when the display path matches'
   await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
   await page.goto('/#/rules?tab=list');
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+  await page.getByRole('button', {name: 'Add rule', exact: true}).locator('xpath=..').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('No rule is in a file doona can write, so there is no place to insert.');
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Open source', exact: true})).toHaveCount(0);
 });
@@ -433,7 +435,12 @@ test('modules list top-level counts and edit only routing through reload', async
   const section = await editor.innerText();
   const edited = section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:');
   await editor.fill(edited);
-  await expect(modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  const global = modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true});
+  await expect(global).toBeDisabled();
+  // Typing leaves keyboard modality, in which React Aria shows no hover tip; a click returns to the pointer.
+  await modules.getByRole('heading', {name: 'global', exact: true}).click();
+  await global.locator('xpath=..').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Another section has unsaved changes; apply or cancel them first');
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await expect(routing).toContainText('6 rules, fallback: resilient');
@@ -459,7 +466,15 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   await manual.click();
   await expect(page.getByRole('tab', {name: 'Sources', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/tab=source&source=src-main&line=\d+$/);
-  await expect(page.locator('.cm-activeLine')).toContainText('routing {');
+  await expect(page.locator('.cm-focusLine')).toContainText('routing {');
+  // Until Edit, the source draws no caret or active line, so it does not look editable.
+  await page.locator('.cm-content').click();
+  await expect(page.locator('.cm-activeLine')).toHaveCount(0);
+  await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
+  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  await page.locator('.cm-content').click();
+  await expect(page.locator('.cm-activeLine')).toHaveCount(1);
+  await expect(page.locator('.cm-cursorLayer')).toHaveCount(1);
 });
 
 test('modules show sections from read-only include files and open the file that defines them', async ({page}) => {
@@ -505,7 +520,7 @@ test('modules show sections from read-only include files and open the file that 
   await expect(routing.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
   await routing.getByRole('button', {name: 'Edit by hand', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-route&line=1$/);
-  await expect(page.locator('.cm-activeLine')).toContainText('routing {');
+  await expect(page.locator('.cm-focusLine')).toContainText('routing {');
 });
 
 test('cancelling a module discards its draft and navigation uses the draft guard', async ({page}) => {

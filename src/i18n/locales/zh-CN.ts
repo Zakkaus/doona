@@ -95,6 +95,7 @@ export const messages = {
   'config.edit': '编辑',
   'config.save': '应用并重载',
   'config.incomplete': '内容不完整或已脱敏，不能在此编辑',
+  'config.moduleEditBlocked': '另一个区段有未保存的修改，须先应用或取消',
   'config.unquotable': '无法写入：值含单引号、换行或结尾反斜线，无法无损转为单引号字符串。',
   'config.contentHidden': '此后端不提供配置内容',
   'config.contentWithheld': '后端未返回此来源的文本，因此不能在此编辑。请检查后端的内容可见性策略。',

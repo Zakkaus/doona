@@ -94,6 +94,7 @@ export const messages = {
   'config.edit': '編輯',
   'config.save': '套用並重載',
   'config.incomplete': '內容不完整或已遮蔽，不能在此編輯',
+  'config.moduleEditBlocked': '另一個區段有未儲存的修改，須先套用或取消',
   'config.unquotable': '無法寫入：值含單引號、換行或結尾反斜線，無法無損轉為單引號字串。',
   'config.contentHidden': '此後端不提供組態內容',
   'config.contentWithheld': '後端未回傳此來源的文字，因此不能在此編輯。請檢查後端的內容可見性原則。',
