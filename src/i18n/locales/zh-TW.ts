@@ -89,12 +89,7 @@ export const messages = {
   'config.readOnly': '唯讀',
   'config.readOnlyHelp': '後端未開放寫入組態。honk 須啟用 experimental.native_api.config_write，並設定密鑰或密碼登入。',
   'config.secretSource': '含密鑰',
-  'config.secretHelp':
-    '此檔案定義了 native_api 或 clash_api 的監聽密鑰，或含有已遮蔽的密鑰值，後端因此不允許編輯。將密鑰所在的區段移到獨立的引入檔後，即可編輯其餘內容。',
-  'config.generatedHelp': '此檔案由引擎寫入，每次重新產生都會覆寫，因此只能檢視。',
-  'config.subscriptionHelp': '此檔案是下載的訂閱內容，更新訂閱時會被取代，因此只能檢視。',
   'config.redactedSource': '內容已遮蔽',
-  'config.redactedHelp': '後端遮蔽了此檔案的部分或全部內容。寫回會遺失被遮蔽的值，因此只能檢視。',
   'config.readOnlyAttempt': '此檔案唯讀',
   'config.kind.main': '主組態',
   'config.kind.include': '引入檔',

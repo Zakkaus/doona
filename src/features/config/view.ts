@@ -200,13 +200,14 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
 
 export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'redacted';
-// The badge, its help, and the line under the text saying what the file is and what can be done with it.
-const readOnlyText: Record<ReadOnlyReason, {label: Key; help: Key; note: Key}> = {
-  generated: {label: 'config.kind.generated', help: 'config.generatedHelp', note: 'config.generatedNote'},
-  subscription: {label: 'config.kind.subscription', help: 'config.subscriptionHelp', note: 'config.subscriptionNote'},
-  disabled: {label: 'config.readOnly', help: 'config.readOnlyHelp', note: 'config.readOnlyNote'},
-  secret: {label: 'config.secretSource', help: 'config.secretHelp', note: 'config.secretNote'},
-  redacted: {label: 'config.redactedSource', help: 'config.redactedHelp', note: 'config.redactedNote'}
+// The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
+// the badge is kept only for what the line has no room for: how to turn configuration writes on.
+const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
+  generated: {label: 'config.kind.generated', note: 'config.generatedNote'},
+  subscription: {label: 'config.kind.subscription', note: 'config.subscriptionNote'},
+  disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
+  secret: {label: 'config.secretSource', note: 'config.secretNote'},
+  redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
 // the server allows. The contract carries no reason for a main or include file, so one is inferred from honk: its
@@ -218,7 +219,7 @@ export function readOnlyBadge(
   configWritable: boolean,
   complete: boolean | undefined,
   t: Translator
-): {reason: ReadOnlyReason; label: string; help: Help & {text: string}; note: string} | null {
+): {reason: ReadOnlyReason; label: string; note: string; help?: Help} | null {
   const reason: ReadOnlyReason | null =
     source.kind === 'generated' || source.kind === 'subscription'
       ? source.kind
@@ -232,7 +233,7 @@ export function readOnlyBadge(
   if (!reason) return null;
   const text = readOnlyText[reason];
   const label = t(text.label);
-  return {reason, label, help: {title: label, text: t(text.help)}, note: t(text.note)};
+  return {reason, label, note: t(text.note), ...(text.help && {help: {title: label, text: t(text.help)}})};
 }
 type DiagnosticRow = {
   id: string;

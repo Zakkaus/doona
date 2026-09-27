@@ -66,7 +66,7 @@ export function Config(props: PageProps) {
               {sourceModel.readOnly && (
                 <span className="rp-help-row">
                   <Badge>{sourceModel.readOnly.label}</Badge>
-                  <ContextualHelp {...sourceModel.readOnly.help} />
+                  {sourceModel.readOnly.help && <ContextualHelp {...sourceModel.readOnly.help} />}
                 </span>
               )}
               <TextTooltip className="rp-label" text={sourceModel.loaded}>
