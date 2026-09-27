@@ -95,11 +95,21 @@ jobs:
               "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
           done
           sha256sum "$@" > SHA256SUMS
+      # Temporary: honk has no release with the native API yet, so every doona release carries honk's rolling debug builds
+      # and a note naming their source commit. Remove this step and the two honk lines in `files` below once honk ships one.
+      - name: Bundle the honk-core debug builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/fetch-honk.mjs release
+          cd release
+          sha256sum honk-core-debug-*.tar.gz HONK-SOURCE.txt >> SHA256SUMS
       - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           draft: true
           prerelease: ${{ env.PRERELEASE != '' }}
           fail_on_unmatched_files: true
+          # The last two lines belong to the temporary honk-core step above.
           files: |
             release/*-${{ env.NPM }}.tar.gz
             release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.deb
@@ -107,3 +117,5 @@ jobs:
             release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.ipk
             release/*-${{ env.VERSION }}${{ env.ARCH_PRERELEASE }}-${{ env.PACKAGE_RELEASE }}-any.pkg.tar.zst
             release/SHA256SUMS
+            release/honk-core-debug-*.tar.gz
+            release/HONK-SOURCE.txt
