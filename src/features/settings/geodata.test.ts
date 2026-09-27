@@ -148,7 +148,7 @@ describe('rows', () => {
   });
   it('lists each asset with its size, host and route, and the full URL behind it', () => {
     const details = assetDetails(status(), [], 'en-US', t);
-    expect(details[0]).toEqual(['geosite', expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full.urls.geosite[0]]);
+    expect(details[0]).toEqual({label: 'geosite', value: expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full: full.urls.geosite[0]});
     expect(assetDetails(undefined, [], 'en-US', t)).toEqual([]);
   });
 });

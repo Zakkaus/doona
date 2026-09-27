@@ -3,6 +3,7 @@ import {geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, typ
 import type {Key, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
+import type {KvItem} from '../../ui/ui';
 
 export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
 export type GeodataChoice = GeodataPresetId | 'custom';
@@ -125,10 +126,10 @@ export function statusLine(data: GeoData | undefined, updating: boolean, now: nu
 }
 
 // Each asset's size, download host and route, with the full URL behind the host.
-export function assetDetails(data: GeoData | undefined, groups: GroupSummary[] | undefined, locale: string, t: Translator): Array<[string, string, string]> {
+export function assetDetails(data: GeoData | undefined, groups: GroupSummary[] | undefined, locale: string, t: Translator): KvItem[] {
   return (data?.assets ?? []).map(asset => {
     const url = asset.fetched_url_redacted ?? asset.source_redacted ?? '';
     const parts = [formatBytes(asset.size_bytes, locale), url ? hostOf(url) : null, asset.download_route ? routeLabel(asset.download_route, groups, t) : null];
-    return [asset.kind, parts.filter(Boolean).join(t('ui.separator')), url];
+    return {label: asset.kind, value: parts.filter(Boolean).join(t('ui.separator')), full: url};
   });
 }

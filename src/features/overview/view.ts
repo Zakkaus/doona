@@ -6,8 +6,7 @@ import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/sel
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
-import type {Help} from '../../ui/ContextualHelp';
-import type {KvItem} from '../../ui/Kv';
+import type {Help, KvItem} from '../../ui/ui';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -49,7 +48,7 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
   const occupancy = ebpf?.maps?.conn_state;
   const row = (key: Key, value: string): KvItem => {
     const help = valueHelp(value, runtimeDegraded, label);
-    return help ? [label(key), datapathValue(value, label), undefined, help] : [label(key), datapathValue(value, label)];
+    return help ? {label: label(key), value: datapathValue(value, label), help} : [label(key), datapathValue(value, label)];
   };
   return [
     row('ov.f.kind', datapath.kind),
@@ -102,7 +101,7 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
     .filter(([key]) => !omit.includes(key))
     .map(([key, value]): KvItem =>
       key === 'ov.f.cgroupScope' && scope
-        ? [label(key), value, undefined, {title: label(key), text: label('ui.valuePair', {label: value, value: label(cgroupHelp[scope])})}]
+        ? {label: label(key), value, help: {title: label(key), text: label('ui.valuePair', {label: value, value: label(cgroupHelp[scope])})}}
         : [label(key), value]
     );
 }
@@ -146,7 +145,7 @@ export function overviewView(
       text: state ? enumLabel(lifecycleStates, state, t) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.statusUnknown')
     },
     strip: [
-      [t('ov.config'), shortId(revision), revision, {title: t('ov.config'), text: t('ov.configHelp')}],
+      {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('ov.configHelp')}},
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
       [t('ov.cpu'), cpu == null ? '—' : t('ui.percent', {n: formatNumber(cpu, locale, 1)})],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
@@ -182,12 +181,11 @@ export function overviewView(
             [t('ov.f.total'), count(runtime.traffic.connections.total)],
             [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload, locale)],
             [t('ui.download'), formatBytes(runtime.traffic.bytes.download, locale)],
-            [
-              t('ov.f.rateWindow'),
-              runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—',
-              undefined,
-              {title: t('ov.f.rateWindow'), text: t('ov.rateWindowHelp')}
-            ]
+            {
+              label: t('ov.f.rateWindow'),
+              value: runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—',
+              help: {title: t('ov.f.rateWindow'), text: t('ov.rateWindowHelp')}
+            }
           ] as KvItem[])
         : [],
       since: runtime
