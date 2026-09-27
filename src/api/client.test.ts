@@ -164,6 +164,42 @@ describe('native transport', () => {
     await failure;
     expect(request).toHaveBeenCalledTimes(2);
   });
+  // Headers arrive, then the body stalls part way; the engine errors the stream with a plain AbortError on abort.
+  const stalling = () =>
+    vi.fn(
+      async (_input: Request | URL, init?: RequestInit) =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(c) {
+              c.enqueue(new TextEncoder().encode('{"observed_at":'));
+              init?.signal?.addEventListener('abort', () => c.error(new DOMException('', 'AbortError')), {once: true});
+            }
+          }),
+          {headers: {'Content-Type': 'application/json'}}
+        )
+    );
+  it.each([
+    ['read', 15, 'ui.errTimeout'],
+    ['write', 30, 'ui.errTimeoutWrite']
+  ] as const)('fails a %s whose body stalls mid-read with the timeout error', async (kind, seconds, key) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', stalling());
+    const api = createApi('https://honk.test');
+    const result: Promise<unknown> = kind === 'read' ? api.runtime() : api.startReload();
+    const failure = expect(result).rejects.toMatchObject({status: 0, code: 'timeout', text: {key, params: {seconds}}});
+    await vi.advanceTimersByTimeAsync(seconds * 1000);
+    await failure;
+  });
+  // Chromium hands a 204 an empty body stream rather than none; the response still carries no body.
+  it('passes a no-content response through with its empty body', async () => {
+    const empty = new Response(null, {status: 204});
+    Object.defineProperty(empty, 'body', {value: new ReadableStream()});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => empty)
+    );
+    await createApi('https://honk.test').closeConnection('c1');
+  });
   it('leaves an open event stream to its own silence limit', async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
