@@ -291,35 +291,35 @@ function SourceCard(props: SourceCardProps) {
   } = useSourceCard(props);
   return (
     <Card aria-label={view.label}>
-      {(canValidate || dirty) && (
-        <div className="rp-row">
-          <span className="rp-cluster">
-            {dirty && (
-              <>
-                <Badge tone="warn">{t('config.unsaved')}</Badge>
-                <span className="rp-label">{t('config.unsavedHint')}</span>
-              </>
-            )}
-          </span>
-          <span className="rp-cluster">
-            {canValidate && (
-              <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
-                {t('config.validate')}
+      <div className="rp-row">
+        <span className="rp-cluster">
+          {dirty ? (
+            <>
+              <Badge tone="warn">{t('config.unsaved')}</Badge>
+              <span className="rp-label">{t('config.unsavedHint')}</span>
+            </>
+          ) : (
+            view.hasContent && <span className="rp-label">{note}</span>
+          )}
+        </span>
+        <span className="rp-cluster">
+          {canValidate && (
+            <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
+              {t('config.validate')}
+            </Button>
+          )}
+          {dirty && (
+            <>
+              <Button isDisabled={busy} onPress={cancel}>
+                {t('ui.cancel')}
               </Button>
-            )}
-            {dirty && (
-              <>
-                <Button isDisabled={busy} onPress={cancel}>
-                  {t('ui.cancel')}
-                </Button>
-                <Button accent isPending={saving} isDisabled={busy} tip={saveTip} onPress={() => void save()}>
-                  {t('config.save')}
-                </Button>
-              </>
-            )}
-          </span>
-        </div>
-      )}
+              <Button accent isPending={saving} isDisabled={busy} tip={saveTip} onPress={() => void save()}>
+                {t('config.save')}
+              </Button>
+            </>
+          )}
+        </span>
+      </div>
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
@@ -349,7 +349,6 @@ function SourceCard(props: SourceCardProps) {
           onSave={dirty && !busy ? () => void save() : undefined}
         />
       )}
-      {view.hasContent && <span className="rp-label">{note}</span>}
     </Card>
   );
 }
