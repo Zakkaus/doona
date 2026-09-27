@@ -135,3 +135,20 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   ]);
   expect(patches[0].headers()['if-match']).toBe('"40"');
 });
+
+test('a disabled Test all does not blame TCP support when the probe limits rule it out', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  // The group takes TCP probes; the backend's job limit is what rules Test all out.
+  capabilities.resources.probes.limits!.max_members_per_job = 0;
+  await page.goto('/#/policies');
+  const probe = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: 'Test all', exact: true});
+  await expect(probe).toBeDisabled();
+  // The disabled button's wrapper is its focus stop; reaching it by keyboard opens the tip at once, where a hover
+  // waits out the delay and closes if the card moves under the pointer.
+  const stop = probe.locator('xpath=..');
+  await stop.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(stop).toBeFocused();
+  await expect(page.getByRole('tooltip')).toHaveText('Test all is not available for this group');
+});

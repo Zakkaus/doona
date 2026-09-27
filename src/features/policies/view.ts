@@ -192,7 +192,8 @@ export function nodeGridView(
   };
 }
 
-// Why members are untested, and whether Test all can settle it: a group that takes no probe cannot.
+// Why members are untested, and whether Test all can settle it: it cannot when the backend offers no TCP probe within
+// its limits, or the group has no members or takes no TCP probe.
 export function untestedHelp(untested: string | null, canProbe: boolean, t: Translator): Help | null {
   return untested ? {title: untested, text: [t('policy.untestedHelp'), t(canProbe ? 'policy.untestedProbe' : 'policy.untestedNoProbe')]} : null;
 }
