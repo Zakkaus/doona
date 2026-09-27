@@ -84,6 +84,17 @@
   font-size: var(--rp-text-3xl);
   font-weight: 800;
 }
+/* The dialog's one action spans the form; the ways out of it sit centred below, as secondary links. */
+.rp-login-submit {
+  width: 100%;
+  justify-content: center;
+}
+.rp-login-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 24px;
+}
 .rp-login-brand img {
   width: 56px;
   height: 56px;
