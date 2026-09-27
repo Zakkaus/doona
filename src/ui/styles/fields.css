@@ -105,6 +105,9 @@
 .rp-toolbar:has(> .rp-search-field[data-invalid]) > .rp-label {
   line-height: var(--rp-control);
 }
+.rp-toolbar:has(> .rp-search-field[data-invalid]) > .rp-help-row {
+  min-height: var(--rp-control);
+}
 :is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input {
   border-color: var(--rp-negative);
 }
