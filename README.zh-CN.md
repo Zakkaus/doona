@@ -18,14 +18,14 @@ doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 ho
 
 [使用示例数据体验演示版](https://demo.daeuniverse.org/)。以 [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults) 打开演示版可查看错误状态，以 `?scenario=` 打开则恢复正常的演示版。
 
-![活动页](docs/screenshots/zh-CN/activity-light.webp)
+![活动页](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/activity-light.webp)
 
 <details>
 <summary><strong>全部配色</strong></summary>
 
 十一套配色各有浅色与深色；Rosé Pine 与 Catppuccin 另有多种深色变体。配色在顶栏切换。
 
-<img src="docs/screenshots/palettes.webp" alt="全部配色的浅色与深色" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="全部配色的浅色与深色" width="100%">
 
 </details>
 
@@ -33,12 +33,12 @@ doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 ho
 
 下图展示活动页的四种配色。可在顶栏切换配色和模式。
 
-| 配色       | 浅色                                                                | 深色                                                               |
-| ---------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Rosé Pine  | ![Rosé Pine 浅色](docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](docs/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin | ![Catppuccin 浅色](docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](docs/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord       | ![Nord 浅色](docs/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](docs/screenshots/en/theme-nord-dark.webp)             |
-| Glass      | ![Glass 浅色](docs/screenshots/en/theme-glass-light.webp)           | ![Glass 深色](docs/screenshots/en/theme-glass-dark.webp)           |
+| 配色       | 浅色                                                                                                | 深色                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Rosé Pine  | ![Rosé Pine 浅色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin | ![Catppuccin 浅色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord       | ![Nord 浅色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
+| Glass      | ![Glass 浅色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)           | ![Glass 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)           |
 
 ## 状态
 
@@ -54,7 +54,7 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ## 页面
 
-<img src="docs/screenshots/zh-CN/policies-light.webp" alt="策略页" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/policies-light.webp" alt="策略页" width="100%">
 
 | 页面       | 内容                                                                                   |
 | ---------- | -------------------------------------------------------------------------------------- |
@@ -73,7 +73,7 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 登录为独立页面，页内提供语言菜单与主题切换。窗口宽度不小于 1024 像素时，表单旁的面板显示施工场景，按下后启动 Flappy Duck 小游戏。演示版预填了用户名 `demo` 和密码 `demo`。
 
-<img src="docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
 
 ## 页面导览
 
@@ -81,39 +81,39 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 在策略页的编排标签页，将右侧列表中的节点或订阅拖动到群组上，即可加入该群组。键盘拖放可完成相同操作；列表下方的加入组菜单可将勾选的各行加入群组。更改会先暂存，打开检查并应用后按应用，才会写入配置。
 
-<img src="docs/screenshots/zh-CN/arrange.webp" alt="将节点 us-01 拖动到 gaming 群组" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/arrange.webp" alt="将节点 us-01 拖动到 gaming 群组" width="100%">
 
 ### 流量与连接
 
 连接页的流量标签页用散点图展示每条连接的上传量与下载量，并按出站着色；选中数据点即可打开对应的连接。连接标签页按设备或出站对实时连接分组，可按协议和出站筛选，并导出为 CSV。
 
-<img src="docs/screenshots/zh-CN/connections-traffic.webp" alt="连接页的流量标签页" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/connections-traffic.webp" alt="连接页的流量标签页" width="100%">
 
-<img src="docs/screenshots/zh-CN/connections-list.webp" alt="按设备分组的实时连接" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/connections-list.webp" alt="按设备分组的实时连接" width="100%">
 
 ### DNS
 
 统计标签页显示解析时间的中位数与 P95、缓存命中率、失败率、各上游在延迟刻度上的查询分布，以及查询的结果分类。
 
-<img src="docs/screenshots/zh-CN/dns.webp" alt="DNS 页的统计标签页" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/dns.webp" alt="DNS 页的统计标签页" width="100%">
 
 ### 日志时间分布
 
 日志列表上方的热力图按时间统计各级别的记录数。点击级别的行标题，即可设置列表显示的最低级别。
 
-<img src="docs/screenshots/zh-CN/logs.webp" alt="日志时间分布热力图" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/logs.webp" alt="日志时间分布热力图" width="100%">
 
 ### 分流总览
 
 规则页的分流总览按规则或设备，经出站追踪到节点。将指针移到规则、出站或节点上，或选中其中一项，即可突出显示经过该项的路径。
 
-<img src="docs/screenshots/zh-CN/routing.webp" alt="在分流总览中依次选中规则与节点" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/routing.webp" alt="在分流总览中依次选中规则与节点" width="100%">
 
 ### 节点延迟
 
 节点页的延迟标签页按策略群组或协议分组，显示每个节点的当前延迟；后端提供时，另显示移动平均和近 10 次平均。不可用的节点列在所属群组下方。
 
-<img src="docs/screenshots/zh-CN/latency.webp" alt="节点页的延迟标签页" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/latency.webp" alt="节点页的延迟标签页" width="100%">
 
 ## 手机布局
 
@@ -123,7 +123,7 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 通过 HTTPS 或在 localhost 上打开时，doona 可安装为应用。在 Chrome 和 Edge 中，设置页的关于卡片提供安装为应用按钮。Safari 没有安装提示，因此卡片改为显示操作步骤：在 iPhone 和 iPad 上轻点共享，再轻点添加到主屏幕；在 macOS 上的 Safari 26 中选取文件 > 添加到程序坞。
 
-<img src="docs/screenshots/zh-CN/phone.webp" alt="手机上的 doona：连接表格、溢出菜单及其配色子菜单" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/phone.webp" alt="手机上的 doona：连接表格、溢出菜单及其配色子菜单" width="100%">
 
 ## 开发
 

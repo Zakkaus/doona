@@ -18,14 +18,14 @@ doona is a static web UI for the native API the daeuniverse engines share: honk 
 
 [Try the demo with sample data](https://demo.daeuniverse.org/). To see the error states, open it with [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
 
-![The activity page](docs/screenshots/en/activity-light.webp)
+![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
 
 <details>
 <summary><strong>Every palette</strong></summary>
 
 Eleven palettes support light and dark modes; Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
 
-<img src="docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
 </details>
 
@@ -33,12 +33,12 @@ Eleven palettes support light and dark modes; Rosé Pine and Catppuccin include 
 
 The activity page in four palettes. Select a palette and mode from the top bar.
 
-| Theme gallery | Light                                                                | Dark                                                               |
-| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Rosé Pine     | ![Rosé Pine Light](docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](docs/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin    | ![Catppuccin Light](docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](docs/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord          | ![Nord Light](docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](docs/screenshots/en/theme-nord-dark.webp)             |
-| Glass         | ![Glass Light](docs/screenshots/en/theme-glass-light.webp)           | ![Glass Dark](docs/screenshots/en/theme-glass-dark.webp)           |
+| Theme gallery | Light                                                                                                | Dark                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Rosé Pine     | ![Rosé Pine Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin    | ![Catppuccin Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord          | ![Nord Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
+| Glass         | ![Glass Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)           | ![Glass Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)           |
 
 ## Status
 
@@ -54,7 +54,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 
 ## Pages
 
-<img src="docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
 
 | Page          | Shows                                                                                                                        |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -73,7 +73,7 @@ A page is marked unavailable only when every resource it needs is unavailable. `
 
 Sign-in is a page of its own with the language menu and scheme toggle. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
 
-<img src="docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
 ## Page tour
 
@@ -81,39 +81,39 @@ Sign-in is a page of its own with the language menu and scheme toggle. From 1024
 
 On the Arrange tab of Policies, drag a node or a subscription from the list on the right onto a group to add it. Keyboard dragging does the same, and Add to group below the list adds the selected rows to a group. The changes stay staged until you open Review and apply and press Apply.
 
-<img src="docs/screenshots/en/arrange.webp" alt="Dragging the node us-01 onto the gaming group" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/arrange.webp" alt="Dragging the node us-01 onto the gaming group" width="100%">
 
 ### Traffic and connections
 
 The Traffic tab of Connections plots each connection's upload against its download, coloured by outbound; select a point to open that connection. The Connections tab groups live connections by device or by outbound, filters them by protocol and outbound, and exports them as CSV.
 
-<img src="docs/screenshots/en/connections-traffic.webp" alt="The Traffic tab of the connections page" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/connections-traffic.webp" alt="The Traffic tab of the connections page" width="100%">
 
-<img src="docs/screenshots/en/connections-list.webp" alt="Live connections grouped by device" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/connections-list.webp" alt="Live connections grouped by device" width="100%">
 
 ### DNS
 
 The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended.
 
-<img src="docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 
 ### Log activity
 
 Above the log list, a heatmap counts records per level over time. A level's row header sets the minimum level the list shows.
 
-<img src="docs/screenshots/en/logs.webp" alt="The log activity heatmap" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/logs.webp" alt="The log activity heatmap" width="100%">
 
 ### Routing map
 
 The routing map on Rules follows traffic from rules, or from devices, through outbounds to nodes. Point at or select a rule, outbound or node to highlight the paths through it.
 
-<img src="docs/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
 
 ### Node latency
 
 The Latency tab of Nodes plots each node's latest latency, and its moving average and the average of the last 10 measurements when the backend reports them. A switch groups the nodes by policy group or by protocol; unavailable nodes appear under their group.
 
-<img src="docs/screenshots/en/latency.webp" alt="The Latency tab of the nodes page" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/latency.webp" alt="The Latency tab of the nodes page" width="100%">
 
 ## On a phone
 
@@ -123,7 +123,7 @@ Below 600 pixels wide, tables keep every column and scroll sideways; on wider sc
 
 Over HTTPS or on localhost, doona installs as an app. In Chrome and Edge, the About card in Settings offers Install as an app. Safari has no install prompt, so the card shows the steps instead. On iPhone and iPad, tap Share, then Add to Home Screen. In Safari 26 on macOS, choose File > Add to Dock.
 
-<img src="docs/screenshots/en/phone.webp" alt="doona on phones: the connections table, the overflow menu and its palette submenu" width="100%">
+<img src="https://zakkaus.github.io/doona-docs/screenshots/en/phone.webp" alt="doona on phones: the connections table, the overflow menu and its palette submenu" width="100%">
 
 ## Development
 
