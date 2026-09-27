@@ -186,6 +186,7 @@ export function ConfirmDialog({
   tone = 'negative',
   isPending,
   isDisabled,
+  reason,
   error,
   children
 }: {
@@ -197,6 +198,8 @@ export function ConfirmDialog({
   tone?: 'negative' | 'accent';
   isPending?: boolean;
   isDisabled?: boolean;
+  // Why Confirm is disabled, under the footer.
+  reason?: string | null;
   error?: {id: number; text: string} | null;
   children: ReactNode;
 }) {
@@ -207,6 +210,7 @@ export function ConfirmDialog({
       narrow
       alert={tone === 'negative'}
       isOpen={isOpen}
+      reason={reason}
       onOpenChange={open => {
         if (!open) onCancel();
       }}
