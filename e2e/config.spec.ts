@@ -1383,7 +1383,7 @@ test('without a pattern to fill, the whole relative path is typed', async ({page
   await expect(dialog).toContainText('The file name must end in .dae');
   // A path no include pattern matches is warned about, and the backend's refusal stays in the dialog.
   await path.fill('work.dae');
-  await expect(dialog.getByRole('status')).toContainText('No include pattern of the main configuration matches this path');
+  await expect(dialog.getByRole('status')).toContainText('No include pattern of the loaded files matches this path');
   await path.fill('config.d/work.dae');
   await expect(dialog.getByRole('status')).toHaveCount(0);
   await create.click();

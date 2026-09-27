@@ -1,6 +1,16 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource} from '../api/model';
-import {globMatch, includeDirectory, includePatterns, includedBy, namePatterns, newSourceNameProblem, newSourcePathProblem, sourceAt} from './newSource';
+import {
+  globMatch,
+  includeCheck,
+  includeDirectory,
+  includePatterns,
+  includedBy,
+  namePatterns,
+  newSourceNameProblem,
+  newSourcePathProblem,
+  sourceAt
+} from './newSource';
 
 it('reads include patterns from top-level include sections, without comments or quotes', () => {
   const text = `global { log_level: info }
@@ -26,6 +36,22 @@ it('matches globs within one path segment and everything else literally', () => 
   expect(globMatch('rule?.dae', 'rule1.dae')).toBe(true);
   expect(globMatch('extra.dae', 'extra.dae')).toBe(true);
   expect(includedBy(['extra.dae', 'config.d/*.dae'], 'other.dae')).toBe(false);
+});
+
+it('checks a new path against the include patterns of every loaded file, each from where it lives', () => {
+  const file = (kind: ConfigSource['kind'], path: string, content: string | undefined) => ({kind, path, content});
+  const sources = [file('main', 'config.dae', 'include { config.d/*.dae }'), file('include', 'config.d/lab.dae', "include { 'lab/*.dae' }")];
+  const loads = includeCheck(sources)!;
+  expect(loads('config.d/work.dae')).toBe(true);
+  // Only the include file's pattern loads this one, resolved from its own directory.
+  expect(loads('config.d/lab/a.dae')).toBe(true);
+  expect(loads('lab/a.dae')).toBe(false);
+  // A backend that reports absolute paths resolves alike.
+  const absolute = includeCheck(sources.map(source => ({...source, path: '/etc/honk/' + source.path})))!;
+  expect(absolute('config.d/lab/a.dae')).toBe(true);
+  expect(absolute('lab/a.dae')).toBe(false);
+  // A file whose text is unknown may hold the pattern, so nothing is known.
+  expect(includeCheck([...sources, file('include', 'config.d/x.dae', undefined)])).toBeNull();
 });
 
 it('offers the directory of the first pattern that globs names in a fixed directory', () => {
