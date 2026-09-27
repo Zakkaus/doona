@@ -1,5 +1,6 @@
 import type {components} from './types';
 import {responseError, send} from './error';
+import {isDemoApi} from './profiles';
 
 // Sign-in reads only what the public discovery view carries; the admitted view's auth adds anonymous_loopback.
 export type AuthDiscovery = components['schemas']['PublicDiscovery']['auth'];
@@ -11,7 +12,11 @@ export type SignIn = 'setup' | 'login' | 'token';
 const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + path, globalThis.location?.href);
 
 // Discovery is public, so it is read without a token; a backend that predates password login has no `auth`.
+// The demo backend signs in through the in-browser mock, loaded only when that backend is asked.
+const demoAuth = () => import('./mock/auth');
+
 export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery | null> {
+  if (isDemoApi(base)) return (await demoAuth()).mockDiscovery();
   const response = await send(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
   if (!response.ok) throw await responseError(response);
   const body: {auth?: AuthDiscovery} = await response.json();
@@ -31,6 +36,7 @@ export function signInKind(auth: AuthDiscovery | null): SignIn {
 
 // Setup and login carry no Authorization: a stale token from an earlier session would be refused as invalid.
 export async function openSession(base: string, kind: 'setup' | 'login', credentials: AuthCredentials, signal?: AbortSignal): Promise<AuthSession> {
+  if (isDemoApi(base)) return (await demoAuth()).mockOpenSession(kind, credentials);
   const response = await fetch(url(base, `/api/v1/auth/${kind}`), {
     method: 'POST',
     headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
@@ -43,6 +49,8 @@ export async function openSession(base: string, kind: 'setup' | 'login', credent
 }
 
 export async function closeSession(base: string, token: string, signal?: AbortSignal): Promise<void> {
+  // The demo keeps no sessions to revoke; dropping the tab's token ends it.
+  if (isDemoApi(base)) return;
   const response = await fetch(url(base, '/api/v1/auth/logout'), {
     method: 'POST',
     headers: {Accept: 'application/json', Authorization: 'Bearer ' + token},

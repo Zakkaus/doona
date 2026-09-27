@@ -1265,6 +1265,8 @@ export const messages = {
   'login.rateLimited': {one: 'Too many attempts. Try again in {n} second.', other: 'Too many attempts. Try again in {n} seconds.'},
   'login.failed': 'Could not sign in: {error}',
   'login.sessionEnded': 'The session has ended; sign in again.',
+  'login.connectedTo': 'Connecting to {backend}',
+  'login.demoNote': 'Demo account: {username}  Password: {password}',
   'hint.logs': 'Live engine log',
   'hint.nodes': 'Node sources, usage and refresh',
   'nav.activity': 'Activity',

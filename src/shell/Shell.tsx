@@ -92,6 +92,26 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
   const Page = view.current.Page;
   const hub = view.groups.find(group => group.items.some(item => item.current));
+  // Signing in takes the whole page: the shell around it would offer nothing that works yet.
+  if (view.content.kind === 'login')
+    return (
+      <Suspense fallback={<Loading />}>
+        <Login
+          profileId={view.content.profileId}
+          api={view.content.api}
+          backend={view.content.backend}
+          rejected={view.content.rejected}
+          lang={lang}
+          pickLang={pickLang}
+          dark={ap.dark}
+          themeLabel={menu.themeLabel}
+          toggleScheme={ap.toggle}
+          wordmark={view.wordmark}
+          error={view.error}
+          onRetry={view.refresh}
+        />
+      </Suspense>
+    );
   return (
     <div className="rp-shell">
       <TopBar
@@ -126,11 +146,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
           <SettingsContext.Provider value={settingsValue}>
-            {view.content.kind === 'login' ? (
-              <Suspense fallback={<Loading />}>
-                <Login profileId={view.content.profileId} api={view.content.api} backend={view.content.backend} rejected={view.content.rejected} />
-              </Suspense>
-            ) : view.content.kind === 'loading' ? (
+            {view.content.kind === 'loading' ? (
               <Loading />
             ) : view.content.kind === 'unavailable' ? (
               <Empty>

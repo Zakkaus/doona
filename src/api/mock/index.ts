@@ -7,11 +7,16 @@ import {createLifecycle} from './lifecycle';
 import {createNetwork} from './network';
 import {createRuntime} from './runtime';
 import {createGeodataState} from './geodata';
+import {mockSessionValid, refuseWithoutSession} from './auth';
 
 export type MockApi = Api & OperationReader;
 
-// `faults` selects the faults scenario where storage cannot, as for the specs' in-process backend.
-export function createMockApi(options: {faults?: boolean} = {}): MockApi {
+// A saved demo profile signs in as a password backend does; with no profile at all (development, the test suites)
+// the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
+// specs' in-process backend.
+export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null};
+
+export function createMockApi(options: MockOptions = {}): MockApi {
   let count = 120;
   let big = false;
   // A busy backend for tools/perf.mjs: byte counters move on every poll and logs arrive every 20 ms.
@@ -69,5 +74,6 @@ export function createMockApi(options: {faults?: boolean} = {}): MockApi {
   );
   const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot, busy, faults);
   const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt, geodata, faults);
-  return {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
+  const api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
+  return options.signIn && !mockSessionValid(options.session) ? refuseWithoutSession(api) : api;
 }

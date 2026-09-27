@@ -5,7 +5,8 @@ import {docsHref} from '../features/shared/docs';
 import {ApiError, errorText} from '../api/error';
 import {discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
-import {normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
+import {isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
+import {DEMO_ACCOUNT} from '../api/mock/auth';
 
 export function loginProfiles(profiles: Profile[], profileId: string, api: string, token: string): Profile[] | null {
   if (!profiles.some(profile => profile.id === profileId && normalizeApi(profile.api) === normalizeApi(api))) return null;
@@ -13,7 +14,8 @@ export function loginProfiles(profiles: Profile[], profileId: string, api: strin
 }
 
 const USERNAME = /^[A-Za-z0-9_.-]{1,64}$/;
-// The backend's own limits, checked first so a typo costs no attempt against its rate limit.
+// The backend's own limits, checked first so a typo costs no attempt against its rate limit. The minimum length
+// binds a new password only: an existing account is the backend's to judge, and the demo's password is short.
 type Field = 'username' | 'password' | 'confirm';
 export function credentialProblems(kind: 'setup' | 'login', username: string, password: string, confirm: string): Partial<Record<Field, Key>> {
   const problems: Partial<Record<Field, Key>> = {};
@@ -21,7 +23,7 @@ export function credentialProblems(kind: 'setup' | 'login', username: string, pa
   else if (!USERNAME.test(username)) problems.username = 'login.badUsername';
   const length = [...password].length;
   if (!length) problems.password = 'login.passwordRequired';
-  else if (length < 8) problems.password = 'login.passwordShort';
+  else if (kind === 'setup' && length < 8) problems.password = 'login.passwordShort';
   else if (length > 128 || new TextEncoder().encode(password).length > 512) problems.password = 'login.passwordLong';
   else if (kind === 'setup' && password !== confirm) problems.confirm = 'login.mismatch';
   return problems;
@@ -75,8 +77,10 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     return () => controller.abort();
   }, [api, discovery.attempt]);
   const [token, setToken] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // The demo backend publishes its account, so its form arrives filled in and says so.
+  const demo = isDemoApi(api);
+  const [username, setUsername] = useState(demo ? DEMO_ACCOUNT.username : '');
+  const [password, setPassword] = useState(demo ? DEMO_ACCOUNT.password : '');
   const [confirm, setConfirm] = useState('');
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -148,7 +152,15 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     discoveryError: discovery.error,
     retryDiscovery: () => setDiscovery(state => ({attempt: state.attempt + 1, error: null})),
     title: t(kind === 'no-api' ? 'login.noApiTitle' : kind === 'setup' ? 'login.setupTitle' : kind === 'token' ? 'login.title' : 'login.passwordTitle'),
-    note: kind === 'no-api' ? t('login.noApiNote') : kind === 'setup' ? t('login.setupNote', {backend}) : kind === 'login' ? null : t('login.note', {backend}),
+    note:
+      kind === 'no-api'
+        ? t('login.noApiNote')
+        : kind === 'setup'
+          ? t('login.setupNote', {backend})
+          : kind === 'login'
+            ? t('login.connectedTo', {backend})
+            : t('login.note', {backend}),
+    demoNote: demo && kind === 'login' ? t('login.demoNote', DEMO_ACCOUNT) : null,
     alert,
     busy,
     token,
