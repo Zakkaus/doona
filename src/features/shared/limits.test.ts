@@ -134,7 +134,7 @@ describe('backendLimits', () => {
 
   it('orders the groups by cause and puts each feature in one group', () => {
     const groups = limits(capabilitiesBase);
-    expect(groups.map(g => g.cause)).toEqual(['configNotLoaded', 'recordOff', 'geodataUnreadable', 'notProvided']);
+    expect(groups.map(g => g.cause)).toEqual(['configNotLoaded', 'recordOff', 'geodataUnreadable', 'notRunning', 'notProvided']);
     const every = groups.flatMap(g => g.items.map(item => item.id));
     expect(new Set(every).size).toBe(every.length);
   });
