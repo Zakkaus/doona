@@ -8,7 +8,7 @@ import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {configMetadata, saveTip, sourceView, diagnosticRows, sourceMarks} from './view';
+import {configMetadata, saveTip, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
 import {configTabs, setupAvailable} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
@@ -69,6 +69,8 @@ export function useConfigPage({go, query}: PageProps) {
   const setup = setupAvailable(resources, mainSource);
   const tabs = configTabs(setup);
   const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
+  const configWritable = resources?.config.writable === true;
+  const canWrite = configWritable && !!source?.writable;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setup ? 'setup' : 'modules';
   const tab = pickTab(
     query,
@@ -81,8 +83,9 @@ export function useConfigPage({go, query}: PageProps) {
         sources,
         open: openSource,
         diagnostics: sourceDiagnostics,
-        canValidate,
-        canWrite: resources?.config.writable === true && source.writable,
+        // A read-only source has nothing to check before a save, so it offers no validation of its own.
+        canValidate: canValidate && canWrite,
+        canWrite,
         contentOffered: resources?.config.content === true,
         editor,
         focusLine
@@ -121,13 +124,13 @@ export function useConfigPage({go, query}: PageProps) {
       ? {
           config: config.data,
           editor,
-          canWrite: resources?.config.writable === true,
+          canWrite: configWritable,
           canValidate,
           open: openSource
         }
       : null,
     validateProps,
-    sourceModel: source ? sourceView(source, locale, t) : null,
+    sourceModel: source ? {...sourceView(source, locale, t), readOnly: readOnlyBadge(source, configWritable, t)} : null,
     sourceOptions: sources.map(item => {
       const view = sourceView(item, locale, t);
       return {id: view.id, label: view.label, desc: view.kind};
