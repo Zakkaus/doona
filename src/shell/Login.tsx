@@ -8,6 +8,11 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
   const t = useT();
   const view = useLogin(profileId, api, backend, rejected);
   const reveal = {shown: view.secretType === 'text', label: view.toggleText, onToggle: view.toggle};
+  const guide = (
+    <Link appearance="link" href={view.guideHref} external>
+      {t('shell.guide')}
+    </Link>
+  );
   // A dialog over the shell, as About is: nothing behind it works until the backend accepts the credentials.
   return (
     <ModalDialog isOpen locked narrow hideTitle title={view.title}>
@@ -33,6 +38,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 <Link appearance="link" href={href('settings')}>
                   {t('login.settings')}
                 </Link>
+                {guide}
               </div>
             </>
           ) : (
@@ -47,7 +53,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
               </InlineAlert>
             )}
             {view.kind === 'no-api' ? (
-              <Link appearance="link" href="https://github.com/Zakkaus/doona#native-api-requirement">
+              <Link appearance="link" href={view.requirementsHref} external>
                 {t('login.requirements')}
               </Link>
             ) : view.kind === 'token' ? (
@@ -104,6 +110,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
               <Link appearance="link" href={href('settings')}>
                 {t('login.settings')}
               </Link>
+              {guide}
             </div>
           </>
         )}

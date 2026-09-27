@@ -1136,6 +1136,7 @@ export const messages = {
   'settings.runtimeFailed': '無法套用後端選項',
   'settings.refreshAllFailed': '無法重新整理訂閱',
   'settings.geodataFailed': '無法更新地理資料',
+  'shell.guide': '安裝指南',
   'shell.shortcuts': '鍵盤快捷鍵',
   'shell.langUnavailable': '無法切換至{name}：介面文字載入失敗。',
   'shell.searchUnavailable': '無法開啟搜尋：搜尋功能載入失敗。',

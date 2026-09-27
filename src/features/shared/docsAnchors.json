@@ -1,0 +1,18 @@
+{
+  "requirements": "requirements",
+  "honk-version": "requirements",
+  "install": "install",
+  "doona": "install",
+  "other-origin": "install",
+  "operation": "install",
+  "config": "configuration",
+  "features": "features",
+  "still-missing": "features",
+  "pages": "features",
+  "troubleshooting": "troubleshooting",
+  "unknown-setting": "troubleshooting",
+  "state-db": "troubleshooting",
+  "no-native-api": "troubleshooting",
+  "sign-in": "troubleshooting",
+  "read-only": "troubleshooting"
+}

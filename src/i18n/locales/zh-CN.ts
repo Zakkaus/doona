@@ -1139,6 +1139,7 @@ export const messages = {
   'settings.geodataFailed': '无法更新地理数据',
   'shell.langUnavailable': '无法切换至{name}：界面文字加载失败。',
   'shell.searchUnavailable': '无法打开搜索：搜索功能加载失败。',
+  'shell.guide': '安装指南',
   'shell.shortcuts': '键盘快捷键',
   'shell.notOffered': '此后端不提供该页面',
   'shell.toActivity': '回到活动',

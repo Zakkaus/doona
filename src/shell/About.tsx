@@ -3,6 +3,7 @@ import {Button, Kv, Link, ModalDialog, cx} from '../ui/ui';
 import logo from '../logo.svg';
 import night from '../duck-night.webp';
 import GitHub from '../ui/icons/GitHub';
+import FileText from '../ui/icons/FileText';
 import {useAbout} from './useShell';
 
 // Opened by its own trigger, or, without one, by the caller through `isOpen`, as the backend indicator does.
@@ -45,6 +46,10 @@ export function About({
         <p className="rp-label">{view.credits}</p>
         <p className="rp-label">{view.privacy}</p>
         <div className="rp-cluster">
+          <Link appearance="link" href={view.guide.href} external>
+            <FileText />
+            {view.guide.label}
+          </Link>
           {view.repositories.map(repository => (
             <Link key={repository.href} appearance="link" href={repository.href} external>
               <GitHub />

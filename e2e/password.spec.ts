@@ -57,7 +57,11 @@ test('a released honk without the native API shows the requirement instead of a 
   const form = page.getByRole('dialog');
   await expect(form.getByRole('heading')).toHaveText('This honk build has no native API');
   await expect(form.getByLabel('Token', {exact: true})).toHaveCount(0);
-  await expect(form.getByRole('link', {name: 'Native API requirements'})).toHaveAttribute('href', 'https://github.com/Zakkaus/doona#native-api-requirement');
+  await expect(form.getByRole('link', {name: 'Native API requirements'})).toHaveAttribute(
+    'href',
+    'https://zakkaus.github.io/doona-docs/en/troubleshooting.html#no-native-api'
+  );
+  await expect(form.getByRole('link', {name: 'Setup guide'})).toHaveAttribute('href', 'https://zakkaus.github.io/doona-docs/en/');
 });
 
 test('a first visit creates the administrator and continues with its session', async ({page}) => {
