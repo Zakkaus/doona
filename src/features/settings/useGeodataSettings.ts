@@ -3,7 +3,7 @@ import type {GeoDataSettingsPatch} from '../../api/model';
 import {useCapabilities, useGeodata, useGroups, useRuntimeSettings} from '../../store';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {errorText} from '../../api/error';
 import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
@@ -54,7 +54,7 @@ export function useGeodataSettings() {
       result => {
         if (result) toast('positive', t('settings.geodataUpdated'));
       },
-      (error: unknown) => toast('negative', t('settings.geodataFailed'), {detail: errorText(error, t)})
+      (error: unknown) => toastFailure(error, t, t('settings.geodataFailed'))
     );
   // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
   // One save at a time: a second press while one is in flight, or while an update runs, does nothing.

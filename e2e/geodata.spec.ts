@@ -1,4 +1,5 @@
 import {expect, mockBackend, test} from './fixtures';
+import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 import {geodataPreset} from '../src/dae/geodata';
 import {LANGS, loadLanguage, translate} from '../src/i18n';
@@ -93,6 +94,26 @@ test('a failed update keeps the old files and shows the reason in the status row
     .getByRole('button', {name: t('settings.geodataDetails')})
     .click();
   await expect(section(page).locator('.rp-kv')).toContainText('4.4 MB');
+});
+
+test('an update the backend forgot while polling reports an unknown result, not a failure', async ({page}) => {
+  const {handlers} = await traffic(page);
+  handlers['POST geodata/update'] = async () => ({
+    operation_id: 'geodata-lost',
+    kind: 'geodata_update',
+    status: 'queued',
+    href: '/api/v1/operations/geodata-lost',
+    retryAfter: 1
+  });
+  handlers['GET operations/geodata-lost'] = async () => {
+    throw new ApiError(404, 'resource_not_found', 'Operation not found');
+  };
+  await page.goto('/#/settings');
+  await section(page)
+    .getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true})
+    .click();
+  await expect(page.locator('.rp-toast.neutral')).toHaveText(new RegExp('^' + t('ui.operationUnknown')));
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
 });
 
 test('custom URLs are edited in a dialog, saved once and then updated', async ({page}) => {
