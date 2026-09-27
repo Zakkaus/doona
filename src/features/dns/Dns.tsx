@@ -164,7 +164,7 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
           />
         </div>
       </ActionHelp>
-      <ActionHelp reason={vm.deleteReason}>
+      <ActionHelp reason={vm.deleteReason} above>
         <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
       </ActionHelp>
     </>
