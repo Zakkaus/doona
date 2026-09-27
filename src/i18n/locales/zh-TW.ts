@@ -230,6 +230,8 @@ export const messages = {
   'conn.closeFailed': '無法關閉連線',
   'conn.notInSnapshot': '目前清單未包含此連線。',
   'conn.ungrouped': '不分組',
+  'conn.collapseAll': '全部收合',
+  'conn.expandAll': '全部展開',
   'conn.groupCount': '{name}（{n}）',
   'conn.truncated': '連線清單已截斷，僅顯示部分記錄。',
   'conn.chart.title': '連線流量',

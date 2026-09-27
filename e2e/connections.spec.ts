@@ -213,7 +213,7 @@ test('column visibility, sorting and grouping persist without expanding the virt
   await expect(grid.locator('[role=row][aria-level="1"]').first()).toContainText('10.0.0.');
 });
 
-test('group slots stay expanded and unselectable across virtual keyboard navigation', async ({page}) => {
+test('group slots take focus but never the selection across virtual keyboard navigation', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.getByRole('button', {name: 'Group by'}).click();
   await page.getByRole('option', {name: 'By device', exact: true}).click();
@@ -230,7 +230,11 @@ test('group slots stay expanded and unselectable across virtual keyboard navigat
   await page.keyboard.press('End');
   await expect(selected).toHaveAttribute('data-key', 'c-0400');
   await expectRowInView(selected);
+  // Home focuses the first group, which keeps the selection where it was; the next row down takes it.
   await page.keyboard.press('Home');
+  await expect(groups.first()).toBeFocused();
+  await expect(page).toHaveURL(/[?&]id=c-0400/);
+  await page.keyboard.press('ArrowDown');
   await expect(selected).toHaveAttribute('data-key', 'c-0001');
   await page.evaluate(() => {
     location.hash = '#/connections?id=c-0002';
@@ -239,7 +243,11 @@ test('group slots stay expanded and unselectable across virtual keyboard navigat
   await expectRowInView(selected);
   await selected.getByRole('rowheader').click();
   await page.keyboard.press('ArrowUp');
+  await expect(grid.locator('[role=row][aria-level="1"]:focus-within')).toHaveCount(1);
+  await expect(selected).toHaveAttribute('data-key', 'c-0002');
+  await page.keyboard.press('ArrowUp');
   await expect(selected).toHaveAttribute('data-key', 'c-0397');
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
   await expect(grid.locator('[role=row][aria-level="1"]:not([aria-expanded="true"])')).toHaveCount(0);
@@ -265,6 +273,45 @@ test.describe('short connection lists', () => {
     await page.keyboard.press('d');
     await expect(grid.locator('[role=row]:focus')).toHaveAttribute('data-key', '4');
     await expect(grid.locator('[role=rowheader]:not(:has(> .cell)), [role=gridcell]:not(:has(> .cell))')).toHaveCount(0);
+  });
+});
+
+test.describe('folding groups', () => {
+  test.use({storage: {'doona-mock-big': '100'}});
+
+  test('collapse all holds across polls, one group reopens, and a new grouping starts expanded', async ({page}) => {
+    await page.clock.install();
+    await page.goto('/#/connections?tab=list');
+    const grid = page.getByRole('treegrid', {name: 'Connections'});
+    const groups = grid.locator('[role=row][aria-level="1"]');
+    const children = grid.locator('[role=row][aria-level="2"]');
+    await expect(children.first()).toBeVisible();
+    await page.getByRole('button', {name: 'Collapse all', exact: true}).click();
+    await expect(children).toHaveCount(0);
+    // The virtual height holds only the group rows, which fit without scrolling.
+    await expect.poll(() => grid.evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(0);
+    await page.clock.fastForward(6000);
+    await expect(groups.first()).toHaveAttribute('aria-expanded', 'false');
+    await expect(children).toHaveCount(0);
+    await groups.first().getByRole('button', {name: 'Expand'}).click();
+    await expect(groups.first()).toHaveAttribute('aria-expanded', 'true');
+    await expect(children.first()).toBeVisible();
+    await expect(grid.locator('[role=row][aria-level="1"][aria-expanded="true"]')).toHaveCount(1);
+    // ArrowLeft on a focused group row folds it again, as in any tree grid.
+    await page.keyboard.press('ArrowLeft');
+    await expect(groups.first()).toHaveAttribute('aria-expanded', 'false');
+    await expect(children).toHaveCount(0);
+    await page.getByRole('button', {name: 'Expand all', exact: true}).click();
+    await expect(grid.locator('[role=row][aria-level="1"][aria-expanded="false"]')).toHaveCount(0);
+    await page.getByRole('button', {name: 'Collapse all', exact: true}).click();
+    await page.getByRole('button', {name: 'Group by'}).click();
+    await page.getByRole('option', {name: 'Outbound', exact: true}).click();
+    await expect(groups.first()).toHaveAttribute('aria-expanded', 'true');
+    await expect(children.first()).toBeVisible();
+    await expect(page.getByRole('button', {name: 'Collapse all', exact: true})).toBeVisible();
+    await page.getByRole('button', {name: 'Group by'}).click();
+    await page.getByRole('option', {name: 'None', exact: true}).click();
+    await expect(page.getByRole('button', {name: 'Collapse all', exact: true})).toHaveCount(0);
   });
 });
 

@@ -13,13 +13,16 @@ import {
   readView,
   viewKey,
   closeSelection,
+  collapseAll,
+  toggleGroup,
   connectionsExport,
   connectionsView,
   connectionDetail,
   connectionTableView,
   filterMenu,
   type CloseSelection,
-  type ConnectionView
+  type ConnectionView,
+  type GroupCollapse
 } from './view';
 import {offered} from '../../api/capabilities';
 import {pathLatency} from './latency';
@@ -47,8 +50,12 @@ export function useConnectionsPage({go, query}: PageProps) {
   const wide = useMediaQuery(panelQuery);
   // Below 600px the secondary filters fold into one menu beside the filter field.
   const compact = useMediaQuery(phoneQuery);
+  // Folded groups last the page session and start over when the grouping changes, since the group keys do.
+  const [collapse, setCollapse] = useState<GroupCollapse>(() => collapseAll(false));
+  const toggleCollapse = useCallback((group: string) => setCollapse(state => toggleGroup(state, group)), []);
   const updateView = (patch: Partial<ConnectionView>) => {
     const next = {...view, ...patch};
+    if (next.group !== view.group) setCollapse(collapseAll(false));
     setView(next);
     try {
       localStorage.setItem(viewKey, JSON.stringify(next));
@@ -162,6 +169,9 @@ export function useConnectionsPage({go, query}: PageProps) {
     openInList,
     view,
     updateView,
+    collapse,
+    toggleCollapse,
+    toggleCollapseAll: () => setCollapse(collapseAll(!collapse.allCollapsed)),
     wide,
     text,
     setText,

@@ -2,6 +2,7 @@ import {expect, it} from 'vitest';
 import {connections} from '../../api/mock/fixtures';
 import {
   closeSelection,
+  collapseAll,
   columns,
   connectionDetail,
   connectionDetails,
@@ -9,9 +10,11 @@ import {
   connectionsView,
   filterMenu,
   connectionTableView,
+  isCollapsed,
   readView,
   sortByKey,
   tableRows,
+  toggleGroup,
   type ConnectionView
 } from './view';
 import {parseU64} from '../../api/u64';
@@ -36,6 +39,31 @@ it('groups by client address without losing IPv6 hosts or UInt64 precision', () 
     ['2001:db8::1', 2, 2, 9007199254741000n],
     ['10.0.0.7', 2, 1, null]
   ]);
+});
+
+it('keys groups by their name so a reorder keeps each id', () => {
+  const c = connections.tcp[0];
+  const view: ConnectionView = {hidden: [], sort: {column: 'src', direction: 'ascending'}, group: 'source'};
+  const a = {...c, id: 'a', src: '10.0.0.1:1'};
+  const b = {...c, id: 'b', src: '10.0.0.2:1'};
+  const ids = (list: (typeof c)[]) => tableRows(list, view, t).map(row => row.id);
+  expect(ids([a, b])).toEqual(['g:10.0.0.1', 'g:10.0.0.2']);
+  expect(ids([b])).toEqual(['g:10.0.0.2']);
+  expect(tableRows([a, b], {...view, sort: {column: 'src', direction: 'descending'}}, t).map(row => row.id)).toEqual(['g:10.0.0.2', 'g:10.0.0.1']);
+});
+
+it('folds groups by a default and its exceptions, so later groups take the default', () => {
+  let state = collapseAll(false);
+  expect(isCollapsed(state, 'a')).toBe(false);
+  state = toggleGroup(state, 'a');
+  expect([isCollapsed(state, 'a'), isCollapsed(state, 'b')]).toEqual([true, false]);
+  state = collapseAll(true);
+  expect([isCollapsed(state, 'a'), isCollapsed(state, 'new')]).toEqual([true, true]);
+  const opened = toggleGroup(state, 'a');
+  expect([isCollapsed(opened, 'a'), isCollapsed(opened, 'new')]).toEqual([false, true]);
+  expect(isCollapsed(state, 'a')).toBe(true);
+  expect(toggleGroup(opened, 'a').exceptions.size).toBe(0);
+  expect(isCollapsed(collapseAll(false), 'a')).toBe(false);
 });
 
 it('groups, sorts and describes by the displayed labels', () => {

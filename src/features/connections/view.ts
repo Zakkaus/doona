@@ -54,9 +54,19 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 6}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
-type GroupRow = {id: number; group: string; children: Connection[]; active: number; download: bigint | null};
+type GroupRow = {id: string; group: string; children: Connection[]; active: number; download: bigint | null};
 type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = storageKeys.connectionsView;
+// Which groups are folded: all but the exceptions once everything is collapsed, otherwise only the exceptions. A group
+// that arrives later takes the default, so a poll neither reopens a folded group nor folds an open one.
+export type GroupCollapse = {allCollapsed: boolean; exceptions: ReadonlySet<string>};
+export const collapseAll = (allCollapsed: boolean): GroupCollapse => ({allCollapsed, exceptions: new Set()});
+export const isCollapsed = (state: GroupCollapse, group: string) => state.allCollapsed !== state.exceptions.has(group);
+export function toggleGroup(state: GroupCollapse, group: string): GroupCollapse {
+  const exceptions = new Set(state.exceptions);
+  if (!exceptions.delete(group)) exceptions.add(group);
+  return {allCollapsed: state.allCollapsed, exceptions};
+}
 
 export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
@@ -127,8 +137,9 @@ export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn):
     if (group) group.push(row);
     else groups.set(key, [row]);
   }
-  return [...groups].map(([group, children], id) => ({
-    id,
+  // A group's id is its key, not its place, so the table's expansion and focus follow the group across polls.
+  return [...groups].map(([group, children]) => ({
+    id: `g:${group}`,
     group,
     children,
     active: children.filter(c => c.state === 'active').length,
@@ -149,7 +160,7 @@ export type ConnectionRowView = {
   downloadRate: string;
   startedAt: string | null;
 };
-type ConnectionGroupView = {id: number; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
+type ConnectionGroupView = {id: string; group: string; children: ConnectionRowView[]; label: string; totals: Record<string, string>};
 export type ConnectionTableRow = {id: string; connection: ConnectionRowView} | ConnectionGroupView;
 // A connection a poll re-reads unchanged keeps its identity, so its row is projected once per locale, outbound names
 // and rules capability, and the table keeps that row's cached item.

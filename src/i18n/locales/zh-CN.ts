@@ -231,6 +231,8 @@ export const messages = {
   'conn.closeFailed': '无法关闭连接',
   'conn.notInSnapshot': '当前列表未包含此连接。',
   'conn.ungrouped': '不分组',
+  'conn.collapseAll': '全部折叠',
+  'conn.expandAll': '全部展开',
   'conn.groupCount': '{name}（{n}）',
   'conn.truncated': '连接列表已截断，仅显示部分记录。',
   'conn.chart.title': '连接流量',

@@ -63,6 +63,7 @@ export function Connections(props: PageProps) {
             {id: 'none', label: t('conn.ungrouped')}
           ]}
         />
+        {vm.view.group !== 'none' && <Button onPress={vm.toggleCollapseAll}>{t(vm.collapse.allCollapsed ? 'conn.expandAll' : 'conn.collapseAll')}</Button>}
         <ChoiceMenu label={t('conn.columns')} selectionMode="multiple" items={vm.columns} value={vm.visibleColumns} onAction={vm.toggleColumn}>
           {t('conn.columns')}
         </ChoiceMenu>
@@ -92,6 +93,8 @@ export function Connections(props: PageProps) {
           onSelect={vm.select}
           selectOnFocus={vm.wide}
           view={vm.view}
+          collapse={vm.collapse}
+          onToggleGroup={vm.toggleCollapse}
           onSort={sort => vm.updateView({sort})}
         />
         <DetailPanel open={!!cur} title={vm.detailTitle} onClose={() => vm.select(null)}>

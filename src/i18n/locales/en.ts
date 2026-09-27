@@ -247,6 +247,8 @@ export const messages = {
   'conn.closeFailed': 'Could not close the connection',
   'conn.notInSnapshot': 'This connection is not in the current list.',
   'conn.ungrouped': 'None',
+  'conn.collapseAll': 'Collapse all',
+  'conn.expandAll': 'Expand all',
   'conn.groupCount': '{name} ({n})',
   'conn.truncated': 'The connection list is truncated; only some records are shown.',
   'conn.chart.title': 'Traffic per connection',
