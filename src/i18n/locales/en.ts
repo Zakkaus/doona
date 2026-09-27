@@ -29,7 +29,6 @@ export const messages = {
   'mode.rule': 'Rule',
   'mode.direct': 'Direct',
   'mode.global': 'Global',
-  'act.apply': 'Apply',
   'act.modeApplied': 'Outbound mode written to the configuration and reloaded: {mode}',
   'act.modeNoRouting': 'The main configuration has no routing section',
   'act.modeInterleaved':
@@ -752,7 +751,6 @@ export const messages = {
   'arrange.policy.manual': 'Manual',
   'arrange.policy.manualHint': 'The node is selected by hand on the Groups tab',
   'arrange.reviewTitle': 'Review changes',
-  'arrange.apply': 'Apply',
   'arrange.undo': 'Undo: {change}',
   'arrange.showText': 'Show the configuration text to be written',
   'arrange.applyNote': 'Applying validates the whole configuration first, then writes and reloads; nothing is written if validation fails.',

@@ -36,7 +36,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
             <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
             {vm.writable ? (
               <Button small accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
-                {t('act.apply')}
+                {t('config.save')}
               </Button>
             ) : vm.readOnly ? (
               <PopoverDialog
