@@ -1,7 +1,7 @@
-import {expect, expectLoadFailures, routes, test} from './fixtures';
+import {demoSession, expect, expectLoadFailures, routes, test} from './fixtures';
 
 // Keep install-time precaching out of the navigation request log.
-test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock'}});
+test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock'}, signedIn: 'legacy'});
 
 for (const route of routes) {
   test(`cold navigation to ${route} loads its chunks`, async ({page}) => {
@@ -107,10 +107,11 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
     const page = await context.newPage();
     const uncaught: string[] = [];
     page.on('pageerror', error => uncaught.push(error.message));
-    await page.addInitScript(() => {
+    await page.addInitScript(session => {
       localStorage.setItem('doona-api', 'mock');
       localStorage.setItem('doona-lang', 'en');
-    });
+      sessionStorage.setItem('doona-session', session);
+    }, demoSession('legacy'));
     let reject = true;
     await page.route(`**/assets/${chunk}-*.js`, route => (reject ? route.abort() : route.continue()));
     try {

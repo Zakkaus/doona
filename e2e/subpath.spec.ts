@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 
 // Every request under a sub-path prefix must be the app's own: assets, fonts, the manifest and its icons.
-test.use({storage: {'doona-api': 'mock', 'doona-lang': 'zh-TW'}});
+test.use({storage: {'doona-api': 'mock', 'doona-lang': 'zh-TW'}, signedIn: 'legacy'});
 
 test('deep links, fonts and the installed app stay under /ui/', async ({page}) => {
   const responses: {path: string; status: number}[] = [];

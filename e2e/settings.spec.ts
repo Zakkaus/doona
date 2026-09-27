@@ -54,8 +54,8 @@ browserTest('paints a frame during discovery, then selects the hosted backend an
   await expect(page.locator('.rp-nav')).toHaveCount(0);
   expect(backendRequests).toBe(0);
   release();
-  await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-login')).toContainText(new URL(page.url()).host);
+  await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
+  await expect(page.locator('.rp-login-page')).toContainText(new URL(page.url()).host);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles') ?? '[]').map((item: {api: string}) => item.api))).toEqual([
     new URL(page.url()).origin
   ]);
@@ -79,7 +79,10 @@ test('saving mock reloads and restores the default activity route', async ({page
   await expect(page.locator('.rp-toast.positive')).toContainText('Settings saved.');
   await expect(page.locator('[name=api]')).toHaveValue('mock');
   await expect(token).toHaveCount(0);
+  // A saved demo profile signs in with its published account, filled in, before the default route.
   await page.goto('/#/');
+  await expect(page.locator('.rp-login-page')).toContainText('Demo account: demo');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Sign in', exact: true}).click()]);
   await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
 });
 
