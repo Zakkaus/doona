@@ -79,7 +79,10 @@ const groupName = (key: string, group: Exclude<ConnectionView['group'], 'none'>,
 // Groups and connections share the table's keys. A group's key is its own key after `g:`; a connection keeps its id
 // as its key, the way links and the selection name it, unless the id could read as a group's key or as an escaped
 // one, which is escaped with a backslash.
-export const groupRowId = (group: string) => 'g:' + group;
+const groupRowId = (group: string) => 'g:' + group;
+export const connectionKey = (id: string) => (id.startsWith('g:') || id.startsWith('\\') ? '\\' + id : id);
+export const connectionId = (key: string) => (key.startsWith('\\') ? key.slice(1) : key);
+
 // The group a selected connection shows in, and a token that changes when it moves to another group or the grouping
 // changes, so its group unfolds once for each move and folding it again holds.
 export function revealTarget(connection: Connection | undefined, group: ConnectionView['group']): {group: string; token: string} | null {
@@ -87,8 +90,6 @@ export function revealTarget(connection: Connection | undefined, group: Connecti
   const key = groupKey(connection, group);
   return {group: key, token: JSON.stringify([connection.id, group, key])};
 }
-export const connectionKey = (id: string) => (id.startsWith('g:') || id.startsWith('\\') ? '\\' + id : id);
-export const connectionId = (key: string) => (key.startsWith('\\') ? key.slice(1) : key);
 
 export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
