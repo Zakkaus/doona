@@ -206,7 +206,7 @@ function Dictionary({view}: {view: Model}) {
                 onChange={condition => setForm({...form, condition})}
               />
             )}
-            <div className="rp-toolbar">
+            <div className="rp-toolbar end">
               <LabeledSelect
                 isDisabled={view.busy}
                 label={t('ui.outbound')}
