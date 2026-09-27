@@ -72,6 +72,8 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
                 : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
                   ? {field: 'dst_ip', key: 'rule.invalidLive'}
                   : null;
+  const touched = (Object.keys(blankForm) as Array<keyof typeof blankForm>).some(key => key !== 'resolve' && key !== 'network' && form[key] !== blankForm[key]);
+  const shown = touched ? invalid : null;
   const resource = capabilities.data?.resources.routing_trace;
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.
   const backendModes: TraceResolve[] = resource?.resolve_modes ?? [];
@@ -155,12 +157,13 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     submit,
     available,
     modes: modes.map(id => ({id, label: t(resolveLabels[id])})),
+    // An untouched form is not wrong yet; submit stays disabled until it is complete.
     errors: {
-      domain: invalid?.field === 'domain' ? t(invalid.key) : undefined,
-      dst_ip: invalid?.field === 'dst_ip' ? t(invalid.key) : undefined,
-      dst_port: invalid?.field === 'dst_port' ? t(invalid.key) : undefined,
-      src_ip: invalid?.field === 'src_ip' ? t(invalid.key) : undefined,
-      src_port: invalid?.field === 'src_port' ? t(invalid.key) : undefined
+      domain: shown?.field === 'domain' ? t(shown.key) : undefined,
+      dst_ip: shown?.field === 'dst_ip' ? t(shown.key) : undefined,
+      dst_port: shown?.field === 'dst_port' ? t(shown.key) : undefined,
+      src_ip: shown?.field === 'src_ip' ? t(shown.key) : undefined,
+      src_port: shown?.field === 'src_port' ? t(shown.key) : undefined
     },
     advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port',
     setAdvanced,
