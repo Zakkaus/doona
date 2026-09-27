@@ -150,33 +150,41 @@
   white-space: nowrap;
   font-size: var(--rp-text-xs);
 }
-/* A feature that is off or limited: its label and state, then why, the setting that turns it on and where to go. */
+/* Features that are off, one block per cause: why, the features it turns off, then the fix. Blocks sit side by side
+   where the card is wide enough for two. */
+.rp-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+  gap: 16px 32px;
+}
 .rp-limit {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-}
-.rp-limit-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  align-self: stretch;
-}
-/* One key per line, so keys that go together never read as one setting. */
-.rp-limit-keys {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
   min-width: 0;
 }
-/* A dotted key is one word, so a phone breaks it anywhere rather than scroll the card. */
-.rp-limit-keys > code,
-.rp-limit-note > code {
-  overflow-wrap: anywhere;
+.rp-limit-reason {
+  margin: 0;
+}
+.rp-limit-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-limit-items > .rp-capability {
+  gap: 8px;
+}
+.rp-limit-snippet {
+  align-self: stretch;
+  margin: 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  border-radius: var(--rp-r-md);
+  background: var(--rp-overlay);
 }
 .rp-legend {
   display: flex;

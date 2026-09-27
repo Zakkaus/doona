@@ -13,7 +13,8 @@ import {backendLimits} from '../shared/limits';
 
 export function useActivity() {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const p = usePalette();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
@@ -53,7 +54,10 @@ export function useActivity() {
   );
   const version = useVersion();
   // Overview lists these with their reasons; here the status card only counts them.
-  const limited = useMemo(() => (capabilities.data ? backendLimits(capabilities.data, version.data, t).length : 0), [capabilities.data, version.data, t]);
+  const limited = useMemo(
+    () => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang).reduce((n, group) => n + group.items.length, 0) : 0),
+    [capabilities.data, version.data, t, lang]
+  );
   const notices = useNotices();
   const mode = useMode();
   return {
