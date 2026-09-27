@@ -47,9 +47,10 @@ const known: Record<string, Key> = {
   'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };
 
-// Codes honk reuses for unrelated failures, such as a group field, a probe target or a DNS record type: their words
-// alone cannot tell these apart, so the backend's own message goes with them.
-const reused = new Set(['invalid_request', 'unsupported_value']);
+// Codes honk reuses for unrelated failures, such as a group field, a probe target, a DNS record type, a node name
+// already in use or a connection that cannot be closed: their words alone cannot tell these apart, so the backend's
+// own message goes with them.
+const reused = new Set(['invalid_request', 'unsupported_value', 'state_conflict']);
 
 // A backend message as a summary in the page language and, for a reused code, the backend's words as its detail.
 export type BackendMessage = {summary: string; detail?: string};
