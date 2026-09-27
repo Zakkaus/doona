@@ -11,7 +11,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-[Install](#install) • [First run](#first-run) • [Pages](#pages) • [Page tour](#page-tour) • [On a phone](#on-a-phone) • [Development](#development) • [Guide](docs/guide.md)
+[Install](#install) • [Pages](#pages) • [Page tour](#page-tour) • [On a phone](#on-a-phone) • [Development](#development) • [Documentation](https://zakkaus.github.io/doona-docs/en/)
 
 </div>
 
@@ -47,44 +47,9 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 
 ## Install
 
-Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Build from source as described under [Development](#development). Verify and extract the files into the directory the engine or web server will serve:
+doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Extract them into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`.
 
-```sh
-VERSION=0.1.0-beta.7  # replace with the downloaded release version, without v
-sha256sum --ignore-missing -c SHA256SUMS
-sudo mkdir -p /usr/share/doona
-sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
-if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
-    sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
-fi
-```
-
-### Native API requirement
-
-**Required honk build:** doona needs the native API in [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api). No tagged daeuniverse/honk release includes it yet. The `native_api` and `password_auth` keys may change before upstream release. A released honk returns 404 for `/api` and `/ui/`. The configuration below applies to that branch.
-
-honk's native API is opt-in. Point `ui` at the extracted files and honk serves them at `/ui/`, same-origin with the API:
-
-```dae
-experimental {
-    native_api {
-        enabled: true
-        listen: '127.0.0.1:9527'
-        password_auth: true
-        ui: '/usr/share/doona'
-    }
-}
-```
-
-Keep this block in its own include (`include { api.dae }`) so the main file stays editable from the configuration page. For scripts and automation, use `secret: '<random token>'` instead of `password_auth: true`. Requirements, serving from another web server or a reverse proxy, and the distribution packages are in the [guide](docs/guide.md#install).
-
-## First run
-
-Open `/ui/` on the engine host. On a first visit doona asks the origin it was served from for `/api` and saves the engine as a backend. In password mode, the locked sign-in dialog offers first-time setup to create the administrator; complete setup from a loopback or private-network client, then sign in with the username and password. Served from elsewhere, or to reach another engine, open Settings and enter the server root.
-
-In token mode, doona asks for the token. Enter it in Settings with the server root, or use a pairing link such as `/ui/#/settings?api=http://router:9527&token=…` to fill the form; doona removes the token from the address bar on load.
-
-The activity page then shows the running engine. Add a subscription or paste share links on Nodes, pick or pin members on Policies, add rules on Rules, and edit, validate and reload the sources on Configuration. Every write goes through the engine with the hash doona read the source at, and a failed reload keeps the previous generation active. The [guide](docs/guide.md#first-run) walks through each page.
+The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
 ## Pages
 
@@ -103,7 +68,7 @@ The activity page then shows the running engine. Add a subscription or paste sha
 | Events, Logs  | The backend event stream; the log stream with filters, pause and export                                         |
 | Settings      | Backends, runtime settings and backend actions, language, appearance, palette and notification placement        |
 
-A page is marked unavailable only when every resource it needs is unavailable. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are in the [guide](docs/guide.md#pages).
+A page is marked unavailable only when every resource it needs is unavailable. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages).
 
 <img src="docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
@@ -159,17 +124,7 @@ Over HTTPS or on localhost, doona installs as an app. In Chrome and Edge, the Ab
 
 ## Development
 
-```sh
-pnpm install --frozen-lockfile
-pnpm build                       # writes dist/
-pnpm check                       # types, lint, translations, formatting, unit tests, generated API types
-pnpm check:size                  # gzip budgets for the dist/ build
-pnpm e2e:install --with-deps     # once, for the browser tests
-pnpm e2e                         # rebuild, then test against the mock at the root and under /ui/
-pnpm package                     # release/doona-<version>.tar.gz, doona-fonts-<version>.tar.gz, SHA256SUMS
-```
-
-`pnpm dev` serves the mock on Vite's dev server. The live-backend test run, the performance and screenshot tools, the source layout and the contract pin are described in the [guide](docs/guide.md#development); see [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Its [Translations](CONTRIBUTING.md#translations) section covers correcting a translation and proposing a language.
+The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://zakkaus.github.io/doona-docs/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## Support
 

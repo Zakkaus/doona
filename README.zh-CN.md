@@ -11,7 +11,7 @@
 
 [English](README.md) · 简体中文 · [繁體中文](README.zh-TW.md)
 
-[安装](#安装) • [首次使用](#首次使用) • [页面](#页面) • [页面导览](#页面导览) • [手机布局](#手机布局) • [开发](#开发) • [使用指南](docs/guide.zh-CN.md)
+[安装](#安装) • [页面](#页面) • [页面导览](#页面导览) • [手机布局](#手机布局) • [开发](#开发) • [文档](https://zakkaus.github.io/doona-docs/zh-CN/)
 
 </div>
 
@@ -47,44 +47,9 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 
 ## 安装
 
-发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上。自行构建请见[开发](#开发)一节。校验文件并解压到引擎或 Web 服务器要提供的目录：
+doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上。将其解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
 
-```sh
-VERSION=0.1.0-beta.7  # 替换为下载文件对应的版本，不含 v
-sha256sum --ignore-missing -c SHA256SUMS
-sudo mkdir -p /usr/share/doona
-sudo tar -xzf "doona-${VERSION}.tar.gz" -C /usr/share/doona
-if [ -f "doona-fonts-${VERSION}.tar.gz" ]; then
-    sudo tar -xzf "doona-fonts-${VERSION}.tar.gz" -C /usr/share/doona
-fi
-```
-
-### honk 原生 API 要求
-
-**所需 honk 构建：**doona 需要 [Glassyiris/honk 的 `feat/native-api` 分支](https://github.com/Glassyiris/honk/tree/feat/native-api)提供的原生 API；daeuniverse/honk 尚无包含该功能的正式发行版本。`native_api` 和 `password_auth` 配置项在上游发布前可能变化。已发布的 honk 对 `/api` 和 `/ui/` 返回 404。下方配置仅适用于该分支。
-
-honk 的原生 API 需要显式开启。把 `ui` 指向解压后的目录，honk 就在 `/ui/` 提供这些文件，与 API 同源：
-
-```dae
-experimental {
-    native_api {
-        enabled: true
-        listen: '127.0.0.1:9527'
-        password_auth: true
-        ui: '/usr/share/doona'
-    }
-}
-```
-
-这个块请放在独立的 include（`include { api.dae }`），主文件才能在配置页编辑。供脚本和自动化程序使用时，以 `secret: '<random token>'` 代替 `password_auth: true`。运行环境、由其他 Web 服务器或反向代理提供、发行版软件包，见[使用指南](docs/guide.zh-CN.md#安装)。
-
-## 首次使用
-
-在引擎主机上打开 `/ui/`。首次访问时，doona 向提供页面的来源请求 `/api`，并将引擎保存为后端。密码模式下，锁定的登录对话框提供首次设置入口，用于创建管理员；请从本机或私有网络客户端完成设置，然后使用用户名和密码登录。若页面来自别处，或要连接另一台引擎，打开设置页填写服务器根地址。
-
-token 模式下，doona 会提示输入 token。可在设置页填写服务器根地址和 token，或使用配对链接（`/ui/#/settings?api=http://router:9527&token=…`）代填表单；加载后，doona 会从地址栏移除 token。
-
-接着活动页显示运行中的引擎。在节点页新增订阅或粘贴分享链接，在策略页选择或固定群组成员，在规则页加规则，在配置页编辑、校验并重载来源。每次写入都带着读取时的哈希经过引擎；重载失败时仍沿用先前的世代。各页面的用法见[使用指南](docs/guide.zh-CN.md#首次使用)。
+[文档](https://zakkaus.github.io/doona-docs/zh-CN/)包含系统要求、honk 与 doona 的安装、示例配置、首次登录、逐项检查功能与故障排查。
 
 ## 页面
 
@@ -103,7 +68,7 @@ token 模式下，doona 会提示输入 token。可在设置页填写服务器�
 | 事件、日志 | 后端事件流；日志流，可筛选、暂停、导出                                                 |
 | 设置       | 后端、运行时设置与后端操作、语言、外观、配色与通知位置                                 |
 
-只有页面需要的资源全部不可用时，页面才会标为不可用。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。各页面需要的资源与 doona 自身设置的存放位置，见[使用指南](docs/guide.zh-CN.md#页面)。
+只有页面需要的资源全部不可用时，页面才会标为不可用。任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。各页面需要的资源与 doona 自身设置的存放位置，见[功能](https://zakkaus.github.io/doona-docs/zh-CN/features.html#pages)一页。
 
 <img src="docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
 
@@ -159,17 +124,7 @@ token 模式下，doona 会提示输入 token。可在设置页填写服务器�
 
 ## 开发
 
-```sh
-pnpm install --frozen-lockfile
-pnpm build                       # 输出 dist/
-pnpm check                       # 类型、lint、翻译、格式、单元测试、生成的 API 类型
-pnpm check:size                  # dist/ 构建的 gzip 大小限制
-pnpm e2e:install --with-deps     # 浏览器测试只需安装一次
-pnpm e2e                         # 重新构建，再对模拟后端运行浏览器测试，覆盖根目录与 /ui/
-pnpm package                     # release/doona-<version>.tar.gz、doona-fonts-<version>.tar.gz、SHA256SUMS
-```
-
-`pnpm dev` 以 Vite 开发服务器提供模拟后端。对实际后端的测试、性能与截图工具、源码布局与契约钉点，见[使用指南](docs/guide.zh-CN.md#开发)；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。修正翻译或提议新增语言，见其中的 [Translations](CONTRIBUTING.md#translations) 一节。
+构建、测试与打包命令、源码布局与契约钉点，见[开发](https://zakkaus.github.io/doona-docs/zh-CN/development.html)一页；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 支持
 
