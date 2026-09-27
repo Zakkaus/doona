@@ -89,10 +89,26 @@
   height: 14px;
   margin-top: 1px;
 }
-:is(.rp-field, .rp-cluster)[data-invalid] .rp-input {
+/* A search field stacks its box over its error the way a labelled field does, without a label. */
+.rp-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+/* In a toolbar the error adds height below the box only, so the row aligns by the top of its controls and centres its
+   text in a control-high line, instead of lifting the box above its neighbours. */
+.rp-toolbar:has(> .rp-search-field[data-invalid]) {
+  align-items: flex-start;
+}
+.rp-toolbar:has(> .rp-search-field[data-invalid]) > .rp-label {
+  line-height: var(--rp-control);
+}
+:is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input {
   border-color: var(--rp-negative);
 }
-:is(.rp-field, .rp-cluster)[data-invalid] .rp-input:focus-within {
+:is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input:focus-within {
   box-shadow: 0 0 0 1px var(--rp-negative);
 }
 .rp-field > label,
