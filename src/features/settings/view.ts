@@ -115,6 +115,29 @@ export function profileView(
       : null
   };
 }
+// Why the profile select, Rename and Delete are disabled: nothing is saved yet to act on.
+export function profileReason(hasActive: boolean, t: Translator): string | null {
+  return hasActive ? null : t('settings.noProfile');
+}
+
+// Why Apply for backend options is disabled, first applicable: a value out of range, then nothing changed. Null while
+// the options are being applied.
+export function runtimeApplyReason({busy, invalid, changed}: {busy: boolean; invalid: string | null; changed: boolean}, t: Translator): string | null {
+  if (busy) return null;
+  if (invalid) return t('settings.runtimeInvalid', {field: invalid});
+  return changed ? null : t('config.noChanges');
+}
+
+// Why refreshing every subscription is disabled: there is none. Null while the list loads or a refresh runs.
+export function refreshAllReason({ready, busy, count}: {ready: boolean; busy: boolean; count: number}, t: Translator): string | null {
+  return ready && !busy && !count ? t('settings.noSubscriptions') : null;
+}
+
+// Why a geodata update is disabled: its status could not be read. Null while it loads or another change runs.
+export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; loaded: boolean; failed: boolean}, t: Translator): string | null {
+  return !busy && !loaded && failed ? t('settings.geodataUnread') : null;
+}
+
 export function paletteLabel(sections: Array<{items: Array<{id: string; label: string}>}>, id: string) {
   return sections.flatMap(section => section.items).find(item => item.id === id)?.label ?? id;
 }

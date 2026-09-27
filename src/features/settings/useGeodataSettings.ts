@@ -7,6 +7,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {errorText} from '../../api/error';
 import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
+import {geodataUpdateReason} from './view';
 import {
   assetDetails,
   cleanUrls,
@@ -227,6 +228,7 @@ export function useGeodataSettings() {
     canUpdate,
     updating: geodata.busy,
     updateBlocked: busy || !geodata.data,
+    updateReason: geodataUpdateReason({busy, loaded: !!geodata.data, failed: !!geodata.error}, t),
     update: () => void update()
   };
 }

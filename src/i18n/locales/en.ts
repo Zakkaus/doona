@@ -1082,6 +1082,7 @@ export const messages = {
   'settings.addProfile': 'Add profile',
   'settings.renameProfile': 'Rename profile',
   'settings.deleteProfile': 'Delete profile',
+  'settings.noProfile': 'No profile yet; saving the backend creates one',
   'settings.deleteProfileHelp': 'Delete {name}? Its backend URL and token will be removed from this browser.',
   'settings.switchProfileHelp': 'Switching profiles discards unsaved backend URL and token changes. Saved profiles remain unchanged.',
   'settings.profileDiscardHelp': 'This discards unsaved backend URL and token changes.',
@@ -1156,6 +1157,7 @@ export const messages = {
   'settings.closeAllHelp':
     'Closes every connection the backend owns ({n} right now), including ones opened after this dialog; kernel-direct connections are skipped.',
   'settings.refreshAll': {one: 'Refresh subscription ({n})', other: 'Refresh all subscriptions ({n})'},
+  'settings.noSubscriptions': 'No subscriptions to refresh',
   'settings.refreshedAll': 'Subscriptions refreshed: {n} of {total}',
   'settings.refreshedDegraded':
     'Nodes applied, but the datapath did not recover, so new connections proxied through userspace are refused. See Overview for details.',
@@ -1207,6 +1209,7 @@ export const messages = {
   'settings.geodataSaveFailed': 'Could not save the geodata settings',
   'settings.geodataStatus': 'Status',
   'settings.geodataUpdateNow': 'Update now',
+  'settings.geodataUnread': 'The geodata status could not be read, so it cannot be updated',
   'settings.geodataLastUpdated': 'Last updated',
   'settings.geodataLastError': 'Last error',
   'settings.geodataNever': 'Never',
@@ -1222,6 +1225,7 @@ export const messages = {
   'settings.apiMajor': 'The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.',
   'settings.installFailed': 'Could not install',
   'settings.runtimeFailed': 'Could not apply backend options',
+  'settings.runtimeInvalid': '{field} must be a whole number within the range shown',
   'settings.refreshAllFailed': 'Could not refresh subscriptions',
   'settings.geodataFailed': 'Could not update geodata',
   'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',

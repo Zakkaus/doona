@@ -2,7 +2,21 @@ import {expect, it} from 'vitest';
 import {geodata, runtimeSettings} from '../../api/mock/fixtures';
 import type {RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {numericAccess, numericFieldView, geodataRows, probeFailure, profileView, paletteLabel, recorderView, recorderPatchValue, recordingNote} from './view';
+import {
+  geodataRows,
+  geodataUpdateReason,
+  numericAccess,
+  numericFieldView,
+  paletteLabel,
+  probeFailure,
+  profileReason,
+  profileView,
+  recorderPatchValue,
+  recorderView,
+  recordingNote,
+  refreshAllReason,
+  runtimeApplyReason
+} from './view';
 import {ApiError} from '../../api/error';
 const t: Translator = (key, params) => translate('en', key, params);
 it('validates numeric bounds and writes typed partial patches without losing sibling edits', () => {
@@ -70,4 +84,31 @@ it('names why a connection test failed and ignores a cancelled test', () => {
   expect(probeFailure(new SyntaxError('Unexpected token'), idle, base, origin)).toEqual({key: 'settings.nonJson'});
   expect(probeFailure(new TypeError('Failed to fetch'), idle, base, origin)).toEqual({key: 'settings.cors'});
   expect(probeFailure(new TypeError('Failed to fetch'), idle, base, 'https://router.example')).toEqual({key: 'settings.network'});
+});
+
+it('says the profile actions wait for a saved profile', () => {
+  expect(profileReason(false, t)).toBe('No profile yet; saving the backend creates one');
+  expect(profileReason(true, t)).toBeNull();
+});
+
+it('says why Apply for backend options is disabled: a value out of range first, then no change', () => {
+  const idle = {busy: false, invalid: null, changed: true};
+  expect(runtimeApplyReason(idle, t)).toBeNull();
+  expect(runtimeApplyReason({...idle, changed: false}, t)).toBe('No changes to apply');
+  expect(runtimeApplyReason({...idle, changed: false, invalid: 'Flow table size'}, t)).toBe('Flow table size must be a whole number within the range shown');
+  expect(runtimeApplyReason({busy: true, invalid: 'x', changed: false}, t)).toBeNull();
+});
+
+it('says why refreshing every subscription is disabled only once the list is read and empty', () => {
+  expect(refreshAllReason({ready: true, busy: false, count: 0}, t)).toBe('No subscriptions to refresh');
+  expect(refreshAllReason({ready: false, busy: false, count: 0}, t)).toBeNull();
+  expect(refreshAllReason({ready: true, busy: true, count: 0}, t)).toBeNull();
+  expect(refreshAllReason({ready: true, busy: false, count: 2}, t)).toBeNull();
+});
+
+it('says a geodata update needs its status, and nothing while it loads', () => {
+  expect(geodataUpdateReason({busy: false, loaded: false, failed: true}, t)).toBe('The geodata status could not be read, so it cannot be updated');
+  expect(geodataUpdateReason({busy: false, loaded: false, failed: false}, t)).toBeNull();
+  expect(geodataUpdateReason({busy: true, loaded: false, failed: true}, t)).toBeNull();
+  expect(geodataUpdateReason({busy: false, loaded: true, failed: true}, t)).toBeNull();
 });
