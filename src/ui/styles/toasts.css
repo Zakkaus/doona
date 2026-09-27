@@ -70,11 +70,9 @@
   justify-content: flex-end;
   gap: 8px;
 }
-/* S2's toast: 12/16/8 padding and at least 56px tall, the icon, the message and close on a grid. The message is a
-   semibold summary with an optional smaller detail under it; icon and close sit on its first line. The footer row takes
-   "show all" at the start and the action at the end, which ends where close ends. A toast is as wide as its content
-   within 336px and 560px, so a typical message fits on one line; the widest toast sets the width of the stack. Margins
-   rather than column gaps space the columns, so a toast without an icon starts its message at the padding. */
+/* S2's toast. The footer row takes "show all" at the start and the action at the end, which ends where close ends; the
+   widest toast sets the width of the stack. Margins rather than column gaps space the columns, so a toast without an
+   icon starts its message at the padding. */
 .rp-toast {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

@@ -13,8 +13,8 @@ export function relativeStart(startedAt: string | null, locale: string, now = Da
   if (Math.abs(seconds) < 86400) return formatter.format(Math.trunc(seconds / 3600), 'hour');
   return formatter.format(Math.trunc(seconds / 86400), 'day');
 }
-/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
 const durationUnits = new Map<string, Intl.NumberFormat>();
+/** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
 export function formatDuration(seconds: string | null, locale: string): string {
   if (seconds === null) return '—';
   const total = parseU64(seconds);

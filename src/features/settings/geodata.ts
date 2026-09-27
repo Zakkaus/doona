@@ -6,7 +6,6 @@ import {backendMessage, oneLine} from '../../i18n/backend';
 import type {KvItem} from '../../ui/ui';
 
 export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
-export type GeodataChoice = GeodataPresetId | 'custom';
 export type GeodataUrls = Record<GeoAssetKind, string[]>;
 
 export const presetLabels: Record<GeodataPresetId, Key> = {
