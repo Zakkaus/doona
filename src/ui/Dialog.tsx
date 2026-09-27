@@ -111,39 +111,53 @@ export function ModalDialog({
 
 // A titled dialog in a popover beside its trigger, after S2's DialogTrigger with type="popover": no underlay, and
 // Escape or a press outside closes it. Without `trigger` it opens beside `triggerRef` while `isOpen`, for a caller
-// whose control is a menu row that is gone once the menu closes.
+// whose control is a menu row that is gone once the menu closes. With `label` in place of `title` it is a note: a few
+// paragraphs of running text named by the label, with no heading, for a status whose trigger already asks the question.
 export function PopoverDialog({
   trigger,
   triggerRef,
   isOpen,
   onOpenChange,
   title,
+  label,
   subtitle,
   placement = 'top start',
   children
 }: {
-  title: string;
-  // A line under the title, such as a status.
-  subtitle?: ReactNode;
   placement?: PopoverProps['placement'];
   children: (close: () => void) => ReactNode;
 } & (
-  | {trigger: ReactElement; triggerRef?: never; isOpen?: never; onOpenChange?: never}
-  | {trigger?: never; triggerRef: RefObject<Element | null>; isOpen: boolean; onOpenChange: (open: boolean) => void}
-)) {
+  | {
+      title: string;
+      // A line under the title, such as a status.
+      subtitle?: ReactNode;
+      label?: never;
+    }
+  | {label: string; title?: never; subtitle?: never}
+) &
+  (
+    | {trigger: ReactElement; triggerRef?: never; isOpen?: never; onOpenChange?: never}
+    | {trigger?: never; triggerRef: RefObject<Element | null>; isOpen: boolean; onOpenChange: (open: boolean) => void}
+  )) {
   const popover = (
-    <Popover className="rp-popover rp-popover-dialog" placement={placement} {...(trigger ? {} : {triggerRef, isOpen, onOpenChange})}>
-      <Dialog className="rp-popover-body">
-        {({close}) => (
-          <>
-            <div className="rp-popover-head">
-              <Heading slot="title">{title}</Heading>
-              {subtitle}
-            </div>
-            {children(close)}
-          </>
-        )}
-      </Dialog>
+    <Popover className={title ? 'rp-popover rp-popover-dialog' : 'rp-popover'} placement={placement} {...(trigger ? {} : {triggerRef, isOpen, onOpenChange})}>
+      {title ? (
+        <Dialog className="rp-popover-body">
+          {({close}) => (
+            <>
+              <div className="rp-popover-head">
+                <Heading slot="title">{title}</Heading>
+                {subtitle}
+              </div>
+              {children(close)}
+            </>
+          )}
+        </Dialog>
+      ) : (
+        <Dialog className="rp-popover-note" aria-label={label}>
+          {({close}) => children(close)}
+        </Dialog>
+      )}
     </Popover>
   );
   return trigger ? (
