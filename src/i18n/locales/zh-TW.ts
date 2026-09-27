@@ -650,7 +650,6 @@ export const messages = {
   'ov.loading': '載入中',
   'ov.unavailable': '此後端不提供該項資料',
   'ov.unknown': '未知',
-  'ov.statusUnknown': '狀態未提供',
   'ov.noAttachments': '沒有掛載點資料',
   'ov.occupancyUnknown': '佔用量未提供，容量 {capacity}',
   'ov.degradedHelp.runtime': '重載後資料路徑未恢復，經使用者空間代理的新連線會被拒絕。可再次重載組態，嘗試恢復資料路徑。',

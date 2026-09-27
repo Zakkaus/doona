@@ -679,7 +679,6 @@ export const messages = {
   'ov.loading': 'Loading',
   'ov.unavailable': 'This backend does not provide this data',
   'ov.unknown': 'Unknown',
-  'ov.statusUnknown': 'Status not reported',
   'ov.noAttachments': 'No attachment data',
   'ov.occupancyUnknown': 'Occupancy not reported, capacity {capacity}',
   'ov.degradedHelp.runtime':
