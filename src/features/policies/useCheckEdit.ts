@@ -1,7 +1,7 @@
-import {useRef, useState} from 'react';
+import {useState} from 'react';
 import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
-import {useDraftGuard} from '../../shell/draft';
+import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast} from '../../ui/ui';
 import {checkDraft, checkFields, checkInvalid, checkPatch, type CheckDraft, type CheckField} from './view';
 export type CheckEditView = {
@@ -25,11 +25,11 @@ export function useCheckEdit(g: Group | undefined, patchConfig: (ops: JsonPatch)
   const [draft, setDraft] = useState<{base: CheckDraft; value: CheckDraft} | null>(null);
   // Field errors show once a save was tried, then follow each edit.
   const [tried, setTried] = useState(false);
-  const session = useRef(0);
+  const session = useDialogSession();
   const fields = g ? checkFields(g) : [];
   const ops = g && draft ? checkPatch(g, draft.base, draft.value) : [];
   const reset = () => {
-    session.current++;
+    session.next();
     setDraft(null);
     setTried(false);
   };
@@ -38,11 +38,11 @@ export function useCheckEdit(g: Group | undefined, patchConfig: (ops: JsonPatch)
     if (!g || !draft) return;
     setTried(true);
     if (!ops.length || fields.some(field => checkInvalid(field, draft.value[field]))) return;
-    const submitted = session.current;
+    const current = session.start();
     void patchConfig(ops).then(saved => {
       if (!saved) return;
       toast('positive', t('policy.updated', {name: g.name}));
-      if (session.current === submitted) {
+      if (current()) {
         guard.clear();
         close();
       }
@@ -69,7 +69,7 @@ export function useCheckEdit(g: Group | undefined, patchConfig: (ops: JsonPatch)
       : [],
     show: () => {
       if (!g) return;
-      session.current++;
+      session.next();
       setTried(false);
       const base = checkDraft(g);
       setDraft({base, value: base});
