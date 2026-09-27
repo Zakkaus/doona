@@ -49,17 +49,22 @@ export function checkInvalid(field: CheckField, value: string): boolean {
   if (!text) return false;
   return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < 1;
 }
-// Replace ops for the offered fields the user changed from `base`, the values the dialog opened with; an empty field sends null.
-// A field the user left alone is not sent, so a change another client made in the meantime is kept.
+// For each offered field the user changed from `base`, the values the dialog opened with: a test that the group still holds
+// the base value, then the replace; an empty field sends null. A field the user left alone is not sent, so a change another
+// client made to it in the meantime is kept, and one made to a changed field fails the test with 409 instead of being overwritten.
 export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonPatch {
   const fields = checkFields(g);
   const ops: JsonPatch = [];
   const url = (text: string) => text.trim() || null;
   const interval = (text: string) => (text.trim() ? Number(text.trim()) : null);
-  if (fields.includes('check_url') && url(draft.check_url) !== url(base.check_url))
-    ops.push({op: 'replace', path: '/config/check_url', value: url(draft.check_url)});
-  if (fields.includes('check_interval') && interval(draft.check_interval) !== interval(base.check_interval))
-    ops.push({op: 'replace', path: '/config/check_interval', value: interval(draft.check_interval)});
+  if (fields.includes('check_url') && url(draft.check_url) !== url(base.check_url)) {
+    const path = '/config/check_url';
+    ops.push({op: 'test', path, value: url(base.check_url)}, {op: 'replace', path, value: url(draft.check_url)});
+  }
+  if (fields.includes('check_interval') && interval(draft.check_interval) !== interval(base.check_interval)) {
+    const path = '/config/check_interval';
+    ops.push({op: 'test', path, value: interval(base.check_interval)}, {op: 'replace', path, value: interval(draft.check_interval)});
+  }
   return ops;
 }
 

@@ -131,9 +131,38 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   await expect(card.getByText(url204, {exact: true})).toBeVisible();
   const patches = requests.filter(request => request.method() === 'PATCH');
   expect(patches.map(request => [new URL(request.url()).pathname, request.postDataJSON()])).toEqual([
-    ['/api/v1/groups/resilient', [{op: 'replace', path: '/config/check_url', value: url204}]]
+    [
+      '/api/v1/groups/resilient',
+      [
+        {op: 'test', path: '/config/check_url', value: null},
+        {op: 'replace', path: '/config/check_url', value: url204}
+      ]
+    ]
   ]);
   expect(patches[0].headers()['if-match']).toBe('"40"');
+});
+
+test('a check URL another client changed while the dialog was open is not overwritten', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'resilient', exact: true});
+  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
+  const remote = 'http://remote.example/';
+  const accepted = await api.patchGroup('resilient', [{op: 'replace', path: '/config/check_url', value: remote}], '"40"');
+  await expect.poll(async () => 'operation_id' in accepted && (await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  await dialog.getByRole('textbox', {name: 'Check URL'}).fill('https://cp.cloudflare.com/generate_204');
+  const save = dialog.getByRole('button', {name: 'Save', exact: true});
+  // The first save carries the revision the page loaded and is refused as stale, which fetches the group again.
+  await save.click();
+  await expect(page.locator('.rp-toast.negative')).toContainText('Revision changed');
+  await expect.poll(() => requests.filter(request => request.method() === 'GET' && request.url().endsWith('/groups/resilient')).length).toBeGreaterThan(1);
+  // The retry carries the current revision, but the URL it opened with no longer holds, so the backend refuses it.
+  await save.click();
+  await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
+  await expect(dialog).toBeVisible();
+  expect((await api.group('resilient')).config.check_url).toBe(remote);
 });
 
 test('a disabled Test all does not blame TCP support when the probe limits rule it out', async ({page}) => {

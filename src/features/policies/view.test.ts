@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
+import {patchGroupConfig} from '../../api/mock/control';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
 import {
@@ -168,17 +169,24 @@ it('offers the check fields a group lists as writable, whatever its policy', () 
   expect(checkFields(resilient)).toEqual(['check_url']);
   expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval']);
 });
-it('patches only the check fields that changed, sending null for an empty one', () => {
+it('patches only the check fields that changed, testing each against its opening value and sending null for an empty one', () => {
   const g = withInterval(nodeFixtures(0).groups[1]);
   const base = checkDraft(g);
   expect(checkPatch(g, base, {check_url: '', check_interval: '30'})).toEqual([]);
+  // An unset field tests against null: honk and the contract hold it as null, not as an absent path.
   expect(checkPatch(g, base, {check_url: ' https://cp.cloudflare.com/ ', check_interval: '30'})).toEqual([
+    {op: 'test', path: '/config/check_url', value: null},
     {op: 'replace', path: '/config/check_url', value: 'https://cp.cloudflare.com/'}
   ]);
-  expect(checkPatch(g, base, {check_url: '', check_interval: ''})).toEqual([{op: 'replace', path: '/config/check_interval', value: null}]);
+  expect(checkPatch(g, base, {check_url: '', check_interval: ''})).toEqual([
+    {op: 'test', path: '/config/check_interval', value: 30},
+    {op: 'replace', path: '/config/check_interval', value: null}
+  ]);
   const set = {...g, config: {...g.config, check_url: 'http://a.example/'}};
   expect(checkPatch(set, checkDraft(set), {check_url: '', check_interval: '60'})).toEqual([
+    {op: 'test', path: '/config/check_url', value: 'http://a.example/'},
     {op: 'replace', path: '/config/check_url', value: null},
+    {op: 'test', path: '/config/check_interval', value: 30},
     {op: 'replace', path: '/config/check_interval', value: 60}
   ]);
   // A field the backend does not list is never sent.
@@ -191,9 +199,22 @@ it('sends only the check fields the user changed, not ones the group changed sin
   // Another client set the interval to 60 while the dialog was open; the user edited the URL only.
   const moved = {...g, config: {...g.config, check_interval: 60}};
   expect(checkPatch(moved, base, {check_url: 'http://a.example/', check_interval: '30'})).toEqual([
+    {op: 'test', path: '/config/check_url', value: null},
     {op: 'replace', path: '/config/check_url', value: 'http://a.example/'}
   ]);
   expect(checkPatch(moved, base, base)).toEqual([]);
+});
+it('refuses a check change another client made to the same field since the dialog opened, and keeps an unrelated one', () => {
+  const g = withInterval(nodeFixtures(0).groups[1]);
+  const base = checkDraft(g);
+  const draft = {...base, check_url: 'http://mine.example/'};
+  const sameField = {...g, config: {...g.config, check_url: 'http://theirs.example/'}};
+  expect(() => patchGroupConfig(sameField, checkPatch(sameField, base, draft))).toThrow(expect.objectContaining({status: 409, code: 'state_conflict'}));
+  const otherField = {...g, config: {...g.config, check_interval: 60}};
+  expect(patchGroupConfig(otherField, checkPatch(otherField, base, draft)).config).toMatchObject({
+    check_url: 'http://mine.example/',
+    check_interval: 60
+  });
 });
 it('accepts only a safe http URL and a positive whole interval, or an empty field', () => {
   for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1']) expect(checkInvalid('check_url', url)).toBe(false);
