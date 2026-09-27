@@ -2,6 +2,7 @@ import {useId, type ReactNode, type Ref} from 'react';
 import {ChartDescription} from './charts/description';
 import {cx} from './cx';
 import {HelpRow, type Help} from './ContextualHelp';
+import {ActionHelp} from './Button';
 
 // The card surface's class, for a react-aria element that has to be the card itself (a drop zone) and a form that is
 // one. Extra classes lay out what the card holds.
@@ -37,6 +38,7 @@ export function Card({
   note,
   help,
   aside,
+  reason,
   id,
   className,
   tabIndex,
@@ -51,6 +53,8 @@ export function Card({
   // What the title means, in a help popover beside it.
   help?: Help;
   aside?: ReactNode;
+  // Why the card's actions cannot run, as an ActionHelp line at its end.
+  reason?: string | null;
   id?: string;
   // Layout for what the card holds.
   className?: string;
@@ -88,20 +92,22 @@ export function Card({
       aria-labelledby={titled ? headingId : undefined}
       aria-label={label}
     >
-      {aside && tile?.kind !== 'metric' ? (
-        <div className="rp-row">
-          {heading}
-          {aside}
-        </div>
-      ) : (
-        heading
-      )}
-      {note && (
-        <p className="rp-note" id={noteId}>
-          {note}
-        </p>
-      )}
-      <ChartDescription.Provider value={note ? noteId : undefined}>{children}</ChartDescription.Provider>
+      <ActionHelp reason={reason}>
+        {aside && tile?.kind !== 'metric' ? (
+          <div className="rp-row">
+            {heading}
+            {aside}
+          </div>
+        ) : (
+          heading
+        )}
+        {note && (
+          <p className="rp-note" id={noteId}>
+            {note}
+          </p>
+        )}
+        <ChartDescription.Provider value={note ? noteId : undefined}>{children}</ChartDescription.Provider>
+      </ActionHelp>
     </section>
   );
 }
