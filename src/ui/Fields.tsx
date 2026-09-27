@@ -150,14 +150,24 @@ export function TextField({
   const affixId = useId();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
   const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
+  // The box sits inside the field so an error can show under it; the structure stays the same with or without one,
+  // so the input keeps focus while an error comes and goes.
   if (search) {
     return (
-      <RSearchField {...props} aria-label={label} className={cx('rp-input', large && 'lg', className)} style={width ? {width} : undefined}>
-        <Search />
-        <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
-        <RButton className="clear" aria-label={t('clear')}>
-          <Close />
-        </RButton>
+      <RSearchField {...validity} {...props} aria-label={label} className={cx('rp-search-field', className)} style={width ? {width} : undefined}>
+        <span className={cx('rp-input', large && 'lg')}>
+          <Search />
+          <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
+          <RButton className="clear" aria-label={t('clear')}>
+            <Close />
+          </RButton>
+        </span>
+        {error && (
+          <FieldError className="rp-field-error">
+            <AlertTriangle />
+            {error}
+          </FieldError>
+        )}
       </RSearchField>
     );
   }

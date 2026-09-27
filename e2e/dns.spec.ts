@@ -219,6 +219,9 @@ test('a mistyped device address keeps the last filter and says so', async ({page
   await source.fill('10.0.0.300');
   await expect(page.getByText('Enter an IPv4 or IPv6 address.')).toBeVisible();
   await expect(source).toHaveAttribute('aria-invalid', 'true');
+  // The error is the field's own, read with it, and showing it keeps the field focused for the next keystroke.
+  await expect(source).toHaveAccessibleDescription('Enter an IPv4 or IPv6 address.');
+  await expect(source).toBeFocused();
   await page.getByRole('tabpanel', {name: 'Resolution log'}).getByRole('button', {name: 'Refresh', exact: true}).click();
   await expect.poll(() => src().length).toBeGreaterThan(before);
   expect(

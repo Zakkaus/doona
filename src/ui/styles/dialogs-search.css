@@ -100,7 +100,7 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
-.rp-input[data-empty] .clear {
+.rp-search-field[data-empty] .clear {
   opacity: 0;
   scale: 0.6;
   pointer-events: none;
