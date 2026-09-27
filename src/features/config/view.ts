@@ -1,3 +1,4 @@
+import type {Engine} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
@@ -230,17 +231,15 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
-// the server allows. The contract carries no reason for a main or include file refused on its own: honk refuses one
-// that defines a native_api or clash_api listener, whose secret it will not write back, but also one it writes itself,
-// and another backend may have reasons of its own. Only such a block in the text names the secret as the reason;
+// the server allows. The contract carries no reason for a main or include file refused on its own, and an engine may
+// refuse one for more than one reason: only the engine's adapter can name the secrets it holds as the reason;
 // otherwise the file is just read-only. A source without text was not sent at all. A text that does not match its
 // digest (`complete` false) had values hidden by the backend; saving it would drop them.
-const listenerBlocks = new Set(['native_api', 'clash_api']);
-const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => listenerBlocks.has(block.name) || definesListener(block.children));
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable' | 'content'>,
   configWritable: boolean,
   complete: boolean | undefined,
+  engine: Pick<Engine, 'holdsCredentials'>,
   t: Translator
 ): {reason: ReadOnlyReason; label: string; note: string; help?: Help} | null {
   const reason: ReadOnlyReason | null =
@@ -249,7 +248,7 @@ export function readOnlyBadge(
       : !configWritable
         ? 'disabled'
         : !source.writable
-          ? source.content !== undefined && definesListener(scanConfig(source.content).blocks)
+          ? engine.holdsCredentials(source)
             ? 'secret'
             : 'refused'
           : source.content === undefined

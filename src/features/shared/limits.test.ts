@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest';
 import type {Capabilities, Version} from '../../api/model';
 import {capabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
-import {backendLimits, limitSnippet, type LimitCause, type LimitGroup} from './limits';
+import {backendLimits, type LimitCause, type LimitGroup} from './limits';
 import {docsHref} from './docs';
 const t: Translator = (key, params) => translate('en', key, params);
 const other = {...version, api: {...version.api, name: 'other/backend'}} as unknown as Version;
@@ -18,7 +18,9 @@ const group = (groups: LimitGroup[], cause: LimitCause) => groups.find(g => g.ca
 const ids = (g: LimitGroup | undefined) => g?.items.map(item => item.id);
 
 const why = (text: Key, link?: object) => ({label: t('ov.lim.why'), text: t(text), link});
-const howTo = (text: Key, keys: string[], link?: object) => ({label: t('ov.lim.howTo'), text: t(text), keys, link});
+// honk's settings sit in its native_api section.
+const nativeApi = (lines: string[]) => ['experimental {', '  native_api {', ...lines.map(line => '    ' + line), '  }', '}'].join('\n');
+const howTo = (text: Key, lines: string[], link?: object) => ({label: t('ov.lim.howTo'), text: t(text), snippet: nativeApi(lines), link});
 
 describe('backendLimits', () => {
   it('lists nothing when every feature is on', () => {
@@ -53,7 +55,7 @@ describe('backendLimits', () => {
     // honk offers flows.max_flows only while record_flows allows recording, so its absence means the key is false.
     const disallowed = limits(patched({flows: {recording: 'off'}, runtime_settings: {fields: ['record_flows', 'log.level']}}));
     expect(group(disallowed, 'flowsIdle')).toBeUndefined();
-    expect(group(disallowed, 'recordOff')?.help?.keys).toEqual(['record_flows: true']);
+    expect(group(disallowed, 'recordOff')?.help?.snippet).toBe(nativeApi(['record_flows: true']));
     expect(limits(patched({flows: {recording: 'sampled'}}))).toEqual([]);
   });
 
@@ -127,7 +129,12 @@ describe('backendLimits', () => {
     expect(geodata({assets: []})).toMatchObject({headline: t('ov.lim.h.geodataUpdate'), help: why('ov.lim.geoNoAssets')});
     const noDb = geodata({configurable_sources: undefined});
     expect(noDb?.help).toMatchObject({label: t('ov.lim.howTo'), text: t('ov.lim.geoNoStateDb'), link: {href: docsHref('en', 'state-db')}});
-    expect(noDb?.help?.keys?.map(key => key.split(':')[0])).toEqual(['geosite_download_url', 'geoip_download_url']);
+    expect(
+      noDb?.help?.snippet
+        ?.split('\n')
+        .slice(2, 4)
+        .map(line => line.trim().split(':')[0])
+    ).toEqual(['geosite_download_url', 'geoip_download_url']);
     expect(geodata({configurable_sources: true})?.help).toEqual(why('ov.lim.geoNoUrl', {href: '#/settings?card=geodata', text: t('settings.geodata')}));
     expect(geodata({configurable_sources: undefined}, other)).toEqual({
       cause: 'geodataUpdate',
@@ -177,7 +184,7 @@ describe('backendLimits', () => {
   });
 });
 
-describe('limitSnippet', () => {
+describe('backendLimits on an older honk', () => {
   it('gives an older honk that leaves resources or fields out no honk reason for them', async () => {
     const {normalizeCapabilities} = await import('../../api/capabilities');
     const {logs: _logs, probes: _probes, geodata: _geodata, traffic_history: _traffic, ...kept} = capabilities.resources;
@@ -206,11 +213,5 @@ describe('limitSnippet', () => {
       ['probes'],
       ['geodata']
     ]);
-  });
-
-  it('nests the keys in the native_api section', () => {
-    expect(limitSnippet(['record_logs: true', 'record_dns_log: true'])).toBe(
-      'experimental {\n  native_api {\n    record_logs: true\n    record_dns_log: true\n  }\n}'
-    );
   });
 });
