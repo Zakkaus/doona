@@ -215,3 +215,26 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
     }
   }
 });
+
+test('features that are off lead the list with their honk setting, and Activity counts them', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const capabilities = await api.capabilities();
+  capabilities.resources.events.available = false;
+  capabilities.resources.traffic_history.available = false;
+  capabilities.resources.config.writable = false;
+  handlers['GET capabilities'] = async () => capabilities;
+  await page.goto('/#/overview');
+  const limits = page.getByRole('list', {name: 'Features that are off or limited', exact: true});
+  const traffic = limits.getByRole('listitem').filter({hasText: 'Traffic history'});
+  await expect(traffic).toContainText('Not recorded');
+  await expect(traffic.locator('code')).toHaveText(['experimental.native_api.record_traffic: true']);
+  // The configuration leads the list.
+  const config = limits.getByRole('listitem').first();
+  await expect(config).toContainText('ConfigurationRead-only');
+  await expect(config.locator('code').first()).toHaveText('experimental.native_api.config_write: true');
+  await expect(page.getByText('Restart honk after changing this section:')).toBeVisible();
+  // The available features stay dots and no longer repeat what the list explains.
+  await expect(page.locator('.rp-capability').filter({hasText: 'Traffic history'})).toHaveCount(0);
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-quick').getByText('3 features are off', {exact: true})).toBeVisible();
+});

@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory} from '../../store';
+import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory, useVersion} from '../../store';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
@@ -9,6 +9,7 @@ import {useNotices} from './useNotices';
 import {useMode} from './useMode';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
+import {backendLimits} from '../shared/limits';
 
 export function useActivity() {
   const t = useT();
@@ -50,10 +51,14 @@ export function useActivity() {
     () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
     [runtime.data, memory.data, t, resources?.runtime.available, locale]
   );
+  const version = useVersion();
+  // Overview lists these with their reasons; here the status card only counts them.
+  const limited = useMemo(() => (capabilities.data ? backendLimits(capabilities.data, version.data, t).length : 0), [capabilities.data, version.data, t]);
   const notices = useNotices();
   const mode = useMode();
   return {
     ...view,
+    limited: limited > 0 ? t('act.limited', {n: limited}) : null,
     mode,
     notices,
     range,

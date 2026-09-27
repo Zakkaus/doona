@@ -6,6 +6,7 @@ import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/sel
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
+import {backendLimits, resourceLabels} from '../shared/limits';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -81,24 +82,6 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
   return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
 }
 
-const resourceLabels = {
-  connections: 'nav.connections',
-  flows: 'rule.flows',
-  routing_trace: 'ov.r.routingTrace',
-  dns_query: 'ov.r.dnsQuery',
-  dns_cache: 'ov.r.dnsCache',
-  events: 'nav.events',
-  probes: 'ov.r.probes',
-  traffic_history: 'ov.r.trafficHistory',
-  memory_history: 'ov.r.memoryHistory',
-  runtime_outbounds: 'ov.r.outbounds',
-  logs: 'nav.logs',
-  providers: 'nodes.providers',
-  config: 'nav.config',
-  runtime_settings: 'settings.runtime',
-  geodata: 'settings.geodata'
-} as const satisfies Record<string, Key>;
-
 export function overviewView(
   data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath},
   loading: {capabilities: boolean; runtime: boolean; version: boolean; memory: boolean; datapath: boolean},
@@ -113,6 +96,7 @@ export function overviewView(
   const cpu = runtime?.process.cpu_percent;
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
+  const limits = capabilities ? backendLimits(capabilities, version, t) : [];
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
   return {
     status: {
@@ -201,21 +185,13 @@ export function overviewView(
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),
+      // What is off or limited comes first with its reason; the rest are available and show as dots.
+      limits,
+      restart: limits.some(limit => limit.keys.length > 0),
       rows: capabilities
         ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>)
-            .map(id => {
-              const available = capabilities.resources[id].available !== false;
-              return {
-                id,
-                label: t(resourceLabels[id]),
-                tone: available ? ('ok' as const) : ('muted' as const),
-                text: t(available ? 'ov.available' : 'ov.notAvailable'),
-                // Most rows are available, so their status is the dot alone and only the exceptions are spelled out;
-                // the text still reaches assistive technology.
-                dotOnly: available
-              };
-            })
-            .sort((a, b) => Number(a.tone === 'muted') - Number(b.tone === 'muted'))
+            .filter(id => !limits.some(limit => limit.id === id))
+            .map(id => ({id, label: t(resourceLabels[id]), text: t('ov.available')}))
         : []
     },
     canExport: !!runtime

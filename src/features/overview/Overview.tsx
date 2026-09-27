@@ -1,9 +1,10 @@
 import {VisuallyHidden} from 'react-aria';
 import {useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, Link, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {tableLayout} from '../../ui/Table';
+import {nativeApiSection} from '../shared/limits';
 
 // While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
 // card keeps its height when the values arrive; `extra` holds the lines below the grid.
@@ -139,15 +140,50 @@ export function Overview() {
         </Card>
         <Card title={t('ov.resources')}>
           {vm.resources.state === 'ready' ? (
-            <div className="rp-capabilities">
-              {vm.resources.rows.map(row => (
-                <div key={row.id} className={'rp-capability' + (row.tone === 'muted' ? ' unavailable' : '')}>
-                  {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
-                  <Light tone={row.tone}>{row.label}</Light>
-                  {row.dotOnly ? <VisuallyHidden>{row.text}</VisuallyHidden> : <span className="rp-capability-status">{row.text}</span>}
+            <>
+              {vm.resources.limits.length > 0 && (
+                <div className="rp-list" role="list" aria-label={t('ov.lim.title')}>
+                  {vm.resources.limits.map(limit => (
+                    <div key={limit.id} role="listitem" className="rp-limit">
+                      <div className="rp-limit-head">
+                        <Light tone="warn">{limit.label}</Light>
+                        <span className="rp-capability-status">{limit.state}</span>
+                      </div>
+                      <p className="rp-note">{limit.reason}</p>
+                      {limit.keys.length > 0 && (
+                        <p className="rp-limit-keys">
+                          {limit.keys.map(key => (
+                            <code key={key} className="rp-code">
+                              {key}
+                            </code>
+                          ))}
+                        </p>
+                      )}
+                      {limit.link && (
+                        <Link appearance="link" href={limit.link.href}>
+                          {limit.link.text}
+                        </Link>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+              {vm.resources.restart && (
+                <p className="rp-note rp-limit-note">
+                  {t('ov.lim.restart')} <code className="rp-code">{nativeApiSection}</code>
+                </p>
+              )}
+              <div className="rp-capabilities">
+                {vm.resources.rows.map(row => (
+                  <div key={row.id} className="rp-capability">
+                    {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
+                    <Light tone="ok">{row.label}</Light>
+                    {/* The status is the dot alone; the text still reaches assistive technology. */}
+                    <VisuallyHidden>{row.text}</VisuallyHidden>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : vm.resources.state === 'loading' ? (
             <Loading />
           ) : vm.errors.capabilities ? null : (
