@@ -4,7 +4,7 @@ import {ApiError} from '../error';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
 import {diagnose, includedFiles, includePaths, resolveIncludePath, sectionLines, stored, validate} from './config';
-import {includedBy, includePatterns, newSourcePathProblem} from '../../dae/newSource';
+import {globMatch, newSourcePathProblem} from '../../dae/newSource';
 import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
 import {faultRules} from './rules';
@@ -66,6 +66,13 @@ export function createConfiguration(
     const main = files.find(source => source.kind === 'main');
     if (main) include(main);
     return candidate;
+  }
+  // honk's size limits on a source write: the shared JSON body limit on the request, the content limit on the text.
+  function withinLimits(content: string, body: unknown) {
+    const bytes = (text: string) => new TextEncoder().encode(text).length;
+    if (bytes(JSON.stringify(body)) > capabilities.limits.max_json_body_bytes) throw new ApiError(413, 'request_too_large', 'Request body exceeds its limit');
+    const max = capabilities.resources.config.max_bytes;
+    if (max !== undefined && bytes(content) > max) throw new ApiError(413, 'request_too_large', `Source content exceeds ${max} bytes`);
   }
   // Advancing a generation increments the revision, restores configured runtime settings, and notifies listeners.
   function advance(): string {
@@ -195,6 +202,7 @@ export function createConfiguration(
         'Configuration source'
       );
       if (!capabilities.resources.config.writable || !source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only');
+      withinLimits(content, {content});
       if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
@@ -215,6 +223,7 @@ export function createConfiguration(
       const config = capabilities.resources.config;
       if (!config.available || !config.create) throw new ApiError(404, 'capability_not_supported', 'Creating configuration sources is unavailable');
       if (!config.writable) throw new ApiError(403, 'permission_denied', 'Configuration writes are disabled');
+      withinLimits(content, {path, content});
       if (newSourcePathProblem(path) || new TextEncoder().encode(path).length > 1024)
         throw new ApiError(400, 'invalid_request', 'path must be a relative .dae path with normal segments');
       await loadSources();
@@ -224,7 +233,9 @@ export function createConfiguration(
       );
       const target = resolveIncludePath(main.path, path);
       if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
-      if (!includedBy(includePatterns(main.content), path)) {
+      // Any file the configuration loads may hold the include, each resolving its patterns from where it lives.
+      const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(source.path, include.path), target)));
+      if (!loaded) {
         const diagnostic = {level: 'error', source_id: main.id, line: null, column: null, span: null, code: 'source-not-included'} as const;
         throw new ApiError(422, 'unsupported_value', 'No include pattern matches the path; nothing was written', null, {
           diagnostics: [{...diagnostic, message: `No include pattern matches ${path}`}]
