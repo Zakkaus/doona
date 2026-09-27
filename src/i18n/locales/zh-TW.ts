@@ -609,7 +609,6 @@ export const messages = {
     '在組態加入以下設定，並在 password_auth: true 與 secret 中擇一設定，然後重新啟動 honk。honk 載入組態期間或儲存區阻擋寫入時，仍無法寫入。',
   'ov.lim.recordOff': '這些記錄預設為開啟。在組態加入以下設定，然後重新啟動 honk。',
   'ov.lim.mainReadOnly': '主組態檔案含有 native API 或監聽器的密鑰，honk 不會寫回含密鑰的檔案。請將密鑰移至獨立的 include 檔案。',
-  'ov.lim.mainReadOnlyOther': '後端不允許編輯主組態檔案。',
   'ov.lim.geoNoAssets': '組態未載入任何 geosite 或 geoip 檔案。',
   'ov.lim.geoNoStateDb': 'honk 的狀態資料庫未開啟，因此沒有內建的下載網址。在組態加入以下兩個網址，然後重新啟動 honk。載入的檔案沒有磁碟路徑時，仍無法更新。',
   'ov.lim.geoNoUrl': '有載入的檔案沒有下載網址或磁碟路徑。',

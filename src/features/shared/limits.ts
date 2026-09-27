@@ -153,7 +153,7 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
       case 'configReadOnly':
         return {headline: t('ov.lim.h.configReadOnly'), named: ['config'], help: helpFor([reason('config')])};
       case 'mainReadOnly':
-        return {headline: t('ov.lim.h.mainReadOnly'), named: ['manage'], help: helpFor([reason('manage')]) ?? why('ov.lim.mainReadOnlyOther')};
+        return {headline: t('ov.lim.h.mainReadOnly'), named: ['manage'], help: helpFor([reason('manage')])};
       case 'recordOff':
         return {headline: t('ov.lim.h.recordOff', {n}), help: helpFor(reasons())};
       case 'geodataUpdate':

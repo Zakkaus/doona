@@ -609,7 +609,6 @@ export const messages = {
   'ov.lim.configWrite': '在配置中加入以下设置，并在 password_auth: true 与 secret 中任选其一，然后重启 honk。honk 加载配置期间或存储阻止写入时，仍无法写入。',
   'ov.lim.recordOff': '这些记录默认为开启。在配置中加入以下设置，然后重启 honk。',
   'ov.lim.mainReadOnly': '主配置文件含有 native API 或监听器的密钥，honk 不会写回含密钥的文件。请将密钥移至单独的 include 文件。',
-  'ov.lim.mainReadOnlyOther': '后端不允许编辑主配置文件。',
   'ov.lim.geoNoAssets': '配置未加载任何 geosite 或 geoip 文件。',
   'ov.lim.geoNoStateDb': 'honk 的状态数据库未打开，因此没有内置的下载网址。在配置中加入以下两个网址，然后重启 honk。加载的文件没有磁盘路径时，仍无法更新。',
   'ov.lim.geoNoUrl': '有加载的文件没有下载网址或磁盘路径。',
