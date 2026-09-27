@@ -1,5 +1,5 @@
 import {VisuallyHidden} from 'react-aria';
-import {limitsHeadingId, useOverview} from './useOverview';
+import {cardHeadings, useOverview} from './useOverview';
 import {useT} from '../../i18n';
 import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, Link, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
@@ -36,7 +36,13 @@ export function Overview({query}: PageProps) {
       <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
       <div className="rp-between">
         <div className="rp-cluster">
-          <Light tone={vm.status.tone}>{vm.status.text}</Light>
+          {vm.status.href ? (
+            <Link appearance="link" href={vm.status.href}>
+              <Light tone={vm.status.tone}>{vm.status.text}</Light>
+            </Link>
+          ) : (
+            <Light tone={vm.status.tone}>{vm.status.text}</Light>
+          )}
           <Kv row items={vm.strip} />
           {vm.reload && (
             <TextTooltip text={vm.reload.tooltip}>
@@ -98,7 +104,7 @@ export function Overview({query}: PageProps) {
         </Card>
       </div>
       <div className="rp-g21 rp-overview-lower">
-        <Card title={t('ov.datapath')} help={{title: t('ov.datapath'), text: t('ov.datapathHelp')}}>
+        <Card title={t('ov.datapath')} titleId={cardHeadings.datapath} help={{title: t('ov.datapath'), text: t('ov.datapathHelp')}}>
           <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
             <>
@@ -160,7 +166,7 @@ export function Overview({query}: PageProps) {
         </Card>
       </div>
       {vm.limits.length > 0 && (
-        <Card title={t('ov.lim.title')} titleId={limitsHeadingId}>
+        <Card title={t('ov.lim.title')} titleId={cardHeadings.limits}>
           <div className="rp-limits">
             {vm.limits.map(group => (
               <div key={group.cause} className="rp-limit">

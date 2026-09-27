@@ -632,6 +632,8 @@ export const messages = {
   'ov.cpu': 'CPU 使用率',
   'ov.lastReload': '上次重載',
   'ov.datapath': '資料路徑',
+  'ov.status.datapathDegraded': '{status}，資料路徑降級',
+  'ov.status.datapathFailed': '{status}，資料路徑故障',
   'ov.memory': '記憶體',
   'ov.attachments': '掛載點',
   'ov.name': '名稱',

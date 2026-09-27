@@ -8,8 +8,8 @@ import {useLifecycle} from '../shared/useLifecycle';
 import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
 
-// The heading of the card that lists the features that are off; `?card=limits` scrolls to it.
-export const limitsHeadingId = 'overview-limits';
+// Cards that `?card=` scrolls to, by their heading ids.
+export const cardHeadings = {limits: 'overview-limits', datapath: 'overview-datapath'};
 
 export function useOverview(query = '') {
   const t = useT();
@@ -27,10 +27,13 @@ export function useOverview(query = '') {
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
   );
   const limits = useMemo(() => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang) : []), [capabilities.data, version.data, t, lang]);
+  // The cards appear once their data arrives, so the scroll waits for them.
   const hasLimits = limits.length > 0;
+  const hasDatapath = !!datapath.data;
   useEffect(() => {
-    if (hasLimits && new URLSearchParams(query).get('card') === 'limits') document.getElementById(limitsHeadingId)?.scrollIntoView({block: 'start'});
-  }, [query, hasLimits]);
+    const card = new URLSearchParams(query).get('card');
+    if ((card === 'limits' && hasLimits) || (card === 'datapath' && hasDatapath)) document.getElementById(cardHeadings[card])?.scrollIntoView({block: 'start'});
+  }, [query, hasLimits, hasDatapath]);
   const view = useMemo(
     () =>
       overviewView(
