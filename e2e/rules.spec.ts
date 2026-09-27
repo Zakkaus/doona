@@ -174,7 +174,8 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
   };
   const first = await write('example.org');
   expect(first.status()).toBe(202);
-  const {operation_id} = await first.json();
+  // Take the operation from Location: CI has seen Chromium discard this response's body before json() read it.
+  const operation_id = new URL(first.headers().location, first.url()).pathname.split('/').pop()!;
   await expect.poll(async () => (await api.operation(operation_id)).status).toBe('succeeded');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
