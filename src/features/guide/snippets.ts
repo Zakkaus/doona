@@ -2,8 +2,9 @@
 // by honk-config at Glassyiris/honk 5d8f32c1 (the `debug` release) and a5a3711c (feat/native-api); re-check them when
 // the pinned honk build changes.
 
-// The honk build this guide was checked against.
-export const honkBuild = {release: 'debug.2026.9.26.native-api.4', commit: '5d8f32c1'};
+// The honk build this guide was checked against, and the first build with configurable geodata sources. Builds from
+// main have no native API; debug.2026.9.24.native-api.* update geodata without configurable sources.
+export const honkBuild = {release: 'debug.2026.9.26.native-api.4', commit: '5d8f32c1', geodataSources: 'debug.2026.9.26.native-api.1'};
 export const links = {
   honkRelease: 'https://github.com/Glassyiris/honk/releases/tag/debug',
   honkBranch: 'https://github.com/Glassyiris/honk/tree/feat/native-api',
@@ -43,7 +44,7 @@ export const installHonk = `TARGET=x86_64-unknown-linux-musl   # or aarch64-unkn
 curl -fLO https://github.com/Glassyiris/honk/releases/download/debug/honk-core-debug-$TARGET.tar.gz
 tar -xzf honk-core-debug-$TARGET.tar.gz
 sudo install -m 0755 honk-core-debug-$TARGET/honk-core /usr/local/bin/honk-core
-honk-core --version`;
+honk-core --version   # prints the tag the build came from, such as ${honkBuild.release}`;
 
 // doc/en/how-to-start.md:174-175, 217-222; the MetaCubeX files are the ones honk's geodata update downloads by default
 // (crates/honk-core/src/native_api/geodata/sources.rs:23-28), so an update keeps the same categories.
@@ -180,16 +181,18 @@ export const apiOptional = `experimental {
 
 // Install the config files after editing them (how-to-start.md:174-175).
 export const installConfig = `sudo install -m 0600 config.dae /etc/honk/config.dae
-sudo install -m 0600 api.dae /etc/honk/config.d/api.dae
-sudo systemctl restart honk-core`;
+sudo install -m 0600 api.dae /etc/honk/config.d/api.dae`;
 
-// doona README.md:52-60
+// doona README.md:52-60. honk refuses to start while `ui` lacks a readable index.html (native_api/ui.rs:34-52).
 export const installDoona = `VERSION=0.1.0-beta.7   # the release you downloaded, without v
 sha256sum --ignore-missing -c SHA256SUMS
 sudo mkdir -p /usr/share/doona
 sudo tar -xzf "doona-\${VERSION}.tar.gz" -C /usr/share/doona
 # Optional Noto Sans TC and SC fonts:
-sudo tar -xzf "doona-fonts-\${VERSION}.tar.gz" -C /usr/share/doona`;
+if [ -f "doona-fonts-\${VERSION}.tar.gz" ]; then
+    sudo tar -xzf "doona-fonts-\${VERSION}.tar.gz" -C /usr/share/doona
+fi
+ls -l /usr/share/doona/index.html`;
 
 // doona README.md:79-81; the token is removed from the address bar on load.
 export const pairingLink = 'http://192.168.1.1:9527/ui/#/settings?api=http://192.168.1.1:9527&token=…';
@@ -199,7 +202,8 @@ export const reloadRestart = `sudo systemctl reload honk-core    # re-read the c
 sudo systemctl restart honk-core   # needed for native_api, interfaces, data_dir
 sudo journalctl -u honk-core -e    # look for applied or rejected`;
 
-// State db: crates/honk-core/src/state.rs:76-89, lib.rs:465-495; unit name from how-to-start.md:228.
+// State db: crates/honk-core/src/state.rs:76-89, lib.rs:465-495; unit name from how-to-start.md:228. The log keeps
+// earlier starts too.
 export const stateDbLog = `sudo journalctl -u honk-core | grep -i 'state database'
 sudo ls -la /var/lib/honk/state/`;
 

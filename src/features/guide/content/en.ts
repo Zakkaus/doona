@@ -30,7 +30,22 @@ export const content: GuideContent = {
         {kind: 'code', lang: 'text', text: s.kernelOptions},
         // how-to-start.md:62-74
         {kind: 'p', text: 'Mount bpffs if the system does not:'},
-        {kind: 'code', lang: 'sh', text: s.bpffs}
+        {kind: 'code', lang: 'sh', text: s.bpffs},
+        {kind: 'h', text: 'honk version'},
+        // snippets.ts honkBuild; build.rs:48-55 (the version is the release tag)
+        {
+          kind: 'list',
+          items: [
+            `Only builds from the \`feat/native-api\` branch of Glassyiris/honk have the native API: the rolling \`debug\` release, currently built from tag \`${s.honkBuild.release}\` (commit \`${s.honkBuild.commit}\`).`,
+            'Builds from main, such as `debug.2026.9.24.1`, have no native API. honk rejects every `native_api` setting as “unknown experimental setting”, and `/api` and `/ui/` answer 404.',
+            `Geodata source settings need \`${s.honkBuild.geodataSources}\` or later. \`debug.2026.9.24.native-api.*\` builds update geodata but have no configurable sources.`
+          ]
+        },
+        // lib.rs:218-223; src/shell/Backend.tsx:52
+        {
+          kind: 'p',
+          text: 'Check the running build with `honk-core --version`. doona shows the same version in the Engine card on Overview and at the bottom of the side navigation.'
+        }
       ]
     },
     {
@@ -40,7 +55,7 @@ export const content: GuideContent = {
         // README.md:64; .github/workflows/release.yml:80,180-182
         {
           kind: 'p',
-          text: 'Download honk from the `debug` release of Glassyiris/honk. A released daeuniverse/honk has no native API and answers 404 for `/api` and `/ui/`.'
+          text: 'Download honk from the `debug` release of Glassyiris/honk. Other builds lack the native API; see honk version under Requirements.'
         },
         {
           kind: 'links',
@@ -76,11 +91,14 @@ export const content: GuideContent = {
         // how-to-start.md:226-262
         {kind: 'p', text: 'The release ships no unit. Create `/etc/systemd/system/honk-core.service`:'},
         {kind: 'code', lang: 'ini', text: s.systemdUnit},
-        {kind: 'p', text: 'After writing the configuration in the next section, enable and start the service, then read its log:'},
-        {kind: 'code', lang: 'sh', text: s.startHonk},
+        // native_api/ui.rs:34-52
         {
           kind: 'p',
-          text: 'honk is ready when the log shows `honk-core is running`. Do not add `NoNewPrivileges=yes`, capability bounding or a read-only `/proc/sys`: startup needs BPF, network administration, namespace, mount and sysctl privileges.'
+          text: 'Do not start the service yet. The example configuration serves doona from `/usr/share/doona`, and honk refuses to start until that directory holds `index.html`; Install doona starts honk.'
+        },
+        {
+          kind: 'p',
+          text: 'Do not add `NoNewPrivileges=yes`, capability bounding or a read-only `/proc/sys`: startup needs BPF, network administration, namespace, mount and sysctl privileges.'
         }
       ]
     },
@@ -104,8 +122,8 @@ export const content: GuideContent = {
             '`bootstrap_resolver`: resolves proxy server names and geodata download hosts without honk intercepting the query. A download URL with a hostname needs it.',
             '`subscription` and `node`: replace them with your own. doona’s Nodes page adds more later.',
             '`group proxy`: the subscription’s nodes plus the static node; `min_moving_avg` selects the member with the lowest latency.',
-            '`routing`: private destinations first with `direct(must)`, then domestic domains and addresses directly, everything else through `proxy`.',
-            '`dns`: domestic names go to a local resolver, the rest to DNS over HTTPS through the proxy.'
+            '`routing`: private destinations first with `direct(must)`, then Chinese mainland domains and IP addresses directly, everything else through `proxy`.',
+            '`dns`: Chinese mainland domains go to a local resolver, the rest to DNS over HTTPS through the proxy.'
           ]
         },
         {kind: 'h', text: 'API file'},
@@ -150,32 +168,39 @@ export const content: GuideContent = {
         },
         // experimental.md:18
         {kind: 'p', text: 'Every `native_api` field needs a restart. A reload rejects a change to one and keeps the running listener.'},
-        {kind: 'h', text: 'Install the files and start'},
+        {kind: 'h', text: 'Install the files'},
         {kind: 'code', lang: 'sh', text: s.installConfig},
-        {kind: 'p', text: 'On the first start, run the `systemctl` commands from Install honk instead of the restart.'},
-        {kind: 'h', text: 'State database'},
-        // state.rs:1-2; lib.rs:465-495; honk-config config.rs:333 (store_subscribe defaults to true)
-        {
-          kind: 'p',
-          text: 'honk opens `<data_dir>/state/honk.db` by default: `global.store_subscribe` is on unless turned off, and `native_api` is enabled here. There is no switch to add; a missing state database means it failed to open. It keeps the administrator account, the geodata sources and other state honk persists. It needs `/var/lib/honk` to exist and be writable by root, and `honk.db` must be a regular file, not a symbolic link.'
-        },
-        {kind: 'code', lang: 'sh', text: s.stateDbLog},
-        {
-          kind: 'p',
-          text: 'The first command prints nothing when the database is healthy. Any line it prints is explained under State database problems in Troubleshooting.'
-        }
+        {kind: 'p', text: 'Install doona next; honk starts after that.'}
       ]
     },
     {
       id: 'doona',
-      title: 'Install doona',
+      title: 'Install doona and start',
       blocks: [
-        // README.md:48-60
-        {kind: 'p', text: 'Download a doona release and extract it into `/usr/share/doona`, the directory `ui` names.'},
+        // README.md:48-60; native_api/ui.rs:34-52
+        {
+          kind: 'p',
+          text: 'Download a doona release and extract it into `/usr/share/doona`, the directory `ui` names. The last command must list `index.html`; without it honk does not start.'
+        },
         {kind: 'links', items: [{href: s.links.doonaReleases, text: 'doona releases'}]},
         {kind: 'code', lang: 'sh', text: s.installDoona},
         // native_api/ui.rs:61-65,119-125
-        {kind: 'p', text: 'honk reads these files from disk on each request, so replacing them needs no restart.'},
+        {kind: 'p', text: 'honk reads these files from disk on each request, so replacing them later needs no restart.'},
+        {kind: 'h', text: 'Start honk'},
+        // how-to-start.md:255-262
+        {kind: 'p', text: 'Enable and start the service, then read its log:'},
+        {kind: 'code', lang: 'sh', text: s.startHonk},
+        {kind: 'p', text: 'honk is ready when the log shows `honk-core is running`.'},
+        {kind: 'h', text: 'State database'},
+        // state.rs:113-135,451-468; lib.rs:465-495; honk-config config.rs:333 (store_subscribe defaults to true)
+        {
+          kind: 'p',
+          text: 'honk opens `<data_dir>/state/honk.db` by default: `global.store_subscribe` is on unless turned off, and `native_api` is enabled here. There is no switch to add. The database keeps the administrator account, the geodata sources and other state honk persists. honk creates `state/` and `honk.db` itself; `/var/lib/honk` must exist and be writable by root.'
+        },
+        {
+          kind: 'p',
+          text: 'With `password_auth: true`, as in this example, honk does not start when the database cannot be opened, so a running honk has it open. In token mode honk starts without it and logs a warning; a missing state database then means it failed to open. Either way, State database problems in Troubleshooting explains the log messages.'
+        },
         {kind: 'h', text: 'First sign-in'},
         // README.md:75-81; docs/guide.md:41-43
         {
@@ -207,6 +232,11 @@ export const content: GuideContent = {
       id: 'features',
       title: 'Check every feature',
       blocks: [
+        // how-to-start.md:186,283
+        {
+          kind: 'p',
+          text: 'First confirm that the gateway carries traffic. Replace the example subscription and node with working ones, then from a real LAN client test direct and proxied TCP, UDP and DNS. `honk-core is running`, the `dae0` link or a reachable API does not prove that traffic flows.'
+        },
         {kind: 'p', text: 'With the example configuration, every doona feature works. Check each one against this list.'},
         // limits in api.md; config.rs:364-382,463-495; geodata.rs:125-149,250-255; experimental.md:28-33; settings.rs:100-124
         {
@@ -234,7 +264,7 @@ export const content: GuideContent = {
             [
               'Settings: geodata sources and Update',
               'The Geodata card lists sources, and Update is enabled.',
-              'The state database; `config_write: true`; download URLs; `bootstrap_resolver`'
+              `honk \`${s.honkBuild.geodataSources}\` or later; the state database; \`config_write: true\`; download URLs; \`bootstrap_resolver\``
             ],
             [
               'Settings: backend options',
@@ -250,18 +280,18 @@ export const content: GuideContent = {
             ],
             ['Connections: close', 'Rows can be closed one by one or all at once.', '`enabled: true`'],
             [
-              'Rules: rule list, flows and routing trace',
-              'Rules show hits, flow records appear, and a trace explains a chosen target.',
+              'Rules: rule list, flows and Trace simulation',
+              'Rules show hits, flow records appear, and Trace simulation explains a chosen target.',
               '`record_flows` for flows; the `routing` section'
             ],
             ['Latency tests', 'Test on a node and Test all on a group show latency.', '`enabled: true`; a private target also needs `probe_allowed_cidrs`'],
             ['Events', 'The Events page shows the event stream.', '`enabled: true`']
           ]
         },
-        // settings.rs:100-124
+        // settings.rs:100-124; src/features/settings/messages.ts settings.record.auto
         {
           kind: 'p',
-          text: 'In the Auto recording mode, flows are recorded on demand, and logs and the DNS log only while a client is attached. A recorder that is allowed but idle is normal.'
+          text: 'In the default With panel mode, flow recording runs on demand, and log recording and the DNS log run only while a panel is attached. A recorder that is allowed but idle is normal.'
         },
         {kind: 'h', text: 'If a feature is still missing', id: 'still-missing'},
         {
@@ -271,7 +301,8 @@ export const content: GuideContent = {
             '`config_write: true` is absent. A `native_api` field written directly under `experimental` stops honk with “unknown experimental setting”.',
             'Neither `password_auth: true` nor `secret` is set. With `config_write: true`, honk then refuses to start.',
             'The file contains a secret or text equal to one, so doona shows it read-only.',
-            'The state database did not open, so the geodata sources card is hidden.',
+            `honk is older than \`${s.honkBuild.geodataSources}\`, so the Geodata card has no source settings.`,
+            'In token mode, the state database did not open, so the geodata sources card is hidden.',
             'Only when honk runs with `--store db`, which this guide does not use: a revision honk could not record blocks writes until the next successful activation.'
           ]
         },
@@ -305,10 +336,10 @@ export const content: GuideContent = {
         // native_api/ui.rs:61-65
         {kind: 'p', text: 'Extract the new release into `/usr/share/doona` and reload the page in the browser. honk needs no restart.'},
         {kind: 'h', text: 'Update geodata'},
-        // api.md:273,284
+        // api.md:273,284; geodata/sources.rs:43-50
         {
           kind: 'p',
-          text: 'Settings, Geodata, Update downloads both files and activates them. Automatic updates are off by default; switch them on in the same card, which checks every 24 hours.'
+          text: 'Settings, Geodata, Update downloads both files and activates them. Automatic updates are on by default and check every 24 hours; the same card turns them off or changes the interval.'
         },
         {kind: 'h', text: 'Where things live'},
         {
@@ -333,6 +364,10 @@ export const content: GuideContent = {
         // parser/scalars.rs:570-578
         {kind: 'p', text: 'honk refuses the configuration because a `native_api` field sits directly under `experimental`. Move it into `native_api { }`.'},
         {kind: 'code', lang: 'dae', text: s.misplacedField},
+        {
+          kind: 'p',
+          text: 'A build from main rejects every `native_api` setting this way, even inside `native_api { }`. Check `honk-core --version` and install the `debug` build; see honk version under Requirements.'
+        },
         {kind: 'h', text: 'honk refuses the native_api block'},
         // experimental.rs:199-218
         {
@@ -347,24 +382,26 @@ export const content: GuideContent = {
         // geodata.rs:125-149,250-255; state.rs:76-89; lib.rs:465-495
         {
           kind: 'p',
-          text: 'Without the state database the geodata sources card disappears, and Update remains only when both download URLs are set. Find the cause in the log:'
+          text: 'With `password_auth: true`, as in this example, a database that cannot be opened stops honk at startup, and the log shows `state database:` with the reason. In token mode honk logs a warning and runs without it: the geodata sources card disappears, and Update remains only when both download URLs are set. Find the cause in the log:'
         },
         {kind: 'code', lang: 'sh', text: s.stateDbLog},
+        {kind: 'p', text: 'The log also keeps messages from earlier starts; read the lines from the latest start.'},
         {kind: 'code', lang: 'text', text: s.stateDbMessages},
+        // state.rs:344-410,451-468,658-669
         {
           kind: 'list',
           ordered: true,
           items: [
-            'unavailable: `data_dir` and its `state/` directory must exist and be writable by the user honk runs as, root with the unit above.',
-            'unsafe: `honk.db` must be a regular file, not a symbolic link or a file replaced while honk opened it.',
+            'unavailable: `data_dir` must exist and be writable by the user honk runs as, root with the unit above. honk creates `state/` itself.',
+            'unsafe: `state/` and `honk.db` must belong to that user and grant no group or other permissions. `honk.db` must be a regular file, not a symbolic link or a file replaced while honk opened it.',
             'locked: wait for `honk-core admin reset` to finish.',
-            'corrupt: honk moves the file to `honk.db.corrupt` and starts a new one. If an older `.corrupt` file is already there, honk keeps both and runs without the database until that file is removed.',
+            'corrupt: with `password_auth: true` honk stops. In token mode honk moves the file to `honk.db.corrupt` and starts a new one; if an older `.corrupt` file is already there, honk keeps both and runs without the database until that file is removed.',
             'Restart honk after the fix.'
           ]
         },
         {
           kind: 'p',
-          text: 'With `password_auth: true` or `--store db`, a database that cannot be opened stops honk at startup and the log shows `state database:` with the reason. “another honk-core has the state database open” and “state database has a foreign application id or a newer schema” always stop startup: stop the other instance, or run the honk build that wrote the database.'
+          text: '“another honk-core has the state database open” and “state database has a foreign application id or a newer schema” always stop startup: stop the other instance, or run the honk build that wrote the database.'
         },
         {kind: 'h', text: 'Pinning a map fails with Invalid argument'},
         // how-to-start.md:345
@@ -375,11 +412,17 @@ export const content: GuideContent = {
           kind: 'p',
           text: 'honk rejects kernels older than 6.12 before attaching. When the verifier rejects compiled routing, use Linux 6.12 or later with BPF and BTF, and keep the full verifier log for a report.'
         },
-        {kind: 'h', text: '404 on /api or /ui/', id: 'no-native-api'},
-        // README.md:64; experimental.md:28
+        {kind: 'h', text: 'No native API, or 404 on /api or /ui/', id: 'no-native-api'},
+        // README.md:64; experimental.md:21,28; native_api/ui.rs:23-52
+        {kind: 'p', text: 'Check the running build with `honk-core --version` against honk version under Requirements.'},
         {
-          kind: 'p',
-          text: 'A 404 on `/api` means the running honk has no native API, or `enabled` is not `true`; doona’s sign-in dialog then says “This honk build has no native API”. Install the `debug` build. A 404 on `/ui/` alone means `ui` is empty.'
+          kind: 'list',
+          items: [
+            'The connection to the `listen` address fails: honk is not running, `enabled` is not `true`, or `listen` names another address. With `enabled: false` the listener does not start.',
+            '`/api` returns 404: the server at that address has no native API, such as a honk build from main. doona’s sign-in dialog then says “This honk build has no native API”. Install the `debug` build.',
+            '`/ui/` alone returns 404: the native API runs, but `ui` is empty.',
+            'honk stops at startup with “failed to inspect native UI directory” or “native UI index.html must be a regular file”: extract doona into the `ui` directory, as in Install doona and start.'
+          ]
         },
         {kind: 'h', text: 'Sign-in and cross-origin failures', id: 'sign-in'},
         // README.md:75-81; experimental.md:59-63; src/features/settings/messages.ts:327-328

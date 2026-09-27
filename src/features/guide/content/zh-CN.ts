@@ -26,14 +26,24 @@ export const content: GuideContent = {
         {kind: 'code', lang: 'sh', text: s.kernelCheck},
         {kind: 'code', lang: 'text', text: s.kernelOptions},
         {kind: 'p', text: '系统未自动挂载 bpffs 时，执行：'},
-        {kind: 'code', lang: 'sh', text: s.bpffs}
+        {kind: 'code', lang: 'sh', text: s.bpffs},
+        {kind: 'h', text: 'honk 版本'},
+        {
+          kind: 'list',
+          items: [
+            `只有 Glassyiris/honk \`feat/native-api\` 分支的构建提供原生 API，即滚动发布的 \`debug\` 版本，目前由标签 \`${s.honkBuild.release}\`（提交 \`${s.honkBuild.commit}\`）构建。`,
+            '由 main 分支构建的版本（例如 `debug.2026.9.24.1`）没有原生 API。honk 会以 `unknown experimental setting` 拒绝所有 `native_api` 设置，访问 `/api` 与 `/ui/` 返回 404。',
+            `地理数据来源设置需要 \`${s.honkBuild.geodataSources}\` 或更高版本。\`debug.2026.9.24.native-api.*\` 可以更新地理数据，但不能设置来源。`
+          ]
+        },
+        {kind: 'p', text: '执行 `honk-core --version` 查看正在运行的版本。doona 也在概览页的“引擎”卡片与侧边导航栏底部显示该版本。'}
       ]
     },
     {
       id: 'install',
       title: '安装 honk',
       blocks: [
-        {kind: 'p', text: '从 Glassyiris/honk 的 `debug` 版本下载 honk。daeuniverse/honk 的正式版本没有原生 API，访问 `/api` 与 `/ui/` 会返回 404。'},
+        {kind: 'p', text: '从 Glassyiris/honk 的 `debug` 版本下载 honk。其他构建没有原生 API，详见“系统要求”中的“honk 版本”。'},
         {
           kind: 'links',
           items: [
@@ -61,11 +71,13 @@ export const content: GuideContent = {
         {kind: 'h', text: 'systemd 服务'},
         {kind: 'p', text: '发布包不含 systemd 单元。请创建 `/etc/systemd/system/honk-core.service`：'},
         {kind: 'code', lang: 'ini', text: s.systemdUnit},
-        {kind: 'p', text: '完成下一节的配置后，启用并启动服务，然后查看日志：'},
-        {kind: 'code', lang: 'sh', text: s.startHonk},
         {
           kind: 'p',
-          text: '日志出现 `honk-core is running` 即表示启动完成。请勿添加 `NoNewPrivileges=yes`、能力边界限制或只读 `/proc/sys`，因为启动过程需要 BPF、网络管理、命名空间、挂载与 sysctl 权限。'
+          text: '此时不要启动服务。示例配置从 `/usr/share/doona` 提供 doona，该目录中没有 `index.html` 时 honk 会拒绝启动；启动步骤位于“安装 doona 并启动”一节。'
+        },
+        {
+          kind: 'p',
+          text: '请勿添加 `NoNewPrivileges=yes`、能力边界限制或只读 `/proc/sys`，因为启动过程需要 BPF、网络管理、命名空间、挂载与 sysctl 权限。'
         }
       ]
     },
@@ -87,8 +99,8 @@ export const content: GuideContent = {
             '`bootstrap_resolver`：直接解析代理服务器与地理数据下载地址的域名，避免被 honk 拦截。下载地址使用域名时必须设置此项。',
             '`subscription` 与 `node`：替换为自己的订阅与节点。之后可在 doona 的节点页继续添加。',
             '`group proxy`：包含订阅中的节点与静态节点；`min_moving_avg` 选择延迟最低的成员。',
-            '`routing`：私有地址优先以 `direct(must)` 直连，国内域名与地址直连，其余流量经由 `proxy`。',
-            '`dns`：国内域名交给本地解析器，其余经由代理以 DNS over HTTPS 解析。'
+            '`routing`：私有地址优先以 `direct(must)` 直连，中国大陆域名与 IP 地址直连，其余流量经由 `proxy`。',
+            '`dns`：中国大陆域名交给本地解析器，其余经由代理以 DNS over HTTPS 解析。'
           ]
         },
         {kind: 'h', text: 'API 文件'},
@@ -120,26 +132,35 @@ export const content: GuideContent = {
           ]
         },
         {kind: 'p', text: '`native_api` 的每个字段都需要重启才能生效。重载会拒绝对这些字段的修改，并保留正在运行的监听。'},
-        {kind: 'h', text: '安装配置文件并启动'},
+        {kind: 'h', text: '安装配置文件'},
         {kind: 'code', lang: 'sh', text: s.installConfig},
-        {kind: 'p', text: '首次启动时，请执行“安装 honk”一节中的 `systemctl` 命令，而不是重启命令。'},
-        {kind: 'h', text: '状态数据库'},
-        {
-          kind: 'p',
-          text: 'honk 默认会打开 `<data_dir>/state/honk.db`：`global.store_subscribe` 默认开启，本示例也启用了 `native_api`。状态数据库没有需要添加的开关，缺失时表示它未能打开。该数据库保存管理员账户、地理数据来源以及 honk 需要持久保存的其他状态。`/var/lib/honk` 必须存在且 root 可写，`honk.db` 必须是普通文件，不能是符号链接。'
-        },
-        {kind: 'code', lang: 'sh', text: s.stateDbLog},
-        {kind: 'p', text: '数据库正常时，第一条命令没有输出。若有输出，请参阅“故障排查”中的“状态数据库问题”。'}
+        {kind: 'p', text: '接下来安装 doona，之后再启动 honk。'}
       ]
     },
     {
       id: 'doona',
-      title: '安装 doona',
+      title: '安装 doona 并启动',
       blocks: [
-        {kind: 'p', text: '下载 doona 发布包并解压到 `/usr/share/doona`，即 `ui` 指定的目录。'},
+        {
+          kind: 'p',
+          text: '下载 doona 发布包并解压到 `/usr/share/doona`，即 `ui` 指定的目录。最后一条命令必须列出 `index.html`，否则 honk 无法启动。'
+        },
         {kind: 'links', items: [{href: s.links.doonaReleases, text: 'doona 发布页'}]},
         {kind: 'code', lang: 'sh', text: s.installDoona},
-        {kind: 'p', text: 'honk 每次请求都从磁盘读取这些文件，因此替换文件后无需重启。'},
+        {kind: 'p', text: 'honk 每次请求都从磁盘读取这些文件，因此以后替换文件无需重启。'},
+        {kind: 'h', text: '启动 honk'},
+        {kind: 'p', text: '启用并启动服务，然后查看日志：'},
+        {kind: 'code', lang: 'sh', text: s.startHonk},
+        {kind: 'p', text: '日志出现 `honk-core is running` 即表示启动完成。'},
+        {kind: 'h', text: '状态数据库'},
+        {
+          kind: 'p',
+          text: 'honk 默认会打开 `<data_dir>/state/honk.db`：`global.store_subscribe` 默认开启，本示例也启用了 `native_api`。状态数据库没有需要添加的开关。该数据库保存管理员账户、地理数据来源以及 honk 需要持久保存的其他状态。honk 会自行创建 `state/` 与 `honk.db`；`/var/lib/honk` 必须存在且 root 可写。'
+        },
+        {
+          kind: 'p',
+          text: '本示例设置了 `password_auth: true`，数据库无法打开时 honk 不会启动，因此 honk 正在运行即表示数据库已打开。Token 模式下 honk 不使用数据库也会启动，并记录一条警告；此时缺少状态数据库表示它未能打开。日志消息的含义见“故障排查”中的“状态数据库问题”。'
+        },
         {kind: 'h', text: '首次登录'},
         {
           kind: 'list',
@@ -167,6 +188,10 @@ export const content: GuideContent = {
       id: 'features',
       title: '逐项检查功能',
       blocks: [
+        {
+          kind: 'p',
+          text: '首先确认网关能够转发流量。将示例订阅与节点替换为可用的订阅与节点，然后在真实的局域网客户端上分别测试直连与代理的 TCP、UDP 以及 DNS。`honk-core is running`、`dae0` 链路或可访问的 API 都不能证明流量正常。'
+        },
         {kind: 'p', text: '使用示例配置时，doona 的全部功能均可使用。请按下表逐项确认。'},
         {
           kind: 'table',
@@ -178,18 +203,26 @@ export const content: GuideContent = {
             ['策略：编辑组', '组卡片提供“编辑”，保存后生效。', '`config_write: true`；组所在文件中不含密钥'],
             ['节点：添加节点与订阅', '节点页提供“粘贴节点链接”与“添加订阅”。', '`config_write: true`；主文件中不含密钥'],
             ['节点：刷新订阅', '每个订阅行都有“刷新”。', '存在 `subscription` 条目，且 honk 的订阅服务正在运行'],
-            ['设置：地理数据来源与更新', '地理数据卡片列出来源，“更新”按钮可用。', '状态数据库；`config_write: true`；下载地址；`bootstrap_resolver`'],
+            [
+              '设置：地理数据来源与更新',
+              '地理数据卡片列出来源，“更新”按钮可用。',
+              `honk \`${s.honkBuild.geodataSources}\` 或更高版本；状态数据库；\`config_write: true\`；下载地址；\`bootstrap_resolver\``
+            ],
             ['设置：后端选项', '后端选项卡片提供流程记录、日志记录与 DNS 记录开关。', '`record_flows`、`record_logs`、`record_dns_log`'],
             ['活动：流量与内存历史', '历史图表在最多 10 分钟内逐步填满。', '`record_traffic`、`record_memory`'],
             ['日志', '打开日志页时持续出现日志。', '`record_logs`'],
             ['DNS：查询、缓存与记录', '列出查询与缓存；打开页面时记录持续增加。', '记录需要 `record_dns_log`；`dns` 配置段'],
             ['连接：关闭', '可以逐条关闭连接，也可以全部关闭。', '`enabled: true`'],
-            ['规则：规则列表、流程记录与路由追踪', '规则显示命中次数，出现流程记录，路由追踪可解释指定目标。', '流程记录需要 `record_flows`；`routing` 配置段'],
+            [
+              '规则：规则列表、流程记录与追踪模拟',
+              '规则显示命中次数，出现流程记录，“追踪模拟”可解释指定目标。',
+              '流程记录需要 `record_flows`；`routing` 配置段'
+            ],
             ['延迟测试', '节点的“测试”与组的“测试全部”显示延迟。', '`enabled: true`；私有地址目标还需要 `probe_allowed_cidrs`'],
             ['事件', '事件页显示事件流。', '`enabled: true`']
           ]
         },
-        {kind: 'p', text: '在自动记录模式下，流程只在需要时记录，日志与 DNS 记录只在有客户端连接时记录。已允许但处于空闲状态的记录器属于正常情况。'},
+        {kind: 'p', text: '在默认的“随面板”模式下，流程记录按需进行，日志记录与 DNS 记录只在有面板连接时进行。已允许但处于空闲状态的记录器属于正常情况。'},
         {kind: 'h', text: '仍有功能缺失时', id: 'still-missing'},
         {
           kind: 'list',
@@ -198,7 +231,8 @@ export const content: GuideContent = {
             '缺少 `config_write: true`。`native_api` 的字段直接写在 `experimental` 下时，honk 会以 `unknown experimental setting` 拒绝启动。',
             '既没有 `password_auth: true`，也没有 `secret`。此时若设置了 `config_write: true`，honk 会拒绝启动。',
             '文件包含密钥或与密钥相同的文本，因此 doona 将其显示为只读。',
-            '状态数据库未能打开，因此地理数据来源卡片被隐藏。',
+            `honk 早于 \`${s.honkBuild.geodataSources}\`，因此地理数据卡片没有来源设置。`,
+            'Token 模式下状态数据库未能打开，因此地理数据来源卡片被隐藏。',
             '仅在以 `--store db` 运行时出现，本指南不使用该模式：honk 未能记录的修订会阻止后续写入，直到下一次成功激活配置。'
           ]
         },
@@ -230,7 +264,7 @@ export const content: GuideContent = {
         {kind: 'h', text: '更新 doona'},
         {kind: 'p', text: '将新版本解压到 `/usr/share/doona`，然后在浏览器中重新加载页面。honk 无需重启。'},
         {kind: 'h', text: '更新地理数据'},
-        {kind: 'p', text: '在设置的地理数据卡片中点击“更新”，honk 会下载并启用两个文件。自动更新默认关闭，可在同一卡片中开启，每 24 小时检查一次。'},
+        {kind: 'p', text: '在设置的地理数据卡片中点击“更新”，honk 会下载并启用两个文件。自动更新默认开启，每 24 小时检查一次；可在同一卡片中关闭或修改间隔。'},
         {kind: 'h', text: '文件位置'},
         {
           kind: 'table',
@@ -253,6 +287,10 @@ export const content: GuideContent = {
         {kind: 'h', text: 'unknown experimental setting', id: 'unknown-setting'},
         {kind: 'p', text: '`native_api` 的字段直接写在 `experimental` 下，honk 因此拒绝该配置。请将字段移入 `native_api { }`。'},
         {kind: 'code', lang: 'dae', text: s.misplacedField},
+        {
+          kind: 'p',
+          text: '由 main 分支构建的 honk 会以同样的方式拒绝所有 `native_api` 设置，即使它们位于 `native_api { }` 中。请执行 `honk-core --version` 检查版本并安装 `debug` 版本，详见“系统要求”中的“honk 版本”。'
+        },
         {kind: 'h', text: 'honk 拒绝 native_api 配置块'},
         {
           kind: 'list',
@@ -263,23 +301,27 @@ export const content: GuideContent = {
           ]
         },
         {kind: 'h', text: '状态数据库问题', id: 'state-db'},
-        {kind: 'p', text: '缺少状态数据库时，地理数据来源卡片会消失；只有同时设置两个下载地址，“更新”按钮才会保留。请先在日志中查找原因：'},
+        {
+          kind: 'p',
+          text: '本示例设置了 `password_auth: true`，数据库无法打开时 honk 会在启动时退出，日志显示 `state database:` 及原因。Token 模式下 honk 会记录警告并在没有数据库的情况下运行：地理数据来源卡片消失，只有同时设置两个下载地址，“更新”按钮才会保留。请在日志中查找原因：'
+        },
         {kind: 'code', lang: 'sh', text: s.stateDbLog},
+        {kind: 'p', text: '日志也保留之前各次启动的消息，请查看最近一次启动的记录。'},
         {kind: 'code', lang: 'text', text: s.stateDbMessages},
         {
           kind: 'list',
           ordered: true,
           items: [
-            'unavailable：`data_dir` 及其 `state/` 目录必须存在，并且运行 honk 的用户可写；使用上文的单元时该用户为 root。',
-            'unsafe：`honk.db` 必须是普通文件，不能是符号链接，也不能在 honk 打开时被替换。',
+            'unavailable：`data_dir` 必须存在，并且运行 honk 的用户可写；使用上文的单元时该用户为 root。`state/` 由 honk 自行创建。',
+            'unsafe：`state/` 与 `honk.db` 必须属于该用户，且不授予组或其他用户任何权限。`honk.db` 必须是普通文件，不能是符号链接，也不能在 honk 打开时被替换。',
             'locked：等待 `honk-core admin reset` 执行完毕。',
-            'corrupt：honk 会将文件移至 `honk.db.corrupt` 并新建数据库。若已存在较早的 `.corrupt` 文件，honk 会保留两者，并在该文件删除之前不使用数据库运行。',
+            'corrupt：设置 `password_auth: true` 时 honk 会退出。Token 模式下 honk 会将文件移至 `honk.db.corrupt` 并新建数据库；若已存在较早的 `.corrupt` 文件，honk 会保留两者，并在该文件删除之前不使用数据库运行。',
             '修复后重启 honk。'
           ]
         },
         {
           kind: 'p',
-          text: '设置 `password_auth: true` 或使用 `--store db` 时，数据库无法打开会使 honk 在启动时退出，日志显示 `state database:` 及原因。`another honk-core has the state database open` 与 `state database has a foreign application id or a newer schema` 总会阻止启动：请停止另一个实例，或使用写入该数据库的 honk 版本。'
+          text: '`another honk-core has the state database open` 与 `state database has a foreign application id or a newer schema` 总会阻止启动：请停止另一个实例，或使用写入该数据库的 honk 版本。'
         },
         {kind: 'h', text: '固定映射时出现 Invalid argument'},
         {kind: 'p', text: '`/sys/fs/bpf` 不是 bpffs。请按“系统要求”一节挂载。'},
@@ -288,10 +330,16 @@ export const content: GuideContent = {
           kind: 'p',
           text: 'honk 会在挂载前拒绝低于 6.12 的内核。验证器拒绝编译后的分流程序时，请使用启用 BPF 与 BTF 的 Linux 6.12 或更高版本，并保留完整的验证器日志以便报告。'
         },
-        {kind: 'h', text: '/api 或 /ui/ 返回 404', id: 'no-native-api'},
+        {kind: 'h', text: '没有原生 API，或 /api、/ui/ 返回 404', id: 'no-native-api'},
+        {kind: 'p', text: '执行 `honk-core --version`，将正在运行的版本与“系统要求”中的“honk 版本”对照。'},
         {
-          kind: 'p',
-          text: '`/api` 返回 404 表示正在运行的 honk 没有原生 API，或 `enabled` 不是 `true`；doona 的登录对话框此时显示“此 honk 构建未提供原生 API”。请安装 `debug` 版本。只有 `/ui/` 返回 404 时，表示 `ui` 为空。'
+          kind: 'list',
+          items: [
+            '无法连接 `listen` 地址：honk 未运行、`enabled` 不是 `true`，或 `listen` 指向其他地址。`enabled: false` 时监听不会启动。',
+            '`/api` 返回 404：该地址上的服务没有原生 API，例如由 main 分支构建的 honk。doona 的登录对话框此时显示“此 honk 构建未提供原生 API”。请安装 `debug` 版本。',
+            '只有 `/ui/` 返回 404：原生 API 正在运行，但 `ui` 为空。',
+            'honk 启动时以 `failed to inspect native UI directory` 或 `native UI index.html must be a regular file` 退出：请按“安装 doona 并启动”一节将 doona 解压到 `ui` 目录。'
+          ]
         },
         {kind: 'h', text: '登录与跨域失败', id: 'sign-in'},
         {
