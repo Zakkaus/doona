@@ -187,7 +187,8 @@ it('tips why a rule cannot be added: no writable place first, then a change stil
 it('tells an empty distribution apart by the recorder, then by the source filter, and explains the sources', () => {
   const recorder = (mode: 'auto' | 'on' | 'off', allowed = true) => ({allowed, mode, active: mode === 'on'});
   expect(distributionEmpty(recorder('off'), 'kernel', t)).toBe(t('rule.distributionNotRecorded'));
-  expect(distributionEmpty(recorder('off', false), 'all', t)).toBe(t('rule.distributionEmpty'));
+  expect(distributionEmpty(recorder('off', false), 'all', t)).toBe(t('rule.distributionForbidden'));
+  expect(distributionEmpty(recorder('off', false), 'kernel', t)).toBe(t('rule.distributionForbidden'));
   expect(distributionEmpty(recorder('on'), 'kernel', t)).toBe(t('rule.distributionFiltered'));
   expect(distributionEmpty(undefined, 'all', t)).toBe(t('rule.distributionEmpty'));
   const view = distributionView(undefined, 'all', t, 'en', recorder('off'));

@@ -32,6 +32,7 @@ export const messages = defineMessages({
     'log.chart.current': '{level}：目前的最低等級',
     'log.empty': '尚無日誌',
     'log.emptyNotRecorded': '請先在設定頁開啟日誌記錄',
+    'log.emptyForbidden': '組態禁止日誌記錄',
     'log.emptyFiltered': '沒有符合篩選條件的日誌'
   },
   'zh-CN': {
@@ -65,6 +66,7 @@ export const messages = defineMessages({
     'log.chart.current': '{level}：当前的最低级别',
     'log.empty': '暂无日志',
     'log.emptyNotRecorded': '请先在设置页开启日志记录',
+    'log.emptyForbidden': '配置禁止日志记录',
     'log.emptyFiltered': '没有符合筛选条件的日志'
   },
   en: {
@@ -98,6 +100,7 @@ export const messages = defineMessages({
     'log.chart.current': '{level}: the current minimum',
     'log.empty': 'No log records yet',
     'log.emptyNotRecorded': 'Turn on log recording in Settings first',
+    'log.emptyForbidden': 'Log recording is disabled in the configuration',
     'log.emptyFiltered': 'No log records match the filters'
   }
 });
