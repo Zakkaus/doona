@@ -1,4 +1,4 @@
-import {useLayoutEffect, useMemo, useRef} from 'react';
+import {useId, useLayoutEffect, useMemo, useRef} from 'react';
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {
@@ -31,6 +31,7 @@ export function RuleList(props: PageProps) {
 function Dictionary({view}: {view: Model}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
+  const mustHelpId = useId();
   // The row actions are new functions each render; a ref keeps the columns, and so the rows, stable.
   const latest = useRef(view);
   useLayoutEffect(() => {
@@ -214,10 +215,13 @@ function Dictionary({view}: {view: Model}) {
                 onChange={outbound => setForm({...form, outbound})}
                 items={view.table.outbounds}
               />
-              <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})}>
+              <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
                 {t('rule.must')} <code>must</code>
               </Switch>
             </div>
+            <span id={mustHelpId} className="rp-label">
+              {t('rule.mustHelp')}
+            </span>
             <LabeledSelect
               isDisabled={view.busy}
               label={t('rule.position')}

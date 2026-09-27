@@ -871,7 +871,9 @@ export const messages = {
   'rule.openSource': 'Open source',
   'rule.lineOnly': 'Line {n}',
   'rule.add': 'Add rule',
-  'rule.must': 'Require this outbound',
+  'rule.must': 'Lock this outbound',
+  'rule.mustHelp':
+    'When locked, a match takes this outbound directly: no sniffing or rerouting by domain, and Global or Direct mode does not override it. direct(must) also keeps port 53 DNS out of transparent DNS takeover.',
   'rule.addHelp': "Adds the rule to the source file's routing section, then saves and reloads after validation passes.",
   'rule.condition': 'Condition',
   'rule.conditionMode': 'Condition form',

@@ -850,7 +850,9 @@ export const messages = {
   'rule.openSource': '開啟來源',
   'rule.lineOnly': '第 {n} 行',
   'rule.add': '新增規則',
-  'rule.must': '強制使用此出站',
+  'rule.must': '鎖定此出站',
+  'rule.mustHelp':
+    '鎖定後，命中此規則就直接採用該出站：不再嗅探或依網域重新分流，全域和直連模式也不會改寫。direct(must) 還會讓 53 連接埠的 DNS 不經透明 DNS 接管。',
   'rule.addHelp': '將規則寫入來源檔案的 routing 區段；驗證通過後儲存並重載。',
   'rule.condition': '條件',
   'rule.conditionMode': '條件寫法',
