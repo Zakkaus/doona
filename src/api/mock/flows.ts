@@ -22,7 +22,7 @@ export function flowFields(input: FlowDetail['input'], steps: FlowStep[]): FlowF
 
 // Keep mock flow evidence aligned with the shared rule dictionary.
 const ruleTable: Array<[string[], string]> = [
-  [['ad.doubleclick.net', 'doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'r1'],
+  [['ad.doubleclick.net', 'doubleclick.net', 'googlesyndication.com', 'adservice.google.com'], 'r3'],
   [
     [
       'taobao.com',
@@ -77,9 +77,9 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
   const decided =
     known ??
     (blocked
-      ? {id: 'r1', expression: ruleOf('r1').cond}
+      ? {id: 'r3', expression: ruleOf('r3').cond}
       : direct
-        ? {id: 'r3', expression: ruleOf('r3').cond}
+        ? {id: 'r2', expression: ruleOf('r2').cond}
         : {id: 'fallback', expression: 'fallback: ' + configRules.fallback.target});
   const expression = decided.expression;
   const leaf = connection.outbound === 'resilient' ? 'sg-01' : connection.outbound === 'gaming' ? 'hk-02' : 'hk-01';
