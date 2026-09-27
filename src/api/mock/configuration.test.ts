@@ -247,3 +247,22 @@ it('resolves a nested include from the main directory, as honk does, when creati
   expect((await api.groups()).map(group => group.name)).toContain('nested');
 });
 
+it('creates one source when two creates of the same path race', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const results = await Promise.allSettled([api.createConfigSource('config.d/a.dae', ''), api.createConfigSource('config.d/a.dae', '')]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({reason: {status: 409, code: 'state_conflict'}});
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.config()).sources.filter(source => source.path.endsWith('/config.d/a.dae'))).toHaveLength(1);
+});
+
+it('refuses a create past the advertised max_sources', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const max = (await api.capabilities()).resources.config.max_sources!;
+  for (let count = (await api.config()).sources.length; count < max; count++) await api.createConfigSource(`config.d/s${count}.dae`, '');
+  await expect(api.createConfigSource('config.d/over.dae', '')).rejects.toMatchObject({status: 413, code: 'request_too_large'});
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.config()).sources).toHaveLength(max);
+});
