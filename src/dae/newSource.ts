@@ -1,7 +1,7 @@
 import type {ConfigSource} from '../api/model';
 import {blockBody, scanConfig, uncomment, unquote} from './text';
 
-// The patterns of the top-level include sections, as written: relative to the directory of the file holding them.
+// The patterns of the top-level include sections, as written: relative to the main source's directory, whichever file holds them.
 export function includePatterns(text: string): string[] {
   const {blocks} = scanConfig(text);
   return blocks
@@ -37,16 +37,13 @@ export function resolveIncludePath(base: string | undefined, path: string) {
 }
 
 // Whether a loaded file includes `path`, given relative to the main source's directory as a new source's path is.
-// Each file's patterns resolve from the directory of the file holding them. A source's path is relative to the main
-// source's directory too; resolving it against the main path serves a backend that reports absolute paths as well.
+// honk resolves every file's patterns from the main source's directory, not from the file holding them. Resolving
+// against the main path serves a backend that reports absolute paths as well.
 // Null while a file's text is unknown, since its patterns are too.
 export function includeCheck(sources: Pick<ConfigSource, 'kind' | 'path' | 'content'>[]): ((path: string) => boolean) | null {
   const main = sources.find(source => source.kind === 'main');
   if (!main || sources.some(source => source.content === undefined)) return null;
-  const patterns = sources.flatMap(source => {
-    const at = resolveIncludePath(main.path, source.path);
-    return includePatterns(source.content!).map(pattern => resolveIncludePath(at, pattern));
-  });
+  const patterns = sources.flatMap(source => includePatterns(source.content!).map(pattern => resolveIncludePath(main.path, pattern)));
   return path => includedBy(patterns, resolveIncludePath(main.path, path));
 }
 

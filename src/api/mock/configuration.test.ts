@@ -233,3 +233,17 @@ it('creates a source an included file loads, and refuses a write over the body l
   await expect(api.replaceConfigSource(rules.id, big, `"${current.content_sha256}"`)).rejects.toMatchObject({status: 413});
   expect((await api.config()).sources.some(source => source.path.endsWith('/extra.d/big.dae'))).toBe(false);
 });
+
+it('resolves a nested include from the main directory, as honk does, when creating a source', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  // The fixture's main source loads config.d/*.dae; this file there includes lab/*.dae.
+  await api.createConfigSource('config.d/lab.dae', "include { 'lab/*.dae' }\n");
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(api.createConfigSource('config.d/lab/a.dae', '')).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
+  await api.createConfigSource('lab/a.dae', 'group { nested { policy: fixed(0) } }\n');
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.config()).sources.some(source => source.path.endsWith('/etc/honk/lab/a.dae'))).toBe(true);
+  expect((await api.groups()).map(group => group.name)).toContain('nested');
+});
+

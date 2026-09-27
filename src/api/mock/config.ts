@@ -44,7 +44,8 @@ export function includePaths(text: string) {
   ];
 }
 
-// The files an include of `path` in the file at `base` loads: every match of a glob, or the one file named.
+// The files an include of `path` loads, resolved against the main source at `base` whichever file holds it: every match
+// of a glob, or the one file named.
 export const includedFiles = <T extends {path: string}>(files: T[], base: string, path: string) =>
   files.filter(file => globMatch(resolveIncludePath(base, path), resolveIncludePath(undefined, file.path)));
 
@@ -105,12 +106,14 @@ export function validate(
   if (new Set(sources.map(source => source.id)).size !== sources.length) throw new ApiError(400, 'invalid_request', 'Source IDs must be unique');
   const diagnostics: ConfigDiagnostic[] = [];
   if (request.mode === 'full') {
+    // The first source is the main one; every include resolves from its directory.
+    const base = sources[0]?.path;
     const byPath = new Map([...localSources, ...sources].filter(source => source.path).map(source => [resolveIncludePath(undefined, source.path!), source]));
     const visited = new Set(sources.map(source => source.path && resolveIncludePath(undefined, source.path)));
     for (let index = 0; index < sources.length; index++) {
       const source = sources[index];
       for (const {path, line} of includePaths(source.content)) {
-        const resolved = resolveIncludePath(source.path, path);
+        const resolved = resolveIncludePath(base, path);
         // A glob may match no file yet; a plain path names one that must exist.
         if (isGlob(path)) {
           for (const [file, dependency] of byPath)
