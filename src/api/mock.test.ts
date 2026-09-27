@@ -236,6 +236,17 @@ it('limits the large connection snapshot without losing totals or deterministic 
   expect(await api.flow(linked.flow_id!)).toMatchObject({connection_id: linked.id, started_at: linked.started_at, input: {dst: linked.dst}});
 });
 
+// honk keys TCP and UDP connections in one map, so an ID is unique across both lists. Two rows with one ID in the
+// same group leave the connection table's collection in a cycle, and opening either row hangs the page.
+it.each([
+  ['default', createMockApi],
+  ['faults', faultsApi]
+])('never reuses a connection ID across TCP and UDP in the %s scenario', async (_, api) => {
+  const snapshot = await api().connections();
+  const ids = [...snapshot.tcp, ...snapshot.udp].map(row => row.id);
+  expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+});
+
 it('finds a retained flow by connection ID when the live row has no flow ID', async () => {
   const api = createMockApi();
   const c = (await api.connections()).tcp.find(c => c.id === '3')!;
