@@ -216,8 +216,8 @@ export function createConfiguration(
         return {active_generation_id: generation, datapath_generation_id: generation};
       });
     },
-    // The creation contract in order: capability, write switch, path shape, no existing file, an include that loads it,
-    // then full validation of the resulting set, the write and a reload.
+    // The creation contract in order: capability, write switch, path shape, no existing file, room under max_sources,
+    // an include that loads it, then full validation of the resulting set, the write and a reload.
     createConfigSource: async (path, content, signal) => {
       signal?.throwIfAborted();
       const config = capabilities.resources.config;
@@ -232,7 +232,13 @@ export function createConfiguration(
         'Main source'
       );
       const target = resolveIncludePath(main.path, path);
-      if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
+      // Checked again after the write below, which awaits: a concurrent create may have added a source meanwhile.
+      const vacant = () => {
+        if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
+        if (config.max_sources !== undefined && disk.length >= config.max_sources)
+          throw new ApiError(413, 'request_too_large', 'Source count exceeds the advertised max_sources');
+      };
+      vacant();
       // Any file the configuration loads may hold the include; honk resolves every pattern from the main source's directory.
       const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(main.path, include.path), target)));
       if (!loaded) {
@@ -242,6 +248,7 @@ export function createConfiguration(
         });
       }
       const next = await stored({id: `src-new-${++created}`, path: target, kind: 'include', writable: true, loaded_at: new Date().toISOString(), content});
+      vacant();
       const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision));
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       disk = [...disk, next];
