@@ -5,6 +5,12 @@ import {useT} from '../../i18n';
 import {useNodeGrid} from './useNodeGrid';
 import {cx} from '../../ui/cx';
 
+// GridLayout spreads its column spacing over the outer edges too, so its tiles sat inset from the small grid's. Instead
+// each cell is a tile plus the grid's 8px gap after it, with no column spacing of its own: the columns then follow the
+// small grid's `minmax(204px, 1fr)` rule (page-layout.css), and the last column's gap keeps the tiles clear of the
+// scrollbar (nodes.css). Rows keep the layout's own spacing.
+const cells = {minItemSize: new Size(204 + 8, 56), maxItemSize: new Size(Infinity, 56), minSpace: new Size(0, 8)};
+
 export function NodeGrid({
   nodes,
   selected,
@@ -69,7 +75,7 @@ export function NodeGrid({
         <span className="rp-grow" />
         <span className="rp-label">{m.count}</span>
       </div>
-      <Virtualizer layout={GridLayout} layoutOptions={{minItemSize: new Size(200, 56), maxItemSize: new Size(Infinity, 56), minSpace: new Size(8, 8)}}>
+      <Virtualizer layout={GridLayout} layoutOptions={cells}>
         <GridList
           className="rp-nodegrid"
           aria-label={t('policy.filter')}
