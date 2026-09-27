@@ -9,7 +9,8 @@ const unknown: Engine = {
   id: 'unknown',
   reason: () => undefined,
   holdsCredentials: () => false,
-  snippet: settings => settings.map(({key, value}) => `${key}: ${value}`).join('\n')
+  snippet: settings => settings.map(({key, value}) => `${key}: ${value}`).join('\n'),
+  redactedSections: () => []
 };
 
 // The engine behind the native API, by the API name its version reports; unknown until the version has loaded.

@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {normalizeCapabilities} from '../capabilities';
 import {capabilities, version} from '../mock/fixtures';
 import type {Capabilities, Version} from '../model';
+import {scanConfig} from '../../dae/text';
 import {engineOf, type EngineSubject} from '.';
 
 type Resources = Capabilities['resources'];
@@ -87,6 +88,10 @@ describe('honk', () => {
       ])
     ).toBe('experimental {\n  native_api {\n    record_logs: true\n    record_dns_log: true\n  }\n}');
   });
+  it('names the native_api section as redacted, and only inside experimental', () => {
+    const blocks = scanConfig(`${listener}\nnative_api { listen: '127.0.0.1:9091' }\nexperimental { dns_cache: true }`).blocks;
+    expect(honk.redactedSections(blocks).map(({block, name}) => [block.from, name])).toEqual([[0, 'experimental.native_api']]);
+  });
 });
 
 describe('an unknown engine', () => {
@@ -95,5 +100,6 @@ describe('an unknown engine', () => {
     for (const subject of ['logs', 'probes', 'geodata', 'config', 'manage', 'subscriptions', 'close'] satisfies EngineSubject[])
       expect(other.reason(subject, off)).toBeUndefined();
     expect(other.holdsCredentials({content: listener})).toBe(false);
+    expect(other.redactedSections(scanConfig(listener).blocks)).toEqual([]);
   });
 });

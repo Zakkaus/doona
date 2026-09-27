@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {ConfigDiagnostic, EffectiveConfig} from '../../api/model';
+import {engineOf} from '../../api/engines';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
 import type {EditorMark} from '../../ui/code/CodeEditor';
@@ -8,6 +9,7 @@ import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, moduleEditTip, sectionMarks, sectionSummaries, sectionUnder, sourceView, splice, type SectionDraft} from './view';
 import {useValidationSources} from './useValidationSources';
+import {useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 
@@ -23,7 +25,10 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
-  const sections = useMemo(() => sectionSummaries(config.sources, lang, t), [config, lang, t]);
+  // The engine names the sections whose text it redacts.
+  const version = useVersion().data;
+  const engine = useMemo(() => engineOf(version), [version]);
+  const sections = useMemo(() => sectionSummaries(config.sources, engine, lang, t), [config, engine, lang, t]);
   const isComplete = useCompleteness(config.sources);
   const [draft, setDraft] = useState<SectionDraft | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);

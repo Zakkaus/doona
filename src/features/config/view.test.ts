@@ -198,7 +198,7 @@ routing {
   fallback: proxy
 }`);
   const include = source('routing { fallback: direct }', 'include');
-  const cards = sectionSummaries([main, include], 'en', t);
+  const cards = sectionSummaries([main, include], honk, 'en', t);
   expect(cards.map(card => card.kind)).toEqual(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'routing']);
   expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstream, 1 request rule, 1 response rule');
   expect(cards.filter(card => card.kind === 'routing').map(card => [card.range, card.summary])).toEqual([
@@ -215,13 +215,13 @@ it('carries a section draft over a change outside it and stops at a change to th
     content_sha256: digest
   });
   const draftOn = (loaded: ConfigSource, text: string): SectionDraft => {
-    const section = sectionSummaries([loaded], 'en', t).find(item => item.kind === 'routing')!;
+    const section = sectionSummaries([loaded], honk, 'en', t).find(item => item.kind === 'routing')!;
     return {section: {...section, source: section.source!, block: section.block!}, text};
   };
   const base = file('  fallback: direct');
   const typed = 'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}';
   const draft = draftOn(base, typed);
-  const now = (loaded: ConfigSource) => sectionSummaries([loaded], 'en', t);
+  const now = (loaded: ConfigSource) => sectionSummaries([loaded], honk, 'en', t);
   expect(sectionUnder(draft, now(base))).toEqual({next: null, conflict: false});
   // Outside the section: carried over, and the splice keeps the other change.
   const outside = file('  fallback: direct', '# concurrent edit\n', 'b');
@@ -276,7 +276,7 @@ it('maps only diagnostics within the edited section using its current line count
 
 it('withholds editing for missing source text and native_api sections', () => {
   const hidden = {...source(''), content: undefined};
-  const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], 'en', t);
+  const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], honk, 'en', t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
   expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentWithheld')});
   // One card says the main text is withheld; no per-section cards repeat it.
@@ -296,14 +296,14 @@ routing {
   domain(example.org) -> proxy
   fallback: proxy
 }`);
-  const cards = sectionSummaries([main], 'en', t);
+  const cards = sectionSummaries([main], honk, 'en', t);
   expect(cards.find(card => card.kind === 'subscription')?.summary).toBe('2 subscriptions');
   expect(cards.find(card => card.kind === 'node')?.summary).toBe('1 node');
   expect(cards.find(card => card.kind === 'routing')?.summary).toBe('2 rules, fallback: proxy');
 });
 
 it('keeps a card id when text before the section changes', () => {
-  const id = (text: string) => sectionSummaries([source(text)], 'en', t).find(card => card.kind === 'routing')!.id;
+  const id = (text: string) => sectionSummaries([source(text)], honk, 'en', t).find(card => card.kind === 'routing')!.id;
   expect(id('# a\nrouting { fallback: direct }')).toBe(id('# a longer comment\n\nrouting { fallback: direct }'));
 });
 
@@ -364,7 +364,7 @@ it('describes only the selected template’s groups and omits routing changes fo
 
 it('names group policies in words, keeping only an expression doona does not know as written', () => {
   const text = 'group {\n  fast { policy: min_avg10 }\n  pinned { policy: fixed(0) }\n  picked { policy: select }\n  odd { policy: custom }\n}';
-  expect(sectionSummaries([source(text)], 'en', t).find(card => card.kind === 'group')?.summary).toBe(
+  expect(sectionSummaries([source(text)], honk, 'en', t).find(card => card.kind === 'group')?.summary).toBe(
     '4 groups: fast: Fastest on average, pinned: Manual, picked: Manual, odd: custom'
   );
 });

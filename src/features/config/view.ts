@@ -139,7 +139,7 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
 
 // Card ids count occurrences rather than offsets, so an edit elsewhere in the file keeps an open editor on its card.
 // A section counts wherever the main file or an include defines it; a read-only file still shows its sections.
-export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Translator): ModuleSection[] {
+export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: Lang, t: Translator): ModuleSection[] {
   const eligible = sources.filter(source => source.kind === 'main' || source.kind === 'include');
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
   const main = sources.find(source => source.kind === 'main') ?? null;
@@ -189,18 +189,16 @@ export function sectionSummaries(sources: ConfigSource[], lang: Lang, t: Transla
           note: t('config.contentWithheld')
         }
       ];
-    return blocks
-      .filter(block => block.name === 'experimental' && block.children.some(child => child.name === 'native_api'))
-      .map((block, index) => ({
-        id: `${source.id}:experimental:${index}`,
-        kind: 'experimental.native_api',
-        source,
-        block: null,
-        href: null,
-        range: sectionRange(source, block),
-        summary: '',
-        note: t('config.incomplete')
-      }));
+    return engine.redactedSections(blocks).map(({block, name}, index) => ({
+      id: `${source.id}:${block.name}:${index}`,
+      kind: name,
+      source,
+      block: null,
+      href: null,
+      range: sectionRange(source, block),
+      summary: '',
+      note: t('config.incomplete')
+    }));
   });
   return [...sections, ...withheld];
 }
