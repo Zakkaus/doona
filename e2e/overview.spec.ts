@@ -120,7 +120,6 @@ test('an accepted source reload respects Retry-After and retains the draft on te
     };
   };
   await page.goto('/#/config?tab=source');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const draft = source.content + '\n# keep this draft\n';
   await page.locator('.cm-content').fill(draft);
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();

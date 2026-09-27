@@ -18,7 +18,6 @@ for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
     });
     test('editor completion suggestions have a localized accessible name', async ({page}) => {
       await page.goto('/#/config?tab=source');
-      await page.getByRole('button', {name: translate(lang, 'config.edit'), exact: true}).click();
       const editor = page.locator('.cm-content[contenteditable="true"]');
       await editor.click();
       await page.keyboard.press('ControlOrMeta+A');
