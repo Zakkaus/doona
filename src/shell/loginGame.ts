@@ -12,6 +12,14 @@ export const DUCK_HEIGHT = 52;
 const IDLE_HEIGHT = 72;
 // The dots after the loading label step every DOT_STEP ms.
 const DOT_STEP = 500;
+// The idle scene: a bar up to BAR_WIDTH wide, the duck DUCK_SPACE to its right, and the ground reaching GROUND_EDGE past
+// both, which keeps EDGE clear of the panel's sides.
+const BAR_WIDTH = 250;
+const BAR_HEIGHT = 22;
+const DUCK_SPACE = 22;
+const GROUND_EDGE = 16;
+const EDGE = 12;
+const SIGN_HEIGHT = 20;
 const STEP = 1 / 120;
 const GRAVITY = 1500;
 const FLAP = 430;
@@ -59,9 +67,40 @@ export function loadingDots(seconds: number) {
   return (Math.floor((seconds * 1000) / DOT_STEP) + 3) % 4;
 }
 
+// The idle scene as one group centred in a w by h panel: the status sign on top, the loading label and 99% over the
+// bar, the bar and the duck standing on the same ground, and the start line below it. The bar gives up width first on
+// a narrow panel. Every y is a text baseline except sign, bar and ground, which are top edges.
+export function idleLayout(w: number, h: number) {
+  const duckWidth = (IDLE_HEIGHT * DUCK_BOX.width) / DUCK_BOX.height;
+  const bar = Math.max(120, Math.min(BAR_WIDTH, Math.floor(w - 2 * (EDGE + GROUND_EDGE) - DUCK_SPACE - duckWidth)));
+  const span = bar + DUCK_SPACE + duckWidth;
+  // Heights from the ground up, then the stack from the sign's top to the start line's descenders centred on h / 2.
+  const top = -BAR_HEIGHT;
+  const label = top - 12;
+  const sign = label - 15 - 30 - SIGN_HEIGHT;
+  const start = 40;
+  const ground = Math.round(h / 2 - (sign + start + 4) / 2);
+  const cx = Math.round(w / 2);
+  const x = Math.round(cx - span / 2);
+  return {
+    cx,
+    x,
+    bar,
+    ground,
+    top: ground + top,
+    label: ground + label,
+    sign: ground + sign,
+    start: ground + start,
+    duck: x + bar + DUCK_SPACE + duckWidth / 2,
+    reach: Math.round(span / 2 + GROUND_EDGE),
+    text: w - 2 * EDGE
+  };
+}
+
 export type GameText = {
   loading: string;
   progress: string;
+  status: string;
   start: string;
   restart: string;
   result: (amount: string) => string;
@@ -238,28 +277,31 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.lineJoin = 'round';
     g!.textAlign = 'center';
     if (!playing) {
-      // Loading: a bar one notch short of full on a stretch of ground, the label and 99% over it, and the duck to the
-      // right, turned to stare at the gap. Only the dots after the label move.
-      const gi = Math.round(h / 2 + 56);
-      const cx = Math.round(w / 2);
-      const x = cx - 170;
-      const top = gi - 62;
-      const width = 250;
+      // Loading: a bar one notch short of full resting on a stretch of ground, the label and 99% over it, and the duck
+      // standing beside it, turned to stare at the gap. Above them a yellow sign, in the helmet's colours, says the
+      // showcase is under construction. Only the dots after the label move.
+      const L = idleLayout(w, h);
       g!.fillStyle = C.sub;
-      g!.fillRect(cx - 190, gi, 380, 1.5);
-      shape(C.paper, () => g!.roundRect(x, top, width, 22, 11));
+      g!.fillRect(L.cx - L.reach, L.ground, 2 * L.reach, 1.5);
+      shape(C.paper, () => g!.roundRect(L.x, L.top, L.bar, BAR_HEIGHT, BAR_HEIGHT / 2));
       g!.fillStyle = C.bar;
       g!.beginPath();
-      g!.roundRect(x + 4, top + 4, (width - 8) * 0.97, 14, 7);
+      g!.roundRect(L.x + 4, L.top + 4, (L.bar - 8) * 0.97, BAR_HEIGHT - 8, (BAR_HEIGHT - 8) / 2);
       g!.fill();
       const dots = loadingDots(reduce.matches ? 0 : (performance.now() - born) / 1000);
       g!.textAlign = 'right';
-      say(text.progress, x + width, top - 12, C.text, 15);
+      say(text.progress, L.x + L.bar, L.label, C.text, 15);
       g!.textAlign = 'left';
-      say(text.loading + '...'.slice(0, dots), x, top - 12, C.text, 15, width - 48);
+      say(text.loading + '...'.slice(0, dots), L.x, L.label, C.text, 15, L.bar - 48);
       g!.textAlign = 'center';
-      duck(x + width + 56, gi - IDLE_HEIGHT / 2, IDLE_HEIGHT, -0.06, true);
-      if (!reduce.matches) say(text.start, cx, gi + 40, C.sub, undefined, 360);
+      g!.font = `600 12px ${font}`;
+      const sign = Math.min(g!.measureText(text.status).width, 2 * L.reach - 24) + 24;
+      shape(C.yellow, () => g!.roundRect(L.cx - sign / 2, L.sign, sign, SIGN_HEIGHT, SIGN_HEIGHT / 2));
+      g!.textBaseline = 'middle';
+      say(text.status, L.cx, L.sign + SIGN_HEIGHT / 2 + 0.5, C.ink, 12, sign - 24);
+      g!.textBaseline = 'alphabetic';
+      duck(L.duck, L.ground - IDLE_HEIGHT / 2, IDLE_HEIGHT, -0.06, true);
+      if (!reduce.matches) say(text.start, L.cx, L.start, C.sub, undefined, Math.min(360, L.text));
       return;
     }
     g!.fillStyle = C.sub;
@@ -384,7 +426,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       restyle();
       // Canvas text doesn't fetch the web font's unicode-range subsets the page hasn't shown yet, so these strings would
       // draw in a fallback font; load the subsets they need and draw again.
-      const glyphs = [next.loading, '.', next.progress, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
+      const glyphs = [next.loading, '.', next.progress, next.status, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
       Promise.all([500, 600].map(weight => document.fonts.load(`${weight} 16px ${font}`, glyphs))).then(
         () => {
           if (text === next) draw();

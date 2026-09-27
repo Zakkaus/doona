@@ -1227,6 +1227,7 @@ export const messages = {
   'login.gameLabel': '小游戏：按下让小鸭扇翅膀',
   'login.gameLoading': '展示区加载中',
   'login.gameProgress': '99%',
+  'login.gameStatus': '正在施工',
   'login.gameStart': '点击开始（不等了）',
   'login.gameRestart': '点击或按空格键重新开始',
   'login.gameResult': '断线　已转发 {amount}',

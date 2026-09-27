@@ -1270,6 +1270,7 @@ export const messages = {
   'login.gameLabel': 'Mini game: press to make the duck flap',
   'login.gameLoading': 'Loading the showcase',
   'login.gameProgress': '99%',
+  'login.gameStatus': 'Under construction',
   'login.gameStart': 'Click to start (done waiting)',
   'login.gameRestart': 'Click or press Space to restart',
   'login.gameResult': 'Link down  {amount} forwarded',
