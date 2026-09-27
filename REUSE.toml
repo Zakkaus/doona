@@ -16,11 +16,11 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "doona contributors"
 SPDX-License-Identifier = "GPL-3.0-only"
 
-# The bundled OFL notice does not identify the font copyright holder.
+# Noto Sans TC and SC, whose name tables carry Adobe's copyright.
 [[annotations]]
 path = ["public/fonts/**"]
 precedence = "override"
-SPDX-FileCopyrightText = "NOASSERTION"
+SPDX-FileCopyrightText = "2014-2021 Adobe"
 SPDX-License-Identifier = "OFL-1.1"
 
 [[annotations]]
