@@ -101,14 +101,6 @@
   flex-direction: column;
   gap: 8px;
 }
-/* Spread short rows across the available columns and height to align neighbouring cards. */
-.rp-list-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-  column-gap: 16px;
-  align-content: space-between;
-  flex: 1 1 auto;
-}
 /* Rows of a label and a text: the labels share one column, so every text starts at the same edge and wraps under
    itself however wide its row's label is. */
 .rp-list-labeled {
