@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {capabilities, datapath as healthy, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
 import {datapathFault} from '../../api/mock/fixtures/runtime';
 import {translate, type Translator} from '../../i18n';
-import {datapathFields, datapathValue, engineStatus, memoryFields, overviewExport, overviewView} from './view';
+import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';
 import type {KvItem} from '../../ui/ui';
 const t: Translator = (key, params) => translate('en', key, params);
@@ -135,16 +135,4 @@ it('explains the cgroup scope by its value', () => {
     expect(row?.help).toEqual({title: t('ov.f.cgroupScope'), text: t('ui.valuePair', {label: row!.value, value: t(key)})});
   }
   expect(field(memoryFields({...runtimeMemory, cgroup: null}, t, 'en-US'), t('ov.f.cgroupScope'))?.help).toBeUndefined();
-});
-
-it('adds a degraded or failed datapath to the engine status with the worse tone and a link to its card', () => {
-  expect(engineStatus('running', 'active', false, t)).toEqual({tone: 'ok', text: t('lifecycle.running'), href: null});
-  expect(engineStatus('running', 'degraded', false, t)).toEqual({
-    tone: 'warn',
-    text: t('ov.status.datapathDegraded', {status: t('lifecycle.running')}),
-    href: '#/overview?card=datapath'
-  });
-  expect(engineStatus('reloading', 'failed', false, t)).toMatchObject({tone: 'err', text: t('ov.status.datapathFailed', {status: t('lifecycle.reloading')})});
-  expect(engineStatus('failed', 'degraded', false, t).tone).toBe('err');
-  expect(engineStatus(undefined, 'failed', true, t)).toEqual({tone: 'warn', text: t('ov.loading'), href: null});
 });

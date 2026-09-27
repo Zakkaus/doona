@@ -1,14 +1,13 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
-import {enumLabel} from '../../i18n/enum';
 import type {Key} from '../../i18n';
 import {formatDuration, localTime, formatBytes} from '../../i18n/format';
-import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/selectors';
+import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels, type LimitGroup} from '../shared/limits';
-import {href} from '../../shell/route';
+import {engineStatus} from '../shared/engineStatus';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -108,20 +107,6 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
     );
 }
 
-const tones = ['ok', 'warn', 'err'] as const;
-// The header's status: the engine's lifecycle, and a datapath that is degraded or failed beside it, linking to the
-// Datapath card. The two stay separate states; the tone is the worse of them.
-export function engineStatus(state: Runtime['lifecycle']['state'] | undefined, path: Datapath['state'] | undefined, busy: boolean, t: LabelFn) {
-  const tone = lifecycleTone(state) as (typeof tones)[number];
-  const text = state ? enumLabel(lifecycleStates, state, t) : t(busy ? 'ov.loading' : 'ov.unknown');
-  if (!state || (path !== 'degraded' && path !== 'failed')) return {tone, text, href: null};
-  return {
-    tone: tones[Math.max(tones.indexOf(tone), path === 'failed' ? 2 : 1)],
-    text: t(path === 'failed' ? 'ov.status.datapathFailed' : 'ov.status.datapathDegraded', {status: text}),
-    href: href('overview', {card: 'datapath'})
-  };
-}
-
 export function overviewView(
   // `limits` is backendLimits for the capabilities; the controller builds it because its links need the UI language.
   data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath; limits?: LimitGroup[]},
@@ -139,7 +124,7 @@ export function overviewView(
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
   return {
-    status: engineStatus(state, datapath?.state, loading.capabilities || loading.runtime, t),
+    status: engineStatus(state, datapath?.state, t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown'), t),
     strip: [
       {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('ov.configHelp')}},
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],

@@ -20,6 +20,7 @@ async function backend(page: Page) {
     flows: () => api.flows(),
     connections: () => api.connections(),
     runtime: () => api.runtime(),
+    datapath: () => api.datapath(),
     geodata: () => api.geodata(),
     'runtime/settings': () => api.runtimeSettings(),
     'runtime/memory': () => api.runtimeMemory(),
