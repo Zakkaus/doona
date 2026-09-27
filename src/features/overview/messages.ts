@@ -131,7 +131,6 @@ export const messages = defineMessages({
     'ov.loading': '載入中',
     'ov.unavailable': '此後端不提供該項資料',
     'ov.unknown': '未知',
-    'ov.statusUnknown': '狀態未提供',
     'ov.noAttachments': '沒有掛載點資料',
     'ov.occupancyUnknown': '佔用量未提供，容量 {capacity}',
     'ov.degradedHelp.runtime': '重載後資料路徑未恢復，經使用者空間代理的新連線會被拒絕。可再次重載組態，嘗試恢復資料路徑。',
@@ -275,7 +274,6 @@ export const messages = defineMessages({
     'ov.loading': '加载中',
     'ov.unavailable': '此后端不提供该项数据',
     'ov.unknown': '未知',
-    'ov.statusUnknown': '状态未提供',
     'ov.noAttachments': '没有挂载点数据',
     'ov.occupancyUnknown': '占用量未提供，容量 {capacity}',
     'ov.degradedHelp.runtime': '重载后数据路径未恢复，经用户空间代理的新连接会被拒绝。可再次重载配置，尝试恢复数据路径。',
@@ -422,7 +420,6 @@ export const messages = defineMessages({
     'ov.loading': 'Loading',
     'ov.unavailable': 'This backend does not provide this data',
     'ov.unknown': 'Unknown',
-    'ov.statusUnknown': 'Status not reported',
     'ov.noAttachments': 'No attachment data',
     'ov.occupancyUnknown': 'Occupancy not reported, capacity {capacity}',
     'ov.degradedHelp.runtime':

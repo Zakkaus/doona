@@ -120,11 +120,6 @@ it('explains a degraded datapath by whether the runtime is degraded too, and an 
   expect(help(datapathFields(datapath, 'unknown', t, 'en-US'), 'ov.f.kind')).toBeUndefined();
 });
 
-it('says the status was not reported, not that it is unknown, once nothing is loading', () => {
-  expect(overviewView({}, loading, 'en-US', t).status.text).toBe(t('ov.statusUnknown'));
-  expect(overviewView({}, {...loading, runtime: true}, 'en-US', t).status.text).toBe(t('ov.loading'));
-});
-
 it('explains the cgroup scope by its value', () => {
   for (const [scope, key] of [
     ['service', 'ov.cgroupHelp.service'],
