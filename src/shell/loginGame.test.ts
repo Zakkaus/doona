@@ -71,7 +71,7 @@ describe('the idle scene', () => {
   it('shows all three dots on a still, then steps through none to three every half second', () => {
     expect([0, 0.49, 0.5, 1, 1.5, 2, 2.5].map(loadingDots)).toEqual([3, 3, 0, 1, 2, 3, 0]);
   });
-  it('centres the bar and the duck as one group on a shared ground, and the whole stack in the panel', () => {
+  it('centres the group on a shared ground with the bar held clear of it, and the whole stack in the panel', () => {
     // The panel beside the form at 1440px and at 1024px, the narrowest that shows it, in logical units.
     for (const [w, h] of [
       [600, 643],
@@ -80,7 +80,9 @@ describe('the idle scene', () => {
       const L = idleLayout(w, h);
       const right = 2 * L.duck - (L.x + L.bar + 22);
       expect(Math.abs(L.post + right - 2 * L.cx)).toBeLessThanOrEqual(1);
-      expect(L.top + 22).toBe(L.ground);
+      // A gap as tall as the bar parts its bottom from the ground, and the rail runs through its middle.
+      expect(L.ground - (L.top + 22)).toBe(22);
+      expect(L.rail + 9 / 2).toBe(L.top + 22 / 2);
       expect(L.x - L.post).toBe(L.board + 24);
       expect(L.cx - L.reach).toBeGreaterThanOrEqual(12);
       expect(L.cx + L.reach).toBeLessThanOrEqual(w - 12);
