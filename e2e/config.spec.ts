@@ -1,7 +1,7 @@
 import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, test} from './fixtures';
 import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -223,24 +223,27 @@ test('paste into a read-only source is refused with the read-only notice', async
   await expect(editor).toHaveText(original, {useInnerText: true});
 });
 
-test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
-  await page.goto('/#/config?tab=validate');
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
-  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rows).toHaveCount(3);
-  await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
-  await expect(rows).toHaveCount(1);
-  await page.getByRole('radio', {name: 'All 3', exact: true}).click();
-  await page.getByRole('button', {name: 'Validate again', exact: true}).click();
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Last validation');
-  await expect(rows).toHaveCount(0);
-  await page.reload();
-  await rows.filter({hasText: 'rules.dae:3'}).click();
-  await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
-  await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
-  await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
-  // An editable source marks the line with its caret; a read-only one with the focus line.
-  await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
+test.describe(() => {
+  test.use({storage: faults});
+  test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
+    await page.goto('/#/config?tab=validate');
+    await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
+    const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
+    await expect(rows).toHaveCount(3);
+    await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
+    await expect(rows).toHaveCount(1);
+    await page.getByRole('radio', {name: 'All 3', exact: true}).click();
+    await page.getByRole('button', {name: 'Validate again', exact: true}).click();
+    await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Last validation');
+    await expect(rows).toHaveCount(0);
+    await page.reload();
+    await rows.filter({hasText: 'rules.dae:3'}).click();
+    await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
+    await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
+    await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
+    // An editable source marks the line with its caret; a read-only one with the focus line.
+    await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
+  });
 });
 
 test('identical diagnostics share one row with their count, and a known code keeps the backend words as detail', async ({page}) => {

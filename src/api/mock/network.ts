@@ -9,12 +9,13 @@ import {routingTrace} from './routing';
 
 const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
 // Derived once per flows array; a real backend keeps its ring, so the mock should not re-sort on every poll.
-function dnsLogRecords(flows: FlowDetail[]): DnsLogRecord[] {
+function dnsLogRecords(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   let ring = dnsRings.get(flows);
-  if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows)));
+  if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows, faults)));
   return ring;
 }
-function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
+// Upstream timeouts and server failures belong to the faults scenario; NXDOMAIN and refused ad domains are answers.
+function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   let seed = 941;
   const next = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
   const domains = [...new Set(flows.map(flow => flow.input.domain).filter((name): name is string => !!name))];
@@ -29,7 +30,7 @@ function buildDnsLog(flows: FlowDetail[]): DnsLogRecord[] {
     const type = i % 4 === 0 ? 'AAAA' : 'A';
     const entry = fixtures.dnsCache.entries.find(row => row.domain === name && row.type === type);
     const cached = !denied && !!entry && i % 3 === 0;
-    const failed = !cached && !denied && i % 23 === 7;
+    const failed = faults && !cached && !denied && i % 23 === 7;
     const missing = !cached && !failed && !denied && i % 11 === 5;
     const status = denied ? 'REFUSED' : cached ? entry!.status : failed ? (i % 2 ? 'TIMEOUT' : 'SERVFAIL') : missing ? 'NXDOMAIN' : 'NOERROR';
     const upstream = cached || denied ? null : i % 7 === 0 ? 'udp://223.5.5.5' : i % 4 === 0 ? 'https://dns.google/dns-query' : 'tls://1.1.1.1';
@@ -72,7 +73,8 @@ export function createNetwork(
   outbounds: RuntimeOutbounds,
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>,
-  busy = false
+  busy = false,
+  faults = false
 ) {
   const flowPage = createPager('flows');
   const cachePage = createPager('dnsCache');
@@ -149,7 +151,7 @@ export function createNetwork(
           dns_intercept: 'partial',
           kernel_bypass: 'none'
         },
-        dropped_records: big ? '0' : fixtures.flowDroppedRecords,
+        dropped_records: big || !faults ? '0' : fixtures.flowDroppedRecords,
         flows: result.items.map(({trace, input, ...summary}) => (fixtures.flowSummaryOmitsInput[summary.id] ? summary : {...summary, input})),
         next_cursor: result.next_cursor
       };
@@ -185,7 +187,7 @@ export function createNetwork(
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
-      const ring = dnsLogRecords(flows);
+      const ring = dnsLogRecords(flows, faults);
       const records = ring.filter(
         r =>
           (!needle || r.question.name.toLowerCase().includes(needle)) &&

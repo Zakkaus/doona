@@ -182,13 +182,19 @@ routing { domain(geosite: category-ads-all@ads) -> block
 
 it('fails a geodata update whose file lacks a used category the way honk does, keeping the files', async () => {
   vi.useFakeTimers();
-  const api = createMockApi();
   const lite = geodataPreset('metacubex-lite');
+  const update = async (api: ReturnType<typeof createMockApi>) => {
+    await api.patchRuntimeSettings({geodata: {geosite: {urls: [...lite.urls.geosite]}, geoip: {urls: [...lite.urls.geoip]}}});
+    const accepted = await api.updateGeodata();
+    await vi.advanceTimersByTimeAsync(1000);
+    return api.operation(accepted.operation_id);
+  };
+  // The default demo's rules use only categories the lite files carry.
+  expect((await update(createMockApi())).status).toBe('succeeded');
+  // The faults scenario adds a rule on geosite:category-ads-all, which they lack.
+  const api = createMockApi({faults: true});
   const before = (await api.geodata()).assets;
-  await api.patchRuntimeSettings({geodata: {geosite: {urls: [...lite.urls.geosite]}, geoip: {urls: [...lite.urls.geoip]}}});
-  const accepted = await api.updateGeodata();
-  await vi.advanceTimersByTimeAsync(1000);
-  const operation = await api.operation(accepted.operation_id);
+  const operation = await update(api);
   expect(operation.status).toBe('failed');
   expect(operation.error).toMatchObject({
     code: 'geodata_update_failed',

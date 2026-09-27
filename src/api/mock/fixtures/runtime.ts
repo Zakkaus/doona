@@ -76,18 +76,18 @@ export const runtime: Runtime = {
   instance_id: instanceId,
   lifecycle: {state: 'running', started_at: ago(777600), uptime_seconds: '777600'},
   generation: {active_id: generationId, config_revision: generationId, state: 'active', activated_at: ago(210)},
-  // The same degraded datapath /datapath reports in full: one delayed map sample, everything else attached.
+  // The same healthy datapath /datapath reports in full.
   datapath: {
     kind: 'ebpf',
-    state: 'degraded',
+    state: 'active',
     visibility: 'full',
     ebpf: {
       backend: 'real',
       programs: 'loaded',
       hooks: 'attached',
       routing: {state: 'published', generation_id: '40'},
-      health: 'degraded',
-      last_error: 'Routing map sample delayed',
+      health: 'healthy',
+      last_error: null,
       checked_at: observedAt
     }
   },
@@ -110,7 +110,7 @@ export const runtime: Runtime = {
 export const datapath: Datapath = {
   observed_at: observedAt,
   kind: 'ebpf',
-  state: 'degraded',
+  state: 'active',
   visibility: 'full',
   ebpf: {
     ...runtime.datapath.ebpf!,
@@ -119,8 +119,10 @@ export const datapath: Datapath = {
     ),
     maps: {state: 'ready', conn_state: {occupancy: live.length, capacity: 65536, occupancy_known: true}}
   },
-  errors: [{code: 'sample_delayed', message: 'Routing map sample delayed'}]
+  errors: []
 };
+// The faults scenario's datapath: one delayed map sample, everything else attached.
+export const datapathFault = {code: 'sample_delayed', message: 'Routing map sample delayed'};
 export const runtimeMemory: RuntimeMemory = {
   observed_at: observedAt,
   process: {rss_bytes: '48234496'},

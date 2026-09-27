@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, faults, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -170,54 +170,60 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await expect(page.getByRole('row').filter({hasText: 'Runtime updated'}).first()).toContainText('/api/v1/runtime');
 });
 
-test('mock notices include distinct operations and the recording gap, not routine overflow', async ({page}) => {
-  await page.setViewportSize({width: 1440, height: 900});
-  await page.goto('/#/activity');
-  for (const lang of ['zh-TW', 'en']) {
-    for (const scheme of ['light', 'dark']) {
-      await page.evaluate(
-        ({lang, scheme}) => {
-          localStorage.setItem('doona-lang', lang);
-          localStorage.setItem('doona-scheme', scheme);
-        },
-        {lang, scheme}
-      );
-      await page.reload();
-      const notices = page.locator('.rp-feed');
-      await expect(notices.getByRole('listitem')).toHaveCount(5);
-      await expect(notices.locator('.rp-light.warn')).toHaveCount(1);
-      if (lang === 'en') {
-        await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
-        await expect(notices.getByRole('listitem').filter({hasText: 'Operation updated'})).toHaveCount(2);
-        await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(1);
-        await expect(notices.getByRole('listitem').filter({hasText: 'records reached the retention limit'})).toHaveCount(0);
+test.describe(() => {
+  test.use({storage: faults});
+  test('mock notices include distinct operations and the recording gap, not routine overflow', async ({page}) => {
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.goto('/#/activity');
+    for (const lang of ['zh-TW', 'en']) {
+      for (const scheme of ['light', 'dark']) {
+        await page.evaluate(
+          ({lang, scheme}) => {
+            localStorage.setItem('doona-lang', lang);
+            localStorage.setItem('doona-scheme', scheme);
+          },
+          {lang, scheme}
+        );
+        await page.reload();
+        const notices = page.locator('.rp-feed');
+        await expect(notices.getByRole('listitem')).toHaveCount(5);
+        await expect(notices.locator('.rp-light.warn')).toHaveCount(1);
+        if (lang === 'en') {
+          await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
+          await expect(notices.getByRole('listitem').filter({hasText: 'Operation updated'})).toHaveCount(2);
+          await expect(notices.getByRole('listitem').filter({hasText: 'Flow records lost'})).toHaveCount(1);
+          await expect(notices.getByRole('listitem').filter({hasText: 'records reached the retention limit'})).toHaveCount(0);
+        }
       }
     }
-  }
+  });
 });
 
-test('notice summaries start at one edge however wide their labels are', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
-  // A phone's card is about as narrow as the card gets.
-  for (const width of [390, 1440]) {
-    await page.setViewportSize({width, height: 900});
-    await page.goto('/#/activity');
-    const notices = page.getByRole('region', {name: 'Notifications', exact: true});
-    await expect(notices.locator('.rp-light.warn')).toHaveText('Warning');
-    const edges = await notices.locator('[role=listitem] .rp-note').evaluateAll(notes => notes.map(note => note.getBoundingClientRect().left));
-    expect(edges.length).toBeGreaterThan(1);
-    expect(new Set(edges).size).toBe(1);
-    // A label lines up with its summary's first line, also when the summary wraps.
-    const offsets = await notices.locator('[role=listitem]').evaluateAll(items =>
-      items.map(item => {
-        const label = item.querySelector('.rp-light')!.getBoundingClientRect();
-        const note = item.querySelector('.rp-note')!;
-        const line = parseFloat(getComputedStyle(note).lineHeight);
-        return Math.abs(label.top + label.height / 2 - (note.getBoundingClientRect().top + line / 2));
-      })
-    );
-    for (const offset of offsets) expect(offset).toBeLessThan(4);
-  }
+test.describe(() => {
+  test.use({storage: faults});
+  test('notice summaries start at one edge however wide their labels are', async ({page}) => {
+    await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+    // A phone's card is about as narrow as the card gets.
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({width, height: 900});
+      await page.goto('/#/activity');
+      const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+      await expect(notices.locator('.rp-light.warn')).toHaveText('Warning');
+      const edges = await notices.locator('[role=listitem] .rp-note').evaluateAll(notes => notes.map(note => note.getBoundingClientRect().left));
+      expect(edges.length).toBeGreaterThan(1);
+      expect(new Set(edges).size).toBe(1);
+      // A label lines up with its summary's first line, also when the summary wraps.
+      const offsets = await notices.locator('[role=listitem]').evaluateAll(items =>
+        items.map(item => {
+          const label = item.querySelector('.rp-light')!.getBoundingClientRect();
+          const note = item.querySelector('.rp-note')!;
+          const line = parseFloat(getComputedStyle(note).lineHeight);
+          return Math.abs(label.top + label.height / 2 - (note.getBoundingClientRect().top + line / 2));
+        })
+      );
+      for (const offset of offsets) expect(offset).toBeLessThan(4);
+    }
+  });
 });
 
 test('housekeeping cannot evict notices while the page is hidden', async ({page}) => {
@@ -450,7 +456,7 @@ test('staged mode changes require discard before navigation', async ({page}) => 
 });
 
 test('local traffic renders without history and duplicate node names retain independent latency', async ({page}) => {
-  const api = createMockApi();
+  const api = createMockApi({faults: true});
   const capabilities = await api.capabilities();
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
   capabilities.resources.nodes.available = true;

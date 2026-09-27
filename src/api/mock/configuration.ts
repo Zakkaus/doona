@@ -7,6 +7,7 @@ import {diagnose, includedFiles, includePaths, resolveIncludePath, sectionLines,
 import {includedBy, includePatterns, newSourcePathProblem} from '../../dae/newSource';
 import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
+import {faultRules} from './rules';
 
 type ConfigurationApi = Pick<
   Api,
@@ -28,7 +29,8 @@ export function createConfiguration(
   {enqueue, log, publish, eventData, trimLogs}: Effects,
   groupNames: () => Set<string>,
   activateInventory: (text: string, revision: string) => void,
-  geodata: MockGeodataState
+  geodata: MockGeodataState,
+  faults = false
 ) {
   const settings = structuredClone(fixtures.runtimeSettings);
   const withGeodata = () => {
@@ -40,7 +42,7 @@ export function createConfiguration(
   let disk: (ConfigSource & {content: string})[] = [];
   let loading: Promise<(ConfigSource & {content: string})[]> | undefined;
   const loadSources = () =>
-    (loading ??= Promise.all(fixtures.configSources.map(stored)).then(list => {
+    (loading ??= Promise.all((faults ? fixtures.faultSources : fixtures.configSources).map(stored)).then(list => {
       sources = list;
       disk = [...list];
       return list;
@@ -95,7 +97,9 @@ export function createConfiguration(
   // Preserve fixture IDs for unchanged rules; new rules use their source location.
   function routingOf(list: (ConfigSource & {content: string})[]): {rules: RuleList['rules']; fallback: RuleList['fallback'] | null} {
     const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
-    const known = new Map(fixtures.configRules.rules.map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id]));
+    const known = new Map(
+      [...fixtures.configRules.rules, ...faultRules].map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id])
+    );
     const entries: RuleList['rules'] = [];
     let fallback: RuleList['fallback'] | null = null;
     const visited = new Set<string>();
@@ -164,7 +168,7 @@ export function createConfiguration(
         sources: list.map(source => (capabilities.resources.config.content ? {...source} : {...source, content: undefined})),
         diagnostics: [
           ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
-          ...fixtures.configNotes
+          ...(faults ? fixtures.configNotes : [])
         ],
         secrets_redacted: true
       };

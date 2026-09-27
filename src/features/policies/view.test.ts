@@ -17,7 +17,7 @@ import {
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
-  const {groups} = nodeFixtures(0);
+  const {groups} = nodeFixtures(0, true);
   const members = memberViews(memberHealth(groups[0], new Map()), t);
   expect(members.find(member => member.id === 'jp-01')).toMatchObject({unavailable: true, tcp: undefined, status: {text: t('ui.unavailable'), tone: 'err'}});
   expect(members.find(member => member.id === 'resilient')).toMatchObject({

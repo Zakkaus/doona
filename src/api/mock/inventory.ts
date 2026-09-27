@@ -46,12 +46,13 @@ export function createInventory(
   advance: () => string,
   editMain: (edit: (text: string) => string) => Promise<() => string>,
   interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean,
-  geodata: MockGeodataState
+  geodata: MockGeodataState,
+  faults = false
 ) {
   const nodePage = createPager('nodes');
   const providerPage = createPager('providers');
   const providers = structuredClone(fixtures.providers);
-  const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120);
+  const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120, faults);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
   const revisions = new Map<string, bigint>();
   const updating = new Set<string>();

@@ -36,7 +36,8 @@ export function createLifecycle(
   runtime: Pick<Runtime, 'observed_at' | 'last_reload'>,
   logSettings: () => RuntimeSettings['log'],
   revision: () => string,
-  trickleEvery = 2500
+  trickleEvery = 2500,
+  faults = false
 ): MockLifecycle {
   const operations = new Map<string, OperationState>();
   let sequence = 0;
@@ -151,28 +152,35 @@ export function createLifecycle(
     () => log('info', 'honk::routing', 'Routing generation published.', {generation_id: revision()}),
     () => log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12}),
     () => log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: 3, unavailable: 0}),
-    () => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}),
+    ...(faults ? [() => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800})] : []),
     () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
   ];
-  // A four-hour ring has routine traffic, busy periods and a short health-check incident.
+  // A four-hour ring has routine traffic and busy periods; the faults scenario adds a stale subscription and a short
+  // health-check incident.
   const started = Date.now();
   for (let minute = 240; minute > 0; minute -= 2) {
     const at = started - minute * 60000;
-    const trouble = minute >= 34 && minute <= 48;
+    const trouble = faults && minute >= 34 && minute <= 48;
     const busy = (minute >= 72 && minute <= 116) || (minute >= 164 && minute <= 188);
     log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: trouble ? 2 : 3, unavailable: trouble ? 1 : 0}, at);
     log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12 + (minute % 9)}, at + 20000);
     if (minute % 6 === 0) log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096 + minute}, at + 10000);
-    if (minute % 14 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
+    if (faults && minute % 14 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
     if (busy) log('info', 'honk::dns', 'Query answered.', {queries: 12 + (minute % 15)}, at + 30000);
     if (trouble) {
       log('warn', 'honk::group', 'Health check slow.', {node: 'us-01', elapsed_ms: 2400}, at + 30000);
       log('error', 'honk::group', 'Health check failed.', {node: 'us-01', error: 'connect timeout'}, at + 50000);
     }
   }
-  for (const record of logSeed) log(record.level, record.target, record.message, record.fields ?? null);
+  for (const record of logSeed)
+    if (faults || (record.level !== 'warn' && record.level !== 'error')) log(record.level, record.target, record.message, record.fields ?? null);
+  // Recorder gaps and a failed operation belong to the faults scenario.
   for (let i = 28; i > 0; i--) {
     const data = {instance_id: instanceId, observed_at: new Date(started - i * 10000).toISOString()};
+    if (!faults && i >= 4 && i <= 7) {
+      publish({id: '', event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}});
+      continue;
+    }
     if (i === 21) publish({id: '', event: 'generation.changed', data: {...data, previous_generation_id: '39', generation_id: '40'}});
     else if (i === 17)
       publish({id: '', event: 'operation.updated', data: {...data, resource_id: 'op-1182', status: 'succeeded', href: '/api/v1/operations/op-1182'}});

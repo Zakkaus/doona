@@ -12,9 +12,9 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await expect(list.first()).toContainText('hk-01');
   await table.getByRole('columnheader', {name: /^Latency/}).click();
   await expect(list.first()).toContainText('sg-01');
-  await expect(list.last()).toContainText('jp-01');
+  await expect(list.last()).toContainText('us-01');
   await table.getByRole('columnheader', {name: /^Latency/}).click();
-  await expect(list.first()).toContainText('jp-01');
+  await expect(list.first()).toContainText('us-01');
   await table.getByRole('columnheader', {name: /^Node/}).click();
   await expect(list.first()).toContainText('hk-01');
   await page.getByRole('button', {name: /Group$/}).click();

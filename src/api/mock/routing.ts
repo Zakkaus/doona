@@ -7,7 +7,7 @@ type Condition = Evaluation['rules'][number]['conditions'][number];
 const geosites: Record<string, string[]> = {
   cn: ['cn', 'bilibili.com', 'baidu.com', 'qq.com'],
   telegram: ['telegram.org', 'telegram.me', 't.me', 'telegra.ph'],
-  discord: ['discord.com', 'discord.gg', 'discordapp.com']
+  openai: ['openai.com', 'chatgpt.com', 'oaistatic.com']
 };
 const fields: Record<string, keyof RoutingTraceInput | 'mac'> = {
   domain: 'domain',

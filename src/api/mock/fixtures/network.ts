@@ -96,7 +96,7 @@ export const connections: ConnectionList = {
     connection('2', '120.92.78.14:443', '10.0.0.7', 'direct', '1200000000', '9400000', 'cdn.bilibili.com'),
     connection('3', '52.84.19.3:443', '10.0.0.7', 'proxy', '58000000', '12000'),
     connection('4', '142.250.66.46:443', '10.0.0.31', 'block', '0', '0', 'doubleclick.net'),
-    connection('6', '104.16.132.229:443', '10.0.0.31', 'proxy', '3400000', '210000', 'discord.com'),
+    connection('6', '104.16.132.229:443', '10.0.0.31', 'proxy', '3400000', '210000', 'chatgpt.com'),
     connection('7', '203.0.113.9:8443', '10.0.0.20', 'resilient', '96000', '40000')
   ],
   udp: [

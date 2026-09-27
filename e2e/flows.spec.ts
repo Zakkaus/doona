@@ -1,30 +1,33 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, faults, mockBackend, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
-test('a flow opens its trace beside the list and links to its connection', async ({page}) => {
-  await page.goto('/#/rules?tab=flows');
-  const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rows.first()).toBeVisible();
-  const total = await rows.count();
-  expect(total).toBeGreaterThan(1);
-  await expect(page.locator('.rp-panel')).toHaveCount(0);
-  await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
-  await rows.filter({hasText: 'api.telegram.org'}).first().click();
-  await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
-  const panel = page.locator('.rp-panel');
-  await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-  await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
-  expect(await panel.locator('.rp-step').count()).toBeGreaterThan(3);
-  await expect(panel.locator('.rp-step').first()).toContainText('Input');
-  await panel.getByRole('link', {name: 'View connection', exact: true}).click();
-  await expect(page).toHaveURL(/#\/connections\?id=1$/);
-  await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-  await page.locator('.rp-panel').getByRole('button', {name: 'View flow', exact: true}).click();
-  await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
-  await page.locator('.rp-panel').getByRole('button', {name: 'Close', exact: true}).click();
-  await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
-  await expect(page.locator('.rp-panel')).toHaveCount(0);
+test.describe(() => {
+  test.use({storage: faults});
+  test('a flow opens its trace beside the list and links to its connection', async ({page}) => {
+    await page.goto('/#/rules?tab=flows');
+    const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
+    await expect(rows.first()).toBeVisible();
+    const total = await rows.count();
+    expect(total).toBeGreaterThan(1);
+    await expect(page.locator('.rp-panel')).toHaveCount(0);
+    await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
+    await rows.filter({hasText: 'api.telegram.org'}).first().click();
+    await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
+    const panel = page.locator('.rp-panel');
+    await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+    await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
+    expect(await panel.locator('.rp-step').count()).toBeGreaterThan(3);
+    await expect(panel.locator('.rp-step').first()).toContainText('Input');
+    await panel.getByRole('link', {name: 'View connection', exact: true}).click();
+    await expect(page).toHaveURL(/#\/connections\?id=1$/);
+    await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+    await page.locator('.rp-panel').getByRole('button', {name: 'View flow', exact: true}).click();
+    await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
+    await page.locator('.rp-panel').getByRole('button', {name: 'Close', exact: true}).click();
+    await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
+    await expect(page.locator('.rp-panel')).toHaveCount(0);
+  });
 });
 
 test('a pinned tree item carries into the records', async ({page}) => {
@@ -33,7 +36,7 @@ test('a pinned tree item carries into the records', async ({page}) => {
   const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'});
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
-  await expect(page).toHaveURL(/path=rule%3Ar3$/);
+  await expect(page).toHaveURL(/path=rule%3Ar2$/);
   await expect(rule).toHaveAttribute('aria-pressed', 'true');
   const showFlows = page.getByRole('button', {name: /^Show the \d+ flows? on this path$/});
   const matching = Number((await showFlows.innerText()).match(/\d+/)?.[0]);

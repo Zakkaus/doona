@@ -15,8 +15,16 @@ function memoryValues(at: number) {
     cgroup_current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))
   };
 }
-export function createRuntime(capabilities: Capabilities, big: boolean) {
+export function createRuntime(capabilities: Capabilities, big: boolean, faults = false) {
   const runtime = structuredClone(fixtures.runtime);
+  const datapath = structuredClone(fixtures.datapath);
+  if (faults) {
+    for (const view of [runtime.datapath, datapath]) {
+      view.state = 'degraded';
+      Object.assign(view.ebpf!, {health: 'degraded', last_error: fixtures.datapathFault.message});
+    }
+    datapath.errors = [structuredClone(fixtures.datapathFault)];
+  }
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   // A large deployment lists dozens of outbounds, most of them idle.
   if (big)
@@ -151,7 +159,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean) {
     },
     datapath: async (detail, signal) => {
       signal?.throwIfAborted();
-      const snapshot = structuredClone(fixtures.datapath);
+      const snapshot = structuredClone(datapath);
       if (detail !== 'full' && snapshot.ebpf) {
         delete snapshot.ebpf.attachments;
         delete snapshot.ebpf.maps;
