@@ -71,5 +71,11 @@ export const honk: Engine = {
   reason,
   holdsCredentials: source => source.content !== undefined && definesListener(scanConfig(source.content).blocks),
   // honk reads its API settings from `experimental { native_api { } }`, and only at startup.
-  snippet: (settings: EngineSetting[]) => ['experimental {', '  native_api {', ...settings.map(({key, value}) => `    ${key}: ${value}`), '  }', '}'].join('\n')
+  snippet: (settings: EngineSetting[]) =>
+    ['experimental {', '  native_api {', ...settings.map(({key, value}) => `    ${key}: ${value}`), '  }', '}'].join('\n'),
+  // honk redacts the native API token when it returns a source, so `experimental { native_api { } }` is not the file's text.
+  redactedSections: blocks =>
+    blocks
+      .filter(block => block.name === 'experimental' && block.children.some(child => child.name === 'native_api'))
+      .map(block => ({block, name: 'experimental.native_api'}))
 };

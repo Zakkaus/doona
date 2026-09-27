@@ -1,3 +1,4 @@
+import type {TextBlock} from '../../dae/text';
 import type {Capabilities, ConfigSource} from '../model';
 
 // What the engine can be asked about: a capabilities resource, or one of the actions the contract flags on a resource.
@@ -39,4 +40,6 @@ export type Engine = {
   holdsCredentials(source: Pick<ConfigSource, 'content'>): boolean;
   // The settings as a snippet of the engine's configuration text.
   snippet(settings: EngineSetting[]): string;
+  // The top-level sections whose text the engine redacts when it returns a source, each with the name the page shows.
+  redactedSections(blocks: TextBlock[]): Array<{block: TextBlock; name: string}>;
 };
