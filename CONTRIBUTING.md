@@ -14,21 +14,51 @@ Before opening a pull request, run the same gates as CI from the repository root
 
 `REUSE.toml` handles license headers; preserve its third-party annotations when adding or moving files. From the repository root, run `reuse lint` if you have REUSE, and run `pnpm test:coverage` to print coverage totals and write `coverage/lcov.info`.
 
-## Organize changes
+## Architecture
 
-The source tree has one folder per concern:
+The source tree has one folder per layer. Arrows point from a layer to the layers it may import.
 
-| Folder         | Holds                                                                                                                                                                |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/api`      | The transport client, contract types, error model, selectors and the demo backend (`mock/`)                                                                          |
-| `src/store`    | Resource watching and action hooks; owns cached reads. Feature controllers may call `getApi()` directly for actions                                                  |
-| `src/dae`      | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend                                                     |
-| `src/features` | One folder per page: a controller hook (`use*.ts`) owns store hooks, URL state and actions; `view.ts` holds pure projections with unit tests; components only render |
-| `src/shell`    | Routing, navigation, appearance, shortcuts and search                                                                                                                |
-| `src/ui`       | The presentational kit and its stylesheets                                                                                                                           |
-| `src/i18n`     | Message loading and formatting                                                                                                                                       |
+```mermaid
+flowchart TB
+  subgraph pages [Pages]
+    direction TB
+    shell[src/shell]
+    features[src/features/*]
+    shared[src/features/shared]
+  end
+  store[src/store]
+  ui[src/ui]
+  subgraph base [Base]
+    subgraph api [src/api]
+      client[client, model, selectors]
+      engines[engines]
+      mock[mock]
+    end
+    dae[src/dae]
+    i18n[src/i18n]
+  end
+  shell -.->|registry.ts, nav.ts| features
+  features -->|routes, drafts, preferences| shell
+  features --> shared
+  pages --> store
+  pages --> ui
+  pages --> base
+  store --> base
+  ui --> base
+```
 
-Create one folder for each feature under `src/features`. Keep a feature's pages, hooks, strings, and tests in that folder. Put visible strings in `messages.ts`. Read backend data through `src/store` hooks from a feature's controller; components receive prepared values and callbacks and never fetch, guard or format on their own. A projection too large for one `view.ts` may move into pure sibling modules beside it, such as `dns/cache.ts`, `dns/stats.ts` and `activity/ranking.ts`; they follow the same rules as `view.ts`: no React, no store, and a unit test beside each.
+_Allowed imports. Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`._
+
+| Folder            | Owns                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `src/api`         | The transport client, contract types, error model, selectors and the demo backend (`mock/`)                      |
+| `src/api/engines` | Everything doona knows about a particular engine; the rest of the app gets engine-neutral data and reasons       |
+| `src/store`       | Watched server reads: resources, caches and live feeds, and the action hooks                                     |
+| `src/dae`         | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend |
+| `src/features`    | One folder per page, with its controller, projections, components, strings and tests                             |
+| `src/shell`       | Routing, navigation, drafts, appearance, shortcuts and search                                                    |
+| `src/ui`          | The presentational kit and its stylesheets                                                                       |
+| `src/i18n`        | Message loading and formatting                                                                                   |
 
 Imports point down the layers:
 
@@ -39,12 +69,61 @@ Imports point down the layers:
 | `src/api`, `src/dae`, `src/i18n` | `src/features`, `src/shell`, `src/store`, `src/ui`                                                           |
 | a feature                        | another feature; share through `src/features/shared` or a lower layer                                        |
 | `src/shell`                      | `src/features`, except `src/features/shared`, each feature's `nav.ts`, and the page loaders in `registry.ts` |
+| anything outside `src/api`       | the modules inside `src/api/engines`; import `src/api/engines` itself                                        |
+
+### Data flow
+
+```mermaid
+flowchart TB
+  backend[Backend native API] --> client[src/api client]
+  client --> store[src/store: cached reads and feeds]
+  store --> controller[use*.ts controller: URL state, drafts, actions]
+  controller -->|actions and one-off requests| client
+  controller -->|engineOf| engines[src/api/engines]
+  controller --> view[view.ts: pure projection]
+  view --> components[Page components]
+  components --> kit[src/ui kit]
+```
+
+_One page, from the backend to the screen._
+
+- `src/store` owns what pages watch and cache: resources, live feeds, and fresh reads such as `readConfigFresh`.
+- A feature's controller hook (`use*.ts`) reads through store hooks and owns URL state, drafts and actions. It calls `getApi()` only for actions and for one-off requests the person starts, such as a DNS query or loading older pages.
+- `view.ts` turns store data into what the page shows. It is pure: no React, no store, and a unit test beside it. A projection too large for one file may move into pure sibling modules such as `dns/cache.ts`, `dns/stats.ts` and `activity/ranking.ts`, under the same rules.
+- Components receive prepared values and callbacks, and never fetch, guard or format on their own. Visible strings live in the feature's `messages.ts`.
+
+### Engines
+
+The native API contract is shared by any engine that implements it; honk is the only one today. Engine-specific knowledge lives only in `src/api/engines`: setting names, section names, why a capability is off, which sources hold credentials. `engineOf(version)` picks the engine by the API name, and a feature asks the returned `Engine` for neutral data and reasons (`EngineReason`), then maps them to its own messages. An engine doona does not know gives no reasons, so the page falls back to what the contract says.
+
+Features, the shell and the store never compare the engine or API name, or an `Engine`'s `id`. Comments may cite honk's source to explain a contract behaviour a feature handles.
+
+To add an engine, add `src/api/engines/<engine>.ts` that implements `Engine`, add its id to `Engine['id']`, map its API name in `engineOf`, and extend `index.test.ts`. When a feature needs an explanation the adapter does not offer, add a neutral method or reason code to `types.ts`, with an answer for the unknown engine.
+
+### Single-source lists
 
 Some lists have one home, and everything else reads them:
 
 - Pages: `routePaths` in `src/shell/routes.ts` and the definition keyed by that path in `src/shell/registry.ts`.
 - Palettes: `src/shell/palettes.ts`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
+
+### How the rules are enforced
+
+`pnpm check` and `pnpm check:size` fail on these; the lint rules live in `eslint.config.js`:
+
+| Boundary                                                                              | Check                                                                                  |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| The import table, including the engines entry                                         | `import-x/no-restricted-paths` zones                                                   |
+| No import cycles                                                                      | `import-x/no-cycle`                                                                    |
+| No engine or API name comparisons in features, shell and store                        | `no-restricted-syntax` (G8)                                                            |
+| Kit roles: React Aria, native controls, kit classes, heavy libraries, colour literals | `@typescript-eslint/no-restricted-imports` and `no-restricted-syntax` (G3, G4, G5, G7) |
+| Visible text comes from catalogues                                                    | `check:i18n`                                                                           |
+| Size budgets                                                                          | `check:size`                                                                           |
+
+A reviewer checks the rest by hand: watched and cached reads go through the store, `view.ts` stays pure and tested, components only render, and no engine-specific setting or section name lands outside `src/api/engines`, even as data.
+
+## User documentation
 
 The user documentation lives in [Zakkaus/doona-docs](https://github.com/Zakkaus/doona-docs) and is published at [zakkaus.github.io/doona-docs](https://zakkaus.github.io/doona-docs/). When a change alters what users see or do, open a matching pull request there. The app links docs sections through `docsHref`; `src/features/shared/docsAnchors.json` maps each anchor to its page, and doona-docs checks that map against its pages.
 
