@@ -1033,6 +1033,9 @@ httpTest('a module draft refused with 412 is rebased and saves on the next attem
   await editor.fill(section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:'));
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
+  // The mock reloads a write about a second later; until then a refetch still reads the old digest, and a second refusal
+  // with it is reported as a disk ahead of the running configuration instead of rebased.
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await rejected;
