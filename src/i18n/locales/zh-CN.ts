@@ -951,7 +951,7 @@ export const messages = {
   'rule.valuesInvalid': '值不能包含单引号、#、->、花括号或未配对的括号。',
   'rule.valuesMissing': '须填写值',
   'rule.conditionMissing': '须填写条件',
-  'rule.conditionInvalid': '条件须为单个调用，例如 domain(…)，且不能包含 ->',
+  'rule.conditionInvalid': '条件须为单行，包含 domain(…) 等调用且括号成对，不能包含 ->、# 注释或花括号',
   'rule.outboundMissing': '须选择出站',
   'rule.kind.domainSuffix': '域名后缀',
   'rule.kind.domain': '完整域名',

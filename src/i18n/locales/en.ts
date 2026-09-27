@@ -984,7 +984,7 @@ export const messages = {
   'rule.valuesInvalid': 'Values cannot contain an apostrophe, #, ->, braces or unmatched parentheses.',
   'rule.valuesMissing': 'Enter the values',
   'rule.conditionMissing': 'Enter a condition',
-  'rule.conditionInvalid': 'The condition must be one call such as domain(…), without ->',
+  'rule.conditionInvalid': 'The condition must be a single line containing a call such as domain(…), with balanced parentheses and no ->, # comment or braces',
   'rule.outboundMissing': 'Choose an outbound',
   'rule.kind.domainSuffix': 'Domain suffix',
   'rule.kind.domain': 'Full domain',

@@ -95,6 +95,10 @@ it('validates picked and raw conditions separately and prepares their preview', 
   expect(ruleDraftView('dip', ' ', true, '', '', t).valid).toBe(false);
   expect(ruleDraftView('dip', '', false, '', 'dip(a) -> direct', t)).toMatchObject({valid: false, rawInvalid: true, preview: null});
   expect(ruleDraftView('dip', '', false, '', 'dip(a)', t).valid).toBe(true);
+  // A comment, a second line, a brace or unbalanced parentheses is refused like a missing call; joined calls pass.
+  for (const raw of ['domain(a) # x', 'domain(a)\ndport(1)', 'domain(a) {', 'domain(a', 'domain(a))', 'direct'])
+    expect(addRuleReason(ruleDraftView('dip', '', false, '', raw, t), 'proxy', t)).toBe(t('rule.conditionInvalid'));
+  expect(ruleDraftView('dip', '', false, '', "domain(a) && dport(80) && pname('a#b')", t).valid).toBe(true);
 });
 
 it('marks a picked value that cannot be written as a condition invalid with a field error', () => {

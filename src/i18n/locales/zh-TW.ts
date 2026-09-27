@@ -951,7 +951,7 @@ export const messages = {
   'rule.valuesInvalid': '值不可包含單引號、#、->、大括號或未成對的括號。',
   'rule.valuesMissing': '須填寫值',
   'rule.conditionMissing': '須填寫條件',
-  'rule.conditionInvalid': '條件須為單一呼叫，例如 domain(…)，且不可包含 ->',
+  'rule.conditionInvalid': '條件須為單行，包含 domain(…) 等呼叫且括號成對，不可包含 ->、# 註解或大括號',
   'rule.outboundMissing': '須選擇出站',
   'rule.kind.domainSuffix': '網域後綴',
   'rule.kind.domain': '完整網域',
