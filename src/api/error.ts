@@ -44,45 +44,91 @@ export const clientError = (status: number, code: string, message: string, key: 
   new ApiError(status, code, message, null, null, null, {key, params});
 
 // A backend that accepts the connection and never answers would leave the request, and every consumer sharing it,
-// waiting forever. A write gets longer, since the backend may be applying it.
+// waiting forever. A write gets longer, since the backend may be applying it. The limit runs until the headers arrive
+// and then between chunks of the body, so a large body arriving steadily is not cut off, only one that stalls.
 export const READ_DEADLINE_MS = 15000;
 export const WRITE_DEADLINE_MS = 30000;
 
 // The caller's signal and the deadline as one. AbortSignal.any lets the browser drop the pair once both are gone; the
-// fallback keeps the forwarding listener until the caller's signal aborts or is collected.
-function either(caller: AbortSignal, deadline: AbortSignal): AbortSignal {
-  if (typeof AbortSignal.any === 'function') return AbortSignal.any([caller, deadline]);
+// fallback forwards through listeners, which release removes once the request is over.
+function either(caller: AbortSignal, deadline: AbortSignal): {signal: AbortSignal; release: () => void} {
+  if (typeof AbortSignal.any === 'function') return {signal: AbortSignal.any([caller, deadline]), release: () => {}};
   const both = new AbortController();
-  const forward = (source: AbortSignal) => () => both.abort(source.reason);
-  if (caller.aborted) both.abort(caller.reason);
-  else {
-    caller.addEventListener('abort', forward(caller), {once: true});
-    deadline.addEventListener('abort', forward(deadline), {once: true});
+  if (caller.aborted) {
+    both.abort(caller.reason);
+    return {signal: both.signal, release: () => {}};
   }
-  return both.signal;
+  const fromCaller = () => both.abort(caller.reason);
+  const fromDeadline = () => both.abort(deadline.reason);
+  caller.addEventListener('abort', fromCaller, {once: true});
+  deadline.addEventListener('abort', fromDeadline, {once: true});
+  return {
+    signal: both.signal,
+    release: () => {
+      caller.removeEventListener('abort', fromCaller);
+      deadline.removeEventListener('abort', fromDeadline);
+    }
+  };
 }
 
-// The deadline covers the body too, but the body is read after send has returned, and some engines error the stream
-// with a plain AbortError rather than the abort reason. A read that fails once the deadline has passed fails with the
-// timeout error; a caller abort keeps its own error. A body-less response has nothing to stall and passes as it is,
-// and so does a no-content status, which Chromium gives an empty stream but a Response cannot be built with.
+// One request's deadline: `arm` starts the limit over, `over` stops it and releases the caller's signal once the
+// request has finished, failed or been cancelled.
+type Deadline = {signal: AbortSignal; arm: () => void; over: () => void};
+function deadlineFor(caller: AbortSignal | null, limit: number, timeout: ApiError): Deadline {
+  const controller = new AbortController();
+  const joined = caller ? either(caller, controller.signal) : {signal: controller.signal, release: () => {}};
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const arm = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(timeout), limit);
+  };
+  arm();
+  return {
+    signal: joined.signal,
+    arm,
+    over: () => {
+      clearTimeout(timer);
+      joined.release();
+    }
+  };
+}
+
+// The body is read after send has returned, and some engines error the stream with a plain AbortError rather than the
+// abort reason. A read that fails once the deadline has passed fails with the timeout error; a caller abort keeps its
+// own error. A body-less response has nothing to stall and passes as it is, and so does a no-content status, which
+// Chromium gives an empty stream but a Response cannot be built with. A body nobody reads keeps the deadline, which
+// then frees the connection. The rebuilt response keeps the original's url, type and redirect flag.
 const NO_CONTENT = new Set([204, 205, 304]);
-function bodyWithin(response: Response, caller: AbortSignal | null, deadline: AbortSignal, timeout: ApiError): Response {
-  if (!response.body || NO_CONTENT.has(response.status)) return response;
+function bodyWithin(response: Response, caller: AbortSignal | null, deadline: Deadline, timeout: ApiError): Response {
+  if (!response.body || NO_CONTENT.has(response.status)) {
+    deadline.over();
+    return response;
+  }
   const reader = response.body.getReader();
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const {done, value} = await reader.read();
-        if (done) controller.close();
-        else controller.enqueue(value);
+        if (done) {
+          deadline.over();
+          controller.close();
+        } else {
+          deadline.arm();
+          controller.enqueue(value);
+        }
       } catch (error) {
-        controller.error(deadline.aborted && !caller?.aborted ? timeout : error);
+        deadline.over();
+        controller.error(deadline.signal.aborted && !caller?.aborted ? timeout : error);
       }
     },
-    cancel: reason => reader.cancel(reason)
+    cancel: reason => {
+      deadline.over();
+      return reader.cancel(reason);
+    }
   });
-  return new Response(body, {status: response.status, statusText: response.statusText, headers: response.headers});
+  const rebuilt = new Response(body, {status: response.status, statusText: response.statusText, headers: response.headers});
+  for (const key of ['url', 'type', 'redirected'] as const) Object.defineProperty(rebuilt, key, {value: response[key]});
+  return rebuilt;
 }
 
 // A request that gets no response at all fails with the browser's own words ("Failed to fetch", "Load failed"); it is
@@ -97,12 +143,14 @@ export async function send(input: RequestInfo | URL, init?: RequestInit, write?:
   const timeout = clientError(0, 'timeout', `No response within ${limit / 1000} seconds`, writes ? 'ui.errTimeoutWrite' : 'ui.errTimeout', {
     seconds: limit / 1000
   });
-  const deadline = new AbortController();
-  setTimeout(() => deadline.abort(timeout), limit);
+  const deadline = deadlineFor(signal, limit, timeout);
   try {
-    const response = await fetch(input, {...init, signal: signal ? either(signal, deadline.signal) : deadline.signal});
-    return bodyWithin(response, signal, deadline.signal, timeout);
+    const response = await fetch(input, {...init, signal: deadline.signal});
+    // The headers are in; from here the limit runs between chunks of the body.
+    deadline.arm();
+    return bodyWithin(response, signal, deadline, timeout);
   } catch (error) {
+    deadline.over();
     if (signal?.aborted) throw error;
     if (deadline.signal.aborted) throw timeout;
     if (error instanceof TypeError) throw clientError(0, 'network_error', error.message, 'ui.errNetwork');

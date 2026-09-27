@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
-import {ApiError} from './error';
+import {ApiError, send} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent} from './model';
 import {currentRefusal} from './refusal';
@@ -190,6 +190,44 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(seconds * 1000);
     await failure;
   });
+  // A large body that keeps arriving: each chunk comes 10 seconds after the last, 50 seconds in all.
+  it('reads a body that arrives slowly but steadily past the read limit', async () => {
+    vi.useFakeTimers();
+    const parts = ['{"observed_at":', '"2026-09-15', 'T14:00:00Z"', ',"x":1', '}'];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async (_input: Request | URL, init?: RequestInit) =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(c) {
+                init?.signal?.addEventListener('abort', () => c.error(new DOMException('', 'AbortError')), {once: true});
+              },
+              async pull(c) {
+                await new Promise(resolve => setTimeout(resolve, 10000));
+                const part = parts.shift();
+                if (part === undefined) c.close();
+                else c.enqueue(new TextEncoder().encode(part));
+              }
+            }),
+            {headers: {'Content-Type': 'application/json'}}
+          )
+      )
+    );
+    const result = createApi('https://honk.test').runtime();
+    const read = expect(result).resolves.toMatchObject({observed_at: '2026-09-15T14:00:00Z'});
+    await vi.advanceTimersByTimeAsync(60000);
+    await read;
+  });
+  it('keeps the url of the response it rebuilds around the body', async () => {
+    const response = json({observed_at: new Date().toISOString()});
+    Object.defineProperty(response, 'url', {value: 'https://honk.test/api/v1/runtime'});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => response)
+    );
+    expect((await send('https://honk.test/api/v1/runtime')).url).toBe('https://honk.test/api/v1/runtime');
+  });
   // Chromium hands a 204 an empty body stream rather than none; the response still carries no body.
   it('passes a no-content response through with its empty body', async () => {
     const empty = new Response(null, {status: 204});
@@ -231,6 +269,50 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(5000);
     controller.abort();
     await failure;
+  });
+  it('releases the deadline once the response is read or the request fails', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({observed_at: new Date().toISOString()}))
+    );
+    const api = createApi('https://honk.test');
+    await api.runtime();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{"observed_at":', {headers: {'Content-Type': 'application/json'}}))
+    );
+    await expect(api.runtime()).rejects.toBeInstanceOf(SyntaxError);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+    await expect(api.runtime()).rejects.toMatchObject({code: 'network_error'});
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('drops the forwarding listeners of an engine without AbortSignal.any once the request is over', async () => {
+    const any = AbortSignal.any;
+    Object.defineProperty(AbortSignal, 'any', {value: undefined, configurable: true});
+    try {
+      const signals: AbortSignal[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_input: URL, init?: RequestInit) => {
+          signals.push(init!.signal!);
+          return json({observed_at: new Date().toISOString()});
+        })
+      );
+      const controller = new AbortController();
+      await createApi('https://honk.test').runtime(controller.signal);
+      controller.abort();
+      expect(signals[0].aborted).toBe(false);
+    } finally {
+      Object.defineProperty(AbortSignal, 'any', {value: any, configurable: true});
+    }
   });
   it.each(['events', 'logs'] as const)('skips malformed id-less %s frames without reconnecting', async kind => {
     vi.useFakeTimers();
