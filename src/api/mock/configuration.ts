@@ -57,13 +57,13 @@ export function createConfiguration(
   const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
   function sourceSet(replacement?: {id: string; content: string}, files = disk) {
     const candidate: Array<{id: string; path: string; content: string}> = [];
+    const main = files.find(source => source.kind === 'main');
     const include = (item: (typeof disk)[number]) => {
       if (candidate.some(source => source.id === item.id)) return;
       const content = item.id === replacement?.id ? replacement.content : item.content;
       candidate.push({id: item.id, path: item.path, content});
-      for (const {path} of includePaths(content)) includedFiles(files, item.path, path).forEach(include);
+      for (const {path} of includePaths(content)) includedFiles(files, main!.path, path).forEach(include);
     };
-    const main = files.find(source => source.kind === 'main');
     if (main) include(main);
     return candidate;
   }
@@ -107,6 +107,7 @@ export function createConfiguration(
   }
   // Preserve fixture IDs for unchanged rules; new rules use their source location.
   function routingOf(list: (ConfigSource & {content: string})[]): {rules: RuleList['rules']; fallback: RuleList['fallback'] | null} {
+    const main = list.find(item => item.kind === 'main');
     const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
     const known = new Map(
       [...fixtures.configRules.rules, ...faultRules].map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id])
@@ -120,7 +121,7 @@ export function createConfiguration(
       sectionLines(file.content, 'routing', bare).forEach(({code, raw, line}) => {
         const include = /^include\s+(\S+)$/.exec(code);
         if (include) {
-          const dependency = byPath.get(resolveIncludePath(file.path, include[1]));
+          const dependency = byPath.get(resolveIncludePath(main!.path, include[1]));
           if (dependency) read(dependency, true);
           return;
         }
@@ -148,9 +149,8 @@ export function createConfiguration(
           kind: 'rule'
         });
       });
-      for (const {path} of includePaths(file.content)) includedFiles(list, file.path, path).forEach(dependency => read(dependency, true));
+      for (const {path} of includePaths(file.content)) includedFiles(list, main!.path, path).forEach(dependency => read(dependency, true));
     };
-    const main = list.find(item => item.kind === 'main');
     if (main) read(main, false);
     return {rules: entries, fallback};
   }
@@ -233,8 +233,8 @@ export function createConfiguration(
       );
       const target = resolveIncludePath(main.path, path);
       if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
-      // Any file the configuration loads may hold the include, each resolving its patterns from where it lives.
-      const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(source.path, include.path), target)));
+      // Any file the configuration loads may hold the include; honk resolves every pattern from the main source's directory.
+      const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(main.path, include.path), target)));
       if (!loaded) {
         const diagnostic = {level: 'error', source_id: main.id, line: null, column: null, span: null, code: 'source-not-included'} as const;
         throw new ApiError(422, 'unsupported_value', 'No include pattern matches the path; nothing was written', null, {

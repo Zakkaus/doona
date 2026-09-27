@@ -38,18 +38,25 @@ it('matches globs within one path segment and everything else literally', () => 
   expect(includedBy(['extra.dae', 'config.d/*.dae'], 'other.dae')).toBe(false);
 });
 
-it('checks a new path against the include patterns of every loaded file, each from where it lives', () => {
+it('checks a new path against the include patterns of every loaded file, all from the main directory', () => {
   const file = (kind: ConfigSource['kind'], path: string, content: string | undefined) => ({kind, path, content});
-  const sources = [file('main', 'config.dae', 'include { config.d/*.dae }'), file('include', 'config.d/lab.dae', "include { 'lab/*.dae' }")];
+  const sources = [
+    file('main', 'config.dae', 'include { config.d/*.dae }'),
+    file('include', 'config.d/lab.dae', "include { 'lab/*.dae' }"),
+    file('include', 'lab/a.dae', 'include { shared/*.dae }')
+  ];
   const loads = includeCheck(sources)!;
   expect(loads('config.d/work.dae')).toBe(true);
-  // Only the include file's pattern loads this one, resolved from its own directory.
-  expect(loads('config.d/lab/a.dae')).toBe(true);
-  expect(loads('lab/a.dae')).toBe(false);
+  // Only the nested include file's pattern loads this one; honk resolves it from the main directory, not its own.
+  expect(loads('lab/a.dae')).toBe(true);
+  expect(loads('config.d/lab/a.dae')).toBe(false);
+  // An include two levels down resolves alike.
+  expect(loads('shared/x.dae')).toBe(true);
+  expect(loads('lab/shared/x.dae')).toBe(false);
   // A backend that reports absolute paths resolves alike.
   const absolute = includeCheck(sources.map(source => ({...source, path: '/etc/honk/' + source.path})))!;
-  expect(absolute('config.d/lab/a.dae')).toBe(true);
-  expect(absolute('lab/a.dae')).toBe(false);
+  expect(absolute('lab/a.dae')).toBe(true);
+  expect(absolute('config.d/lab/a.dae')).toBe(false);
   // A file whose text is unknown may hold the pattern, so nothing is known.
   expect(includeCheck([...sources, file('include', 'config.d/x.dae', undefined)])).toBeNull();
 });
