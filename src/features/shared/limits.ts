@@ -17,7 +17,9 @@ export const resourceLabels = {
   runtime_outbounds: 'ov.r.outbounds',
   logs: 'nav.logs',
   providers: 'nodes.providers',
+  rules: 'rule.listTitle',
   config: 'nav.config',
+  config_validate: 'ov.r.configValidate',
   runtime_settings: 'settings.runtime',
   geodata: 'settings.geodata'
 } as const satisfies Record<string, Key>;
@@ -46,8 +48,9 @@ const limitCauses = [
   'notProvided'
 ] as const;
 export type LimitCause = (typeof limitCauses)[number];
-// `manage` stands for adding and editing nodes and subscriptions, `subscriptions` for refreshing them.
-export type LimitId = Resource | 'manage' | 'subscriptions';
+// `manage` stands for adding and editing nodes and subscriptions, `subscriptions` for refreshing them, `close` for
+// closing connections.
+export type LimitId = Resource | 'manage' | 'subscriptions' | 'close';
 
 type LimitLink = {href: string; text: string; external?: boolean};
 export type LimitGroup = {
@@ -89,6 +92,9 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
   // writable, can_manage); node management and geodata updates need writes too and share the configuration's cause.
   const configCause: LimitCause | null = !resources.config.available ? 'configNotLoaded' : resources.config.writable !== true ? 'configReadOnly' : null;
   if (configCause) add(configCause, 'config');
+  // honk config.rs running: validation needs the sources loaded too, so it shares that cause and no other.
+  const validateUnloaded = !resources.config_validate.available && configCause === 'configNotLoaded';
+  if (validateUnloaded) add('configNotLoaded', 'config_validate');
   if (resources.nodes.can_manage === false || resources.providers.can_manage === false) add(configCause ?? 'mainReadOnly', 'manage', 'ov.lim.manage');
 
   // honk settings.rs capability: `flows.max_flows` is offered only while record_flows allows recording.
@@ -98,16 +104,17 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
   for (const id of Object.keys(resourceLabels) as Resource[]) {
     const resource = resources[id];
     const recorder = recorders[id];
-    if (id === 'config') continue;
+    if (id === 'config' || (id === 'config_validate' && validateUnloaded)) continue;
     const flowsOff = id === 'flows' && resource.available && resources.flows.recording === 'off';
     // Flows stay available with recording off, so their recorder is off only when honk no longer offers max_flows.
     if (honk && recorder && (id === 'flows' ? flowsOff && !flowsAllowed : !resource.available)) {
       add('recordOff', id);
       recordKeys.push(recorder + ': true');
-    } else if (flowsOff) add(flowsSwitch ? 'flowsIdle' : 'notProvided', id);
+    } else if (flowsOff) add('flowsIdle', id);
     else if (resource.available) {
       if (id === 'geodata' && resources.geodata.can_update !== true) add(configCause ?? 'geodataUpdate', id);
       if (id === 'providers' && resources.providers.can_refresh === false) add('notRunning', 'subscriptions', 'ov.lim.subscriptions');
+      if (id === 'connections' && resources.connections.can_close === false) add('notProvided', 'close', 'ov.lim.close');
     } else if (honk && id === 'probes') add('notRunning', id);
     // honk geodata.rs capability: unavailable only when routing and DNS loaded different files of one kind.
     else if (honk && id === 'geodata') add('geodataUnreadable', id);
@@ -163,7 +170,8 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
         return {
           headline: t(honk ? 'ov.lim.h.flowsIdle' : 'ov.lim.h.flowsOff'),
           named: ['flows'],
-          link: {href: href('settings', {card: 'runtime'}), text: t('settings.runtime')}
+          // Without the record_flows switch Settings has nothing to turn on.
+          link: flowsSwitch ? {href: href('settings', {card: 'runtime'}), text: t('settings.runtime')} : undefined
         };
       case 'notProvided':
         return {headline: t(honk ? 'ov.lim.h.notProvided' : 'ov.lim.h.notProvidedOther', {n}), link: docs('honk-version', 'ov.lim.docsVersion')};
