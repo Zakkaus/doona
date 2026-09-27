@@ -3,7 +3,7 @@ import {LOG_FEED_LIMIT, useCapabilities, useLogFeed, useRuntimeSettings, useVers
 import type {LogLevel} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useDebounced} from '../../ui/ui';
-import {logLevel, logStatus, logsExport, logView} from './view';
+import {logEmpty, logLevel, logStatus, logsExport, logView} from './view';
 
 // One array while no levels are advertised, so the heatmap's memo holds between renders.
 const noLevels: LogLevel[] = [];
@@ -21,13 +21,15 @@ export function useLogs() {
   const resource = capabilities.data?.resources.logs;
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});
-  const recorded = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false).data?.log.level;
+  const settings = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false).data;
+  const recorded = settings?.log.level;
   const view = useMemo(
     () => logView(feed.records, resource?.levels ?? [], version.data?.engine.name, locale, t, feed.gaps, recorded),
     [feed.records, feed.gaps, resource, version.data, locale, t, recorded]
   );
   return {
     ...view,
+    empty: logEmpty(settings?.recording?.logs, !!targetFilter, t),
     status: logStatus(feed.connected, !!feed.error, paused, feed.pending, LOG_FEED_LIMIT, locale, t),
     // The records the list shows, and the levels the backend offers, for the activity heatmap.
     records: feed.records,

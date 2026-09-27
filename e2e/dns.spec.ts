@@ -86,7 +86,7 @@ test('DNS logs load older pages and export only loaded records', async ({page}) 
   });
   await page.goto('/#/dns?tab=log');
   await expect(page.getByText('1 loaded; the export covers loaded records only', {exact: true})).toBeVisible();
-  await expect(page.getByText('500 records in the ring buffer', {exact: true})).toBeVisible();
+  await expect(page.getByText('500 records kept', {exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Load older records'}).click();
   // Everything is loaded now, so the qualifier goes away.
   await expect(page.getByText(/loaded; the export covers/)).toHaveCount(0);

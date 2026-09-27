@@ -58,7 +58,7 @@ export const messages = defineMessages({
     'act.d7': '7 天',
     'act.rankingScope': '依目前可見連線的下載量排序，佔比以全部可見資料計算。',
     'act.rankingTruncated': '連線清單已截斷，排行僅涵蓋已取得的資料。',
-    'act.rankingEmpty': '尚無可排行的連線資料'
+    'act.rankingEmpty': '目前沒有可排行的連線'
   },
   'zh-CN': {
     'act.noOutbounds': '此后端不提供出站统计',
@@ -117,7 +117,7 @@ export const messages = defineMessages({
     'act.d7': '7 天',
     'act.rankingScope': '按当前可见连接的下载量排序，占比以全部可见数据计算。',
     'act.rankingTruncated': '连接列表已截断，排行仅涵盖已获取的数据。',
-    'act.rankingEmpty': '暂无可排行的连接数据'
+    'act.rankingEmpty': '当前没有可排行的连接'
   },
   en: {
     'act.noOutbounds': 'This backend does not provide outbound counters',
@@ -176,6 +176,6 @@ export const messages = defineMessages({
     'act.d7': '7 d',
     'act.rankingScope': 'Ranked by download totals for visible connections. Shares use all visible data.',
     'act.rankingTruncated': 'The connection list is truncated. Rankings cover only the retrieved data.',
-    'act.rankingEmpty': 'No connection data to rank'
+    'act.rankingEmpty': 'No connections to rank'
   }
 });
