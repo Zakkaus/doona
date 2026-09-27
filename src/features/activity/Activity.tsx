@@ -26,7 +26,10 @@ export function Activity() {
         <ModeCards model={vm.mode} />
         <Card>
           <div className="rp-row">
-            <Light tone={vm.status.tone}>{vm.status.text}</Light>
+            <div className="rp-cluster">
+              <Light tone={vm.status.tone}>{vm.status.text}</Light>
+              {vm.limited && <span className="rp-label">{vm.limited}</span>}
+            </div>
             <Link appearance="button" quiet href={href('overview')}>
               {t('act.viewDetails')}
             </Link>
