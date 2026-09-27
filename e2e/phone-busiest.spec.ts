@@ -123,7 +123,7 @@ test.describe('390px', () => {
 test.describe('1440px', () => {
   test.use({viewport: {width: 1440, height: 900}});
 
-  test('the three tiles share one row with the same values', async ({page}) => {
+  test('the three tiles share one row with the same values, the busiest taking two shares', async ({page}) => {
     await page.goto('/#/connections');
     const busiest = tile(page, 'Heaviest connection');
     await expect(busiest.locator('.rp-big')).toHaveText('cdn.bilibili.com');
@@ -134,8 +134,8 @@ test.describe('1440px', () => {
     const [first, second, third] = await Promise.all([box(busiest), box(tile(page, 'Download')), box(tile(page, 'Upload'))]);
     expect(second.y).toBeCloseTo(first.y, 0);
     expect(third.y).toBeCloseTo(first.y, 0);
-    expect(second.width).toBeCloseTo(first.width, 0);
-    expect(third.width).toBeCloseTo(first.width, 0);
+    expect(third.width).toBeCloseTo(second.width, 0);
+    expect(first.width).toBeGreaterThan(second.width * 1.9);
   });
 
   test('a long host is still cut at its end, with its title', async ({page}) => {
@@ -145,5 +145,17 @@ test.describe('1440px', () => {
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('title', long);
     await expect(value).not.toHaveClass(/rp-truncate-start/);
+  });
+});
+
+// Between phone and desktop, equal thirds cut a short host such as cdn.bilibili.com; two shares keep it whole.
+test.describe('740px', () => {
+  test.use({viewport: {width: 740, height: 900}});
+
+  test('the busiest host fits its tile uncut', async ({page}) => {
+    await page.goto('/#/connections');
+    const value = tile(page, 'Heaviest connection').locator('.rp-big');
+    await expect(value).toHaveText('cdn.bilibili.com');
+    expect(await value.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   });
 });
