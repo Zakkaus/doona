@@ -3,10 +3,6 @@
 button.rp-node {
   cursor: pointer;
 }
-button.rp-node[data-focus-visible] {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
-}
 .rp-node[data-selected],
 .rp-node.cur {
   border-color: var(--rp-accent);

@@ -56,10 +56,6 @@
 .rp-card-link[data-pressed] {
   background: var(--rp-overlay);
 }
-.rp-card-link[data-focus-visible] {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
-}
 .rp-card {
   background: var(--rp-base);
   border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
