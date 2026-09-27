@@ -11,6 +11,9 @@ const features = readdirSync('src/features', {withFileTypes: true})
   .map(d => d.name);
 const heavy = '^(recharts|d3-|victory|@codemirror/|@lezer/|codemirror)';
 const kit = 'belongs to src/ui; use or extend the kit component.';
+// The shell modules a page may use: links and URL state, the unsaved-draft guard, stored preferences, the install
+// offer and the About dialog that Settings shows too. Everything else in the shell is the shell's own.
+const shellForFeatures = ['./route.ts', './routes.ts', './draft.ts', './preferences.ts', './install.ts', './About.tsx'];
 // G4, G7 and G5 share no-restricted-syntax, so their selectors live in one list; the kit keeps the last two.
 const outsideUi = [
   {selector: 'JSXOpeningElement[name.name=/^(button|select|input|textarea)$/]', message: `A native control ${kit}`},
@@ -73,6 +76,12 @@ export default [
         {
           zones: [
             {target: './src/ui', from: ['./src/features', './src/store', './src/shell'], message: 'src/ui takes data as props.'},
+            {
+              target: './src/ui',
+              from: './src/api',
+              except: ['./error.ts', './model.ts', './serverClock.ts', './types.ts'],
+              message: 'src/ui takes data as props; from src/api it may use only the error model, the types and the server clock.'
+            },
             {target: './src/store', from: ['./src/features', './src/shell', './src/ui']},
             {target: ['./src/api', './src/dae', './src/i18n'], from: ['./src/features', './src/shell', './src/store', './src/ui']},
             {
@@ -87,6 +96,12 @@ export default [
               except: [`./${f}`, './shared'],
               message: 'Share through src/features/shared or a lower layer.'
             })),
+            {
+              target: './src/features',
+              from: './src/shell',
+              except: shellForFeatures,
+              message: 'From src/shell, features use only route, routes, draft, preferences, install and About.'
+            },
             {
               target: './src/shell',
               from: './src/features',

@@ -16,38 +16,72 @@ Before opening a pull request, run the same gates as CI from the repository root
 
 ## Architecture
 
-The source tree has one folder per layer. Arrows point from a layer to the layers it may import.
+### Where things are
+
+- `src/`: the app, in the layers described below.
+- `e2e/`: Playwright tests.
+- `tools/`: build, check and release scripts.
+- `contract/`: the vendored native API contract that `pnpm gen:api` reads.
+- `public/`: fonts, icons and the logo, served as they are.
+- `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
+- `docs/`: the README's screenshots.
+- `patches/`: pnpm patches to dependencies.
+- `LICENSES/`: license texts for REUSE.
+- `.github/`: CI workflows and the issue and pull request templates.
+
+A feature folder, with `src/features/dns` as the example:
+
+```text
+src/features/dns/
+  Dns.tsx       page
+  Analysis.tsx  tab components
+  useDns.ts     controller
+  view.ts       projection
+  cache.ts      pure sibling
+  stats.ts      pure sibling
+  messages.ts   strings
+  nav.ts        tabs
+```
+
+`view.ts`, `cache.ts` and `stats.ts` each have a `.test.ts` beside them, and the shell's search reads the tabs in `nav.ts`. New features follow the same shape; a small page may leave pieces out. The folder table under the layer diagram says what each part of `src/` owns.
+
+### Layers
+
+The source tree has one folder per layer, and imports point down. Each arrow is an allowed import; the table under the diagram says exactly what each one covers.
 
 ```mermaid
 flowchart TB
-  subgraph pages [Pages]
-    direction TB
-    shell[src/shell]
-    features[src/features/*]
-    shared[src/features/shared]
+  subgraph pages [pages]
+    shell
+    features
   end
-  store[src/store]
-  ui[src/ui]
-  subgraph base [Base]
-    subgraph api [src/api]
-      client[client, model, selectors]
-      engines[engines]
-      mock[mock]
-    end
-    dae[src/dae]
-    i18n[src/i18n]
+  store
+  ui
+  subgraph base [base]
+    api
+    dae
+    i18n
   end
-  shell -.->|registry.ts, nav.ts| features
-  features -->|routes, drafts, preferences| shell
-  features --> shared
+  shell -->|1| features
+  features -->|2| shell
   pages --> store
   pages --> ui
   pages --> base
   store --> base
-  ui --> base
+  ui -->|3| base
 ```
 
-_Allowed imports. Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`._
+_Allowed imports. Numbered arrows cover only the modules listed in the table._
+
+| Code in                          | May import                                                                                                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/shell`                      | `src/store`, `src/ui` and the base layers. From `src/features` (1): `shared/`, each feature's `nav.ts`, and the pages in `registry.ts`                                                                             |
+| a feature                        | Its own folder, `src/features/shared`, `src/store`, `src/ui` and the base layers. From `src/shell` (2): `route.ts`, `routes.ts`, `draft.ts`, `preferences.ts`, `install.ts` and `About.tsx`; never another feature |
+| `src/store`                      | The base layers                                                                                                                                                                                                    |
+| `src/ui`                         | (3) `src/i18n`, `src/dae`, and from `src/api` only `error.ts`, `model.ts`, `serverClock.ts` and `types.ts`. Never the client, `getApi`, `mock` or `src/store`: the kit takes data as props                         |
+| `src/api`, `src/dae`, `src/i18n` | Each other                                                                                                                                                                                                         |
+
+Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`. `registry.ts` loads each page lazily except the default page, Activity, which it imports directly so the first paint needs no second round trip. A feature uses the shell for links and URL state, the unsaved-draft guard, stored preferences and the install offer, and Settings shows the same About dialog as the backend menu.
 
 | Folder            | Owns                                                                                                             |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -60,37 +94,37 @@ _Allowed imports. Outside `src/api`, code reaches `src/api/engines` only through
 | `src/ui`          | The presentational kit and its stylesheets                                                                       |
 | `src/i18n`        | Message loading and formatting                                                                                   |
 
-Imports point down the layers:
-
-| Code in                          | May not import                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `src/ui`                         | `src/features`, `src/store`, `src/shell`; the kit takes data as props                                        |
-| `src/store`                      | `src/features`, `src/shell`, `src/ui`                                                                        |
-| `src/api`, `src/dae`, `src/i18n` | `src/features`, `src/shell`, `src/store`, `src/ui`                                                           |
-| a feature                        | another feature; share through `src/features/shared` or a lower layer                                        |
-| `src/shell`                      | `src/features`, except `src/features/shared`, each feature's `nav.ts`, and the page loaders in `registry.ts` |
-| anything outside `src/api`       | the modules inside `src/api/engines`; import `src/api/engines` itself                                        |
-
 ### Data flow
 
 ```mermaid
 flowchart TB
-  backend[Backend native API] --> client[src/api client]
-  client --> store[src/store: cached reads and feeds]
-  store --> controller[use*.ts controller: URL state, drafts, actions]
-  controller -->|actions and one-off requests| client
-  controller -->|engineOf| engines[src/api/engines]
-  controller --> view[view.ts: pure projection]
-  view --> components[Page components]
-  components --> kit[src/ui kit]
+  backend[backend]
+  api[api client]
+  store[store]
+  controller[use*.ts controller]
+  view[view.ts]
+  components[components]
+  kit[ui kit]
+  engines[engines adapter]
+  backend -->|responses| api
+  api -->|resources, feeds| store
+  store -->|hook data| controller
+  controller -->|store data| view
+  view -->|view model| components
+  components -->|props| kit
+  controller -.->|actions via getApi| api
+  api -.->|requests| backend
+  controller -.->|engineOf| engines
 ```
 
-_One page, from the backend to the screen._
+_Solid arrows carry data. Dashed arrows are calls and actions._
 
 - `src/store` owns what pages watch and cache: resources, live feeds, and fresh reads such as `readConfigFresh`.
 - A feature's controller hook (`use*.ts`) reads through store hooks and owns URL state, drafts and actions. It calls `getApi()` only for actions and for one-off requests the person starts, such as a DNS query or loading older pages.
 - `view.ts` turns store data into what the page shows. It is pure: no React, no store, and a unit test beside it. A projection too large for one file may move into pure sibling modules such as `dns/cache.ts`, `dns/stats.ts` and `activity/ranking.ts`, under the same rules.
 - Components receive prepared values and callbacks, and never fetch, guard or format on their own. Visible strings live in the feature's `messages.ts`.
+
+A small page need not have every piece; one with nothing to project has no `view.ts`. The rules are about which way data and imports go, not about having every file.
 
 ### Engines
 
@@ -114,7 +148,7 @@ Some lists have one home, and everything else reads them:
 
 | Boundary                                                                              | Check                                                                                  |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| The import table, including the engines entry                                         | `import-x/no-restricted-paths` zones                                                   |
+| The import table, the engines entry and both allow-lists                              | `import-x/no-restricted-paths` zones                                                   |
 | No import cycles                                                                      | `import-x/no-cycle`                                                                    |
 | No engine or API name comparisons in features, shell and store                        | `no-restricted-syntax` (G8)                                                            |
 | Kit roles: React Aria, native controls, kit classes, heavy libraries, colour literals | `@typescript-eslint/no-restricted-imports` and `no-restricted-syntax` (G3, G4, G5, G7) |
