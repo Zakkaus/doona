@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {dictionaryView, distributionView, dnsView, evaluationView, removalView, ruleDraftView, rulesView, traceStatusView} from './view';
+import {addRuleTip, dictionaryView, distributionView, dnsView, evaluationView, removalView, ruleDraftView, rulesView, traceStatusView} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
 
@@ -165,4 +165,10 @@ it('does not infer a source from its display name when the ID is unknown', async
   const view = dictionaryView([unknown, explicit], undefined, undefined, sources, [], t, 'en');
   expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
   expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=40', removable: true});
+});
+
+it('tips why a rule cannot be added: no writable place first, then a change still being applied', () => {
+  expect(addRuleTip(true, true, t)).toBe(t('conn.ruleNoPosition'));
+  expect(addRuleTip(false, true, t)).toBe('Another change is being applied');
+  expect(addRuleTip(false, false, t)).toBeUndefined();
 });

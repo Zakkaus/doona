@@ -7,7 +7,7 @@ import type {EditorMark} from '../../ui/code/CodeEditor';
 import {allGroupNames} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
-import {diagnosticRows, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
+import {diagnosticRows, moduleEditTip, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
@@ -100,7 +100,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
       editing: draft?.section.id === section.id,
       canEdit: canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true,
       editDisabled: dirty || !!editor.busy,
-      editTip: dirty ? t('config.moduleEditBlocked') : undefined,
+      editTip: moduleEditTip(dirty, !!editor.busy, t),
       note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
       muted: !section.block,
       // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.

@@ -57,6 +57,10 @@ export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; pos
 function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): string {
   return linked ? fileName(linked) : source.file === '<redacted>' ? '' : source.file;
 }
+// Why Add rule is disabled: no rule in a writable file to insert beside, else another change still being applied.
+export const addRuleTip = (noPosition: boolean, busy: boolean, t: Translator) =>
+  noPosition ? t('conn.ruleNoPosition') : busy ? t('ui.changeApplying') : undefined;
+
 export function dictionaryView(
   rules: RoutingRule[],
   generation: string | undefined,

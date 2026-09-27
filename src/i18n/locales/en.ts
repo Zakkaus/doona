@@ -1293,6 +1293,7 @@ export const messages = {
   'cm.controlCharacter': 'Control character',
   close: 'Close',
   'ui.back': 'Back',
+  'ui.changeApplying': 'Another change is being applied',
   'toast.collapse': 'Collapse',
   'toast.clearAll': 'Clear all',
   'ui.openRule': 'Open {rule} in the rule list',
