@@ -46,7 +46,7 @@ it('counts a source in lines and bytes and leaves its load time to the tooltip',
 });
 it('names the one reason a source is read-only', () => {
   const reason = (kind: ConfigSource['kind'], writable: boolean, configWritable: boolean, complete?: boolean) =>
-    readOnlyBadge({kind, writable}, configWritable, complete, t)?.reason ?? null;
+    readOnlyBadge({kind, writable, content: ''}, configWritable, complete, t)?.reason ?? null;
   // Generated and subscription sources are never writable, with writes on or off.
   expect(reason('generated', false, true)).toBe('generated');
   expect(reason('generated', false, false)).toBe('generated');
@@ -66,20 +66,29 @@ it('names the one reason a source is read-only', () => {
   expect(reason('main', true, true, true)).toBeNull();
   expect(reason('main', false, true, false)).toBe('secret');
   expect(reason('generated', false, true, false)).toBe('generated');
-  const badge = readOnlyBadge({kind: 'generated', writable: false}, true, true, t)!;
+  // No text at all is not a redaction: the backend did not send the file.
+  const withheld = readOnlyBadge({kind: 'main', writable: true, content: undefined}, true, false, t)!;
+  expect(withheld.reason).toBe('withheld');
+  expect(withheld.label).toBe(t('config.withheldSource'));
+  expect(withheld.note).toBe(t('config.contentWithheld'));
+  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, t)!.reason).toBe('secret');
+  const badge = readOnlyBadge({kind: 'generated', writable: false, content: ''}, true, true, t)!;
   expect(badge.label).toBe('Generated');
   // The line under the text already says why; only the write switch needs more than that line holds.
   expect(badge.help).toBeUndefined();
-  expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
-  expect(readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.help).toBeUndefined();
-  expect(readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.label).toBe('Contains secrets');
-  expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.label).toBe('Read-only');
-  expect(readOnlyBadge({kind: 'subscription', writable: false}, true, true, t)!.label).toBe('Subscription');
-  expect(readOnlyBadge({kind: 'main', writable: true}, true, false, t)!.label).toBe(t('config.redactedSource'));
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.help).toBeUndefined();
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.label).toBe('Contains secrets');
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'subscription', writable: false, content: ''}, true, true, t)!.label).toBe('Subscription');
+  expect(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.label).toBe(t('config.redactedSource'));
   // Each reason has its own line under the text.
-  const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false}, true, true, t)!.note);
-  notes.push(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.note, readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.note);
-  notes.push(readOnlyBadge({kind: 'main', writable: true}, true, false, t)!.note);
+  const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false, content: ''}, true, true, t)!.note);
+  notes.push(
+    readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.note,
+    readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.note
+  );
+  notes.push(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.note);
   expect(notes).toEqual([t('config.generatedNote'), t('config.subscriptionNote'), t('config.readOnlyNote'), t('config.secretNote'), t('config.redactedNote')]);
 });
 it('projects source locations without inventing a line for source-wide diagnostics', async () => {
