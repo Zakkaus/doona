@@ -41,6 +41,24 @@ export function splice(text: string, block: Pick<TextBlock, 'from' | 'to'>, repl
   return text.slice(0, block.from) + replacement + text.slice(block.to);
 }
 
+// A section being edited, with the file and block it was read from.
+export type SectionDraft = {section: ModuleSection & {source: ConfigSource; block: TextBlock}; text: string};
+
+// A section draft against the sections as loaded now. A file changed only outside the section, or a draft not yet
+// typed in, is carried over to the new text, since splicing the draft into it keeps that change. A section changed or
+// removed on disk is a conflict the person settles, since saving would replace text they have not seen. `next` is the
+// draft carried over to the section as it is now, when it is still there.
+export function sectionUnder(draft: SectionDraft, sections: ModuleSection[]): {next: SectionDraft | null; conflict: boolean} {
+  const {section, text} = draft;
+  const current = sections.find(item => item.id === section.id);
+  if (current?.source?.content_sha256 === section.source.content_sha256) return {next: null, conflict: false};
+  if (!current?.source?.content || !current.block) return {next: null, conflict: true};
+  const now = current.source.content.slice(current.block.from, current.block.to);
+  const base = section.source.content!.slice(section.block.from, section.block.to);
+  const next = {section: {...current, source: current.source, block: current.block}, text: text === base ? now : text};
+  return {next, conflict: now !== base && text !== base && now !== text};
+}
+
 export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, block: TextBlock, text: string): EditorMark[] {
   const end = block.line + text.split('\n').length;
   return diagnostics
@@ -199,7 +217,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 }
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'withheld' | 'redacted';
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'withheld' | 'redacted';
 // The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
@@ -207,15 +225,18 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   subscription: {label: 'config.kind.subscription', note: 'config.subscriptionNote'},
   disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
   secret: {label: 'config.secretSource', note: 'config.secretNote'},
+  refused: {label: 'config.readOnly', note: 'config.refusedNote'},
   withheld: {label: 'config.withheldSource', note: 'config.contentWithheld'},
   redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
-// the server allows. The contract carries no reason for a main or include file, so one is inferred from honk: its
-// resources.config.writable already covers the write switch, the credential and a blocked revision store, so with it
-// true the only per-file check left is a native_api or clash_api secret defined in the file or its value in the text.
-// A source without text was not sent at all. A text that does not match its digest (`complete` false) had values
-// hidden by the backend; saving it would drop them.
+// the server allows. The contract carries no reason for a main or include file refused on its own: honk refuses one
+// that defines a native_api or clash_api listener, whose secret it will not write back, but also one it writes itself,
+// and another backend may have reasons of its own. Only such a block in the text names the secret as the reason;
+// otherwise the file is just read-only. A source without text was not sent at all. A text that does not match its
+// digest (`complete` false) had values hidden by the backend; saving it would drop them.
+const listenerBlocks = new Set(['native_api', 'clash_api']);
+const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => listenerBlocks.has(block.name) || definesListener(block.children));
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable' | 'content'>,
   configWritable: boolean,
@@ -228,7 +249,9 @@ export function readOnlyBadge(
       : !configWritable
         ? 'disabled'
         : !source.writable
-          ? 'secret'
+          ? source.content !== undefined && definesListener(scanConfig(source.content).blocks)
+            ? 'secret'
+            : 'refused'
           : source.content === undefined
             ? 'withheld'
             : complete === false

@@ -237,6 +237,19 @@ function Modules(props: ModulesProps) {
                 outbounds={vm.outbounds}
                 onSave={vm.dirty && !vm.busy ? () => void vm.save() : undefined}
               />
+              {vm.conflict && (
+                <InlineAlert
+                  action={
+                    vm.keep && (
+                      <Button isDisabled={vm.busy} onPress={vm.keep}>
+                        {t('config.keepChanges')}
+                      </Button>
+                    )
+                  }
+                >
+                  {vm.conflict}
+                </InlineAlert>
+              )}
               {vm.diagnostics.length > 0 && (
                 <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
                   {vm.diagnostics.map(item => (
@@ -254,7 +267,7 @@ function Modules(props: ModulesProps) {
                     {t('config.validate')}
                   </Button>
                 )}
-                <Button accent isPending={vm.saving} isDisabled={vm.busy || !vm.dirty} onPress={() => void vm.save()}>
+                <Button accent isPending={vm.saving} isDisabled={vm.busy || !vm.dirty || !!vm.conflict} onPress={() => void vm.save()}>
                   {t('config.save')}
                 </Button>
                 <Button isDisabled={vm.busy} onPress={vm.cancel}>
@@ -282,6 +295,8 @@ function SourceCard(props: SourceCardProps) {
     outbounds,
     focus,
     dirty,
+    conflict,
+    keep,
     validate,
     save,
     cancel,
@@ -327,6 +342,17 @@ function SourceCard(props: SourceCardProps) {
           </span>
         )}
       </div>
+      {conflict && (
+        <InlineAlert
+          action={
+            <Button isDisabled={busy} onPress={keep}>
+              {t('config.keepChanges')}
+            </Button>
+          }
+        >
+          {conflict}
+        </InlineAlert>
+      )}
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (

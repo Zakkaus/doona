@@ -511,26 +511,29 @@ test('leaving the editor aborts validation before any replacement', async ({page
   expect(writes).toBe(0);
 });
 
-httpTest('a stale original digest refuses replacement, retains the draft and rebases it', async ({page}) => {
+httpTest('a file changed on disk under a draft blocks saving until the draft is kept over it', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# local draft\n');
   const source = (await api.config()).sources.find(source => source.id === 'src-rules')!;
   await api.replaceConfigSource(source.id, source.content + '\n# concurrent edit\n', `\"${source.content_sha256}\"`);
-  // The mock reloads a write about a second later; until then a refetch still reads the old digest.
+  // The concurrent edit becomes the accepted text once its reload completes.
   await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
-  const accepted = (await api.config()).sources.find(item => item.id === source.id)!;
+  // The save carries the digest the draft began from and is refused; the refetch shows the change, and the draft
+  // stays with saving held for the person.
+  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await apply.click();
   await rejected;
-  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
-  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  const conflict = page.getByRole('alert').filter({hasText: 'changed on disk while you were editing'});
+  await expect(conflict).toBeVisible();
+  await expect(apply).toBeDisabled();
   await expect(editor).toContainText('# local draft');
-  // The draft is rebased in the render that shows the refetched source, so its line count marks the new base, and the
-  // one next save carries the new digest and replaces it.
-  await expect(page.getByText(`${accepted.line_count} lines,`)).toBeVisible();
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(editor).not.toContainText('# concurrent edit');
+  await conflict.getByRole('button', {name: 'Keep changes', exact: true}).click();
+  await expect(conflict).toHaveCount(0);
+  await apply.click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   const saved = (await api.config()).sources.find(item => item.id === source.id)!.content!;
   expect(saved).toContain('# local draft');
@@ -1052,7 +1055,37 @@ test('outbound completion inserts a quoted group with its quotes', async ({page}
   await expect(editor).toContainText("domain(example.org) -> 'my lab'");
 });
 
-httpTest('a module draft refused with 412 is rebased and saves on the next attempt', async ({page}) => {
+httpTest('a module draft is carried over a change outside its section and saves once', async ({page}) => {
+  const {api} = await configBackend(page);
+  await page.goto('/#/config');
+  const routing = page.getByRole('tabpanel', {name: 'Modules'}).getByRole('region', {name: 'routing', exact: true});
+  await routing.getByRole('button', {name: 'Edit', exact: true}).click();
+  const editor = routing.locator('.cm-content');
+  const section = await editor.innerText();
+  await editor.fill(section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:'));
+  const range = routing.locator('.rp-label.rp-code');
+  const before = await range.innerText();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
+  // The mock reloads a write about a second later; until then a refetch still reads the old digest, and a second refusal
+  // with it is reported as a disk ahead of the running configuration.
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
+  const apply = routing.getByRole('button', {name: 'Apply and reload', exact: true});
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await apply.click();
+  await rejected;
+  // The refetch after the refusal carries the draft over to the section, one line further down.
+  await expect(range).not.toHaveText(before);
+  await expect(editor).toContainText('domain(example.org) -> proxy');
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(saved).toContain('# concurrent edit');
+  expect(saved).toContain('domain(example.org) -> proxy');
+});
+
+httpTest('a module draft whose section changed on disk waits until it is cancelled', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config');
   const routing = page.getByRole('tabpanel', {name: 'Modules'}).getByRole('region', {name: 'routing', exact: true});
@@ -1061,25 +1094,23 @@ httpTest('a module draft refused with 412 is rebased and saves on the next attem
   const section = await editor.innerText();
   await editor.fill(section.replace('  fallback:', '  domain(example.org) -> proxy\n  fallback:'));
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
-  // The mock reloads a write about a second later; until then a refetch still reads the old digest, and a second refusal
-  // with it is reported as a disk ahead of the running configuration instead of rebased.
-  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
-  const range = routing.locator('.rp-cluster > .rp-label.rp-code');
-  const before = await range.innerText();
+  await api.replaceConfigSource(
+    main.id,
+    main.content!.replace('\nrouting {', '\nrouting {\n  domain(concurrent.example) -> direct'),
+    `"${main.content_sha256}"`
+  );
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('concurrent.example');
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await rejected;
-  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
+  const conflict = routing.getByRole('alert').filter({hasText: 'changed on disk while you were editing'});
+  await expect(conflict).toBeVisible();
+  await expect(routing.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
   await expect(editor).toContainText('domain(example.org) -> proxy');
-  // The draft is rebased in the render that shows the refetched section, which the added line moves down one line.
-  await expect(range).not.toHaveText(before);
-  // The one next attempt carries the refetched digest; the concurrent edit outside the section is kept.
-  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
-  expect(saved).toContain('# concurrent edit');
-  expect(saved).toContain('domain(example.org) -> proxy');
+  await routing.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(conflict).toHaveCount(0);
+  await expect(editor).toHaveCount(0);
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).not.toContain('domain(example.org) -> proxy');
 });
 
 const restartRefusal = {
