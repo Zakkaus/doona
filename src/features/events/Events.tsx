@@ -32,7 +32,7 @@ export function Events() {
         isRowHeader: true,
         render: event => (
           <HelpRow fill help={event.help}>
-            {event.summary}
+            <TextTooltip>{event.summary}</TextTooltip>
           </HelpRow>
         )
       }

@@ -44,7 +44,11 @@ test('an Events row discloses its whole summary', async ({page}) => {
     ])
   );
   await page.goto('/#/events');
-  await disclose(page, page.getByRole('grid', {name: 'Events', exact: true}), 'flows-recorder-primary, reason: buffer overflow, records dropped: 12');
+  await disclose(
+    page,
+    page.getByRole('grid', {name: 'Events', exact: true}),
+    'flows-recorder-primary, reason: records reached the retention limit, records dropped since recording started: 12'
+  );
 });
 
 async function logRow(page: Page) {
