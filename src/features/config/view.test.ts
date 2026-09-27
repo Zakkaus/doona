@@ -73,6 +73,11 @@ it('names the one reason a source is read-only', () => {
   expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.label).toBe('Read-only');
   expect(readOnlyBadge({kind: 'subscription', writable: false}, true, true, t)!.label).toBe('Subscription');
   expect(readOnlyBadge({kind: 'main', writable: true}, true, false, t)!.label).toBe(t('config.redactedSource'));
+  // Each reason has its own line under the text.
+  const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false}, true, true, t)!.note);
+  notes.push(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.note, readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.note);
+  notes.push(readOnlyBadge({kind: 'main', writable: true}, true, false, t)!.note);
+  expect(notes).toEqual([t('config.generatedNote'), t('config.subscriptionNote'), t('config.readOnlyNote'), t('config.secretNote'), t('config.redactedNote')]);
 });
 it('projects source locations without inventing a line for source-wide diagnostics', async () => {
   const configSources = (await createMockApi().config()).sources;

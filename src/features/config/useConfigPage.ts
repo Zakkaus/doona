@@ -241,6 +241,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   const view = sourceView(source, locale, t);
   return {
     writable,
+    note: readOnly?.note ?? t(canValidate ? 'config.editNoteValidate' : 'config.editNote'),
     refused,
     shown: diagnosticRows(shown, sources, locale, t),
     marks,
