@@ -54,9 +54,9 @@ export function useSourceComplete(source: ConfigSource | null): boolean | null {
 }
 
 // A 412 on replacing `source`, given the digest the backend reports for it after a refetch (undefined when that
-// failed). A new digest means the file changed and the next attempt starts from it. The same digest refused twice in
-// a row means the disk is ahead of the running configuration and no refetch helps; the first may only be a reload
-// still in progress. Returns the error to raise and the refusal to remember for the next 412.
+// failed). A new digest means the file changed, which the editor then puts to the person. The same digest refused
+// twice in a row means the disk is ahead of the running configuration and no refetch helps; the first may only be a
+// reload still in progress. Returns the error to raise and the refusal to remember for the next 412.
 export function refusalOutcome(
   error: ApiError,
   source: Pick<ConfigSource, 'id' | 'content_sha256'>,

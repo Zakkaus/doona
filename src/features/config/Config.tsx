@@ -25,6 +25,7 @@ import AddCircle from '../../ui/icons/AddCircle';
 import Refresh from '../../ui/icons/Refresh';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {Wizard} from './Wizard';
+import {ChangedOnDisk} from './ChangedOnDisk';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage, useSourceCard, useValidateTab, type SourceCardProps, type ValidateTabProps} from './useConfigPage';
 import {useModules, type ModulesProps} from './useModules';
@@ -237,19 +238,7 @@ function Modules(props: ModulesProps) {
                 outbounds={vm.outbounds}
                 onSave={vm.dirty && !vm.busy ? () => void vm.save() : undefined}
               />
-              {vm.conflict && (
-                <InlineAlert
-                  action={
-                    vm.keep && (
-                      <Button isDisabled={vm.busy} onPress={vm.keep}>
-                        {t('config.keepChanges')}
-                      </Button>
-                    )
-                  }
-                >
-                  {vm.conflict}
-                </InlineAlert>
-              )}
+              {vm.conflict && <ChangedOnDisk message={vm.conflict} busy={vm.busy} keep={vm.keep} />}
               {vm.diagnostics.length > 0 && (
                 <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
                   {vm.diagnostics.map(item => (
@@ -342,17 +331,7 @@ function SourceCard(props: SourceCardProps) {
           </span>
         )}
       </div>
-      {conflict && (
-        <InlineAlert
-          action={
-            <Button isDisabled={busy} onPress={keep}>
-              {t('config.keepChanges')}
-            </Button>
-          }
-        >
-          {conflict}
-        </InlineAlert>
-      )}
+      {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (

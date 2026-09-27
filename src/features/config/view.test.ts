@@ -10,6 +10,7 @@ import {
   moduleEditTip,
   wizardInitial,
   wizardRows,
+  wizardUnder,
   sectionSummaries,
   sectionRange,
   sectionMarks,
@@ -233,6 +234,15 @@ it('carries a section draft over a change outside it and stops at a change to th
   expect(untouched).toMatchObject({conflict: false, next: {text: 'routing {\n  fallback: block\n}'}});
   // A section removed on disk can only be cancelled.
   expect(sectionUnder(draft, now({...source('global { log_level: info }'), content_sha256: 'e'}))).toEqual({next: null, conflict: true});
+});
+
+it('lets an untouched quick setup follow a change on disk and stops a changed one at it', () => {
+  const loaded = {...source("subscription {\n  a: 'https://example.org/a'\n}\n"), content_sha256: 'a'};
+  const changed = {...loaded, content: loaded.content + '# concurrent edit\n', content_sha256: 'b'};
+  expect(wizardUnder(false, loaded, loaded)).toBeNull();
+  expect(wizardUnder(true, loaded, {...loaded})).toBeNull();
+  expect(wizardUnder(false, loaded, changed)).toBe('follow');
+  expect(wizardUnder(true, loaded, changed)).toBe('conflict');
 });
 
 it('maps only diagnostics within the edited section using its current line count', () => {

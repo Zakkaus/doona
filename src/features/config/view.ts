@@ -314,6 +314,12 @@ export function wizardInitial(content: string): WizardState {
   const read = readState(content);
   return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
 }
+// The quick setup's form against its file as loaded now. An untouched form follows a file changed on disk; a changed
+// one is a conflict the person settles, as a section draft is, since saving would replace text they have not seen.
+export function wizardUnder(dirty: boolean, origin: ConfigSource, loaded: ConfigSource): 'follow' | 'conflict' | null {
+  if (origin.content_sha256 === loaded.content_sha256) return null;
+  return dirty ? 'conflict' : 'follow';
+}
 // A value the file cannot hold is flagged on its own field, not on every row.
 export function wizardRows(state: WizardState, lang: Lang, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
   return {

@@ -540,6 +540,50 @@ httpTest('a file changed on disk under a draft blocks saving until the draft is 
   expect(saved).not.toContain('# concurrent edit');
 });
 
+// The quick setup holds its form over the file it opened; a change on disk under a changed form waits for the person.
+async function setupConflict(page: Page) {
+  const {api} = await configBackend(page);
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  const url = card.getByLabel('Subscription URL', {exact: true});
+  await url.fill('https://example.org/sub?token=local');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
+  const content = async () => (await api.config()).sources.find(source => source.id === main.id)!.content!;
+  await expect.poll(content).toContain('# concurrent edit');
+  const apply = card.getByRole('button', {name: 'Apply and reload', exact: true});
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await apply.click();
+  await rejected;
+  const conflict = card.getByRole('alert').filter({hasText: 'changed on disk while you were editing'});
+  await expect(conflict).toBeVisible();
+  await expect(apply).toBeDisabled();
+  await expect(url).toHaveValue('https://example.org/sub?token=local');
+  return {card, url, apply, conflict, content, original: main.content!};
+}
+
+httpTest('a quick setup form over a file changed on disk saves only once it is kept', async ({page}) => {
+  const {card, apply, conflict, content} = await setupConflict(page);
+  await conflict.getByRole('button', {name: 'Keep changes', exact: true}).click();
+  await expect(conflict).toHaveCount(0);
+  // The form is written over the file as it is now, so the change outside it stays.
+  await expect(card.locator('.cm-content')).toContainText('# concurrent edit');
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
+  const saved = await content();
+  expect(saved).toContain('# concurrent edit');
+  expect(saved).toContain("'https://example.org/sub?token=local'");
+});
+
+httpTest('discarding a quick setup form over a file changed on disk loads the file as it is now', async ({page}) => {
+  const {url, apply, conflict, content, original} = await setupConflict(page);
+  await conflict.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(conflict).toHaveCount(0);
+  await expect(url).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
+  await expect(apply).toBeDisabled();
+  expect(await content()).toBe('# concurrent edit\n' + original);
+});
+
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
   const {api} = await configBackend(page);
   const rules = await api.rules();
