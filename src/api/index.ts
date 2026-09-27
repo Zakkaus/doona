@@ -6,7 +6,7 @@ import {sessionExpiry, sessionToken} from './session';
 
 let selected: Api | undefined;
 let configuration = '';
-let mockFactory: (() => Api) | undefined;
+let mockFactory: typeof import('./mock').createMockApi | undefined;
 // Every store hook asks for the client on every render; storage is read again only once something may have changed
 // it, or once the session it was built with has lapsed.
 let checked = {revision: -1, until: 0};
@@ -35,7 +35,8 @@ export function getApi(): Api {
       selected = createApi(base, token ?? undefined, clock);
       selectServerClock(clock);
     } else if (mockFactory) {
-      selected = mockFactory();
+      // A saved demo profile asks for the demo account; the tab's session is its bearer, as for a password backend.
+      selected = mockFactory(profile ? {signIn: true, session: token ?? null} : undefined);
       selectServerClock(createServerClock());
     } else if (selected) {
       // This tab saved the mock and reloads: keep serving the current backend until the mock has loaded.
