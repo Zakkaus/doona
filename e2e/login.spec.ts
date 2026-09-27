@@ -61,9 +61,30 @@ test.describe('the demo', () => {
     expect(Math.abs(column.x + column.width / 2 - 180)).toBeLessThanOrEqual(1);
     await page.setViewportSize({width: 1280, height: 800});
     const showcase = page.locator('.rp-login-showcase');
-    await expect(showcase.getByRole('button', {name: 'Mini game: press to make the duck flap'})).toBeVisible();
+    await expect(showcase.locator('canvas')).toBeVisible();
     const pane = (await page.locator('.rp-login-pane').boundingBox())!;
     expect((await showcase.boundingBox())!.x).toBeGreaterThanOrEqual(pane.x + pane.width);
+  });
+
+  test('shows a still scene that takes no presses under reduced motion, and plays once motion is allowed', async ({page}) => {
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.goto('/#/activity');
+    const showcase = page.locator('.rp-login-showcase');
+    const button = showcase.locator('button');
+    await expect(showcase.locator('canvas')).toBeVisible();
+    // A picture, not a control: out of the tab order and unnamed, so nothing offers a game that cannot be played.
+    await expect(button).toBeDisabled();
+    await expect(showcase).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.getByRole('button', {name: 'Mini game: press to make the duck flap'})).toHaveCount(0);
+    // The preference is followed while the page stays open.
+    await page.emulateMedia({reducedMotion: 'no-preference'});
+    const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
+    await expect(game).toBeEnabled();
+    await game.click();
+    await expect(showcase.locator('[aria-live]')).toHaveText(/^Link down, /);
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    await expect(button).toBeDisabled();
+    await expect(showcase).toHaveAttribute('aria-hidden', 'true');
   });
 
   test.describe('with motion allowed', () => {
