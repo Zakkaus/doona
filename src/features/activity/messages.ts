@@ -30,7 +30,7 @@ export const messages = defineMessages({
     'act.apply': '套用',
     'act.modeApplied': '出站模式已寫入組態並重載：{mode}',
     'act.modeNoRouting': '主組態未包含 routing 區段',
-    'act.modeInterleaved': '一般規則位於 must 規則之前，無法安全切換出站模式。',
+    'act.modeInterleaved': '路由區段有一般規則排在 must 規則前面。請先把 must 規則移到路由區段最前面，再切換出站模式。',
     'act.modeReadOnly': '唯讀',
     'act.modeWhyReadOnly': '查看唯讀原因',
     'act.modeReadOnlyReason':
@@ -89,7 +89,7 @@ export const messages = defineMessages({
     'act.apply': '应用',
     'act.modeApplied': '出站模式已写入配置并重载：{mode}',
     'act.modeNoRouting': '主配置未包含 routing 区段',
-    'act.modeInterleaved': '普通规则位于 must 规则之前，无法安全切换出站模式。',
+    'act.modeInterleaved': '路由区段有普通规则排在 must 规则前面。请先把 must 规则移到路由区段最前面，再切换出站模式。',
     'act.modeReadOnly': '只读',
     'act.modeWhyReadOnly': '查看只读原因',
     'act.modeReadOnlyReason':
@@ -148,7 +148,8 @@ export const messages = defineMessages({
     'act.apply': 'Apply',
     'act.modeApplied': 'Outbound mode written to the configuration and reloaded: {mode}',
     'act.modeNoRouting': 'The main configuration has no routing section',
-    'act.modeInterleaved': 'Ordinary rules precede must rules; the outbound mode cannot be changed safely.',
+    'act.modeInterleaved':
+      'An ordinary rule comes before a must rule in the routing block. Move the must rules to the top of the routing block, then change the outbound mode.',
     'act.modeReadOnly': 'Read-only',
     'act.modeWhyReadOnly': 'Why is the mode read-only?',
     'act.modeReadOnlyReason':

@@ -8,6 +8,7 @@ import {useDraftGuard} from '../../shell/draft';
 import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeView} from './view';
 import {offered} from '../../api/capabilities';
+import {LocalError} from '../../api/error';
 
 export function useMode() {
   const t = useT();
@@ -28,6 +29,11 @@ export function useMode() {
       guard.clear();
       setStaged(current => (current === submitted ? null : current));
       toast('positive', t('act.modeApplied', {mode: t(modeLabels[submitted.mode])}));
+    }
+    // doona's own refusal is the whole story: its advice leads and the rule in the way is the second line.
+    if (result.kind === 'failed' && result.error instanceof LocalError && result.error.key === 'act.modeInterleaved') {
+      toast('negative', t(result.error.key), {detail: result.error.detail ?? undefined});
+      return;
     }
     const problem = editProblem(result, t);
     if (problem) toast(problem.kind, problem.text, {detail: problem.detail});

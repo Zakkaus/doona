@@ -537,6 +537,29 @@ test('interleaved mandatory rules reject mode changes without writing configurat
   await page.goto('/#/activity');
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Ordinary rules precede must rules');
+  const toast = page.locator('.rp-toast.negative');
+  await expect(toast).toContainText('Move the must rules to the top of the routing block');
+  // The rule in the way is named on its own line.
+  await expect(toast).toContainText('domain(example.com) -> proxy');
   expect(requests.filter(request => request.method() === 'PUT')).toEqual([]);
+});
+
+test('the demo switches the outbound mode and back through its own configuration', async ({page}) => {
+  await page.goto('/#/activity');
+  const modes = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await modes.getByRole('radio', {name: 'Direct', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Direct');
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  // The catch-all is a real rule of the new generation, right after the must rules.
+  await page.goto('/#/rules?tab=list');
+  const rules = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
+  await expect(rules.nth(2)).toContainText('l4proto(tcp, udp)');
+  await expect(rules.nth(2)).toContainText('direct');
+  await page.goto('/#/activity');
+  await expect(modes.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+  await modes.getByRole('radio', {name: 'Rule', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive').filter({hasText: 'reloaded: Rule'})).toBeVisible();
+  await expect(modes.getByRole('radio', {name: 'Rule', exact: true})).toBeChecked();
 });
