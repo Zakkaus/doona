@@ -130,7 +130,7 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
   gap: 4px 12px;
   flex: 1 1 auto;
-  align-content: space-between;
+  align-content: start;
 }
 .rp-capability {
   display: flex;
@@ -150,14 +150,15 @@
   white-space: nowrap;
   font-size: var(--rp-text-xs);
 }
-/* Features that are off, one block per cause: why, the features it turns off, then the fix. Blocks sit side by side
-   where the card is wide enough for two. */
+/* Features that are off, one block per cause: why, the features it turns off, then the fix. Blocks flow down
+   columns where the card is wide enough for two, so a short block leaves no gap beside a tall one. */
 .rp-limits {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
-  gap: 16px 32px;
+  column-width: 400px;
+  column-gap: 32px;
 }
 .rp-limit {
+  break-inside: avoid;
+  padding-bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
