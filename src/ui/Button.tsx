@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
+import {createContext, useContext, useEffect, useId, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
@@ -10,6 +10,25 @@ export type ButtonStyle = {quiet?: boolean; small?: boolean; icon?: boolean; acc
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
 export function buttonClass({quiet, small, icon, accent, negative}: ButtonStyle, base = 'rp-btn') {
   return cx(base, quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
+}
+
+// The id of the ActionHelp line around a button, which its disabled buttons name as their description.
+const ReasonId = createContext<string | undefined>(undefined);
+
+// Why the actions in `children` cannot run, as S2 help text: a line under them, in view on every width. A tooltip never
+// opens on touch, so it cannot be the only place a reason is given. Nothing is added while there is no reason.
+export function ActionHelp({reason, children}: {reason?: string | null; children: ReactNode}) {
+  const id = useId();
+  return (
+    <ReasonId.Provider value={reason ? id : undefined}>
+      {children}
+      {reason && (
+        <span id={id} className="rp-label">
+          {reason}
+        </span>
+      )}
+    </ReasonId.Provider>
+  );
 }
 
 export function Button({
@@ -43,6 +62,8 @@ export function Button({
   const ref = useRef<HTMLButtonElement>(null);
   // A pending button keeps its colour and stays focusable, so the wrapper must not add a second tab stop.
   const disabled = isDisabled && !isPending;
+  const reasonId = useContext(ReasonId);
+  const reasoned = disabled && !!reasonId;
   // An icon marked rp-spin-on-press (the refresh arrows) turns once per press and keeps turning while the button is
   // pending, always finishing a whole turn; one animation owns the rotation, so a long refetch never hands over.
   const spin = useRef<Animation | null>(null);
@@ -88,6 +109,7 @@ export function Button({
       className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
       onPress={press}
       aria-label={label}
+      aria-describedby={reasoned ? reasonId : undefined}
       isDisabled={disabled}
       isPending={isPending}
       type={type}
@@ -98,7 +120,8 @@ export function Button({
     </RButton>
   );
   // A tip adds what the name cannot say (why the button is disabled), so it wins; the label stays the accessible name.
-  const text = tip ?? label;
+  // Once an ActionHelp line gives the reason, the tip would only repeat it.
+  const text = reasoned ? label : (tip ?? label);
   if (!text) return btn;
   // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts
   // focus and pointer events only when the native button cannot.

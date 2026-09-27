@@ -1,27 +1,29 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Button, DataTable, Light, Segmented, TextTooltip} from '../../ui/ui';
+import {ActionHelp, Button, DataTable, Light, Segmented, TextTooltip} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
 import {useValidateTab, type ValidateTabProps} from './useConfigPage';
 export function ValidateTab(props: ValidateTabProps) {
   const {canValidate, open} = props;
   const t = useT();
-  const {level, setLevel, selected, setSelected, shown, validate, summaryTone, summary, lastRun, validating, blocked, tip, levels} = useValidateTab(props);
+  const {level, setLevel, selected, setSelected, shown, validate, summaryTone, summary, lastRun, validating, blocked, reason, levels} = useValidateTab(props);
   return (
     <>
-      <div className="rp-toolbar">
-        <Light small tone={summaryTone}>
-          {summary}
-        </Light>
-        <span className="rp-label">{lastRun}</span>
-        <span className="rp-grow" />
-        {canValidate && (
-          <Button isPending={validating} isDisabled={blocked} tip={tip} onPress={validate}>
-            <Refresh className="rp-spin-on-press" />
-            {t('config.revalidate')}
-          </Button>
-        )}
-      </div>
+      <ActionHelp reason={canValidate ? reason : null}>
+        <div className="rp-toolbar">
+          <Light small tone={summaryTone}>
+            {summary}
+          </Light>
+          <span className="rp-label">{lastRun}</span>
+          <span className="rp-grow" />
+          {canValidate && (
+            <Button isPending={validating} isDisabled={blocked} onPress={validate}>
+              <Refresh className="rp-spin-on-press" />
+              {t('config.revalidate')}
+            </Button>
+          )}
+        </div>
+      </ActionHelp>
       <span className="rp-label">{t('config.validateNote')}</span>
       <Segmented label={t('config.level')} value={level} onChange={setLevel} items={levels} />
       <DataTable

@@ -6,7 +6,7 @@ import type {EditorMark} from '../../ui/code/CodeEditor';
 import {allGroupNames} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
-import {diagnosticRows, moduleEditTip, sectionMarks, sectionSummaries, sectionUnder, sourceView, splice, type SectionDraft} from './view';
+import {diagnosticRows, moduleEditTip, saveReason, sectionMarks, sectionSummaries, sectionUnder, sourceView, splice, type SectionDraft} from './view';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
@@ -90,25 +90,31 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   // A section removed on disk while being edited keeps its card, so the draft is not stranded out of sight.
   const cards = draft && !sections.some(section => section.id === draft.section.id) ? [...sections, draft.section] : sections;
   return {
-    cards: cards.map(section => ({
-      ...section,
-      editing: draft?.section.id === section.id,
-      canEdit: canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true,
-      editDisabled: dirty || !!editor.busy,
-      editTip: moduleEditTip(dirty, !!editor.busy, t),
-      note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
-      muted: !section.block,
-      // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.
-      manual: section.source && section.source.content !== undefined ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
-      edit: () => {
-        if (dirty || editor.busy || !canWrite || !section.source?.writable || !section.block || isComplete(section.source) !== true) return;
-        setFound(null);
-        setDraft({
-          section: {...section, source: section.source, block: section.block},
-          text: section.source.content!.slice(section.block.from, section.block.to)
-        });
-      }
-    })),
+    cards: cards.map(section => {
+      const editing = draft?.section.id === section.id;
+      const canEdit = canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true;
+      return {
+        ...section,
+        editing,
+        canEdit,
+        editDisabled: dirty || !!editor.busy,
+        editTip: moduleEditTip(dirty, !!editor.busy, t),
+        // Only the open draft is said in view; another change being applied passes in a moment.
+        editReason: canEdit && !editing && dirty ? t('config.moduleEditBlocked') : null,
+        note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
+        muted: !section.block,
+        // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.
+        manual: section.source && section.source.content !== undefined ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
+        edit: () => {
+          if (dirty || editor.busy || !canWrite || !section.source?.writable || !section.block || isComplete(section.source) !== true) return;
+          setFound(null);
+          setDraft({
+            section: {...section, source: section.source, block: section.block},
+            text: section.source.content!.slice(section.block.from, section.block.to)
+          });
+        }
+      };
+    }),
     text: draft?.text ?? '',
     // The last diagnostics stay until the next validation replaces them, so the list and marks do not flicker.
     change: (text: string) => setDraft(previous => (previous ? {...previous, text} : null)),
@@ -116,6 +122,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
     diagnostics: diagnosticRows(own, config.sources, locale, t),
     outbounds: () => outbounds,
     dirty,
+    saveReason: saveReason({busy: !!editor.busy, conflict: !!conflict, changed: dirty}, t),
     conflict: conflict ? t('config.changedOnDisk') : null,
     // Keeping the draft carries it over to the section as it is now, so the next save replaces that section.
     keep: conflict && under?.next ? () => setDraft(under.next) : null,

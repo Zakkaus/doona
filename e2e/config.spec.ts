@@ -625,10 +625,11 @@ test('modules list top-level counts and edit only routing through reload', async
   await editor.fill(edited);
   const global = modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true});
   await expect(global).toBeDisabled();
-  // Typing leaves keyboard modality, in which React Aria shows no hover tip; a click returns to the pointer.
-  await modules.getByRole('heading', {name: 'global', exact: true}).click();
-  await global.locator('xpath=..').hover();
-  await expect(page.getByRole('tooltip')).toHaveText('Another section has unsaved changes; apply or cancel them first');
+  // The reason is a line in view under the card's header, not a hover tip that touch never opens.
+  const blocked = 'Another section has unsaved changes; apply or cancel them first';
+  await expect(modules.getByRole('region', {name: 'global', exact: true}).getByText(blocked, {exact: true})).toBeVisible();
+  await expect(global).toHaveAccessibleDescription(blocked);
+  await expect(routing.getByText(blocked, {exact: true})).toHaveCount(0);
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await expect(routing).toContainText('6 rules, fallback: resilient');
