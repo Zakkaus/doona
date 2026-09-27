@@ -31,9 +31,9 @@ export const messages = defineMessages({
     'event.gapUnscopedNoCount': '原因：{reason}',
     'event.gap.overflow': '記錄已達保留上限',
     'event.gap.sampled': '取樣略過',
-    'event.gap.evicted': '流程記錄到期',
+    'event.gap.evicted': '移出保留記錄',
     'event.gapHelp.overflow': '部分流程記錄未能保留。若因保留筆數達到上限，可在設定頁調高該上限。',
-    'event.gapHelp.evicted': '已結束的流程超過保留時間後會移出，不影響進行中的流程。',
+    'event.gapHelp.evicted': '已結束的流程超過保留時間後會移出保留記錄；保留筆數達到上限時會提前移出。進行中的流程不受影響。',
     'event.gap.recording': '記錄設定變更'
   },
   'zh-CN': {
@@ -66,9 +66,9 @@ export const messages = defineMessages({
     'event.gapUnscopedNoCount': '原因：{reason}',
     'event.gap.overflow': '记录已达保留上限',
     'event.gap.sampled': '采样跳过',
-    'event.gap.evicted': '流程记录到期',
+    'event.gap.evicted': '移出保留记录',
     'event.gapHelp.overflow': '部分流程记录未能保留。若因保留条数达到上限，可在设置页调高该上限。',
-    'event.gapHelp.evicted': '已结束的流程超过保留时长后会移出，不影响进行中的流程。',
+    'event.gapHelp.evicted': '已结束的流程超过保留时长后会移出保留记录；保留条数达到上限时会提前移出。进行中的流程不受影响。',
     'event.gap.recording': '记录设置变更'
   },
   en: {
@@ -101,9 +101,10 @@ export const messages = defineMessages({
     'event.gapUnscopedNoCount': 'reason: {reason}',
     'event.gap.overflow': 'records reached the retention limit',
     'event.gap.sampled': 'skipped by sampling',
-    'event.gap.evicted': 'flow records expired',
+    'event.gap.evicted': 'removed from the retained records',
     'event.gapHelp.overflow': 'Some flow records could not be kept. If the kept count reached its limit, raise that limit in Settings.',
-    'event.gapHelp.evicted': 'Finished flows are removed once they pass the retention time. Flows in progress are not affected.',
+    'event.gapHelp.evicted':
+      'Finished flows are removed from the retained records after the retention time, or earlier when the record limit is reached. Flows in progress are not affected.',
     'event.gap.recording': 'recording changed'
   }
 });
