@@ -1,9 +1,7 @@
 import type {Api} from '../api';
-import type {AuthCredentials, AuthDiscovery, AuthSession} from '../auth';
+import {DEMO_ACCOUNT, type AuthCredentials, type AuthDiscovery, type AuthSession} from '../auth';
 import {ApiError} from '../error';
 
-// The demo backend's one account. It is published on the sign-in page, so it guards nothing.
-export const DEMO_ACCOUNT = {username: 'demo', password: 'demo'} as const;
 const PREFIX = 'demo-session-';
 const LIFETIME = 12 * 3600_000;
 

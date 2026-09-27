@@ -3,10 +3,9 @@ import {useLang, useT, type Params} from '../i18n';
 import type {Key} from '../i18n';
 import {docsHref} from '../features/shared/docs';
 import {ApiError, errorText} from '../api/error';
-import {discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
+import {DEMO_ACCOUNT, discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
 import {isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
-import {DEMO_ACCOUNT} from '../api/mock/auth';
 
 export function loginProfiles(profiles: Profile[], profileId: string, api: string, token: string): Profile[] | null {
   if (!profiles.some(profile => profile.id === profileId && normalizeApi(profile.api) === normalizeApi(api))) return null;
