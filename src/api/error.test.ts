@@ -46,7 +46,12 @@ it('gives a reused code the backend message as its detail, with the request note
   expect(failureNotice(error, t, t('ui.writeFailed')).detail).toBe(
     t('ui.valuePair', {label: t('ui.backend.unsupportedValue'), value: 'Group field is not mutable（request_id：abc）'})
   );
-  expect(errorLines(new ApiError(409, 'state_conflict', 'Group changed meanwhile', 'abc'), t)).toEqual({
-    summary: t('ui.backend.stateConflict') + '（request_id：abc）'
+  const refused = new ApiError(409, 'state_conflict', 'The connection is observed by eBPF but its transport is not owned by userspace.', 'abc');
+  expect(errorLines(refused, t)).toEqual({
+    summary: t('ui.backend.stateConflict'),
+    detail: 'The connection is observed by eBPF but its transport is not owned by userspace.（request_id：abc）'
+  });
+  expect(errorLines(new ApiError(404, 'capability_not_supported', 'Provider refresh is not supported', 'abc'), t)).toEqual({
+    summary: t('ui.backend.capabilityNotSupported') + '（request_id：abc）'
   });
 });

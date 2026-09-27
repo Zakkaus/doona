@@ -59,7 +59,11 @@ it('keeps the backend message for the codes honk reuses for unrelated failures',
   expect(oneLine(backendMessage('unsupported_value', 'Group field is not mutable', t), t)).toBe(
     t('ui.valuePair', {label: t('ui.backend.unsupportedValue'), value: 'Group field is not mutable'})
   );
-  expect(backendMessage('state_conflict', 'Group changed meanwhile', t)).toEqual({summary: t('ui.backend.stateConflict')});
+  expect(backendMessage('state_conflict', 'An inline node named hk-03 already exists.', t)).toEqual({
+    summary: t('ui.backend.stateConflict'),
+    detail: 'An inline node named hk-03 already exists.'
+  });
+  expect(backendMessage('capability_not_supported', 'Provider refresh is not supported', t)).toEqual({summary: t('ui.backend.capabilityNotSupported')});
 });
 
 it('shows an unknown bare code as it is', () => {
