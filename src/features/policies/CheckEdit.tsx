@@ -8,6 +8,7 @@ export function CheckEdit({model: m}: {model: CheckEditView}) {
       title={m.title}
       narrow
       isOpen={m.open}
+      reason={m.reason}
       onOpenChange={open => {
         if (!open) m.close();
       }}

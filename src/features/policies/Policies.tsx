@@ -3,7 +3,23 @@ import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import Refresh from '../../ui/icons/Refresh';
-import {Badge, Button, Card, HelpRow, Disclosure, DisclosureGroup, ErrorMessage, Light, Loading, Kv, Segmented, Switch, Empty, Tabs} from '../../ui/ui';
+import {
+  ActionHelp,
+  Badge,
+  Button,
+  Card,
+  HelpRow,
+  Disclosure,
+  DisclosureGroup,
+  ErrorMessage,
+  Light,
+  Loading,
+  Kv,
+  Segmented,
+  Switch,
+  Empty,
+  Tabs
+} from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import {CheckEdit} from './CheckEdit';
@@ -50,35 +66,37 @@ function PolicyDetail(props: PolicyGroupInput) {
       {m.loading && <PolicyWait heading={<h3 className="rp-h3">{props.name}</h3>} members={props.members} label={m.loadingText} />}
       {g && (
         <>
-          <div className="rp-row">
-            <span className="rp-cluster">
-              <h3 className="rp-h3">{g.name}</h3>
-              <Badge tip={g.policy.id}>{g.policy.label}</Badge>
-              <Light small tone="ok">
-                {g.healthy}
-              </Light>
-              {g.down && (
-                <Light small tone="err">
-                  {g.down}
+          <ActionHelp reason={m.actionsReason}>
+            <div className="rp-row">
+              <span className="rp-cluster">
+                <h3 className="rp-h3">{g.name}</h3>
+                <Badge tip={g.policy.id}>{g.policy.label}</Badge>
+                <Light small tone="ok">
+                  {g.healthy}
                 </Light>
-              )}
-              {g.untested && (
-                <HelpRow help={m.untestedHelp}>
-                  <Light small tone="neutral">
-                    {g.untested}
+                {g.down && (
+                  <Light small tone="err">
+                    {g.down}
                   </Light>
-                </HelpRow>
-              )}
-            </span>
-            <span className="rp-cluster">
-              <PolicyEdit model={m.edit} />
-              <CheckEdit model={m.check} />
-              <Button isPending={m.probing} isDisabled={m.probeDisabled} tip={m.probeTip} onPress={m.probe}>
-                <Refresh className="rp-spin-on-press" />
-                {m.probeText}
-              </Button>
-            </span>
-          </div>
+                )}
+                {g.untested && (
+                  <HelpRow help={m.untestedHelp}>
+                    <Light small tone="neutral">
+                      {g.untested}
+                    </Light>
+                  </HelpRow>
+                )}
+              </span>
+              <span className="rp-cluster">
+                <PolicyEdit model={m.edit} />
+                <CheckEdit model={m.check} />
+                <Button isPending={m.probing} isDisabled={m.probeDisabled} tip={m.probeTip} onPress={m.probe}>
+                  <Refresh className="rp-spin-on-press" />
+                  {m.probeText}
+                </Button>
+              </span>
+            </div>
+          </ActionHelp>
           <Disclosure id={g.id} title={t('ui.config')}>
             <Kv items={g.fields} />
           </Disclosure>

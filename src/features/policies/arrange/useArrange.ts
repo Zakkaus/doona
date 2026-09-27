@@ -8,7 +8,7 @@ import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupNameError} from '../../shared/policyText';
-import {arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
+import {applyReason, arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
 import {offered} from '../../../api/capabilities';
 
@@ -120,7 +120,7 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     },
     preview,
     canApply: changes.length > 0 && view.emptyNew.length === 0 && !blockedReason && !applying,
-    applyNote: view.emptyNew.length ? t('arrange.emptyNew', {group: view.emptyNew[0]}) : null,
+    applyNote: applyReason(blockedReason ? t(blockedReason) : null, view.emptyNew, t),
     apply
   };
 }
