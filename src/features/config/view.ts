@@ -328,11 +328,19 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
   };
 }
 
-// The save button's tip; it shows only with unsaved changes. While a validation runs the disabled button says so;
-// otherwise, saving included, it names the shortcut.
-export function saveTip(busy: 'save' | 'validate' | null, mac: boolean, t: Translator): string {
-  if (busy === 'validate') return t('config.saveValidating');
-  return t(mac ? 'config.saveShortcutMac' : 'config.saveShortcut');
+// The save button, shown only with unsaved changes. A refetch can make the source read-only while a draft is open;
+// then Save is refused and its tip gives the reason. While a validation runs the disabled button says so; otherwise,
+// saving included, it names the shortcut.
+export function saveView(
+  busy: 'save' | 'validate' | null,
+  writable: boolean,
+  readOnlyNote: string | null,
+  mac: boolean,
+  t: Translator
+): {disabled: boolean; tip: string} {
+  if (!writable && readOnlyNote) return {disabled: true, tip: readOnlyNote};
+  const tip = t(busy === 'validate' ? 'config.saveValidating' : mac ? 'config.saveShortcutMac' : 'config.saveShortcut');
+  return {disabled: !!busy || !writable, tip};
 }
 
 // The generation and the revision of the active configuration; the generation is explained, since a reload can
