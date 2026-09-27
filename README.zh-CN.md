@@ -46,6 +46,8 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 
 doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上。将其解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
 
+在 honk 发行含原生 API 的正式版本之前，每个 doona 发行版也附带该 `debug` 版本预先构建的 `honk-core-debug-<target>[-stock].tar.gz`，用户无需自行编译 honk。`HONK-SOURCE.txt` 注明构建所用的 honk 提交。[安装 honk](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install) 说明如何按网关选择归档文件。
+
 [文档](https://zakkaus.github.io/doona-docs/zh-CN/)包含系统要求、honk 与 doona 的安装、示例配置、首次登录、逐项检查功能与故障排查。
 
 ## 页面
