@@ -49,7 +49,7 @@ test('a non-auth discovery failure stays visible until Retry refreshes capabilit
     failed = false;
     await alert.getByRole('button', {name: 'Retry'}).click();
     await expect(alert).toHaveCount(0);
-    await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
+    await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
     expect(requests).toBeGreaterThanOrEqual(2);
   } finally {
     await context.close();

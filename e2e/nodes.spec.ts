@@ -146,7 +146,6 @@ test('node sources list their nodes and a subscription can be refreshed', async 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const original = (await createMockApi().config()).sources.find(source => source.kind === 'main')!.content!;
   await editor.fill(
     original.replace(

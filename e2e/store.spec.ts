@@ -54,7 +54,6 @@ test('a hidden main-source path does not block a validated conditional replaceme
     return api.validateConfig(candidate);
   };
   await page.goto('/#/config?tab=source&source=src-main');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await editor.fill(main.content! + '\n# updated\n');
