@@ -209,10 +209,11 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     }
     g!.restore();
   }
-  function say(s: string, x: number, yy: number, color: string, px?: number) {
+  // A width, when given, shrinks the text to fit it, so a long translation stays inside the sign.
+  function say(s: string, x: number, yy: number, color: string, px?: number, width?: number) {
     g!.fillStyle = color;
     g!.font = `${px ? 600 : 500} ${px ?? 13}px ${font}`;
-    g!.fillText(s, x, yy);
+    g!.fillText(s, x, yy, width);
   }
   // Snaps a logical x to the device pixel grid so scrolling walls keep crisp edges.
   function snap(v: number) {
@@ -235,7 +236,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       g!.fillRect(cx - 213, gi, 426, 1.5);
       for (const x of [cx - 62, cx + 56]) shape(C.paper, () => g!.rect(x, gi - 76, 6, 76));
       shape(C.gold, () => g!.roundRect(cx - 96, gi - 128, 192, 52, 6));
-      say(text.sign, cx, gi - 96, C.ink, 16);
+      say(text.sign, cx, gi - 96, C.ink, 16, 168);
       for (const x of [cx - 139, cx + 139]) {
         shape(C.cone, () => {
           g!.moveTo(x - 13, gi);
