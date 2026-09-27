@@ -8,7 +8,7 @@ import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64} from '../../api/u64';
 import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
-import {backendMessage} from '../../i18n/backend';
+import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
@@ -188,7 +188,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
     status: pseudo ? null : enumLabel(statuses, item.status, t),
     tone: tones[item.status],
-    error: item.last_error ? backendMessage(item.last_error.code, item.last_error.message, t) : undefined,
+    error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
     refreshLabel: t('nodes.refresh', {name}),
     removeLabel: t('nodes.remove', {name})
   };

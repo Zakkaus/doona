@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {LANGS, translate} from '../i18n';
-import {ApiError, LocalError, errorText, failureNotice, noticeText, withoutRequestNote} from './error';
+import {ApiError, LocalError, errorLines, errorText, failureNotice, noticeText, withoutRequestNote} from './error';
 
 it('joins a local error and its detail with the colon of the active language', () => {
   const error = new LocalError('ui.operationFailed', 'member refused');
@@ -37,4 +37,16 @@ it('drops the request note from a failure in every language and leaves other bra
     expect(failure(id)).toContain(id);
     expect(withoutRequestNote(failure(id))).toBe(failure(null));
   }
+});
+
+it('gives a reused code the backend message as its detail, with the request note after it', () => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('zh-CN', key, params);
+  const error = new ApiError(422, 'unsupported_value', 'Group field is not mutable', 'abc');
+  expect(errorLines(error, t)).toEqual({summary: t('ui.backend.unsupportedValue'), detail: 'Group field is not mutable（request_id：abc）'});
+  expect(failureNotice(error, t, t('ui.writeFailed')).detail).toBe(
+    t('ui.valuePair', {label: t('ui.backend.unsupportedValue'), value: 'Group field is not mutable（request_id：abc）'})
+  );
+  expect(errorLines(new ApiError(409, 'state_conflict', 'Group changed meanwhile', 'abc'), t)).toEqual({
+    summary: t('ui.backend.stateConflict') + '（request_id：abc）'
+  });
 });

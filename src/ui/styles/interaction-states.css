@@ -94,6 +94,13 @@
 .rp-alert-title {
   font-weight: 600;
 }
+/* The backend's own words under the message, as a toast's detail. */
+.rp-alert-detail {
+  display: block;
+  margin-block-start: 2px;
+  font-size: var(--rp-text-sm);
+  color: color-mix(in srgb, currentColor 82%, transparent);
+}
 .rp-spinner {
   width: 14px;
   height: 14px;

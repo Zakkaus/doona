@@ -47,14 +47,25 @@ const known: Record<string, Key> = {
   'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };
 
+// Codes honk reuses for unrelated failures, such as a group field, a probe target or a DNS record type: their words
+// alone cannot tell these apart, so the backend's own message goes with them.
+const reused = new Set(['invalid_request', 'unsupported_value']);
+
+// A backend message as a summary in the page language and, for a reused code, the backend's words as its detail.
+export type BackendMessage = {summary: string; detail?: string};
+
 // honk names the step that failed in details.stage. A stage with its own words says more than the code; any other
 // stage is added to the code's words.
-export function backendMessage(code: string, message: string, t: Translator, details?: unknown): string {
+export function backendMessage(code: string, message: string, t: Translator, details?: unknown): BackendMessage {
   const stage = (details as {stage?: unknown} | null | undefined)?.stage;
-  if (typeof stage === 'string' && known[stage]) return t(known[stage]);
+  if (typeof stage === 'string' && known[stage]) return {summary: t(known[stage])};
   const text = known[code] ? t(known[code]) : t('ui.backendMessage', {message});
-  return typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
+  const summary = typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
+  return reused.has(code) && message ? {summary, detail: message} : {summary};
 }
+
+// A backend message on one line, for a place with room for one.
+export const oneLine = ({summary, detail}: BackendMessage, t: Translator) => (detail ? t('ui.valuePair', {label: summary, value: detail}) : summary);
 
 export const knownCode = (code: string) => Object.hasOwn(known, code);
 

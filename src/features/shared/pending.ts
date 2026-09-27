@@ -1,6 +1,6 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError, failureNotice, noticeText} from '../../api/error';
-import {backendMessage} from '../../i18n/backend';
+import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
@@ -42,7 +42,7 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   return {
     text: restart ? t('config.writeRestart', {n: restart}) : errors ? t('ui.writeInvalid', {n: errors}) : t('rule.refused'),
     lines: found.map(item => {
-      const message = backendMessage(item.code, item.message, t);
+      const message = oneLine(backendMessage(item.code, item.message, t), t);
       const source = sources.find(source => source.id === item.source_id);
       return item.line === null ? message : t('config.atFile', {file: source ? fileName(source) : item.source_id, line: item.line, message});
     })

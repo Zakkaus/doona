@@ -26,7 +26,6 @@ import {
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
-import {errorText} from '../../api/error';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
@@ -36,7 +35,7 @@ export function Dns(props: PageProps) {
   const vm = useDns(props);
   const queryTab = (
     <>
-      {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={t('dns.queryFailed', {error: errorText(vm.queryError, t)})} />}
+      {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={error => t('dns.queryFailed', {error})} />}
       <form
         className={cardClass()}
         onSubmit={event => {

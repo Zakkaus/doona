@@ -5,7 +5,7 @@ import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {backendMessage} from '../../i18n/backend';
+import {backendMessage, oneLine} from '../../i18n/backend';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -193,7 +193,7 @@ export function overviewView(
         direction: datapathValue(a.direction, t),
         state: datapathValue(a.state, t)
       })),
-      errors: datapath?.errors.map(error => ({tooltip: error.code, text: backendMessage(error.code, error.message, t)})) ?? [],
+      errors: datapath?.errors.map(error => ({tooltip: error.code, text: oneLine(backendMessage(error.code, error.message, t), t)})) ?? [],
       warning:
         datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error)
           ? t('ui.backendMessage', {message: datapath.ebpf.last_error})

@@ -226,7 +226,7 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
   }
   return [...groups.values()].map(({item, count}, index) => {
     const path = paths.get(item.source_id) ?? item.source_id;
-    const text = backendMessage(item.code, item.message, t);
+    const text = backendMessage(item.code, item.message, t).summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
     // A translated code keeps the backend's own words in the detail, which names the entry the code cannot.
     const described = knownCode(item.code) ? t('config.backendDetail', {text: message, message: item.message}) : message;
