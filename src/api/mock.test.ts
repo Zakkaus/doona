@@ -1,9 +1,10 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
-import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp} from './selectors';
+import {chainLabel, ipLiteral, memoryTone, outboundUsage, preferredHealth, sourceIp} from './selectors';
 import {addU64} from './u64';
 import type {ApiEvent} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
+import {faultMemoryLimit, runtimeMemory} from './mock/fixtures/runtime';
 import {liteCategories} from '../dae/geodata';
 
 afterEach(() => {
@@ -72,6 +73,12 @@ it('serves cumulative outbound counters independently of live connection bytes',
   expect(runtime.traffic.connections.total).toBe(history.samples.at(-1)?.connections);
   expect(near(runtime.traffic.rates!.download_bytes_per_second, history.samples.at(-1)!.download_bytes_per_second!)).toBe(true);
   expect(near(runtime.traffic.rates!.upload_bytes_per_second, history.samples.at(-1)!.upload_bytes_per_second!)).toBe(true);
+});
+
+it('keeps the faults scenario\'s memory high but not critical at both ends of the drift', () => {
+  // memoryValues in mock/runtime.ts moves usage by at most 4% + 3% + 1% either way.
+  const current = Number(runtimeMemory.cgroup!.current_bytes);
+  for (const drift of [0.92, 1.08]) expect(memoryTone(((current * drift) / Number(faultMemoryLimit)) * 100)).toBe('warn');
 });
 
 it('serves a healthy honk by default and the seeded faults only in the faults scenario', async () => {
