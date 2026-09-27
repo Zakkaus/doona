@@ -159,14 +159,35 @@
   height: 10px;
 }
 .rp-login-showcase {
-  display: grid;
-  place-items: center;
+  /* The duck mark's own ink, paper and yellow (src/logo.svg), for the props drawn beside it on every palette. */
+  --rp-mark-ink: #0b0a09;
+  --rp-mark-paper: #fff;
+  --rp-mark-yellow: #fd0;
+  min-width: 0;
   background: var(--rp-base);
 }
-.rp-login-showcase img {
-  width: 56px;
-  height: 56px;
-  opacity: 0.5;
+/* The showcase is a game surface, not a link: the default cursor, and presses must not select text, zoom on double tap
+   or flash a tap highlight. Its focus ring stays keyboard only (see loginGame.ts) and inside the panel edge. */
+.rp-login-game {
+  all: unset;
+  display: block;
+  width: 100%;
+  height: 100%;
+  font: inherit;
+  cursor: default;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rp-login-game:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -8px;
+  border-radius: var(--rp-r-lg);
+}
+.rp-login-game canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 @media (min-width: 1024px) {
   .rp-login-page {
