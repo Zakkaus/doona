@@ -13,8 +13,10 @@ import {
   sectionSummaries,
   sectionRange,
   sectionMarks,
+  sectionUnder,
   sourceMarks,
-  splice
+  splice,
+  type SectionDraft
 } from './view';
 import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
@@ -55,30 +57,36 @@ it('names the one reason a source is read-only', () => {
   // Writes off server-wide: every main and include file is read-only for that reason alone.
   expect(reason('main', false, false)).toBe('disabled');
   expect(reason('include', true, false)).toBe('disabled');
-  // Writes on, but the file refused: honk's only per-file refusal is a listener secret.
-  expect(reason('main', false, true)).toBe('secret');
-  expect(reason('include', false, true)).toBe('secret');
+  // Writes on, but the file refused: a listener block in the text names the secret, and nothing else does, since
+  // honk also refuses the includes it writes itself.
+  expect(reason('main', false, true)).toBe('refused');
+  expect(reason('include', false, true)).toBe('refused');
+  const listener = (content: string) => readOnlyBadge({kind: 'main', writable: false, content}, true, true, t)?.reason;
+  expect(listener("experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}")).toBe('secret');
+  expect(listener("clash_api { secret: '<redacted>' }")).toBe('secret');
+  expect(listener('# native_api is off\nglobal { log_level: info }')).toBe('refused');
   expect(reason('main', true, true)).toBeNull();
   expect(reason('include', true, true)).toBeNull();
   // Writes allowed, but the text arrived with values hidden: saving it back would drop them. Unknown is not a reason yet.
   expect(reason('main', true, true, false)).toBe('redacted');
   expect(reason('include', true, true, false)).toBe('redacted');
   expect(reason('main', true, true, true)).toBeNull();
-  expect(reason('main', false, true, false)).toBe('secret');
+  expect(reason('main', false, true, false)).toBe('refused');
   expect(reason('generated', false, true, false)).toBe('generated');
   // No text at all is not a redaction: the backend did not send the file.
   const withheld = readOnlyBadge({kind: 'main', writable: true, content: undefined}, true, false, t)!;
   expect(withheld.reason).toBe('withheld');
   expect(withheld.label).toBe(t('config.withheldSource'));
   expect(withheld.note).toBe(t('config.contentWithheld'));
-  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, t)!.reason).toBe('secret');
+  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, t)!.reason).toBe('refused');
   const badge = readOnlyBadge({kind: 'generated', writable: false, content: ''}, true, true, t)!;
   expect(badge.label).toBe('Generated');
   // The line under the text already says why; only the write switch needs more than that line holds.
   expect(badge.help).toBeUndefined();
   expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
   expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.help).toBeUndefined();
-  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.label).toBe('Contains secrets');
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, t)!.label).toBe('Contains secrets');
   expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.label).toBe('Read-only');
   expect(readOnlyBadge({kind: 'subscription', writable: false, content: ''}, true, true, t)!.label).toBe('Subscription');
   expect(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.label).toBe(t('config.redactedSource'));
@@ -86,10 +94,18 @@ it('names the one reason a source is read-only', () => {
   const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false, content: ''}, true, true, t)!.note);
   notes.push(
     readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.note,
+    readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, t)!.note,
     readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.note
   );
   notes.push(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.note);
-  expect(notes).toEqual([t('config.generatedNote'), t('config.subscriptionNote'), t('config.readOnlyNote'), t('config.secretNote'), t('config.redactedNote')]);
+  expect(notes).toEqual([
+    t('config.generatedNote'),
+    t('config.subscriptionNote'),
+    t('config.readOnlyNote'),
+    t('config.secretNote'),
+    t('config.refusedNote'),
+    t('config.redactedNote')
+  ]);
 });
 it('projects source locations without inventing a line for source-wide diagnostics', async () => {
   const configSources = (await createMockApi().config()).sources;
@@ -184,6 +200,39 @@ routing {
   ]);
   expect(cards[0].block).toBeNull();
   expect(cards[0].summary).toContain('config.dae');
+});
+
+it('carries a section draft over a change outside it and stops at a change to the section itself', () => {
+  const file = (routing: string, prefix = '', digest = 'a') => ({
+    ...source(prefix + `global { log_level: info }\nrouting {\n${routing}\n}`),
+    content_sha256: digest
+  });
+  const draftOn = (loaded: ConfigSource, text: string): SectionDraft => {
+    const section = sectionSummaries([loaded], 'en', t).find(item => item.kind === 'routing')!;
+    return {section: {...section, source: section.source!, block: section.block!}, text};
+  };
+  const base = file('  fallback: direct');
+  const typed = 'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}';
+  const draft = draftOn(base, typed);
+  const now = (loaded: ConfigSource) => sectionSummaries([loaded], 'en', t);
+  expect(sectionUnder(draft, now(base))).toEqual({next: null, conflict: false});
+  // Outside the section: carried over, and the splice keeps the other change.
+  const outside = file('  fallback: direct', '# concurrent edit\n', 'b');
+  const carried = sectionUnder(draft, now(outside));
+  expect(carried.conflict).toBe(false);
+  expect(carried.next?.text).toBe(typed);
+  expect(splice(outside.content!, carried.next!.section.block, carried.next!.text)).toBe('# concurrent edit\nglobal { log_level: info }\n' + typed);
+  // The section itself: a conflict, and keeping the draft carries it over to the new section.
+  const inside = file('  fallback: block', '', 'c');
+  const refused = sectionUnder(draft, now(inside));
+  expect(refused.conflict).toBe(true);
+  expect(refused.next).toMatchObject({text: typed, section: {source: {content_sha256: 'c'}}});
+  // The same text written on disk, or a draft not typed in yet, has nothing to settle.
+  expect(sectionUnder(draft, now({...file(typed.slice(10, -2)), content_sha256: 'd'})).conflict).toBe(false);
+  const untouched = sectionUnder(draftOn(base, 'routing {\n  fallback: direct\n}'), now(inside));
+  expect(untouched).toMatchObject({conflict: false, next: {text: 'routing {\n  fallback: block\n}'}});
+  // A section removed on disk can only be cancelled.
+  expect(sectionUnder(draft, now({...source('global { log_level: info }'), content_sha256: 'e'}))).toEqual({next: null, conflict: true});
 });
 
 it('maps only diagnostics within the edited section using its current line count', () => {

@@ -171,12 +171,6 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   const writable = canWrite && isComplete(source) === true;
   // The read-only notice shows once for this source; the card remounts when another source is chosen.
   const told = useRef(false);
-  // A save refused because the file changed on disk: the refetched source becomes the base and the typed text stays,
-  // so the next save carries the new digest instead of failing with 412 again.
-  const stale = editor.error instanceof ApiError && editor.error.status === 412 && editor.errorSource === source.id && draft?.origin.id === source.id;
-  useLinked(stale && source.content_sha256 !== draft.origin.content_sha256 ? source : null, next => {
-    if (next) setDraft(current => current && {...current, origin: next});
-  });
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
   const shown = saveErrors ?? found ?? diagnostics;
   const marks = useMemo(() => sourceMarks(shown, source.id), [shown, source.id]);
@@ -187,6 +181,9 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
   const dirty = draft !== null && draft.text !== source.content;
+  // The file changed on disk under the draft, whether a refetch or a refused save showed it. Saving waits until the
+  // person keeps the draft over the new text or cancels it, since the draft would replace a change they have not seen.
+  const conflict = dirty && draft.origin.content_sha256 !== source.content_sha256;
   const guard = useDraftGuard(dirty, () => {
     setDraft(null);
     setFound(null);
@@ -210,7 +207,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     return result ? presentValidation(result) : false;
   };
   const save = async () => {
-    if (draft === null || editor.busy || !writable) return;
+    if (draft === null || editor.busy || !writable || conflict) return;
     const result = await editor.apply(draft.origin, draft.text);
     setFound(null);
     if (!result) return;
@@ -249,6 +246,8 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     outbounds,
     focus: jump ?? focusLine,
     dirty,
+    conflict: conflict ? t('config.changedOnDisk') : null,
+    keep: () => setDraft(current => current && {...current, origin: source}),
     validate,
     save,
     cancel,
@@ -257,7 +256,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
-    saveButton: saveView(editor.busy, writable, readOnly?.note ?? null, isMac, t),
+    saveButton: conflict ? {disabled: true, tip: t('config.changedOnDisk')} : saveView(editor.busy, writable, readOnly?.note ?? null, isMac, t),
     validateDisabled: !!editor.busy || !candidates,
     validateTip: !candidates ? t('config.incomplete') : undefined
   };

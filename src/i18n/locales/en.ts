@@ -119,6 +119,8 @@ export const messages = {
   },
   'config.diskAhead':
     'The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart',
+  'config.changedOnDisk': 'The file changed on disk while you were editing; saving would replace that change.',
+  'config.keepChanges': 'Keep changes',
   'config.tooLarge': 'The configuration is larger than the backend accepts. Limit: {limit} bytes',
   'config.diagnostics': 'Diagnostics',
   'config.export': 'Export',
@@ -215,6 +217,7 @@ export const messages = {
   'config.subscriptionNote': 'This file is downloaded from the subscription URL and replaced when the subscription updates, so it can only be viewed here.',
   'config.readOnlyNote': 'The backend does not allow configuration writes, so this file can only be viewed. The help above explains how to turn writes on.',
   'config.secretNote': 'This file holds a listener secret, so the backend does not write it back. Move the secret into its own included file to edit the rest.',
+  'config.refusedNote': 'The backend does not accept writes to this file, so it can only be viewed.',
   'config.redactedNote': 'The backend hid part of this file. Writing it back would lose those values, so it can only be viewed.',
   'config.level.error': 'Error',
   'config.level.warning': 'Warning',

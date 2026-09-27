@@ -1,13 +1,12 @@
 import {useEffect, useMemo, useState} from 'react';
-import {ApiError} from '../../api/error';
-import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
+import type {ConfigDiagnostic, EffectiveConfig} from '../../api/model';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, useLinked} from '../../ui/ui';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 import {allGroupNames} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
-import {diagnosticRows, moduleEditTip, sectionMarks, sectionSummaries, sourceView, splice, type ModuleSection} from './view';
+import {diagnosticRows, moduleEditTip, sectionMarks, sectionSummaries, sectionUnder, sourceView, splice, type SectionDraft} from './view';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
@@ -19,7 +18,6 @@ export type ModulesProps = {
   canValidate: boolean;
   open: (sourceId: string, line: number | null) => void;
 };
-type Draft = {section: ModuleSection & {source: ConfigSource; block: NonNullable<ModuleSection['block']>}; text: string};
 
 export function useModules({config, editor, canWrite, canValidate, open}: ModulesProps) {
   const t = useT();
@@ -27,19 +25,16 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   const locale = LOCALE[lang];
   const sections = useMemo(() => sectionSummaries(config.sources, lang, t), [config, lang, t]);
   const isComplete = useCompleteness(config.sources);
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<SectionDraft | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
   const dirty = draft !== null && draft.text !== draft.section.source.content!.slice(draft.section.block.from, draft.section.block.to);
-  // A save refused because the file changed on disk: the refetched section becomes the base and the typed text
-  // stays, so the next save carries the new digest instead of failing with 412 again.
-  const stale = editor.error instanceof ApiError && editor.error.status === 412 && !!draft && editor.errorSource === draft.section.source.id;
-  const rebased = stale
-    ? sections.find(
-        section => section.id === draft.section.id && section.source && section.block && section.source.content_sha256 !== draft.section.source.content_sha256
-      )
-    : undefined;
-  useLinked(rebased ?? null, next => {
-    if (next?.source && next.block) setDraft(current => current && {...current, section: {...next, source: next.source!, block: next.block!}});
+  // The file changed on disk while the section was being edited, whether a refetch or a refused save showed it. A
+  // change outside the section carries the draft over; a change to the section itself blocks saving until the person
+  // keeps the draft over it or discards it.
+  const under = useMemo(() => (draft ? sectionUnder(draft, sections) : null), [draft, sections]);
+  const conflict = !!under?.conflict;
+  useLinked(under && !under.conflict ? under.next : null, next => {
+    if (next) setDraft(next);
   });
   const guard = useDraftGuard(dirty, () => {
     setDraft(null);
@@ -80,7 +75,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
     if (result) present(result.valid, result.diagnostics);
   };
   const save = async () => {
-    if (!draft || fullText === null || editor.busy || !dirty) return;
+    if (!draft || fullText === null || editor.busy || !dirty || conflict) return;
     const result = await editor.apply(draft.section.source, fullText);
     if (!result) return;
     if (result.diagnostics) {
@@ -121,6 +116,9 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
     diagnostics: diagnosticRows(own, config.sources, locale, t),
     outbounds: () => outbounds,
     dirty,
+    conflict: conflict ? t('config.changedOnDisk') : null,
+    // Keeping the draft carries it over to the section as it is now, so the next save replaces that section.
+    keep: conflict && under?.next ? () => setDraft(under.next) : null,
     busy: !!editor.busy,
     saving: editor.busy === 'save',
     validating: editor.busy === 'validate',
