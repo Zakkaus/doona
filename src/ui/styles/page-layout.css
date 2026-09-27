@@ -42,6 +42,11 @@
 .rp-toolbar.top {
   align-items: flex-start;
 }
+/* A labelled field beside an unlabelled control-height one, such as a switch: bottoms align, so the switch sits level
+   with the input rather than with the middle of label and input together, and a wrapped row adds no gap. */
+.rp-toolbar.end {
+  align-items: flex-end;
+}
 .rp-between {
   display: flex;
   align-items: center;
