@@ -121,6 +121,15 @@
   flex-direction: column;
   gap: 2px;
 }
+/* An untitled note in a popover: running text at the popover's own inset. */
+.rp-popover-note {
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  line-height: 1.5;
+}
+.rp-popover-note p {
+  margin: 0 0 8px;
+}
 /* A help button, after S2's ContextualHelp: an icon beside the label it explains, kept within the label's line. */
 .rp-btn.rp-help {
   width: 24px;
