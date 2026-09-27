@@ -578,7 +578,7 @@ export const messages = {
   'ov.lim.title': '未开启的功能',
   'ov.lim.why': '可能原因',
   'ov.lim.howTo': '开启方法',
-  'ov.lim.h.configNotLoaded': '读不到配置',
+  'ov.lim.h.configNotLoaded': '无法读取配置',
   'ov.lim.h.configReadOnly': '配置为只读',
   'ov.lim.h.mainReadOnly': '无法编辑节点与来源',
   'ov.lim.h.recordOff': '配置中关闭了 {n} 项记录',
