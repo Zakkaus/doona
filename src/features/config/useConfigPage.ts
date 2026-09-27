@@ -290,7 +290,6 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
   const errors = count('error');
   const warnings = count('warning');
   const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
-  const cur = rows.find(item => item.id === selected) ?? null;
   const isComplete = useCompleteness(config.sources);
   const candidates = useValidationSources(config.sources, isComplete);
   const validate = () => {
@@ -309,7 +308,6 @@ export function useValidateTab({config, editor}: ValidateTabProps) {
     selected,
     setSelected,
     shown,
-    cur,
     validate,
     summaryTone: errors ? ('err' as const) : warnings ? ('warn' as const) : ('ok' as const),
     summary: errors

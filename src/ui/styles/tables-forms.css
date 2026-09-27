@@ -198,6 +198,14 @@
   gap: 12px;
 }
 
+/* The row a table discloses (DataTable `detail`). Empty, it leaves no box, so the page's gap is as before, yet it stays
+   in the accessibility tree as a live region. */
+.rp-table-detail {
+  min-width: 0;
+}
+.rp-table-detail:empty {
+  display: contents;
+}
 .rp-table [role='gridcell']:has(.rp-btn) {
   overflow: visible;
 }
