@@ -851,7 +851,9 @@ export const messages = {
   'rule.openSource': '打开来源',
   'rule.lineOnly': '第 {n} 行',
   'rule.add': '新建规则',
-  'rule.must': '强制使用此出站',
+  'rule.must': '锁定此出站',
+  'rule.mustHelp':
+    '锁定后，命中此规则就直接采用该出站：不再嗅探或按域名重新分流，全局和直连模式也不会改写。direct(must) 还会让 53 端口的 DNS 不经透明 DNS 接管。',
   'rule.addHelp': '将规则写入来源文件的 routing 区段；校验通过后保存并重载。',
   'rule.condition': '条件',
   'rule.conditionMode': '条件写法',

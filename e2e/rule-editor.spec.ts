@@ -22,7 +22,10 @@ test('the add-rule switch explains the must keyword in each locale', async ({pag
         .first()
         .click();
       const control = page.getByRole('dialog').getByRole('switch');
-      await expect(control).toHaveAccessibleName(lang === 'en' ? 'Require this outbound must' : '強制使用此出站 must');
+      await expect(control).toHaveAccessibleName(lang === 'en' ? 'Lock this outbound must' : '鎖定此出站 must');
+      await expect(control).toHaveAccessibleDescription(
+        lang === 'en' ? /^When locked, a match takes this outbound directly/ : /^鎖定後，命中此規則就直接採用該出站/
+      );
       await expect(page.getByRole('dialog').locator('.rp-switch code')).toHaveText('must');
     }
   }

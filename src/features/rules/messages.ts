@@ -7,7 +7,9 @@ export const messages = defineMessages({
     'rule.openSource': '開啟來源',
     'rule.lineOnly': '第 {n} 行',
     'rule.add': '新增規則',
-    'rule.must': '強制使用此出站',
+    'rule.must': '鎖定此出站',
+    'rule.mustHelp':
+      '鎖定後，命中此規則就直接採用該出站：不再嗅探或依網域重新分流，全域和直連模式也不會改寫。direct(must) 還會讓 53 連接埠的 DNS 不經透明 DNS 接管。',
     'rule.addHelp': '將規則寫入來源檔案的 routing 區段；驗證通過後儲存並重載。',
     'rule.condition': '條件',
     'rule.conditionMode': '條件寫法',
@@ -108,7 +110,9 @@ export const messages = defineMessages({
     'rule.openSource': '打开来源',
     'rule.lineOnly': '第 {n} 行',
     'rule.add': '新建规则',
-    'rule.must': '强制使用此出站',
+    'rule.must': '锁定此出站',
+    'rule.mustHelp':
+      '锁定后，命中此规则就直接采用该出站：不再嗅探或按域名重新分流，全局和直连模式也不会改写。direct(must) 还会让 53 端口的 DNS 不经透明 DNS 接管。',
     'rule.addHelp': '将规则写入来源文件的 routing 区段；校验通过后保存并重载。',
     'rule.condition': '条件',
     'rule.conditionMode': '条件写法',
@@ -209,7 +213,9 @@ export const messages = defineMessages({
     'rule.openSource': 'Open source',
     'rule.lineOnly': 'Line {n}',
     'rule.add': 'Add rule',
-    'rule.must': 'Require this outbound',
+    'rule.must': 'Lock this outbound',
+    'rule.mustHelp':
+      'When locked, a match takes this outbound directly: no sniffing or rerouting by domain, and Global or Direct mode does not override it. direct(must) also keeps port 53 DNS out of transparent DNS takeover.',
     'rule.addHelp': "Adds the rule to the source file's routing section, then saves and reloads after validation passes.",
     'rule.condition': 'Condition',
     'rule.conditionMode': 'Condition form',
