@@ -6,6 +6,7 @@ import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
+import {signInDemo} from './demo-session.mjs';
 
 const require = createRequire(import.meta.url);
 let browserModule;
@@ -65,13 +66,6 @@ const tour = [
 ];
 // Mock timestamps derive from the clock; a fixed one keeps the tour and phone images the same from run to run.
 const fixedTime = new Date('2026-09-01T09:30:00Z');
-// The mock asks for the demo account like a password backend; a session already in the tab skips the sign-in page.
-function signInDemo() {
-  const session = {profileId: 'demo', api: 'mock', token: 'demo-session-tools', expiresAt: new Date(Date.now() + 3600_000).toISOString()};
-  localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
-  localStorage.setItem('doona-profile', 'demo');
-  sessionStorage.setItem('doona-session', JSON.stringify(session));
-}
 execFileSync('cwebp', ['-version'], {stdio: 'ignore'});
 execFileSync('img2webp', ['-version'], {stdio: 'ignore'});
 async function screenshot(page, path, options = {}, lossy = false) {
