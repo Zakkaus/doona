@@ -28,6 +28,8 @@ const known: Record<string, Key> = {
   reload_degraded: 'ui.backend.reloadDegraded',
   engine_unavailable: 'ui.backend.engineUnavailable',
   request_exhausted: 'ui.backend.requestExhausted',
+  // honk builds before suspend and resume were removed report a failed one with this code; doona still offers both.
+  lifecycle_failed: 'ui.backend.lifecycleFailed',
   geodata_update_failed: 'ui.backend.geodataUpdateFailed',
   // geodata.last_error carries the failed stage as its code.
   asset_validation_failed: 'ui.backend.assetValidationFailed',

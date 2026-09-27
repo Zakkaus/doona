@@ -72,6 +72,7 @@ export const messages = defineMessages({
     'ui.backend.reloadDegraded': '組態已套用，但資料路徑處於降級狀態',
     'ui.backend.engineUnavailable': '引擎無法使用，或在完成前已停止',
     'ui.backend.requestExhausted': '重載請求序號已用盡',
+    'ui.backend.lifecycleFailed': '服務狀態切換失敗',
     'ui.backend.geodataUpdateFailed': '地理資料更新失敗',
     'ui.backend.assetValidationFailed': '新的地理資料檔未通過驗證：檔案無法解析，或缺少規則使用的分類。已沿用目前的檔案',
     'ui.backend.probeInterrupted': '探測在完成前中斷',
@@ -233,6 +234,7 @@ export const messages = defineMessages({
     'ui.backend.reloadDegraded': '配置已应用，但数据路径处于降级状态',
     'ui.backend.engineUnavailable': '引擎不可用，或在完成前已停止',
     'ui.backend.requestExhausted': '重载请求序号已用尽',
+    'ui.backend.lifecycleFailed': '服务状态切换失败',
     'ui.backend.geodataUpdateFailed': '地理数据更新失败',
     'ui.backend.assetValidationFailed': '新的地理数据文件未通过校验：文件无法解析，或缺少规则使用的分类。已沿用当前的文件',
     'ui.backend.probeInterrupted': '探测在完成前中断',
@@ -394,6 +396,7 @@ export const messages = defineMessages({
     'ui.backend.reloadDegraded': 'The configuration is applied, but the datapath is degraded',
     'ui.backend.engineUnavailable': 'The engine is unavailable or stopped before finishing',
     'ui.backend.requestExhausted': 'Reload request numbers are exhausted',
+    'ui.backend.lifecycleFailed': 'The service state change failed',
     'ui.backend.geodataUpdateFailed': 'The geodata update failed',
     'ui.backend.assetValidationFailed':
       'The new geodata file failed validation: it could not be read or lacks categories the rules use. The current files are kept',

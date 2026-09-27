@@ -1394,6 +1394,7 @@ export const messages = {
   'ui.backend.reloadDegraded': '配置已应用，但数据路径处于降级状态',
   'ui.backend.engineUnavailable': '引擎不可用，或在完成前已停止',
   'ui.backend.requestExhausted': '重载请求序号已用尽',
+  'ui.backend.lifecycleFailed': '服务状态切换失败',
   'ui.backend.geodataUpdateFailed': '地理数据更新失败',
   'ui.backend.assetValidationFailed': '新的地理数据文件未通过校验：文件无法解析，或缺少规则使用的分类。已沿用当前的文件',
   'ui.backend.probeInterrupted': '探测在完成前中断',
