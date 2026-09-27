@@ -79,11 +79,12 @@ it('shows a log level from a newer backend as sent', () => {
   expect(view.recordedText).toBe(t('log.recorded', {level: 'fatal'}));
 });
 
-it('tells an empty list apart by the recorder, then by the filter', () => {
+it('tells an empty list apart by the configuration and the recorder, then by the filter', () => {
   const recorder = (mode: 'auto' | 'on' | 'off', allowed = true) => ({allowed, mode, active: mode === 'on'});
   expect(logEmpty(recorder('off'), true, t)).toBe(t('log.emptyNotRecorded'));
-  // Settings cannot turn on a recorder the configuration forbids, so it is not what the list asks for.
-  expect(logEmpty(recorder('off', false), false, t)).toBe(t('log.empty'));
+  // Settings cannot turn on a recorder the configuration forbids, so the list names the configuration instead.
+  expect(logEmpty(recorder('off', false), false, t)).toBe(t('log.emptyForbidden'));
+  expect(logEmpty(recorder('off', false), true, t)).toBe(t('log.emptyForbidden'));
   expect(logEmpty(recorder('auto'), true, t)).toBe(t('log.emptyFiltered'));
   expect(logEmpty(undefined, false, t)).toBe(t('log.empty'));
 });

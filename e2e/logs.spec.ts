@@ -124,3 +124,25 @@ test('logs state the level the engine records and mark the levels below it', asy
   await expect(page.getByRole('option', {name: 'Debug: lower the log level in Settings first', exact: true})).toBeVisible();
   await expect(page.getByRole('option', {name: 'Warning', exact: true})).toBeVisible();
 });
+
+test('an empty log list says when the configuration forbids recording', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const runtime = await api.runtime();
+  handlers['GET runtime/settings'] = async () => {
+    const settings = await api.runtimeSettings();
+    return {...settings, recording: {...settings.recording!, logs: {allowed: false, mode: 'off', active: false}}};
+  };
+  // The empty text shows only while the stream is open, and a routed response always ends, so the page's own fetch
+  // answers the log stream with a ready frame and keeps it open.
+  const ready = `event: stream.ready\nid: ready:0\ndata: ${JSON.stringify({instance_id: runtime.instance_id, observed_at: runtime.observed_at})}\n\n`;
+  await page.addInitScript(frame => {
+    const fetch = window.fetch;
+    window.fetch = (input, init) => {
+      if (!String(input instanceof Request ? input.url : input).includes('/api/v1/logs')) return fetch(input, init);
+      const body = new ReadableStream({start: controller => controller.enqueue(new TextEncoder().encode(frame))});
+      return Promise.resolve(new Response(body, {headers: {'Content-Type': 'text/event-stream'}}));
+    };
+  }, ready);
+  await page.goto('/#/logs');
+  await expect(page.getByText('Log recording is disabled in the configuration', {exact: true})).toBeVisible();
+});

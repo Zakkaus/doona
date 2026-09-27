@@ -151,7 +151,12 @@ export type DistributionView = {
 };
 export function distributionEmpty(recorder: RecorderState | undefined, source: string, t: Translator): string {
   return t(
-    recorderEmpty(recorder, source !== 'all', {off: 'rule.distributionNotRecorded', filtered: 'rule.distributionFiltered', empty: 'rule.distributionEmpty'})
+    recorderEmpty(recorder, source !== 'all', {
+      forbidden: 'rule.distributionForbidden',
+      off: 'rule.distributionNotRecorded',
+      filtered: 'rule.distributionFiltered',
+      empty: 'rule.distributionEmpty'
+    })
   );
 }
 export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang, recorder?: RecorderState): DistributionView {

@@ -70,7 +70,9 @@ export function logView(
 }
 
 export function logEmpty(recorder: RecorderState | undefined, filtered: boolean, t: LabelFn): string {
-  return t(recorderEmpty(recorder, filtered, {off: 'log.emptyNotRecorded', filtered: 'log.emptyFiltered', empty: 'log.empty'}));
+  return t(
+    recorderEmpty(recorder, filtered, {forbidden: 'log.emptyForbidden', off: 'log.emptyNotRecorded', filtered: 'log.emptyFiltered', empty: 'log.empty'})
+  );
 }
 
 // Kept apart from `logView` because the count of held records changes while the list does not.
