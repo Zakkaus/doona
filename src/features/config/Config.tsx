@@ -270,7 +270,8 @@ function SourceCard(props: SourceCardProps) {
   const {canValidate, canWrite, contentOffered} = props;
   const t = useT();
   const {
-    editing,
+    writable,
+    refused,
     shown,
     marks,
     text,
@@ -279,7 +280,6 @@ function SourceCard(props: SourceCardProps) {
     dirty,
     validate,
     save,
-    edit,
     cancel,
     change,
     view,
@@ -288,13 +288,11 @@ function SourceCard(props: SourceCardProps) {
     saving,
     saveTip,
     validateDisabled,
-    validateTip,
-    editDisabled,
-    editTip
+    validateTip
   } = useSourceCard(props);
   return (
     <Card aria-label={view.label}>
-      {canWrite && (
+      {(canValidate || dirty) && (
         <div className="rp-row">
           <span className="rp-cluster">
             {dirty && (
@@ -310,17 +308,12 @@ function SourceCard(props: SourceCardProps) {
                 {t('config.validate')}
               </Button>
             )}
-            {!editing && (
-              <Button isDisabled={editDisabled} tip={editTip} onPress={edit}>
-                {t('config.edit')}
-              </Button>
-            )}
-            {editing && (
+            {dirty && (
               <>
                 <Button isDisabled={busy} onPress={cancel}>
                   {t('ui.cancel')}
                 </Button>
-                <Button accent isPending={saving} isDisabled={busy || !dirty} tip={saveTip} onPress={() => void save()}>
+                <Button accent isPending={saving} isDisabled={busy} tip={saveTip} onPress={() => void save()}>
                   {t('config.save')}
                 </Button>
               </>
@@ -348,12 +341,13 @@ function SourceCard(props: SourceCardProps) {
         <CodeEditor
           label={view.label}
           value={text}
-          readOnly={!editing || busy}
-          onChange={editing ? change : undefined}
+          readOnly={!writable || busy}
+          onChange={change}
+          onReadOnlyAttempt={refused}
           marks={marks}
           focusLine={focus}
           outbounds={outbounds}
-          onSave={editing && dirty && !busy ? () => void save() : undefined}
+          onSave={dirty && !busy ? () => void save() : undefined}
         />
       )}
       {canWrite && <span className="rp-label">{t('config.editNote')}</span>}

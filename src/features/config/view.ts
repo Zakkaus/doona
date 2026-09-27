@@ -199,24 +199,35 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 }
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret';
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'redacted';
 const readOnlyText: Record<ReadOnlyReason, {label: Key; help: Key}> = {
   generated: {label: 'config.kind.generated', help: 'config.generatedHelp'},
   subscription: {label: 'config.kind.subscription', help: 'config.subscriptionHelp'},
   disabled: {label: 'config.readOnly', help: 'config.readOnlyHelp'},
-  secret: {label: 'config.secretSource', help: 'config.secretHelp'}
+  secret: {label: 'config.secretSource', help: 'config.secretHelp'},
+  redacted: {label: 'config.redactedSource', help: 'config.redactedHelp'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
 // the server allows. The contract carries no reason for a main or include file, so one is inferred from honk: its
 // resources.config.writable already covers the write switch, the credential and a blocked revision store, so with it
 // true the only per-file check left is a native_api or clash_api secret defined in the file or its value in the text.
+// A text that does not match its digest (`complete` false) had values hidden by the backend; saving it would drop them.
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable'>,
   configWritable: boolean,
+  complete: boolean | undefined,
   t: Translator
-): {reason: ReadOnlyReason; label: string; help: Help} | null {
+): {reason: ReadOnlyReason; label: string; help: Help & {text: string}} | null {
   const reason: ReadOnlyReason | null =
-    source.kind === 'generated' || source.kind === 'subscription' ? source.kind : !configWritable ? 'disabled' : !source.writable ? 'secret' : null;
+    source.kind === 'generated' || source.kind === 'subscription'
+      ? source.kind
+      : !configWritable
+        ? 'disabled'
+        : !source.writable
+          ? 'secret'
+          : complete === false
+            ? 'redacted'
+            : null;
   if (!reason) return null;
   const label = t(readOnlyText[reason].label);
   return {reason, label, help: {title: label, text: t(readOnlyText[reason].help)}};
@@ -310,11 +321,10 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
   };
 }
 
-// The save button's tip. A disabled button says why it cannot be pressed: nothing to save, or a validation still
-// running. Otherwise, saving included, it names the shortcut.
-export function saveTip(busy: 'save' | 'validate' | null, dirty: boolean, mac: boolean, t: Translator): string {
+// The save button's tip; it shows only with unsaved changes. While a validation runs the disabled button says so;
+// otherwise, saving included, it names the shortcut.
+export function saveTip(busy: 'save' | 'validate' | null, mac: boolean, t: Translator): string {
   if (busy === 'validate') return t('config.saveValidating');
-  if (!busy && !dirty) return t('config.saveClean');
   return t(mac ? 'config.saveShortcutMac' : 'config.saveShortcut');
 }
 
