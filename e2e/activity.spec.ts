@@ -570,9 +570,12 @@ test('the demo switches the outbound mode and back through its own configuration
   await expect(modes.getByRole('radio', {name: 'Rule', exact: true})).toBeChecked();
 });
 
-test('the status card reports a degraded datapath as the Overview header does', async ({page}) => {
-  await page.goto('/#/activity');
-  const status = page.locator('.rp-quick .rp-cluster > .rp-light');
-  await expect(status).toHaveText('Running, datapath degraded');
-  await expect(status).toHaveClass(/\bwarn\b/);
+test.describe(() => {
+  test.use({storage: faults});
+  test('the status card reports a degraded datapath as the Overview header does', async ({page}) => {
+    await page.goto('/#/activity');
+    const status = page.locator('.rp-quick .rp-cluster > .rp-light');
+    await expect(status).toHaveText('Running, datapath degraded');
+    await expect(status).toHaveClass(/\bwarn\b/);
+  });
 });

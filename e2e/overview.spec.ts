@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, mockBackend, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
@@ -289,9 +289,12 @@ test.describe('with the base profile', () => {
   });
 });
 
-test('the header shows a degraded datapath beside the lifecycle and links to the Datapath card', async ({page}) => {
-  await page.goto('/#/overview');
-  const status = page.locator('.rp-page > .rp-between').getByRole('link', {name: 'Running, datapath degraded', exact: true});
-  await expect(status).toHaveAttribute('href', '#/overview?card=datapath');
-  await expect(status.locator('.rp-light')).toHaveClass(/\bwarn\b/);
+test.describe(() => {
+  test.use({storage: faults});
+  test('the header shows a degraded datapath beside the lifecycle and links to the Datapath card', async ({page}) => {
+    await page.goto('/#/overview');
+    const status = page.locator('.rp-page > .rp-between').getByRole('link', {name: 'Running, datapath degraded', exact: true});
+    await expect(status).toHaveAttribute('href', '#/overview?card=datapath');
+    await expect(status.locator('.rp-light')).toHaveClass(/\bwarn\b/);
+  });
 });
