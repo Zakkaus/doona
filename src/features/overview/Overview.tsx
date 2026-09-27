@@ -1,10 +1,11 @@
 import {VisuallyHidden} from 'react-aria';
 import {cardHeadings, useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {ActionGroup, Badge, Card, Bar, DataTable, Kv, Light, Link, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {ActionGroup, Badge, Button, Card, Bar, DataTable, Kv, Light, Link, PopoverDialog, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import InfoCircle from '../../ui/icons/InfoCircle';
 import {tableLayout} from '../../ui/Table';
-import {limitSnippet} from '../shared/limits';
+import {limitSnippet, type LimitGroup, type LimitHelp} from '../shared/limits';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
 
@@ -24,6 +25,38 @@ function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
       {extra > 0 && <div aria-hidden="true" style={{height: extra}} />}
       <Loading />
     </div>
+  );
+}
+// A limit's link; one that leaves the app ends with an arrow.
+function LimitLink({link}: {link: NonNullable<LimitGroup['link']>}) {
+  return (
+    <Link appearance="link" external={link.external} href={link.href}>
+      {link.text}
+      {link.external && <span aria-hidden="true">↗</span>}
+    </Link>
+  );
+}
+// After S2's ContextualHelp, with its label beside the icon: a popover with the cause, the settings that lift it and a link.
+function LimitHelpButton({help}: {help: LimitHelp}) {
+  return (
+    <PopoverDialog
+      title={help.label}
+      placement="bottom end"
+      trigger={
+        <Button quiet>
+          <InfoCircle />
+          {help.label}
+        </Button>
+      }
+    >
+      {() => (
+        <>
+          <p className="rp-limit-help">{help.text}</p>
+          {help.keys && <DaeCode as="pre" className="rp-limit-snippet" text={limitSnippet(help.keys)} />}
+          {help.link && <LimitLink link={help.link} />}
+        </>
+      )}
+    </PopoverDialog>
   );
 }
 // The least the attachments table takes: its frame, heading and two rows.
@@ -167,28 +200,17 @@ export function Overview({query}: PageProps) {
       </div>
       {vm.limits.length > 0 && (
         <Card title={t('ov.lim.title')} titleId={cardHeadings.limits}>
-          <div className="rp-limits">
+          <ul className="rp-limits">
             {vm.limits.map(group => (
-              <div key={group.cause} className="rp-limit">
-                <p className="rp-limit-reason">{group.reason}</p>
-                <ul className="rp-limit-items">
-                  {group.items.map(item => (
-                    <li key={item.id} className="rp-capability">
-                      <Light tone="warn">{item.label}</Light>
-                      <span className="rp-capability-status">{item.state}</span>
-                    </li>
-                  ))}
-                </ul>
-                {group.keys && <DaeCode as="pre" className="rp-limit-snippet" text={limitSnippet(group.keys)} />}
-                {group.restart && <p className="rp-note">{t('ov.lim.restart')}</p>}
-                {group.link && (
-                  <Link appearance="link" external={group.link.external} href={group.link.href}>
-                    {group.link.text}
-                  </Link>
-                )}
-              </div>
+              <li key={group.cause} className="rp-limit">
+                <div className="rp-limit-text">
+                  <span>{group.headline}</span>
+                  {group.features && <span className="rp-note">{group.features}</span>}
+                </div>
+                {group.help ? <LimitHelpButton help={group.help} /> : group.link && <LimitLink link={group.link} />}
+              </li>
             ))}
-          </div>
+          </ul>
         </Card>
       )}
     </div>
