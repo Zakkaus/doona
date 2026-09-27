@@ -9,7 +9,17 @@ import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {addRule, removeRule, ruleAnchor} from '../../dae/ruleText';
 import {parseRuleSeed, type RuleSeed} from '../shared/link';
-import {addRuleTip, dictionaryView, distributionView, removalView, ruleDraftView, type DictionaryView, type DistributionView, type RuleDraftView} from './view';
+import {
+  addRuleReason,
+  addRuleTip,
+  dictionaryView,
+  distributionView,
+  removalView,
+  ruleDraftView,
+  type DictionaryView,
+  type DistributionView,
+  type RuleDraftView
+} from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {offered} from '../../api/capabilities';
 
@@ -46,6 +56,8 @@ export type RuleListModel = {
   busy: boolean;
   addDisabled: boolean;
   addTip: string | undefined;
+  // Why Add rule is disabled, shown under it; another change being applied is left to the tip.
+  addReason: string | null;
   editHelp: string | null;
   loading: boolean;
   error: Error | null;
@@ -64,6 +76,7 @@ export type RuleListModel = {
   setPick: (pick: RulePick) => void;
   draft: RuleDraftView;
   submitDisabled: boolean;
+  submitReason: string | null;
   changeMode: (mode: string) => void;
 };
 export function useRuleList({go, query}: PageProps) {
@@ -221,6 +234,7 @@ export function useRuleList({go, query}: PageProps) {
     busy: !!editor.busy,
     addDisabled: !table.positions.length || !!editor.busy,
     addTip: addRuleTip(!!rules.data && !!config.data && !table.positions.length, !!editor.busy, t),
+    addReason: addRuleTip(!!rules.data && !!config.data && !table.positions.length, false, t) ?? null,
     editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
@@ -248,6 +262,7 @@ export function useRuleList({go, query}: PageProps) {
     },
     draft,
     submitDisabled: dialog?.kind !== 'remove' && (!draft.valid || !form.outbound),
+    submitReason: dialog?.kind === 'add' && !editor.busy ? addRuleReason(draft, form.outbound, t) : null,
     changeMode: (mode: string) => {
       if (pending.current) return;
       if (mode === 'text' && pick.on && pick.value.trim() && condition) setForm({...form, condition});

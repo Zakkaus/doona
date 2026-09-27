@@ -592,12 +592,11 @@ test('rule writes require a stable source ID even when the display path matches'
   await page.goto('/#/rules?tab=list');
   const add = page.getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
-  // The button is disabled while the configuration loads too, but gains its tip, and the wrapper that takes the hover,
-  // only once it arrives. React Aria opens a hover tip only in pointer modality, which the first pointer move sets
-  // after the hover has already begun, so the pointer moves once before it enters.
-  await page.mouse.move(1, 1);
-  await page.locator('.rp-tipwrap', {has: add}).hover();
-  await expect(page.getByRole('tooltip')).toHaveText('No rule is in a file doona can write, so there is no place to insert.');
+  // The button is disabled while the configuration loads too, but gains its reason, a line under the toolbar, only once
+  // it arrives.
+  const reason = 'No rule is in a file doona can write, so there is no place to insert.';
+  await expect(page.getByText(reason, {exact: true})).toBeVisible();
+  await expect(add).toHaveAccessibleDescription(reason);
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Open source', exact: true})).toHaveCount(0);
 });

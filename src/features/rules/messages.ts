@@ -18,6 +18,10 @@ export const messages = defineMessages({
     'rule.values': '值',
     'rule.valuesHelp': '多個值以逗號分隔',
     'rule.valuesInvalid': '值不可包含單引號、#、->、大括號或未成對的括號。',
+    'rule.valuesMissing': '須填寫值',
+    'rule.conditionMissing': '須填寫條件',
+    'rule.conditionInvalid': '條件須為單一呼叫，例如 domain(…)，且不可包含 ->',
+    'rule.outboundMissing': '須選擇出站',
     'rule.kind.domainSuffix': '網域後綴',
     'rule.kind.domain': '完整網域',
     'rule.kind.geosite': 'geosite 分類',
@@ -107,7 +111,9 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': '沒有路由規則',
     'rule.dnsHeading': 'DNS：{name}',
     'rule.droppedUnknown': '遺失記錄數未知',
-    'rule.traceFailed': '無法執行追蹤'
+    'rule.traceFailed': '無法執行追蹤',
+    'rule.traceUnavailable': '後端目前無法執行追蹤',
+    'rule.resolveUnavailable': '後端不提供此解析模式'
   },
   'zh-CN': {
     'rule.dictionaryCaption': '{n} 条规则，代次 {generation}',
@@ -126,6 +132,10 @@ export const messages = defineMessages({
     'rule.values': '值',
     'rule.valuesHelp': '多个值以逗号分隔',
     'rule.valuesInvalid': '值不能包含单引号、#、->、花括号或未配对的括号。',
+    'rule.valuesMissing': '须填写值',
+    'rule.conditionMissing': '须填写条件',
+    'rule.conditionInvalid': '条件须为单个调用，例如 domain(…)，且不能包含 ->',
+    'rule.outboundMissing': '须选择出站',
     'rule.kind.domainSuffix': '域名后缀',
     'rule.kind.domain': '完整域名',
     'rule.kind.geosite': 'geosite 分类',
@@ -215,7 +225,9 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': '暂无路由规则',
     'rule.dnsHeading': 'DNS：{name}',
     'rule.droppedUnknown': '丢失记录数未知',
-    'rule.traceFailed': '无法执行追踪'
+    'rule.traceFailed': '无法执行追踪',
+    'rule.traceUnavailable': '后端当前无法执行追踪',
+    'rule.resolveUnavailable': '后端不提供此解析模式'
   },
   en: {
     'rule.dictionaryCaption': {one: '{n} rule, generation {generation}', other: '{n} rules, generation {generation}'},
@@ -234,6 +246,10 @@ export const messages = defineMessages({
     'rule.values': 'Values',
     'rule.valuesHelp': 'Separate multiple values with commas',
     'rule.valuesInvalid': 'Values cannot contain an apostrophe, #, ->, braces or unmatched parentheses.',
+    'rule.valuesMissing': 'Enter the values',
+    'rule.conditionMissing': 'Enter a condition',
+    'rule.conditionInvalid': 'The condition must be one call such as domain(…), without ->',
+    'rule.outboundMissing': 'Choose an outbound',
     'rule.kind.domainSuffix': 'Domain suffix',
     'rule.kind.domain': 'Full domain',
     'rule.kind.geosite': 'geosite category',
@@ -328,6 +344,8 @@ export const messages = defineMessages({
     'rule.dictionaryEmpty': 'No routing rules',
     'rule.dnsHeading': 'DNS: {name}',
     'rule.droppedUnknown': 'Dropped record count unknown',
-    'rule.traceFailed': 'Could not run the trace'
+    'rule.traceFailed': 'Could not run the trace',
+    'rule.traceUnavailable': 'The backend cannot run a trace right now',
+    'rule.resolveUnavailable': 'The backend does not offer this resolution mode'
   }
 });

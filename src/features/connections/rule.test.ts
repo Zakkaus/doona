@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
-import {pinnedPosition, rulePositions, ruleTargets} from './rule';
+import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers a domain exactly or as a suffix, and otherwise the destination IP of either family', () => {
@@ -87,4 +87,14 @@ it('keeps the pinned position while its rule exists and reports it moved after a
     t
   );
   expect(pinnedPosition(renumbered, pin, '41').moved).toBe(true);
+});
+
+it('says the add-rule dialog is loading only while what it needs is being read', () => {
+  const idle = {disabled: true, busy: false, failed: false, unplaceable: false};
+  expect(ruleDialogReason(idle, t)).toBe('Loading…');
+  expect(ruleDialogReason({...idle, disabled: false}, t)).toBeNull();
+  // A failed read and a missing position have their own notices in the dialog; a write in flight shows as pending.
+  expect(ruleDialogReason({...idle, failed: true}, t)).toBeNull();
+  expect(ruleDialogReason({...idle, unplaceable: true}, t)).toBeNull();
+  expect(ruleDialogReason({...idle, busy: true}, t)).toBeNull();
 });

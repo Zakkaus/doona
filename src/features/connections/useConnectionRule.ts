@@ -6,7 +6,7 @@ import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from '../shared/usePendingApply';
-import {pinnedPosition, rulePositions, ruleTargets, type RuleTarget} from './rule';
+import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type RuleTarget} from './rule';
 
 type Pin = {generation: string; rule: RoutingRule};
 type Draft = {targets: RuleTarget[]; matched: string | null; current: string | null; target: number; outbound: string; pin: Pin | null};
@@ -98,6 +98,9 @@ export function useConnectionRule(connection: Connection | undefined) {
     setDraft(null);
   };
   const targets = connection ? ruleTargets(connection) : [];
+  const loadError = rules.error ?? config.error ?? groups.error;
+  const unplaceable = !!rules.data && !!config.data && !positions.length;
+  const disabled = !target || !before || !groupsRead;
   return {
     canAdd: canWrite && targets.length > 0,
     // Showing the matched rule only reads the rule list.
@@ -117,11 +120,12 @@ export function useConnectionRule(connection: Connection | undefined) {
       setBefore: (value: string) => edit({pin: pinOf(value)}),
       preview: target ? (outbound ? ruleLine(target.condition, outbound) : target.condition) : '',
       busy: pending.busy,
-      loadError: rules.error ?? config.error ?? groups.error,
+      loadError,
       retry,
       moved,
-      unplaceable: !!rules.data && !!config.data && !positions.length,
-      disabled: !target || !before || !groupsRead,
+      unplaceable,
+      disabled,
+      reason: ruleDialogReason({disabled, busy: pending.busy, failed: !!loadError, unplaceable}, t),
       failure,
       hold,
       applyNow: () => void applyNow(),

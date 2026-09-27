@@ -75,6 +75,27 @@ function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): stri
 export const addRuleTip = (noPosition: boolean, busy: boolean, t: Translator) =>
   noPosition ? t('conn.ruleNoPosition') : busy ? t('ui.changeApplying') : undefined;
 
+// Why Add in the add-rule dialog is disabled, first applicable: the condition is missing or invalid, then no outbound.
+export function addRuleReason(draft: Pick<RuleDraftView, 'valid' | 'mode' | 'pickError' | 'rawInvalid'>, outbound: string, t: Translator): string | null {
+  if (!draft.valid) {
+    if (draft.mode === 'pick') return draft.pickError ?? t('rule.valuesMissing');
+    return t(draft.rawInvalid ? 'rule.conditionInvalid' : 'rule.conditionMissing');
+  }
+  return outbound ? null : t('rule.outboundMissing');
+}
+
+// Why Run trace is disabled, first applicable: the backend cannot trace, the form is incomplete or wrong, or the
+// resolution mode is not offered. Null while the capabilities load or a trace runs.
+export function traceReason(
+  {loaded, busy, available, invalid, modeOffered}: {loaded: boolean; busy: boolean; available: boolean; invalid: Key | null; modeOffered: boolean},
+  t: Translator
+): string | null {
+  if (!loaded || busy) return null;
+  if (!available) return t('rule.traceUnavailable');
+  if (invalid) return t(invalid);
+  return modeOffered ? null : t('rule.resolveUnavailable');
+}
+
 export function dictionaryView(
   rules: RoutingRule[],
   generation: string | undefined,
