@@ -84,3 +84,11 @@ it('distinguishes unsupported runtime from loading without hiding independent me
   expect(view.rss).not.toBe('—');
   expect(activityView(undefined, undefined, t).status.text).toBe(t('ui.loading'));
 });
+
+it('reports a degraded or failed datapath in the status as Overview does, without its link', () => {
+  expect(activityView(runtime, undefined, t, true, 'en', 'degraded').status).toEqual({
+    tone: 'warn',
+    text: t('ov.status.datapathDegraded', {status: t('lifecycle.running')})
+  });
+  expect(activityView(runtime, undefined, t, true, 'en', 'active').status).toEqual({tone: 'ok', text: t('lifecycle.running')});
+});

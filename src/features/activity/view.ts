@@ -1,25 +1,14 @@
-import type {ApiEvent, ConnectionList, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
+import type {ApiEvent, ConnectionList, Datapath, Group, Node, Runtime, RuntimeMemory, RuntimeOutbounds} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {backendCode} from '../../i18n/backend';
 import {isBuiltinOutbound} from '../../dae/vocab';
-import {
-  eventKindLabels,
-  eventSummary,
-  healthMillis,
-  lifecycleStates,
-  lifecycleTone,
-  memoryTone,
-  outboundLabel,
-  outboundUsage,
-  preferredHealth,
-  routineGap,
-  shortId
-} from '../../api/selectors';
+import {eventKindLabels, eventSummary, healthMillis, memoryTone, outboundLabel, outboundUsage, preferredHealth, routineGap, shortId} from '../../api/selectors';
 import {localTime, formatBytes, formatRate, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
+import {engineStatus} from '../shared/engineStatus';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -125,14 +114,20 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   };
 }
 const memoryText = {ok: 'act.memoryOk', warn: 'act.memoryHigh', err: 'act.memoryNearLimit'} as const;
-export function activityView(runtime: Runtime | undefined, memory: RuntimeMemory | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en') {
+export function activityView(
+  runtime: Runtime | undefined,
+  memory: RuntimeMemory | undefined,
+  t: LabelFn,
+  runtimeAvailable?: boolean,
+  locale = 'en',
+  datapath?: Datapath['state']
+) {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const memoryLevel = percent === null ? null : memoryTone(percent);
+  // Overview's status; the card's own link already leads there, so the status carries no link of its own.
+  const {tone, text} = engineStatus(runtime?.lifecycle.state, datapath, t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading'), t);
   return {
-    status: {
-      tone: lifecycleTone(runtime?.lifecycle.state) as 'ok' | 'err' | 'warn',
-      text: runtime ? enumLabel(lifecycleStates, runtime.lifecycle.state, t) : t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading')
-    },
+    status: {tone, text},
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null, locale),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),
     connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),

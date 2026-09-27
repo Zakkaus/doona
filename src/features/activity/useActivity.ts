@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useRuntime, useRuntimeMemory, useTrafficHistory, useVersion} from '../../store';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useTrafficHistory, useVersion} from '../../store';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
@@ -20,6 +20,7 @@ export function useActivity() {
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
   const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
+  const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
   const [range, setRange] = useState('live');
   const windowSeconds = trafficWindows[range] ?? 120;
   const memoryHistory = useMemorySeries(capabilities.data, memory.data);
@@ -49,8 +50,8 @@ export function useActivity() {
   const count = useCallback((value: number) => formatNumber(value, locale), [locale]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value ?? null, locale), [locale]);
   const view = useMemo(
-    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale),
-    [runtime.data, memory.data, t, resources?.runtime.available, locale]
+    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale, datapath.data?.state),
+    [runtime.data, memory.data, t, resources?.runtime.available, locale, datapath.data?.state]
   );
   const version = useVersion();
   // Overview lists these with their reasons; here the status card only counts them.
