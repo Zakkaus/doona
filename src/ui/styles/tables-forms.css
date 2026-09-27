@@ -157,6 +157,19 @@
   align-items: center;
   max-width: none;
 }
+/* A group row's chevron points along the row while folded and down while open. */
+.rp-table .rp-expand {
+  flex: none;
+  margin-inline-start: -8px;
+  color: var(--rp-muted);
+}
+.rp-table .rp-expand > svg {
+  rotate: calc(-90deg * var(--rp-dir));
+  transition: rotate var(--rp-duration-panel) var(--rp-ease-out);
+}
+.rp-table [data-expanded] > .rp-expand > svg {
+  rotate: 0deg;
+}
 .rp-table .cell {
   width: 100%;
   min-width: 0;

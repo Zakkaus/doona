@@ -11,12 +11,13 @@ import {
   Cell,
   Virtualizer,
   TableLayout,
+  Button as RButton,
   type Selection
 } from 'react-aria-components';
 import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
 import {useContentWidth} from './hooks';
-import {TextTooltip} from './Button';
+import {TextTooltip, buttonClass} from './Button';
 import {Empty, Loading} from './Feedback';
 
 // Minima include padding; positive drop priorities yield in ascending order when columns cannot fit.
@@ -24,7 +25,7 @@ type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHea
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
 // A group row in tree mode: its label under the first column, its totals under the others, then its children.
-export type TableGroup<T> = {id: number | string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
+export type TableGroup<T> = {id: string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
 
 export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisibleHeader?: boolean}) {
   const t = useT();
@@ -174,9 +175,10 @@ export function DataTable<T extends {id: string}>({
   stream?: boolean;
   // A list that is often short (sources, data files, the DNS cache, events): no full-height placeholder while it loads.
   fit?: boolean;
-  // Tree mode (connections): `rows` may hold groups, which stay expanded and cannot be selected. The first visible
-  // column heads each row and, once `grouped`, holds the tree. Home and End move between rows, never within one.
-  tree?: {grouped: boolean};
+  // Tree mode (connections): `rows` may hold groups, which cannot be selected and fold as `collapsed` says; the chevron
+  // or ArrowLeft/ArrowRight on a group row calls `onToggle`. The first visible column heads each row and, once
+  // `grouped`, holds the tree. Home and End move between rows, never within one.
+  tree?: {grouped: boolean; collapsed: (group: string) => boolean; onToggle: (group: string) => void};
   // A row press opens a detail that shows every column's value in full, so a tap on cut text there opens the detail
   // rather than a tip (TextTooltip).
   rowDetail?: boolean;
@@ -189,9 +191,14 @@ export function DataTable<T extends {id: string}>({
   const [treeGridRef, gridWidth] = useContentWidth<HTMLElement>();
   const width = tree ? gridWidth : containerWidth;
   const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
-  // Groups count as rows for the height, the virtual row count and the reveal offset.
-  const flat = useMemo(() => (tree ? rows.flatMap(row => (isGroup(row) ? [row, ...row.children] : [row])) : rows), [rows, tree]);
-  const groupKeys = useMemo(() => (tree ? rows.filter(isGroup).map(row => row.id) : undefined), [rows, tree]);
+  // Groups count as rows for the height, the virtual row count and the reveal offset; a folded group's children do not.
+  const flat = useMemo(
+    () => (tree ? rows.flatMap(row => (isGroup(row) ? (tree.collapsed(row.group) ? [row] : [row, ...row.children]) : [row])) : rows),
+    [rows, tree]
+  );
+  const groups = useMemo(() => (tree ? rows.filter(isGroup) : []), [rows, tree]);
+  const groupKeys = useMemo(() => (tree ? groups.map(row => row.id) : undefined), [groups, tree]);
+  const expandedKeys = useMemo(() => (tree ? groups.filter(row => !tree.collapsed(row.group)).map(row => row.id) : undefined), [groups, tree]);
   const fitted = useTableHeight(height, flat.length, loading, fit);
   const [virtual, setVirtual] = useState(stream || flat.length >= virtualiseFrom);
   if (!virtual && flat.length >= virtualiseFrom) setVirtual(true);
@@ -216,6 +223,11 @@ export function DataTable<T extends {id: string}>({
     <Row key={row.id} id={row.id} textValue={row.group}>
       {shown.map((column, index) => (
         <Cell key={column.id} className={column.align}>
+          {index === 0 && (
+            <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
+              <ChevronDown />
+            </RButton>
+          )}
           <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
         </Cell>
       ))}
@@ -232,13 +244,23 @@ export function DataTable<T extends {id: string}>({
       }}
       aria-label={label}
       aria-rowcount={virtual ? flat.length + 1 : undefined}
-      expandedKeys={groupKeys}
+      expandedKeys={expandedKeys}
+      onExpandedChange={keys => {
+        if (tree) for (const row of groups) if (keys.has(row.id) === tree.collapsed(row.group)) tree.onToggle(row.group);
+      }}
       disabledKeys={groupKeys}
+      // Group rows take focus, so the arrow keys can fold them, but never the selection.
+      disabledBehavior="selection"
       treeColumn={tree?.grouped ? shown[0]?.id : undefined}
       selectionMode={onSelect ? 'single' : 'none'}
       selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
       selectedKeys={keys}
-      onSelectionChange={keys => onSelect?.(selectedRow(keys))}
+      // The selection is never emptied from inside: focusing a group row asks to replace it with nothing, which leaves
+      // the selected connection and its detail as they were.
+      onSelectionChange={keys => {
+        const id = selectedRow(keys);
+        if (id !== null) onSelect?.(id);
+      }}
       disallowEmptySelection={!!onSelect}
       sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
       onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
