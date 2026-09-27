@@ -1,6 +1,6 @@
-Pin: 21d3de7
+Pin: 3640713
 
-openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch feat/config-source-create, commit 21d3de7 (PR #30, not yet merged).
+openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch feat/config-source-create, commit 3640713 (PR #30, not yet merged).
 
 The merged changes include PR #4 client fixes, #5 config, #6 observability and management, #7 connection close, and #8 GroupOverrideCleared with the native outbound mode dropped.
 They also include #9 rule source IDs, #12 recorder modes and unredacted administrative data, #13 password authentication (8 to 128 characters), #14 DNS cache usage by entry count, #15 configurable geodata sources with automatic updates and update status, #16 flow demand, #17 short DNS pages, and #18 geodata seeding from the configuration file.
