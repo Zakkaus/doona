@@ -127,6 +127,7 @@ test('read-only main configuration keeps the current mode and explains the write
   await expect(mode.getByRole('radio', {name: 'Global', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Global target', exact: true})).toContainText('proxy');
+  await expect(page.getByRole('button', {name: 'Global target', exact: true})).toHaveAccessibleDescription('Read-only');
   await page.getByRole('button', {name: 'Why is the mode read-only?'}).click();
   await expect(page.getByRole('dialog', {name: 'Why is the mode read-only?'})).toContainText('honk requires configuration writes');
   await expect(page.getByRole('link', {name: 'Read-only sources'})).toHaveAttribute(
