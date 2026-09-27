@@ -46,6 +46,8 @@ Some lists have one home, and everything else reads them:
 - Palettes: `src/shell/palettes.ts`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
+The user documentation lives in [Zakkaus/doona-docs](https://github.com/Zakkaus/doona-docs) and is published at [zakkaus.github.io/doona-docs](https://zakkaus.github.io/doona-docs/). When a change alters what users see or do, open a matching pull request there. The app links docs sections through `docsHref`; `src/features/shared/docsAnchors.json` maps each anchor to its page, and doona-docs checks that map against its pages.
+
 ## Translations
 
 doona ships three languages: Traditional Chinese (`zh-TW`), Simplified Chinese (`zh-CN`) and English (`en`). Each feature keeps its strings in its own `messages.ts`, with the three tables side by side, so a translator sees every language of a key together. `src/i18n/locales/*.ts` is generated from those files; do not edit it.
