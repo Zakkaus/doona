@@ -5,7 +5,7 @@ import {errorText} from '../../api/error';
 import {useConfigCreate} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
 import {useDialogSession} from '../../shell/draft';
-import {includeDirectory, includedBy, includePatterns, namePatterns, newSourceNameProblem, newSourcePathProblem} from '../../dae/newSource';
+import {includeCheck, includeDirectory, includePatterns, namePatterns, newSourceNameProblem, newSourcePathProblem} from '../../dae/newSource';
 
 export type NewSourceProps = {
   sources: ConfigSource[];
@@ -21,6 +21,7 @@ export function useNewSource({sources, contentOffered, refetch, open}: NewSource
   const patterns = useMemo(() => (contentOffered && main?.content !== undefined ? includePatterns(main.content) : null), [contentOffered, main]);
   // With a pattern to fill, the field holds only the name its `*` stands for; without one, the whole relative path.
   const choices = useMemo(() => namePatterns(patterns ?? []), [patterns]);
+  const loads = useMemo(() => includeCheck(sources), [sources]);
   // null while the dialog is closed.
   const [draft, setDraft] = useState<{text: string; pattern: string} | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
@@ -64,8 +65,8 @@ export function useNewSource({sources, contentOffered, refetch, open}: NewSource
     text,
     setText: (next: string) => setDraft(prev => prev && {...prev, text: next}),
     error: invalid ? t(invalid) : undefined,
-    // Only a known set of patterns can say a path is not loaded; the backend refuses it either way.
-    unmatched: !!text && !invalid && patterns !== null && !includedBy(patterns, value),
+    // Only the known patterns of every loaded file can say a path is not loaded; the backend refuses it either way.
+    unmatched: !!text && !invalid && loads !== null && !loads(value),
     problem,
     busy,
     canSubmit: !!text && !invalid && !busy,

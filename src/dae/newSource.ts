@@ -24,6 +24,32 @@ export function globMatch(pattern: string, path: string): boolean {
 
 export const includedBy = (patterns: string[], path: string) => patterns.some(pattern => globMatch(pattern, path));
 
+// `path` resolved against the directory of the file at `base`, as an absolute POSIX path with `.` and `..` collapsed.
+// Names stay as written: a URL would percent-encode a space or CJK and cut the path at `?`.
+export function resolveIncludePath(base: string | undefined, path: string) {
+  const joined = path.startsWith('/') ? path : (base ?? '').slice(0, (base ?? '').lastIndexOf('/') + 1) + path;
+  const parts: string[] = [];
+  for (const part of joined.split('/')) {
+    if (part === '..') parts.pop();
+    else if (part && part !== '.') parts.push(part);
+  }
+  return '/' + parts.join('/') + (parts.length && /\/\.{0,2}$/.test(joined) ? '/' : '');
+}
+
+// Whether a loaded file includes `path`, given relative to the main source's directory as a new source's path is.
+// Each file's patterns resolve from the directory of the file holding them. A source's path is relative to the main
+// source's directory too; resolving it against the main path serves a backend that reports absolute paths as well.
+// Null while a file's text is unknown, since its patterns are too.
+export function includeCheck(sources: Pick<ConfigSource, 'kind' | 'path' | 'content'>[]): ((path: string) => boolean) | null {
+  const main = sources.find(source => source.kind === 'main');
+  if (!main || sources.some(source => source.content === undefined)) return null;
+  const patterns = sources.flatMap(source => {
+    const at = resolveIncludePath(main.path, source.path);
+    return includePatterns(source.content!).map(pattern => resolveIncludePath(at, pattern));
+  });
+  return path => includedBy(patterns, resolveIncludePath(main.path, path));
+}
+
 // The directory of the first pattern that globs file names in a fixed directory, with its trailing slash.
 export function includeDirectory(patterns: string[]): string {
   for (const pattern of patterns.map(item => item.replace(/^\.\//, ''))) {
