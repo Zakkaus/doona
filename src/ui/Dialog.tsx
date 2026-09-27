@@ -32,7 +32,7 @@ import Close from './icons/Close';
 import {useT} from '../i18n';
 import {errorText} from '../api/error';
 import {cx} from './cx';
-import {Button} from './Button';
+import {ActionHelp, Button} from './Button';
 import {InlineAlert} from './Feedback';
 import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
@@ -70,7 +70,8 @@ export function ModalDialog({
   isOpen,
   onOpenChange,
   hideTitle,
-  locked
+  locked,
+  reason
 }: {
   trigger?: ReactElement;
   title: string;
@@ -83,17 +84,19 @@ export function ModalDialog({
   hideTitle?: boolean;
   // Neither the underlay nor Escape closes it: the app behind cannot be used until the dialog is done.
   locked?: boolean;
+  // Why the footer's actions cannot run, as an ActionHelp line under them.
+  reason?: string | null;
 }) {
   const modal = (
     <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
         <Dialog className="rp-dialog" role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
           {({close}) => (
-            <>
+            <ActionHelp reason={footer ? reason : null}>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
               {typeof children === 'function' ? children(close) : children}
               {footer && <div className="foot">{footer(close)}</div>}
-            </>
+            </ActionHelp>
           )}
         </Dialog>
       </Modal>
