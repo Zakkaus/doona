@@ -1226,7 +1226,6 @@ export const messages = {
   'login.demoNote': '示範帳號：{username}　密碼：{password}',
   'login.gameLabel': '小遊戲：按下讓小鴨拍翅膀',
   'login.gameSign': '展示區施工中',
-  'login.gameStart': '點擊或按空白鍵拍翅膀',
   'login.gameRestart': '點擊或按空白鍵重新開始',
   'login.gameResult': '斷線　已轉送 {amount}',
   'login.gameBest': '最佳 {amount}',

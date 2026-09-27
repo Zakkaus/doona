@@ -16,7 +16,6 @@ export default function LoginShowcase() {
   const text = useMemo<GameText>(
     () => ({
       sign: t('login.gameSign'),
-      start: t('login.gameStart'),
       restart: t('login.gameRestart'),
       result: amount => t('login.gameResult', {amount}),
       best: amount => t('login.gameBest', {amount})
