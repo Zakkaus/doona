@@ -94,6 +94,7 @@ export const messages = {
     'The backend does not allow configuration writes. On honk, enable experimental.native_api.config_write and set a secret or password sign-in.',
   'config.secretSource': 'Contains secrets',
   'config.redactedSource': 'Redacted',
+  'config.withheldSource': 'Text not returned',
   'config.readOnlyAttempt': 'This file is read-only',
   'config.kind.main': 'Main',
   'config.kind.include': 'Include',

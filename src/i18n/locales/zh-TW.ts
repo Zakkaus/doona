@@ -90,6 +90,7 @@ export const messages = {
   'config.readOnlyHelp': '後端未開放寫入組態。honk 須啟用 experimental.native_api.config_write，並設定密鑰或密碼登入。',
   'config.secretSource': '含密鑰',
   'config.redactedSource': '內容已遮蔽',
+  'config.withheldSource': '未回傳內容',
   'config.readOnlyAttempt': '此檔案唯讀',
   'config.kind.main': '主組態',
   'config.kind.include': '引入檔',

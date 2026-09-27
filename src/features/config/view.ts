@@ -199,7 +199,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 }
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'redacted';
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'withheld' | 'redacted';
 // The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
@@ -207,15 +207,17 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   subscription: {label: 'config.kind.subscription', note: 'config.subscriptionNote'},
   disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
   secret: {label: 'config.secretSource', note: 'config.secretNote'},
+  withheld: {label: 'config.withheldSource', note: 'config.contentWithheld'},
   redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
 // the server allows. The contract carries no reason for a main or include file, so one is inferred from honk: its
 // resources.config.writable already covers the write switch, the credential and a blocked revision store, so with it
 // true the only per-file check left is a native_api or clash_api secret defined in the file or its value in the text.
-// A text that does not match its digest (`complete` false) had values hidden by the backend; saving it would drop them.
+// A source without text was not sent at all. A text that does not match its digest (`complete` false) had values
+// hidden by the backend; saving it would drop them.
 export function readOnlyBadge(
-  source: Pick<ConfigSource, 'kind' | 'writable'>,
+  source: Pick<ConfigSource, 'kind' | 'writable' | 'content'>,
   configWritable: boolean,
   complete: boolean | undefined,
   t: Translator
@@ -227,9 +229,11 @@ export function readOnlyBadge(
         ? 'disabled'
         : !source.writable
           ? 'secret'
-          : complete === false
-            ? 'redacted'
-            : null;
+          : source.content === undefined
+            ? 'withheld'
+            : complete === false
+              ? 'redacted'
+              : null;
   if (!reason) return null;
   const text = readOnlyText[reason];
   const label = t(text.label);
