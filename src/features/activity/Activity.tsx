@@ -28,7 +28,11 @@ export function Activity() {
           <div className="rp-row">
             <div className="rp-cluster">
               <Light tone={vm.status.tone}>{vm.status.text}</Light>
-              {vm.limited && <span className="rp-label">{vm.limited}</span>}
+              {vm.limited && (
+                <Link appearance="link" href={href('overview', {card: 'limits'})}>
+                  {vm.limited}
+                </Link>
+              )}
             </div>
             <Link appearance="button" quiet href={href('overview')}>
               {t('act.viewDetails')}
