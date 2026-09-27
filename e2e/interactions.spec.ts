@@ -157,7 +157,6 @@ test('the backend indicator is a styled control, not a bare button', async ({pag
 
 test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {
   await page.goto('/#/config?tab=source');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content[contenteditable="true"]');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+A');

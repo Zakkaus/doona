@@ -63,7 +63,6 @@ for (const tab of ['source', 'setup']) {
   test(`${tab} drafts survive cancelled sidebar and hash navigation`, async ({page}) => {
     await page.goto(`/#/config?tab=${tab}`);
     if (tab === 'source') {
-      await page.getByRole('button', {name: 'Edit', exact: true}).click();
       await page.locator('.cm-content').fill('draft that must survive');
     } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/unsaved');
     await page.locator('.rp-nav[href="#/connections"]').click();
@@ -106,8 +105,8 @@ for (const tab of ['source', 'setup']) {
     });
     await page.goto(`/#/config?tab=${tab}`);
     if (tab === 'source') {
-      await page.getByRole('button', {name: 'Edit', exact: true}).click();
       const editor = page.locator('.cm-content');
+      await expect(editor).toHaveAttribute('contenteditable', 'true');
       await editor.click();
       await page.keyboard.press('ControlOrMeta+End');
       await page.keyboard.type('\n# retained edit\n');
@@ -276,7 +275,6 @@ for (const tab of ['source', 'setup']) {
     });
     await page.goto(`/#/config?tab=${tab}`);
     if (tab === 'source') {
-      await page.getByRole('button', {name: 'Edit', exact: true}).click();
       await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
     } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/discarded');
     const validating = page.waitForRequest('**/config/validate');
@@ -288,7 +286,7 @@ for (const tab of ['source', 'setup']) {
     } else await page.getByRole('tab', {name: 'Sources', exact: true}).click();
     await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
     try {
-      await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeEnabled();
+      await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
     } finally {
       release();
     }

@@ -16,14 +16,12 @@ test('same-route query changes selection through browser history', async ({page}
 
 test('discard resets a source draft even when the destination selects the same editor', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-main');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   await page.locator('.cm-content').fill('discard this draft');
   await page.locator('.rp-nav[href="#/config"]').click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/config$/);
   await page.getByRole('tab', {name: 'Sources', exact: true}).click();
   await expect(page.locator('.cm-content')).not.toContainText('discard this draft');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   await page.locator('.cm-content').fill('guard this new draft');
   await page.locator('.rp-nav[href="#/settings"]').click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
