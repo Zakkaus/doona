@@ -11,7 +11,10 @@ import {
   connectionsView,
   filterMenu,
   connectionTableView,
+  connectionId,
+  connectionKey,
   isCollapsed,
+  revealTarget,
   readView,
   sortByKey,
   tableRows,
@@ -53,6 +56,45 @@ it('keys groups by their name so a reorder keeps each id', () => {
   expect(tableRows([a, b], {...view, sort: {column: 'src', direction: 'descending'}}, t).map(row => row.id)).toEqual(['g:10.0.0.2', 'g:10.0.0.1']);
 });
 
+it('keys outbound groups on the outbound, whatever the language or a label it shares', () => {
+  const c = connections.tcp[0];
+  const list = [
+    {...c, id: 'a', outbound: 'direct'},
+    {...c, id: 'b', outbound: 'Direct'}
+  ];
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  const keys = (translator: Translator) => tableRows(list, {hidden: [], sort: null, group: 'outbound'}, translator).map(row => row.id);
+  expect(keys(t)).toEqual(['g:direct', 'g:Direct']);
+  expect(keys(zh)).toEqual(keys(t));
+});
+
+it('keeps group and connection keys apart, and every connection id recoverable from its key', () => {
+  const c = connections.tcp[0];
+  const view: ConnectionView = {hidden: [], sort: null, group: 'source'};
+  const list = [
+    {...c, id: 'g:10.0.0.1', src: '10.0.0.1:1'},
+    {...c, id: '\\g:10.0.0.1', src: '10.0.0.1:2'},
+    {...c, id: 'plain', src: '10.0.0.1:3'}
+  ];
+  const [group] = connectionTableView(list, view, 'en-US', new Map(), false, t);
+  const keys = 'children' in group ? [group.id, ...group.children.map(row => row.id)] : [];
+  expect(new Set(keys).size).toBe(4);
+  expect(keys.slice(1).map(connectionId)).toEqual(list.map(row => row.id));
+  expect(connectionKey('plain')).toBe('plain');
+});
+
+it('unfolds a selected connection again when it moves to another group, and only then', () => {
+  const c = {...connections.tcp[0], id: 'moving', outbound: null};
+  const before = revealTarget(c, 'outbound')!;
+  expect(before.group).toBe('unknown');
+  expect(revealTarget({...c, download_bytes: '9'}, 'outbound')).toEqual(before);
+  const moved = revealTarget({...c, outbound: 'proxy'}, 'outbound')!;
+  expect(moved.group).toBe('proxy');
+  expect(moved.token).not.toBe(before.token);
+  expect(revealTarget(c, 'none')).toBeNull();
+  expect(revealTarget(undefined, 'source')).toBeNull();
+});
+
 it('folds groups by a default and its exceptions, so later groups take the default', () => {
   let state = collapseAll(false);
   expect(isCollapsed(state, 'a')).toBe(false);
@@ -76,9 +118,11 @@ it('groups, sorts and describes by the displayed labels', () => {
   ];
   const groups = tableRows(list, {hidden: [], sort: null, group: 'outbound'}, t);
   expect(groups.map(row => ('group' in row ? [row.group, row.children.length] : row.id))).toEqual([
-    [t('ui.direct'), 1],
-    [t('ui.unknown'), 2]
+    ['direct', 1],
+    ['unknown', 2]
   ]);
+  const described = connectionTableView(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', new Map(), false, t);
+  expect(described.map(row => ('label' in row ? row.label : row.id))).toEqual([`${t('ui.direct')} (1)`, `${t('ui.unknown')} (2)`]);
   const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, t);
   expect(sorted.map(row => row.id)).toEqual([...list].sort((x, y) => compareNames(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id));
   const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');

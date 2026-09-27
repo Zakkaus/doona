@@ -229,7 +229,7 @@ export function DataTable<T extends {id: string}>({
     );
   };
   const renderGroup = (row: TableGroup<T>) => (
-    <Row key={row.id} id={row.id} textValue={row.group}>
+    <Row key={row.id} id={row.id} textValue={row.label}>
       {shown.map((column, index) => (
         <Cell key={column.id} className={column.align}>
           {index === 0 && (

@@ -15,7 +15,7 @@ import {
   closeSelection,
   collapseAll,
   expandGroup,
-  groupKey,
+  revealTarget,
   toggleGroup,
   connectionsExport,
   connectionsView,
@@ -116,12 +116,14 @@ export function useConnectionsPage({go, query}: PageProps) {
     [rows, network, out, rule, needle, names, t]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
-  // A connection opened by its id shows its row: its group unfolds once, when the id arrives, so folding it again holds.
+  // A connection opened by its id shows its row: its group unfolds once, when the id arrives or the connection moves
+  // to another group, so folding that group again holds.
   const [revealed, setRevealed] = useState<string | null>(null);
   if (!sel && revealed !== null) setRevealed(null);
-  if (cur && view.group !== 'none' && revealed !== cur.id) {
-    setRevealed(cur.id);
-    setCollapse(expandGroup(collapse, groupKey(cur, view.group, t)));
+  const target = revealTarget(cur, view.group);
+  if (target && revealed !== target.token) {
+    setRevealed(target.token);
+    setCollapse(expandGroup(collapse, target.group));
   }
   const ruleAction = useConnectionRule(cur);
   const lists = useMemo(() => connectionsView(rows, resource.data, src, rule, locale, t), [rows, resource.data, src, rule, locale, t]);

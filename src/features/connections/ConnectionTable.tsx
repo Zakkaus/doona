@@ -1,7 +1,16 @@
 import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef} from '../../ui/ui';
-import {columns, isCollapsed, type ConnectionView, type ConnectionRowView, type ConnectionTableRow, type GroupCollapse} from './view';
+import {
+  columns,
+  connectionId,
+  connectionKey,
+  isCollapsed,
+  type ConnectionView,
+  type ConnectionRowView,
+  type ConnectionTableRow,
+  type GroupCollapse
+} from './view';
 
 type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
   view: ConnectionView;
@@ -50,8 +59,8 @@ export function ConnectionTable({collection, view, collapse, onToggleGroup, load
         cols={definitions}
         rows={rows}
         height={height}
-        selected={selected}
-        onSelect={onSelect}
+        selected={selected && connectionKey(selected)}
+        onSelect={onSelect && (key => onSelect(key && connectionId(key)))}
         selectOnFocus={selectOnFocus}
         reveal
         empty={t('conn.empty')}
