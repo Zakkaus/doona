@@ -453,14 +453,15 @@ for (const [width, columns] of [
     });
   });
 
-// The installed iOS app runs in WebKit: a tap into a source that is not being edited must not look like an edit.
+// The installed iOS app runs in WebKit: a tap into a read-only source must not look like an edit, and says why.
 test.describe('on a touch screen', () => {
-  test.use({hasTouch: true});
-  test('a tap into a source not being edited draws no caret or active line', async ({page}) => {
-    await page.goto('/#/config?tab=source&source=src-main');
-    const editor = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
-    await expect(editor).toContainText('routing');
+  test.use({hasTouch: true, isMobile: true});
+  test('a tap into a read-only source draws no caret or active line and shows the read-only notice', async ({page}) => {
+    await page.goto('/#/config?tab=source&source=src-generated');
+    const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
+    await expect(editor).toContainText('skylink');
     await editor.tap();
+    await expect(page.locator('.rp-toast.info', {hasText: 'This file is read-only'})).toBeVisible();
     await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
     await expect(page.locator('.cm-activeLine')).toHaveCount(0);
   });
