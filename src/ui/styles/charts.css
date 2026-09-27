@@ -377,6 +377,10 @@
   height: 14px;
   border-inline-start: 1.5px dashed var(--rp-text);
 }
+/* The axis labels of the area charts. */
+.rp-area-tick {
+  font-size: var(--rp-text-2xs);
+}
 /* The hover tip of the SVG and HTML charts, in the look of the activity charts' tooltips. */
 .rp-chart-hover {
   position: relative;
@@ -402,6 +406,29 @@
 }
 .rp-charttip.end {
   translate: calc(-100% + 12px) calc(-100% - 12px);
+}
+/* The tip of the charts that keep it inside their card. */
+.rp-boundedtip {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--rp-r-md);
+  background-color: var(--rp-text);
+  color: var(--rp-on-text);
+  font-size: var(--rp-text-xs);
+  /* As wide as its longest line; the bounds cap it inline. */
+  inline-size: max-content;
+  overflow-wrap: anywhere;
+}
+.rp-boundedtip p,
+.rp-boundedtip ul {
+  margin: 0;
+  padding: 0;
+}
+.rp-boundedtip li {
+  display: block;
+  padding-block: 4px;
 }
 
 /* ---- Share bar ---- */

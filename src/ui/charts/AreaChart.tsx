@@ -239,7 +239,7 @@ export function AreaPlot({
             )}
             <g>
               {xTicks.map(({index, position}) => (
-                <text key={index} x={position} y={bottom + 8} fontSize={11} fill={p.subtle} textAnchor="middle">
+                <text key={index} x={position} y={bottom + 8} className="rp-area-tick" fill={p.subtle} textAnchor="middle">
                   <tspan x={position} dy="0.71em">
                     {tickLabels[index]}
                   </tspan>
@@ -248,7 +248,7 @@ export function AreaPlot({
             </g>
             <g className="rp-area-y-ticks">
               {yTicksVisible.map(({index, position}) => (
-                <text key={index} x={right + 8} y={position} fontSize={11} fill={p.subtle} textAnchor="start">
+                <text key={index} x={right + 8} y={position} className="rp-area-tick" fill={p.subtle} textAnchor="start">
                   <tspan x={right + 8} dy="0.355em">
                     {fmt(yTicks[index])}
                   </tspan>
