@@ -1316,6 +1316,8 @@ export const messages = {
   'ui.allCount': '全部 {n}',
   'ui.errNoJson': '後端回應沒有 JSON 內容。',
   'ui.errNetwork': '無法連線至後端。',
+  'ui.errTimeout': '後端未在 {seconds} 秒內回應。',
+  'ui.errTimeoutWrite': '後端未在 {seconds} 秒內回應，變更可能已套用。請先重新載入，再重試。',
   'ui.backendMessage': '後端訊息：{message}',
   'ui.backend.sampleDelayed': '路由映射表取樣延遲',
   'ui.backend.invalidRequest': '請求內容無效',

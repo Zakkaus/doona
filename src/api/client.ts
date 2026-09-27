@@ -64,11 +64,14 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       // A mutation is replayed only under an Idempotency-Key, so a refusal that already wrote something cannot
       // repeat the write.
       const {pathname} = new URL(request.url);
-      const retryable = request.headers.has('Idempotency-Key') || readOnlyPaths.some(path => pathname.endsWith(path));
-      if (!retryable) return send(request);
+      const readOnly = readOnlyPaths.some(path => pathname.endsWith(path));
+      // A read-only POST gets the read deadline and text: it cannot have changed anything.
+      const write = request.method !== 'GET' && !readOnly;
+      const retryable = request.headers.has('Idempotency-Key') || readOnly;
+      if (!retryable) return send(request, undefined, write);
       // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
       for (let refused = 0; ; refused++) {
-        const response = await send(request.clone());
+        const response = await send(request.clone(), undefined, write);
         if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
         const error = await responseError(response.clone());
         if (!error.transient) return response;

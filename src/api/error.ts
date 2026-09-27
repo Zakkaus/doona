@@ -43,14 +43,45 @@ export async function responseError(response: Response): Promise<ApiError> {
 export const clientError = (status: number, code: string, message: string, key: Key, params?: Params) =>
   new ApiError(status, code, message, null, null, null, {key, params});
 
+// A backend that accepts the connection and never answers would leave the request, and every consumer sharing it,
+// waiting forever. A write gets longer, since the backend may be applying it.
+export const READ_DEADLINE_MS = 15000;
+export const WRITE_DEADLINE_MS = 30000;
+
+// The caller's signal and the deadline as one. AbortSignal.any lets the browser drop the pair once both are gone; the
+// fallback keeps the forwarding listener until the caller's signal aborts or is collected.
+function either(caller: AbortSignal, deadline: AbortSignal): AbortSignal {
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any([caller, deadline]);
+  const both = new AbortController();
+  const forward = (source: AbortSignal) => () => both.abort(source.reason);
+  if (caller.aborted) both.abort(caller.reason);
+  else {
+    caller.addEventListener('abort', forward(caller), {once: true});
+    deadline.addEventListener('abort', forward(deadline), {once: true});
+  }
+  return both.signal;
+}
+
 // A request that gets no response at all fails with the browser's own words ("Failed to fetch", "Load failed"); it is
-// reported as a network failure in the page language instead. A cancelled request keeps its AbortError.
-export async function send(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+// reported as a network failure in the page language instead. A cancelled request keeps its AbortError. The deadline
+// covers the body too: it aborts with the timeout error, so a stalled body read fails with it as well. A write that
+// timed out may still have been applied, and its text says so.
+export async function send(input: RequestInfo | URL, init?: RequestInit, write?: boolean): Promise<Response> {
+  const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  const writes = write ?? (method !== 'GET' && method !== 'HEAD');
+  const limit = writes ? WRITE_DEADLINE_MS : READ_DEADLINE_MS;
+  const timeout = clientError(0, 'timeout', `No response within ${limit / 1000} seconds`, writes ? 'ui.errTimeoutWrite' : 'ui.errTimeout', {
+    seconds: limit / 1000
+  });
+  const deadline = new AbortController();
+  setTimeout(() => deadline.abort(timeout), limit);
   try {
-    return await fetch(input, init);
+    return await fetch(input, {...init, signal: signal ? either(signal, deadline.signal) : deadline.signal});
   } catch (error) {
-    const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
-    if (error instanceof TypeError && !signal?.aborted) throw clientError(0, 'network_error', error.message, 'ui.errNetwork');
+    if (signal?.aborted) throw error;
+    if (deadline.signal.aborted) throw timeout;
+    if (error instanceof TypeError) throw clientError(0, 'network_error', error.message, 'ui.errNetwork');
     throw error;
   }
 }
