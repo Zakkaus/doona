@@ -67,6 +67,10 @@ export const test = base.extend<{storage: Record<string, string>}>({
   }
 });
 
+// The mock backend's faults scenario: a degraded datapath, unavailable nodes, dropped flow records, warnings and
+// errors in the logs, a failed operation and a rule the lite geodata files cannot serve. The default demo has none.
+export const faults = {'doona-mock-scenario': 'faults'};
+
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
 export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
 
@@ -103,8 +107,8 @@ const query = (request: Request) => {
   return params as never;
 };
 
-export async function mockBackend(page: Page) {
-  const api = createMockApi();
+export async function mockBackend(page: Page, options: {faults?: boolean} = {}) {
+  const api = createMockApi(options);
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   const requests: Request[] = [];

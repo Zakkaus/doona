@@ -1,10 +1,18 @@
 import {expect, it} from 'vitest';
-import {capabilities, datapath, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
+import {capabilities, datapath as healthy, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
+import {datapathFault} from '../../api/mock/fixtures/runtime';
 import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';
 import type {KvItem} from '../../ui/ui';
 const t: Translator = (key, params) => translate('en', key, params);
+// The faults scenario's datapath: its one error also stands as the eBPF last error.
+const datapath = {
+  ...healthy,
+  state: 'degraded' as const,
+  ebpf: {...healthy.ebpf!, health: 'degraded' as const, last_error: datapathFault.message},
+  errors: [datapathFault]
+};
 const loading = {capabilities: false, runtime: false, version: false, memory: false, datapath: false};
 // The row with this label, as an object whichever form it has.
 const field = (items: KvItem[], label: string) =>

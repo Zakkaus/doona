@@ -45,7 +45,7 @@ const ruleTable: Array<[string[], string]> = [
     'r4'
   ],
   [['telegram.org', 't.me'], 'r5'],
-  [['discord.com', 'discord.gg', 'discordapp.com'], 'r7']
+  [['openai.com', 'chatgpt.com', 'oaistatic.com'], 'r7']
 ];
 const ruleOf = (id: string) => rules.find(rule => rule.id === id)!;
 function ruleFor(domain: string): {id: string; expression: string} | null {

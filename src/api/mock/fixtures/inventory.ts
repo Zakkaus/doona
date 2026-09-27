@@ -78,13 +78,14 @@ function group(name: keyof typeof groupPolicies, members: string[], leaf: string
     }
   };
 }
-export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
+// Every node answers its probes unless the faults scenario takes jp-01 and about one subscription node in sixteen down.
+export function nodeFixtures(count: number, faults = false): {nodes: Node[]; groups: Group[]} {
   const nodes = [
     // The inline nodes match the links in the mock's config.dae.
     node('hk-01', 84, 91, true, 'inline', 'vless'),
     node('hk-02', 91, 88, true, 'inline', 'vless'),
     node('sg-01', 63, 70, false, 'inline', 'trojan'),
-    node('jp-01', null, null, false, 'inline', 'vless'),
+    node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless'),
     node('us-01', 188, 201, true, 'inline', 'anytls')
   ];
   const groups = [
@@ -115,7 +116,7 @@ export function nodeFixtures(count: number): {nodes: Node[]; groups: Group[]} {
     const [region, base] = regions[i % regions.length];
     const n = String(Math.floor(i / regions.length) + 1).padStart(2, '0');
     const tag = tags[Math.floor(rnd() * tags.length)];
-    const alive = rnd() > 0.06;
+    const alive = rnd() > 0.06 || !faults;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
     airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));

@@ -23,7 +23,7 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
 });
 
 it('chooses measured nodes and preserves an explicitly selected unavailable node', () => {
-  const {nodes} = nodeFixtures(0);
+  const {nodes} = nodeFixtures(0, true);
   expect(nodeView(nodes, '', t).name).toBe('hk-01');
   const unavailable = nodeView(nodes, 'jp-01', t);
   expect(unavailable.tone).toBe('err');
@@ -59,7 +59,7 @@ it('localizes notice kinds and shortens UUIDs without changing event identity', 
 });
 
 it('selects duplicate node labels by ID and preserves independent health', () => {
-  const {nodes} = nodeFixtures(0);
+  const {nodes} = nodeFixtures(0, true);
   const first = {...nodes.find(node => node.name === 'hk-01')!, id: 'provider-a/hk', name: 'HK', provider_id: 'provider-a'};
   const second = {...nodes.find(node => node.name === 'jp-01')!, id: 'provider-b/hk', name: 'HK', provider_id: 'provider-b'};
   const view = nodeView([first, second], second.id, t);

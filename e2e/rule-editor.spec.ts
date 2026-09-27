@@ -35,7 +35,7 @@ test('the rule list shows the dictionary in evaluation order with its source lin
   await page.goto('/#/rules?tab=list');
   const list = rows(page);
   await expect(list).toHaveCount(9);
-  await expect(list.first()).toContainText('domain(suffix: doubleclick.net)');
+  await expect(list.first()).toContainText('pname(NetworkManager, systemd-resolved)');
   await expect(list.first()).toContainText('config.dae:40');
   await expect(list.nth(5)).toContainText('rules.dae:3');
   await expect(list.last()).toContainText('fallback: resilient');

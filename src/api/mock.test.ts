@@ -4,11 +4,15 @@ import {chainLabel, ipLiteral, outboundUsage, preferredHealth, sourceIp} from '.
 import {addU64} from './u64';
 import type {ApiEvent} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
+import {liteCategories} from '../dae/geodata';
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+// A mock backend in the faults scenario, which seeds the degraded states the default demo leaves out.
+const faultsApi = () => createMockApi({faults: true});
 
 it('validates and enumerates quoted hashes without treating them as comments', async () => {
   vi.useFakeTimers();
@@ -70,8 +74,31 @@ it('serves cumulative outbound counters independently of live connection bytes',
   expect(near(runtime.traffic.rates!.upload_bytes_per_second, history.samples.at(-1)!.upload_bytes_per_second!)).toBe(true);
 });
 
+it('serves a healthy honk by default and the seeded faults only in the faults scenario', async () => {
+  const healthy = async (api: ReturnType<typeof createMockApi>) => {
+    const [datapath, nodes, flows, config, geodata] = await Promise.all([api.datapath(), api.nodes(), api.flows(), api.config(), api.geodata()]);
+    const levels = new Set<string>();
+    const controller = new AbortController();
+    const stream = api.subscribeLogs({level: 'trace', signal: controller.signal, onRecord: record => levels.add(record.level)});
+    controller.abort();
+    await stream;
+    const lite = liteCategories.geosite;
+    return {
+      datapath: datapath.state === 'active' && datapath.errors.length === 0,
+      nodes: nodes.nodes.every(node => node.health.every(sample => sample.state === 'healthy')),
+      flows: flows.dropped_records === '0',
+      config: config.diagnostics.length === 0,
+      logs: !levels.has('warn') && !levels.has('error'),
+      geodata: geodata.required_codes!.geosite.every(code => lite.includes(code))
+    };
+  };
+  const all = {datapath: true, nodes: true, flows: true, config: true, logs: true, geodata: true};
+  expect(await healthy(createMockApi())).toEqual(all);
+  expect(await healthy(faultsApi())).toEqual(Object.fromEntries(Object.keys(all).map(key => [key, false])));
+});
+
 it('keeps the fuller demo history, cache and rankings internally consistent', async () => {
-  const api = createMockApi();
+  const api = faultsApi();
   const [dns, cache, nodes, flows, rules, memory] = await Promise.all([
     api.dnsLog({limit: 500}),
     api.dnsCache(),
@@ -214,7 +241,7 @@ it('finds a retained flow by connection ID when the live row has no flow ID', as
 });
 
 it('omits unavailable summary input without losing retained detail evidence', async () => {
-  const api = createMockApi();
+  const api = faultsApi();
   const snapshot = await api.flows();
   const summary = snapshot.flows.find(flow => flow.id === 'flow-unobserved')!;
   expect(summary).not.toHaveProperty('input');
@@ -289,7 +316,7 @@ it('pages the airport override without losing members', async () => {
 });
 it('advances reload operations and emits invalidations until aborted', async () => {
   vi.useFakeTimers();
-  const api = createMockApi();
+  const api = faultsApi();
   const accepted = await api.startReload();
   expect(accepted.status).toBe('queued');
   expect((await api.operation(accepted.operation_id)).status).toBe('running');
@@ -336,7 +363,7 @@ it('selects both networks with an independent revision and preserves configurati
 
 it('completes probes with fixture failures and publishes fresh health', async () => {
   vi.useFakeTimers();
-  const api = createMockApi();
+  const api = faultsApi();
   const before = preferredHealth((await api.nodes()).nodes.find(n => n.id === 'hk-01')!)!;
   vi.setSystemTime(Date.parse(before.observed_at) + 1000);
   const accepted = await api.startProbe({

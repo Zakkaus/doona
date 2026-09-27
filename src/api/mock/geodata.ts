@@ -4,7 +4,7 @@ import {redactUrl} from './common';
 import {defaultGeodataPreset, geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl} from '../../dae/geodata';
 import {scanConfig} from '../../dae/text';
 import * as fixtures from './fixtures/inventory';
-import {rules} from './rules';
+import {faultRules, rules} from './rules';
 
 const kinds: GeoAssetKind[] = ['geosite', 'geoip'];
 // The categories the given rule conditions use, lowercase and without attribute suffixes, as honk reports them.
@@ -23,13 +23,13 @@ const publishesChecksum = (url: string) => /^https:\/\/(raw\.githubusercontent\.
 const presetAt = (kind: GeoAssetKind, url: string) => geodataPresets.find(preset => preset.urls[kind].includes(url) || preset.mirrors[kind].includes(url));
 
 // The stored geodata settings and update status: the backend keeps them across reloads, unlike the other runtime settings.
-export function createGeodataState(capabilities: Capabilities, groupIds: () => Set<string>) {
+export function createGeodataState(capabilities: Capabilities, groupIds: () => Set<string>, faults = false) {
   const configurable = capabilities.resources.geodata.configurable_sources === true;
   let stored: Record<GeoAssetKind, string[]> | null = null;
   const auto = {enabled: true, interval_hours: 24};
   let download: GeoDataDownload = {route: 'routing', group_id: null};
   const data = structuredClone(fixtures.geodata);
-  data.required_codes = requiredCodes(rules.map(rule => rule.cond));
+  data.required_codes = requiredCodes([...rules, ...(faults ? faultRules : [])].map(rule => rule.cond));
   const urls = () => stored ?? {geosite: [...defaultGeodataPreset.urls.geosite], geoip: [...defaultGeodataPreset.urls.geoip]};
   const nextCheck = (from: number) => (auto.enabled ? new Date(from + auto.interval_hours * 3600_000 + 17 * 60_000).toISOString() : null);
   data.next_check_at = nextCheck(Date.parse(data.last_checked_at ?? '') || Date.now());

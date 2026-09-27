@@ -9,8 +9,8 @@ const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof tran
 const full = geodataPreset('metacubex');
 const loyal = geodataPreset('loyalsoldier');
 // Serves the mock over the network and records every settings PATCH and geodata update the page sends, in order.
-async function traffic(page: Page) {
-  const backend = await mockBackend(page);
+async function traffic(page: Page, options: {faults?: boolean} = {}) {
+  const backend = await mockBackend(page, options);
   const sent: string[] = [];
   const bodies: unknown[] = [];
   page.on('request', request => {
@@ -57,20 +57,20 @@ test('choosing a preset saves it once and then updates once', async ({page}) => 
 });
 
 test('a failed update keeps the old files and shows the reason in the status row', async ({page}) => {
-  const {sent} = await traffic(page);
+  const {sent} = await traffic(page, {faults: true});
   await page.goto('/#/settings');
   await section(page)
     .getByRole('button', {name: t('settings.geodataSource')})
     .first()
     .click();
-  // The demo rules use geosite:discord, which the lite file lacks; the option says so before it is chosen.
+  // The faults scenario's rules use geosite:category-ads-all, which the lite file lacks; the option says so before it is chosen.
   const option = page.getByRole('option', {name: t('settings.geodataPreset.metacubexLite')});
-  await expect(option).toContainText('geosite:discord');
+  await expect(option).toContainText('geosite:category-ads-all');
   await option.click();
   // Choosing it asks first; cancelling stores nothing and keeps the source shown.
   const lite = t('settings.geodataPreset.metacubexLite');
   const dialog = page.getByRole('dialog', {name: t('settings.geodataLackingTitle', {preset: lite})});
-  await expect(dialog).toContainText(t('settings.geodataLackingHelp', {preset: lite, codes: 'geosite:discord'}));
+  await expect(dialog).toContainText(t('settings.geodataLackingHelp', {preset: lite, codes: 'geosite:category-ads-all'}));
   await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(

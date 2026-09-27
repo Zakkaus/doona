@@ -1,5 +1,5 @@
 import type {Group, RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
-import {rules, type ConfigRule} from '../rules';
+import {faultRules, rules, type ConfigRule} from '../rules';
 import {ago, observedAt, generationId} from './clock';
 export const groupPolicies = {
   proxy: {kind: 'selector', native: 'fixed(0)'},
@@ -83,8 +83,8 @@ const configRulesFile = `# Household exceptions, kept apart from config.dae.
 # The TV never leaves through a node.
 mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct
 
-# Chat
-domain(geosite: discord) -> proxy
+# AI
+domain(geosite: openai) -> proxy
 sip(10.0.0.0/24) && dport(25) -> block
 `;
 const configSubscription = `'香港 01 IPLC': 'vless://<redacted>'
@@ -95,6 +95,7 @@ const configSubscription = `'香港 01 IPLC': 'vless://<redacted>'
 const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
 skylink { filter: subtag(sub-c) }
 `;
+// The faults scenario's backend notes.
 export const configNotes: ConfigDiagnostic[] = [
   {
     level: 'warning',
@@ -139,3 +140,7 @@ export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' 
   },
   {id: 'src-generated', path: '/var/lib/honk/generated/skylink.dae', kind: 'generated', writable: false, loaded_at: ago(1800), content: configGenerated}
 ];
+// The faults scenario's sources: rules.dae carries its extra rules.
+export const faultSources = configSources.map(source =>
+  source.id === 'src-rules' ? {...source, content: source.content + '\n# Ads\n' + faultRules.map(rule => `${rule.cond} -> ${rule.target}\n`).join('')} : source
+);

@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, faults, mockBackend, test} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
@@ -152,14 +152,17 @@ test('a failed node read keeps the latency card with the reason and a retry', as
   await expect(nodeLatency(page).locator('.rp-swarm')).toBeVisible();
 });
 
-test('the log heatmap sits above the list and sets the minimum level from a row', async ({page}) => {
-  await page.goto('/#/logs');
-  await expect(fact(page, 'Errors')).toHaveText(/^\d+ records?$/);
-  await expect(fact(page, 'Most errors').locator('.rp-big')).toHaveText(/^\d\d:\d\d–\d\d:\d\d$/);
-  await expect(fact(page, 'Most errors').locator('.rp-fact-caption')).toHaveText(/^\d+ records?$/);
-  await page.getByRole('button', {name: 'Show Warning and above'}).click();
-  await expect(page.getByRole('group', {name: 'Log activity over time'}).getByText('Info', {exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: /Level$/})).toContainText('Warning');
+test.describe(() => {
+  test.use({storage: faults});
+  test('the log heatmap sits above the list and sets the minimum level from a row', async ({page}) => {
+    await page.goto('/#/logs');
+    await expect(fact(page, 'Errors')).toHaveText(/^\d+ records?$/);
+    await expect(fact(page, 'Most errors').locator('.rp-big')).toHaveText(/^\d\d:\d\d–\d\d:\d\d$/);
+    await expect(fact(page, 'Most errors').locator('.rp-fact-caption')).toHaveText(/^\d+ records?$/);
+    await page.getByRole('button', {name: 'Show Warning and above'}).click();
+    await expect(page.getByRole('group', {name: 'Log activity over time'}).getByText('Info', {exact: true})).toHaveCount(0);
+    await expect(page.getByRole('button', {name: /Level$/})).toContainText('Warning');
+  });
 });
 
 test('the DNS cache card reads usage from one entry and says only what the backend reports', async ({page}) => {
