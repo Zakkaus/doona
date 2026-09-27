@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {useCapabilities, useConfig, useConfigEditor} from '../../store';
+import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {localTime} from '../../i18n/format';
@@ -15,6 +15,7 @@ import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 import {offered} from '../../api/capabilities';
+import {engineOf} from '../../api/engines';
 import type {NewSourceProps} from './useNewSource';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
@@ -71,7 +72,10 @@ export function useConfigPage({go, query}: PageProps) {
   const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
   const configWritable = resources?.config.writable === true;
   const isComplete = useCompleteness(sources);
-  const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), t) : null;
+  // The engine names the secrets that make a source read-only.
+  const version = useVersion().data;
+  const engine = useMemo(() => engineOf(version), [version]);
+  const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
   const canWrite = !!source && !readOnly;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setup ? 'setup' : 'modules';
   const tab = pickTab(

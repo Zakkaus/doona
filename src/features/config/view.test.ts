@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
-import {configNotes} from '../../api/mock/fixtures';
+import {configNotes, version} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
+import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
 import {
   saveView,
@@ -23,6 +24,7 @@ import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
 const t: Translator = (key, params) => translate('en', key, params);
+const honk = engineOf(version);
 it('keeps hidden source paths out of source labels and exposes content availability', async () => {
   const configSources = (await createMockApi().config()).sources;
   const source = {...configSources[0], id: 'abcdef012345', path: '<redacted>', content: undefined, writable: false};
@@ -49,7 +51,7 @@ it('counts a source in lines and bytes and leaves its load time to the tooltip',
 });
 it('names the one reason a source is read-only', () => {
   const reason = (kind: ConfigSource['kind'], writable: boolean, configWritable: boolean, complete?: boolean) =>
-    readOnlyBadge({kind, writable, content: ''}, configWritable, complete, t)?.reason ?? null;
+    readOnlyBadge({kind, writable, content: ''}, configWritable, complete, honk, t)?.reason ?? null;
   // Generated and subscription sources are never writable, with writes on or off.
   expect(reason('generated', false, true)).toBe('generated');
   expect(reason('generated', false, false)).toBe('generated');
@@ -62,10 +64,14 @@ it('names the one reason a source is read-only', () => {
   // honk also refuses the includes it writes itself.
   expect(reason('main', false, true)).toBe('refused');
   expect(reason('include', false, true)).toBe('refused');
-  const listener = (content: string) => readOnlyBadge({kind: 'main', writable: false, content}, true, true, t)?.reason;
+  const listener = (content: string) => readOnlyBadge({kind: 'main', writable: false, content}, true, true, honk, t)?.reason;
   expect(listener("experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}")).toBe('secret');
   expect(listener("clash_api { secret: '<redacted>' }")).toBe('secret');
   expect(listener('# native_api is off\nglobal { log_level: info }')).toBe('refused');
+  // Another engine's reasons are unknown, so the same file is only read-only.
+  expect(readOnlyBadge({kind: 'main', writable: false, content: "clash_api { secret: '<redacted>' }"}, true, true, engineOf(undefined), t)?.reason).toBe(
+    'refused'
+  );
   expect(reason('main', true, true)).toBeNull();
   expect(reason('include', true, true)).toBeNull();
   // Writes allowed, but the text arrived with values hidden: saving it back would drop them. Unknown is not a reason yet.
@@ -75,30 +81,30 @@ it('names the one reason a source is read-only', () => {
   expect(reason('main', false, true, false)).toBe('refused');
   expect(reason('generated', false, true, false)).toBe('generated');
   // No text at all is not a redaction: the backend did not send the file.
-  const withheld = readOnlyBadge({kind: 'main', writable: true, content: undefined}, true, false, t)!;
+  const withheld = readOnlyBadge({kind: 'main', writable: true, content: undefined}, true, false, honk, t)!;
   expect(withheld.reason).toBe('withheld');
   expect(withheld.label).toBe(t('config.withheldSource'));
   expect(withheld.note).toBe(t('config.contentWithheld'));
-  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, t)!.reason).toBe('refused');
-  const badge = readOnlyBadge({kind: 'generated', writable: false, content: ''}, true, true, t)!;
+  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, honk, t)!.reason).toBe('refused');
+  const badge = readOnlyBadge({kind: 'generated', writable: false, content: ''}, true, true, honk, t)!;
   expect(badge.label).toBe('Generated');
   // The line under the text already says why; only the write switch needs more than that line holds.
   expect(badge.help).toBeUndefined();
-  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
-  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.help).toBeUndefined();
-  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.label).toBe('Read-only');
-  expect(readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, t)!.label).toBe('Contains secrets');
-  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.label).toBe('Read-only');
-  expect(readOnlyBadge({kind: 'subscription', writable: false, content: ''}, true, true, t)!.label).toBe('Subscription');
-  expect(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.label).toBe(t('config.redactedSource'));
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, honk, t)!.help).toBeUndefined();
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, honk, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, honk, t)!.label).toBe('Contains secrets');
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'subscription', writable: false, content: ''}, true, true, honk, t)!.label).toBe('Subscription');
+  expect(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, honk, t)!.label).toBe(t('config.redactedSource'));
   // Each reason has its own line under the text.
-  const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false, content: ''}, true, true, t)!.note);
+  const notes = (['generated', 'subscription'] as const).map(kind => readOnlyBadge({kind, writable: false, content: ''}, true, true, honk, t)!.note);
   notes.push(
-    readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, t)!.note,
-    readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, t)!.note,
-    readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, t)!.note
+    readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t)!.note,
+    readOnlyBadge({kind: 'main', writable: false, content: 'clash_api { }'}, true, true, honk, t)!.note,
+    readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, honk, t)!.note
   );
-  notes.push(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, t)!.note);
+  notes.push(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, false, honk, t)!.note);
   expect(notes).toEqual([
     t('config.generatedNote'),
     t('config.subscriptionNote'),

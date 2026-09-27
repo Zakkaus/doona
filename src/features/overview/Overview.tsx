@@ -20,7 +20,7 @@ import {
 import Download from '../../ui/icons/Download';
 import InfoCircle from '../../ui/icons/InfoCircle';
 import {tableLayout} from '../../ui/Table';
-import {limitSnippet, type LimitGroup, type LimitHelp} from '../shared/limits';
+import type {LimitGroup, LimitHelp} from '../shared/limits';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
 
@@ -67,7 +67,7 @@ function LimitHelpButton({help}: {help: LimitHelp}) {
       {() => (
         <>
           <p className="rp-limit-help">{help.text}</p>
-          {help.keys && <DaeCode as="pre" className="rp-limit-snippet" text={limitSnippet(help.keys)} />}
+          {help.snippet && <DaeCode as="pre" className="rp-limit-snippet" text={help.snippet} />}
           {help.link && <LimitLink link={help.link} />}
         </>
       )}
