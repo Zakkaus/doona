@@ -1,9 +1,9 @@
 import {useEffect, useState} from 'react';
-import {useLang, useT, type Params} from '../i18n';
+import {useLang, useT, type Params, type Translator} from '../i18n';
 import type {Key} from '../i18n';
 import {docsHref} from '../features/shared/docs';
 import {ApiError, errorText} from '../api/error';
-import {DEMO_ACCOUNT, discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
+import {DEMO_ACCOUNT, discoverAuth, openSession, servesNativeApi, signInKind, type AuthCredentials, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
 import {isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
 
@@ -56,6 +56,58 @@ export async function resolveSignInKind(api: string, signal?: AbortSignal): Prom
   }
 }
 
+// Writes the pasted token into the profile being signed in to. Null once it is stored, else what the form reports;
+// a profile removed or repointed meanwhile is not rewritten.
+export function storeToken(profileId: string, api: string, token: string): Key | null {
+  try {
+    const {profiles, activeId} = readProfiles();
+    const updated = loginProfiles(profiles, profileId, api, token);
+    if (!updated) return 'login.stale';
+    writeProfiles({profiles: updated, activeId});
+  } catch {
+    return 'settings.saveError';
+  }
+  return null;
+}
+
+// Opens a session and keeps it in this tab. Null once it is kept, else a refusal the form names or the error it
+// reports as a failed sign-in.
+export async function signIn(
+  profileId: string,
+  api: string,
+  mode: 'setup' | 'login',
+  credentials: AuthCredentials
+): Promise<Refusal | {error: unknown} | null> {
+  let session;
+  try {
+    session = await openSession(api, mode, credentials);
+  } catch (error) {
+    return signInRefusal(error) ?? {error};
+  }
+  try {
+    saveSession(profileId, api, session.token, session.expires_at);
+  } catch {
+    // The sign-in succeeded; only the tab's storage refused the session.
+    return {key: 'settings.saveError'};
+  }
+  return null;
+}
+
+type Failure = {key: Key; params?: Params} | string;
+type Alert = {tone: 'negative' | 'informative'; text: string; focus: boolean; id: number};
+// A refusal after a submit takes focus, again on each attempt; the notes shown on arrival do not.
+export function loginAlert(
+  state: {kind: SignIn | 'no-api' | null; failure: Failure | null; attempt: number; ended: boolean; rejected: boolean},
+  t: Translator
+): Alert | null {
+  const {kind, failure, attempt, ended, rejected} = state;
+  if (kind === 'no-api') return null;
+  if (failure !== null) return {tone: 'negative', text: typeof failure === 'string' ? failure : t(failure.key, failure.params), focus: true, id: attempt};
+  if (ended) return {tone: 'informative', text: t('login.sessionEnded'), focus: false, id: 0};
+  if (rejected && kind === 'token') return {tone: 'negative', text: t('login.rejected'), focus: false, id: 0};
+  return null;
+}
+
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
   const t = useT();
   const lang = useLang();
@@ -85,7 +137,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const [busy, setBusy] = useState(false);
   // A field's own problem shows on that field until it is edited; a refusal of the whole form shows once above it.
   const [problems, setProblems] = useState<Partial<Record<Field, Key>>>({});
-  const [failure, setFailure] = useState<{key: Key; params?: Params} | string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
   const edit = (field: Field, set: (value: string) => void) => (value: string) => {
     set(value);
@@ -93,58 +145,32 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   };
   const submitToken = () => {
     if (!token.trim()) return;
-    try {
-      const {profiles, activeId} = readProfiles();
-      const updated = loginProfiles(profiles, profileId, api, token);
-      if (!updated) {
-        setFailure({key: 'login.stale'});
-        return;
-      }
-      writeProfiles({profiles: updated, activeId});
-    } catch {
-      setFailure({key: 'settings.saveError'});
-      return;
-    }
-    location.reload();
+    const problem = storeToken(profileId, api, token);
+    if (problem) setFailure({key: problem});
+    else location.reload();
   };
   const submitPassword = async (mode: 'setup' | 'login') => {
     const found = credentialProblems(mode, username, password, confirm);
     setProblems(found);
     if (Object.keys(found).length) return;
     setBusy(true);
-    try {
-      const session = await openSession(api, mode, {username, password});
-      try {
-        saveSession(profileId, api, session.token, session.expires_at);
-      } catch {
-        // The sign-in succeeded; only the tab's storage refused the session.
-        setBusy(false);
-        setFailure({key: 'settings.saveError'});
-        return;
-      }
+    const refused = await signIn(profileId, api, mode, {username, password});
+    if (!refused) {
       location.reload();
-    } catch (error) {
-      setBusy(false);
-      const refusal = signInRefusal(error);
-      if (refusal?.switchTo) {
-        setKind(refusal.switchTo);
-        setConfirm('');
-      }
-      setFailure(refusal ?? t('login.failed', {error: errorText(error, t)}));
+      return;
     }
+    setBusy(false);
+    if ('error' in refused) {
+      setFailure(t('login.failed', {error: errorText(refused.error, t)}));
+      return;
+    }
+    if (refused.switchTo) {
+      setKind(refused.switchTo);
+      setConfirm('');
+    }
+    setFailure(refused);
   };
   const usesPassword = kind === 'setup' || kind === 'login';
-  // A refusal after a submit takes focus; the notes shown on arrival do not.
-  const alert =
-    kind === 'no-api'
-      ? null
-      : failure !== null
-        ? {tone: 'negative' as const, text: typeof failure === 'string' ? failure : t(failure.key, failure.params), focus: true, id: attempt}
-        : ended
-          ? {tone: 'informative' as const, text: t('login.sessionEnded'), focus: false, id: 0}
-          : rejected && kind === 'token'
-            ? {tone: 'negative' as const, text: t('login.rejected'), focus: false, id: 0}
-            : null;
   const fieldError = (field: Field) => (problems[field] ? t(problems[field]) : undefined);
   return {
     kind,
@@ -160,7 +186,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
             ? t('login.connectedTo', {backend})
             : t('login.note', {backend}),
     demoNote: demo && kind === 'login' ? t('login.demoNote', DEMO_ACCOUNT) : null,
-    alert,
+    alert: loginAlert({kind, failure, attempt, ended, rejected}, t),
     busy,
     token,
     setToken,
