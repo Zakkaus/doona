@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
+import type {Api} from '../api/api';
 import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
 import {EVENT_FEED_LIMIT, useEvents} from './events';
 import {useCapabilities} from './runtime';
@@ -33,6 +34,24 @@ export function useEventFeed(withRuntime: boolean) {
     return [...time.keys()].sort((a, b) => time.get(b)! - time.get(a)!);
   }, [changes.records, runtime.records]);
   return {...status, events};
+}
+
+// The home page's notices, held per backend rather than per mount, so returning to the page keeps those already shown.
+const notices = new WeakMap<Api, ReturnType<typeof createFeed<ApiEvent, Record<string, never>>>>();
+export function noticeFeed(api: Api) {
+  let feed = notices.get(api);
+  if (!feed) notices.set(api, (feed = createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace')));
+  return feed;
+}
+// The events `keep` accepts, including those the shared stream received before the page opened. The feed outlives
+// the page, so every caller passes the same `keep`.
+export function useNoticeFeed(keep: (event: ApiEvent) => boolean) {
+  const feed = noticeFeed(getApi());
+  const {records} = useSyncExternalStore(feed.subscribe, feed.getSnapshot);
+  const status = useEvents(event => {
+    if (keep(event)) feed.append(event);
+  }, true);
+  return {...status, records};
 }
 
 export function useLogFeed({level, target, paused}: {level?: LogLevel; target?: string; paused: boolean}) {

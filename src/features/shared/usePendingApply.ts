@@ -2,7 +2,7 @@ import {useEffect, useRef} from 'react';
 import {getApi} from '../../api/index';
 import {LocalError} from '../../api/error';
 import type {ConfigSource} from '../../api/model';
-import {pendingRules, refetchAll, useConfigEditor, usePendingRules, type PendingFailure, type PendingRule} from '../../store';
+import {pendingRules, readConfigFresh, refetchAll, useConfigEditor, usePendingRules, type PendingFailure, type PendingRule} from '../../store';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {byFile, insertRules, partialFailure, ruleFailure} from './pending';
@@ -25,7 +25,7 @@ export function usePendingApply() {
     let sources: ConfigSource[] = [];
     let text: string | null | undefined;
     try {
-      sources = (await getApi().config(signal)).sources;
+      sources = (await readConfigFresh(getApi(), signal)).sources;
       if (signal.aborted) return undefined;
       const source = sources.find(source => source.id === group[0].sourceId);
       const result = source && (await editor.apply(source, () => (text = insertRules(source, group))));

@@ -1,6 +1,7 @@
-import {expect, it} from 'vitest';
+import {expect, it, onTestFinished, vi} from 'vitest';
 import {ApiError, LocalError} from '../api/error';
-import {closestLimit, createSource, refusalOutcome, withinLimits} from './config';
+import {closestLimit, createSource, readConfigFresh, refusalOutcome, withinLimits} from './config';
+import {watchResource} from './resourceCore';
 import {createMockApi} from '../api/mock';
 
 const source = {id: 'main', content_sha256: 'aaa'};
@@ -78,4 +79,23 @@ it('finds a created source again whose name holds a space, CJK or a question mar
     const id = await createSource(api, `config.d/${name}.dae`, new AbortController().signal);
     expect((await api.config()).sources.find(source => source.id === id)?.path).toMatch(new RegExp(`/config\\.d/${name.replace('?', '\\?')}\\.dae$`));
   }
+});
+
+it('reads the configuration past the watched copy, one request a call, and leaves that copy as fetched', async () => {
+  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  onTestFinished(() => void vi.unstubAllGlobals());
+  const api = createMockApi();
+  const watched = watchResource(api, {key: ['config'], every: 0, fetch: signal => api.config(signal)}, () => {});
+  onTestFinished(watched.dispose);
+  const before = await vi.waitUntil(() => watched.getSnapshot().data);
+  const created = (config: {sources: {path: string}[]}) => config.sources.some(source => source.path.endsWith('/config.d/work.dae'));
+  expect(created(before)).toBe(false);
+  await createSource(api, 'config.d/work.dae', new AbortController().signal);
+  const read = vi.spyOn(api, 'config');
+  const {signal} = new AbortController();
+  const fresh = await readConfigFresh(api, signal);
+  await readConfigFresh(api, signal);
+  expect(read.mock.calls).toEqual([[signal], [signal]]);
+  expect(created(fresh)).toBe(true);
+  expect(watched.getSnapshot().data).toBe(before);
 });
