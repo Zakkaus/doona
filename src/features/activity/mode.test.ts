@@ -82,6 +82,20 @@ it('refuses an override when ordinary rules precede mandatory exceptions', () =>
   expect(writeMode(source, {mode: 'rule'})).toBe(source);
 });
 
+it('names the first ordinary rule ahead of a must rule, or the text on the line of a must rule', () => {
+  const refusal = (source: string) => {
+    try {
+      writeMode(source, {mode: 'direct'});
+    } catch (error) {
+      return error;
+    }
+  };
+  const interleaved = 'routing {\n  domain(a.example) -> proxy  \n  domain(b.example) -> block\n  pname(system) -> direct(must)\n  fallback: proxy\n}\n';
+  expect(refusal(interleaved)).toMatchObject({key: 'act.modeInterleaved', detail: 'domain(a.example) -> proxy'});
+  const shared = 'routing {\n  pname(system) -> direct(must) domain(a.example) -> proxy\n  fallback: proxy\n}\n';
+  expect(refusal(shared)).toMatchObject({key: 'act.modeInterleaved', detail: 'pname(system) -> direct(must) domain(a.example) -> proxy'});
+});
+
 it('finds a hand-edited marked line by its marker and replaces it rather than adding a second', () => {
   const edited = 'routing {\n  l4proto(udp,tcp)  ->   proxy   # doona: outbound mode\n  fallback: direct\n}\n';
   expect(readMode(edited)).toEqual({mode: 'global', target: 'proxy'});

@@ -31,7 +31,7 @@ export const messages = {
   'act.apply': '应用',
   'act.modeApplied': '出站模式已写入配置并重载：{mode}',
   'act.modeNoRouting': '主配置未包含 routing 区段',
-  'act.modeInterleaved': '普通规则位于 must 规则之前，无法安全切换出站模式。',
+  'act.modeInterleaved': '路由区段有普通规则排在 must 规则前面。请先把 must 规则移到路由区段最前面，再切换出站模式。',
   'act.modeReadOnly': '只读',
   'act.modeWhyReadOnly': '查看只读原因',
   'act.modeReadOnlyReason':

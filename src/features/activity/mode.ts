@@ -42,7 +42,12 @@ export function writeMode(text: string, next: OutboundMode): string {
   const indent = body.match(/\n([ \t]+)\S/)?.[1] ?? '    ';
   let at = block.open + 1;
   if (text[at] === '\n') at++;
-  let ordinary = false;
+  let ordinary: string | null = null;
+  // The line an arrow sits on, as the refusal names it.
+  const lineOf = (at: number) => {
+    const end = text.indexOf('\n', at);
+    return text.slice(text.lastIndexOf('\n', at - 1) + 1, end === -1 ? undefined : end).trim();
+  };
   // Mandatory rules must form a prefix or the catch-all cannot preserve their precedence.
   for (let i = 0; i < tokens.length; i++) {
     const arrow = tokens[i];
@@ -60,14 +65,14 @@ export function writeMode(text: string, next: OutboundMode): string {
       text.slice(modifier.from, modifier.to) === 'must' &&
       text.slice(close.from, close.to) === ')';
     if (!mandatory) {
-      ordinary = true;
+      ordinary ??= lineOf(arrow.from);
       continue;
     }
-    if (ordinary) throw new LocalError('act.modeInterleaved');
+    if (ordinary !== null) throw new LocalError('act.modeInterleaved', ordinary);
     const end = text.indexOf('\n', close.to);
     at = end !== -1 && end < block.close ? end + 1 : close.to;
     const following = tokens[i + 5];
-    if (following && following.from < at && following.kind !== 'comment') throw new LocalError('act.modeInterleaved');
+    if (following && following.from < at && following.kind !== 'comment') throw new LocalError('act.modeInterleaved', lineOf(following.from));
   }
   const outbound = next.mode === 'direct' ? 'direct' : next.target;
   return text.slice(0, at) + (text[at - 1] === '\n' ? '' : '\n') + `${indent}l4proto(tcp, udp) -> ${outbound} ${MODE_MARK}\n` + text.slice(at);

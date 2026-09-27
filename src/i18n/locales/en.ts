@@ -31,7 +31,8 @@ export const messages = {
   'act.apply': 'Apply',
   'act.modeApplied': 'Outbound mode written to the configuration and reloaded: {mode}',
   'act.modeNoRouting': 'The main configuration has no routing section',
-  'act.modeInterleaved': 'Ordinary rules precede must rules; the outbound mode cannot be changed safely.',
+  'act.modeInterleaved':
+    'An ordinary rule comes before a must rule in the routing block. Move the must rules to the top of the routing block, then change the outbound mode.',
   'act.modeReadOnly': 'Read-only',
   'act.modeWhyReadOnly': 'Why is the mode read-only?',
   'act.modeReadOnlyReason':
