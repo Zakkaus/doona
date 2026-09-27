@@ -74,8 +74,9 @@ export function loadingDots(seconds: number) {
   return (Math.floor((seconds * 1000) / DOT_STEP) + 3) % 4;
 }
 
-// The idle scene as one group centred in a w by h panel: the barricade with its board as wide as the status needs, the
-// loading label and 99% over the bar, all three standing on the same ground with the duck, and the start line below.
+// The idle scene as one group centred in a w by h panel: the barricade with its board as wide as the status needs and
+// the duck standing on the same ground, the bar with the loading label and 99% above it held clear of the ground
+// between them, and the start line below.
 // fit carries what the text needs: the board's width, the loading row's width and the label's cap height. The bar
 // gives up width first on a narrow panel, never below the row; when that is still too wide, the whole group draws
 // smaller by shrink around (cx, h / 2) instead of squeezing the text. Every y is a text baseline except head, sign,
@@ -88,8 +89,9 @@ export function idleLayout(w: number, h: number, fit: {board?: number; row?: num
   const span = board + POST_SPACE + bar + DUCK_SPACE + duckWidth;
   const shrink = Math.min(1, (w / 2 - EDGE) / (span / 2 + GROUND_EDGE));
   // Heights from the ground up, then the stack from the duck's helmet to the start line's descenders centred on h / 2.
-  // The board's top meets the label's capitals and the rail's top the bar's.
-  const top = -BAR_HEIGHT;
+  // The bar floats one bar height above the ground so the two never read as one stroke, its middle level with the
+  // duck's body and the barricade's rail; the board's top meets the label's capitals.
+  const top = -2 * BAR_HEIGHT;
   const label = top - 12;
   const head = -IDLE_HEIGHT;
   const start = 40;
@@ -109,7 +111,7 @@ export function idleLayout(w: number, h: number, fit: {board?: number; row?: num
     head: ground + head,
     // The board's outline straddles its edge, so the edge sits half a stroke under the capitals.
     sign: ground + label - (fit.cap ?? 12) + 0.75,
-    rail: ground + top,
+    rail: ground + top + (BAR_HEIGHT - RAIL_HEIGHT) / 2,
     start: ground + start,
     duck: x + bar + DUCK_SPACE + duckWidth / 2,
     reach: Math.round(span / 2 + GROUND_EDGE),
