@@ -258,6 +258,7 @@ const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.err
 // Identical diagnostics, such as one warning per duplicate entry at the same place, share one row with their count.
 export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
   const paths = new Map(sources.map(source => [source.id, fileName(source)]));
+  // The key is also the row id, so a selection follows its diagnostic when the polled list changes around it.
   const groups = new Map<string, {item: ConfigDiagnostic; count: number}>();
   for (const item of diagnostics) {
     const key = JSON.stringify([item.level, item.source_id, item.line, item.column, item.code, item.message]);
@@ -265,14 +266,14 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
     if (group) group.count++;
     else groups.set(key, {item, count: 1});
   }
-  return [...groups.values()].map(({item, count}, index) => {
+  return [...groups].map(([key, {item, count}]) => {
     const path = paths.get(item.source_id) ?? item.source_id;
     const text = backendMessage(item.code, item.message, t).summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
     // A translated code keeps the backend's own words in the detail, which names the entry the code cannot.
     const described = knownCode(item.code) ? t('config.backendDetail', {text: message, message: item.message}) : message;
     return {
-      id: String(index),
+      id: key,
       level: item.level,
       tone: tones[item.level],
       levelText: enumLabel(levels, item.level, t),
