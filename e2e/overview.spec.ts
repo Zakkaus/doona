@@ -244,25 +244,50 @@ test('a read the backend never answers fails at the deadline and recovers on ret
   await expect(alert).toHaveCount(0);
 });
 
-test('features that are off lead the list with their honk setting, and Activity counts them', async ({page}) => {
-  const {api, handlers} = await mockBackend(page);
-  const capabilities = await api.capabilities();
-  capabilities.resources.events.available = false;
-  capabilities.resources.traffic_history.available = false;
-  capabilities.resources.config.writable = false;
-  handlers['GET capabilities'] = async () => capabilities;
+test.describe('with the base profile', () => {
+  test.use({storage: {'doona-mock-profile': 'base'}});
+
+  test('the features that are off are grouped by cause below the other cards, and Activity links to them', async ({page}) => {
+    await page.goto('/#/overview');
+    const card = page.locator('section').filter({has: page.getByRole('heading', {name: 'Features that are off', exact: true})});
+    const groups = card.locator('.rp-limit');
+    await expect(groups.locator('.rp-limit-reason')).toHaveText([
+      /^honk cannot serve the configuration files/,
+      'The honk configuration turns these recorders off; they are on by default.',
+      /^Routing and DNS loaded different files/,
+      'honk is starting or stopping, so these services are not running.',
+      'This honk build does not provide these features.'
+    ]);
+    // Each cause is said once, with the features it turns off after it.
+    const recorders = groups.nth(1);
+    await expect(recorders.locator('li')).toHaveText(['DNS logNot recorded', 'Traffic historyNot recorded', 'Memory historyNot recorded', 'LogsNot recorded']);
+    await expect(recorders.locator('pre')).toHaveText(
+      'experimental {\n  native_api {\n    record_dns_log: true\n    record_traffic: true\n    record_memory: true\n    record_logs: true\n  }\n}'
+    );
+    await expect(recorders.getByText('Restart honk after changing this section.', {exact: true})).toBeVisible();
+    await expect(groups.nth(0).locator('li')).toHaveText(['ConfigurationNot loaded', 'Nodes and sourcesCannot edit']);
+    await expect(groups.nth(3).locator('li')).toHaveText(['SubscriptionsCannot refresh']);
+    await expect(groups.nth(4).getByRole('link', {name: 'honk version'})).toHaveAttribute('href', /\/en\/requirements\.html#honk-version$/);
+    // The card sits below the Datapath and Backend features row, across the page.
+    const lower = await page.locator('.rp-overview-lower').boundingBox();
+    const box = await card.boundingBox();
+    expect(box!.y).toBeGreaterThan(lower!.y + lower!.height);
+    // Backend features lists only what is on, as dots.
+    const features = page.locator('section').filter({has: page.getByRole('heading', {name: 'Backend features', exact: true})});
+    await expect(features.locator('.rp-capability-status')).toHaveCount(0);
+    await expect(features.locator('.rp-capability').filter({hasText: 'Logs'})).toHaveCount(0);
+    await expect(features.locator('.rp-capability').filter({hasText: 'Connections'})).toHaveCount(1);
+    await page.goto('/#/activity');
+    const count = page.locator('.rp-quick').getByRole('link', {name: '13 features are off', exact: true});
+    await count.click();
+    await expect(page).toHaveURL(/#\/overview\?card=limits$/);
+    await expect(page.getByRole('heading', {name: 'Features that are off', exact: true})).toBeInViewport();
+  });
+});
+
+test('the header shows a degraded datapath beside the lifecycle and links to the Datapath card', async ({page}) => {
   await page.goto('/#/overview');
-  const limits = page.getByRole('list', {name: 'Features that are off or limited', exact: true});
-  const traffic = limits.getByRole('listitem').filter({hasText: 'Traffic history'});
-  await expect(traffic).toContainText('Not recorded');
-  await expect(traffic.locator('code')).toHaveText(['experimental.native_api.record_traffic: true']);
-  // The configuration leads the list.
-  const config = limits.getByRole('listitem').first();
-  await expect(config).toContainText('ConfigurationRead-only');
-  await expect(config.locator('code').first()).toHaveText('experimental.native_api.config_write: true');
-  await expect(page.getByText('Restart honk after changing this section:')).toBeVisible();
-  // The available features stay dots and no longer repeat what the list explains.
-  await expect(page.locator('.rp-capability').filter({hasText: 'Traffic history'})).toHaveCount(0);
-  await page.goto('/#/activity');
-  await expect(page.locator('.rp-quick').getByText('3 features are off', {exact: true})).toBeVisible();
+  const status = page.locator('.rp-page > .rp-between').getByRole('link', {name: 'Running, datapath degraded', exact: true});
+  await expect(status).toHaveAttribute('href', '#/overview?card=datapath');
+  await expect(status.locator('.rp-light')).toHaveClass(/\bwarn\b/);
 });

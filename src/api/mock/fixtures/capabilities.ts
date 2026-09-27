@@ -130,7 +130,8 @@ export const capabilitiesBase: Capabilities = {
     geodata: {available: false},
     rules: {available: false},
     nodes: {available: true, can_manage: false},
-    providers: {available: true, can_refresh: true, can_manage: false, max_page_size: 1000},
+    // The subscription service has not started, so the overview shows a service that is not running.
+    providers: {available: true, can_refresh: false, can_manage: false, max_page_size: 1000},
     config: {available: false, content: false, create: false},
     config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
