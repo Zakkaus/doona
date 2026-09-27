@@ -1,7 +1,7 @@
 import {useEffect, useLayoutEffect, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
-import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Transaction} from '@codemirror/state';
+import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -24,6 +24,7 @@ import {daeCompletion} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {toDiagnostics} from './diagnostics';
 import type {GroupEntry} from '../../dae/groups';
+import {readOnlyAttempts} from './readOnlyAttempt';
 
 // CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
@@ -198,6 +199,7 @@ export function CodeEditor({
   label,
   outbounds,
   onSave,
+  onReadOnlyAttempt,
   compact
 }: {
   value: string;
@@ -210,6 +212,8 @@ export function CodeEditor({
   outbounds?: () => Pick<GroupEntry, 'name' | 'written'>[];
   // Mod-S inside the editor; the caller decides what saving means.
   onSave?: () => void;
+  // Typing, paste, cut or a touch tap while read-only; the caller explains why the text cannot change.
+  onReadOnlyAttempt?: () => void;
   compact?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -218,15 +222,18 @@ export function CodeEditor({
   const change = useRef(onChange);
   const names = useRef(outbounds);
   const save = useRef(onSave);
+  const refused = useRef(onReadOnlyAttempt);
   useEffect(() => {
     change.current = onChange;
     names.current = outbounds;
     save.current = onSave;
+    refused.current = onReadOnlyAttempt;
   });
   const editable = useRef(new Compartment());
   const t = useT();
   const language = useRef(new Compartment());
   const naming = useRef(new Compartment());
+  const undoable = useRef(new Compartment());
   // Before paint, so the first frame already shows the editor rather than an empty host.
   useLayoutEffect(() => {
     const instance = new EditorView({
@@ -236,7 +243,7 @@ export function CodeEditor({
         extensions: [
           lineNumbers(),
           highlightSpecialChars(),
-          history(),
+          undoable.current.of(history()),
           rectangularSelection(),
           lineMarks,
           highlightSelectionMatches(),
@@ -270,6 +277,7 @@ export function CodeEditor({
           language.current.of(phrasesFor(t)),
           // Read-only sources remain focusable for keyboard scrolling and search.
           naming.current.of(EditorView.contentAttributes.of({'aria-label': label, tabindex: '0'})),
+          readOnlyAttempts(() => refused.current?.()),
           EditorView.updateListener.of(update => {
             // A new `value` from the parent is not an edit: it is not echoed back.
             if (update.docChanged && !update.transactions.some(tr => tr.annotation(external))) change.current?.(update.state.doc.toString());
@@ -298,11 +306,14 @@ export function CodeEditor({
   useEffect(() => {
     const instance = view.current;
     if (!instance || instance.state.doc.toString() === value) return;
-    // Kept out of the undo history: Ctrl-Z must not bring back the text the source had before a refetch.
+    // A new value starts a new undo history: Ctrl-Z must neither bring back the text from before a refetch nor replay,
+    // at the edge of the new text, an edit that a cancel threw away. Dropping the history and adding it back resets it.
     instance.dispatch({
       changes: {from: 0, to: instance.state.doc.length, insert: value},
-      annotations: [external.of(true), Transaction.addToHistory.of(false)]
+      annotations: external.of(true),
+      effects: undoable.current.reconfigure([])
     });
+    instance.dispatch({effects: undoable.current.reconfigure(history())});
   }, [value]);
   useEffect(() => {
     const instance = view.current;
