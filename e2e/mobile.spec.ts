@@ -498,8 +498,16 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
   backend.capabilities.resources.dns_cache.delete_entry = false;
   await page.goto('/#/dns?tab=cache');
   await expectReason(page, page.getByRole('button', {name: 'Clear all cache', exact: true}), 'This backend does not support clearing the cache');
-  // The rows' Delete buttons share one line under the table.
-  await expect(page.getByText('This backend does not support deleting cache entries', {exact: true})).toBeVisible();
+  // The rows' Delete buttons share one line above the table, in view without scrolling through it.
+  const grid = page.getByRole('grid', {name: 'Cache', exact: true});
+  const line = page.getByText('This backend does not support deleting cache entries', {exact: true});
+  await expect(line).toBeVisible();
+  expect((await line.boundingBox())!.y).toBeLessThan((await grid.boundingBox())!.y);
+  // The Delete column sits past the phone's width until the table is scrolled sideways.
+  await grid.evaluate(table => {
+    for (let box: Element | null = table; box; box = box.parentElement) if (box.scrollWidth > box.clientWidth) return void (box.scrollLeft = box.scrollWidth);
+  });
+  await expectReason(page, grid.getByRole('button', {name: /^Delete the /}).first(), 'This backend does not support deleting cache entries');
 });
 
 test('the outbound mode says there is nothing to apply until a mode is picked', async ({page}) => {

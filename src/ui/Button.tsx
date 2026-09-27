@@ -22,16 +22,20 @@ export function useReasonId(disabled?: boolean) {
 
 // Why the actions in `children` cannot run, as S2 help text: a line under them, in view on every width. A tooltip never
 // opens on touch, so it cannot be the only place a reason is given. Nothing is added while there is no reason.
-export function ActionHelp({reason, children}: {reason?: string | null; children: ReactNode}) {
+// `above` puts the line before the actions, for ones spread down a tall region such as a table's rows, whose end is
+// out of view on a phone.
+export function ActionHelp({reason, above, children}: {reason?: string | null; above?: boolean; children: ReactNode}) {
   const id = useId();
+  const line = reason && (
+    <span id={id} className="rp-label">
+      {reason}
+    </span>
+  );
   return (
     <ReasonId.Provider value={reason ? id : undefined}>
+      {above && line}
       {children}
-      {reason && (
-        <span id={id} className="rp-label">
-          {reason}
-        </span>
-      )}
+      {!above && line}
     </ReasonId.Provider>
   );
 }
