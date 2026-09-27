@@ -69,9 +69,26 @@ export function toggleGroup(state: GroupCollapse, group: string): GroupCollapse 
   return {allCollapsed: state.allCollapsed, exceptions};
 }
 export const expandGroup = (state: GroupCollapse, group: string) => (isCollapsed(state, group) ? toggleGroup(state, group) : state);
-// Source groups key on the address without the port, so one client is one group.
-export const groupKey = (row: Connection, group: Exclude<ConnectionView['group'], 'none'>, t: LabelFn) =>
-  group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : outboundLabel(row.outbound, t);
+// Groups key on what the backend sent, not on its label, so a change of language keeps which groups are folded and
+// an outbound named like a built-in label stays its own group. Source groups key on the address without the port, so
+// one client is one group; a connection without an outbound joins `unknown`, which its label already reads as.
+const groupKey = (row: Connection, group: Exclude<ConnectionView['group'], 'none'>) =>
+  group === 'source' ? (sourceIp(row.src ?? undefined) ?? row.src ?? '—') : (row.outbound ?? 'unknown');
+const groupName = (key: string, group: Exclude<ConnectionView['group'], 'none'>, t: LabelFn) => (group === 'source' ? key : outboundLabel(key, t));
+
+// Groups and connections share the table's keys. A group's key is its own key after `g:`; a connection keeps its id
+// as its key, the way links and the selection name it, unless the id could read as a group's key or as an escaped
+// one, which is escaped with a backslash.
+export const groupRowId = (group: string) => 'g:' + group;
+// The group a selected connection shows in, and a token that changes when it moves to another group or the grouping
+// changes, so its group unfolds once for each move and folding it again holds.
+export function revealTarget(connection: Connection | undefined, group: ConnectionView['group']): {group: string; token: string} | null {
+  if (!connection || group === 'none') return null;
+  const key = groupKey(connection, group);
+  return {group: key, token: JSON.stringify([connection.id, group, key])};
+}
+export const connectionKey = (id: string) => (id.startsWith('g:') || id.startsWith('\\') ? '\\' + id : id);
+export const connectionId = (key: string) => (key.startsWith('\\') ? key.slice(1) : key);
 
 export function readView(stored: string | null): ConnectionView {
   const defaults: ConnectionView = {hidden: [], sort: null, group: 'source'};
@@ -133,17 +150,17 @@ export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn):
       return direction === 'descending' ? -order : order;
     });
   }
-  if (view.group === 'none') return sorted.map(connection => ({id: connection.id, connection}));
+  if (view.group === 'none') return sorted.map(connection => ({id: connectionKey(connection.id), connection}));
   const groups = new Map<string, Connection[]>();
   for (const row of sorted) {
-    const key = groupKey(row, view.group, t);
+    const key = groupKey(row, view.group);
     const group = groups.get(key);
     if (group) group.push(row);
     else groups.set(key, [row]);
   }
   // A group's id is its key, not its place, so the table's expansion and focus follow the group across polls.
   return [...groups].map(([group, children]) => ({
-    id: `g:${group}`,
+    id: groupRowId(group),
     group,
     children,
     active: children.filter(c => c.state === 'active').length,
@@ -181,7 +198,7 @@ export function connectionTableView(
     const hit = projected.get(c);
     if (hit && hit.locale === locale && hit.names === names && hit.rulesListed === rulesListed && hit.t === t) return hit.row;
     const row: ConnectionRowView = {
-      id: c.id,
+      id: connectionKey(c.id),
       target: c.domain || c.dst || '—',
       source: c.src ?? '—',
       node: nodeLabel(c, t, names),
@@ -203,7 +220,7 @@ export function connectionTableView(
           id: row.id,
           group: row.group,
           children: row.children.map(project),
-          label: t('conn.groupCount', {name: row.group, n: row.children.length}),
+          label: t('conn.groupCount', {name: groupName(row.group, view.group as Exclude<ConnectionView['group'], 'none'>, t), n: row.children.length}),
           totals: {down: formatBytes(row.download, locale), state: t('conn.activeCount', {n: row.active})}
         }
   );
