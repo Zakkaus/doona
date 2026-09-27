@@ -102,31 +102,12 @@ function BoundedTip({tip}: {tip: Tip}) {
         transform: `translate(${x}px, ${y}px)`
       }}
     >
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          margin: 0,
-          padding: '8px 12px',
-          backgroundColor: 'var(--rp-text)',
-          color: 'var(--rp-on-text)',
-          border: 'none',
-          // As wide as its longest line, but never wider than the bounds, so a narrow card wraps it instead of
-          // cutting it off.
-          boxSizing: 'border-box',
-          inlineSize: 'max-content',
-          maxInlineSize: bounds.width,
-          overflowWrap: 'anywhere',
-          borderRadius: 8,
-          fontSize: 12
-        }}
-      >
-        <p style={{margin: 0}}>{tip.label}</p>
-        <ul style={{padding: 0, margin: 0}}>
+      {/* Never wider than the bounds, so a narrow card wraps it instead of cutting it off. */}
+      <div role="status" aria-live="polite" className="rp-boundedtip" style={{maxInlineSize: bounds.width}}>
+        <p>{tip.label}</p>
+        <ul>
           {tip.lines.map((line, index) => (
-            <li key={index} style={{display: 'block', paddingTop: 4, paddingBottom: 4}}>
-              {line}
-            </li>
+            <li key={index}>{line}</li>
           ))}
         </ul>
       </div>
