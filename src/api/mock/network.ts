@@ -83,6 +83,7 @@ export function createNetwork(
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
+  if (faults && !large) connections.tcp.push(structuredClone(fixtures.failedConnection));
   // honk's first release observes userspace only; the mock says so the same way.
   if (profile === 'm1') connections.visibility = 'partial';
   const dnsCache = structuredClone(fixtures.dnsCache);

@@ -30,6 +30,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
   let download: GeoDataDownload = {route: 'routing', group_id: null};
   const data = structuredClone(fixtures.geodata);
   data.required_codes = requiredCodes([...rules, ...(faults ? faultRules : [])].map(rule => rule.cond));
+  // In the faults scenario this morning's automatic check could not reach any URL; the files from three days ago stay.
+  if (faults) Object.assign(data, fixtures.geodataFault);
   const urls = () => stored ?? {geosite: [...defaultGeodataPreset.urls.geosite], geoip: [...defaultGeodataPreset.urls.geoip]};
   const nextCheck = (from: number) => (auto.enabled ? new Date(from + auto.interval_hours * 3600_000 + 17 * 60_000).toISOString() : null);
   data.next_check_at = nextCheck(Date.parse(data.last_checked_at ?? '') || Date.now());

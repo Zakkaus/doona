@@ -165,6 +165,19 @@ flows.push(unobservedFlow, {
   id: 'flow-ipv6',
   input: {...unobservedFlow.input, src: '[2001:db8::12]:5000'}
 });
+// The faults scenario's dial failure: a proxied connection whose outbound never connected, so nothing moved.
+export const failedConnection: Connection = {
+  ...connections.tcp.find(row => row.id === '3')!,
+  id: '9',
+  dst: '198.51.100.23:443',
+  src: '10.0.0.44',
+  state: 'failed',
+  started_at: ago(12),
+  upload_bytes: '0',
+  download_bytes: '0',
+  upload_bytes_per_second: '0',
+  download_bytes_per_second: '0'
+};
 // Retained terminal flows without a live connection: the routing view shows a config with many rules.
 function retained(id: string, domain: string, outbound: string, network: 'tcp' | 'udp' = 'tcp') {
   const seed: ConnectionSeed = {

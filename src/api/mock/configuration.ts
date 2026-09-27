@@ -32,7 +32,8 @@ export function createConfiguration(
   geodata: MockGeodataState,
   faults = false
 ) {
-  const settings = structuredClone(fixtures.runtimeSettings);
+  const configured = faults ? fixtures.faultSettings : fixtures.runtimeSettings;
+  const settings = structuredClone(configured);
   const withGeodata = () => {
     const value = structuredClone(settings);
     if (capabilities.resources.geodata.configurable_sources === true) value.geodata = geodata.settings();
@@ -42,9 +43,12 @@ export function createConfiguration(
   let disk: (ConfigSource & {content: string})[] = [];
   let loading: Promise<(ConfigSource & {content: string})[]> | undefined;
   const loadSources = () =>
-    (loading ??= Promise.all((faults ? fixtures.faultSources : fixtures.configSources).map(stored)).then(list => {
+    (loading ??= Promise.all([
+      Promise.all((faults ? fixtures.faultSources : fixtures.configSources).map(stored)),
+      faults ? Promise.all(fixtures.faultDisk.map(stored)) : null
+    ]).then(([list, files]) => {
       sources = list;
-      disk = [...list];
+      disk = files ?? [...list];
       return list;
     }));
   let configRevision = 40;
@@ -73,7 +77,7 @@ export function createConfiguration(
       geodata.follow(routingOf(sources).rules.flatMap(rule => (rule.kind === 'rule' ? [rule.expression] : [])));
     }
     configRevision += 1;
-    Object.assign(settings, structuredClone(fixtures.runtimeSettings), {observed_at: new Date().toISOString()});
+    Object.assign(settings, structuredClone(configured), {observed_at: new Date().toISOString()});
     log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
     const generation = String(configRevision);
     runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};

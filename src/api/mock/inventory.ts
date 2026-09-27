@@ -54,6 +54,12 @@ export function createInventory(
   const providers = structuredClone(fixtures.providers);
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120, faults);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
+  // In the faults scenario the subscription host fails every fetch: the provider keeps its cached nodes as stale.
+  if (faults)
+    Object.assign(
+      providers.find(provider => provider.id === 'sub-c')!,
+      {status: 'stale', last_error: fixtures.providerFault}
+    );
   const revisions = new Map<string, bigint>();
   const updating = new Set<string>();
   const api: InventoryApi = {
@@ -229,6 +235,11 @@ export function createInventory(
       updating.add('refresh:' + providerId);
       return enqueue('provider_refresh', () => {
         updating.delete('refresh:' + providerId);
+        if (faults && provider.id === 'sub-c') {
+          provider.last_error = structuredClone(fixtures.providerFault);
+          log('warn', 'honk::subscription', 'Subscription fetch failed.', {provider: provider.name, error: fixtures.providerFault.code});
+          throw new ApiError(502, fixtures.providerFault.code, fixtures.providerFault.message);
+        }
         provider.updated_at = new Date().toISOString();
         provider.status = 'ok';
         provider.last_error = null;
