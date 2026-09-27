@@ -68,7 +68,10 @@ it('names the one reason a source is read-only', () => {
   expect(reason('generated', false, true, false)).toBe('generated');
   const badge = readOnlyBadge({kind: 'generated', writable: false}, true, true, t)!;
   expect(badge.label).toBe('Generated');
-  expect(badge.help).toEqual({title: 'Generated', text: t('config.generatedHelp')});
+  // The line under the text already says why; only the write switch needs more than that line holds.
+  expect(badge.help).toBeUndefined();
+  expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.help).toEqual({title: 'Read-only', text: t('config.readOnlyHelp')});
+  expect(readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.help).toBeUndefined();
   expect(readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.label).toBe('Contains secrets');
   expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.label).toBe('Read-only');
   expect(readOnlyBadge({kind: 'subscription', writable: false}, true, true, t)!.label).toBe('Subscription');

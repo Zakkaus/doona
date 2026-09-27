@@ -90,12 +90,7 @@ export const messages = {
   'config.readOnly': '只读',
   'config.readOnlyHelp': '后端未开放写入配置。honk 须启用 experimental.native_api.config_write，并设置密钥或密码登录。',
   'config.secretSource': '含密钥',
-  'config.secretHelp':
-    '此文件定义了 native_api 或 clash_api 的监听密钥，或包含已脱敏的密钥值，后端因此不允许编辑。将密钥所在的区段移到独立的引入文件后，即可编辑其余内容。',
-  'config.generatedHelp': '此文件由引擎写入，每次重新生成都会覆盖，因此只能查看。',
-  'config.subscriptionHelp': '此文件是下载的订阅内容，更新订阅时会被替换，因此只能查看。',
   'config.redactedSource': '内容已脱敏',
-  'config.redactedHelp': '后端对此文件的部分或全部内容做了脱敏。写回会丢失被脱敏的值，因此只能查看。',
   'config.readOnlyAttempt': '此文件只读',
   'config.kind.main': '主配置',
   'config.kind.include': '引入文件',

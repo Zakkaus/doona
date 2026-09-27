@@ -93,12 +93,7 @@ export const messages = {
   'config.readOnlyHelp':
     'The backend does not allow configuration writes. On honk, enable experimental.native_api.config_write and set a secret or password sign-in.',
   'config.secretSource': 'Contains secrets',
-  'config.secretHelp':
-    'This file defines a native_api or clash_api secret or contains a redacted secret value, so the backend does not allow editing it. Move the section with the secret into its own included file to edit the rest.',
-  'config.generatedHelp': 'The engine writes this file and overwrites it each time it regenerates it, so it can only be viewed.',
-  'config.subscriptionHelp': 'This file holds downloaded subscription content and is replaced when the subscription updates, so it can only be viewed.',
   'config.redactedSource': 'Redacted',
-  'config.redactedHelp': 'The backend redacted some or all of this file. Writing it back would lose the redacted values, so it can only be viewed.',
   'config.readOnlyAttempt': 'This file is read-only',
   'config.kind.main': 'Main',
   'config.kind.include': 'Include',

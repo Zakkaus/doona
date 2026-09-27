@@ -39,12 +39,11 @@ test('a generated source names why it is read-only and offers no validation', as
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]')).toContainText('skylink');
   const toolbar = page.locator('.rp-toolbar').nth(1);
   await expect(toolbar.locator('.rp-badge')).toHaveText(['Generated']);
-  await toolbar.getByRole('button', {name: 'About Generated', exact: true}).click();
-  await expect(page.getByRole('dialog', {name: 'Generated'})).toContainText('The engine writes this file');
-  await page.keyboard.press('Escape');
+  // The line under the text says why, so the badge carries no help that would repeat it.
+  await expect(toolbar.getByRole('button', {name: 'About Generated', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
-  // What the file is and what can be done with it is said under the text, not only behind the help button.
+  // What the file is and what can be done with it is said under the text.
   await expect(page.locator('.rp-card')).toContainText('The engine generates this file and overwrites it when it regenerates');
   // The path is named once, by the picker; the card carries it only as its accessible name.
   await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveCount(0);
@@ -154,7 +153,7 @@ test('a read-only source explains itself once per visit when typed into, and kee
   await page.keyboard.type('abc');
   const notice = readOnlyNotice(page);
   await expect(notice).toHaveCount(1);
-  await expect(notice).toContainText('The engine writes this file');
+  await expect(notice).toContainText('The engine generates this file');
   await expect(editor).toHaveText(original, {useInnerText: true});
   await notice.getByRole('button', {name: 'Close', exact: true}).click();
   await expect(page.locator('.rp-toast')).toHaveCount(0);
@@ -184,7 +183,7 @@ test('paste into a read-only source is refused with the read-only notice', async
   await editor.click();
   await page.evaluate(() => navigator.clipboard.writeText('pasted text'));
   await page.keyboard.press('ControlOrMeta+V');
-  await expect(readOnlyNotice(page)).toContainText('The engine writes this file');
+  await expect(readOnlyNotice(page)).toContainText('The engine generates this file');
   await expect(editor).toHaveText(original, {useInnerText: true});
 });
 

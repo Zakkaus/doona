@@ -32,12 +32,7 @@ export const messages = defineMessages({
     'config.readOnly': '唯讀',
     'config.readOnlyHelp': '後端未開放寫入組態。honk 須啟用 experimental.native_api.config_write，並設定密鑰或密碼登入。',
     'config.secretSource': '含密鑰',
-    'config.secretHelp':
-      '此檔案定義了 native_api 或 clash_api 的監聽密鑰，或含有已遮蔽的密鑰值，後端因此不允許編輯。將密鑰所在的區段移到獨立的引入檔後，即可編輯其餘內容。',
-    'config.generatedHelp': '此檔案由引擎寫入，每次重新產生都會覆寫，因此只能檢視。',
-    'config.subscriptionHelp': '此檔案是下載的訂閱內容，更新訂閱時會被取代，因此只能檢視。',
     'config.redactedSource': '內容已遮蔽',
-    'config.redactedHelp': '後端遮蔽了此檔案的部分或全部內容。寫回會遺失被遮蔽的值，因此只能檢視。',
     'config.readOnlyAttempt': '此檔案唯讀',
     'config.kind.main': '主組態',
     'config.kind.include': '引入檔',
@@ -180,12 +175,7 @@ export const messages = defineMessages({
     'config.readOnly': '只读',
     'config.readOnlyHelp': '后端未开放写入配置。honk 须启用 experimental.native_api.config_write，并设置密钥或密码登录。',
     'config.secretSource': '含密钥',
-    'config.secretHelp':
-      '此文件定义了 native_api 或 clash_api 的监听密钥，或包含已脱敏的密钥值，后端因此不允许编辑。将密钥所在的区段移到独立的引入文件后，即可编辑其余内容。',
-    'config.generatedHelp': '此文件由引擎写入，每次重新生成都会覆盖，因此只能查看。',
-    'config.subscriptionHelp': '此文件是下载的订阅内容，更新订阅时会被替换，因此只能查看。',
     'config.redactedSource': '内容已脱敏',
-    'config.redactedHelp': '后端对此文件的部分或全部内容做了脱敏。写回会丢失被脱敏的值，因此只能查看。',
     'config.readOnlyAttempt': '此文件只读',
     'config.kind.main': '主配置',
     'config.kind.include': '引入文件',
@@ -331,12 +321,7 @@ export const messages = defineMessages({
     'config.readOnlyHelp':
       'The backend does not allow configuration writes. On honk, enable experimental.native_api.config_write and set a secret or password sign-in.',
     'config.secretSource': 'Contains secrets',
-    'config.secretHelp':
-      'This file defines a native_api or clash_api secret or contains a redacted secret value, so the backend does not allow editing it. Move the section with the secret into its own included file to edit the rest.',
-    'config.generatedHelp': 'The engine writes this file and overwrites it each time it regenerates it, so it can only be viewed.',
-    'config.subscriptionHelp': 'This file holds downloaded subscription content and is replaced when the subscription updates, so it can only be viewed.',
     'config.redactedSource': 'Redacted',
-    'config.redactedHelp': 'The backend redacted some or all of this file. Writing it back would lose the redacted values, so it can only be viewed.',
     'config.readOnlyAttempt': 'This file is read-only',
     'config.kind.main': 'Main',
     'config.kind.include': 'Include',

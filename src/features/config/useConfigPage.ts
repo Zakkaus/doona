@@ -235,7 +235,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     ? () => {
         if (told.current) return;
         told.current = true;
-        toast('info', t('config.readOnlyAttempt'), {detail: readOnly.help.text});
+        toast('info', t('config.readOnlyAttempt'), {detail: readOnly.note});
       }
     : undefined;
   const view = sourceView(source, locale, t);
