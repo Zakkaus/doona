@@ -1,20 +1,31 @@
-/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url]; Node 22+; exits 0/1/2 for done/verification
- * failure/usage. Downloads every honk-core build from honk's rolling debug pre-release, checks each file against the sha256 digest the GitHub API
- * reports, checks the commit the release body names against the release target or its source tag, downloads the source archive of that commit,
- * and writes HONK-SOURCE.txt naming it. GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API calls.
+/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url] [--commit sha]; Node 22+; exits 0/1/2
+ * for done/verification failure/usage. Downloads every honk-core build from honk's rolling debug pre-release, checks each file against the sha256
+ * digest the GitHub API reports, checks that the release body, the release target and the source tag all name the pinned commit, downloads the
+ * source archive of that commit, and writes HONK-SOURCE.txt naming it. The pin is --commit or, by default, tools/honk-commit.txt.
+ * GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API calls.
  * Temporary: the release workflow bundles these builds until honk publishes a release with the native API. */
 import {createHash} from 'node:crypto';
 import {createWriteStream} from 'node:fs';
-import {mkdir, rename, rm, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {Readable, Transform} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 export const SOURCE_NOTE = 'HONK-SOURCE.txt';
 // honk's Cargo.toml declares the licence; LICENSE carries the GPL-3.0 text.
 const LICENCE = 'GPL-3.0-only';
-const usage = 'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url]';
+const usage = 'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url] [--commit sha]';
+const SHA = /^[0-9a-f]{40}$/;
+
+// The debug release is rolling, so a doona release names the honk commit it bundles here and the release PR bumps it.
+export const PIN_FILE = fileURLToPath(new URL('honk-commit.txt', import.meta.url));
+
+export async function readPin(path = PIN_FILE) {
+  const commit = (await readFile(path, 'utf8')).trim();
+  if (!SHA.test(commit)) throw new Error(`${path} holds no full commit SHA`);
+  return commit;
+}
 
 // honk's release workflow builds each target twice: mimalloc by default, and the system allocator under -stock.
 export function expectedAssets() {
@@ -44,7 +55,8 @@ export function sourceNote({repo, release, source, files}) {
     'honk-core builds bundled with this doona release',
     '',
     'doona ships these until honk publishes a release with the native API. They are',
-    `unmodified copies of the ${release.tag_name} pre-release assets.`,
+    `unmodified copies of the ${release.tag_name} pre-release assets, checked against the`,
+    'honk commit this doona release pins.',
     '',
     `Release: ${release.html_url}`,
     `Source tag: ${source.tag}`,
@@ -93,21 +105,26 @@ export async function fetchHonk({
   tag = 'debug',
   api = 'https://api.github.com',
   archive = 'https://github.com',
+  commit,
   token,
   log = () => {}
 }) {
+  if (!SHA.test(commit ?? '')) throw new Error(`the pinned commit ${commit} is not a full commit SHA`);
   const headers = {accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28'};
   if (token) headers.authorization = `Bearer ${token}`;
   const response = await fetch(`${api}/repos/${repo}/releases/tags/${tag}`, {headers, signal: AbortSignal.timeout(60_000)});
   if (!response.ok) throw new Error(`GET release ${repo}@${tag}: HTTP ${response.status}`);
   const release = await response.json();
   const source = parseBody(release.body);
-  // The source shipped must be the commit the builds came from. A release that targets a commit names it; one that
-  // targets a branch does not, and the source tag the build ran on is checked instead.
-  const [target, named] = /^[0-9a-f]{40}$/.test(release.target_commitish ?? '')
-    ? [release.target_commitish, 'the release targets']
-    : [await tagCommit({api, repo, tag: source.tag, headers}), `source tag ${source.tag} points to`];
-  if (target !== source.commit) throw new Error(`release body names commit ${source.commit}, ${named} ${target}`);
+  // honk overwrites the debug release on every debug tag, so it may now hold a later build than the one this doona release pins.
+  if (source.commit !== commit)
+    throw new Error(`release body names commit ${source.commit}, doona pins ${commit}; update tools/honk-commit.txt if doona should ship that build`);
+  // The source shipped must be the commit the builds came from. A release that targets a branch names no commit, and the
+  // source tag the build ran on is checked either way.
+  if (SHA.test(release.target_commitish ?? '') && release.target_commitish !== commit)
+    throw new Error(`the release targets ${release.target_commitish}, doona pins ${commit}`);
+  const tagged = await tagCommit({api, repo, tag: source.tag, headers});
+  if (tagged !== commit) throw new Error(`source tag ${source.tag} points to ${tagged}, doona pins ${commit}`);
 
   const expected = expectedAssets();
   const assets = new Map((release.assets ?? []).filter(asset => asset.name.startsWith('honk-core-')).map(asset => [asset.name, asset]));
@@ -156,7 +173,7 @@ export async function main(args) {
       positional.push(args[i]);
       continue;
     }
-    if (!['--repo', '--tag', '--api', '--archive'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
+    if (!['--repo', '--tag', '--api', '--archive', '--commit'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
       console.error(usage);
       return 2;
     }
@@ -167,7 +184,8 @@ export async function main(args) {
     return 2;
   }
   try {
-    await fetchHonk({...options, out: positional[0], token: process.env.GITHUB_TOKEN || process.env.GH_TOKEN, log: line => console.log(line)});
+    const commit = options.commit ?? (await readPin());
+    await fetchHonk({...options, commit, out: positional[0], token: process.env.GITHUB_TOKEN || process.env.GH_TOKEN, log: line => console.log(line)});
     return 0;
   } catch (error) {
     console.error(`fetch-honk: ${error.message}`);
