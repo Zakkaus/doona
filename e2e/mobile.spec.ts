@@ -114,7 +114,10 @@ test('the overflow menu draws every row icon at the same size, whatever the sche
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     const icons = page.locator('.rp-subitem .ic > *');
     await expect(icons).toHaveCount(5);
-    for (const box of await icons.evaluateAll(els => els.map(el => el.getBoundingClientRect()))) expect([box.width, box.height]).toEqual([16, 16]);
+    // Read until every icon settles: one read right after the menu opened once caught an icon 10px wide in CI.
+    await expect
+      .poll(() => icons.evaluateAll(els => els.map(el => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])))
+      .toEqual(Array(5).fill([16, 16]));
     await page.keyboard.press('Escape');
   }
 });
