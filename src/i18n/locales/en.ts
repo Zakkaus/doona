@@ -1437,6 +1437,7 @@ export const messages = {
   'ui.backend.reloadDegraded': 'The configuration is applied, but the datapath is degraded',
   'ui.backend.engineUnavailable': 'The engine is unavailable or stopped before finishing',
   'ui.backend.requestExhausted': 'Reload request numbers are exhausted',
+  'ui.backend.lifecycleFailed': 'The service state change failed',
   'ui.backend.geodataUpdateFailed': 'The geodata update failed',
   'ui.backend.assetValidationFailed':
     'The new geodata file failed validation: it could not be read or lacks categories the rules use. The current files are kept',

@@ -8,6 +8,7 @@ const operationCodes = [
   'reload_degraded',
   'engine_unavailable',
   'request_exhausted',
+  'lifecycle_failed',
   'geodata_update_failed',
   'probe_interrupted',
   'probe_cleanup_failed',

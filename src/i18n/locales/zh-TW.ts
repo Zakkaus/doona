@@ -1394,6 +1394,7 @@ export const messages = {
   'ui.backend.reloadDegraded': '組態已套用，但資料路徑處於降級狀態',
   'ui.backend.engineUnavailable': '引擎無法使用，或在完成前已停止',
   'ui.backend.requestExhausted': '重載請求序號已用盡',
+  'ui.backend.lifecycleFailed': '服務狀態切換失敗',
   'ui.backend.geodataUpdateFailed': '地理資料更新失敗',
   'ui.backend.assetValidationFailed': '新的地理資料檔未通過驗證：檔案無法解析，或缺少規則使用的分類。已沿用目前的檔案',
   'ui.backend.probeInterrupted': '探測在完成前中斷',
