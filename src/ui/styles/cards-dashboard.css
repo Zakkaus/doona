@@ -159,7 +159,7 @@
   height: 10px;
 }
 .rp-login-showcase {
-  /* The duck mark's own ink, paper and yellow (src/logo.svg), for the props drawn beside it on every palette. */
+  /* The duck's own ink, paper and yellow, the logo's colours, for the duck and the props beside it on every palette. */
   --rp-mark-ink: #0b0a09;
   --rp-mark-paper: #fff;
   --rp-mark-yellow: #fd0;

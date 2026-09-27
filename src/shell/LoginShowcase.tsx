@@ -2,7 +2,6 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {VisuallyHidden} from 'react-aria';
 import {useT} from '../i18n';
 import {CanvasButton} from '../ui/CanvasButton';
-import logo from '../logo.svg';
 import {startLoginGame, type GameText, type LoginGame} from './loginGame';
 
 // The panel beside the sign-in form on wide screens: a construction scene that a press turns into a mini game (see
@@ -25,7 +24,7 @@ export default function LoginShowcase() {
     [t]
   );
   useEffect(() => {
-    const started = startLoginGame(button.current!, canvas.current!, logo, (amount, best) => setResult({amount, best}));
+    const started = startLoginGame(button.current!, canvas.current!, (amount, best) => setResult({amount, best}));
     game.current = started;
     return () => {
       started.destroy();
