@@ -5,7 +5,10 @@ import {expect, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixt
 // under the table (DataTable `detail`), by pointer or by Enter and Space on the focused row.
 test.use({viewport: {width: 390, height: 844}, storage: {'doona-lang': 'en'}});
 
-const cut = (cell: Locator) => cell.locator('.rp-truncate').evaluate(el => el.scrollWidth > el.clientWidth);
+// Text is measured a frame after it renders, and cut text then remounts inside its tooltip trigger, so one read can
+// land on the span being replaced, which has no width; the check reads again until it meets the mounted one.
+const expectCut = (cell: Locator) =>
+  expect.poll(() => cell.locator('.rp-truncate').evaluate(el => el.scrollWidth > el.clientWidth), {message: 'the message is cut in the table'}).toBe(true);
 
 async function disclose(page: Page, grid: Locator, text: string) {
   // The text column comes last; a phone scrolls to it before the grid renders it.
@@ -13,7 +16,7 @@ async function disclose(page: Page, grid: Locator, text: string) {
   await scrollTableToEnd(grid);
   const row = grid.getByRole('row').filter({hasText: text.slice(0, 20)});
   await expect(row).toHaveCount(1);
-  expect(await cut(row.getByRole('rowheader')), 'the message is cut in the table').toBe(true);
+  await expectCut(row.getByRole('rowheader'));
   const detail = page.locator('.rp-table-detail');
   await expect(detail).toHaveAttribute('aria-live', 'polite');
   await expect(detail).toBeEmpty();
@@ -98,7 +101,7 @@ test.describe('by touch', () => {
     await scrollTableToEnd(grid);
     const row = grid.getByRole('row').filter({hasText: logText.slice(0, 20)});
     await expect(row).toHaveCount(1);
-    expect(await cut(row.getByRole('rowheader')), 'the message is cut in the table').toBe(true);
+    await expectCut(row.getByRole('rowheader'));
     const detail = page.locator('.rp-table-detail');
     await expect(detail).toBeEmpty();
     // Tap the message itself: a tap on the row's middle would scroll the grid back to where the message is not drawn.
