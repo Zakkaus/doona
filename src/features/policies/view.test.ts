@@ -157,9 +157,11 @@ const withInterval = <G extends ReturnType<typeof nodeFixtures>['groups'][number
   ...g,
   capabilities: {...g.capabilities, mutable_config: [...g.capabilities.mutable_config, 'check_interval']}
 });
-it('offers only the writable check fields, and none on a selector group', () => {
+it('offers the check fields a group lists as writable, whatever its policy', () => {
   const [proxy, resilient] = nodeFixtures(0).groups;
+  // honk lists no check field for a selector group; a backend that probes one lists check_url and gets it.
   expect(checkFields(proxy)).toEqual([]);
+  expect(checkFields(withInterval(proxy))).toEqual(['check_interval']);
   // honk lists check_url only; a backend that also lists check_interval gets both fields.
   expect(checkFields(resilient)).toEqual(['check_url']);
   expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval']);

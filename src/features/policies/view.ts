@@ -34,9 +34,9 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
 
 export type CheckField = 'check_url' | 'check_interval';
 export type CheckDraft = Record<CheckField, string>;
-// The check settings a group takes writes to. Honk does not probe a selector group's check URL, so a selector offers none.
+// The check settings a group takes writes to, as its mutable_config lists them. honk leaves check_url out for a
+// selector group, which it does not probe; a backend that probes one lists it.
 export function checkFields(g: Group): CheckField[] {
-  if (g.policy.kind === 'selector') return [];
   return (['check_url', 'check_interval'] as const).filter(field => g.capabilities.mutable_config.includes(field));
 }
 export const checkDraft = (g: Group): CheckDraft => ({
