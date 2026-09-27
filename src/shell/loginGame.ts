@@ -1,3 +1,5 @@
+import {DUCK_BOX, DUCK_PATHS} from './loginDuck';
+
 // The showcase beside the sign-in form is "under construction": a sign, two cones and the duck in a hard hat. A press
 // turns it into Flappy Duck: flap through open ports in firewall walls while the forwarded traffic adds up. The link
 // rate climbs without end; speed, gap and wall spacing tighten with it but only ever approach the limits the flap
@@ -19,9 +21,9 @@ export const FLAP_HEIGHT = (FLAP * FLAP) / (2 * GRAVITY);
 export const GAP_MIN = Math.max(2.2 * DUCK_HEIGHT, DUCK_HEIGHT + FLAP_HEIGHT + 4);
 export const SPACE_MIN = 200;
 export const SPEED_MAX = (SPACE_MIN * GRAVITY) / (2 * FLAP);
-// Half the duck's hit box.
-const HALF_W = 0.38 * DUCK_HEIGHT;
-const HALF_H = 0.42 * DUCK_HEIGHT;
+// Half the duck's hit box: its drawn bounds, pulled in to 84% so a brush with a wall's corner is forgiven.
+const HALF_W = (0.84 * DUCK_HEIGHT * DUCK_BOX.width) / DUCK_BOX.height / 2;
+const HALF_H = (0.84 * DUCK_HEIGHT) / 2;
 
 function unit(n: number, units: string[], digits: number) {
   let i = 0;
@@ -64,38 +66,14 @@ export type LoginGame = {setText: (text: GameText) => void; destroy: () => void}
 type Wall = {x: number; ox: number; gap: number; c0: number; c: number; oc: number; a: number; f: number; ph: number; done: boolean};
 type Colors = {ink: string; paper: string; yellow: string; text: string; sub: string; accent: string; wall: string; base: string; gold: string; cone: string};
 
-// A hard hat in the logo's own units: a dome over the crown, a rim, a short brim over the beak and a centre ridge,
-// tilted a few degrees forward. The mark faces left, so forward is towards smaller x.
-function hardHat() {
-  const tilt = new DOMMatrix().translate(560, 365).rotate(-5).translate(-560, -365);
-  const dome = new Path2D();
-  const line = new Path2D();
-  dome.arc(560, 365, 186, Math.PI + 0.53, -0.53);
-  dome.lineTo(730, 298);
-  dome.lineTo(404, 298);
-  dome.lineTo(354, 300);
-  dome.quadraticCurveTo(330, 300, 332, 285);
-  dome.quadraticCurveTo(334, 271, 356, 271);
-  dome.closePath();
-  line.arc(560, 365, 150, Math.PI + 0.62, -0.72);
-  line.moveTo(400, 270);
-  line.lineTo(722, 270);
-  const hat = new Path2D();
-  const ridge = new Path2D();
-  hat.addPath(dome, tilt);
-  ridge.addPath(line, tilt);
-  return {hat, ridge};
-}
-
 // Runs the scene and the game on the canvas inside the button until destroy. The text arrives through setText, and
 // onCrash hears each result for the live region.
-export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElement, logo: string, onCrash: (amount: string, best: string) => void): LoginGame {
+export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElement, onCrash: (amount: string, best: string) => void): LoginGame {
   const g = canvas.getContext('2d');
   if (!g) return {setText() {}, destroy() {}};
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const root = document.documentElement;
-  const {hat, ridge} = hardHat();
-  const mark: Array<[Path2D, string]> = [];
+  const drawing = DUCK_PATHS.map(([fill, d]) => [fill, new Path2D(d)] as const);
   let text: GameText | undefined;
   let font = '';
   let colors: Colors = look();
@@ -122,24 +100,9 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
   let seen = true;
   let timer = 0;
 
-  // The logo's own paths, so the duck matches the brand mark at every size. Without them the scene has no duck.
-  const loading = new AbortController();
-  fetch(logo, {signal: loading.signal})
-    .then(response => response.text())
-    .then(source => {
-      new DOMParser()
-        .parseFromString(source, 'image/svg+xml')
-        .querySelectorAll('path')
-        .forEach(path => {
-          mark.push([new Path2D(path.getAttribute('d') ?? ''), path.getAttribute('fill') ?? '']);
-        });
-      draw();
-    })
-    .catch(() => {});
-
   function look(): Colors {
-    // The panel's own style carries the palette from <html> and the duck mark's ink, paper and yellow, which stay the
-    // same on every palette and scheme so the props drawn beside the duck match it.
+    // The panel's own style carries the palette from <html> and the duck's ink, paper and yellow, which stay the same on
+    // every palette and scheme so the props drawn beside the duck match it.
     const css = getComputedStyle(button);
     const token = (name: string) => css.getPropertyValue(name).trim();
     font = css.fontFamily;
@@ -236,26 +199,17 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.fill();
     g!.stroke();
   }
-  // The mark, mirrored to face right, centred on (x, yc) and s tall; its box is 317 to 962 by 189 to 905.
+  // The duck, mirrored to face right, centred on (x, yc) and s tall.
   function duck(x: number, yc: number, s: number, rot: number) {
-    const k = s / 716;
+    const k = s / DUCK_BOX.height;
     g!.save();
     g!.translate(x, yc);
     g!.rotate(rot);
     g!.scale(-k, k);
-    g!.translate(-640, -547);
-    for (const [path, fill] of mark) {
-      g!.fillStyle = fill;
+    g!.translate(-(DUCK_BOX.x + DUCK_BOX.width / 2), -(DUCK_BOX.y + DUCK_BOX.height / 2));
+    for (const [fill, path] of drawing) {
+      g!.fillStyle = colors[fill];
       g!.fill(path, 'evenodd');
-    }
-    if (mark.length) {
-      g!.lineWidth = 13;
-      g!.strokeStyle = colors.ink;
-      g!.fillStyle = colors.yellow;
-      g!.fill(hat);
-      g!.stroke(hat);
-      g!.lineWidth = 10;
-      g!.stroke(ridge);
     }
     g!.restore();
   }
@@ -422,7 +376,6 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     destroy() {
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
-      loading.abort();
       button.removeEventListener('pointerdown', onPointer);
       button.removeEventListener('keydown', onKey);
       button.removeEventListener('click', onClick);
