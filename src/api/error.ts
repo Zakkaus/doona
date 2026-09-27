@@ -62,10 +62,33 @@ function either(caller: AbortSignal, deadline: AbortSignal): AbortSignal {
   return both.signal;
 }
 
+// The deadline covers the body too, but the body is read after send has returned, and some engines error the stream
+// with a plain AbortError rather than the abort reason. A read that fails once the deadline has passed fails with the
+// timeout error; a caller abort keeps its own error. A body-less response has nothing to stall and passes as it is,
+// and so does a no-content status, which Chromium gives an empty stream but a Response cannot be built with.
+const NO_CONTENT = new Set([204, 205, 304]);
+function bodyWithin(response: Response, caller: AbortSignal | null, deadline: AbortSignal, timeout: ApiError): Response {
+  if (!response.body || NO_CONTENT.has(response.status)) return response;
+  const reader = response.body.getReader();
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const {done, value} = await reader.read();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      } catch (error) {
+        controller.error(deadline.aborted && !caller?.aborted ? timeout : error);
+      }
+    },
+    cancel: reason => reader.cancel(reason)
+  });
+  return new Response(body, {status: response.status, statusText: response.statusText, headers: response.headers});
+}
+
 // A request that gets no response at all fails with the browser's own words ("Failed to fetch", "Load failed"); it is
-// reported as a network failure in the page language instead. A cancelled request keeps its AbortError. The deadline
-// covers the body too: it aborts with the timeout error, so a stalled body read fails with it as well. A write that
-// timed out may still have been applied, and its text says so.
+// reported as a network failure in the page language instead. A cancelled request keeps its AbortError. A stalled
+// body read fails with the timeout error as well. A write that timed out may still have been applied, and its text
+// says so.
 export async function send(input: RequestInfo | URL, init?: RequestInit, write?: boolean): Promise<Response> {
   const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
@@ -77,7 +100,8 @@ export async function send(input: RequestInfo | URL, init?: RequestInit, write?:
   const deadline = new AbortController();
   setTimeout(() => deadline.abort(timeout), limit);
   try {
-    return await fetch(input, {...init, signal: signal ? either(signal, deadline.signal) : deadline.signal});
+    const response = await fetch(input, {...init, signal: signal ? either(signal, deadline.signal) : deadline.signal});
+    return bodyWithin(response, signal, deadline.signal, timeout);
   } catch (error) {
     if (signal?.aborted) throw error;
     if (deadline.signal.aborted) throw timeout;
