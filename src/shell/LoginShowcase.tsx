@@ -17,6 +17,7 @@ export default function LoginShowcase() {
     () => ({
       loading: t('login.gameLoading'),
       progress: t('login.gameProgress'),
+      status: t('login.gameStatus'),
       start: t('login.gameStart'),
       restart: t('login.gameRestart'),
       result: amount => t('login.gameResult', {amount}),
