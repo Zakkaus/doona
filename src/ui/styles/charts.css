@@ -453,10 +453,14 @@
     grid-column: auto;
   }
 }
-/* However many facts a page has, they share the row evenly, edge to edge with the cards below. */
+/* However many facts a page has, they share the row evenly, edge to edge with the cards below. A lead value is a name
+   beside short figures, so its tile takes two shares and the name fits where equal thirds would cut it. */
 @media (min-width: 600px) {
   .rp-strip.rp-facts {
     grid-template-columns: repeat(var(--facts), minmax(0, 1fr));
+  }
+  .rp-strip.rp-facts-lead {
+    grid-template-columns: minmax(0, 2fr) repeat(var(--facts-rest), minmax(0, 1fr));
   }
 }
 

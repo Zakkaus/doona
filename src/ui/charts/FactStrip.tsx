@@ -13,13 +13,17 @@ export type ChartFact = {
 };
 
 // The page's figures as the activity page shows its own: a strip of tiles, label above, value large.
-// `lead`: the first value is a name whose end tells most, as a host's domain. On a phone its tile takes the first row
-// alone, and a name still too long for it gives way at its start; a hover, keyboard focus or tap shows it whole.
+// `lead`: the first value is a name whose end tells most, as a host's domain. Wide, its tile takes two shares of the
+// row; on a phone it takes the first row alone, and a name still too long for it gives way at its start; a hover,
+// keyboard focus or tap shows it whole.
 export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
   const phone = useMediaQuery(phoneQuery);
   if (!facts.length) return null;
   return (
-    <dl className={'rp-strip rp-facts' + (lead ? ' rp-facts-lead' : '')} style={{['--facts' as string]: facts.length}}>
+    <dl
+      className={'rp-strip rp-facts' + (lead ? ' rp-facts-lead' : '')}
+      style={{['--facts' as string]: facts.length, ['--facts-rest' as string]: facts.length - 1}}
+    >
       {facts.map((fact, i) => (
         <div key={fact.label} className={'rp-card' + (fact.tone ? ' ' + fact.tone : '')}>
           <dt className={'rp-tile-head' + (fact.tint ? ' rp-tint-' + fact.tint : '')}>
