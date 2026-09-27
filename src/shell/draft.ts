@@ -1,4 +1,4 @@
-import {createContext, useCallback, useContext, useEffect, useState} from 'react';
+import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {useLinked} from '../ui/hooks';
 
 export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
@@ -31,4 +31,23 @@ export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
   }, [dirty, id, setDirty, clear, revision]);
   useLinked(revision, onDiscard);
   return {clear, revision};
+}
+
+// Numbers each opening of a dialog, so a request that settles after its dialog closed, or after it was opened again,
+// neither closes the new one nor reports into it. `next` runs on open and on close; `start` runs when a request is
+// sent and returns whether that same opening is still the current one.
+export function useDialogSession() {
+  const count = useRef(0);
+  return useMemo(
+    () => ({
+      next: () => {
+        count.current++;
+      },
+      start: () => {
+        const started = count.current;
+        return () => count.current === started;
+      }
+    }),
+    []
+  );
 }

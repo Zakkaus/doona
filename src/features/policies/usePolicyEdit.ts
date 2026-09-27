@@ -1,10 +1,10 @@
-import {useRef, useState} from 'react';
+import {useState} from 'react';
 import {useT} from '../../i18n';
 import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast} from '../../ui/ui';
-import {useDraftGuard} from '../../shell/draft';
+import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {errorText, noticeText} from '../../api/error';
 import {groupEditSafe} from '../shared/policyText';
 export type PolicyEditView = {
@@ -27,11 +27,11 @@ export type PolicyEditView = {
 export function usePolicyEdit(name: string, source: MainSourceEdit, entry: GroupEntry | undefined): PolicyEditView {
   const t = useT();
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
-  const session = useRef(0);
+  const session = useDialogSession();
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
   const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
   const guard = useDraftGuard(!!draft && (draft.policy !== entry?.policy || JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters)), () => {
-    session.current++;
+    session.next();
     setDraft(null);
     setProblem(null);
   });
@@ -42,11 +42,11 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       refuse(t('policy.editUnsafe'));
       return;
     }
-    const submitted = session.current;
+    const current = session.start();
     void source
       .apply(text => writeGroupEntry(text, draft.name, {filters, policy: draft.policy}), draft.origin)
       .then(result => {
-        const open = session.current === submitted;
+        const open = current();
         if (result.kind === 'ok') {
           if (open) {
             guard.clear();
@@ -84,12 +84,12 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
       remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
     })),
     show: () => {
-      session.current++;
+      session.next();
       setProblem(null);
       if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
     },
     close: () => {
-      session.current++;
+      session.next();
       setProblem(null);
       guard.clear();
       setDraft(null);
