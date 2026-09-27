@@ -34,7 +34,7 @@ const recorders: Partial<Record<Resource, string>> = {
 };
 
 // Why features are off, in the order the overview lists them.
-export const limitCauses = [
+const limitCauses = [
   'configNotLoaded',
   'configReadOnly',
   'mainReadOnly',
@@ -99,17 +99,15 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
     const resource = resources[id];
     const recorder = recorders[id];
     if (id === 'config') continue;
-    if (id === 'flows' && resource.available && resources.flows.recording === 'off') {
-      if (honk && !flowsAllowed) {
-        add('recordOff', id);
-        recordKeys.push(recorder + ': true');
-      } else add(flowsSwitch ? 'flowsIdle' : 'notProvided', id);
-    } else if (resource.available) {
-      if (id === 'geodata' && resources.geodata.can_update !== true) add(configCause ?? 'geodataUpdate', id);
-      if (id === 'providers' && resources.providers.can_refresh === false) add('notRunning', 'subscriptions', 'ov.lim.subscriptions');
-    } else if (honk && recorder && id !== 'flows') {
+    const flowsOff = id === 'flows' && resource.available && resources.flows.recording === 'off';
+    // Flows stay available with recording off, so their recorder is off only when honk no longer offers max_flows.
+    if (honk && recorder && (id === 'flows' ? flowsOff && !flowsAllowed : !resource.available)) {
       add('recordOff', id);
       recordKeys.push(recorder + ': true');
+    } else if (flowsOff) add(flowsSwitch ? 'flowsIdle' : 'notProvided', id);
+    else if (resource.available) {
+      if (id === 'geodata' && resources.geodata.can_update !== true) add(configCause ?? 'geodataUpdate', id);
+      if (id === 'providers' && resources.providers.can_refresh === false) add('notRunning', 'subscriptions', 'ov.lim.subscriptions');
     } else if (honk && id === 'probes') add('notRunning', id);
     // honk geodata.rs capability: unavailable only when routing and DNS loaded different files of one kind.
     else if (honk && id === 'geodata') add('geodataUnreadable', id);
@@ -130,8 +128,8 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
     // Another backend says no more than the headline.
     return undefined;
   };
-  // The headline, the ids it names (the features line then lists only the others), and the action. A help text that
-  // would only repeat the headline, as another backend's often would, is left out.
+  // The headline, the ids it names (the features line is omitted when the headline already names every feature), and
+  // the action. A help text that would only repeat the headline, as another backend's often would, is left out.
   const explain = (cause: LimitCause, items: LimitGroup['items']): {headline: string; named?: LimitId[]; help?: LimitHelp; link?: LimitLink} => {
     const n = items.length;
     switch (cause) {
