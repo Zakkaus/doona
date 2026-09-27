@@ -23,15 +23,15 @@ test('quick setup refuses an apostrophe without changing the subscription URL', 
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('tproxy_port: 12345');
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
+  await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toHaveAttribute('contenteditable', 'true');
   const picker = page.getByRole('button', {name: /Source/});
   await expect(picker).toContainText('/etc/honk/config.dae');
   await picker.click();
   await expect(page.getByRole('option')).toHaveCount(4);
   await page.getByRole('option', {name: /sub-c\.dae/}).click();
   await expect(page).toHaveURL(/source=src-sub-c$/);
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toContainText('redacted');
+  await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toHaveAttribute('contenteditable', 'false');
 });
 
 test('a generated source names why it is read-only and offers no validation', async ({page}) => {
@@ -43,7 +43,7 @@ test('a generated source names why it is read-only and offers no validation', as
   await expect(page.getByRole('dialog', {name: 'Generated'})).toContainText('The engine writes this file');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+  await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   // The path is named once, by the picker; the card carries it only as its accessible name.
   await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveCount(0);
   await page.goto('/#/config?tab=source&source=src-main');
@@ -56,7 +56,7 @@ test('switching sources discards the draft after confirmation', async ({page}) =
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
   await expect(editor).toBeVisible();
   const original = await editor.innerText();
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('domain(example.org) -> proxy');
@@ -70,14 +70,12 @@ test('switching sources discards the draft after confirmation', async ({page}) =
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toBeVisible();
   await picker.click();
   await page.getByRole('option', {name: /\/etc\/honk\/rules\.dae/}).click();
-  await expect(editor).toHaveAttribute('contenteditable', 'false');
   await expect(editor).toHaveText(original, {useInnerText: true});
   await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
 });
 
 test('editing validates, shows diagnostics on errors, and saves through a reload', async ({page}) => {
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.click();
@@ -99,11 +97,103 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(page.locator('.rp-card')).toContainText('Reloading or closing the page loses the changes');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeVisible();
-  await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toHaveAttribute('contenteditable', 'false');
+  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('8 lines,');
+});
+
+test('a writable source edits in place, and Cancel restores the loaded text with nothing left to undo', async ({page}) => {
+  await page.goto('/#/config?source=src-rules');
+  const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  const original = await editor.innerText();
+  const unsaved = page.locator('.rp-badge', {hasText: 'Unsaved'});
+  const save = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const cancel = page.getByRole('button', {name: 'Cancel', exact: true});
+  await expect(save).toHaveCount(0);
+  await expect(cancel).toHaveCount(0);
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('# typed');
+  await expect(unsaved).toBeVisible();
+  await expect(save).toBeEnabled();
+  // Typing back to the loaded text leaves nothing to save.
+  for (let i = 0; i < '# typed'.length; i++) await page.keyboard.press('Backspace');
+  await expect(unsaved).toHaveCount(0);
+  await expect(save).toHaveCount(0);
+  await page.keyboard.type('# dropped');
+  await cancel.click();
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await expect(unsaved).toHaveCount(0);
+  // The cancelled edits are gone from the undo history too.
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+Z');
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await expect(unsaved).toHaveCount(0);
+});
+
+const readOnlyNotice = (page: Page) => page.locator('.rp-toast.info', {hasText: 'This file is read-only'});
+const nextFrame = (page: Page) => page.evaluate(() => new Promise(requestAnimationFrame));
+
+test('a read-only source explains itself once per visit when typed into, and keeps its text', async ({page}) => {
+  await page.goto('/#/config?tab=source&source=src-generated');
+  const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
+  await expect(editor).toContainText('skylink');
+  const original = await editor.innerText();
+  await editor.click();
+  // No caret or active line, so it does not look editable; a mouse click alone is not an attempt.
+  await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
+  await expect(page.locator('.cm-activeLine')).toHaveCount(0);
+  await nextFrame(page);
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+  await page.keyboard.type('abc');
+  const notice = readOnlyNotice(page);
+  await expect(notice).toHaveCount(1);
+  await expect(notice).toContainText('The engine writes this file');
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  await notice.getByRole('button', {name: 'Close', exact: true}).click();
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+  await editor.click();
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Enter');
+  await nextFrame(page);
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+  await expect(editor).toHaveText(original, {useInnerText: true});
+  // Another source and back is a new visit, so the first attempt explains again.
+  const picker = page.getByRole('button', {name: /Source/});
+  await picker.click();
+  await page.getByRole('option', {name: /\/etc\/honk\/config\.dae/}).click();
+  await picker.click();
+  await page.getByRole('option', {name: /skylink\.dae/}).click();
+  await editor.click();
+  await page.keyboard.type('x');
+  await expect(readOnlyNotice(page)).toHaveCount(1);
+});
+
+test('paste into a read-only source is refused with the read-only notice', async ({page, context}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/#/config?tab=source&source=src-generated');
+  const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
+  await expect(editor).toContainText('skylink');
+  const original = await editor.innerText();
+  await editor.click();
+  await page.evaluate(() => navigator.clipboard.writeText('pasted text'));
+  await page.keyboard.press('ControlOrMeta+V');
+  await expect(readOnlyNotice(page)).toContainText('The engine writes this file');
+  await expect(editor).toHaveText(original, {useInnerText: true});
+});
+
+test.describe('on a touch screen', () => {
+  test.use({viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true});
+  test('a tap into a read-only source shows the read-only notice', async ({page}) => {
+    await page.goto('/#/config?tab=source&source=src-generated');
+    const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
+    await expect(editor).toContainText('skylink');
+    await editor.tap();
+    await expect(readOnlyNotice(page)).toBeVisible();
+  });
 });
 
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
@@ -122,7 +212,8 @@ test('the validation tab lists kept diagnostics and opens the source at the line
   await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
-  await expect(page.locator('.cm-focusLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
+  // An editable source marks the line with its caret; a read-only one with the focus line.
+  await expect(page.locator('.cm-activeLine')).toContainText('mac(aa:bb:cc:dd:ee:ff)');
 });
 
 test('identical diagnostics share one row with their count, and a known code keeps the backend words as detail', async ({page}) => {
@@ -275,7 +366,6 @@ httpTest('validation refusal keeps the draft and never replaces the source', asy
   const {api} = await configBackend(page);
   const original = (await api.config()).sources.find(source => source.id === 'src-rules')!.content;
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill(original + '\ndomain(example.org) -> nowhere\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -293,7 +383,6 @@ test('a source over the advertised body limit is refused before anything is sent
     if (request.method() !== 'GET') writes.push(request.url());
   });
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# grown past the limit\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -311,7 +400,6 @@ test('a 413 on a config write names the tighter advertised limit', async ({page}
   );
   expectLoadFailures(page, /\/config\/sources\//);
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# refused by the backend\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -326,7 +414,6 @@ test('source application works without the optional full validation endpoint', a
     if (request.url().endsWith('/config/validate')) validations++;
   });
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# without dry run\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -345,7 +432,9 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
     if (request.method() !== 'GET') mutations++;
   });
   await page.goto('/#/config?tab=source');
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Redacted']);
+  await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+  await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await page.getByRole('tab', {name: 'Quick setup'}).click();
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
   await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
@@ -377,7 +466,6 @@ test('leaving the editor aborts validation before any replacement', async ({page
     if (request.method() === 'PUT') writes++;
   });
   await page.goto('/#/config?source=src-main');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# cancelled draft\n');
   const validating = page.waitForRequest('**/config/validate');
@@ -395,7 +483,6 @@ test('leaving the editor aborts validation before any replacement', async ({page
 httpTest('a stale original digest refuses replacement, retains the draft and rebases it', async ({page}) => {
   const {api} = await configBackend(page);
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# local draft\n');
   const source = (await api.config()).sources.find(source => source.id === 'src-rules')!;
@@ -488,14 +575,8 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   await manual.click();
   await expect(page.getByRole('tab', {name: 'Sources', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/tab=source&source=src-main&line=\d+$/);
-  await expect(page.locator('.cm-focusLine')).toContainText('routing {');
-  // Until Edit, the source draws no caret or active line, so it does not look editable.
-  await page.locator('.cm-content').click();
-  await expect(page.locator('.cm-activeLine')).toHaveCount(0);
-  await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
-  await page.locator('.cm-content').click();
-  await expect(page.locator('.cm-activeLine')).toHaveCount(1);
+  // The main source is editable as opened: the caret waits on the section's first line.
+  await expect(page.locator('.cm-activeLine')).toContainText('routing {');
   await expect(page.locator('.cm-cursorLayer')).toHaveCount(1);
 });
 
@@ -697,7 +778,6 @@ test('explicit include validation sends the main-first set with source paths', a
   config.sources.reverse();
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# candidate include\n');
   const request = page.waitForRequest('**/config/validate');
@@ -729,7 +809,6 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
     })
   );
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# rejected\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -753,7 +832,6 @@ test('withheld includes do not disable main validation or background diagnostics
   await page.goto('/#/config?tab=source');
   await page.getByRole('button', {name: 'Validate', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Validation passed');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill(config.sources.find(source => source.kind === 'main')!.content + '\nrouting { domain(example.org) -> nowhere }\n');
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('No group named "nowhere"');
@@ -790,7 +868,7 @@ test('source withholding does not certify exports or diagnose the hidden include
   await page.getByRole('button', {name: /Source/}).click();
   await page.getByRole('option', {name: /Include/}).click();
   await expect(page.locator('.rp-content')).toContainText('The backend did not return this source');
-  await expect(page.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+  await expect(page.locator('.cm-content')).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
 });
 
@@ -997,7 +1075,6 @@ httpTest('a restart-only change is refused with the setting named, and the next 
     return route.fulfill({status: 422, json: restartRefusal});
   });
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# restart draft\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -1014,7 +1091,6 @@ httpTest('a file ahead of the running configuration is explained when the refusa
     route.fulfill({status: 412, json: {request_id: 'ahead', error: {code: 'stale_revision', message: 'Source changed on disk', details: null}}})
   );
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# ahead draft\n');
   const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
@@ -1050,7 +1126,6 @@ httpTest('a reload refused after the write says the file was written but not app
     })
   );
   await page.goto('/#/config?source=src-rules');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# rejected reload\n');
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
@@ -1076,7 +1151,6 @@ test('a new file in the include directory is created empty and opens in the sour
   await expect(page.locator('.rp-toast.positive')).toContainText('config.d/work.dae created, configuration reloaded');
   await expect(page).toHaveURL(/tab=source&source=src-new-1$/);
   const editor = page.locator('.cm-content[aria-label="/etc/honk/config.d/work.dae"]');
-  await page.getByRole('button', {name: 'Edit', exact: true}).click();
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.click();
   await page.keyboard.type('domain(geosite: netflix) -> proxy');
