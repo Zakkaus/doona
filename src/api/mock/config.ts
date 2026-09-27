@@ -44,7 +44,17 @@ export function includePaths(text: string) {
   ];
 }
 
-export const resolveIncludePath = (base: string | undefined, path: string) => new URL(path, new URL(base ?? '', 'file:///')).pathname;
+// `path` resolved against the directory of the file at `base`, as an absolute POSIX path with `.` and `..` collapsed.
+// Names stay as written: a URL would percent-encode a space or CJK and cut the path at `?`.
+export function resolveIncludePath(base: string | undefined, path: string) {
+  const joined = path.startsWith('/') ? path : (base ?? '').slice(0, (base ?? '').lastIndexOf('/') + 1) + path;
+  const parts: string[] = [];
+  for (const part of joined.split('/')) {
+    if (part === '..') parts.pop();
+    else if (part && part !== '.') parts.push(part);
+  }
+  return '/' + parts.join('/') + (parts.length && /\/\.{0,2}$/.test(joined) ? '/' : '');
+}
 // The files an include of `path` in the file at `base` loads: every match of a glob, or the one file named.
 export const includedFiles = <T extends {path: string}>(files: T[], base: string, path: string) =>
   files.filter(file => globMatch(resolveIncludePath(base, path), resolveIncludePath(undefined, file.path)));
