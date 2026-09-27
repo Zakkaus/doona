@@ -21,6 +21,9 @@
 .rp-light > span {
   min-width: 0;
   overflow-wrap: anywhere;
+  /* The text, not the dot, gives the light its baseline: a dot has none, so it would lend its bottom edge and set
+     the light lower than the text beside it. */
+  align-self: baseline;
 }
 /* The status dot, shared by a light and a toned latency. */
 .rp-light::before,

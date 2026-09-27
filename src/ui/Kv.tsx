@@ -11,8 +11,14 @@ export function Kv({items, inline, row}: {items: KvItem[]; inline?: boolean; row
       {items.map(([k, v, full, help]) => (
         <div key={k}>
           <span className="k">
-            {k}
-            {help && <ContextualHelp {...help} />}
+            {help ? (
+              <span className="rp-help-row">
+                {k}
+                <ContextualHelp {...help} />
+              </span>
+            ) : (
+              k
+            )}
           </span>
           {full ? (
             <TextTooltip className="v" text={full}>
