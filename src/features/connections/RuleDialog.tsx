@@ -10,6 +10,7 @@ export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRul
       title={t('rule.add')}
       narrow
       isOpen={!!dialog}
+      reason={dialog?.reason}
       onOpenChange={open => {
         if (!open) dialog?.close();
       }}

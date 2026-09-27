@@ -45,3 +45,12 @@ export function pinnedPosition(positions: Array<{id: string; desc: string}>, pin
   const kept = positions.find(position => position.id === pin.rule.rule_id && (generation === pin.generation || position.desc === pin.rule.expression));
   return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
+
+// Why the add-rule dialog cannot write yet: the rules, sources or groups it needs are still being read. Null while it
+// can write, while a write is in flight, or when a failed read or a missing position is already shown in the dialog.
+export function ruleDialogReason(
+  {disabled, busy, failed, unplaceable}: {disabled: boolean; busy: boolean; failed: boolean; unplaceable: boolean},
+  t: Translator
+): string | null {
+  return disabled && !busy && !failed && !unplaceable ? t('ui.loading') : null;
+}

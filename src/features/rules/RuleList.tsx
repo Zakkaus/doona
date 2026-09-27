@@ -2,6 +2,7 @@ import {useId, useLayoutEffect, useMemo, useRef} from 'react';
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {
+  ActionHelp,
   Badge,
   Button,
   Card,
@@ -94,15 +95,17 @@ function Dictionary({view}: {view: Model}) {
   );
   return (
     <div className="rp-col">
-      <div className="rp-toolbar">
-        {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
-        <span className="rp-grow" />
-        {view.canWrite && (
-          <Button small isDisabled={view.addDisabled} tip={view.addTip} onPress={view.openAdd}>
-            {t('rule.add')}
-          </Button>
-        )}
-      </div>
+      <ActionHelp reason={view.canWrite ? view.addReason : null}>
+        <div className="rp-toolbar">
+          {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
+          <span className="rp-grow" />
+          {view.canWrite && (
+            <Button small isDisabled={view.addDisabled} tip={view.addTip} onPress={view.openAdd}>
+              {t('rule.add')}
+            </Button>
+          )}
+        </div>
+      </ActionHelp>
       {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       {view.held && (
         <Card className="rp-list" aria-label={view.held.title}>
@@ -152,6 +155,7 @@ function Dictionary({view}: {view: Model}) {
         tone={dialog?.kind === 'remove' ? 'negative' : 'accent'}
         confirmLabel={view.submitLabel}
         isDisabled={view.submitDisabled}
+        reason={view.submitReason}
         isPending={view.busy}
         onConfirm={() => void view.submit(view.close)}
       >

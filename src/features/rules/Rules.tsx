@@ -2,6 +2,7 @@ import {useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useRoutingTrace, useTraceForm, type TraceResolve} from './useRoutingTrace';
 import {
+  ActionHelp,
   Button,
   Card,
   cardClass,
@@ -80,41 +81,43 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
           void trace.submit();
         }}
       >
-        <div className="rp-toolbar top">
-          <LabeledSelect
-            label={t('ui.network')}
-            value={form.network}
-            onChange={network => setForm({...form, network: network as 'tcp' | 'udp'})}
-            items={[
-              {id: 'tcp', label: t('ui.tcp')},
-              {id: 'udp', label: t('ui.udp')}
-            ]}
-          />
-          <TextField
-            label={t('ui.domain')}
-            value={form.domain}
-            placeholder="example.com"
-            onChange={domain => setForm({...form, domain})}
-            error={trace.errors.domain}
-          />
-          <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
-          <TextField
-            label={t('rule.dstPort')}
-            value={form.dst_port}
-            placeholder="443"
-            onChange={dst_port => setForm({...form, dst_port})}
-            error={trace.errors.dst_port}
-          />
-          <LabeledSelect
-            label={t('rule.resolve')}
-            value={trace.resolve}
-            onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
-            items={trace.modes}
-          />
-          <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
-            {t('rule.run')}
-          </Button>
-        </div>
+        <ActionHelp reason={trace.reason}>
+          <div className="rp-toolbar top">
+            <LabeledSelect
+              label={t('ui.network')}
+              value={form.network}
+              onChange={network => setForm({...form, network: network as 'tcp' | 'udp'})}
+              items={[
+                {id: 'tcp', label: t('ui.tcp')},
+                {id: 'udp', label: t('ui.udp')}
+              ]}
+            />
+            <TextField
+              label={t('ui.domain')}
+              value={form.domain}
+              placeholder="example.com"
+              onChange={domain => setForm({...form, domain})}
+              error={trace.errors.domain}
+            />
+            <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
+            <TextField
+              label={t('rule.dstPort')}
+              value={form.dst_port}
+              placeholder="443"
+              onChange={dst_port => setForm({...form, dst_port})}
+              error={trace.errors.dst_port}
+            />
+            <LabeledSelect
+              label={t('rule.resolve')}
+              value={trace.resolve}
+              onChange={resolve => setForm({...form, resolve: resolve as TraceResolve})}
+              items={trace.modes}
+            />
+            <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
+              {t('rule.run')}
+            </Button>
+          </div>
+        </ActionHelp>
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
           <div className="rp-toolbar">
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />

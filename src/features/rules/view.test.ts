@@ -3,7 +3,9 @@ import {createMockApi} from '../../api/mock';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {
+  addRuleReason,
   addRuleTip,
+  traceReason,
   dictionaryView,
   distributionView,
   dnsView,
@@ -198,4 +200,24 @@ it('tells an empty distribution apart by the recorder, then by the source filter
     t('ui.valuePair', {label: t('rule.sourceRecomputed'), value: t('rule.sourceHelp.recomputed')}),
     t('ui.valuePair', {label: t('rule.sourceUnknown'), value: t('rule.sourceHelp.unknown')})
   ]);
+});
+
+it('says why Add is disabled in the add-rule dialog: the condition first, then the outbound', () => {
+  const ok = {valid: true, mode: 'pick', pickError: undefined, rawInvalid: false};
+  expect(addRuleReason(ok, 'proxy', t)).toBeNull();
+  expect(addRuleReason(ok, '', t)).toBe('Choose an outbound');
+  expect(addRuleReason({...ok, valid: false}, '', t)).toBe('Enter the values');
+  expect(addRuleReason({...ok, valid: false, pickError: t('rule.valuesInvalid')}, 'proxy', t)).toBe(t('rule.valuesInvalid'));
+  expect(addRuleReason({...ok, valid: false, mode: 'text'}, 'proxy', t)).toBe('Enter a condition');
+  expect(addRuleReason({...ok, valid: false, mode: 'text', rawInvalid: true}, 'proxy', t)).toBe(t('rule.conditionInvalid'));
+});
+
+it('says why Run trace is disabled, and nothing while the capabilities load or a trace runs', () => {
+  const ok = {loaded: true, busy: false, available: true, invalid: null, modeOffered: true};
+  expect(traceReason(ok, t)).toBeNull();
+  expect(traceReason({...ok, loaded: false, available: false}, t)).toBeNull();
+  expect(traceReason({...ok, busy: true, invalid: 'rule.invalidTarget'}, t)).toBeNull();
+  expect(traceReason({...ok, available: false, invalid: 'rule.invalidTarget'}, t)).toBe('The backend cannot run a trace right now');
+  expect(traceReason({...ok, invalid: 'rule.invalidTarget', modeOffered: false}, t)).toBe('Enter a domain or destination IP.');
+  expect(traceReason({...ok, modeOffered: false}, t)).toBe('The backend does not offer this resolution mode');
 });

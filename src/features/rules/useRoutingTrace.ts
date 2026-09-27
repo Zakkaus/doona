@@ -11,7 +11,7 @@ import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure} from '../../ui/ui';
-import {dnsView, evaluationView, traceStatusView} from './view';
+import {dnsView, evaluationView, traceReason, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
@@ -154,6 +154,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     setForm,
     busy: busy !== null,
     canSubmit: !busy && canSubmit,
+    reason: traceReason({loaded: !!capabilities.data, busy: busy !== null, available, invalid: invalid?.key ?? null, modeOffered: modes.includes(resolve)}, t),
     submit,
     available,
     modes: modes.map(id => ({id, label: t(resolveLabels[id])})),
