@@ -1,8 +1,6 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../api/model';
 import {readGroupEntries, type GroupEntry} from './groups';
 
-export const groupNames = (text: string): string[] => readGroupEntries(text).map(entry => entry.name);
-
 // The groups a rule in any source may name: every loaded source's, with the one being edited read from its draft.
 // A rule names a group by its header as written, so two headers that unquote alike are still two groups.
 export function allGroupNames(sources: ConfigSource[], draft?: {id: string; content: string}): Pick<GroupEntry, 'name' | 'written'>[] {

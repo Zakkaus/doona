@@ -3,7 +3,6 @@ import {blockFields, scanConfig, uncomment, isFragment, quote, unquote} from './
 import {addNamesToGroup, namedIn, readGroupEntries} from './groups';
 import {readState, writeState} from './setup';
 import {LocalError} from '../api/error';
-import {groupNames} from './sources';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
   const text = `# group { fake {} }
@@ -21,7 +20,7 @@ dns { routing { request { fallback: direct } } }
     ['filter', "name(regex: 'a{2}#b')"],
     ['policy', 'fixed(2)']
   ]);
-  expect(groupNames(text)).toEqual(['proxy.eu', 'quoted group']);
+  expect(readGroupEntries(text).map(entry => entry.name)).toEqual(['proxy.eu', 'quoted group']);
   expect(blocks[3].children[0].children[0].name).toBe('request');
 });
 
@@ -33,7 +32,7 @@ it('strips only comments, not quoted hashes or URL fragments', () => {
 it('keeps comments adjacent to braces out of section headers and depth', () => {
   const text = 'group # { ignored\n{ a { policy: random } }# }\nrouting { fallback: a }\n';
   expect(scanConfig(text).blocks.map(block => block.name)).toEqual(['group', 'routing']);
-  expect(groupNames(text)).toEqual(['a']);
+  expect(readGroupEntries(text).map(entry => entry.name)).toEqual(['a']);
 });
 
 describe('isFragment', () => {
