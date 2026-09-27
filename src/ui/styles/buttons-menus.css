@@ -139,6 +139,18 @@
   display: inline-flex;
   align-items: center;
 }
+.rp-help-row-fill {
+  display: flex;
+  min-width: 0;
+}
+.rp-help-row-fill > .rp-help-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-help-row-fill > .rp-help {
+  flex: none;
+}
 .rp-popover-body p {
   margin: 0;
   line-height: 20px;

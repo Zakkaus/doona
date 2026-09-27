@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, ContextualHelp, DataTable, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn} from '../../ui/ui';
+import {Button, DataTable, HelpRow, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn} from '../../ui/ui';
 import {useEventsPage} from './useEventsPage';
 import Download from '../../ui/icons/Download';
 
@@ -31,10 +31,9 @@ export function Events() {
         minWidth: 240,
         isRowHeader: true,
         render: event => (
-          <>
+          <HelpRow fill help={event.help}>
             {event.summary}
-            {event.help && <ContextualHelp {...event.help} />}
-          </>
+          </HelpRow>
         )
       }
     ],

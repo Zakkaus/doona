@@ -85,3 +85,24 @@ test('events say where a reconnect could not recover what was sent meanwhile', a
   const grid = page.getByRole('grid', {name: 'Events', exact: true});
   await expect(grid.getByRole('rowheader')).toHaveText(['Events lost: those sent while disconnected cannot be recovered', data.instance_id]);
 });
+
+test('a long gap summary on a phone keeps its help button in view', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  const id = `flow-${'7f3a9c2e'.repeat(6)}`;
+  await page.route('**/api/v1/events', route =>
+    fulfillStream(route, [{id: 'gap:1', event: 'flow.gap', data: {...data, resource_id: id, reason: 'buffer_overflow', dropped_records: '123456'}}])
+  );
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/events');
+  const cell = page.getByRole('grid', {name: 'Events', exact: true}).getByRole('rowheader');
+  await expect(cell).toContainText(id);
+  const help = cell.getByRole('button', {name: 'About records reached the retention limit', exact: true});
+  await expect(help).toBeInViewport({ratio: 1});
+  const [box, bounds] = [(await help.boundingBox())!, (await cell.boundingBox())!];
+  expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+  await help.click();
+  await expect(page.getByRole('dialog').getByText('Some flow records could not be kept.', {exact: false})).toBeVisible();
+});

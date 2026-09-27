@@ -27,11 +27,12 @@ export function ContextualHelp({title, text}: Help) {
 }
 
 // A label, a heading or a status with its help button after it, on one row. The row stays when there is no help, so the
-// label sits the same either way.
-export function HelpRow({help, children}: {help?: Help | null; children: ReactNode}) {
+// label sits the same either way. A clipped cell passes fill: the text then gives way with an ellipsis and the help
+// button stays in view.
+export function HelpRow({help, fill, children}: {help?: Help | null; fill?: boolean; children: ReactNode}) {
   return (
-    <span className="rp-help-row">
-      {children}
+    <span className={fill ? 'rp-help-row rp-help-row-fill' : 'rp-help-row'}>
+      {fill ? <span className="rp-help-text">{children}</span> : children}
       {help && <ContextualHelp {...help} />}
     </span>
   );

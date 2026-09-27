@@ -407,9 +407,10 @@ export const messages = {
   'event.gapUnscopedNoCount': 'reason: {reason}',
   'event.gap.overflow': 'records reached the retention limit',
   'event.gap.sampled': 'skipped by sampling',
-  'event.gap.evicted': 'flow records expired',
+  'event.gap.evicted': 'removed from the retained records',
   'event.gapHelp.overflow': 'Some flow records could not be kept. If the kept count reached its limit, raise that limit in Settings.',
-  'event.gapHelp.evicted': 'Finished flows are removed once they pass the retention time. Flows in progress are not affected.',
+  'event.gapHelp.evicted':
+    'Finished flows are removed from the retained records after the retention time, or earlier when the record limit is reached. Flows in progress are not affected.',
   'event.gap.recording': 'recording changed',
   'log.chart.errors': 'Errors',
   'log.chart.peakErrors': 'Most errors',
