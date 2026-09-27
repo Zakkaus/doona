@@ -28,7 +28,7 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     kind: event.event,
     kindText: enumLabel(eventKindLabels, event.event, t),
     summary: t(summary.key, summary.params),
-    help: lost ? undefined : eventHelp(event, t)
+    help: eventHelp(event, t)
   };
   rows.set(event, {locale, row});
   return row;
