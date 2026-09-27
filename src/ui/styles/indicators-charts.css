@@ -145,39 +145,43 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rp-capability-status {
-  flex: none;
-  white-space: nowrap;
-  font-size: var(--rp-text-xs);
-}
-/* Features that are off, one block per cause: why, the features it turns off, then the fix. Blocks flow down
-   columns where the card is wide enough for two, so a short block leaves no gap beside a tall one. */
+/* Features that are off, one row per cause after S2's list rows: the result and the features it covers, then one
+   action at the end, which keeps its width while the text wraps. */
 .rp-limits {
-  column-width: 400px;
-  column-gap: 32px;
-}
-.rp-limit {
-  break-inside: avoid;
-  padding-bottom: 16px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-.rp-limit-reason {
-  margin: 0;
-}
-.rp-limit-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.rp-limit-items > .rp-capability {
-  gap: 8px;
+.rp-limit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-block: 12px;
+}
+.rp-limit:first-child {
+  padding-top: 0;
+}
+.rp-limit:last-child {
+  padding-bottom: 0;
+}
+.rp-limit + .rp-limit {
+  border-top: 1px solid var(--rp-hl-med);
+}
+.rp-limit-text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-limit > .rp-link,
+.rp-limit > .rp-btn {
+  flex: none;
+}
+.rp-limit-help {
+  margin: 0;
 }
 .rp-limit-snippet {
   align-self: stretch;
