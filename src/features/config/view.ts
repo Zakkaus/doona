@@ -207,8 +207,9 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; help: Key}> = {
   secret: {label: 'config.secretSource', help: 'config.secretHelp'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
-// the server allows. The contract carries no reason for a main or include file, so one is inferred: with writes off
-// server-wide nothing is writable, and with them on, honk refuses only a file that defines or holds a listener secret.
+// the server allows. The contract carries no reason for a main or include file, so one is inferred from honk: its
+// resources.config.writable already covers the write switch, the credential and a blocked revision store, so with it
+// true the only per-file check left is a native_api or clash_api secret defined in the file or its value in the text.
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable'>,
   configWritable: boolean,

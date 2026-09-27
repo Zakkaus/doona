@@ -206,8 +206,7 @@ export const messages = {
   'config.loadedAt': 'Loaded: {time}',
   'config.unsaved': 'Unsaved',
   'config.unsavedHint': 'Reloading or closing the page loses the changes',
-  'config.editNote':
-    'The backend may withhold source text, paths or diagnostics; displayed and exported text may still contain credentials. Editing is available only when the backend provides the complete content. If the file has changed on disk before saving, the backend refuses the save and does not overwrite the file.',
+  'config.editNote': 'If the file has changed on disk before saving, the backend refuses the save and does not overwrite the file.',
   'config.level.error': 'Error',
   'config.level.warning': 'Warning',
   'config.level.info': 'Info',
