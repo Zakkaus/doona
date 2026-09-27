@@ -106,6 +106,14 @@ it('shows the backend words of a reused code once, in the detail', async () => {
   expect(row.detail).toBe(t('config.backendDetail', {text: t('ui.backend.unsupportedValue'), message: configNotes[0].message}));
   expect(row.detail.split(configNotes[0].message)).toHaveLength(2);
 });
+it('keeps a diagnostic row id when the diagnostics before it go away', async () => {
+  const configSources = (await createMockApi().config()).sources;
+  const other = {...configNotes[0], line: 9, message: 'Another warning'};
+  const [, before] = diagnosticRows([configNotes[0], other], configSources, 'en-US', t);
+  const [after] = diagnosticRows([other], configSources, 'en-US', t);
+  expect(after.id).toBe(before.id);
+  expect(diagnosticRows([configNotes[0]], configSources, 'en-US', t)[0].id).not.toBe(before.id);
+});
 it('initializes empty setup and preserves opaque subscription lines while hiding blank lines', () => {
   const empty = wizardInitial('');
   expect(empty.rules).not.toBe('keep');
