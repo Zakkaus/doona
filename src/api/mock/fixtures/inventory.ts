@@ -160,6 +160,8 @@ export const providers: Provider[] = [
     last_error: null
   }
 ];
+// The faults scenario's subscription fetch failure, as a provider's last_error and its refresh operation's error.
+export const providerFault = {code: 'fetch_failed', message: 'Subscription host answered HTTP 502', details: null};
 // Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
 export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'];
 // The loaded files came from the built-in MetaCubeX sources three days ago; automatic updates are off.
@@ -192,4 +194,8 @@ export const geodata: GeoData = {
   next_check_at: null,
   last_error: null,
   required_codes: {geosite: [], geoip: []}
+};
+export const geodataFault: Pick<GeoData, 'last_checked_at' | 'last_error'> = {
+  last_checked_at: ago(6 * 3600),
+  last_error: {code: 'download_failed', message: 'Every geosite URL failed to download', details: null}
 };

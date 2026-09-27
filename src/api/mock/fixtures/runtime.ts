@@ -123,9 +123,18 @@ export const datapath: Datapath = {
 };
 // The faults scenario's datapath: one delayed map sample, everything else attached.
 export const datapathFault = {code: 'sample_delayed', message: 'Routing map sample delayed'};
+// The faults scenario's last reload: the routing map did not take the new generation in time, so the old one stayed.
+export const reloadFault: Runtime['last_reload'] = {
+  operation_id: 'op-1183',
+  status: 'failed',
+  finished_at: ago(50),
+  error: {code: 'routing_publish_timeout', message: 'Routing map update timed out; the previous generation stays active'}
+};
 export const runtimeMemory: RuntimeMemory = {
   observed_at: observedAt,
   process: {rss_bytes: '48234496'},
   cgroup: {scope: 'service', current_bytes: '67108864', limit_bytes: '268435456', events: {high: '2', oom: '0', oom_kill: '0'}},
   kernel: {ebpf_bytes: '18874368', sampled_at: observedAt}
 };
+// The faults scenario's cgroup limit: 81 MiB keeps the drifting usage between 75% and 90%, a high but not critical share.
+export const faultMemoryLimit = String(81 * 1048576);

@@ -22,6 +22,11 @@ export const runtimeSettings: RuntimeSettings = {
     grace_remaining_seconds: 0
   }
 };
+// The faults scenario's configuration forbids DNS log recording, so its recorder cannot be switched on.
+export const faultSettings: RuntimeSettings = {
+  ...runtimeSettings,
+  recording: {...runtimeSettings.recording!, dns_log: {allowed: false, mode: 'auto', active: false}}
+};
 
 // Initial routing dictionary for fixture flow evidence and stable rule IDs.
 type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
@@ -143,4 +148,9 @@ export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' 
 // The faults scenario's sources: rules.dae carries its extra rules.
 export const faultSources = configSources.map(source =>
   source.id === 'src-rules' ? {...source, content: source.content + '\n# Ads\n' + faultRules.map(rule => `${rule.cond} -> ${rule.target}\n`).join('')} : source
+);
+// The faults scenario's files on disk: someone saved rules.dae after honk loaded it, so writes to it are refused as stale
+// until a reload takes the file in.
+export const faultDisk = faultSources.map(source =>
+  source.id === 'src-rules' ? {...source, content: source.content + 'domain(suffix: example.org) -> direct\n'} : source
 );

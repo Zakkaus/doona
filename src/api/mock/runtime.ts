@@ -24,7 +24,10 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
       Object.assign(view.ebpf!, {health: 'degraded', last_error: fixtures.datapathFault.message});
     }
     datapath.errors = [structuredClone(fixtures.datapathFault)];
+    runtime.last_reload = structuredClone(fixtures.reloadFault);
   }
+  const memoryFixture = structuredClone(fixtures.runtimeMemory);
+  if (faults) memoryFixture.cgroup!.limit_bytes = fixtures.faultMemoryLimit;
   const outbounds = structuredClone(fixtures.runtimeOutbounds);
   // A large deployment lists dozens of outbounds, most of them idle.
   if (big)
@@ -168,7 +171,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
     },
     runtimeMemory: async signal => {
       signal?.throwIfAborted();
-      const memory = structuredClone(fixtures.runtimeMemory);
+      const memory = structuredClone(memoryFixture);
       const now = Date.now();
       const values = memoryValues(now);
       memory.observed_at = new Date(now).toISOString();
