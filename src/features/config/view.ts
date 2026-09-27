@@ -13,7 +13,7 @@ import {href as routeHref} from '../../shell/route';
 import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
 import type {EditorMark} from '../../ui/code/CodeEditor';
-import type {KvItem} from '../../ui/ui';
+import type {Help, KvItem} from '../../ui/ui';
 import {sourceKinds} from './nav';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
@@ -192,17 +192,34 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
     id: source.id,
     label: redacted(source) ? `${kind} ${source.id.slice(0, 8)}` : source.path,
     kind,
-    editable: t(source.writable ? 'config.editable' : 'config.readOnly'),
-    tone: source.writable ? ('ok' as const) : ('muted' as const),
-    facts: t('config.sourceFacts', {
-      lines: formatNumber(source.line_count, locale),
-      size: formatBytes(String(source.bytes), locale),
-      time: localTime(source.loaded_at, locale)
-    }),
+    facts: t('config.sourceFacts', {n: source.line_count, size: formatBytes(String(source.bytes), locale)}),
+    loaded: t('config.loadedAt', {time: localTime(source.loaded_at, locale)}),
     hasContent: source.content !== undefined
   };
 }
-type SourceView = {id: string; label: string; kind: string; editable: string; tone: 'ok' | 'muted'; facts: string; hasContent: boolean};
+type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
+
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret';
+const readOnlyText: Record<ReadOnlyReason, {label: Key; help: Key}> = {
+  generated: {label: 'config.kind.generated', help: 'config.generatedHelp'},
+  subscription: {label: 'config.kind.subscription', help: 'config.subscriptionHelp'},
+  disabled: {label: 'config.readOnly', help: 'config.readOnlyHelp'},
+  secret: {label: 'config.secretSource', help: 'config.secretHelp'}
+};
+// Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
+// the server allows. The contract carries no reason for a main or include file, so one is inferred: with writes off
+// server-wide nothing is writable, and with them on, honk refuses only a file that defines or holds a listener secret.
+export function readOnlyBadge(
+  source: Pick<ConfigSource, 'kind' | 'writable'>,
+  configWritable: boolean,
+  t: Translator
+): {reason: ReadOnlyReason; label: string; help: Help} | null {
+  const reason: ReadOnlyReason | null =
+    source.kind === 'generated' || source.kind === 'subscription' ? source.kind : !configWritable ? 'disabled' : !source.writable ? 'secret' : null;
+  if (!reason) return null;
+  const label = t(readOnlyText[reason].label);
+  return {reason, label, help: {title: label, text: t(readOnlyText[reason].help)}};
+}
 type DiagnosticRow = {
   id: string;
   level: ConfigDiagnostic['level'];

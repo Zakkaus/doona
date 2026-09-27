@@ -3,7 +3,9 @@ import {configNotes} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {
+  saveTip,
   sourceView,
+  readOnlyBadge,
   diagnosticRows,
   moduleEditTip,
   wizardInitial,
@@ -12,8 +14,7 @@ import {
   sectionRange,
   sectionMarks,
   sourceMarks,
-  splice,
-  saveTip
+  splice
 } from './view';
 import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
@@ -25,8 +26,45 @@ it('keeps hidden source paths out of source labels and exposes content availabil
   const row = sourceView(source, 'en-US', t);
   expect(row.label).not.toContain('<redacted>');
   expect(row.hasContent).toBe(false);
-  expect(row.tone).toBe('muted');
   expect(sourceView(configSources[0], 'en-US', t).label).toBe(configSources[0].path);
+});
+it('counts a source in lines and bytes and leaves its load time to the tooltip', () => {
+  const source = {
+    id: 's',
+    path: 'a.dae',
+    kind: 'main',
+    content_sha256: '0'.repeat(64),
+    bytes: 102,
+    writable: true,
+    loaded_at: '2026-09-27T09:54:47Z',
+    line_count: 2
+  } as const;
+  const row = sourceView(source, 'en-US', t);
+  expect(row.facts).toBe('2 lines, 102 B');
+  expect(sourceView({...source, line_count: 1}, 'en-US', t).facts).toBe('1 line, 102 B');
+  expect(row.loaded).toMatch(/^Loaded: .*:47/);
+});
+it('names the one reason a source is read-only', () => {
+  const reason = (kind: ConfigSource['kind'], writable: boolean, configWritable: boolean) => readOnlyBadge({kind, writable}, configWritable, t)?.reason ?? null;
+  // Generated and subscription sources are never writable, with writes on or off.
+  expect(reason('generated', false, true)).toBe('generated');
+  expect(reason('generated', false, false)).toBe('generated');
+  expect(reason('subscription', false, true)).toBe('subscription');
+  expect(reason('subscription', false, false)).toBe('subscription');
+  // Writes off server-wide: every main and include file is read-only for that reason alone.
+  expect(reason('main', false, false)).toBe('disabled');
+  expect(reason('include', true, false)).toBe('disabled');
+  // Writes on, but the file refused: honk's only per-file refusal is a listener secret.
+  expect(reason('main', false, true)).toBe('secret');
+  expect(reason('include', false, true)).toBe('secret');
+  expect(reason('main', true, true)).toBeNull();
+  expect(reason('include', true, true)).toBeNull();
+  const badge = readOnlyBadge({kind: 'generated', writable: false}, true, t)!;
+  expect(badge.label).toBe('Generated');
+  expect(badge.help).toEqual({title: 'Generated', text: t('config.generatedHelp')});
+  expect(readOnlyBadge({kind: 'main', writable: false}, true, t)!.label).toBe('Contains secrets');
+  expect(readOnlyBadge({kind: 'main', writable: false}, false, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'subscription', writable: false}, true, t)!.label).toBe('Subscription');
 });
 it('projects source locations without inventing a line for source-wide diagnostics', async () => {
   const configSources = (await createMockApi().config()).sources;

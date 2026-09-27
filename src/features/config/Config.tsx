@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Card,
+  ContextualHelp,
   DataTable,
   ErrorMessage,
   InlineAlert,
@@ -62,25 +63,29 @@ export function Config(props: PageProps) {
           <LabeledSelect side label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
           {sourceModel && (
             <>
-              <Badge>{sourceModel.kind}</Badge>
-              <Light small tone={sourceModel.tone}>
-                {sourceModel.editable}
-              </Light>
-              <span className="rp-label">{sourceModel.facts}</span>
+              {sourceModel.readOnly && (
+                <span className="rp-help-row">
+                  <Badge>{sourceModel.readOnly.label}</Badge>
+                  <ContextualHelp {...sourceModel.readOnly.help} />
+                </span>
+              )}
+              <TextTooltip className="rp-label" text={sourceModel.loaded}>
+                {sourceModel.facts}
+              </TextTooltip>
             </>
           )}
           {(newSourceProps || sourceModel?.hasContent) && <span className="rp-grow" />}
           {newSourceProps && <NewSource {...newSourceProps} />}
           {sourceModel?.hasContent && (
-            <>
+            <span className="rp-help-row">
               <Button onPress={exportSource}>
                 <Download />
                 {t('config.export')}
               </Button>
-            </>
+              <ContextualHelp title={t('config.export')} text={t('config.exportWarning')} />
+            </span>
           )}
         </div>
-        {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
         {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
       </>
     ),
@@ -288,40 +293,41 @@ function SourceCard(props: SourceCardProps) {
     editTip
   } = useSourceCard(props);
   return (
-    <Card>
-      <div className="rp-row">
-        <span className="rp-cluster">
-          <h3 className="rp-h3 rp-code">{view.label}</h3>
-          {dirty && (
-            <>
-              <Badge tone="warn">{t('config.unsaved')}</Badge>
-              <span className="rp-label">{t('config.unsavedHint')}</span>
-            </>
-          )}
-        </span>
-        <span className="rp-cluster">
-          {canValidate && (
-            <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
-              {t('config.validate')}
-            </Button>
-          )}
-          {canWrite && !editing && (
-            <Button isDisabled={editDisabled} tip={editTip} onPress={edit}>
-              {t('config.edit')}
-            </Button>
-          )}
-          {editing && (
-            <>
-              <Button isDisabled={busy} onPress={cancel}>
-                {t('ui.cancel')}
+    <Card aria-label={view.label}>
+      {canWrite && (
+        <div className="rp-row">
+          <span className="rp-cluster">
+            {dirty && (
+              <>
+                <Badge tone="warn">{t('config.unsaved')}</Badge>
+                <span className="rp-label">{t('config.unsavedHint')}</span>
+              </>
+            )}
+          </span>
+          <span className="rp-cluster">
+            {canValidate && (
+              <Button isPending={validating} isDisabled={validateDisabled} tip={validateTip} onPress={() => void validate()}>
+                {t('config.validate')}
               </Button>
-              <Button accent isPending={saving} isDisabled={busy || !dirty} tip={saveTip} onPress={() => void save()}>
-                {t('config.save')}
+            )}
+            {!editing && (
+              <Button isDisabled={editDisabled} tip={editTip} onPress={edit}>
+                {t('config.edit')}
               </Button>
-            </>
-          )}
-        </span>
-      </div>
+            )}
+            {editing && (
+              <>
+                <Button isDisabled={busy} onPress={cancel}>
+                  {t('ui.cancel')}
+                </Button>
+                <Button accent isPending={saving} isDisabled={busy || !dirty} tip={saveTip} onPress={() => void save()}>
+                  {t('config.save')}
+                </Button>
+              </>
+            )}
+          </span>
+        </div>
+      )}
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
           {shown.map((item, index) => (
@@ -350,7 +356,7 @@ function SourceCard(props: SourceCardProps) {
           onSave={editing && dirty && !busy ? () => void save() : undefined}
         />
       )}
-      <span className="rp-label">{t(canWrite ? 'config.editNote' : 'config.readNote')}</span>
+      {canWrite && <span className="rp-label">{t('config.editNote')}</span>}
     </Card>
   );
 }
