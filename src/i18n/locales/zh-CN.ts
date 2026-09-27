@@ -645,7 +645,7 @@ export const messages = {
   'arrange.ruleSelects': '当前选入：{names}',
   'policy.tab.groups': '组',
   'policy.tab.arrange': '编排',
-  'arrange.note': '将右侧的节点或订阅拖动至组即可加入，也可使用每行的“加入”菜单。更改会先暂存，检查后一次应用。',
+  'arrange.note': '将右侧的节点或订阅拖动至组即可加入，也可勾选后使用下方的“加入组”。更改会先暂存，点击“检查并应用”后一次写入。',
   'arrange.readOnly': '此后端不提供配置写入，仅供查看。',
   'arrange.noMain': '主配置的内容未完整提供，无法在此编排。',
   'arrange.pendingRegion': '待应用的更改',

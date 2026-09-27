@@ -674,7 +674,7 @@ export const messages = {
   'policy.tab.groups': 'Groups',
   'policy.tab.arrange': 'Arrange',
   'arrange.note':
-    'Drag a node or subscription from the right onto a group to add it, or use the Add menu on its row. Changes are staged; review them and apply them together.',
+    'Drag a node or subscription from the right onto a group to add it, or select rows and use Add to group below. Changes are staged until you review and apply them.',
   'arrange.readOnly': 'This backend does not provide configuration writes, so this view is read-only.',
   'arrange.noMain': 'The main configuration is not fully available, so it cannot be arranged here.',
   'arrange.pendingRegion': 'Changes not applied',
