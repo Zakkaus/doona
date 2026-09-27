@@ -105,12 +105,17 @@ function settleWrite(api: Api, accepted: OperationAccepted, signal: AbortSignal)
 }
 
 // Creates an empty source at `path` and returns the id the reloaded configuration lists it under, or null when it
-// lists none there. A failed reload removes the new file, which the operation reports as not written.
+// lists none there. A failed reload removes the new file, which the operation reports as not written. Once the reload
+// succeeded the file exists, so a failed read-back only leaves the id unknown: the create still succeeded.
 export async function createSource(api: Api, path: string, signal: AbortSignal): Promise<string | null> {
   const operation = await settleWrite(api, await api.createConfigSource(path, '', signal), signal);
   finished(operation, 'reload');
   signal.throwIfAborted();
-  return sourceAt((await api.config(signal)).sources, path)?.id ?? null;
+  const config = await api.config(signal).catch(() => {
+    signal.throwIfAborted();
+    return null;
+  });
+  return config && (sourceAt(config.sources, path)?.id ?? null);
 }
 
 export function useConfigCreate(refetch: () => void) {
