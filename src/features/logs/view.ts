@@ -1,6 +1,7 @@
 import {logLevelLabels} from '../../api/selectors';
 import {enumLabel} from '../../i18n/enum';
 import type {LogLevel, LogRecord, RecorderState} from '../../api/model';
+import {recorderEmpty} from '../shared/recorder';
 import {localTime} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 
@@ -68,11 +69,8 @@ export function logView(
   };
 }
 
-// Why the list is empty: log recording switched off in Settings, a target filter, or no records at all. The recorder
-// state comes from the runtime settings rather than from the empty list, which cannot tell the three apart.
 export function logEmpty(recorder: RecorderState | undefined, filtered: boolean, t: LabelFn): string {
-  if (recorder?.allowed && recorder.mode === 'off') return t('log.emptyNotRecorded');
-  return t(filtered ? 'log.emptyFiltered' : 'log.empty');
+  return t(recorderEmpty(recorder, filtered, {off: 'log.emptyNotRecorded', filtered: 'log.emptyFiltered', empty: 'log.empty'}));
 }
 
 // Kept apart from `logView` because the count of held records changes while the list does not.

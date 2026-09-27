@@ -26,6 +26,7 @@ import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
+import {recorderEmpty} from '../shared/recorder';
 
 const kindLabels: Record<ConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
@@ -148,11 +149,10 @@ export type DistributionView = {
   empty: string;
   sourceHelp: Help;
 };
-// Why the table is empty: flow recording switched off in Settings, a source filter, or no flows at all. The recorder
-// state comes from the runtime settings rather than from the empty list, which cannot tell the three apart.
 export function distributionEmpty(recorder: RecorderState | undefined, source: string, t: Translator): string {
-  if (recorder?.allowed && recorder.mode === 'off') return t('rule.distributionNotRecorded');
-  return t(source === 'all' ? 'rule.distributionEmpty' : 'rule.distributionFiltered');
+  return t(
+    recorderEmpty(recorder, source !== 'all', {off: 'rule.distributionNotRecorded', filtered: 'rule.distributionFiltered', empty: 'rule.distributionEmpty'})
+  );
 }
 export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang, recorder?: RecorderState): DistributionView {
   const locale = LOCALE[lang];
