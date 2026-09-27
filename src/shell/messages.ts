@@ -2,6 +2,7 @@ import {defineMessages} from '../i18n/defineMessages';
 
 export const messages = defineMessages({
   'zh-TW': {
+    'shell.guide': '安裝指南',
     'shell.shortcuts': '鍵盤快捷鍵',
     'shell.langUnavailable': '無法切換至{name}：介面文字載入失敗。',
     'shell.searchUnavailable': '無法開啟搜尋：搜尋功能載入失敗。',
@@ -146,6 +147,7 @@ export const messages = defineMessages({
   'zh-CN': {
     'shell.langUnavailable': '无法切换至{name}：界面文字加载失败。',
     'shell.searchUnavailable': '无法打开搜索：搜索功能加载失败。',
+    'shell.guide': '安装指南',
     'shell.shortcuts': '键盘快捷键',
     'shell.notOffered': '此后端不提供该页面',
     'shell.toActivity': '回到活动',
@@ -288,6 +290,7 @@ export const messages = defineMessages({
   en: {
     'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',
     'shell.searchUnavailable': 'Could not open search: it did not load.',
+    'shell.guide': 'Setup guide',
     'shell.shortcuts': 'Keyboard shortcuts',
     'shell.notOffered': 'This backend does not provide this page',
     'shell.toActivity': 'Back to activity',

@@ -3,10 +3,11 @@ import {useApplyHeld} from '../features/shared/usePendingApply';
 import {useLifecycle} from '../features/shared/useLifecycle';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
-import {useT} from '../i18n';
+import {useLang, useT} from '../i18n';
 import {toast} from '../ui/ui';
 import {accessError, duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
 import {errorText} from '../api/error';
+import {docsHref} from '../features/shared/docs';
 
 export const AboutContext = createContext<AboutView | null>(null);
 const rereadAll = () => void refetchAll();
@@ -67,9 +68,12 @@ export function useShell(settings: Settings, route: string): ShellModel {
 }
 export function useAbout(onHonk?: () => void) {
   const view = useContext(AboutContext)!;
+  const t = useT();
+  const lang = useLang();
   const [taps, setTaps] = useState(0);
   return {
     ...view,
+    guide: {href: docsHref(lang), label: t('shell.guide')},
     ...duckView(taps),
     taps,
     tap: () => {

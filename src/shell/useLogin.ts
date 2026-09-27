@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
-import {useT, type Params} from '../i18n';
+import {useLang, useT, type Params} from '../i18n';
 import type {Key} from '../i18n';
+import {docsHref} from '../features/shared/docs';
 import {ApiError, errorText} from '../api/error';
 import {discoverAuth, openSession, servesNativeApi, signInKind, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
@@ -56,6 +57,7 @@ export async function resolveSignInKind(api: string, signal?: AbortSignal): Prom
 
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
   const t = useT();
+  const lang = useLang();
   // A session this tab held and the backend no longer accepts has ended; it is dropped before asking again.
   // endSession is idempotent for the page load, so running it in the initializer is safe under StrictMode.
   const [ended] = useState(() => endSession(profileId, api));
@@ -171,6 +173,8 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     canSubmit: kind !== 'no-api' && (usesPassword || !!token.trim()),
     secretType: shown ? 'text' : 'password',
     toggle: () => setShown(value => !value),
-    toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken')
+    toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken'),
+    guideHref: docsHref(lang),
+    requirementsHref: docsHref(lang, 'no-native-api')
   };
 }

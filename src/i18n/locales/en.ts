@@ -1179,6 +1179,7 @@ export const messages = {
   'settings.geodataFailed': 'Could not update geodata',
   'shell.langUnavailable': 'Could not switch to {name}: the interface text did not load.',
   'shell.searchUnavailable': 'Could not open search: it did not load.',
+  'shell.guide': 'Setup guide',
   'shell.shortcuts': 'Keyboard shortcuts',
   'shell.notOffered': 'This backend does not provide this page',
   'shell.toActivity': 'Back to activity',
