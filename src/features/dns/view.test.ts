@@ -110,3 +110,28 @@ it('says the persistent cache is memory only rather than not covered, and explai
   expect(log.totalHelp).toEqual({title: t('dns.logTotal', {n: 3}), text: t('dns.logTotalHelp')});
   expect(dnsLogView(undefined, true, t).totalHelp).toBeNull();
 });
+
+it('says why Query, Clear all cache and Delete are disabled when the backend does not support them', () => {
+  const {resources} = capabilities;
+  expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).reason).toBeNull();
+  // An empty domain speaks for itself, and nothing is said before the capabilities arrive or while a query runs.
+  expect(dnsQueryView(null, resources, 'A', '', false, t).reason).toBeNull();
+  expect(dnsQueryView(null, undefined, 'A', 'example.com', false, t).reason).toBeNull();
+  const off = {...resources, dns_query: {...resources.dns_query, available: false}};
+  expect(dnsQueryView(null, off, 'A', 'example.com', false, t).reason).toBe('This backend cannot run DNS queries right now');
+  expect(dnsQueryView(null, off, 'A', 'example.com', true, t).reason).toBeNull();
+  const aOnly = {...resources, dns_query: {...resources.dns_query, record_types: ['A']}};
+  expect(dnsQueryView(null, aOnly, 'AAAA', 'example.com', false, t).reason).toBe('This backend cannot query this record type');
+  const none = {...resources, dns_query: {...resources.dns_query, record_types: []}};
+  expect(dnsQueryView(null, none, 'all', 'example.com', false, t).reason).toBe('This backend offers no record types to query');
+
+  const cache = dnsCacheView(dnsCache, resources, '', null, 'en-US', t);
+  expect([cache.flushReason, cache.deleteReason]).toEqual([null, null]);
+  const readOnly = {...resources, dns_cache: {...resources.dns_cache, flush: false, delete_entry: false}};
+  const limited = dnsCacheView(dnsCache, readOnly, '', null, 'en-US', t);
+  expect(limited.flushReason).toBe('This backend does not support clearing the cache');
+  expect(limited.deleteReason).toBe('This backend does not support deleting cache entries');
+  // No row, no Delete to explain; a change in flight shows as pending.
+  expect(dnsCacheView(dnsCache, readOnly, 'nothing-matches', null, 'en-US', t).deleteReason).toBeNull();
+  expect(dnsCacheView(dnsCache, readOnly, '', 'flush', 'en-US', t).flushReason).toBeNull();
+});
