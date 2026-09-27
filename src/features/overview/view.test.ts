@@ -3,22 +3,26 @@ import {capabilities, datapath, runtime, runtimeMemory, version} from '../../api
 import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';
+import type {KvItem} from '../../ui/ui';
 const t: Translator = (key, params) => translate('en', key, params);
 const loading = {capabilities: false, runtime: false, version: false, memory: false, datapath: false};
+// The row with this label, as an object whichever form it has.
+const field = (items: KvItem[], label: string) =>
+  items.map(item => (Array.isArray(item) ? {label: item[0], value: item[1], full: undefined, help: undefined} : item)).find(item => item.label === label);
 
 it('keeps unknown datapath vocabulary and does not invent unknown map occupancy', () => {
   expect(datapathValue('future_backend', t)).toBe('future_backend');
   const value = {...datapath, ebpf: {...datapath.ebpf!, maps: {state: 'ready' as const, conn_state: {occupancy: 0, capacity: 100, occupancy_known: false}}}};
-  expect(datapathFields(value, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe(t('ov.occupancyUnknown', {capacity: '100'}));
+  expect(field(datapathFields(value, 'unknown', t, 'en-US'), t('ov.f.connState'))?.value).toBe(t('ov.occupancyUnknown', {capacity: '100'}));
   const noMap = {...datapath, ebpf: {...datapath.ebpf!, maps: {state: 'ready' as const, conn_state: null}}};
-  expect(datapathFields(noMap, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe('unknown');
+  expect(field(datapathFields(noMap, 'unknown', t, 'en-US'), t('ov.f.connState'))?.value).toBe('unknown');
 });
 
 it('marks shared memory as shared and omits selected fields without losing zero counters', () => {
   const fields = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope: 'shared'}}, t, 'en-US', ['ov.f.cgroupLimit']);
-  expect(fields.find(([label]) => label === t('ov.f.cgroupScope'))?.[1]).toBe(t('ov.v.cgroupShared'));
-  expect(fields.find(([label]) => label === t('ov.f.cgroupLimit'))).toBeUndefined();
-  expect(fields.find(([label]) => label === t('ov.f.oomKill'))?.[1]).toBe('0');
+  expect(field(fields, t('ov.f.cgroupScope'))?.value).toBe(t('ov.v.cgroupShared'));
+  expect(field(fields, t('ov.f.cgroupLimit'))).toBeUndefined();
+  expect(field(fields, t('ov.f.oomKill'))?.value).toBe('0');
 });
 
 it('distinguishes loading and unavailable sections and deduplicates datapath errors', () => {
@@ -87,9 +91,7 @@ it('retains each known cgroup measurement when the other is unknown', () => {
 
 it('shows process CPU as a percent of one core, and a dash when unmeasured', () => {
   const cpu = (cpu_percent: number | null, locale = 'en-US', label = t) =>
-    overviewView({runtime: {...runtime, process: {...runtime.process, cpu_percent}}}, loading, locale, label).strip.find(
-      ([name]) => name === label('ov.cpu')
-    )?.[1];
+    field(overviewView({runtime: {...runtime, process: {...runtime.process, cpu_percent}}}, loading, locale, label).strip, label('ov.cpu'))?.value;
   expect(cpu(2.1)).toBe('2.1%');
   expect(cpu(1234.56)).toBe('1,234.6%');
   expect(cpu(1234.56, 'de-DE')).toBe('1.234,6%');
@@ -98,7 +100,7 @@ it('shows process CPU as a percent of one core, and a dash when unmeasured', () 
 });
 
 it('explains a degraded datapath by whether the runtime is degraded too, and an unconfirmed value', () => {
-  const help = (fields: ReturnType<typeof datapathFields>, key: Parameters<Translator>[0]) => fields.find(([label]) => label === t(key))?.[3];
+  const help = (fields: ReturnType<typeof datapathFields>, key: Parameters<Translator>[0]) => field(fields, t(key))?.help;
   const degraded = {...datapath, state: 'degraded' as const};
   expect(help(datapathFields(degraded, 'unknown', t, 'en-US', true), 'ov.f.state')).toEqual({title: t('ov.v.degraded'), text: t('ov.degradedHelp.runtime')});
   expect(help(datapathFields(degraded, 'unknown', t, 'en-US'), 'ov.f.state')).toEqual({title: t('ov.v.degraded'), text: t('ov.degradedHelp.datapath')});
@@ -121,8 +123,8 @@ it('explains the cgroup scope by its value', () => {
     ['shared', 'ov.cgroupHelp.shared'],
     ['unknown', 'ov.cgroupHelp.unknown']
   ] as const) {
-    const row = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope}}, t, 'en-US').find(([label]) => label === t('ov.f.cgroupScope'));
-    expect(row?.[3]).toEqual({title: t('ov.f.cgroupScope'), text: t('ui.valuePair', {label: row![1], value: t(key)})});
+    const row = field(memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope}}, t, 'en-US'), t('ov.f.cgroupScope'));
+    expect(row?.help).toEqual({title: t('ov.f.cgroupScope'), text: t('ui.valuePair', {label: row!.value, value: t(key)})});
   }
-  expect(memoryFields({...runtimeMemory, cgroup: null}, t, 'en-US').find(([label]) => label === t('ov.f.cgroupScope'))?.[3]).toBeUndefined();
+  expect(field(memoryFields({...runtimeMemory, cgroup: null}, t, 'en-US'), t('ov.f.cgroupScope'))?.help).toBeUndefined();
 });

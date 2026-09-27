@@ -304,7 +304,7 @@ export function saveTip(busy: 'save' | 'validate' | null, dirty: boolean, mac: b
 // change the revision and keep it.
 export function configMetadata(generation: string, revision: string, t: Translator): KvItem[] {
   return [
-    [t('config.generation'), generation, undefined, {title: t('config.generation'), text: t('config.generationHelp')}],
+    {label: t('config.generation'), value: generation, help: {title: t('config.generation'), text: t('config.generationHelp')}},
     [t('config.revision'), revision]
   ];
 }
