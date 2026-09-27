@@ -127,7 +127,7 @@ test.describe('1440px', () => {
     await page.goto('/#/connections');
     const busiest = tile(page, 'Heaviest connection');
     await expect(busiest.locator('.rp-big')).toHaveText('cdn.bilibili.com');
-    await expect(busiest.locator('.rp-big')).toHaveAttribute('title', 'cdn.bilibili.com');
+    await expect(busiest.locator('.rp-big')).not.toHaveAttribute('data-tip');
     await expect(busiest.locator('.rp-fact-caption')).toHaveText('direct');
     await expect(tile(page, 'Download').locator('dd')).toHaveText('1.2 GB');
     await expect(tile(page, 'Upload').locator('dd')).toHaveText('9.4 MB');
@@ -138,13 +138,13 @@ test.describe('1440px', () => {
     expect(first.width).toBeGreaterThan(second.width * 1.9);
   });
 
-  test('a long host is still cut at its end, with its title', async ({page}) => {
+  test('a long host loses its start and keeps its end, as on a phone', async ({page}) => {
     await longHost(page);
     await page.goto('/#/connections');
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
-    await expect(value).toHaveAttribute('title', long);
-    await expect(value).not.toHaveClass(/rp-truncate-start/);
+    await expect(value).toHaveAttribute('data-tip', '');
+    expect(await edges(value)).toEqual({cut: true, first: false, last: true});
   });
 });
 
@@ -157,5 +157,16 @@ test.describe('740px', () => {
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText('cdn.bilibili.com');
     expect(await value.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+
+  test('a host too long for two shares loses its start, keeps its end and shows whole on focus', async ({page}) => {
+    await longHost(page);
+    await page.goto('/#/connections');
+    const value = tile(page, 'Heaviest connection').locator('.rp-big');
+    await expect(value).toHaveText(long);
+    await expect(value).toHaveAttribute('data-tip', '');
+    expect(await edges(value)).toEqual({cut: true, first: false, last: true});
+    await value.focus();
+    await expect(page.getByRole('tooltip')).toHaveText(long);
   });
 });

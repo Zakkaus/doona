@@ -1,6 +1,5 @@
 import type {ReactNode} from 'react';
 import {TextTooltip} from '../Button';
-import {phoneQuery, useMediaQuery} from '../hooks';
 
 // `icon` and `tint` as on the activity page's tiles: the icon takes a palette role colour, or the tone's.
 export type ChartFact = {
@@ -14,10 +13,9 @@ export type ChartFact = {
 
 // The page's figures as the activity page shows its own: a strip of tiles, label above, value large.
 // `lead`: the first value is a name whose end tells most, as a host's domain. Wide, its tile takes two shares of the
-// row; on a phone it takes the first row alone, and a name still too long for it gives way at its start; a hover,
-// keyboard focus or tap shows it whole.
+// row; on a phone it takes the first row alone. At any width a name still too long for its tile gives way at its
+// start, and a hover, keyboard focus or tap shows it whole.
 export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
-  const phone = useMediaQuery(phoneQuery);
   if (!facts.length) return null;
   return (
     <dl
@@ -31,7 +29,7 @@ export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
-            {lead && phone && i === 0 ? (
+            {lead && i === 0 ? (
               <TextTooltip className="rp-big" cut="start">
                 {fact.value}
               </TextTooltip>
