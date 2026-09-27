@@ -75,7 +75,7 @@ test.describe('390px', () => {
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
-    expect(await edges(value)).toEqual({cut: true, first: false, last: true});
+    await expect.poll(() => edges(value)).toEqual({cut: true, first: false, last: true});
     await value.tap();
     await expect(page.getByRole('tooltip')).toHaveText(long);
   });
@@ -115,7 +115,7 @@ test.describe('390px', () => {
       await page.goto('/#/connections');
       const value = tile(page, 'Heaviest connection').locator('.rp-big');
       await expect(value).toHaveAttribute('data-tip', '');
-      expect(await edges(value)).toEqual({cut: true, first: false, last: true});
+      await expect.poll(() => edges(value)).toEqual({cut: true, first: false, last: true});
     });
   });
 });
@@ -144,7 +144,7 @@ test.describe('1440px', () => {
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
-    expect(await edges(value)).toEqual({cut: true, first: false, last: true});
+    await expect.poll(() => edges(value)).toEqual({cut: true, first: false, last: true});
   });
 });
 
@@ -165,7 +165,7 @@ test.describe('740px', () => {
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
-    expect(await edges(value)).toEqual({cut: true, first: false, last: true});
+    await expect.poll(() => edges(value)).toEqual({cut: true, first: false, last: true});
     await value.focus();
     await expect(page.getByRole('tooltip')).toHaveText(long);
   });
