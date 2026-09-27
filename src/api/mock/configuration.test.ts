@@ -217,3 +217,19 @@ it('shows a custom geodata URL without its query once an update downloads it', a
   expect(asset.source_redacted).toBe('https://example.com/geosite.dat?[redacted]');
   expect(asset.fetched_url_redacted).toBe('https://example.com/geosite.dat?[redacted]');
 });
+
+it('creates a source an included file loads, and refuses a write over the body limit', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const rules = (await api.config()).sources.find(source => source.kind === 'include')!;
+  await api.replaceConfigSource(rules.id, rules.content + '\ninclude { extra.d/*.dae }\n', `"${rules.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  await api.createConfigSource('extra.d/more.dae', '');
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.config()).sources.some(source => source.path.endsWith('/extra.d/more.dae'))).toBe(true);
+  const big = '#'.repeat(70000);
+  await expect(api.createConfigSource('extra.d/big.dae', big)).rejects.toMatchObject({status: 413, code: 'request_too_large'});
+  const current = (await api.config()).sources.find(source => source.id === rules.id)!;
+  await expect(api.replaceConfigSource(rules.id, big, `"${current.content_sha256}"`)).rejects.toMatchObject({status: 413});
+  expect((await api.config()).sources.some(source => source.path.endsWith('/extra.d/big.dae'))).toBe(false);
+});
