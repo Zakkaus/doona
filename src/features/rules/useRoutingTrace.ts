@@ -60,11 +60,11 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     !form.domain.trim() && !form.dst_ip.trim()
       ? {field: 'domain', key: 'rule.invalidTarget'}
       : form.dst_ip.trim() && !ipLiteral(form.dst_ip)
-        ? {field: 'dst_ip', key: 'rule.invalidIp'}
+        ? {field: 'dst_ip', key: 'ui.invalidIp'}
         : !isPort(form.dst_port)
           ? {field: 'dst_port', key: 'rule.invalidPort'}
           : form.src_ip.trim() && !ipLiteral(form.src_ip)
-            ? {field: 'src_ip', key: 'rule.invalidIp'}
+            ? {field: 'src_ip', key: 'ui.invalidIp'}
             : form.src_port.trim() && !isPort(form.src_port)
               ? {field: 'src_port', key: 'rule.invalidPort'}
               : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()

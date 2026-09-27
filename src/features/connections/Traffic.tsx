@@ -93,7 +93,7 @@ export const Traffic = memo(function Traffic({
         <LatencyCard latency={latency} />
       ) : (
         latencyError && (
-          <Card title={t('conn.latency.title')}>
+          <Card title={t('ui.nodeLatency')}>
             <ErrorMessage error={latencyError} onRetry={retryLatency} />
           </Card>
         )
@@ -111,7 +111,7 @@ function LatencyCard({latency}: {latency: PathLatency}) {
   const locale = LOCALE[useLang()];
   const colour = (used: boolean) => (!latency.chains || used ? p.cat[0] : p.muted);
   return (
-    <Card title={t('conn.latency.title')} note={t('conn.latency.sample', {n: latency.samples.length, missing: latency.missing})}>
+    <Card title={t('ui.nodeLatency')} note={t('conn.latency.sample', {n: latency.samples.length, missing: latency.missing})}>
       {latency.samples.length ? (
         <>
           <p className="rp-note">{t('conn.latency.percentiles', {p50: fmt(latency.p50!), p90: fmt(latency.p90!)})}</p>
@@ -123,7 +123,7 @@ function LatencyCard({latency}: {latency: PathLatency}) {
             </p>
           )}
           <Beeswarm
-            label={t('conn.latency.title')}
+            label={t('ui.nodeLatency')}
             points={latency.samples.map(sample => ({
               id: sample.node,
               value: sample.value,

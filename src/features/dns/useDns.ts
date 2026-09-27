@@ -204,7 +204,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     setType,
     src,
     setSrc,
-    srcError: srcInvalid ? t('dns.srcInvalid') : undefined,
+    srcError: srcInvalid ? t('ui.invalidIp') : undefined,
     selected: detail ? selected : null,
     setSelected,
     wide,

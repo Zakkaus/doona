@@ -148,7 +148,7 @@ export function shellView(
       facts: [
         [t('about.api'), apiText],
         ...fact(t('shell.backend.build'), version?.build?.revision?.slice(0, 12)),
-        [t('shell.backend.address'), address],
+        [t('ui.backendUrl'), address],
         // The built-in demo data runs without a profile.
         ...fact(t('shell.backend.profile'), profile?.name)
       ],
