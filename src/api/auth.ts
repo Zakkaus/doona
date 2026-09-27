@@ -36,16 +36,21 @@ export function signInKind(auth: AuthDiscovery | null): SignIn {
   return auth.setup_required ? 'setup' : 'login';
 }
 
-// Setup and login carry no Authorization: a stale token from an earlier session would be refused as invalid.
+// Setup and login carry no Authorization: a stale token from an earlier session would be refused as invalid. Only
+// setup changes what the backend holds: a login that timed out is simply tried again, so it keeps the read wording.
 export async function openSession(base: string, kind: 'setup' | 'login', credentials: AuthCredentials, signal?: AbortSignal): Promise<AuthSession> {
   if (isDemoApi(base)) return (await demoAuth()).mockOpenSession(kind, credentials);
-  const response = await fetch(url(base, `/api/v1/auth/${kind}`), {
-    method: 'POST',
-    headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
-    body: JSON.stringify(credentials),
-    cache: 'no-store',
-    signal
-  });
+  const response = await send(
+    url(base, `/api/v1/auth/${kind}`),
+    {
+      method: 'POST',
+      headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
+      body: JSON.stringify(credentials),
+      cache: 'no-store',
+      signal
+    },
+    kind === 'setup'
+  );
   if (!response.ok) throw await responseError(response);
   return response.json();
 }
@@ -53,7 +58,7 @@ export async function openSession(base: string, kind: 'setup' | 'login', credent
 export async function closeSession(base: string, token: string, signal?: AbortSignal): Promise<void> {
   // The demo keeps no sessions to revoke; dropping the tab's token ends it.
   if (isDemoApi(base)) return;
-  const response = await fetch(url(base, '/api/v1/auth/logout'), {
+  const response = await send(url(base, '/api/v1/auth/logout'), {
     method: 'POST',
     headers: {Accept: 'application/json', Authorization: 'Bearer ' + token},
     cache: 'no-store',
