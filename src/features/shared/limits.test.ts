@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities, Version} from '../../api/model';
-import {capabilities, capabilitiesBase, version} from '../../api/mock/fixtures';
+import {capabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, limitSnippet, type LimitCause, type LimitGroup} from './limits';
 import {docsHref} from './docs';
@@ -55,6 +55,28 @@ describe('backendLimits', () => {
     expect(group(disallowed, 'flowsIdle')).toBeUndefined();
     expect(group(disallowed, 'recordOff')?.help?.keys).toEqual(['record_flows: true']);
     expect(limits(patched({flows: {recording: 'sampled'}}))).toEqual([]);
+  });
+
+  it('files flows that are off without a runtime switch as idle, with no Settings link', () => {
+    for (const runtime_settings of [{available: false}, {fields: ['flows.max_flows' as const, 'log.level' as const]}]) {
+      expect(group(limits(patched({flows: {recording: 'off'}, runtime_settings})), 'flowsIdle')).toEqual({
+        cause: 'flowsIdle',
+        headline: t('ov.lim.h.flowsIdle'),
+        items: [{id: 'flows', label: t('rule.flows')}]
+      });
+    }
+  });
+
+  it('lists the rule list, validation and closing connections when the backend turns them off', () => {
+    const base = limits(capabilitiesBase, other);
+    expect(ids(group(base, 'configNotLoaded'))).toEqual(['config', 'config_validate', 'manage']);
+    expect(ids(group(base, 'notProvided'))).toContain('rules');
+    const m1 = limits(capabilitiesM1, other);
+    expect(ids(group(m1, 'configNotLoaded'))).toEqual(['config', 'config_validate']);
+    expect(ids(group(m1, 'notProvided'))).toEqual(expect.arrayContaining(['rules', 'close']));
+    expect(group(m1, 'notProvided')?.items.find(item => item.id === 'close')?.label).toBe(t('ov.lim.close'));
+    // Validation follows the loaded sources in honk (config.rs running), so a read-only configuration keeps it.
+    expect(ids(group(limits(patched({config: {writable: false}, config_validate: {available: false}})), 'notProvided'))).toEqual(['config_validate']);
   });
 
   it('explains a configuration that is not loaded once for everything that needs it', () => {

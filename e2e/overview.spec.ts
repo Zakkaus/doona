@@ -257,9 +257,9 @@ test.describe('with the base profile', () => {
       'The configuration turns off 4 recorders',
       'Geodata is unavailable',
       'Subscriptions cannot be refreshed for now',
-      'This honk build lacks 5 features'
+      'This honk build lacks 6 features'
     ]);
-    await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Nodes and sources');
+    await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Validation, Nodes and sources');
     await expect(rows.nth(1).locator('.rp-note')).toHaveText('DNS log, Traffic history, Memory history, Logs');
     await expect(rows.nth(2).locator('.rp-note')).toHaveCount(0);
     await expect(card.locator('pre')).toHaveCount(0);
@@ -282,7 +282,7 @@ test.describe('with the base profile', () => {
     await expect(features.locator('.rp-capability').filter({hasText: 'Logs'})).toHaveCount(0);
     await expect(features.locator('.rp-capability').filter({hasText: 'Connections'})).toHaveCount(1);
     await page.goto('/#/activity');
-    const count = page.locator('.rp-quick').getByRole('link', {name: '13 features are off', exact: true});
+    const count = page.locator('.rp-quick').getByRole('link', {name: '15 features are off', exact: true});
     await count.click();
     await expect(page).toHaveURL(/#\/overview\?card=limits$/);
     await expect(page.getByRole('heading', {name: 'Features that are off', exact: true})).toBeInViewport();
