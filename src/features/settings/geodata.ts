@@ -2,7 +2,7 @@ import type {GeoAssetKind, GeoData, GeoDataDownload, GroupSummary} from '../../a
 import {geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
-import {backendMessage} from '../../i18n/backend';
+import {backendMessage, oneLine} from '../../i18n/backend';
 
 export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
 export type GeodataChoice = GeodataPresetId | 'custom';
@@ -108,7 +108,7 @@ export function statusLine(data: GeoData | undefined, updating: boolean, now: nu
   if (updating) return {text: t('settings.geodataUpdating'), error: false};
   if (data?.last_error)
     return {
-      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: backendMessage(data.last_error.code, data.last_error.message, t)}),
+      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(backendMessage(data.last_error.code, data.last_error.message, t), t)}),
       error: true
     };
   const at = data?.last_updated_at;

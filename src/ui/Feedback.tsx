@@ -17,7 +17,7 @@ import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
 import ChevronDown from './icons/ChevronDown';
 import {useT, type Translator} from '../i18n';
-import {errorText, failureNotice, withoutRequestNote} from '../api/error';
+import {errorLines, failureNotice, withoutRequestNote} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 import {escapeLayers} from './hooks';
@@ -74,10 +74,12 @@ export function InlineAlert({
 }
 
 // Retry refetches the failed resource rather than reloading the page.
-// `message` replaces the load-failure wording for a failed action.
-export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: string}) {
+// `message` words the error for a failed action instead of as a load failure; the backend's detail goes below it.
+export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: (error: string) => string}) {
   const t = useT();
-  return error ? (
+  if (!error) return null;
+  const {summary, detail} = errorLines(error, t);
+  return (
     <InlineAlert
       action={
         onRetry && (
@@ -87,9 +89,10 @@ export function ErrorMessage({error, onRetry, message}: {error: Error | null | u
         )
       }
     >
-      {message ?? t('ui.loadFailed', {error: errorText(error, t)})}
+      {message ? message(summary) : t('ui.loadFailed', {error: summary})}
+      {detail && <span className="rp-alert-detail">{detail}</span>}
     </InlineAlert>
-  ) : null;
+  );
 }
 
 // Without children the light is the dot alone, for a place that names the state elsewhere.

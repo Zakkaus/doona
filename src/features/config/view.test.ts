@@ -24,6 +24,13 @@ it('projects source locations without inventing a line for source-wide diagnosti
   expect(rows[1].where).toBe('missing');
   expect(rows[1].detail).toBe(t('ui.backendMessage', {message: configNotes[0].message}));
 });
+it('shows the backend words of a reused code once, in the detail', async () => {
+  const configSources = (await createMockApi().config()).sources;
+  const [row] = diagnosticRows([{...configNotes[0], code: 'unsupported_value', line: null}], configSources, 'en-US', t);
+  expect(row.message).toBe(t('ui.backend.unsupportedValue'));
+  expect(row.detail).toBe(t('config.backendDetail', {text: t('ui.backend.unsupportedValue'), message: configNotes[0].message}));
+  expect(row.detail.split(configNotes[0].message)).toHaveLength(2);
+});
 it('initializes empty setup and preserves opaque subscription lines while hiding blank lines', () => {
   const empty = wizardInitial('');
   expect(empty.rules).not.toBe('keep');

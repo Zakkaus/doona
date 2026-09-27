@@ -50,6 +50,7 @@ it('explains a refused write with its diagnostics, restart-only settings or the 
     text: 'Validation found 1 error; nothing written',
     lines: ['config.dae line 44: Backend message: no group nope']
   });
+  expect(ruleFailure(null, [{...diagnostic, code: 'unsupported_value'}], sources, t).lines).toEqual(['config.dae line 44: Unsupported value: no group nope']);
   const restart = new ApiError(422, 'validation_failed', 'invalid', undefined, {
     diagnostics: [{...diagnostic, line: null, code: 'restart-required', message: 'global.tproxy_port'}]
   });

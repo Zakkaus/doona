@@ -2,7 +2,7 @@ import type {ErrorResponse} from './model';
 
 import type {Key} from '../i18n';
 import type {Params, Translator} from '../i18n/index';
-import {backendMessage} from '../i18n/backend';
+import {backendMessage, oneLine, type BackendMessage} from '../i18n/backend';
 
 export class ApiError extends Error {
   constructor(
@@ -70,19 +70,24 @@ export class LocalError extends Error {
 
 // The backend's part of a local failure, in its words when it sent a known code.
 const localDetail = (error: LocalError, t: Translator) =>
-  error.detail ? (error.code ? backendMessage(error.code, error.detail, t, error.details) : error.detail) : undefined;
+  error.detail ? (error.code ? oneLine(backendMessage(error.code, error.detail, t, error.details), t) : error.detail) : undefined;
 
-// The words for a failure: doona's own errors in the current language, the backend's message as it sent it.
-export function errorText(error: unknown, t: Translator): string {
+// The words for a failure: doona's own errors in the current language, the backend's message as it sent it. A code
+// honk reuses keeps the backend's words as the detail, which carries the request note when there is one.
+export function errorLines(error: unknown, t: Translator): BackendMessage {
   if (error instanceof LocalError) {
     const detail = localDetail(error, t);
-    return detail ? t('ui.valuePair', {label: t(error.key), value: detail}) : t(error.key);
+    return {summary: detail ? t('ui.valuePair', {label: t(error.key), value: detail}) : t(error.key)};
   }
-  if (error instanceof ApiError && error.text) return t(error.text.key, error.text.params);
-  const message =
-    error instanceof ApiError ? backendMessage(error.code, error.message, t, error.details) : error instanceof Error ? error.message : String(error);
-  return error instanceof ApiError && error.requestId ? message + t('ui.requestNote', {id: error.requestId}) : message;
+  if (error instanceof ApiError && error.text) return {summary: t(error.text.key, error.text.params)};
+  if (!(error instanceof ApiError)) return {summary: error instanceof Error ? error.message : String(error)};
+  const {summary, detail} = backendMessage(error.code, error.message, t, error.details);
+  const note = error.requestId ? t('ui.requestNote', {id: error.requestId}) : '';
+  return detail ? {summary, detail: detail + note} : {summary: summary + note};
 }
+
+// The same words on one line.
+export const errorText = (error: unknown, t: Translator) => oneLine(errorLines(error, t), t);
 
 // The request note errorText appends, as every language words ui.requestNote: request_id in half- or full-width
 // brackets. A toast drops it; the places that stay on screen keep it for a bug report.

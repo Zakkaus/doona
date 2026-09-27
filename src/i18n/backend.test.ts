@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {backendCode, backendMessage} from './backend';
+import {backendCode, backendMessage, oneLine} from './backend';
 import {LANGS, translate, type Lang, type Translator} from './index';
 
 // The codes honk sets on operation.error, provider.last_error and health.error, which the contract leaves to the adapter.
@@ -26,7 +26,7 @@ const operationCodes = [
 it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %s', (lang: Lang) => {
   const t: Translator = (key, params) => translate(lang, key, params);
   for (const code of operationCodes) {
-    const text = backendMessage(code, 'English message from the backend', t);
+    const text = backendMessage(code, 'English message from the backend', t).summary;
     expect(text, code).not.toContain('English message');
     expect(text, code).not.toContain('ui.backend.');
   }
@@ -34,16 +34,32 @@ it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %
 
 it('falls back to the backend message for a code it does not know', () => {
   const t: Translator = (key, params) => translate('en', key, params);
-  expect(backendMessage('adapter_specific', 'Something specific', t)).toBe(t('ui.backendMessage', {message: 'Something specific'}));
+  expect(backendMessage('adapter_specific', 'Something specific', t)).toEqual({summary: t('ui.backendMessage', {message: 'Something specific'})});
 });
 
 it('names a failed stage: in its own words when known, else beside the code', () => {
   const t: Translator = (key, params) => translate('en', key, params);
-  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'asset_validation_failed'})).toBe(t('ui.backend.assetValidationFailed'));
-  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'destination_rejected'})).toBe(
-    t('ui.aside', {text: t('ui.backend.geodataUpdateFailed'), note: 'destination_rejected'})
+  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'asset_validation_failed'})).toEqual({summary: t('ui.backend.assetValidationFailed')});
+  expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'destination_rejected'})).toEqual({
+    summary: t('ui.aside', {text: t('ui.backend.geodataUpdateFailed'), note: 'destination_rejected'})
+  });
+  expect(backendMessage('geodata_update_failed', 'x', t, {committed: false})).toEqual({summary: t('ui.backend.geodataUpdateFailed')});
+});
+
+it('keeps the backend message for the codes honk reuses for unrelated failures', () => {
+  const t: Translator = (key, params) => translate('zh-CN', key, params);
+  expect(backendMessage('unsupported_value', 'Group field is not mutable', t)).toEqual({
+    summary: t('ui.backend.unsupportedValue'),
+    detail: 'Group field is not mutable'
+  });
+  expect(backendMessage('invalid_request', 'Unsupported record type "XYZ"', t)).toEqual({
+    summary: t('ui.backend.invalidRequest'),
+    detail: 'Unsupported record type "XYZ"'
+  });
+  expect(oneLine(backendMessage('unsupported_value', 'Group field is not mutable', t), t)).toBe(
+    t('ui.valuePair', {label: t('ui.backend.unsupportedValue'), value: 'Group field is not mutable'})
   );
-  expect(backendMessage('geodata_update_failed', 'x', t, {committed: false})).toBe(t('ui.backend.geodataUpdateFailed'));
+  expect(backendMessage('state_conflict', 'Group changed meanwhile', t)).toEqual({summary: t('ui.backend.stateConflict')});
 });
 
 it('shows an unknown bare code as it is', () => {
