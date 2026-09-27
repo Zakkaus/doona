@@ -1,6 +1,7 @@
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../model';
 import {ago, now, observedAt} from './clock';
 import {groupPolicies} from './configuration';
+import {groupCapabilities, groupConfig} from '../groupDefaults';
 import {defaultGeodataPreset} from '../../../dae/geodata';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
@@ -50,15 +51,7 @@ function group(name: keyof typeof groupPolicies, members: string[], leaf: string
     config_revision: '40',
     policy: {...policy},
     members: members.map(id => ({id, name: id, kind: nodeIds.has(id) ? 'node' : 'group'})),
-    config: {
-      default_member_id: kind === 'selector' ? leaf : null,
-      final_outbound: null,
-      check_url: null,
-      check_interval: 30,
-      tolerance: 10,
-      idle_timeout: null,
-      interrupt_connections: false
-    },
+    config: groupConfig(kind === 'selector' ? leaf : null),
     runtime: {
       // The proxy group selects different members per network so the TCP/UDP switch has something to show.
       selection: {
@@ -69,13 +62,7 @@ function group(name: keyof typeof groupPolicies, members: string[], leaf: string
         .filter(n => memberIds.has(n.id))
         .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))
     },
-    capabilities: {
-      can_select: kind === 'selector',
-      can_override: kind !== 'selector',
-      supports_nested_groups: true,
-      mutable_config: ['policy', 'default_member_id', ...(kind === 'selector' ? [] : (['check_url'] as const)), 'tolerance', 'interrupt_connections'],
-      probe_transports: ['tcp', 'udp']
-    }
+    capabilities: groupCapabilities(kind)
   };
 }
 // Every node answers its probes unless the faults scenario takes jp-01 and about one subscription node in sixteen down.
