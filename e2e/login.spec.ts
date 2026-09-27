@@ -92,3 +92,40 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Connect', exact: true}).click()]);
   await expect.poll(() => authorization).toBe('Bearer fresh-token');
 });
+
+// Settings works without a backend, so the link leaves the sign-in page for the backend editor while signed out.
+test('changing the backend URL while signed out probes the new backend', async ({page}) => {
+  expectLoadFailures(page, /\/(one|two)\/api/);
+  const discovery = (setupRequired: boolean) => ({
+    name: 'dae/honk-native',
+    api_major: 1,
+    links: {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'},
+    auth: {mode: 'password', setup_required: setupRequired}
+  });
+  const probed: string[] = [];
+  await page.route(/\/(one|two)\/api$/, route => {
+    const backend = new URL(route.request().url()).pathname.split('/')[1];
+    probed.push(backend);
+    return route.fulfill({json: discovery(backend === 'two')});
+  });
+  await page.route(/\/(one|two)\/api\/v1\//, route =>
+    route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Authentication required', details: null}, request_id: 'r'}})
+  );
+  await page.addInitScript(() => {
+    if (localStorage.getItem('doona-profiles')) return;
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin + '/one', token: ''}]));
+    localStorage.setItem('doona-profile', 'home');
+  });
+  await page.goto('/#/activity');
+  const login = page.locator('.rp-login-page');
+  await expect(login.getByRole('heading', {level: 1})).toHaveText('Sign in');
+  await login.getByRole('link', {name: 'Change backend URL'}).click();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await expect(page.locator('.rp-login-page')).toHaveCount(0);
+  const origin = new URL(page.url()).origin;
+  await page.locator('[name=api]').fill(origin + '/two');
+  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await page.goto('/#/activity');
+  await expect(login.getByRole('heading', {level: 1})).toHaveText('Create the administrator');
+  expect(probed.at(-1)).toBe('two');
+});
