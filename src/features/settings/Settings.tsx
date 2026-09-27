@@ -101,7 +101,7 @@ export function Settings({query}: PageProps) {
           }}
         >
           <TextField
-            label={t('settings.api')}
+            label={t('ui.backendUrl')}
             autoComplete="url"
             spellCheck={false}
             description={t('settings.apiHelp')}

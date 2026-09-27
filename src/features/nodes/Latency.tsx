@@ -71,7 +71,7 @@ export function NodeLatency() {
     <div className="rp-chart-page">
       <FactStrip facts={facts} />
       <Card
-        title={t('nodes.latency.title')}
+        title={t('ui.nodeLatency')}
         note={t('nodes.latency.sample', {n: nodes.data.length})}
         aside={
           <Segmented
@@ -86,7 +86,7 @@ export function NodeLatency() {
         }
       >
         <MarkerPlot
-          label={t('nodes.latency.title')}
+          label={t('ui.nodeLatency')}
           max={latencyMax(view)}
           fmt={value => formatLatency(value, t)}
           showAll={n => t('nodes.latency.showAll', {n})}
