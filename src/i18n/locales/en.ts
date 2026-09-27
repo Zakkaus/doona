@@ -662,6 +662,8 @@ export const messages = {
   'ov.cpu': 'CPU usage',
   'ov.lastReload': 'Last reload',
   'ov.datapath': 'Datapath',
+  'ov.status.datapathDegraded': '{status}, datapath degraded',
+  'ov.status.datapathFailed': '{status}, datapath failed',
   'ov.memory': 'Memory',
   'ov.attachments': 'Attachments',
   'ov.name': 'Name',
