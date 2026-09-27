@@ -34,6 +34,20 @@ test('configuration sources list with the main source open, read-only ones canno
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toHaveAttribute('contenteditable', 'false');
 });
 
+test('the editor starts at the same height for writable and read-only sources', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  const editorTop = async (path: string) => {
+    const content = page.locator(`.cm-content[aria-label="${path}"]`);
+    await expect(content).toBeVisible();
+    return (await page.locator('.cm-editor').boundingBox())!.y;
+  };
+  const writable = await editorTop('/etc/honk/config.dae');
+  await page.getByRole('button', {name: /Source/}).click();
+  await page.getByRole('option', {name: /sub-c\.dae/}).click();
+  const readOnly = await editorTop('/var/lib/honk/subscriptions/sub-c.dae');
+  expect(Math.abs(writable - readOnly)).toBeLessThanOrEqual(1);
+});
+
 test('a generated source names why it is read-only and offers no validation', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-generated');
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]')).toContainText('skylink');
