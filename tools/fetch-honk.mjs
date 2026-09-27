@@ -1,6 +1,6 @@
-/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url]; Node 22+; exits 0/1/2 for done/verification failure/usage.
- * Downloads every honk-core build from honk's rolling debug pre-release, checks each file against the sha256 digest the GitHub API reports, and
- * writes HONK-SOURCE.txt with the commit the binaries were built from. GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API call.
+/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url]; Node 22+; exits 0/1/2 for done/verification
+ * failure/usage. Downloads every honk-core build from honk's rolling debug pre-release, checks each file against the sha256 digest the GitHub API
+ * reports, downloads the source archive of the commit the binaries were built from, and writes HONK-SOURCE.txt naming that commit. GITHUB_TOKEN or GH_TOKEN, when set, authenticates the API call.
  * Temporary: the release workflow bundles these builds until honk publishes a release with the native API. */
 import {createHash} from 'node:crypto';
 import {createWriteStream} from 'node:fs';
@@ -13,7 +13,7 @@ import {pathToFileURL} from 'node:url';
 export const SOURCE_NOTE = 'HONK-SOURCE.txt';
 // honk's Cargo.toml declares the licence; LICENSE carries the GPL-3.0 text.
 const LICENCE = 'GPL-3.0-only';
-const usage = 'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url]';
+const usage = 'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--tag tag] [--api url] [--archive url]';
 
 // honk's release workflow builds each target twice: mimalloc by default, and the system allocator under -stock.
 export function expectedAssets() {
@@ -34,6 +34,9 @@ export function parseBody(body) {
   return source;
 }
 
+// GPL-3.0 section 6: the release carries the corresponding source beside the binaries rather than only pointing at it.
+export const sourceArchive = commit => `honk-source-${commit}.tar.gz`;
+
 export function sourceNote({repo, release, source, files}) {
   const tree = `https://github.com/${repo}/tree/${source.commit}`;
   return [
@@ -48,7 +51,7 @@ export function sourceNote({repo, release, source, files}) {
     `Build: ${source.build}`,
     `Licence: ${LICENCE}, https://github.com/${repo}/blob/${source.commit}/LICENSE`,
     `Corresponding source: ${tree}`,
-    `Source archive: https://github.com/${repo}/archive/${source.commit}.tar.gz`,
+    `Source archive: ${sourceArchive(source.commit)}, from https://github.com/${repo}/archive/${source.commit}.tar.gz`,
     '',
     'SHA-256:',
     ...files.map(({name, sha256}) => `${sha256}  ${name}`),
@@ -70,7 +73,15 @@ async function download(url, path) {
   return hash.digest('hex');
 }
 
-export async function fetchHonk({out, repo = 'Glassyiris/honk', tag = 'debug', api = 'https://api.github.com', token, log = () => {}}) {
+export async function fetchHonk({
+  out,
+  repo = 'Glassyiris/honk',
+  tag = 'debug',
+  api = 'https://api.github.com',
+  archive = 'https://github.com',
+  token,
+  log = () => {}
+}) {
   const headers = {accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28'};
   if (token) headers.authorization = `Bearer ${token}`;
   const response = await fetch(`${api}/repos/${repo}/releases/tags/${tag}`, {headers, signal: AbortSignal.timeout(60_000)});
@@ -89,22 +100,31 @@ export async function fetchHonk({out, repo = 'Glassyiris/honk', tag = 'debug', a
   if (unexpected.length) throw new Error(`release has unrecognised builds ${unexpected.join(', ')}`);
 
   await mkdir(out, {recursive: true});
+  // Only a complete file gets its final name; `expect` is the digest to check it against, when one is published.
+  const save = async (url, name, expect) => {
+    const partial = join(out, `${name}.part`);
+    try {
+      const actual = await download(url, partial);
+      if (expect && actual !== expect) throw new Error(`${name}: sha256 ${actual}, the API reports ${expect}`);
+      await rename(partial, join(out, name));
+      return actual;
+    } finally {
+      await rm(partial, {force: true});
+    }
+  };
   const files = [];
   for (const name of expected) {
     const asset = assets.get(name);
     const digest = /^sha256:([0-9a-f]{64})$/.exec(asset.digest ?? '')?.[1];
     if (!digest) throw new Error(`${name}: the API reports no sha256 digest`);
-    const partial = join(out, `${name}.part`);
-    try {
-      const actual = await download(asset.browser_download_url, partial);
-      if (actual !== digest) throw new Error(`${name}: sha256 ${actual}, the API reports ${digest}`);
-      await rename(partial, join(out, name));
-    } finally {
-      await rm(partial, {force: true});
-    }
+    await save(asset.browser_download_url, name, digest);
     files.push({name, sha256: digest});
     log(`OK ${digest}  ${name}`);
   }
+  // GitHub publishes no digest for a commit archive, so the copy downloaded here is the one SHA256SUMS vouches for.
+  const name = sourceArchive(source.commit);
+  files.push({name, sha256: await save(`${archive}/${repo}/archive/${source.commit}.tar.gz`, name)});
+  log(`OK ${files.at(-1).sha256}  ${name}`);
   await writeFile(join(out, SOURCE_NOTE), sourceNote({repo, release, source, files}));
   log(`${source.tag} at ${source.commit}`);
   return {source, files};
@@ -118,7 +138,7 @@ export async function main(args) {
       positional.push(args[i]);
       continue;
     }
-    if (!['--repo', '--tag', '--api'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
+    if (!['--repo', '--tag', '--api', '--archive'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
       console.error(usage);
       return 2;
     }

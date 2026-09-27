@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {afterEach, describe, expect, it} from 'vitest';
-import {expectedAssets, fetchHonk, parseBody, SOURCE_NOTE} from './fetch-honk.mjs';
+import {expectedAssets, fetchHonk, parseBody, SOURCE_NOTE, sourceArchive} from './fetch-honk.mjs';
 
 const commit = '5d8f32c10fc01363cea33dcdb9b1c155e2449fa2';
 const body = [
@@ -19,8 +19,9 @@ const servers = [];
 const dirs = [];
 const sha256 = data => createHash('sha256').update(data).digest('hex');
 
-// A GitHub release API stand-in: `edit` adjusts the release JSON, `served` the bytes behind one asset name.
-async function serve({edit = release => release, served = {}} = {}) {
+// A GitHub stand-in for the release API, its downloads and commit archives: `edit` adjusts the release JSON, `served` the bytes
+// behind one asset name, and `source` the archive of the commit (null answers 404).
+async function serve({edit = release => release, served = {}, source = `source of ${commit}`} = {}) {
   const contents = Object.fromEntries(expectedAssets().map(name => [name, `tarball ${name}`]));
   const server = createServer((request, response) => {
     const {port} = server.address();
@@ -33,6 +34,11 @@ async function serve({edit = release => release, served = {}} = {}) {
       const release = edit({tag_name: 'debug', html_url: 'https://github.com/Glassyiris/honk/releases/tag/debug', target_commitish: commit, body, assets});
       response.writeHead(200, {'content-type': 'application/json'});
       response.end(JSON.stringify(release));
+      return;
+    }
+    if (request.url === `/Glassyiris/honk/archive/${commit}.tar.gz` && source !== null) {
+      response.writeHead(200, {'content-type': 'application/gzip'});
+      response.end(source);
       return;
     }
     const name = decodeURIComponent(request.url.replace(/^\/download\//, ''));
@@ -48,7 +54,8 @@ async function serve({edit = release => release, served = {}} = {}) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const out = mkdtempSync(join(tmpdir(), 'fetch-honk-'));
   dirs.push(out);
-  return {api: `http://127.0.0.1:${server.address().port}`, out, contents};
+  const api = `http://127.0.0.1:${server.address().port}`;
+  return {api, archive: api, out, contents, source};
 }
 
 afterEach(async () => {
@@ -84,17 +91,28 @@ describe('fetchHonk', () => {
     expect(expectedAssets()).toContain('honk-core-debug-aarch64-unknown-linux-musl-stock.tar.gz');
   });
 
-  it('downloads every build and writes the source note', async () => {
-    const {api, out, contents} = await serve();
-    const {files} = await fetchHonk({api, out});
-    expect(files.map(file => file.name)).toEqual(expectedAssets());
-    expect(readdirSync(out).sort()).toEqual([...expectedAssets(), SOURCE_NOTE].sort());
+  it('downloads every build and the source archive, and writes the source note', async () => {
+    const {api, archive, out, contents, source} = await serve();
+    const {files} = await fetchHonk({api, archive, out});
+    expect(files.map(file => file.name)).toEqual([...expectedAssets(), sourceArchive(commit)]);
+    expect(readdirSync(out).sort()).toEqual([...expectedAssets(), sourceArchive(commit), SOURCE_NOTE].sort());
     for (const name of expectedAssets()) expect(readFileSync(join(out, name), 'utf8')).toBe(contents[name]);
+    expect(readFileSync(join(out, sourceArchive(commit)), 'utf8')).toBe(source);
     const note = readFileSync(join(out, SOURCE_NOTE), 'utf8');
     expect(note).toContain('Source tag: debug.2026.9.26.native-api.4');
     expect(note).toContain(`Corresponding source: https://github.com/Glassyiris/honk/tree/${commit}`);
     expect(note).toContain('Licence: GPL-3.0-only');
     expect(note).toContain(`${sha256(contents[expectedAssets()[0]])}  ${expectedAssets()[0]}`);
+    expect(note).toContain(`Source archive: honk-source-${commit}.tar.gz, from https://github.com/Glassyiris/honk/archive/${commit}.tar.gz`);
+    expect(note).toContain(`${sha256(source)}  honk-source-${commit}.tar.gz`);
+  });
+
+  it('fails when the source archive is not found and writes no note', async () => {
+    const {api, archive, out} = await serve({source: null});
+    await expect(fetchHonk({api, archive, out})).rejects.toThrow('HTTP 404');
+    expect(existsSync(join(out, sourceArchive(commit)))).toBe(false);
+    expect(existsSync(join(out, `${sourceArchive(commit)}.part`))).toBe(false);
+    expect(existsSync(join(out, SOURCE_NOTE))).toBe(false);
   });
 
   it('fails on a digest mismatch and keeps no partial file', async () => {
