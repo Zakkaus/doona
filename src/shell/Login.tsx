@@ -34,7 +34,7 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
           view.discoveryError ? (
             <>
               <ErrorMessage error={view.discoveryError} onRetry={view.retryDiscovery} />
-              <div className="rp-toolbar">
+              <div className="rp-login-links">
                 <Link appearance="link" href={href('settings')}>
                   {t('login.settings')}
                 </Link>
@@ -101,12 +101,12 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
                 )}
               </>
             )}
-            <div className="rp-toolbar">
-              {view.kind !== 'no-api' && (
-                <Button accent type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
-                  {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
-                </Button>
-              )}
+            {view.kind !== 'no-api' && (
+              <Button accent className="rp-login-submit" type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
+                {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
+              </Button>
+            )}
+            <div className="rp-login-links">
               <Link appearance="link" href={href('settings')}>
                 {t('login.settings')}
               </Link>
