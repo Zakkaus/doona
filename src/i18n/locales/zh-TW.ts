@@ -644,7 +644,7 @@ export const messages = {
   'arrange.ruleSelects': '目前選入：{names}',
   'policy.tab.groups': '群組',
   'policy.tab.arrange': '編排',
-  'arrange.note': '將右側的節點或訂閱拖曳至群組即可加入，亦可使用每列的「加入」選單。變更會先暫存，檢查後一次套用。',
+  'arrange.note': '將右側的節點或訂閱拖曳至群組即可加入，亦可勾選後使用下方的「加入群組」。變更會先暫存，按「檢查並套用」後一次寫入。',
   'arrange.readOnly': '此後端不提供組態寫入，僅供檢視。',
   'arrange.noMain': '主組態的內容未完整提供，無法在此編排。',
   'arrange.pendingRegion': '待套用的變更',
