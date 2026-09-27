@@ -215,3 +215,15 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
     }
   }
 });
+
+test('the cgroup scope explains itself in a help popover', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/overview');
+  await page.getByRole('button', {name: 'About cgroup scope', exact: true}).click();
+  const help = page.getByRole('dialog', {name: 'cgroup scope'});
+  await expect(help).toContainText(
+    'This service: This cgroup holds only this service. Its used memory counts toward this service, and usage is the used memory against the limit.'
+  );
+  await page.keyboard.press('Escape');
+  await expect(help).toHaveCount(0);
+});

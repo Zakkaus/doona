@@ -9,7 +9,9 @@ const loading = {capabilities: false, runtime: false, version: false, memory: fa
 it('keeps unknown datapath vocabulary and does not invent unknown map occupancy', () => {
   expect(datapathValue('future_backend', t)).toBe('future_backend');
   const value = {...datapath, ebpf: {...datapath.ebpf!, maps: {state: 'ready' as const, conn_state: {occupancy: 0, capacity: 100, occupancy_known: false}}}};
-  expect(datapathFields(value, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe('unknown');
+  expect(datapathFields(value, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe(t('ov.occupancyUnknown', {capacity: '100'}));
+  const noMap = {...datapath, ebpf: {...datapath.ebpf!, maps: {state: 'ready' as const, conn_state: null}}};
+  expect(datapathFields(noMap, 'unknown', t, 'en-US').find(([label]) => label === t('ov.f.connState'))?.[1]).toBe('unknown');
 });
 
 it('marks shared memory as shared and omits selected fields without losing zero counters', () => {
@@ -93,4 +95,34 @@ it('shows process CPU as a percent of one core, and a dash when unmeasured', () 
   expect(cpu(1234.56, 'de-DE')).toBe('1.234,6%');
   expect(cpu(null)).toBe('—');
   expect(overviewView({}, loading, 'en-US', t).strip).toContainEqual([t('ov.cpu'), '—']);
+});
+
+it('explains a degraded datapath by whether the runtime is degraded too, and an unconfirmed value', () => {
+  const help = (fields: ReturnType<typeof datapathFields>, key: Parameters<Translator>[0]) => fields.find(([label]) => label === t(key))?.[3];
+  const degraded = {...datapath, state: 'degraded' as const};
+  expect(help(datapathFields(degraded, 'unknown', t, 'en-US', true), 'ov.f.state')).toEqual({title: t('ov.v.degraded'), text: t('ov.degradedHelp.runtime')});
+  expect(help(datapathFields(degraded, 'unknown', t, 'en-US'), 'ov.f.state')).toEqual({title: t('ov.v.degraded'), text: t('ov.degradedHelp.datapath')});
+  const runtimeDegraded = {...runtime, lifecycle: {...runtime.lifecycle, state: 'degraded' as const}};
+  const fields = overviewView({runtime: runtimeDegraded, datapath: degraded}, loading, 'en-US', t).datapath.fields;
+  expect(help(fields, 'ov.f.state')?.text).toBe(t('ov.degradedHelp.runtime'));
+  const unknown = {...datapath, ebpf: {...datapath.ebpf!, maps: undefined}};
+  expect(help(datapathFields(unknown, 'unknown', t, 'en-US'), 'ov.f.maps')).toEqual({title: t('ov.v.unknown'), text: t('ov.unknownHelp')});
+  expect(help(datapathFields(datapath, 'unknown', t, 'en-US'), 'ov.f.kind')).toBeUndefined();
+});
+
+it('says the status was not reported, not that it is unknown, once nothing is loading', () => {
+  expect(overviewView({}, loading, 'en-US', t).status.text).toBe(t('ov.statusUnknown'));
+  expect(overviewView({}, {...loading, runtime: true}, 'en-US', t).status.text).toBe(t('ov.loading'));
+});
+
+it('explains the cgroup scope by its value', () => {
+  for (const [scope, key] of [
+    ['service', 'ov.cgroupHelp.service'],
+    ['shared', 'ov.cgroupHelp.shared'],
+    ['unknown', 'ov.cgroupHelp.unknown']
+  ] as const) {
+    const row = memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope}}, t, 'en-US').find(([label]) => label === t('ov.f.cgroupScope'));
+    expect(row?.[3]).toEqual({title: t('ov.f.cgroupScope'), text: t('ui.valuePair', {label: row![1], value: t(key)})});
+  }
+  expect(memoryFields({...runtimeMemory, cgroup: null}, t, 'en-US').find(([label]) => label === t('ov.f.cgroupScope'))?.[3]).toBeUndefined();
 });

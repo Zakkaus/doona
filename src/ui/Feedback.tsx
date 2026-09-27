@@ -121,26 +121,6 @@ export function Badge({children, tone, className, tip}: {children: ReactNode; to
   );
 }
 
-// `row` keeps label and value on one line; a third element is the full value, shown as a tooltip.
-export function Kv({items, inline, row}: {items: Array<[string, string] | [string, string, string]>; inline?: boolean; row?: boolean}) {
-  return (
-    <div className={cx('rp-kv', (inline || row) && 'inline', row && 'row')}>
-      {items.map(([k, v, full]) => (
-        <div key={k}>
-          <span className="k">{k}</span>
-          {full ? (
-            <TextTooltip className="v" text={full}>
-              {v}
-            </TextTooltip>
-          ) : (
-            <span className="v">{v}</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Toasts: react-aria's queue rendered like S2's ToastContainer; timers pause while hovered, focused or listed.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 // A button in the toast, as S2's actionLabel / onAction / shouldCloseOnAction. A toast with one stays until closed:

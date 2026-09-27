@@ -1,6 +1,7 @@
 import {useId, type ReactNode, type Ref} from 'react';
 import {ChartDescription} from './charts/description';
 import {cx} from './cx';
+import {ContextualHelp, type Help} from './ContextualHelp';
 
 // The card surface's class, for a react-aria element that has to be the card itself (a drop zone) and a form that is
 // one. Extra classes lay out what the card holds.
@@ -34,6 +35,7 @@ export function Card({
   titleId,
   tile,
   note,
+  help,
   aside,
   id,
   className,
@@ -46,6 +48,8 @@ export function Card({
   // A heading id other code relies on, such as a `?card=` scroll target.
   titleId?: string;
   note?: string;
+  // What the title means, in a help popover beside it.
+  help?: Help;
   aside?: ReactNode;
   id?: string;
   // Layout for what the card holds.
@@ -66,11 +70,19 @@ export function Card({
       {tile.kind === 'metric' && aside}
     </TileHead>
   ) : (
-    title != null && (
+    title != null &&
+    (help ? (
+      <div className="rp-help-row">
+        <Heading className="rp-h3" id={headingId}>
+          {title}
+        </Heading>
+        <ContextualHelp {...help} />
+      </div>
+    ) : (
       <Heading className="rp-h3" id={headingId}>
         {title}
       </Heading>
-    )
+    ))
   );
   return (
     <section

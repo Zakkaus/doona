@@ -6,6 +6,8 @@ import {lifecycleStates, lifecycleTone, memoryTone, shortId} from '../../api/sel
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
+import type {Help} from '../../ui/ContextualHelp';
+import type {KvItem} from '../../ui/Kv';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -35,34 +37,51 @@ const datapathValues: Record<string, Key> = {
 export function datapathValue(value: string, label: LabelFn): string {
   return datapathValues[value] ? label(datapathValues[value]) : value;
 }
-export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn, locale: string): Array<[string, string]> {
+// A degraded or an unknown value is explained beside its label. A runtime that is degraded as well means a reload
+// left the datapath unrecovered, which is what the explanation then describes.
+function valueHelp(value: string, runtimeDegraded: boolean, label: LabelFn): Help | undefined {
+  if (value === 'degraded') return {title: label('ov.v.degraded'), text: label(runtimeDegraded ? 'ov.degradedHelp.runtime' : 'ov.degradedHelp.datapath')};
+  if (value === 'unknown') return {title: label('ov.v.unknown'), text: label('ov.unknownHelp')};
+  return undefined;
+}
+export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn, locale: string, runtimeDegraded = false): KvItem[] {
   const ebpf = datapath.ebpf;
   const occupancy = ebpf?.maps?.conn_state;
-  const v = (value: string) => datapathValue(value, label);
+  const row = (key: Key, value: string): KvItem => {
+    const help = valueHelp(value, runtimeDegraded, label);
+    return help ? [label(key), datapathValue(value, label), undefined, help] : [label(key), datapathValue(value, label)];
+  };
   return [
-    [label('ov.f.kind'), v(datapath.kind)],
-    [label('ov.f.state'), v(datapath.state)],
-    [label('ov.f.visibility'), v(datapath.visibility)],
+    row('ov.f.kind', datapath.kind),
+    row('ov.f.state', datapath.state),
+    row('ov.f.visibility', datapath.visibility),
     ...(ebpf
-      ? ([
-          [label('ov.f.backend'), v(ebpf.backend)],
-          [label('ov.f.programs'), v(ebpf.programs)],
-          [label('ov.f.hooks'), v(ebpf.hooks)],
-          [label('ov.f.routing'), v(ebpf.routing.state)],
-          [label('ov.f.health'), v(ebpf.health)],
-          [label('ov.f.maps'), v(ebpf.maps?.state ?? 'unknown')],
+      ? [
+          row('ov.f.backend', ebpf.backend),
+          row('ov.f.programs', ebpf.programs),
+          row('ov.f.hooks', ebpf.hooks),
+          row('ov.f.routing', ebpf.routing.state),
+          row('ov.f.health', ebpf.health),
+          row('ov.f.maps', ebpf.maps?.state ?? 'unknown'),
           [
             label('ov.f.connState'),
             occupancy?.occupancy_known && occupancy.occupancy !== null
               ? label('ui.fraction', {part: formatNumber(occupancy.occupancy, locale), whole: formatNumber(occupancy.capacity, locale)})
-              : unknown
-          ]
-        ] as Array<[string, string]>)
+              : occupancy
+                ? label('ov.occupancyUnknown', {capacity: formatNumber(occupancy.capacity, locale)})
+                : unknown
+          ] as KvItem
+        ]
       : [])
   ];
 }
 const cgroupScopes: Record<'service' | 'shared' | 'unknown', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared', unknown: 'ui.unknown'};
-export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: string, omit: Key[] = []): Array<[string, string]> {
+const cgroupHelp: Record<'service' | 'shared' | 'unknown', Key> = {
+  service: 'ov.cgroupHelp.service',
+  shared: 'ov.cgroupHelp.shared',
+  unknown: 'ov.cgroupHelp.unknown'
+};
+export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: string, omit: Key[] = []): KvItem[] {
   const count = (value: string | null | undefined) => {
     const parsed = parseU64(value ?? null);
     return parsed === null ? '—' : formatNumber(parsed, locale);
@@ -78,7 +97,14 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
     ['ov.f.oomKill', count(memory.cgroup?.events?.oom_kill)],
     ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null, locale)]
   ];
-  return rows.filter(([key]) => !omit.includes(key)).map(([key, value]) => [label(key), value]);
+  const scope = memory.cgroup?.scope;
+  return rows
+    .filter(([key]) => !omit.includes(key))
+    .map(([key, value]): KvItem =>
+      key === 'ov.f.cgroupScope' && scope
+        ? [label(key), value, undefined, {title: label(key), text: label('ui.valuePair', {label: value, value: label(cgroupHelp[scope])})}]
+        : [label(key), value]
+    );
 }
 
 const resourceLabels = {
@@ -117,14 +143,14 @@ export function overviewView(
   return {
     status: {
       tone: lifecycleTone(state) as 'ok' | 'err' | 'warn',
-      text: state ? enumLabel(lifecycleStates, state, t) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown')
+      text: state ? enumLabel(lifecycleStates, state, t) : t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.statusUnknown')
     },
     strip: [
-      [t('ov.config'), shortId(revision), revision],
+      [t('ov.config'), shortId(revision), revision, {title: t('ov.config'), text: t('ov.configHelp')}],
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
       [t('ov.cpu'), cpu == null ? '—' : t('ui.percent', {n: formatNumber(cpu, locale, 1)})],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
-    ] as Array<[string, string] | [string, string, string]>,
+    ] as KvItem[],
     reload: reload
       ? {
           tooltip: reload.operation_id,
@@ -156,8 +182,13 @@ export function overviewView(
             [t('ov.f.total'), count(runtime.traffic.connections.total)],
             [t('ui.upload'), formatBytes(runtime.traffic.bytes.upload, locale)],
             [t('ui.download'), formatBytes(runtime.traffic.bytes.download, locale)],
-            [t('ov.f.rateWindow'), runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—']
-          ] as Array<[string, string]>)
+            [
+              t('ov.f.rateWindow'),
+              runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—',
+              undefined,
+              {title: t('ov.f.rateWindow'), text: t('ov.rateWindowHelp')}
+            ]
+          ] as KvItem[])
         : [],
       since: runtime
         ? t('ov.countersSince', {
@@ -184,7 +215,7 @@ export function overviewView(
     },
     datapath: {
       state: section(!!datapath, loading.capabilities || loading.datapath),
-      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t, locale) : [],
+      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t, locale, state === 'degraded') : [],
       showAttachments: !!datapath?.ebpf,
       attachments: (datapath?.ebpf?.attachments ?? []).map((a, i) => ({
         id: String(i),

@@ -121,6 +121,28 @@
   flex-direction: column;
   gap: 2px;
 }
+/* A help button, after S2's ContextualHelp: an icon beside the label it explains, kept within the label's line. */
+.rp-btn.rp-help {
+  width: 24px;
+  height: 24px;
+  margin-block: -4px;
+  margin-inline-start: 2px;
+  vertical-align: middle;
+  color: var(--rp-subtle);
+}
+.rp-btn.rp-help > .rp-icon {
+  width: 16px;
+  height: 16px;
+}
+/* A control or a title with its help button beside it. */
+.rp-help-row {
+  display: inline-flex;
+  align-items: center;
+}
+.rp-popover-body p {
+  margin: 0;
+  line-height: 20px;
+}
 .rp-popover-body h2 {
   margin: 0;
   font-size: var(--rp-text-lg);
