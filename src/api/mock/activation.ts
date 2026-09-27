@@ -3,6 +3,7 @@ import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
 import {groupAdmits, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
 import {redactUrl} from './common';
+import {groupCapabilities, groupConfig} from './groupDefaults';
 
 export function activateInventory(text: string, revision: string, nodes: Node[], groups: Group[], providers: Provider[]) {
   const {blocks, tokens} = scanConfig(text);
@@ -55,15 +56,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
     const kind = policyKind(native) ?? 'selector';
-    const config: Group['config'] = {
-      default_member_id: null,
-      final_outbound: null,
-      check_url: null,
-      check_interval: 30,
-      tolerance: 10,
-      idle_timeout: null,
-      interrupt_connections: false
-    };
+    const config = groupConfig(null);
     const block = blocks
       .filter(block => block.name === 'group')
       .flatMap(block => block.children)
@@ -104,13 +97,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
           node.health.map(health => ({...health, member_id: node.id, resolved_leaf_node_id: node.id, sorting_latency_ms: health.latency_ms, ranking: null}))
         )
       },
-      capabilities: {
-        can_select: kind === 'selector',
-        can_override: kind !== 'selector',
-        supports_nested_groups: true,
-        mutable_config: ['policy', 'default_member_id', ...(kind === 'selector' ? [] : (['check_url'] as const)), 'tolerance', 'interrupt_connections'],
-        probe_transports: ['tcp', 'udp']
-      }
+      capabilities: groupCapabilities(kind)
     };
   });
   for (const node of nextNodes) node.group_ids = memberships.get(node.id)!;
