@@ -3,16 +3,14 @@ import {flushSync} from 'react-dom';
 import {useT, type Params} from '../../i18n';
 import type {Key} from '../../i18n';
 import {discoverAuth} from '../../api/auth';
-import {createApi} from '../../api/client';
 import {uuid} from '../../api/hash';
-import {ApiError} from '../../api/error';
 import {DEMO_API, isDemoApi, normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
 import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {buildHash} from '../../shell/route';
-import {probeFailure} from './view';
+import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
 
 // `id` changes with each failed save, so the dialog's alert takes focus again on a repeat.
@@ -31,7 +29,7 @@ export function useBackendForm(query: string) {
   const [token, setToken] = useState(saved.token);
   const [paired, setPaired] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
-  const [pending, setPending] = useState(false);
+  const {pending, running, cancel: cancelProbe, run: runProbe} = useConnectionTest();
   // Pairing links also fill an already-open form without saving the credentials.
   const dirty = api !== (saved.api ?? '') || token !== saved.token;
   const guard = useDraftGuard(dirty, () => {
@@ -47,7 +45,6 @@ export function useBackendForm(query: string) {
       setPaired(true);
       setApi(pair.api);
       setToken(pair.token);
-      setPending(false);
       setResult(null);
     }
   }
@@ -66,29 +63,15 @@ export function useBackendForm(query: string) {
   const [saving, setSaving] = useState(false);
   const saveLock = useRef(false);
   const saveFailures = useRef(0);
-  const request = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      const controller = request.current;
-      request.current = null;
-      controller?.abort();
-    },
-    []
-  );
 
   const resetProbe = useCallback(() => {
-    const controller = request.current;
-    request.current = null;
-    controller?.abort();
-    setPending(false);
+    cancelProbe();
     setResult(null);
-  }, []);
+  }, [cancelProbe]);
+  // A pairing link drops the test in flight; its result was cleared with the pairing.
   useLayoutEffect(() => {
-    if (!readPairing(query)) return;
-    const controller = request.current;
-    request.current = null;
-    controller?.abort();
-  }, [query]);
+    if (readPairing(query)) cancelProbe();
+  }, [query, cancelProbe]);
   // How the backend in the address field signs in, as its public discovery says: read for the saved backend when the
   // page opens and again by each connection test. A password backend has no bearer to paste, so its field is hidden.
   const [auth, setAuth] = useState<{base: string; password: boolean} | null>(null);
@@ -179,7 +162,7 @@ export function useBackendForm(query: string) {
     if (switchId !== null) persist(saved.profiles, switchId);
   };
   const testConnection = async () => {
-    if (request.current) return;
+    if (running()) return;
     resetProbe();
     const base = validate(api);
     if (base === null) return;
@@ -188,35 +171,19 @@ export function useBackendForm(query: string) {
       toast('neutral', t('settings.demo'));
       return;
     }
-    const controller = new AbortController();
-    request.current = controller;
-    const timer = setTimeout(() => controller.abort(new DOMException('Connection timeout', 'TimeoutError')), 5000);
-    setPending(true);
-    try {
-      const discovery = await createApi(base, token).discovery(controller.signal);
-      if (!discovery || !Number.isInteger(discovery.api_major) || discovery.api_major < 1) {
-        throw new ApiError(200, 'invalid_discovery', 'Missing API version');
+    await runProbe(base, token, outcome => {
+      if ('failure' in outcome) {
+        const {failure, requestId} = outcome;
+        setResult({...failure, error: true, requestId});
+        // The failure is already named in the page language; the raw message (a DOMException, "Failed to fetch") is not.
+        toast('negative', t(failure.key, failure.params));
+        return;
       }
-      if (request.current === controller) {
-        setAuth({base, password: discovery.auth?.mode === 'password'});
-        const version = String(discovery.api_major);
-        setResult({key: 'settings.reachable', params: {version}});
-        toast('positive', t('settings.reachable', {version}));
-      }
-    } catch (error) {
-      if (request.current !== controller) return;
-      const failure = probeFailure(error, controller.signal, base, location.origin, token);
-      if (!failure) return;
-      setResult({...failure, error: true, requestId: error instanceof ApiError ? error.requestId : null});
-      // The failure is already named in the page language; the raw message (a DOMException, "Failed to fetch") is not.
-      toast('negative', t(failure.key, failure.params));
-    } finally {
-      clearTimeout(timer);
-      if (request.current === controller) {
-        request.current = null;
-        setPending(false);
-      }
-    }
+      const {version, password} = outcome;
+      setAuth({base, password});
+      setResult({key: 'settings.reachable', params: {version}});
+      toast('positive', t('settings.reachable', {version}));
+    });
   };
 
   const [dialog, showDialog] = useState<'add' | 'rename' | 'delete' | null>(null);
