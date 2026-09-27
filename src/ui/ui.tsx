@@ -29,3 +29,4 @@ export {ActionBar} from './ActionBar';
 export {ActionGroup, type Action} from './ActionGroup';
 export {Card, cardClass} from './Card';
 export {Divider} from './Divider';
+export {VisuallyHidden} from 'react-aria';

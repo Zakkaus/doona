@@ -99,7 +99,7 @@ export default [
               allowImportNames: ['useFilter', 'useDragAndDrop', 'isTextDropItem', 'I18nProvider', 'RouterProvider'],
               message: `A React Aria component ${kit}`
             },
-            {name: 'react-aria', allowTypeImports: true, allowImportNames: ['VisuallyHidden'], message: `A React Aria primitive ${kit}`}
+            {name: 'react-aria', allowTypeImports: true, message: `A React Aria primitive ${kit}`}
           ],
           patterns: [
             {group: ['react-aria/private/**'], message: 'Private React Aria paths break on upgrade.'},
