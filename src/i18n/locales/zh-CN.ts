@@ -193,8 +193,7 @@ export const messages = {
   'config.loadedAt': '加载时间：{time}',
   'config.unsaved': '未保存',
   'config.unsavedHint': '重新加载或关闭页面会丢失修改',
-  'config.editNote':
-    '后端可能隐藏来源文本、路径或诊断；显示与导出的文本仍可能包含凭据。仅在后端提供完整内容时可以编辑。若磁盘上的文件在保存前已更改，后端会拒绝保存，不会覆盖该文件。',
+  'config.editNote': '若磁盘上的文件在保存前已更改，后端会拒绝保存，不会覆盖该文件。',
   'config.level.error': '错误',
   'config.level.warning': '警告',
   'config.level.info': '提示',

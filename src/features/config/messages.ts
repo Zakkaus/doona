@@ -135,8 +135,7 @@ export const messages = defineMessages({
     'config.loadedAt': '載入時間：{time}',
     'config.unsaved': '未儲存',
     'config.unsavedHint': '重新載入或關閉頁面會遺失修改',
-    'config.editNote':
-      '後端可能隱藏來源文字、路徑或診斷；顯示與匯出的文字仍可能含有憑證。僅在後端提供完整內容時可以編輯。若磁碟上的檔案在儲存前已變更，後端會拒絕儲存，不會覆寫該檔案。',
+    'config.editNote': '若磁碟上的檔案在儲存前已變更，後端會拒絕儲存，不會覆寫該檔案。',
     'config.level.error': '錯誤',
     'config.level.warning': '警告',
     'config.level.info': '提示',
@@ -276,8 +275,7 @@ export const messages = defineMessages({
     'config.loadedAt': '加载时间：{time}',
     'config.unsaved': '未保存',
     'config.unsavedHint': '重新加载或关闭页面会丢失修改',
-    'config.editNote':
-      '后端可能隐藏来源文本、路径或诊断；显示与导出的文本仍可能包含凭据。仅在后端提供完整内容时可以编辑。若磁盘上的文件在保存前已更改，后端会拒绝保存，不会覆盖该文件。',
+    'config.editNote': '若磁盘上的文件在保存前已更改，后端会拒绝保存，不会覆盖该文件。',
     'config.level.error': '错误',
     'config.level.warning': '警告',
     'config.level.info': '提示',
@@ -430,8 +428,7 @@ export const messages = defineMessages({
     'config.loadedAt': 'Loaded: {time}',
     'config.unsaved': 'Unsaved',
     'config.unsavedHint': 'Reloading or closing the page loses the changes',
-    'config.editNote':
-      'The backend may withhold source text, paths or diagnostics; displayed and exported text may still contain credentials. Editing is available only when the backend provides the complete content. If the file has changed on disk before saving, the backend refuses the save and does not overwrite the file.',
+    'config.editNote': 'If the file has changed on disk before saving, the backend refuses the save and does not overwrite the file.',
     'config.level.error': 'Error',
     'config.level.warning': 'Warning',
     'config.level.info': 'Info',
