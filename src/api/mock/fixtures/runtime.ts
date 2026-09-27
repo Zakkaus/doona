@@ -136,5 +136,6 @@ export const runtimeMemory: RuntimeMemory = {
   cgroup: {scope: 'service', current_bytes: '67108864', limit_bytes: '268435456', events: {high: '2', oom: '0', oom_kill: '0'}},
   kernel: {ebpf_bytes: '18874368', sampled_at: observedAt}
 };
-// The faults scenario's cgroup limit: 81 MiB keeps the drifting usage between 75% and 90%, a high but not critical share.
-export const faultMemoryLimit = String(81 * 1048576);
+// The faults scenario's cgroup limit: 78 MiB keeps the usage, 64 MiB drifting by up to 8% either way, between 75% and
+// 90%, a high but not critical share.
+export const faultMemoryLimit = String(78 * 1048576);
