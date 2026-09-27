@@ -481,6 +481,54 @@ test('quick setup says in view why Apply and reload is disabled', async ({page})
   await expect(reason).toHaveCount(0);
 });
 
+// Each case gives the reason under the disabled action, in view on a phone and named as the button's description.
+async function expectReason(page: Page, button: ReturnType<Page['getByRole']>, reason: string) {
+  await expect(button).toBeDisabled();
+  const line = page.getByText(reason, {exact: true});
+  await expect(line).toBeVisible();
+  await expect(button).toHaveAccessibleDescription(reason);
+  const box = (await line.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  return line;
+}
+
+test('the DNS cache says in view that the backend cannot clear or delete entries', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.dns_cache.flush = false;
+  backend.capabilities.resources.dns_cache.delete_entry = false;
+  await page.goto('/#/dns?tab=cache');
+  await expectReason(page, page.getByRole('button', {name: 'Clear all cache', exact: true}), 'This backend does not support clearing the cache');
+  // The rows' Delete buttons share one line under the table.
+  await expect(page.getByText('This backend does not support deleting cache entries', {exact: true})).toBeVisible();
+});
+
+test('the outbound mode says there is nothing to apply until a mode is picked', async ({page}) => {
+  await page.goto('/#/activity');
+  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const line = await expectReason(page, apply, 'No changes to apply');
+  await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
+  await expect(apply).toBeEnabled();
+  await expect(line).toHaveCount(0);
+});
+
+test('the profile actions say a profile is created by saving the backend', async ({page}) => {
+  await page.goto('/#/settings');
+  await expectReason(page, page.getByRole('button', {name: 'Rename profile', exact: true}), 'No profile yet; saving the backend creates one');
+  await expect(page.getByRole('button', {name: 'Delete profile', exact: true})).toHaveAccessibleDescription('No profile yet; saving the backend creates one');
+});
+
+test('the route trace says what it lacks until a destination and port are given', async ({page}) => {
+  await page.goto('/#/rules?tab=trace');
+  const run = page.getByRole('button', {name: 'Run trace', exact: true});
+  const line = await expectReason(page, run, 'Enter a domain or destination IP.');
+  await page.getByLabel('Domain', {exact: true}).fill('example.com');
+  await expect(line).toHaveCount(0);
+  await expect(run).toHaveAccessibleDescription('Ports must be integers from 1 to 65535.');
+  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  await expect(run).toBeEnabled();
+  await expect(page.getByText('Ports must be integers from 1 to 65535.', {exact: true})).toHaveCount(0);
+});
+
 // A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, line up
 // with each other and fit the demo's names whole, and the panel keeps the grid's 8px gap between its last column and
 // the scrollbar, which on a phone is drawn over the content.
