@@ -62,3 +62,12 @@ it('creates an empty source through a reload and returns the id the configuratio
   await expect(createSource(api, 'config.d/work.dae', new AbortController().signal)).rejects.toMatchObject({status: 409, code: 'state_conflict'});
   await expect(createSource(api, 'elsewhere/work.dae', new AbortController().signal)).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
 });
+
+it('creates the source when only the read-back of the configuration fails, without naming an id', async () => {
+  const api = createMockApi();
+  const config = api.config.bind(api);
+  let reads = 0;
+  api.config = (...args) => (++reads === 1 ? Promise.reject(new ApiError(503, 'service_unavailable', 'Unavailable')) : config(...args));
+  expect(await createSource(api, 'config.d/work.dae', new AbortController().signal)).toBeNull();
+  expect((await api.config()).sources.some(source => source.path.endsWith('/config.d/work.dae'))).toBe(true);
+});
