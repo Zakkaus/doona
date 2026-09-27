@@ -168,9 +168,8 @@ flows.push(unobservedFlow, {
 // The faults scenario's dial failure: a proxied connection whose outbound never connected, so nothing moved.
 export const failedConnection: Connection = {
   ...connections.tcp.find(row => row.id === '3')!,
-  id: '9',
+  id: 'failed-1',
   dst: '198.51.100.23:443',
-  src: '10.0.0.44',
   state: 'failed',
   started_at: ago(12),
   upload_bytes: '0',
