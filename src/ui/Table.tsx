@@ -16,11 +16,12 @@ import {
 } from 'react-aria-components';
 import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
-import {useContentWidth} from './hooks';
+import {phoneQuery, useContentWidth, useMediaQuery} from './hooks';
 import {TextTooltip, buttonClass} from './Button';
 import {Empty, Loading} from './Feedback';
 
-// Minima include padding; positive drop priorities yield in ascending order when columns cannot fit.
+// Minima include padding; positive drop priorities yield in ascending order when columns cannot fit. A phone drops none:
+// the table scrolls sideways instead (see DataTable).
 type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
@@ -199,7 +200,10 @@ export function DataTable<T extends {id: string}>({
   // A tree fits its columns to the grid, which scrolls it, so its width excludes the scrollbar gutter.
   const [treeGridRef, gridWidth] = useContentWidth<HTMLElement>();
   const width = tree ? gridWidth : containerWidth;
-  const shown = useMemo(() => fitColumns(cols, width), [cols, width]);
+  // Fitting a phone's width would leave one or two columns and put the rest of each row out of reach, so there every
+  // column keeps its minimum and the table scrolls sideways; wider screens drop columns rather than scroll.
+  const phone = useMediaQuery(phoneQuery);
+  const shown = useMemo(() => fitColumns(cols, phone ? null : width), [cols, phone, width]);
   // Groups count as rows for the height, the virtual row count and the reveal offset; a folded group's children do not.
   const flat = useMemo(
     () => (tree ? rows.flatMap(row => (isGroup(row) ? (tree.collapsed(row.group) ? [row] : [row, ...row.children]) : [row])) : rows),
@@ -245,8 +249,10 @@ export function DataTable<T extends {id: string}>({
   );
   const table = (
     <Table
-      // A tree measures the grid itself, so a minimum width here would feed back into that measure.
-      style={tree ? undefined : {minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
+      // A native table overflows its container, which scrolls it. A virtualised grid scrolls itself and lays its columns
+      // out wider than itself; a minimum width would make the container scroll it instead, vertical scrollbar and all.
+      // A tree measures the grid, so a minimum width would also feed back into that measure.
+      style={tree || virtual ? undefined : {minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
       ref={element => {
         grid.current = element;
         if (tree) treeGridRef.current = element;
