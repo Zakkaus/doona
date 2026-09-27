@@ -1,7 +1,22 @@
-import {VisuallyHidden} from 'react-aria';
 import {cardHeadings, useOverview} from './useOverview';
 import {useT} from '../../i18n';
-import {ActionGroup, Badge, Button, Card, Bar, DataTable, Kv, Light, Link, PopoverDialog, TextTooltip, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {
+  ActionGroup,
+  Badge,
+  Button,
+  Card,
+  Bar,
+  DataTable,
+  Kv,
+  Light,
+  Link,
+  PopoverDialog,
+  TextTooltip,
+  ErrorMessage,
+  Loading,
+  Empty,
+  VisuallyHidden
+} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import InfoCircle from '../../ui/icons/InfoCircle';
 import {tableLayout} from '../../ui/Table';
@@ -64,6 +79,7 @@ const attachmentsFloor = 2 + tableLayout.headingHeight + 2 * tableLayout.rowHeig
 export function Overview({query}: PageProps) {
   const t = useT();
   const vm = useOverview(query);
+  const status = <Light tone={vm.status.tone}>{vm.status.text}</Light>;
   return (
     <div className="rp-page">
       <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
@@ -71,10 +87,10 @@ export function Overview({query}: PageProps) {
         <div className="rp-cluster">
           {vm.status.href ? (
             <Link appearance="link" href={vm.status.href}>
-              <Light tone={vm.status.tone}>{vm.status.text}</Light>
+              {status}
             </Link>
           ) : (
-            <Light tone={vm.status.tone}>{vm.status.text}</Light>
+            status
           )}
           <Kv row items={vm.strip} />
           {vm.reload && (

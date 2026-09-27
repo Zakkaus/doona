@@ -1,7 +1,6 @@
 import {useEffect, useState, useSyncExternalStore} from 'react';
-import {VisuallyHidden} from 'react-aria';
 import {useT} from '../i18n';
-import {InlineAlert} from '../ui/ui';
+import {InlineAlert, VisuallyHidden} from '../ui/ui';
 import {currentRefusal, subscribeRefusal, type Refusal} from '../api/refusal';
 
 // A request the backend asked to wait on: why, and a countdown to the automatic retry.
