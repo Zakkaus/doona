@@ -1,4 +1,5 @@
-import {useT} from '../../i18n';
+import {useLang, useT} from '../../i18n';
+import {docsHref} from '../shared/docs';
 import {Dialog, DialogTrigger, Popover} from 'react-aria-components';
 import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, Segmented} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
@@ -24,6 +25,7 @@ type ModeCardsModel = {
 
 export function ModeCards({model: vm}: {model: ModeCardsModel}) {
   const t = useT();
+  const lang = useLang();
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
@@ -46,8 +48,8 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
                   <Dialog className="rp-mode-help" aria-label={t('act.modeWhyReadOnly')}>
                     <p>{t('act.modeReadOnlyReason')}</p>
                     <p>{t('act.modeReadOnlyAction')}</p>
-                    <Link external appearance="link" href="https://github.com/Zakkaus/doona/blob/main/README.md#install">
-                      {t('act.installGuide')}
+                    <Link external appearance="link" href={docsHref(lang, 'read-only')}>
+                      {t('act.readOnlyDocs')}
                     </Link>
                   </Dialog>
                 </Popover>
