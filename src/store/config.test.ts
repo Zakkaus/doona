@@ -71,3 +71,11 @@ it('creates the source when only the read-back of the configuration fails, witho
   expect(await createSource(api, 'config.d/work.dae', new AbortController().signal)).toBeNull();
   expect((await api.config()).sources.some(source => source.path.endsWith('/config.d/work.dae'))).toBe(true);
 });
+
+it('finds a created source again whose name holds a space, CJK or a question mark', async () => {
+  const api = createMockApi();
+  for (const name of ['my work', String.fromCodePoint(0x5de5, 0x4f5c), 'a?b']) {
+    const id = await createSource(api, `config.d/${name}.dae`, new AbortController().signal);
+    expect((await api.config()).sources.find(source => source.id === id)?.path).toMatch(new RegExp(`/config\\.d/${name.replace('?', '\\?')}\\.dae$`));
+  }
+});
