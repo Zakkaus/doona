@@ -49,6 +49,12 @@ class NoCache(SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+class Server(ThreadingHTTPServer):
+    # A service worker install fetches the whole shell at once. With the default backlog of 5, a busy machine drops
+    # connection attempts, and the browser retries each one after a growing delay, so the install can stall for many
+    # seconds.
+    request_queue_size = 128
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('port', nargs='?', type=int, default=4173)
@@ -60,4 +66,4 @@ if __name__ == '__main__':
     if prefix and (not prefix.startswith('/') or posixpath.normpath(prefix) != prefix or any(c in prefix for c in '?#%')):
         parser.error('--prefix must be an absolute URL path, such as /ui')
     handler = functools.partial(NoCache, directory=args.directory, prefix=prefix, worker_update=args.worker_update)
-    ThreadingHTTPServer(('0.0.0.0', args.port), handler).serve_forever()
+    Server(('0.0.0.0', args.port), handler).serve_forever()
