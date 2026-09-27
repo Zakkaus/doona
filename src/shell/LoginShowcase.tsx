@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {VisuallyHidden} from 'react-aria';
 import {useT} from '../i18n';
 import {CanvasButton} from '../ui/CanvasButton';
+import {VisuallyHidden} from '../ui/ui';
 import {startLoginGame, type GameText, type LoginGame} from './loginGame';
 
 // The panel beside the sign-in form on wide screens: a construction scene that a press turns into a mini game (see
