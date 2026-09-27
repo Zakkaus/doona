@@ -135,6 +135,32 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
   });
 }
 
+test('a rejected showcase import leaves its panel empty and the sign-in form working', async ({browser}) => {
+  const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1280, height: 800}});
+  const page = await context.newPage();
+  const uncaught: string[] = [];
+  page.on('pageerror', error => uncaught.push(error.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
+    localStorage.setItem('doona-profile', 'demo');
+    localStorage.setItem('doona-lang', 'en');
+  });
+  const rejected = page.waitForRequest(/\/LoginShowcase-[^/]+\.js$/);
+  await page.route('**/assets/LoginShowcase-*.js', route => route.abort());
+  try {
+    await page.goto('/#/activity');
+    await rejected;
+    const login = page.locator('.rp-login-page');
+    await expect(login.locator('.rp-login-showcase[aria-hidden="true"]')).toBeVisible();
+    await expect(login.locator('.rp-alert')).toHaveCount(0);
+    await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Sign in', exact: true}).click()]);
+    await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
+    expect(uncaught).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
 test('the idle warm-up loads the search dialog before any interaction', async ({page}) => {
   const requested = page.waitForRequest(/\/SearchDialog-[^/]+\.js$/);
   await page.goto('/#/activity');
