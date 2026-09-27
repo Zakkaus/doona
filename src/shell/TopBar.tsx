@@ -3,7 +3,6 @@ import {About} from './About';
 import {BackendMenuPopover} from './Backend';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
-import Lighten from '../ui/icons/Lighten';
 import MoreVertical from '../ui/icons/MoreVertical';
 import Data from '../ui/icons/Data';
 import DataRefresh from '../ui/icons/DataRefresh';
@@ -18,17 +17,9 @@ import type {PaletteId, Scheme, Wordmark} from './preferences';
 import type {AppearanceMenu, BackendView, PaletteSection} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
+import {LanguageMenu, SchemeToggle} from './AppearanceControls';
 
 type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
-
-function SchemeIcon({dark}: {dark: boolean}) {
-  return (
-    <span className="rp-icon-stack" data-dark={dark || undefined}>
-      <Contrast className="moon" />
-      <Lighten className="sun" />
-    </span>
-  );
-}
 
 type TopBarProps = {
   lang: Lang;
@@ -73,8 +64,8 @@ export const TopBar = memo(function TopBar({
   menu
 }: TopBarProps) {
   const t = useT();
-  // The language and palette icons turn in when their value changes, like the scheme icon; not on first paint.
-  const [first] = useState({lang, palette: ap.palette});
+  // The palette icon turns in when the palette changes, like the scheme icon; not on first paint.
+  const [firstPalette] = useState(ap.palette);
   const palettes = paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)}));
   const narrowMenu = useRef<HTMLSpanElement>(null);
   const [backendOpen, setBackendOpen] = useState(false);
@@ -118,15 +109,11 @@ export const TopBar = memo(function TopBar({
         {/* Below the side navigation's breakpoint, language and appearance share one overflow menu, a submenu each. */}
         <span className="rp-wide-only">
           <Divider />
-          <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
-            <Translate key={lang} className={lang !== first.lang ? 'rp-icon-in' : undefined} />
-          </ChoiceMenu>
+          <LanguageMenu lang={lang} pickLang={pickLang} />
           <ChoiceMenu quiet chevron={false} label={t('palette')} sections={[...palettes, wordmarks]}>
-            <Color key={ap.palette} className={ap.palette !== first.palette ? 'rp-icon-in' : undefined} />
+            <Color key={ap.palette} className={ap.palette !== firstPalette ? 'rp-icon-in' : undefined} />
           </ChoiceMenu>
-          <Button quiet icon label={menu.themeLabel} onPress={ap.toggle}>
-            <SchemeIcon dark={ap.dark} />
-          </Button>
+          <SchemeToggle dark={ap.dark} label={menu.themeLabel} toggle={ap.toggle} />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>
           <ChoiceMenu
