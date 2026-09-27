@@ -28,6 +28,10 @@ export type ModuleSection = {
   href: string | null;
 };
 
+// Why a module's Edit is disabled: a draft open in another section, else another change still being applied.
+export const moduleEditTip = (dirty: boolean, busy: boolean, t: Translator) =>
+  dirty ? t('config.moduleEditBlocked') : busy ? t('ui.changeApplying') : undefined;
+
 export function sectionRange(source: ConfigSource, block: TextBlock): string {
   return `${fileName(source)}:${block.line + 1}-${block.endLine + 1}`;
 }

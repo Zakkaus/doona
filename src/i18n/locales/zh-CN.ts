@@ -1265,6 +1265,7 @@ export const messages = {
   'cm.controlCharacter': '控制字符',
   close: '关闭',
   'ui.back': '返回',
+  'ui.changeApplying': '另一项修改正在应用',
   'toast.collapse': '折叠',
   'toast.clearAll': '全部清除',
   'ui.openRule': '在规则列表中查看 {rule}',
