@@ -62,6 +62,9 @@ button.rp-node {
 }
 .rp-nodegrid {
   height: 376px;
+  /* Every cell ends in the 8px gap (Nodes.tsx), so the scroller reaches that far into the card's padding: the tiles line
+     up with a small group's, and the last column's gap is the room an overlay scrollbar, as on phones, draws in. */
+  margin-inline-end: -8px;
   overflow: auto;
   outline: none;
   border-radius: var(--rp-r-md);
@@ -71,6 +74,8 @@ button.rp-node {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 .rp-nodegrid .rp-node {
+  width: auto;
+  margin-inline-end: 8px;
   cursor: default;
   outline: none;
 }

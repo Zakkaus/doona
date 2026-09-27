@@ -466,3 +466,52 @@ test.describe('on a touch screen', () => {
     await expect(page.locator('.cm-activeLine')).toHaveCount(0);
   });
 });
+
+// A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, line up
+// with each other and fit the demo's names whole, and the panel keeps the grid's 8px gap between its last column and
+// the scrollbar, which on a phone is drawn over the content.
+for (const [width, columns] of [
+  [390, 1],
+  [440, 1],
+  [1440, 5]
+]) {
+  test.describe(`${width}px node grids`, () => {
+    test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
+    test('a large group lines up with a small one and keeps its tiles off the scrollbar', async ({page}) => {
+      await page.goto('/#/policies');
+      const large = page.getByRole('region', {name: 'skylink'});
+      await large.scrollIntoViewIfNeeded();
+      const panel = large.locator('.rp-nodegrid');
+      await expect(panel.locator('.rp-node').first()).toBeVisible();
+      const m = await page.evaluate(() => {
+        const panel = document.querySelector('.rp-nodegrid')!;
+        const small = document.querySelector('.rp-nodes')!;
+        const edges = (tiles: NodeListOf<Element>) => {
+          const boxes = [...tiles].map(t => t.getBoundingClientRect());
+          const top = Math.min(...boxes.map(b => b.top));
+          const row = boxes.filter(b => b.top === top);
+          return {left: Math.min(...row.map(b => b.left)), right: Math.max(...row.map(b => b.right)), width: row[0].width, columns: row.length};
+        };
+        const range = document.createRange();
+        const cut = [...document.querySelectorAll<HTMLElement>('.rp-node .n')].filter(n => {
+          range.selectNodeContents(n);
+          return range.getBoundingClientRect().width > n.clientWidth + 0.5;
+        });
+        const box = panel.getBoundingClientRect();
+        return {
+          inner: box.left + panel.clientLeft + panel.clientWidth,
+          large: edges(panel.querySelectorAll('.rp-node')),
+          small: {...edges(small.querySelectorAll('.rp-node')), columns: getComputedStyle(small).gridTemplateColumns.split(' ').length},
+          cut: cut.map(n => n.textContent)
+        };
+      });
+      expect(m.inner - m.large.right).toBeGreaterThanOrEqual(8);
+      expect(m.large.columns).toBe(columns);
+      expect(m.small.columns).toBe(columns);
+      expect(Math.abs(m.large.width - m.small.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(m.large.left - m.small.left)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 3);
+      if (columns === 1) expect(Math.abs(m.large.right - m.small.right)).toBeLessThanOrEqual(0.5);
+      expect(m.cut).toEqual([]);
+    });
+  });
+}

@@ -239,9 +239,11 @@
 .rp-btn[data-disabled] > svg {
   opacity: 0.6;
 }
+/* A large group's scroll panel follows the same column rule (Nodes.tsx). 204px holds a long name such as
+   "土耳其 04 流媒體" beside a three-digit latency without cutting it. */
 .rp-nodes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(204px, 1fr));
   gap: 8px;
 }
 .rp-grow {
