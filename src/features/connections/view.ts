@@ -20,6 +20,7 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {word} from '../../api/labels';
 import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
+import type {Help} from '../../ui/ui';
 import {csvLine} from '../../ui/ui';
 import {ruleHref} from '../shared/link';
 import {within} from '../../shell/route';
@@ -282,6 +283,18 @@ export function filterMenu(
   };
 }
 
+// The states before a connection is established say little by name, so each is explained beside the status: the
+// three steps are listed together because a connection held at one of them is read against the others.
+const pendingStates = {
+  observed: ['conn.state.observed', 'conn.stateHelp.observed'],
+  routing: ['conn.state.routing', 'conn.stateHelp.routing'],
+  dialing: ['conn.state.dialing', 'conn.stateHelp.dialing']
+} as const satisfies Record<string, [Key, Key]>;
+export function connectionStateHelp(state: Connection['state'], t: LabelFn): Help | null {
+  if (!Object.hasOwn(pendingStates, state)) return null;
+  return {title: t('ui.state'), text: Object.values(pendingStates).map(([label, help]) => t('ui.valuePair', {label: t(label), value: t(help)}))};
+}
+
 export function connectionDetail(
   current: (Connection & {network: string}) | undefined,
   locale: string,
@@ -303,7 +316,8 @@ export function connectionDetail(
         ),
         flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
         source: current.src ? (sourceIp(current.src) ?? current.src) : null,
-        closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing'
+        closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing',
+        stateHelp: connectionStateHelp(current.state, t)
       }
     : null;
 }

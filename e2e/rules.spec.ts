@@ -13,6 +13,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
@@ -23,7 +24,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   const ids = await panel.getByRole('rowheader').allTextContents();
   expect(ids.length).toBe(allCount);
   const sourceRows = await Promise.all(
-    ['Kernel', 'Recomputed', 'Unknown'].map(async source => ({
+    ['Kernel', 'Userspace', 'Unknown'].map(async source => ({
       source,
       texts: await rows.filter({has: page.locator('.rp-badge', {hasText: new RegExp(`^${source}$`)})}).allTextContents()
     }))
@@ -64,6 +65,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Rule list'});
@@ -80,7 +82,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   snapshot.dropped_records = null;
   await page.clock.fastForward(16000);
   await expect(rows).toHaveCount(0);
-  await expect(panel.getByText('No matching flows in this snapshot', {exact: true})).toBeVisible();
+  await expect(panel.getByText('No flows from this source', {exact: true})).toBeVisible();
   await expect(panel.getByText('Dropped record count unknown', {exact: true})).toBeVisible();
 });
 

@@ -37,6 +37,7 @@ export function RoutingMap(props: PageProps) {
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <Card
         title={t('flow.topology')}
+        note={t('flow.topologyNote')}
         className="rp-topology"
         aside={
           <Segmented

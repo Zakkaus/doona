@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Card,
+  ContextualHelp,
   DataTable,
   LabeledSelect,
   Light,
@@ -258,7 +259,10 @@ function Distribution({view}: {view: Model}) {
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
-        <Segmented label={t('rule.distributionSource')} value={view.source} onChange={view.setSource} items={table.choices} />
+        <span className="rp-help-row">
+          <Segmented label={t('rule.distributionSource')} value={view.source} onChange={view.setSource} items={table.choices} />
+          <ContextualHelp {...table.sourceHelp} />
+        </span>
         {table.caption && (
           <TextTooltip text={t('rule.distributionScope')} className="rp-label">
             {table.caption}
@@ -272,7 +276,7 @@ function Distribution({view}: {view: Model}) {
         )}
       </div>
       <ErrorMessage error={view.error} onRetry={view.retry} />
-      <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={t('rule.distributionEmpty')} cols={columns} />
+      <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={table.empty} cols={columns} />
     </div>
   );
 }

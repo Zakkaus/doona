@@ -5,7 +5,7 @@ import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
 import {formatNumber, type Translator} from '../../i18n';
-import {latencyTone, type NodeStatus} from '../../ui/ui';
+import {latencyTone, type Help, type NodeStatus} from '../../ui/ui';
 import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
@@ -190,4 +190,9 @@ export function nodeGridView(
     regionLabel: filter.region === 'all' ? t('policy.allRegions') : filter.region === '?' ? '—' : filter.region,
     count: down ? t('policy.membersDown', {n: shown.length, down}) : t('policy.members', {n: shown.length})
   };
+}
+
+// Why members are untested, and whether Test all can settle it: a group that takes no probe cannot.
+export function untestedHelp(untested: string | null, canProbe: boolean, t: Translator): Help | null {
+  return untested ? {title: untested, text: [t('policy.untestedHelp'), t(canProbe ? 'policy.untestedProbe' : 'policy.untestedNoProbe')]} : null;
 }

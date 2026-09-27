@@ -5,6 +5,7 @@ import {
   collapseAll,
   columns,
   connectionDetail,
+  connectionStateHelp,
   connectionDetails,
   connectionsExport,
   connectionsView,
@@ -306,4 +307,15 @@ it('lists devices and rules with equal counts in the same order whatever order t
     ['domain(a)', 'domain(b)']
   ]);
   expect(menus([...rows].reverse())).toEqual(menus(rows));
+});
+
+it('explains the states before a connection is established, and no other', () => {
+  const help = connectionStateHelp('routing', t);
+  expect(help?.title).toBe(t('ui.state'));
+  expect(help?.text).toEqual([
+    t('ui.valuePair', {label: t('conn.state.observed'), value: t('conn.stateHelp.observed')}),
+    t('ui.valuePair', {label: t('conn.state.routing'), value: t('conn.stateHelp.routing')}),
+    t('ui.valuePair', {label: t('conn.state.dialing'), value: t('conn.stateHelp.dialing')})
+  ]);
+  expect(connectionStateHelp('active', t)).toBeNull();
 });

@@ -1,4 +1,15 @@
-import type {Capabilities, ConfigSource, FlowList, GroupSummary, Node, RoutingEvaluation, RoutingRule, RoutingTraceResponse, RuleSource} from '../../api/model';
+import type {
+  Capabilities,
+  ConfigSource,
+  FlowList,
+  RecorderState,
+  GroupSummary,
+  Node,
+  RoutingEvaluation,
+  RoutingRule,
+  RoutingTraceResponse,
+  RuleSource
+} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
@@ -13,6 +24,7 @@ import {word} from '../../api/labels';
 import {ruleAnchor, ruleOutbounds, sourceFor} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
+import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
 
 const kindLabels: Record<ConditionKind, Key> = {
@@ -40,6 +52,7 @@ const kindHints: Record<ConditionKind, string> = {
   l4proto: 'udp'
 };
 const sources: Record<string, Key> = {kernel: 'rule.sourceKernel', recomputed: 'rule.sourceRecomputed', unknown: 'rule.sourceUnknown'};
+const sourceHelp: Record<string, Key> = {kernel: 'rule.sourceHelp.kernel', recomputed: 'rule.sourceHelp.recomputed', unknown: 'rule.sourceHelp.unknown'};
 type Choice = {id: string; label: string; desc?: string};
 type DictionaryRow = {
   id: string;
@@ -132,8 +145,16 @@ export type DistributionView = {
   caption: string | null;
   coverage: CoverageView | null;
   droppedUnknown: boolean;
+  empty: string;
+  sourceHelp: Help;
 };
-export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang): DistributionView {
+// Why the table is empty: flow recording switched off in Settings, a source filter, or no flows at all. The recorder
+// state comes from the runtime settings rather than from the empty list, which cannot tell the three apart.
+export function distributionEmpty(recorder: RecorderState | undefined, source: string, t: Translator): string {
+  if (recorder?.allowed && recorder.mode === 'off') return t('rule.distributionNotRecorded');
+  return t(source === 'all' ? 'rule.distributionEmpty' : 'rule.distributionFiltered');
+}
+export function distributionView(list: FlowList | undefined, source: string, t: Translator, lang: Lang, recorder?: RecorderState): DistributionView {
   const locale = LOCALE[lang];
   // Keyed by what the row counts, so a row keeps its identity when a poll reorders the counts.
   const rows = ruleDistribution(list?.flows ?? [])
@@ -158,7 +179,12 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
     choices: [['all', t('ui.all')], ...Object.entries(sources).map(([id, key]): [string, string] => [id, t(key)])],
     caption: list ? t('rule.distributionCaption', {n: list.flows.length}) : null,
     coverage: list ? coverageView(list, t, lang) : null,
-    droppedUnknown: list?.dropped_records === null
+    droppedUnknown: list?.dropped_records === null,
+    empty: distributionEmpty(recorder, source, t),
+    sourceHelp: {
+      title: t('rule.distributionSource'),
+      text: Object.entries(sourceHelp).map(([id, help]) => t('ui.valuePair', {label: t(sources[id]), value: t(help)}))
+    }
   };
 }
 // A typed condition: a call like `domain(...)`, no outbound of its own, and nothing that escapes its line.

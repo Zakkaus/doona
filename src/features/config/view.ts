@@ -13,6 +13,7 @@ import {href as routeHref} from '../../shell/route';
 import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
 import type {EditorMark} from '../../ui/code/CodeEditor';
+import type {KvItem} from '../../ui/ui';
 import {sourceKinds} from './nav';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
@@ -289,4 +290,21 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
           ]
     )
   };
+}
+
+// The save button's tip. A disabled button says why it cannot be pressed: nothing to save, or a validation still
+// running. Otherwise, saving included, it names the shortcut.
+export function saveTip(busy: 'save' | 'validate' | null, dirty: boolean, mac: boolean, t: Translator): string {
+  if (busy === 'validate') return t('config.saveValidating');
+  if (!busy && !dirty) return t('config.saveClean');
+  return t(mac ? 'config.saveShortcutMac' : 'config.saveShortcut');
+}
+
+// The generation and the revision of the active configuration; the generation is explained, since a reload can
+// change the revision and keep it.
+export function configMetadata(generation: string, revision: string, t: Translator): KvItem[] {
+  return [
+    [t('config.generation'), generation, undefined, {title: t('config.generation'), text: t('config.generationHelp')}],
+    [t('config.revision'), revision]
+  ];
 }

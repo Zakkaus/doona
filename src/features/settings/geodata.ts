@@ -114,8 +114,14 @@ export function statusLine(data: GeoData | undefined, updating: boolean, now: nu
   const at = data?.last_updated_at;
   const when = !data ? '—' : at ? relativeStart(at, locale, now) : t('settings.geodataNever');
   const checked = data?.assets.length && data.assets.every(asset => asset.verified !== undefined);
-  const verified = checked ? t(data.assets.every(asset => asset.verified) ? 'settings.geodataVerifiedYes' : 'settings.geodataVerifiedNo') : null;
-  return {text: t('ui.valuePair', {label: t('settings.geodataLastUpdated'), value: verified ? when + t('ui.separator') + verified : when}), error: false};
+  const unverified = checked && !data.assets.every(asset => asset.verified);
+  const verified = checked ? t(unverified ? 'settings.geodataVerifiedNo' : 'settings.geodataVerifiedYes') : null;
+  return {
+    text: t('ui.valuePair', {label: t('settings.geodataLastUpdated'), value: verified ? when + t('ui.separator') + verified : when}),
+    error: false,
+    // An unverified file still loads, which the word alone does not say.
+    help: unverified ? {title: t('settings.geodataVerifiedNo'), text: t('settings.geodataUnverifiedHelp')} : undefined
+  };
 }
 
 // Each asset's size, download host and route, with the full URL behind the host.
