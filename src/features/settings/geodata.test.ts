@@ -133,7 +133,10 @@ describe('rows', () => {
   });
   it('reads the status as the last update and its checksums, an update in progress, or the last error', () => {
     expect(statusLine(status(), false, now, 'en-US', t)).toEqual({text: 'Last updated: 3 days ago, Verified', error: false});
-    expect(statusLine(status({assets: [asset('geosite'), asset('geoip', {verified: false})]}), false, now, 'en-US', t).text).toMatch(/Not verified$/);
+    const unverified = statusLine(status({assets: [asset('geosite'), asset('geoip', {verified: false})]}), false, now, 'en-US', t);
+    expect(unverified.text).toMatch(/Not verified$/);
+    expect(unverified.help).toEqual({title: t('settings.geodataVerifiedNo'), text: t('settings.geodataUnverifiedHelp')});
+    expect(statusLine(status(), false, now, 'en-US', t).help).toBeUndefined();
     expect(statusLine(status({last_updated_at: null}), false, now, 'en-US', t).text).toBe('Last updated: Never, Verified');
     expect(statusLine(undefined, false, now, 'en-US', t)).toEqual({text: 'Last updated: —', error: false});
     expect(statusLine(status(), true, now, 'en-US', t)).toEqual({text: 'Updating…', error: false});

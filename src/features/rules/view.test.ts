@@ -2,7 +2,18 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {addRuleTip, dictionaryView, distributionView, dnsView, evaluationView, removalView, ruleDraftView, rulesView, traceStatusView} from './view';
+import {
+  addRuleTip,
+  dictionaryView,
+  distributionView,
+  dnsView,
+  evaluationView,
+  removalView,
+  ruleDraftView,
+  rulesView,
+  traceStatusView,
+  distributionEmpty
+} from './view';
 
 const t: Translator = (key, params) => translate('en', key, params);
 
@@ -171,4 +182,19 @@ it('tips why a rule cannot be added: no writable place first, then a change stil
   expect(addRuleTip(true, true, t)).toBe(t('conn.ruleNoPosition'));
   expect(addRuleTip(false, true, t)).toBe('Another change is being applied');
   expect(addRuleTip(false, false, t)).toBeUndefined();
+});
+
+it('tells an empty distribution apart by the recorder, then by the source filter, and explains the sources', () => {
+  const recorder = (mode: 'auto' | 'on' | 'off', allowed = true) => ({allowed, mode, active: mode === 'on'});
+  expect(distributionEmpty(recorder('off'), 'kernel', t)).toBe(t('rule.distributionNotRecorded'));
+  expect(distributionEmpty(recorder('off', false), 'all', t)).toBe(t('rule.distributionEmpty'));
+  expect(distributionEmpty(recorder('on'), 'kernel', t)).toBe(t('rule.distributionFiltered'));
+  expect(distributionEmpty(undefined, 'all', t)).toBe(t('rule.distributionEmpty'));
+  const view = distributionView(undefined, 'all', t, 'en', recorder('off'));
+  expect(view.empty).toBe(t('rule.distributionNotRecorded'));
+  expect(view.sourceHelp.text).toEqual([
+    t('ui.valuePair', {label: t('rule.sourceKernel'), value: t('rule.sourceHelp.kernel')}),
+    t('ui.valuePair', {label: t('rule.sourceRecomputed'), value: t('rule.sourceHelp.recomputed')}),
+    t('ui.valuePair', {label: t('rule.sourceUnknown'), value: t('rule.sourceHelp.unknown')})
+  ]);
 });

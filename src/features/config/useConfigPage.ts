@@ -8,7 +8,7 @@ import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {sourceView, diagnosticRows, sourceMarks} from './view';
+import {configMetadata, saveTip, sourceView, diagnosticRows, sourceMarks} from './view';
 import {configTabs, setupAvailable} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
@@ -107,12 +107,7 @@ export function useConfigPage({go, query}: PageProps) {
     reload: config.refetch,
     loading: config.loading && !config.data,
     ready: !!config.data,
-    metadata: config.data
-      ? ([
-          [t('config.generation'), config.data.generation_id],
-          [t('config.revision'), config.data.revision]
-        ] as Array<[string, string]>)
-      : [],
+    metadata: config.data ? configMetadata(config.data.generation_id, config.data.revision, t) : [],
     redacted: !!config.data?.secrets_redacted,
     tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
     tab,
@@ -240,7 +235,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
-    saveTip: t(isMac ? 'config.saveShortcutMac' : 'config.saveShortcut'),
+    saveTip: saveTip(editor.busy, dirty, isMac, t),
     validateDisabled: !!editor.busy || !candidates,
     validateTip: !candidates ? t('config.incomplete') : undefined,
     editDisabled: !complete || !!editor.busy,

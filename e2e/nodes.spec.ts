@@ -356,6 +356,6 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
   });
   await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.info')).toContainText('sub-c: nodes applied, but the runtime is degraded');
+  await expect(page.locator('.rp-toast.info')).toContainText('sub-c: nodes applied, but the datapath did not recover');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
 });

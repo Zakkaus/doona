@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, Card, ConfirmDialog, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
+import {Button, Card, ConfirmDialog, ContextualHelp, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './nav';
@@ -95,6 +95,7 @@ export function GeodataSettingsCard() {
               <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
                 {m.status.text}
               </span>
+              {m.status.help && <ContextualHelp {...m.status.help} />}
               {m.canUpdate && (
                 <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
                   {t('settings.geodataUpdateNow')}

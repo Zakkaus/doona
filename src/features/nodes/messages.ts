@@ -88,7 +88,7 @@ export const messages = defineMessages({
     'nodes.groups': '所屬群組',
     'nodes.empty': '此來源沒有節點',
     'nodes.refreshFailed': '無法重新整理 {name}',
-    'nodes.refreshedDegraded': '{name}：節點已套用，但執行期處於降級狀態',
+    'nodes.refreshedDegraded': '{name}：節點已套用，但資料路徑未恢復，經使用者空間代理的新連線會被拒絕。詳見概覽頁。',
     'nodes.probeError': '無法測試 {name}'
   },
   'zh-CN': {
@@ -178,7 +178,7 @@ export const messages = defineMessages({
     'nodes.groups': '所属组',
     'nodes.empty': '此来源暂无节点',
     'nodes.refreshFailed': '无法刷新 {name}',
-    'nodes.refreshedDegraded': '{name}：节点已应用，但运行时处于降级状态',
+    'nodes.refreshedDegraded': '{name}：节点已应用，但数据路径未恢复，经用户空间代理的新连接会被拒绝。详见概览页。',
     'nodes.probeError': '无法测试 {name}'
   },
   en: {
@@ -269,7 +269,8 @@ export const messages = defineMessages({
     'nodes.groups': 'Groups',
     'nodes.empty': 'This source has no nodes',
     'nodes.refreshFailed': 'Could not refresh {name}',
-    'nodes.refreshedDegraded': '{name}: nodes applied, but the runtime is degraded',
+    'nodes.refreshedDegraded':
+      '{name}: nodes applied, but the datapath did not recover, so new connections proxied through userspace are refused. See Overview for details.',
     'nodes.probeError': 'Could not test {name}'
   }
 });

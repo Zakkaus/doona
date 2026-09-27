@@ -2,7 +2,18 @@ import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
-import {actionErrorText, checkFields, checkInvalid, checkPatch, groupConfigFields, memberViews, nodeGridView, policyCardView, probeSummary} from './view';
+import {
+  actionErrorText,
+  checkFields,
+  checkInvalid,
+  checkPatch,
+  groupConfigFields,
+  memberViews,
+  nodeGridView,
+  policyCardView,
+  probeSummary,
+  untestedHelp
+} from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('projects nested, failed and unmeasured members without inventing latency', () => {
@@ -182,4 +193,10 @@ it('accepts only a safe http URL and a positive whole interval, or an empty fiel
     expect(checkInvalid('check_url', url)).toBe(true);
   for (const interval of ['', '1', ' 30 ']) expect(checkInvalid('check_interval', interval)).toBe(false);
   for (const interval of ['0', '-1', '1.5', '1e3', 'x']) expect(checkInvalid('check_interval', interval)).toBe(true);
+});
+
+it('offers Test all for untested members only where the group takes a probe', () => {
+  expect(untestedHelp('2 untested', true, t)).toEqual({title: '2 untested', text: [t('policy.untestedHelp'), t('policy.untestedProbe')]});
+  expect(untestedHelp('2 untested', false, t)?.text).toEqual([t('policy.untestedHelp'), t('policy.untestedNoProbe')]);
+  expect(untestedHelp(null, true, t)).toBeNull();
 });

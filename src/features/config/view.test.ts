@@ -2,7 +2,19 @@ import {expect, it} from 'vitest';
 import {configNotes} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
-import {sourceView, diagnosticRows, moduleEditTip, wizardInitial, wizardRows, sectionSummaries, sectionRange, sectionMarks, sourceMarks, splice} from './view';
+import {
+  sourceView,
+  diagnosticRows,
+  moduleEditTip,
+  wizardInitial,
+  wizardRows,
+  sectionSummaries,
+  sectionRange,
+  sectionMarks,
+  sourceMarks,
+  splice,
+  saveTip
+} from './view';
 import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
@@ -225,4 +237,11 @@ it('tips why a module cannot be edited: another draft first, then a change still
   expect(moduleEditTip(true, true, t)).toBe(t('config.moduleEditBlocked'));
   expect(moduleEditTip(false, true, t)).toBe('Another change is being applied');
   expect(moduleEditTip(false, false, t)).toBeUndefined();
+});
+
+it('says why Save is disabled, and names the shortcut otherwise', () => {
+  expect(saveTip(null, false, false, t)).toBe(t('config.saveClean'));
+  expect(saveTip('validate', true, false, t)).toBe(t('config.saveValidating'));
+  expect(saveTip('save', true, false, t)).toBe(t('config.saveShortcut'));
+  expect(saveTip(null, true, true, t)).toBe(t('config.saveShortcutMac'));
 });

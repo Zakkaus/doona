@@ -1,5 +1,5 @@
 import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
-import {pendingRules, useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, usePendingRules, useRules} from '../../store';
+import {pendingRules, useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, usePendingRules, useRules, useRuntimeSettings} from '../../store';
 import {pendingView} from '../shared/pending';
 import {useLang, useT} from '../../i18n';
 import type {ConfigSource, RoutingRule} from '../../api/model';
@@ -14,7 +14,15 @@ import {useDraftGuard} from '../../shell/draft';
 import {offered} from '../../api/capabilities';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
-const noDistribution: DistributionView = {rows: [], choices: [], caption: null, coverage: null, droppedUnknown: false};
+const noDistribution: DistributionView = {
+  rows: [],
+  choices: [],
+  caption: null,
+  coverage: null,
+  droppedUnknown: false,
+  empty: '',
+  sourceHelp: {title: '', text: ''}
+};
 type Dialog = ({kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) & {
   generation: string;
   sources: ConfigSource[];
@@ -98,7 +106,11 @@ export function useRuleList({go, query}: PageProps) {
         : noDictionary,
     [dictionary, rules.data, flows.data, config.data, groups.data, t, lang]
   );
-  const distribution = useMemo(() => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang)), [dictionary, flows.data, source, t, lang]);
+  const recorder = useRuntimeSettings(!dictionary && (resources?.runtime_settings.available ?? false)).data?.recording?.flows;
+  const distribution = useMemo(
+    () => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang, recorder)),
+    [dictionary, flows.data, source, t, lang, recorder]
+  );
   const stale = () => {
     toast('negative', t('rule.stale'));
     retry();
