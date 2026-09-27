@@ -45,7 +45,8 @@ it('counts a source in lines and bytes and leaves its load time to the tooltip',
   expect(row.loaded).toMatch(/^Loaded: .*:47/);
 });
 it('names the one reason a source is read-only', () => {
-  const reason = (kind: ConfigSource['kind'], writable: boolean, configWritable: boolean) => readOnlyBadge({kind, writable}, configWritable, t)?.reason ?? null;
+  const reason = (kind: ConfigSource['kind'], writable: boolean, configWritable: boolean, complete?: boolean) =>
+    readOnlyBadge({kind, writable}, configWritable, complete, t)?.reason ?? null;
   // Generated and subscription sources are never writable, with writes on or off.
   expect(reason('generated', false, true)).toBe('generated');
   expect(reason('generated', false, false)).toBe('generated');
@@ -59,12 +60,19 @@ it('names the one reason a source is read-only', () => {
   expect(reason('include', false, true)).toBe('secret');
   expect(reason('main', true, true)).toBeNull();
   expect(reason('include', true, true)).toBeNull();
-  const badge = readOnlyBadge({kind: 'generated', writable: false}, true, t)!;
+  // Writes allowed, but the text arrived with values hidden: saving it back would drop them. Unknown is not a reason yet.
+  expect(reason('main', true, true, false)).toBe('redacted');
+  expect(reason('include', true, true, false)).toBe('redacted');
+  expect(reason('main', true, true, true)).toBeNull();
+  expect(reason('main', false, true, false)).toBe('secret');
+  expect(reason('generated', false, true, false)).toBe('generated');
+  const badge = readOnlyBadge({kind: 'generated', writable: false}, true, true, t)!;
   expect(badge.label).toBe('Generated');
   expect(badge.help).toEqual({title: 'Generated', text: t('config.generatedHelp')});
-  expect(readOnlyBadge({kind: 'main', writable: false}, true, t)!.label).toBe('Contains secrets');
-  expect(readOnlyBadge({kind: 'main', writable: false}, false, t)!.label).toBe('Read-only');
-  expect(readOnlyBadge({kind: 'subscription', writable: false}, true, t)!.label).toBe('Subscription');
+  expect(readOnlyBadge({kind: 'main', writable: false}, true, true, t)!.label).toBe('Contains secrets');
+  expect(readOnlyBadge({kind: 'main', writable: false}, false, true, t)!.label).toBe('Read-only');
+  expect(readOnlyBadge({kind: 'subscription', writable: false}, true, true, t)!.label).toBe('Subscription');
+  expect(readOnlyBadge({kind: 'main', writable: true}, true, false, t)!.label).toBe(t('config.redactedSource'));
 });
 it('projects source locations without inventing a line for source-wide diagnostics', async () => {
   const configSources = (await createMockApi().config()).sources;
@@ -278,8 +286,7 @@ it('tips why a module cannot be edited: another draft first, then a change still
 });
 
 it('says why Save is disabled, and names the shortcut otherwise', () => {
-  expect(saveTip(null, false, false, t)).toBe(t('config.saveClean'));
-  expect(saveTip('validate', true, false, t)).toBe(t('config.saveValidating'));
-  expect(saveTip('save', true, false, t)).toBe(t('config.saveShortcut'));
-  expect(saveTip(null, true, true, t)).toBe(t('config.saveShortcutMac'));
+  expect(saveTip('validate', false, t)).toBe(t('config.saveValidating'));
+  expect(saveTip('save', false, t)).toBe(t('config.saveShortcut'));
+  expect(saveTip(null, true, t)).toBe(t('config.saveShortcutMac'));
 });

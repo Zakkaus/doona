@@ -83,7 +83,6 @@ export const messages = {
   'config.generation': 'Generation',
   'config.generationHelp':
     "The number of the active configuration's generation. A reload that changes the active configuration starts a new generation; a reload that leaves the content unchanged keeps the current one.",
-  'config.saveClean': 'No unsaved changes',
   'config.saveValidating': 'Validating…',
   'config.revision': 'Revision',
   'config.errors': {one: '{n} error', other: '{n} errors'},
@@ -98,6 +97,9 @@ export const messages = {
     'This file defines a native_api or clash_api secret or contains a redacted secret value, so the backend does not allow editing it. Move the section with the secret into its own included file to edit the rest.',
   'config.generatedHelp': 'The engine writes this file and overwrites it each time it regenerates it, so it can only be viewed.',
   'config.subscriptionHelp': 'This file holds downloaded subscription content and is replaced when the subscription updates, so it can only be viewed.',
+  'config.redactedSource': 'Redacted',
+  'config.redactedHelp': 'The backend redacted some or all of this file. Writing it back would lose the redacted values, so it can only be viewed.',
+  'config.readOnlyAttempt': 'This file is read-only',
   'config.kind.main': 'Main',
   'config.kind.include': 'Include',
   'config.kind.subscription': 'Subscription',

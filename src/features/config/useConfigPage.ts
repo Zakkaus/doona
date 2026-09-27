@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor} from '../../store';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
@@ -70,7 +70,9 @@ export function useConfigPage({go, query}: PageProps) {
   const tabs = configTabs(setup);
   const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
   const configWritable = resources?.config.writable === true;
-  const canWrite = configWritable && !!source?.writable;
+  const isComplete = useCompleteness(sources);
+  const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), t) : null;
+  const canWrite = !!source && !readOnly;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setup ? 'setup' : 'modules';
   const tab = pickTab(
     query,
@@ -86,6 +88,8 @@ export function useConfigPage({go, query}: PageProps) {
         // A read-only source has nothing to check before a save, so it offers no validation of its own.
         canValidate: canValidate && canWrite,
         canWrite,
+        readOnly,
+        isComplete,
         contentOffered: resources?.config.content === true,
         editor,
         focusLine
@@ -130,7 +134,7 @@ export function useConfigPage({go, query}: PageProps) {
         }
       : null,
     validateProps,
-    sourceModel: source ? {...sourceView(source, locale, t), readOnly: readOnlyBadge(source, configWritable, t)} : null,
+    sourceModel: source ? {...sourceView(source, locale, t), readOnly} : null,
     sourceOptions: sources.map(item => {
       const view = sourceView(item, locale, t);
       return {id: view.id, label: view.label, desc: view.kind};
@@ -149,20 +153,24 @@ export type SourceCardProps = {
   diagnostics: ConfigDiagnostic[];
   canValidate: boolean;
   canWrite: boolean;
+  readOnly: ReturnType<typeof readOnlyBadge>;
+  isComplete: (source: ConfigSource) => boolean | undefined;
   contentOffered: boolean;
   editor: ConfigEditor;
   focusLine: number | null;
 };
 
-export function useSourceCard({source, sources, diagnostics, canValidate, editor, focusLine}: SourceCardProps) {
+export function useSourceCard({source, sources, diagnostics, canValidate, canWrite, readOnly, isComplete, editor, focusLine}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  // If-Match uses the draft's original digest to reject changes made on disk while editing.
+  // The text typed over the loaded source; null while it is unchanged. If-Match uses the draft's original digest to
+  // reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
-  const isComplete = useCompleteness(sources);
-  const complete = isComplete(source);
-  const editing = draft !== null;
+  // Editable until busy; while the digest check is pending the text is not known to be whole yet.
+  const writable = canWrite && isComplete(source) === true;
+  // The read-only notice shows once for this source; the card remounts when another source is chosen.
+  const told = useRef(false);
   // A save refused because the file changed on disk: the refetched source becomes the base and the typed text stays,
   // so the next save carries the new digest instead of failing with 412 again.
   const stale = editor.error instanceof ApiError && editor.error.status === 412 && editor.errorSource === source.id && draft?.origin.id === source.id;
@@ -178,7 +186,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
   const [jump, setJump] = useState<number | null>(null);
   // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
-  const dirty = editing && draft.text !== source.content;
+  const dirty = draft !== null && draft.text !== source.content;
   const guard = useDraftGuard(dirty, () => {
     setDraft(null);
     setFound(null);
@@ -214,15 +222,26 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     guard.clear();
     setDraft(null);
   };
-  const edit = () => setDraft({text: source.content ?? '', origin: source});
   const cancel = () => {
     setDraft(null);
     setFound(null);
   };
-  const change = (value: string) => setDraft(prev => (prev ? {...prev, text: value} : prev));
+  // Typing back to the loaded text leaves nothing to save, so it ends the draft as a cancel does.
+  const change = (value: string) => {
+    if (value === source.content) cancel();
+    else setDraft(prev => ({text: value, origin: prev?.origin ?? source}));
+  };
+  const refused = readOnly
+    ? () => {
+        if (told.current) return;
+        told.current = true;
+        toast('info', t('config.readOnlyAttempt'), {detail: readOnly.help.text});
+      }
+    : undefined;
   const view = sourceView(source, locale, t);
   return {
-    editing,
+    writable,
+    refused,
     shown: diagnosticRows(shown, sources, locale, t),
     marks,
     text,
@@ -231,18 +250,15 @@ export function useSourceCard({source, sources, diagnostics, canValidate, editor
     dirty,
     validate,
     save,
-    edit,
     cancel,
     change,
     view,
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
-    saveTip: saveTip(editor.busy, dirty, isMac, t),
+    saveTip: saveTip(editor.busy, isMac, t),
     validateDisabled: !!editor.busy || !candidates,
-    validateTip: !candidates ? t('config.incomplete') : undefined,
-    editDisabled: !complete || !!editor.busy,
-    editTip: complete === false ? t('config.incomplete') : undefined
+    validateTip: !candidates ? t('config.incomplete') : undefined
   };
 }
 
