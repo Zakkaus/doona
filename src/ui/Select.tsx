@@ -19,7 +19,7 @@ import {
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import {cx} from './cx';
-import {Button, TextTooltip} from './Button';
+import {Button, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {useT} from '../i18n';
@@ -111,6 +111,7 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
       {count}
     </span>
   ) : null;
+  const reasonId = useReasonId(isDisabled);
   return (
     <MenuTrigger>
       {appearance ? (
@@ -119,7 +120,7 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
           {chevron && <ChevronDown />}
         </Button>
       ) : (
-        <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} isDisabled={isDisabled}>
+        <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} aria-describedby={reasonId} isDisabled={isDisabled}>
           {children}
           {badge}
           {chevron && <ChevronDown />}
