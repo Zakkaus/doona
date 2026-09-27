@@ -518,19 +518,20 @@ httpTest('a stale original digest refuses replacement, retains the draft and reb
   await editor.fill((await editor.innerText()) + '\n# local draft\n');
   const source = (await api.config()).sources.find(source => source.id === 'src-rules')!;
   await api.replaceConfigSource(source.id, source.content + '\n# concurrent edit\n', `\"${source.content_sha256}\"`);
+  // The mock reloads a write about a second later; until then a refetch still reads the old digest.
+  await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
+  const accepted = (await api.config()).sources.find(item => item.id === source.id)!;
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await rejected;
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await expect(editor).toContainText('# local draft');
-  // The concurrent edit becomes the accepted text once its reload completes.
-  await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
-  // The draft is rebased on the refetched source, so the next save carries the new digest and replaces it.
-  await expect(async () => {
-    await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
-    await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded', {timeout: 2000});
-  }).toPass({timeout: 15000});
+  // The draft is rebased in the render that shows the refetched source, so its line count marks the new base, and the
+  // one next save carries the new digest and replaces it.
+  await expect(page.getByText(`${accepted.line_count} lines,`)).toBeVisible();
+  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   const saved = (await api.config()).sources.find(item => item.id === source.id)!.content!;
   expect(saved).toContain('# local draft');
   expect(saved).not.toContain('# concurrent edit');
@@ -1064,15 +1065,18 @@ httpTest('a module draft refused with 412 is rebased and saves on the next attem
   // The mock reloads a write about a second later; until then a refetch still reads the old digest, and a second refusal
   // with it is reported as a disk ahead of the running configuration instead of rebased.
   await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
+  const range = routing.locator('.rp-cluster > .rp-label.rp-code');
+  const before = await range.innerText();
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await rejected;
+  await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await expect(editor).toContainText('domain(example.org) -> proxy');
-  // The second attempt carries the refetched digest; the concurrent edit outside the section is kept.
-  await expect(async () => {
-    await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
-    await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded', {timeout: 2000});
-  }).toPass({timeout: 15000});
+  // The draft is rebased in the render that shows the refetched section, which the added line moves down one line.
+  await expect(range).not.toHaveText(before);
+  // The one next attempt carries the refetched digest; the concurrent edit outside the section is kept.
+  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(saved).toContain('# concurrent edit');
   expect(saved).toContain('domain(example.org) -> proxy');
