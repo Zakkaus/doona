@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {settingsCard} from './nav';
 
@@ -73,16 +73,18 @@ export function RuntimeSettingsCard() {
                   {m.recordingNote && <span className="rp-label">{m.recordingNote}</span>}
                 </div>
               )}
-              <div className="rp-toolbar">
-                <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
-                  {t('settings.apply')}
-                </Button>
-                {m.dirty && (
-                  <Button isDisabled={m.busy} onPress={m.discard}>
-                    {t('config.discard')}
+              <ActionHelp reason={m.reason}>
+                <div className="rp-toolbar">
+                  <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
+                    {t('settings.apply')}
                   </Button>
-                )}
-              </div>
+                  {m.dirty && (
+                    <Button isDisabled={m.busy} onPress={m.discard}>
+                      {t('config.discard')}
+                    </Button>
+                  )}
+                </div>
+              </ActionHelp>
             </>
           )}
         </>

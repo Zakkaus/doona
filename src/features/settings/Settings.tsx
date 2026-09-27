@@ -1,6 +1,6 @@
 import {useId} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -19,6 +19,7 @@ export function Settings({query}: PageProps) {
   const {
     activeId,
     hasActive,
+    profileReason,
     firstRun,
     error,
     retry,
@@ -70,28 +71,30 @@ export function Settings({query}: PageProps) {
       {paired && <p className="rp-note">{t('settings.paired')}</p>}
       <Card level={2} title={t(cards.backend.titleKey)} titleId={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
-        <div className="rp-toolbar">
-          <LabeledSelect
-            label={t('settings.profile')}
-            side
-            value={activeId}
-            isDisabled={!hasActive || saving}
-            items={profile.choices}
-            onChange={switchProfile}
-          />
-          <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
-          <Button isDisabled={!hasActive} onPress={renameProfile}>
-            {t('settings.renameProfile')}
-          </Button>
-          <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
-            {t('settings.deleteProfile')}
-          </Button>
-          {session && (
-            <Button isPending={session.busy} onPress={() => void session.signOut()}>
-              {t('settings.signOut')}
+        <ActionHelp reason={profileReason}>
+          <div className="rp-toolbar">
+            <LabeledSelect
+              label={t('settings.profile')}
+              side
+              value={activeId}
+              isDisabled={!hasActive || saving}
+              items={profile.choices}
+              onChange={switchProfile}
+            />
+            <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
+            <Button isDisabled={!hasActive} onPress={renameProfile}>
+              {t('settings.renameProfile')}
             </Button>
-          )}
-        </div>
+            <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
+              {t('settings.deleteProfile')}
+            </Button>
+            {session && (
+              <Button isPending={session.busy} onPress={() => void session.signOut()}>
+                {t('settings.signOut')}
+              </Button>
+            )}
+          </div>
+        </ActionHelp>
         <form
           className="rp-form"
           noValidate

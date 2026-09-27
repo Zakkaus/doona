@@ -4,7 +4,7 @@ import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {SettingsContext} from '../../shell/preferences';
 import {useBackendForm} from './useBackendForm';
-import {profileView, paletteLabel} from './view';
+import {profileView, profileReason, paletteLabel} from './view';
 import {installHint, useInstallOffer} from '../../shell/install';
 export function useSettingsPage(query: string) {
   const t = useT();
@@ -38,6 +38,7 @@ export function useSettingsPage(query: string) {
     firstRun: form.saved.api === null,
     activeId: form.saved.activeId,
     hasActive: !!form.active,
+    profileReason: profileReason(!!form.active, t),
     invalidText: form.invalid ? t('settings.invalidUrl') : undefined,
     tokenType: showToken ? 'text' : 'password',
     tokenToggleText: t(showToken ? 'settings.hideToken' : 'settings.showToken'),

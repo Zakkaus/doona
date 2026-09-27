@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, Card, ConfirmDialog, ContextualHelp, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ConfirmDialog, ContextualHelp, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './nav';
@@ -91,17 +91,19 @@ export function GeodataSettingsCard() {
           </div>
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.geodataStatus')}</span>
-            <div className="rp-cluster">
-              <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
-                {m.status.text}
-              </span>
-              {m.status.help && <ContextualHelp {...m.status.help} />}
-              {m.canUpdate && (
-                <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
-                  {t('settings.geodataUpdateNow')}
-                </Button>
-              )}
-            </div>
+            <ActionHelp reason={m.canUpdate ? m.updateReason : null}>
+              <div className="rp-cluster">
+                <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
+                  {m.status.text}
+                </span>
+                {m.status.help && <ContextualHelp {...m.status.help} />}
+                {m.canUpdate && (
+                  <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
+                    {t('settings.geodataUpdateNow')}
+                  </Button>
+                )}
+              </div>
+            </ActionHelp>
           </div>
           <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
           {m.status.details.length > 0 && (

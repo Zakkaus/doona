@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionGroup, Button, Card, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Button, Card, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './nav';
 
@@ -14,6 +14,7 @@ export function BackendActionsCard() {
     closeAll,
     geodataBusy,
     geodataBlocked,
+    geodataReason,
     geodataLoading,
     geodataError,
     retryGeodata,
@@ -26,6 +27,7 @@ export function BackendActionsCard() {
     refreshingAll,
     refreshAll,
     refreshDisabled,
+    refreshReason,
     refreshLabel,
     canFlush,
     canRefresh,
@@ -67,11 +69,13 @@ export function BackendActionsCard() {
             <span className="rp-label">{t('nav.nodes')}</span>
             <ErrorMessage error={providersError} onRetry={retryProviders} />
             {/* Loading shows on the button itself: a spinner row would push the other groups down and back. */}
-            <div className="rp-cluster">
-              <Button isPending={refreshingAll || providersLoading} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
-                {refreshLabel}
-              </Button>
-            </div>
+            <ActionHelp reason={refreshReason}>
+              <div className="rp-cluster">
+                <Button isPending={refreshingAll || providersLoading} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
+                  {refreshLabel}
+                </Button>
+              </div>
+            </ActionHelp>
           </div>
         )}
         {canClose && (
@@ -88,13 +92,15 @@ export function BackendActionsCard() {
         <div className="rp-geodata">
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.geodata')}</span>
-            <div className="rp-cluster">
-              {canUpdate && (
-                <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
-                  {t('settings.geodataUpdate')}
-                </Button>
-              )}
-            </div>
+            <ActionHelp reason={canUpdate ? geodataReason : null}>
+              <div className="rp-cluster">
+                {canUpdate && (
+                  <Button isPending={geodataBusy} isDisabled={geodataBlocked} onPress={update}>
+                    {t('settings.geodataUpdate')}
+                  </Button>
+                )}
+              </div>
+            </ActionHelp>
           </div>
           <span className="rp-label">{t('settings.geodataNote')}</span>
           <ErrorMessage error={geodataError} onRetry={retryGeodata} />

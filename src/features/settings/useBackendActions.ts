@@ -3,7 +3,7 @@ import {useLifecycle} from '../shared/useLifecycle';
 import {closedAllTone} from '../../api/selectors';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
-import {geodataRows} from './view';
+import {geodataRows, geodataUpdateReason, refreshAllReason} from './view';
 import {geodataConfigurable} from './nav';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
@@ -91,6 +91,7 @@ export function useBackendActions() {
     },
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,
+    geodataReason: geodataUpdateReason({busy: geodata.busy, loaded: !!geodata.data, failed: !!geodata.error}, t),
     geodataLoading: geodata.loading && !geodata.data,
     geodataError: geodata.error,
     retryGeodata: geodata.refetch,
@@ -105,6 +106,7 @@ export function useBackendActions() {
     refreshingAll,
     refreshAll,
     refreshDisabled: !providersReady || !!refresh.busy || !subscriptions.length,
+    refreshReason: refreshAllReason({ready: providersReady, busy: !!refresh.busy, count: subscriptions.length}, t),
     refreshLabel: t('settings.refreshAll', {n: providersReady ? subscriptions.length : '—'}),
     canFlush: !!(resources?.dns_cache.available && resources.dns_cache.flush),
     canRefresh: !!resources?.providers.can_refresh,
