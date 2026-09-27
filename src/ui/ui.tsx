@@ -20,7 +20,9 @@ export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMen
 export {ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, DisclosureGroup, Tabs, useTabShown} from './Dialog';
 export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
-export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, Toasts, type ToastPlacement, Light, Badge, Bar, Kv} from './Feedback';
+export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, Toasts, type ToastPlacement, Light, Badge, Bar} from './Feedback';
+export {Kv, type KvItem} from './Kv';
+export {ContextualHelp, type Help} from './ContextualHelp';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
 export {Tag, Tags} from './Tag';
 export {ActionBar} from './ActionBar';

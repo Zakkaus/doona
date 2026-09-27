@@ -95,7 +95,7 @@ export function Overview() {
         </Card>
       </div>
       <div className="rp-g21 rp-overview-lower">
-        <Card title={t('ov.datapath')}>
+        <Card title={t('ov.datapath')} help={{title: t('ov.datapath'), text: t('ov.datapathHelp')}}>
           <ErrorMessage error={vm.errors.datapath} onRetry={vm.retry.datapath} />
           {vm.datapath.state === 'ready' ? (
             <>
@@ -105,7 +105,7 @@ export function Overview() {
                   label={t('ov.attachments')}
                   height={250}
                   rows={vm.datapath.attachments}
-                  empty={t('ov.unknown')}
+                  empty={t('ov.noAttachments')}
                   cols={[
                     {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true, render: a => a.name},
                     {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2, render: a => a.interface},
