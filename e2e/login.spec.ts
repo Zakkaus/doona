@@ -11,7 +11,7 @@ test.describe('the demo', () => {
     const login = page.locator('.rp-login-page');
     await expect(login.getByRole('heading', {level: 1})).toHaveText('Sign in');
     await expect(login).toContainText('Connecting to Demo');
-    await expect(login.locator('.rp-login-demo')).toHaveText('Demo account: demo  Password: demo');
+    await expect(login.locator('.rp-login-account')).toHaveText('Demo account: demo  Password: demo');
     await expect(login.getByLabel('Username', {exact: true})).toHaveValue('demo');
     await expect(login.getByLabel('Password', {exact: true})).toHaveValue('demo');
     // Nothing of the shell is drawn before sign-in.
@@ -40,7 +40,7 @@ test.describe('the demo', () => {
     await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
     const login = page.locator('.rp-login-page');
     await expect(login.getByRole('heading', {level: 1})).toHaveText('登入');
-    await expect(login.locator('.rp-login-demo')).toHaveText('示範帳號：demo　密碼：demo');
+    await expect(login.locator('.rp-login-account')).toHaveText('示範帳號：demo　密碼：demo');
     await expect(page.locator('html')).toHaveAttribute('data-scheme', 'light');
     // The same toggle as the top bar: a saved scheme goes back to the system's, which then flips to its opposite.
     await controls.getByRole('button', {name: '主題：亮色', exact: true}).click();

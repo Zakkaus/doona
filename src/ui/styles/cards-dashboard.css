@@ -100,18 +100,20 @@
   display: flex;
   flex-direction: column;
 }
+/* The column keeps one spacing step: 32 between its parts, 24 between fields, 8 or 16 between what belongs together.
+   The brand leads the page, so it stands larger than the top bar's. */
 .rp-login-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 48px;
-  font-size: var(--rp-text-2xl);
-  line-height: 28px;
+  gap: 12px;
+  margin-bottom: 32px;
+  font-size: var(--rp-text-4xl);
+  line-height: 40px;
   font-weight: 700;
 }
 .rp-login-brand img {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
 }
 .rp-login-note {
   margin: 8px 0 0;
@@ -124,21 +126,10 @@
 .rp-login-column > .rp-empty {
   margin-top: 24px;
 }
-/* The demo's published account, above the fields it fills. The spaces between its parts are part of the text. */
-.rp-login-demo {
-  margin: 24px 0 0;
-  padding: 12px 16px;
-  border: 1px solid var(--rp-hl-med);
-  border-radius: var(--rp-r-md);
-  background: var(--rp-base);
-  font-size: var(--rp-text-md);
-  line-height: 22px;
-  white-space: pre-wrap;
-}
 .rp-login {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   margin-top: 32px;
 }
 /* The form's one action spans it; the ways out sit centred below, as secondary links. */
@@ -147,12 +138,20 @@
   justify-content: center;
   margin-top: 8px;
 }
+/* The demo's published account, one line of secondary text under the action. The spaces between its parts are part
+   of the text. */
+.rp-login-account {
+  margin-top: 16px;
+  text-align: center;
+  white-space: pre-wrap;
+}
 .rp-login-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px 32px;
+  gap: 8px 24px;
   margin-top: 24px;
+  font-size: var(--rp-text-md);
 }
 .rp-link-out {
   width: 10px;
