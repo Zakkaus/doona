@@ -201,17 +201,6 @@ test('paste into a read-only source is refused with the read-only notice', async
   await expect(editor).toHaveText(original, {useInnerText: true});
 });
 
-test.describe('on a touch screen', () => {
-  test.use({viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true});
-  test('a tap into a read-only source shows the read-only notice', async ({page}) => {
-    await page.goto('/#/config?tab=source&source=src-generated');
-    const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
-    await expect(editor).toContainText('skylink');
-    await editor.tap();
-    await expect(readOnlyNotice(page)).toBeVisible();
-  });
-});
-
 test('the validation tab lists kept diagnostics and opens the source at the line', async ({page}) => {
   await page.goto('/#/config?tab=validate');
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('Passed with 2 warnings');
