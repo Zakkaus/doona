@@ -1,7 +1,18 @@
 import {describe, expect, it} from 'vitest';
 import type {Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
-import {nodeRows, ownedNodes, providerRows, nodeRowView, providerRowView, intervalText, intervalItems, providerCreate, selectedProvider} from './view';
+import {
+  nodeFormReason,
+  nodeRows,
+  ownedNodes,
+  providerRows,
+  nodeRowView,
+  providerRowView,
+  intervalText,
+  intervalItems,
+  providerCreate,
+  selectedProvider
+} from './view';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';
@@ -242,4 +253,16 @@ it('falls back to the first real source when the linked provider is no longer li
   const {list} = providerRows([provider('a'), provider('b')], [], [], t);
   expect(selectedProvider(list, 'b')).toBe('b');
   expect(selectedProvider(list, 'gone')).toBe('a');
+});
+
+it('says why the add dialog cannot submit, first applicable, and nothing while it is still empty', () => {
+  expect(nodeFormReason('provider', '', '', t)).toBeNull();
+  expect(nodeFormReason('provider', '', 'https://example.org/sub', t)).toBe('Enter a name');
+  expect(nodeFormReason('provider', 'sub a', 'ftp://x', t)).toBe(t('nodes.nameInvalid'));
+  expect(nodeFormReason('provider', 'sub-a', 'ftp://x', t)).toBe(t('nodes.urlInvalid'));
+  expect(nodeFormReason('provider', 'sub-a', 'https://example.org/sub', t)).toBeNull();
+  expect(nodeFormReason('node', 'hk-03', 'vless:/broken', t)).toBe('The node link must look like vless://…');
+  expect(nodeFormReason('node', 'hk 03', 'vless://id@host:443', t)).toBeNull();
+  // A group name's problem is shown at its field.
+  expect(nodeFormReason('group', 'bad name', '', t)).toBeNull();
 });
