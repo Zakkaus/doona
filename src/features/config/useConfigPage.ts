@@ -8,7 +8,7 @@ import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery, within} from '../../shell/route';
-import {configMetadata, saveTip, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
+import {configMetadata, saveView, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
 import {configTabs, setupAvailable} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
@@ -210,7 +210,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     return result ? presentValidation(result) : false;
   };
   const save = async () => {
-    if (draft === null || editor.busy) return;
+    if (draft === null || editor.busy || !writable) return;
     const result = await editor.apply(draft.origin, draft.text);
     setFound(null);
     if (!result) return;
@@ -257,7 +257,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     busy: !!editor.busy,
     validating: editor.busy === 'validate',
     saving: editor.busy === 'save',
-    saveTip: saveTip(editor.busy, isMac, t),
+    saveButton: saveView(editor.busy, writable, readOnly?.note ?? null, isMac, t),
     validateDisabled: !!editor.busy || !candidates,
     validateTip: !candidates ? t('config.incomplete') : undefined
   };

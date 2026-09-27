@@ -285,7 +285,7 @@ function SourceCard(props: SourceCardProps) {
     busy,
     validating,
     saving,
-    saveTip,
+    saveButton,
     validateDisabled,
     validateTip
   } = useSourceCard(props);
@@ -313,7 +313,7 @@ function SourceCard(props: SourceCardProps) {
               <Button isDisabled={busy} onPress={cancel}>
                 {t('ui.cancel')}
               </Button>
-              <Button accent isPending={saving} isDisabled={busy} tip={saveTip} onPress={() => void save()}>
+              <Button accent isPending={saving} isDisabled={saveButton.disabled} tip={saveButton.tip} onPress={() => void save()}>
                 {t('config.save')}
               </Button>
             </>

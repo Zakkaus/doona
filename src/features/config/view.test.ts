@@ -3,7 +3,7 @@ import {configNotes} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {
-  saveTip,
+  saveView,
   sourceView,
   readOnlyBadge,
   diagnosticRows,
@@ -296,14 +296,16 @@ it('names group policies in words, keeping only an expression doona does not kno
   );
 });
 
+it('says why Save is disabled, and names the shortcut otherwise', () => {
+  expect(saveView('validate', true, null, false, t)).toEqual({disabled: true, tip: t('config.saveValidating')});
+  expect(saveView('save', true, null, false, t)).toEqual({disabled: true, tip: t('config.saveShortcut')});
+  expect(saveView(null, true, null, true, t)).toEqual({disabled: false, tip: t('config.saveShortcutMac')});
+  // A refetch that made the source read-only while a draft was open: Save is refused with the reason.
+  expect(saveView(null, false, t('config.secretNote'), false, t)).toEqual({disabled: true, tip: t('config.secretNote')});
+});
+
 it('tips why a module cannot be edited: another draft first, then a change still being applied', () => {
   expect(moduleEditTip(true, true, t)).toBe(t('config.moduleEditBlocked'));
   expect(moduleEditTip(false, true, t)).toBe('Another change is being applied');
   expect(moduleEditTip(false, false, t)).toBeUndefined();
-});
-
-it('says why Save is disabled, and names the shortcut otherwise', () => {
-  expect(saveTip('validate', false, t)).toBe(t('config.saveValidating'));
-  expect(saveTip('save', false, t)).toBe(t('config.saveShortcut'));
-  expect(saveTip(null, true, t)).toBe(t('config.saveShortcutMac'));
 });
