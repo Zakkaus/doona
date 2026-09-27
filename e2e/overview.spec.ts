@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, mockBackend, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
@@ -225,4 +225,21 @@ test('the cgroup scope explains itself in a help popover', async ({page}) => {
   );
   await page.keyboard.press('Escape');
   await expect(help).toHaveCount(0);
+});
+
+test('a read the backend never answers fails at the deadline and recovers on retry', async ({page}) => {
+  const backend = await mockBackend(page);
+  expectLoadFailures(page, /\/api\/v1\/datapath/);
+  let hold = true;
+  // The connection is accepted and never answered.
+  backend.handlers['GET datapath'] = async () => (hold ? new Promise(() => {}) : backend.api.datapath());
+  await page.clock.install();
+  await page.goto('/#/overview');
+  await expect.poll(() => backend.requests.some(request => new URL(request.url()).pathname === '/api/v1/datapath')).toBe(true);
+  await page.clock.fastForward(15000);
+  const alert = page.getByRole('alert').filter({hasText: 'The backend did not answer within 15 seconds.'});
+  await expect(alert).toBeVisible();
+  hold = false;
+  await alert.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(alert).toHaveCount(0);
 });

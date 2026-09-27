@@ -126,6 +126,76 @@ describe('native transport', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     await expect(createApi('https://honk.test').dnsCache()).rejects.toMatchObject({status: 0, code: 'network_error', text: {key: 'ui.errNetwork'}});
   });
+  // A backend that accepts the connection and never answers: the request settles only when its signal aborts.
+  const hanging = () =>
+    vi.fn(
+      (_input: Request | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal!.reason), {once: true}))
+    );
+  it('gives up on a read that gets no answer after the read deadline', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', hanging());
+    let settled = false;
+    const result = createApi('https://honk.test').runtime();
+    const failure = expect(result).rejects.toMatchObject({status: 0, code: 'timeout', text: {key: 'ui.errTimeout', params: {seconds: 15}}});
+    void result.catch(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(14999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await failure;
+  });
+  it('gives a mutation the write deadline and says the change may have been applied', async () => {
+    vi.useFakeTimers();
+    const request = hanging();
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    let settled = false;
+    const reload = api.startReload();
+    const failure = expect(reload).rejects.toMatchObject({code: 'timeout', text: {key: 'ui.errTimeoutWrite', params: {seconds: 30}}});
+    void reload.catch(() => (settled = true));
+    // A read-only POST writes nothing, so it keeps the read deadline and text.
+    const trace = api.routingTrace({input: {network: 'tcp', dst_ip: '1.1.1.1', dst_port: 443}, resolve: 'none'});
+    const traced = expect(trace).rejects.toMatchObject({code: 'timeout', text: {key: 'ui.errTimeout'}});
+    await vi.advanceTimersByTimeAsync(15000);
+    await traced;
+    await vi.advanceTimersByTimeAsync(14999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await failure;
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it('leaves an open event stream to its own silence limit', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const signals: AbortSignal[] = [];
+    const request = vi.fn(async (_input: URL, init?: RequestInit) => {
+      signals.push(init!.signal!);
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(c) {
+            c.enqueue(new TextEncoder().encode('id: i:1\nevent: stream.ready\ndata: {"instance_id":"i","observed_at":"2026-09-15T14:00:00Z"}\n\n'));
+          }
+        })
+      );
+    });
+    vi.stubGlobal('fetch', request);
+    const stream = createApi('https://honk.test').subscribeEvents({signal: controller.signal, heartbeatSeconds: 60, onEvent: () => {}});
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(signals[0].aborted).toBe(false);
+    controller.abort();
+    await stream;
+  });
+  it('keeps a caller abort before the deadline an abort', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', hanging());
+    const controller = new AbortController();
+    const result = createApi('https://honk.test').runtime(controller.signal);
+    const failure = expect(result).rejects.toMatchObject({name: 'AbortError'});
+    await vi.advanceTimersByTimeAsync(5000);
+    controller.abort();
+    await failure;
+  });
   it.each(['events', 'logs'] as const)('skips malformed id-less %s frames without reconnecting', async kind => {
     vi.useFakeTimers();
     const controller = new AbortController();

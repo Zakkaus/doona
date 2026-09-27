@@ -1357,6 +1357,8 @@ export const messages = {
   'ui.allCount': 'All {n}',
   'ui.errNoJson': 'The backend response has no JSON body.',
   'ui.errNetwork': 'The backend could not be reached.',
+  'ui.errTimeout': 'The backend did not answer within {seconds} seconds.',
+  'ui.errTimeoutWrite': 'The backend did not answer within {seconds} seconds; the change may still have been applied. Reload before trying again.',
   'ui.backendMessage': 'Backend message: {message}',
   'ui.backend.sampleDelayed': 'Routing map sample delayed',
   'ui.backend.invalidRequest': 'Invalid request',
