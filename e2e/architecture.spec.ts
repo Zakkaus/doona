@@ -758,7 +758,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
     await expect(dialog.getByRole('button', {name: /Match by$/})).toBeDisabled();
     await expect(dialog.getByRole('button', {name: /Outbound$/})).toBeDisabled();
     await expect(dialog.getByRole('button', {name: /Insert$/})).toBeDisabled();
-    await expect(dialog.getByRole('switch', {name: 'Require this outbound must'})).toBeDisabled();
+    await expect(dialog.getByRole('switch', {name: 'Lock this outbound must'})).toBeDisabled();
   } finally {
     release();
   }
