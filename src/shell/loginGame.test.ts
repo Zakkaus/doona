@@ -79,13 +79,23 @@ describe('the idle scene', () => {
     ]) {
       const L = idleLayout(w, h);
       const right = 2 * L.duck - (L.x + L.bar + 22);
-      expect(Math.abs(L.x + right - 2 * L.cx)).toBeLessThanOrEqual(1);
+      expect(Math.abs(L.post + right - 2 * L.cx)).toBeLessThanOrEqual(1);
       expect(L.top + 22).toBe(L.ground);
+      expect(L.x - L.post).toBe(L.board + 24);
       expect(L.cx - L.reach).toBeGreaterThanOrEqual(12);
       expect(L.cx + L.reach).toBeLessThanOrEqual(w - 12);
-      expect(Math.abs(L.sign + L.start + 4 - h)).toBeLessThanOrEqual(1);
+      expect(L.shrink).toBe(1);
+      expect(Math.abs(L.head + L.start + 4 - h)).toBeLessThanOrEqual(1);
     }
     expect(idleLayout(600, 643).bar).toBe(250);
     expect(idleLayout(360, 549).bar).toBeLessThan(250);
+  });
+  it('keeps the loading row whole on a narrow panel and shrinks the group to fit instead', () => {
+    // English at 1024px: a wide board and a long label need more room than the panel has.
+    const L = idleLayout(360, 549, {board: 121, row: 223});
+    expect(L.bar).toBe(223);
+    expect(L.shrink).toBeLessThan(1);
+    expect(L.cx - L.shrink * L.reach).toBeGreaterThanOrEqual(12 - 0.5);
+    expect(L.cx + L.shrink * L.reach).toBeLessThanOrEqual(360 - 12 + 0.5);
   });
 });
