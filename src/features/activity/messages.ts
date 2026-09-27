@@ -36,7 +36,7 @@ export const messages = defineMessages({
     'act.modeReadOnlyReason':
       'honk 須允許組態寫入，且控制端已設定驗證。主組態若含 native_api 或 clash_api 的密鑰欄位或巢狀區塊，會標記為唯讀。組態含目前的監聽密鑰時也一樣。',
     'act.modeReadOnlyAction': '請確認 honk 對主組態檔案有寫入權限，並將 native_api 設定放在獨立的 include 檔案。',
-    'act.installGuide': '查看安裝說明',
+    'act.readOnlyDocs': '唯讀的組態檔案',
     'act.modeUnavailable': '此後端不提供',
     'act.viewAll': '查看全部',
     'act.noticeRepeat': '重複 {n} 次',
@@ -95,7 +95,7 @@ export const messages = defineMessages({
     'act.modeReadOnlyReason':
       'honk 须允许配置写入，且控制端已设置身份验证。主配置若含 native_api 或 clash_api 的密钥字段或嵌套区块，会标记为只读。配置含当前的监听密钥时也一样。',
     'act.modeReadOnlyAction': '请确认 honk 对主配置文件有写入权限，并将 native_api 设置放在独立的 include 文件。',
-    'act.installGuide': '查看安装说明',
+    'act.readOnlyDocs': '只读的配置文件',
     'act.modeUnavailable': '此后端不提供',
     'act.viewAll': '查看全部',
     'act.noticeRepeat': '重复 {n} 次',
@@ -155,7 +155,7 @@ export const messages = defineMessages({
     'act.modeReadOnlyReason':
       'honk requires configuration writes and authenticated control. It marks the main source read-only if it contains a secret field or nested block in native_api or clash_api, or an active listener secret.',
     'act.modeReadOnlyAction': 'Make the main file writable by honk and keep native_api in its own include file.',
-    'act.installGuide': 'Installation instructions',
+    'act.readOnlyDocs': 'Read-only sources',
     'act.modeUnavailable': 'Not provided by this backend',
     'act.viewAll': 'View all',
     'act.noticeRepeat': {one: '{n} time', other: '{n} times'},

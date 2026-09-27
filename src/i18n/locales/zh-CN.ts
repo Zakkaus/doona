@@ -37,7 +37,7 @@ export const messages = {
   'act.modeReadOnlyReason':
     'honk 须允许配置写入，且控制端已设置身份验证。主配置若含 native_api 或 clash_api 的密钥字段或嵌套区块，会标记为只读。配置含当前的监听密钥时也一样。',
   'act.modeReadOnlyAction': '请确认 honk 对主配置文件有写入权限，并将 native_api 设置放在独立的 include 文件。',
-  'act.installGuide': '查看安装说明',
+  'act.readOnlyDocs': '只读的配置文件',
   'act.modeUnavailable': '此后端不提供',
   'act.viewAll': '查看全部',
   'act.noticeRepeat': '重复 {n} 次',
