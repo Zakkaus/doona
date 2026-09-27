@@ -74,7 +74,6 @@ export function Login({profileId, api, backend, rejected, lang, pickLang, dark, 
             )
           ) : (
             <>
-              {view.demoNote && <p className="rp-login-demo">{view.demoNote}</p>}
               <form
                 className="rp-login"
                 onSubmit={event => {
@@ -143,6 +142,7 @@ export function Login({profileId, api, backend, rejected, lang, pickLang, dark, 
                   </Button>
                 )}
               </form>
+              {view.demoNote && <p className="rp-login-note rp-login-account">{view.demoNote}</p>}
               {links}
             </>
           )}
