@@ -1,6 +1,7 @@
 import type {Api} from '../api';
 import {DEMO_ACCOUNT, type AuthCredentials, type AuthDiscovery, type AuthSession} from '../auth';
 import {ApiError} from '../error';
+import {uuid} from '../hash';
 
 const PREFIX = 'demo-session-';
 const LIFETIME = 12 * 3600_000;
@@ -14,7 +15,7 @@ export function mockOpenSession(kind: 'setup' | 'login', credentials: AuthCreden
   if (kind === 'setup') throw new ApiError(409, 'setup_already_completed', 'Setup already completed');
   if (credentials.username !== DEMO_ACCOUNT.username || credentials.password !== DEMO_ACCOUNT.password)
     throw new ApiError(401, 'invalid_credentials', 'Invalid credentials');
-  return {token: PREFIX + crypto.randomUUID(), expires_at: new Date(Date.now() + LIFETIME).toISOString()};
+  return {token: PREFIX + uuid(), expires_at: new Date(Date.now() + LIFETIME).toISOString()};
 }
 
 // The mock keeps no server state across reloads, so any session it issued is accepted by its form.

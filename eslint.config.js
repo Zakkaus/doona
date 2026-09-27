@@ -134,5 +134,17 @@ export default [
     ],
     rules: {'@typescript-eslint/no-restricted-imports': 'off'}
   },
+  {
+    // Routers serve doona over plain HTTP on the LAN, where these exist only in secure contexts.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/api/hash.ts', 'src/**/*.test.*'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {object: 'crypto', property: 'randomUUID', message: 'Use uuid() from src/api/hash.ts.'},
+        {object: 'crypto', property: 'subtle', message: 'Use sha256() from src/api/hash.ts.'}
+      ]
+    }
+  },
   prettier
 ];
