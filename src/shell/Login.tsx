@@ -3,6 +3,7 @@ import {useLogin} from './useLogin';
 import {Button, ErrorMessage, InlineAlert, Link, Loading, ModalDialog, TextField} from '../ui/ui';
 import logo from '../logo.svg';
 import {href} from './route';
+import {guideHref} from '../features/shared/guide';
 
 export function Login({profileId, api, backend, rejected}: {profileId: string; api: string; backend: string; rejected: boolean}) {
   const t = useT();
@@ -32,6 +33,9 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
               <div className="rp-toolbar">
                 <Link appearance="link" href={href('settings')}>
                   {t('login.settings')}
+                </Link>
+                <Link appearance="link" href={guideHref()}>
+                  {t('guide.title')}
                 </Link>
               </div>
             </>
@@ -103,6 +107,9 @@ export function Login({profileId, api, backend, rejected}: {profileId: string; a
               )}
               <Link appearance="link" href={href('settings')}>
                 {t('login.settings')}
+              </Link>
+              <Link appearance="link" href={guideHref()}>
+                {t('guide.title')}
               </Link>
             </div>
           </>

@@ -75,8 +75,8 @@ it('asks for sign-in when a read is refused, even while discovery reports a fail
   expect(view.error).toBeNull();
   expect(shellView(configured, 'connections', capabilitiesBase, accessError(unavailable, null), version, null, t).error).toBe(unavailable);
 });
-it('puts every page in exactly one hub and shows the hubs as the navigation sections', () => {
-  expect(hubs.flatMap(hub => hub.pages).sort()).toEqual([...routePaths].sort());
+it('puts every navigation page in exactly one hub and shows the hubs as the navigation sections', () => {
+  expect(hubs.flatMap(hub => hub.pages).sort()).toEqual(routePaths.filter(path => path !== 'guide').sort());
   const view = shellView(settings, 'dns', capabilitiesBase, null, version, null, t);
   expect(view.groups.map(group => [group.label, group.items.map(item => item.path)])).toEqual([
     ['Overview', ['overview', 'activity']],

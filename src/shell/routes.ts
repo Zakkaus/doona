@@ -1,12 +1,26 @@
 // Route ids and the page contract. A leaf module, so pages and the shell import it without an import cycle.
 import type {Key} from '../i18n';
 
-export const routePaths = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules', 'nodes', 'config', 'events', 'logs', 'settings'] as const;
+export const routePaths = [
+  'activity',
+  'overview',
+  'connections',
+  'dns',
+  'policies',
+  'rules',
+  'nodes',
+  'config',
+  'events',
+  'logs',
+  'settings',
+  'guide'
+] as const;
 export type RoutePath = (typeof routePaths)[number];
 // Where an empty or unknown address lands.
 export const defaultRoute: RoutePath = 'activity';
 
-// Every page belongs to one hub. The side navigation shows the hubs as its sections; a phone shows them in the bottom
+// Every page in navigation belongs to one hub; the setup guide has no entry and opens from settings, the sign-in dialog
+// and explanations. The side navigation shows the hubs as its sections; a phone shows them in the bottom
 // bar, with the open hub's pages above the content. The first page is where a hub opens until another is visited.
 export const hubs = [
   {id: 'overview', titleKey: 'hub.overview', pages: ['overview', 'activity']},

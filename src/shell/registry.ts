@@ -28,6 +28,8 @@ type Feature = {
   path: RoutePath;
   // hintKey: the question under a page title that tells similar pages apart.
   nav: {titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
+  // The title of a page without a navigation entry.
+  titleKey?: Key;
   Page: ComponentType<PageProps>;
   // Absent for an eager page.
   preload?: () => Promise<unknown>;
@@ -101,6 +103,15 @@ const definitions = {
     shortcut: 's',
     nav: {titleKey: 'nav.settings', Icon: SettingsIcon},
     ...lazyPage(() => import('../features/settings/Settings').then(m => ({default: m.Settings}))),
+    offline: true,
+    requires: {}
+  },
+  guide: {
+    nav: null,
+    titleKey: 'guide.title',
+    ...lazyPage(() => import('../features/guide/Guide').then(m => ({default: m.Guide}))),
+    warm: 'intent',
+    // Setup help is needed before any backend answers.
     offline: true,
     requires: {}
   }

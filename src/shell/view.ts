@@ -125,7 +125,7 @@ export function shellView(
     current: {
       id: feature.id,
       path: route,
-      title: t(feature.nav?.titleKey ?? 'nav.activity'),
+      title: t(feature.nav?.titleKey ?? feature.titleKey ?? 'nav.activity'),
       hint: feature.nav?.hintKey ? t(feature.nav.hintKey) : undefined,
       Page: feature.Page
     },

@@ -1,6 +1,6 @@
 import {useId} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, Link, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -10,6 +10,7 @@ import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
 import type {PageProps} from '../../shell/routes';
 import {settingsCard} from './nav';
+import {guideHref} from '../shared/guide';
 
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
@@ -205,6 +206,9 @@ export function Settings({query}: PageProps) {
         )}
         <div className="rp-cluster">
           <About trigger={<Button>{t('about.title')}</Button>} />
+          <Link appearance="button" href={guideHref()}>
+            {t('guide.title')}
+          </Link>
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
           {installHint && <p className="rp-note">{installHint}</p>}
         </div>

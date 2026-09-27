@@ -1,0 +1,64 @@
+/* The setup guide: prose in cards, code blocks and plain reference tables. Loaded with the guide's chunk. */
+.rp-guide {
+  max-width: 960px;
+}
+.rp-guide :is(.rp-h3, .rp-guide-h) {
+  scroll-margin-block-start: 80px;
+}
+.rp-guide-p {
+  margin: 0;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.rp-guide-h {
+  margin: 8px 0 0;
+  font-size: var(--rp-text-md);
+  font-weight: 700;
+}
+.rp-guide-list {
+  margin: 0;
+  padding-inline-start: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.rp-guide-toc ol {
+  margin: 0;
+  padding-inline-start: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 24px;
+}
+.rp-guide-code {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--rp-r-sm);
+  background: var(--rp-hl-low);
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 20px;
+  max-width: 100%;
+}
+.rp-guide-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.rp-guide-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--rp-text-sm);
+  line-height: 20px;
+}
+.rp-guide-table :is(th, td) {
+  padding: 8px 10px;
+  border-block-end: 1px solid var(--rp-line);
+  text-align: start;
+  vertical-align: top;
+  min-width: 120px;
+}
+.rp-guide-table th {
+  color: var(--rp-subtle);
+  font-weight: 600;
+}
