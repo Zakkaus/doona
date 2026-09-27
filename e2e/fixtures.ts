@@ -28,9 +28,15 @@ export const offered = async (page: Page, route: string) => {
   return (await page.locator(`.rp-nav[href="#/${route}"]:not([data-unavailable])`).count()) > 0;
 };
 
-export const test = base.extend<{storage: Record<string, string>}>({
+// A saved demo profile signs in first, as a password backend does. A spec about something else names the profile to
+// start with this tab already holding the demo's session.
+export const demoSession = (profileId: string) =>
+  JSON.stringify({profileId, api: 'mock', token: 'demo-session-e2e', expiresAt: new Date(Date.now() + 3600_000).toISOString()});
+
+export const test = base.extend<{storage: Record<string, string>; signedIn: string | null}>({
   storage: [{}, {option: true}],
-  page: async ({page, storage}, use) => {
+  signedIn: [null, {option: true}],
+  page: async ({page, storage, signedIn}, use) => {
     const errors: string[] = [];
     const controls: string[] = [];
     if (isLive) {
@@ -61,6 +67,10 @@ export const test = base.extend<{storage: Record<string, string>}>({
       },
       {'doona-scheme': 'light', 'doona-lang': 'en', ...live, ...storage}
     );
+    if (signedIn !== null)
+      await page.addInitScript(session => {
+        if (sessionStorage.getItem('doona-session') === null) sessionStorage.setItem('doona-session', session);
+      }, demoSession(signedIn));
     await use(page);
     expect(controls, 'Live observation suite sent control requests').toEqual([]);
     expect(errors, 'Browser errors').toEqual([]);

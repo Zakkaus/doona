@@ -54,7 +54,7 @@ test('a released honk without the native API shows the requirement instead of a 
   backend.handlers['GET capabilities'] = missing;
   backend.handlers['GET version'] = missing;
   await page.goto('/#/activity');
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   await expect(form.getByRole('heading')).toHaveText('This honk build has no native API');
   await expect(form.getByLabel('Token', {exact: true})).toHaveCount(0);
   await expect(form.getByRole('link', {name: 'Native API requirements'})).toHaveAttribute(
@@ -67,11 +67,10 @@ test('a released honk without the native API shows the requirement instead of a 
 test('a first visit creates the administrator and continues with its session', async ({page}) => {
   const state = await passwordBackend(page, true);
   await page.goto('/#/activity');
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   await expect(form.getByRole('heading')).toHaveText('Create the administrator');
-  // Nothing behind the dialog works before sign-in, so it cannot be dismissed.
-  await page.keyboard.press('Escape');
-  await expect(form).toBeVisible();
+  // Nothing behind the form works before sign-in, so the shell is not drawn around it.
+  await expect(page.locator('.rp-nav')).toHaveCount(0);
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse batterx');
@@ -99,14 +98,14 @@ test('a first visit creates the administrator and continues with its session', a
   await form.getByLabel('Confirm password', {exact: true}).fill('correct horse battery');
   await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Create and sign in'}).click()]);
   expect(state.attempts).toEqual([{path: 'setup', body: {username: 'admin', password: 'correct horse battery'}, authorization: undefined}]);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.rp-login-page')).toHaveCount(0);
   await expect(page.locator('.rp-nav').first()).toBeVisible();
 });
 
 test('login reports wrong credentials, then signs in; a refused session asks again', async ({page}) => {
   const state = await passwordBackend(page, false);
   await page.goto('/#/activity');
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   await expect(form.getByRole('heading')).toHaveText('Sign in');
   await expect(form.getByLabel('Confirm password', {exact: true})).toHaveCount(0);
   await form.getByLabel('Username', {exact: true}).fill('admin');
@@ -136,7 +135,7 @@ test('a session the tab cannot store asks to allow storage instead of reporting 
     };
   });
   await page.goto('/#/activity');
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
   await form.getByRole('button', {name: 'Sign in'}).click();
@@ -146,7 +145,7 @@ test('a session the tab cannot store asks to allow storage instead of reporting 
 
 test('signing out ends the session on the backend and in the tab', async ({page}) => {
   const state = await passwordBackend(page, false);
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   await page.goto('/#/activity');
   await form.getByLabel('Username', {exact: true}).fill('admin');
   await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
@@ -156,7 +155,7 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   expect(state.attempts.at(-1)).toMatchObject({path: 'logout', authorization: 'Bearer hnk1_session'});
   // The sign-in form follows at once, not a Settings page full of refused reads.
   await expect(page).toHaveURL(/#\/activity$/);
-  await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Sign in');
+  await expect(page.locator('.rp-login-page').getByRole('heading')).toHaveText('Sign in');
   // Signing out is not an ended session: no warning greets the next sign-in.
   await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);
 });
@@ -182,19 +181,19 @@ test('a failed discovery asks to retry instead of guessing the sign-in', async (
     throw new ApiError(401, 'authentication_required', 'Authentication required');
   };
   await page.goto('/#/activity');
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('alert')).toContainText('Bad Gateway');
-  await expect(dialog.getByLabel('Token', {exact: true})).toHaveCount(0);
+  const form = page.locator('.rp-login-page');
+  await expect(form.getByRole('alert')).toContainText('Bad Gateway');
+  await expect(form.getByLabel('Token', {exact: true})).toHaveCount(0);
   up = true;
-  await dialog.getByRole('button', {name: 'Retry', exact: true}).click();
-  await expect(dialog.getByRole('heading')).toHaveText('Sign in');
-  await expect(dialog.getByLabel('Username', {exact: true})).toBeVisible();
+  await form.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(form.getByRole('heading')).toHaveText('Sign in');
+  await expect(form.getByLabel('Username', {exact: true})).toBeVisible();
 });
 
 test('the password reveal toggle sits inside the field, answers the keyboard and names its action', async ({page}) => {
   await passwordBackend(page, true);
   await page.goto('/#/activity');
-  const form = page.getByRole('dialog');
+  const form = page.locator('.rp-login-page');
   const username = form.getByLabel('Username', {exact: true});
   const password = form.getByLabel('Password', {exact: true});
   await password.fill('correct horse battery');
