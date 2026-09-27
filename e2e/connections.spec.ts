@@ -315,6 +315,32 @@ test.describe('folding groups', () => {
   });
 });
 
+test.describe('a folded group', () => {
+  test.use({storage: {'doona-connections-view': JSON.stringify({hidden: [], sort: null, group: 'source'})}});
+
+  test('a connection opened by its id unfolds its group once', async ({page}) => {
+    await page.clock.install();
+    await page.goto('/#/connections?tab=list');
+    const grid = page.getByRole('treegrid', {name: 'Connections'});
+    const first = grid.locator('[role=row][aria-level="2"]').first();
+    await expect(first).toBeVisible();
+    const id = (await first.getAttribute('data-key'))!;
+    const row = grid.locator(`[data-key="${id}"]`);
+    await page.getByRole('button', {name: 'Collapse all', exact: true}).click();
+    await expect(row).toHaveCount(0);
+    await page.evaluate(id => (location.hash = `#/connections?tab=list&id=${id}`), id);
+    await expect(row).toBeVisible();
+    await expect(page.locator('.rp-panel')).toBeVisible();
+    // Folding that group again holds while the connection stays open.
+    const group = grid.locator('[role=row][aria-level="1"][aria-expanded="true"]');
+    await expect(group).toHaveCount(1);
+    await group.getByRole('button', {name: 'Collapse'}).click();
+    await expect(row).toHaveCount(0);
+    await page.clock.fastForward(6000);
+    await expect(row).toHaveCount(0);
+  });
+});
+
 test('a detail panel leaves Escape to an alert dialog above it', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   await page.locator('.rp-table [data-key="c-0002"]').click();
