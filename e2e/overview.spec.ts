@@ -250,31 +250,35 @@ test.describe('with the base profile', () => {
   test('the features that are off are grouped by cause below the other cards, and Activity links to them', async ({page}) => {
     await page.goto('/#/overview');
     const card = page.locator('section').filter({has: page.getByRole('heading', {name: 'Features that are off', exact: true})});
-    const groups = card.locator('.rp-limit');
-    await expect(groups.locator('.rp-limit-reason')).toHaveText([
-      /^honk cannot serve the configuration files/,
-      'The honk configuration turns these recorders off; they are on by default.',
-      /^Routing and DNS loaded different files/,
-      'honk is starting or stopping, so these services are not running.',
-      'This honk build does not provide these features.'
+    const rows = card.locator('.rp-limit');
+    // Each cause is one row: the result, then the features it covers unless the result already names them.
+    await expect(rows.locator('.rp-limit-text > span:first-child')).toHaveText([
+      'The configuration cannot be read',
+      'The configuration turns off 4 recorders',
+      'Geodata is unavailable',
+      'Subscriptions cannot be refreshed for now',
+      'This honk build lacks 5 features'
     ]);
-    // Each cause is said once, with the features it turns off after it.
-    const recorders = groups.nth(1);
-    await expect(recorders.locator('li')).toHaveText(['DNS logNot recorded', 'Traffic historyNot recorded', 'Memory historyNot recorded', 'LogsNot recorded']);
-    await expect(recorders.locator('pre')).toHaveText(
+    await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Nodes and sources');
+    await expect(rows.nth(1).locator('.rp-note')).toHaveText('DNS log, Traffic history, Memory history, Logs');
+    await expect(rows.nth(2).locator('.rp-note')).toHaveCount(0);
+    await expect(card.locator('pre')).toHaveCount(0);
+    // The recorders' help holds the settings that turn them on.
+    await rows.nth(1).getByRole('button', {name: 'How to turn on'}).click();
+    const help = page.getByRole('dialog', {name: 'How to turn on'});
+    await expect(help).toContainText('Add the settings below to the configuration, then restart honk.');
+    await expect(help.locator('pre')).toHaveText(
       'experimental {\n  native_api {\n    record_dns_log: true\n    record_traffic: true\n    record_memory: true\n    record_logs: true\n  }\n}'
     );
-    await expect(recorders.getByText('Restart honk after changing this section.', {exact: true})).toBeVisible();
-    await expect(groups.nth(0).locator('li')).toHaveText(['ConfigurationNot loaded', 'Nodes and sourcesCannot edit']);
-    await expect(groups.nth(3).locator('li')).toHaveText(['SubscriptionsCannot refresh']);
-    await expect(groups.nth(4).getByRole('link', {name: 'honk version'})).toHaveAttribute('href', /\/en\/requirements\.html#honk-version$/);
+    await page.keyboard.press('Escape');
+    await expect(help).toBeHidden();
+    await expect(rows.nth(4).getByRole('link', {name: 'Version requirements'})).toHaveAttribute('href', /\/en\/requirements\.html#honk-version$/);
     // The card sits below the Datapath and Backend features row, across the page.
     const lower = await page.locator('.rp-overview-lower').boundingBox();
     const box = await card.boundingBox();
     expect(box!.y).toBeGreaterThan(lower!.y + lower!.height);
     // Backend features lists only what is on, as dots.
     const features = page.locator('section').filter({has: page.getByRole('heading', {name: 'Backend features', exact: true})});
-    await expect(features.locator('.rp-capability-status')).toHaveCount(0);
     await expect(features.locator('.rp-capability').filter({hasText: 'Logs'})).toHaveCount(0);
     await expect(features.locator('.rp-capability').filter({hasText: 'Connections'})).toHaveCount(1);
     await page.goto('/#/activity');
