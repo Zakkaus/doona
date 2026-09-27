@@ -28,7 +28,6 @@ export const messages = defineMessages({
     'mode.rule': '規則',
     'mode.direct': '直連',
     'mode.global': '全域',
-    'act.apply': '套用',
     'act.modeApplied': '出站模式已寫入組態並重載：{mode}',
     'act.modeNoRouting': '主組態未包含 routing 區段',
     'act.modeInterleaved': '路由區段有一般規則排在 must 規則前面。請先把 must 規則移到路由區段最前面，再切換出站模式。',
@@ -88,7 +87,6 @@ export const messages = defineMessages({
     'mode.rule': '规则',
     'mode.direct': '直连',
     'mode.global': '全局',
-    'act.apply': '应用',
     'act.modeApplied': '出站模式已写入配置并重载：{mode}',
     'act.modeNoRouting': '主配置未包含 routing 区段',
     'act.modeInterleaved': '路由区段有普通规则排在 must 规则前面。请先把 must 规则移到路由区段最前面，再切换出站模式。',
@@ -148,7 +146,6 @@ export const messages = defineMessages({
     'mode.rule': 'Rule',
     'mode.direct': 'Direct',
     'mode.global': 'Global',
-    'act.apply': 'Apply',
     'act.modeApplied': 'Outbound mode written to the configuration and reloaded: {mode}',
     'act.modeNoRouting': 'The main configuration has no routing section',
     'act.modeInterleaved':

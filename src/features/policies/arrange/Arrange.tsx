@@ -412,7 +412,7 @@ function Review({m}: {m: Model}) {
             {t('ui.cancel')}
           </Button>
           <Button accent isPending={m.applying} isDisabled={!m.canApply} onPress={() => void m.apply()}>
-            {t('arrange.apply')}
+            {t('config.save')}
           </Button>
         </>
       )}
