@@ -1,15 +1,8 @@
 import type {Locator, Page} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {box, expect, test, turn} from './fixtures';
 
 // The mirrored layout: Settings turns the page right to left while the language, here English, stays left to right.
 
-const box = async (locator: Locator) => (await locator.boundingBox())!;
-// The sine of an element's turn: the down chevron turned to the left has 1.
-const turn = (locator: Locator) =>
-  locator.evaluate(el => {
-    const m = new DOMMatrix(getComputedStyle(el).transform);
-    return Math.round(m.b);
-  });
 const mirrorSwitch = (page: Page) => page.getByRole('switch', {name: 'Mirrored layout'});
 // The input is hidden under its track, so a click goes to the switch as drawn.
 const flip = (page: Page) => page.locator('.rp-switch').filter({hasText: 'Mirrored layout'}).click();

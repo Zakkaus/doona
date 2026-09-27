@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {detail, expect, test} from './fixtures';
+import {box, detail, expect, test, turn} from './fixtures';
 
 // No right-to-left language ships yet, so these specs make the engine report every locale as right to left. The app's
 // direction and React Aria's both read Intl.Locale's text info, so the first-paint stamp, the shell and React Aria's
@@ -9,15 +9,6 @@ test.beforeEach(async ({page}) => {
     Object.defineProperty(Intl.Locale.prototype, 'getTextInfo', {configurable: true, value: () => ({direction: 'rtl'})});
   });
 });
-
-const box = async (locator: Locator) => (await locator.boundingBox())!;
-
-// The sine of an element's turn. The down chevron turned to the right has -1, turned to the left 1.
-const turn = (locator: Locator) =>
-  locator.evaluate(el => {
-    const m = new DOMMatrix(getComputedStyle(el).transform);
-    return Math.round(m.b);
-  });
 
 // Whether a value's first character is drawn left of its last, as in left-to-right text.
 const readsLeftToRight = (locator: Locator) =>

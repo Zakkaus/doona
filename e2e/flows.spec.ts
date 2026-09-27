@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, test} from './fixtures';
+import {expect, faults, mockBackend, setAppearance, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -215,13 +215,7 @@ test.describe('narrow screens', () => {
     await page.goto('/#/rules?tab=map');
     for (const lang of ['zh-TW', 'en']) {
       for (const scheme of ['light', 'dark']) {
-        await page.evaluate(
-          ({lang, scheme}) => {
-            localStorage.setItem('doona-lang', lang);
-            localStorage.setItem('doona-scheme', scheme);
-          },
-          {lang, scheme}
-        );
+        await setAppearance(page, lang, scheme);
         await page.reload();
         const map = page.locator('.rp-topology');
         await expect(map.locator('.rp-tree-hint')).toBeVisible();

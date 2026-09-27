@@ -6,6 +6,7 @@ import {createMockApi} from '../api/mock';
 import {version} from '../api/mock/fixtures';
 import type {Version} from '../api/model';
 import {refetchAll, watchResource as subscribeResource} from './resourceCore';
+import {deferred} from './testHelpers';
 
 function watchResource(
   {api, key, every}: {api: Api; key: ResourceKey; every: number},
@@ -15,16 +16,6 @@ function watchResource(
   const resource = subscribeResource(api, {key, every, fetch}, () => publish(resource.getSnapshot()));
   if (resource.getSnapshot().loading) publish(resource.getSnapshot());
   return resource;
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: Error) => void;
-  const promise = new Promise<T>((yes, no) => {
-    resolve = yes;
-    reject = no;
-  });
-  return {promise, resolve, reject};
 }
 
 const visibility = Object.assign(new EventTarget(), {hidden: false});

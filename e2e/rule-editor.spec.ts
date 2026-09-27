@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, setAppearance, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 const rows = (page: import('@playwright/test').Page) =>
@@ -9,13 +9,7 @@ test('the add-rule switch explains the must keyword in each locale', async ({pag
   await page.goto('/#/rules?tab=list');
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
-      await page.evaluate(
-        ({lang, scheme}) => {
-          localStorage.setItem('doona-lang', lang);
-          localStorage.setItem('doona-scheme', scheme);
-        },
-        {lang, scheme}
-      );
+      await setAppearance(page, lang, scheme);
       await page.reload();
       await page
         .getByRole('button', {name: lang === 'en' ? 'Add rule' : '新增規則', exact: true})
