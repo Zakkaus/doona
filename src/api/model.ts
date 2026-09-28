@@ -86,9 +86,8 @@ export type GeoDataDownload = Schema['GeoDataDownload'];
 export type RuleList = Schema['RuleList'];
 export type DnsRuleList = Schema['DnsRuleList'];
 export type DnsRoutingRule = Schema['DnsRoutingRule'];
-// honk supplies source_id beside the redacted label, but the pinned contract does not yet declare it.
-export type RuleSource = NonNullable<Schema['RuleSource']> & {source_id?: string};
-export type RoutingRule = Omit<Schema['RoutingRule'], 'source'> & {source: RuleSource | null};
+export type RuleSource = NonNullable<Schema['RuleSource']>;
+export type RoutingRule = Schema['RoutingRule'];
 export type RoutingEvaluation = Schema['RoutingEvaluation'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];

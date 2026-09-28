@@ -68,7 +68,7 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
       key: ['dnsLog', {name, type, src, limit}],
       // The page keeps the limit it was served at, so what reads it compares against what was actually asked for.
       fetch: async signal => {
-        const result = await smallerOnRefusal(query => api.dnsLog(query, signal), {name, type: type as never, src, limit}, signal);
+        const result = await smallerOnRefusal(query => api.dnsLog(query, signal), {name, type, src, limit}, signal);
         return {...result.page, limit: result.limit};
       }
     },
