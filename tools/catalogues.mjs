@@ -6,11 +6,43 @@ const text = value => typeof value === 'string' && value.trim() !== '';
 const valid = message =>
   text(message) ||
   (typeof message === 'object' && message !== null && Object.keys(message).sort().join() === 'one,other' && text(message.one) && text(message.other));
-// The placeholders a message fills, from every string in it (a plural's forms included).
-const placeholders = message =>
-  [...new Set((typeof message === 'string' ? [message] : Object.values(message)).flatMap(text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1])))]
-    .sort()
-    .join(',');
+// The placeholders one string fills.
+const placeholders = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
+// A message's forms by name; a plain string is the general form, `other`.
+const forms = message => (typeof message === 'string' ? {other: message} : message);
+// Each form of a message against the reference's form of the same name, else its general form, so a plural form that
+// drops a placeholder is caught even when another form keeps it.
+function placeholderFailures(file, key, message, expected, reference) {
+  const wanted = forms(expected);
+  return Object.entries(forms(message)).flatMap(([form, text]) => {
+    const have = placeholders(text),
+      want = placeholders(wanted[form] ?? wanted.other);
+    const name = typeof message === 'string' ? key : `${key} (${form})`;
+    return have === want ? [] : [`${file}: ${name} placeholders {${have}} differ from ${reference}'s {${want}}`];
+  });
+}
+// The keys an object in JSON text repeats, which JSON.parse would silently resolve to the last value.
+function duplicateKeys(source) {
+  const objects = [];
+  const repeated = [];
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    if (c === '{') objects.push(new Set());
+    else if (c === '}') objects.pop();
+    else if (c === '"') {
+      let end = i + 1;
+      while (source[end] !== '"') end += source[end] === '\\' ? 2 : 1;
+      const key = JSON.parse(source.slice(i, end + 1));
+      i = end;
+      // A string followed by a colon is a key of the innermost object.
+      if (/^\s*:/.test(source.slice(end + 1, end + 16))) {
+        if (objects.at(-1).has(key)) repeated.push(key);
+        objects.at(-1).add(key);
+      }
+    }
+  }
+  return repeated;
+}
 
 /**
  * @param {Record<string, Record<string, unknown>>} catalogues each language's parsed catalogue, by id
@@ -30,8 +62,7 @@ export function checkCatalogues(catalogues, reference, complete) {
       const message = catalogue[key];
       if (!valid(message)) failures.push(`${file}: ${key} must be a non-empty string or {"one", "other"} non-empty strings`);
       else if (!Object.hasOwn(expected, key)) failures.push(`${file}: ${key} is not in ${reference}.json`);
-      else if (valid(expected[key]) && placeholders(message) !== placeholders(expected[key]))
-        failures.push(`${file}: ${key} placeholders {${placeholders(message)}} differ from ${reference}'s {${placeholders(expected[key])}}`);
+      else if (valid(expected[key])) failures.push(...placeholderFailures(file, key, message, expected[key], reference));
     }
     missing[lang] = Object.keys(expected).filter(key => !Object.hasOwn(catalogue, key));
     if (complete.has(lang)) for (const key of missing[lang]) failures.push(`${file}: ${key} is missing`);
@@ -54,8 +85,10 @@ export function readCatalogues(languages, read, pending) {
   for (const {id, complete} of languages) {
     const file = `src/i18n/locales/${id}.json`;
     const source = read(file);
-    if (source !== undefined) catalogues[id] = JSON.parse(source);
-    else if (complete) failures.push(`${file} does not exist, and ${id} is marked complete in src/i18n/languages.ts`);
+    if (source !== undefined) {
+      catalogues[id] = JSON.parse(source);
+      for (const key of duplicateKeys(source)) failures.push(`${file}: ${key} is written more than once`);
+    } else if (complete) failures.push(`${file} does not exist, and ${id} is marked complete in src/i18n/languages.ts`);
     else {
       catalogues[id] = {};
       if (id !== pending) failures.push(`${file} does not exist; create it, starting from {}`);
