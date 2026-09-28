@@ -4,6 +4,7 @@ import {Button, ModalDialog} from '../ui/ui';
 import type {ShortcutView} from './view';
 import {isRoutePath, type PageProps} from './routes';
 import {preloadSearch} from './search/load';
+import {onOpenShortcuts} from './shortcuts';
 
 export function Shortcuts({
   go,
@@ -22,6 +23,7 @@ export function Shortcuts({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  useEffect(() => onOpenShortcuts(() => setOpen(true)), []);
   useEffect(() => {
     let prefixAt: number | null = null;
     const reset = () => {
