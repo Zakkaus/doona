@@ -136,7 +136,8 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   });
   let authorization: string | undefined;
   await page.route('**/api/v1/**', route => {
-    authorization = route.request().headers()['authorization'];
+    // The sign-in page probes without a token, so only a request that carries one is kept.
+    authorization = route.request().headers()['authorization'] ?? authorization;
     return route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'r'}});
   });
   await page.route(/\/api$/, route =>

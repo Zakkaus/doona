@@ -1,6 +1,7 @@
 import {test as browserTest} from '@playwright/test';
 import {expect, expectLoadFailures, loadCatalogues, mockBackend, test} from './fixtures';
 import {translate} from '../src/i18n';
+import {capabilities} from '../src/api/mock/fixtures';
 
 // The specs read the catalogues the page loads on demand.
 test.beforeAll(loadCatalogues);
@@ -177,9 +178,12 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
 browserTest('a backend that answers 401 gets a token form instead of the page', async ({page}) => {
   let authorization: string | null = null;
   await page.route('**/api/v1/**', async route => {
-    authorization = route.request().headers()['authorization'] ?? null;
-    if (!authorization)
+    // The sign-in page probes without a token, so only a request that carries one is kept.
+    const header = route.request().headers()['authorization'];
+    if (!header)
       return route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'r1'}});
+    authorization = header;
+    if (route.request().url().endsWith('/api/v1/capabilities')) return route.fulfill({json: capabilities});
     return route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'nope', details: null}, request_id: 'r2'}});
   });
   await page.addInitScript(() => {
