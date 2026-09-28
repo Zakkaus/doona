@@ -26,16 +26,19 @@ export function ruleTargets(c: Pick<Connection, 'domain' | 'dst'>): RuleTarget[]
 // can write: before the first rule, or the first one in a writable source when earlier ones are not. Only a rule doona
 // can locate in a writable source is offered; the first choice is the default.
 export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: string | null, t: Translator) {
-  const anchored = (rule: RoutingRule) => {
-    const source = sources.find(source => source.id === rule.source?.source_id);
-    return !!source?.writable && ruleAnchor(source, rule) !== null;
-  };
+  const anchored = (rule: RoutingRule) => ruleWritable(rule, sources);
   const hit = rules.find(rule => rule.rule_id === matched && anchored(rule));
   const top = rules.find(anchored);
   const topLabel = (rule: RoutingRule) => (rule === rules[0] ? t('conn.ruleTop') : t('rule.positionBefore', {n: rule.index + 1}));
   return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: topLabel(top)}] : [])].map(
     ({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression})
   );
+}
+
+// Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.
+export function ruleWritable(rule: RoutingRule | undefined, sources: ConfigSource[]): boolean {
+  const source = rule && sources.find(source => source.id === rule.source?.source_id);
+  return !!source?.writable && ruleAnchor(source, rule!) !== null;
 }
 
 // The position a dialog pinned while its rule still exists: the same id in the same generation, or the same id and

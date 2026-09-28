@@ -37,8 +37,9 @@ export type DictionaryCopy = {
 export type DictionaryModel = RuleEditorModel & {
   table: DictionaryView;
   copy: DictionaryCopy;
-  selected: string | null;
-  select: (row: string | null) => void;
+  // Only the routing list selects a row; a list without `select` has no selection.
+  selected?: string | null;
+  select?: (row: string | null) => void;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
   // An apply has already taken its copy of the held rules, so a discard now would still be written.
@@ -62,8 +63,10 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
   const rules = useRules(dictionary);
   const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
   const groups = useGroups(dictionary && offered(resources, 'groups', {whileLoading: false}));
-  const canWrite = dictionary && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
-  const config = useConfig(canWrite);
+  // The sources are read wherever the configuration is, for the links to each rule's line; only writing needs `writable`.
+  const readable = dictionary && offered(resources, 'config', {whileLoading: false});
+  const canWrite = readable && resources?.config.writable === true;
+  const config = useConfig(readable);
   const retry = () => {
     config.refetch();
     rules.refetch();

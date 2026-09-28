@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
-import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets} from './rule';
+import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers a domain exactly or as a suffix, and otherwise the destination IP of either family', () => {
@@ -97,4 +97,20 @@ it('says the add-rule dialog is loading only while what it needs is being read',
   expect(ruleDialogReason({...idle, failed: true}, t)).toBeNull();
   expect(ruleDialogReason({...idle, unplaceable: true}, t)).toBeNull();
   expect(ruleDialogReason({...idle, busy: true}, t)).toBeNull();
+});
+
+it('offers editing a matched rule only when doona can locate it in a writable source', async () => {
+  const api = createMockApi();
+  const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
+  const rule = rules.find(rule => rule.rule_id === 'r5')!;
+  expect(ruleWritable(rule, sources)).toBe(true);
+  expect(ruleWritable(undefined, sources)).toBe(false);
+  // An implicit fallback has no source to write.
+  expect(ruleWritable({...rule, source: null}, sources)).toBe(false);
+  expect(
+    ruleWritable(
+      rule,
+      sources.map(source => ({...source, writable: false}))
+    )
+  ).toBe(false);
 });

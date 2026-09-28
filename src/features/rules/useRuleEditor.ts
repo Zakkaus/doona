@@ -92,7 +92,11 @@ export function useRuleEditor<R extends EditedRule>({
   const [form, setForm] = useState<RuleForm>({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState<RulePick>({on: true, kind: kinds[0], value: ''});
   const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
-  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()), () => setDialog(null));
+  const drafted =
+    dialog?.kind === 'add'
+      ? !!(pick.value.trim() || form.condition.trim())
+      : dialog?.kind === 'edit' && (form.outbound !== dialog.outbound || form.must !== dialog.must);
+  const guard = useDraftGuard(drafted, () => setDialog(null));
   const rules: R[] = list?.rules ?? [];
   const sources = config?.sources ?? [];
   const stale = () => {

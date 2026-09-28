@@ -20,8 +20,10 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
   const resources = useCapabilities().data?.resources;
   const available = offered(resources, 'dns_rules', {whileLoading: false});
   const rules = useDnsRules(available);
-  const canWrite = available && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
-  const config = useConfig(canWrite);
+  // The sources are read wherever the configuration is, for the links to each rule's line; only writing needs `writable`.
+  const readable = available && offered(resources, 'config', {whileLoading: false});
+  const canWrite = readable && resources?.config.writable === true;
+  const config = useConfig(readable);
   const retry = () => {
     config.refetch();
     rules.refetch();
@@ -62,8 +64,6 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
       must: false,
       hits: false
     },
-    selected: null,
-    select: () => {},
     held: null,
     discard: () => {},
     applying: false,
