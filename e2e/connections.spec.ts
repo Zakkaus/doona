@@ -393,7 +393,7 @@ test('closing a connection removes it from the list and clears the selection', a
   await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Closed api.telegram.org');
-  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
+  await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.locator('.rp-table [data-key="c-0001"]')).toHaveCount(0);
   // A kernel-observed connection is refused by the backend, and the row stays.
   await page.goto('/#/connections?id=c-0002');
@@ -642,7 +642,7 @@ test('clearing the filter that opened the table keeps the table open', async ({p
   await page.goto('/#/connections?q=no-such-connection');
   await expect(page.getByRole('grid').first()).toBeVisible();
   await page.getByRole('button', {name: 'Clear filters', exact: true}).first().click();
-  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
+  await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.getByRole('grid').first()).toBeVisible();
 });
 
@@ -687,4 +687,22 @@ test.describe('with motion', () => {
     const running = await page.evaluate(() => document.getAnimations().filter(a => (a.effect as KeyframeEffect).target?.closest?.('.rp-underlay')).length);
     expect(running).toBe(0);
   });
+});
+
+test('the connection list is the first tab and opens by default, and tab links keep their tab', async ({page}) => {
+  await page.goto('/#/connections');
+  const tabs = page.getByRole('tablist', {name: 'Connections', exact: true}).getByRole('tab');
+  await expect(tabs).toHaveText(['Connections', 'Traffic']);
+  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', {name: 'Traffic', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections\?tab=traffic$/);
+  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  for (const [link, tab] of [
+    ['tab=traffic', 'Traffic'],
+    ['tab=list', 'Connections']
+  ] as const) {
+    await page.goto(`/#/connections?${link}`);
+    await expect(page.getByRole('tab', {name: tab, exact: true})).toHaveAttribute('aria-selected', 'true');
+  }
 });

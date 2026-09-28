@@ -30,14 +30,8 @@ import {offered} from '../../api/capabilities';
 import {pathLatency} from './latency';
 import {useConnectionRule} from './useConnectionRule';
 
-const connectionTabs = ['traffic', 'list'] as const;
-// The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
-const connectionsFallback = (query: string) =>
-  ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(query).has(key)) ? 'list' : 'traffic';
-// While the link decides the tab, a change within the page writes it, so clearing the filter or selection that opened
-// the table keeps the table.
-const stay = (query: string, patch: Record<string, string | null>) =>
-  within(query, connectionsFallback(query) === 'list' ? {tab: pickTab(query, connectionTabs, 'list'), ...patch} : patch);
+// The connection list is the first tab and the default, so a link with no tab, or with a filter or selection, opens it.
+const connectionTabs = ['list', 'traffic'] as const;
 
 export function useConnectionsPage({go, query}: PageProps) {
   const t = useT();
@@ -70,7 +64,7 @@ export function useConnectionsPage({go, query}: PageProps) {
   const network = q.get('network') ?? 'all';
   const out = q.get('out') ?? 'all';
   const rule = q.get('rule') ?? 'all';
-  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', stay(query, {[key]: value === 'all' ? null : value}));
+  const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', within(query, {[key]: value === 'all' ? null : value}));
   const sel = q.get('id');
   const [confirmed, setConfirmed] = useState<CloseSelection | null>(null);
   useLinked(q.get('q'), value => setText(value ?? ''));
@@ -80,7 +74,7 @@ export function useConnectionsPage({go, query}: PageProps) {
   useEffect(() => {
     latest.current = query;
   });
-  const select = (id: string | null) => go('connections', stay(latest.current, {id}));
+  const select = (id: string | null) => go('connections', within(latest.current, {id}));
   // Filtering follows typing at React's pace, not a fixed delay, so an export or close right after typing sees it.
   const settledText = useDeferredValue(text);
   const src = ipLiteral(q.get('src') ?? '');
@@ -161,7 +155,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     const picked = readTag(String(key), ['src', 'rule'] as const);
     if (picked?.kind === 'src') {
       setText('');
-      go('connections', stay(query, {src: !picked.value || src === picked.value ? null : picked.value, q: null}));
+      go('connections', within(query, {src: !picked.value || src === picked.value ? null : picked.value, q: null}));
     } else if (picked?.kind === 'rule') setFilter('rule', rule === picked.value ? 'all' : picked.value);
   };
   const menu = filterMenu(lists, {network, out, src, rule}, t);
@@ -173,12 +167,11 @@ export function useConnectionsPage({go, query}: PageProps) {
       sections: submenu.sections.map(section => ({...section, onChange: pickFor[filter]}))
     }))
   };
-  const fallback = connectionsFallback(query);
-  const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
+  const openInList = useCallback((id: string) => go('connections', within(query, {tab: null, id})), [go, query]);
   return {
     ...model,
-    tab: pickTab(query, connectionTabs, fallback),
-    setTab: (next: string) => go('connections', tabQuery(query, next, fallback === 'traffic' ? fallback : null)),
+    tab: pickTab(query, connectionTabs, 'list'),
+    setTab: (next: string) => go('connections', tabQuery(query, next, 'list')),
     openInList,
     view,
     updateView,
@@ -215,7 +208,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     filtered: network !== 'all' || out !== 'all' || rule !== 'all' || !!src || text.trim() !== '',
     clear: () => {
       setText('');
-      go('connections', stay(query, {network: null, out: null, rule: null, q: null, src: null}));
+      go('connections', within(query, {network: null, out: null, rule: null, q: null, src: null}));
     },
     error: resource.error,
     retry: resource.refetch,
@@ -264,7 +257,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     onlyClient: () => {
       if (model.detail?.source) {
         setText('');
-        go('connections', stay(query, {src: model.detail.source, q: null}));
+        go('connections', within(query, {src: model.detail.source, q: null}));
       }
     },
     canExport: shown.length > 0,

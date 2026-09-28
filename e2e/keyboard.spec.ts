@@ -40,13 +40,11 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await page.keyboard.press('g');
   await page.keyboard.press('c');
   await expect(page).toHaveURL(/#\/connections$/);
-  // The shortcut opens the traffic tab; the filter lives in the list.
-  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
   const input = page.getByRole('searchbox', {name: 'Filter'});
   await input.focus();
   await page.keyboard.type('g a?');
   await expect(input).toHaveValue('g a?');
-  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
+  await expect(page).toHaveURL(/#\/connections$/);
   await expect(help).toBeHidden();
 });
 

@@ -152,6 +152,7 @@ export function Connections(props: PageProps) {
         value={vm.tab}
         onChange={vm.setTab}
         items={[
+          {id: 'list', label: t('conn.tab.list'), content: list},
           {
             id: 'traffic',
             label: t('conn.tab.traffic'),
@@ -166,8 +167,7 @@ export function Connections(props: PageProps) {
                 onSelect={vm.openInList}
               />
             )
-          },
-          {id: 'list', label: t('conn.tab.list'), content: list}
+          }
         ]}
       />
     </div>
