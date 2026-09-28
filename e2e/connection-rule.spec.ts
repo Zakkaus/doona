@@ -69,7 +69,7 @@ test('show matched rule opens the rule list on that rule', async ({page}) => {
   await page.goto('/#/connections?id=1');
   await detail(page).getByRole('button', {name: 'Show matched rule', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
-  const selected = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=row][aria-selected=true]');
+  const selected = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][aria-selected=true]');
   await expect(selected).toHaveCount(1);
   await expect(selected).toContainText('domain(geosite: telegram)');
 });
@@ -341,7 +341,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   read.open();
   // The rule list is read again after the close; a write would come before that settles.
   await page.goto('/#/rules?tab=list');
-  await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('domain(geosite: telegram)');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite: telegram)');
   await page.waitForTimeout(500);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
 });

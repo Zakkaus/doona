@@ -1,27 +1,16 @@
-import {useEffect, useEffectEvent, useMemo, useRef, useState} from 'react';
-import {pendingRules, useCapabilities, useConfig, useConfigEditor, useFlows, useGroups, usePendingRules, useRules, useRuntimeSettings} from '../../store';
+import {useMemo, useState} from 'react';
+import {pendingRules, useCapabilities, useConfig, useFlows, useGroups, usePendingRules, useRules, useRuntimeSettings} from '../../store';
 import {pendingView} from '../shared/pending';
 import {useLang, useT} from '../../i18n';
-import type {ConfigSource, RoutingRule} from '../../api/model';
-import {toast, toastFailure} from '../../ui/ui';
-import {ruleCondition, type ConditionKind} from '../../dae/groups';
+import type {RoutingRule} from '../../api/model';
+import {conditionKinds} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
-import {addRule, removeRule, ruleAnchor} from '../../dae/ruleText';
-import {parseRuleSeed, type RuleSeed} from '../shared/link';
-import {
-  addRuleReason,
-  addRuleTip,
-  dictionaryView,
-  distributionView,
-  removalView,
-  ruleDraftView,
-  type DictionaryView,
-  type DistributionView,
-  type RuleDraftView
-} from './view';
-import {useDraftGuard} from '../../shell/draft';
+import {ruleAnchor} from '../../dae/ruleText';
+import {parseRuleSeed} from '../shared/link';
+import {dictionaryView, distributionView, type DictionaryView, type DistributionView} from './view';
 import {offered} from '../../api/capabilities';
+import {useRuleEditor, type RuleEditorModel} from './useRuleEditor';
 
 const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: []};
 const noDistribution: DistributionView = {
@@ -33,53 +22,39 @@ const noDistribution: DistributionView = {
   empty: '',
   sourceHelp: {title: '', text: ''}
 };
-type Dialog = ({kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) & {
-  generation: string;
-  sources: ConfigSource[];
-  rules: RoutingRule[];
+// The words and columns that differ between the routing list and the DNS lists.
+export type DictionaryCopy = {
+  label: string;
+  empty: string;
+  target: string;
+  placeholder: string;
+  addHelp: string;
+  // Routing rules can lock their outbound with `(must)` and count their hits in flow records; DNS rules do neither.
+  must: boolean;
+  hits: boolean;
 };
-type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
-type RulePick = {on: boolean; kind: ConditionKind; value: string};
-export type RuleListModel = {
-  kind: 'dictionary' | 'distribution';
+// What the rule dictionary renders: one list with its add and remove dialogs.
+export type DictionaryModel = RuleEditorModel & {
   table: DictionaryView;
-  distribution: DistributionView;
-  source: string;
-  setSource: (source: string) => void;
+  copy: DictionaryCopy;
   selected: string | null;
   select: (row: string | null) => void;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
   // An apply has already taken its copy of the held rules, so a discard now would still be written.
   applying: boolean;
-  canWrite: boolean;
-  busy: boolean;
-  addDisabled: boolean;
-  addTip: string | undefined;
-  // Why Add rule is disabled, shown under it; another change being applied is left to the tip.
-  addReason: string | null;
-  editHelp: string | null;
   loading: boolean;
   error: Error | null;
   retry: () => void;
-  dialog: {kind: 'add'} | {kind: 'remove'; expression: string; help: string} | null;
-  dialogTitle: string;
-  submitLabel: string;
-  close: () => void;
-  openAdd: () => void;
-  openRemove: (id: string) => void;
   openSource: (query: string) => void;
-  submit: (dismiss: () => void) => Promise<void>;
-  form: RuleForm;
-  setForm: (form: RuleForm) => void;
-  pick: RulePick;
-  setPick: (pick: RulePick) => void;
-  draft: RuleDraftView;
-  submitDisabled: boolean;
-  submitReason: string | null;
-  changeMode: (mode: string) => void;
 };
-export function useRuleList({go, query}: PageProps) {
+export type RuleListModel = DictionaryModel & {
+  kind: 'dictionary' | 'distribution';
+  distribution: DistributionView;
+  source: string;
+  setSource: (source: string) => void;
+};
+export function useRuleList({go, query}: PageProps): RuleListModel {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
@@ -93,19 +68,6 @@ export function useRuleList({go, query}: PageProps) {
     config.refetch();
     rules.refetch();
   };
-  const editor = useConfigEditor(retry);
-  const report = useEffectEvent((error: Error) => toastFailure(error, t, t('ui.writeFailed')));
-  useEffect(() => {
-    if (editor.error) report(editor.error);
-  }, [editor.error]);
-  const [dialog, setDialog] = useState<Dialog | null>(null);
-  const pending = useRef(false);
-  const [form, setForm] = useState({condition: '', outbound: '', must: false, before: 'end'});
-  const [pick, setPick] = useState<{on: boolean; kind: ConditionKind; value: string}>({on: true, kind: 'domainSuffix', value: ''});
-  const condition = pick.on ? ruleCondition(pick.kind, pick.value) : form.condition.trim();
-  const guard = useDraftGuard(dialog?.kind === 'add' && !!(pick.value.trim() || form.condition.trim()), () => setDialog(null));
-  const list: RoutingRule[] = rules.data?.rules ?? [];
-  const sources = config.data?.sources ?? [];
   const params = new URLSearchParams(query);
   const landed = params.get('rule');
   const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
@@ -124,25 +86,20 @@ export function useRuleList({go, query}: PageProps) {
     () => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang, recorder)),
     [dictionary, flows.data, source, t, lang, recorder]
   );
-  const stale = () => {
-    toast('negative', t('rule.stale'));
-    retry();
-  };
-  const initialize = (next: {kind: 'add'} | {kind: 'remove'; rule: RoutingRule}, preset?: RuleSeed) => {
-    if (editor.busy || !rules.data) return;
-    setForm({condition: '', outbound: groups.data?.[0]?.name ?? 'direct', must: false, before: table.positions[0]?.id ?? 'end'});
-    setPick({on: true, kind: 'domainSuffix', value: '', ...preset});
-    setDialog({...next, generation: rules.data.generation_id, sources, rules: list});
-  };
-  const open = (next: {kind: 'add'} | {kind: 'remove'; rule: RoutingRule}) => {
-    if (pending.current) return;
-    if (rules.data?.generation_id !== config.data?.generation_id) {
-      stale();
-      return;
-    }
-    initialize(next);
-  };
   const seed = params.get('add');
+  const editor = useRuleEditor<RoutingRule>({
+    canWrite,
+    list: rules.data,
+    config: config.data,
+    retry,
+    positions: table.positions,
+    target: () => groups.data?.[0]?.name ?? 'direct',
+    anchor: ruleAnchor,
+    kinds: conditionKinds,
+    onClose: () => {
+      if (seed) go('rules', within(query, {add: null}));
+    }
+  });
   const parsedSeed = useMemo(() => parseRuleSeed(seed), [seed]);
   // Resource refreshes must not consume or reset a navigation's seed.
   const [consumption, setConsumption] = useState<{seed: string | null; consumed: boolean}>({seed, consumed: false});
@@ -158,68 +115,22 @@ export function useRuleList({go, query}: PageProps) {
     table.positions.length
   ) {
     setConsumption({seed, consumed: true});
-    initialize({kind: 'add'}, parsedSeed);
+    editor.initialize({kind: 'add'}, parsedSeed);
   }
-  // Cancel while a write is pending abandons it; the write may still land, so the rules and sources are read again.
-  const close = () => {
-    if (pending.current) {
-      editor.cancel();
-      pending.current = false;
-      retry();
-    }
-    guard.clear();
-    setDialog(null);
-    if (seed) go('rules', within(query, {add: null}));
-  };
-  const write = async (source: ConfigSource, transform: (text: string) => string | null) => {
-    const result = await editor.apply(source, text => {
-      const next = transform(text);
-      if (next === null) stale();
-      return next;
-    });
-    if (!result) return false;
-    if (result.diagnostics) {
-      toast('negative', t('ui.writeInvalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
-      return false;
-    }
-    return true;
-  };
-  const submit = async (dismiss: () => void) => {
-    if (pending.current) return;
-    // Both writes address a line the dialog saw in one generation; a reload since then means starting over.
-    if (!dialog || !rules.data || !config.data || rules.data.generation_id !== dialog.generation || config.data.generation_id !== dialog.generation) {
-      stale();
-      return;
-    }
-    const rule =
-      dialog.kind === 'remove' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
-    const source = dialog.sources.find(source => source.id === rule?.source?.source_id);
-    const anchor = source && rule ? ruleAnchor(source, rule) : null;
-    if (condition === null) return;
-    if (!source || !anchor) {
-      stale();
-      return;
-    }
-    pending.current = true;
-    try {
-      const written = await write(source, text =>
-        dialog.kind === 'remove' ? removeRule(text, anchor) : addRule(text, anchor, condition, form.outbound, form.must)
-      );
-      if (written) {
-        toast('positive', t(dialog.kind === 'remove' ? 'rule.removed' : 'rule.added'));
-        pending.current = false;
-        dismiss();
-      }
-    } finally {
-      pending.current = false;
-    }
-  };
-  const draft = ruleDraftView(pick.kind, pick.value, pick.on, condition, form.condition, t);
   const held = usePendingRules();
-  const dialogView = dialog?.kind === 'remove' ? {kind: 'remove' as const, ...removalView(dialog.rule, sources, t)} : dialog;
   return {
+    ...editor.model,
     kind: dictionary ? ('dictionary' as const) : ('distribution' as const),
     table,
+    copy: {
+      label: t('rule.listTitle'),
+      empty: t('rule.dictionaryEmpty'),
+      target: t('ui.outbound'),
+      placeholder: 'domain(geosite:netflix)',
+      addHelp: t('rule.addHelp'),
+      must: true,
+      hits: true
+    },
     distribution,
     source,
     setSource,
@@ -230,43 +141,9 @@ export function useRuleList({go, query}: PageProps) {
       if (!held.applying) pendingRules.remove([id]);
     },
     applying: held.applying,
-    canWrite,
-    busy: !!editor.busy,
-    addDisabled: !table.positions.length || !!editor.busy,
-    addTip: addRuleTip(!!rules.data && !!config.data && !table.positions.length, !!editor.busy, t),
-    addReason: addRuleTip(!!rules.data && !!config.data && !table.positions.length, false, t) ?? null,
-    editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
     retry: dictionary ? retry : flows.refetch,
-    dialog: dialogView,
-    dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : 'rule.add'),
-    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : 'rule.add'),
-    close,
-    openAdd: () => {
-      if (rules.data) open({kind: 'add'});
-    },
-    openRemove: (id: string) => {
-      const rule = list.find(rule => rule.rule_id === id);
-      if (rule && rules.data) open({kind: 'remove', rule});
-    },
-    openSource: (query: string) => go('config', query),
-    submit,
-    form,
-    setForm: (next: RuleForm) => {
-      if (!pending.current) setForm(next);
-    },
-    pick,
-    setPick: (next: RulePick) => {
-      if (!pending.current) setPick(next);
-    },
-    draft,
-    submitDisabled: dialog?.kind !== 'remove' && (!draft.valid || !form.outbound),
-    submitReason: dialog?.kind === 'add' && !editor.busy ? addRuleReason(draft, form.outbound, t) : null,
-    changeMode: (mode: string) => {
-      if (pending.current) return;
-      if (mode === 'text' && pick.on && pick.value.trim() && condition) setForm({...form, condition});
-      setPick({...pick, on: mode === 'pick'});
-    }
+    openSource: (query: string) => go('config', query)
   };
 }

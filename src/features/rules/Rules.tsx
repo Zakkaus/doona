@@ -19,6 +19,7 @@ import {
   type TableColumn
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
+import {DnsRules} from './DnsRules';
 import {FlowRecords, RoutingMap} from './flows/Flows';
 import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
@@ -28,7 +29,13 @@ export function Rules(props: PageProps) {
   const t = useT();
   const view = useRulesPage(props);
   const traceForm = useTraceForm();
-  const content = {map: <RoutingMap {...props} />, list: <RuleList {...props} />, flows: <FlowRecords {...props} />, trace: <Trace form={traceForm} />};
+  const content = {
+    list: <RuleList {...props} />,
+    dns: <DnsRules {...props} />,
+    map: <RoutingMap {...props} />,
+    flows: <FlowRecords {...props} />,
+    trace: <Trace form={traceForm} />
+  };
   if (view.loading) return <Loading />;
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (

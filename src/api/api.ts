@@ -47,6 +47,7 @@ import type {
   NodeCreate,
   GeoData,
   RuleList,
+  DnsRuleList,
   LogOptions,
   EffectiveConfig,
   ConfigValidationRequest,
@@ -91,6 +92,8 @@ export interface Api {
   geodata(signal?: AbortSignal): Promise<GeoData>;
   /** The running generation's rule dictionary; ids match routing trace and flow evidence. */
   rules(signal?: AbortSignal): Promise<RuleList>;
+  /** The running generation's DNS request and response rules, each list ending with its fallback. */
+  dnsRules(signal?: AbortSignal): Promise<DnsRuleList>;
   updateGeodata(signal?: AbortSignal): Promise<OperationAccepted>;
   config(signal?: AbortSignal): Promise<EffectiveConfig>;
   validateConfig(request: ConfigValidationRequest, signal?: AbortSignal): Promise<ConfigValidationResult>;

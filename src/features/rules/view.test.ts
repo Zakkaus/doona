@@ -8,6 +8,7 @@ import {
   traceReason,
   dictionaryView,
   distributionView,
+  dnsDictionaryView,
   dnsView,
   evaluationView,
   removalView,
@@ -23,10 +24,10 @@ it('offers edits only at writable sources and preserves source locations when pa
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);
   const first = rules.rules[0];
-  expect(first.source).toMatchObject({source_id: 'src-main', line: 40, column: 3});
+  expect(first.source).toMatchObject({source_id: 'src-main', line: 51, column: 3});
   const view = dictionaryView(rules.rules, rules.generation_id, flows, config.sources, groups, t, 'en');
-  expect(view.rows[0].position).toBe('config.dae:40');
-  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=40');
+  expect(view.rows[0].position).toBe('config.dae:51');
+  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=51');
   expect(view.positions[0].id).toBe('end');
   expect(view.rows.at(-1)?.number).toBe('—');
   expect(view.rows.at(-1)?.removable).toBe(false);
@@ -109,6 +110,7 @@ it('rejects unavailable tab requests and keeps trace-only navigation usable', as
   const {resources} = await createMockApi().capabilities();
   resources.flows.available = false;
   resources.rules.available = false;
+  resources.dns_rules.available = false;
   resources.routing_trace.available = true;
   const view = rulesView(resources, 'tab=map', t);
   expect(view.tabs.map(tab => tab.id)).toEqual(['trace']);
@@ -181,7 +183,7 @@ it('does not infer a source from its display name when the ID is unknown', async
   const explicit = {...rule, rule_id: 'explicit', source: {...rule.source!, file: 'config.dae', source_id: 'b'}};
   const view = dictionaryView([unknown, explicit], undefined, undefined, sources, [], t, 'en');
   expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
-  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=40', removable: true});
+  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=51', removable: true});
 });
 
 it('tips why a rule cannot be added: no writable place first, then a change still being applied', () => {
@@ -224,4 +226,55 @@ it('says why Run trace is disabled, and nothing while the capabilities load or a
   expect(traceReason({...ok, available: false, invalid: 'rule.invalidTarget'}, t)).toBe('The backend cannot run a trace right now');
   expect(traceReason({...ok, invalid: 'rule.invalidTarget', modeOffered: false}, t)).toBe('Enter a domain or destination IP.');
   expect(traceReason({...ok, modeOffered: false}, t)).toBe('The backend does not offer this resolution mode');
+});
+
+it('puts the rule lists first, routing then DNS, and offers DNS only when the backend lists its rules', async () => {
+  const {resources} = await createMockApi().capabilities();
+  const view = rulesView(resources, '', t);
+  expect(view.tabs.map(tab => tab.id)).toEqual(['list', 'dns', 'map', 'flows', 'trace']);
+  expect(view.tabs.map(tab => tab.label)).toEqual(['Routing rules', 'DNS rules', 'Routing map', 'Flow records', 'Trace simulation']);
+  expect(view).toMatchObject({tab: 'list', fallback: 'list'});
+  expect(rulesView(resources, 'tab=dns', t).tab).toBe('dns');
+  expect(rulesView(resources, 'tab=trace', t).tab).toBe('trace');
+  // A map link from when the map was the default tab carries its pinned path but no tab.
+  expect(rulesView(resources, 'path=a', t).tab).toBe('map');
+  expect(rulesView(resources, 'by=client', t).tab).toBe('map');
+  resources.dns_rules.available = false;
+  expect(rulesView(resources, 'tab=dns', t).tabs.map(tab => tab.id)).toEqual(['list', 'map', 'flows', 'trace']);
+  expect(rulesView(resources, 'tab=dns', t).tab).toBe('list');
+});
+
+it('lists DNS request and response rules with their actions, locations and insertion points', async () => {
+  const api = createMockApi();
+  const [dns, config] = await Promise.all([api.dnsRules(), api.config()]);
+  expect(dns.request.at(-1)).toMatchObject({kind: 'fallback', action: 'upstream', upstream: 'cloudflare'});
+  expect(dns.response.at(-1)).toMatchObject({kind: 'fallback', action: 'accept', upstream: null});
+  const request = dnsDictionaryView('request', dns.request, dns.generation_id, config.sources, t, 'en');
+  expect(request.rows.map(row => row.outbound)).toEqual(['reject', 'asis', 'reject', 'alidns', 'cloudflare']);
+  expect(request.rows.map(row => row.expression)).toEqual([
+    'qname(geosite: category-ads-all)',
+    'qname(suffix: lan, home.arpa)',
+    'qtype(HTTPS) && qname(geosite: cn)',
+    'qname(geosite: cn)',
+    'fallback: cloudflare'
+  ]);
+  expect(request.rows[0]).toMatchObject({number: '1', position: 'config.dae:36', removable: true, hits: '—', must: false});
+  expect(request.rows.at(-1)).toMatchObject({number: '—', removable: false});
+  expect(request.positions.map(position => position.id)).toEqual(['end', ...dns.request.slice(0, -1).map(rule => rule.rule_id)]);
+  // A request rule sends the query to an upstream or answers it itself; a response rule never sends it as is.
+  expect(request.outbounds.map(choice => choice.id)).toEqual(['cloudflare', 'alidns', 'asis', 'reject']);
+  const response = dnsDictionaryView('response', dns.response, dns.generation_id, config.sources, t, 'en');
+  expect(response.rows.map(row => row.outbound)).toEqual(['accept', 'cloudflare', 'accept']);
+  expect(response.outbounds.map(choice => choice.id)).toEqual(['accept', 'reject', 'cloudflare', 'alidns']);
+  expect(response.outbounds.find(choice => choice.id === 'alidns')?.desc).toBe(t('rule.dns.action.requery'));
+  // Without the source text nothing can be located, so nothing is offered for removal or as an insertion point.
+  const withheld = config.sources.map(source => ({...source, content: undefined}));
+  expect(dnsDictionaryView('request', dns.request, dns.generation_id, withheld, t, 'en')).toMatchObject({positions: []});
+});
+
+it('explains an invalid DNS condition and a missing action in DNS terms', () => {
+  const keys = {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'} as const;
+  expect(addRuleReason(ruleDraftView('qnameSuffix', '', false, '', 'qname', t, ['qnameSuffix']), 'alidns', t, keys)).toBe(t('rule.dns.conditionInvalid'));
+  expect(addRuleReason(ruleDraftView('qtype', 'A', true, 'qtype(A)', '', t, ['qtype']), '', t, keys)).toBe(t('rule.dns.actionMissing'));
+  expect(ruleDraftView('qtype', '', true, null, '', t, ['qnameSuffix', 'qtype']).choices.map(choice => choice.id)).toEqual(['qnameSuffix', 'qtype']);
 });

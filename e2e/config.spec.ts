@@ -362,6 +362,7 @@ async function configBackend(page: Page) {
     version: () => api.version(),
     config: () => api.config(),
     rules: () => api.rules(),
+    'dns/rules': () => api.dnsRules(),
     groups: () => api.groups(),
     nodes: () => api.nodes(),
     providers: () => api.providers(),
@@ -614,7 +615,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'group', exact: true})).toContainText(
     '4 groups: proxy: Manual, resilient: Fastest on average, gaming: Fastest on average, skylink: Fastest on average'
   );
-  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 1 request rule, 0 response rules');
+  await expect(modules.getByRole('region', {name: 'dns', exact: true})).toContainText('2 upstreams, 4 request rules, 2 response rules');
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
   await expect(routing).toContainText('5 rules, fallback: resilient');
   await routing.getByRole('button', {name: 'Edit', exact: true}).click();

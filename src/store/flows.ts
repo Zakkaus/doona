@@ -91,3 +91,7 @@ export function useRules(enabled = true) {
   const api = getApi();
   return useResource({key: ['rules'], every: 0, fetch: signal => api.rules(signal)}, {enabled});
 }
+export function useDnsRules(enabled = true) {
+  const api = getApi();
+  return useResource({key: ['dnsRules'], every: 0, fetch: signal => api.dnsRules(signal)}, {enabled});
+}

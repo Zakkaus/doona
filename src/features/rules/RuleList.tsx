@@ -1,5 +1,5 @@
 import {useId, useLayoutEffect, useMemo, useRef} from 'react';
-import {useT} from '../../i18n';
+import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {
   ActionHelp,
@@ -21,16 +21,28 @@ import {
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
-import type {ConditionKind} from '../../dae/groups';
+import type {RuleConditionKind} from '../../dae/groups';
 import {Coverage} from './flows/Coverage';
 import type {PageProps} from '../../shell/routes';
-import {useRuleList, type RuleListModel as Model} from './useRuleList';
+import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './useRuleList';
 
 export function RuleList(props: PageProps) {
   const view = useRuleList(props);
-  return view.kind === 'dictionary' ? <Dictionary view={view} /> : <Distribution view={view} />;
+  return view.kind === 'dictionary' ? <RuleDictionary view={view} /> : <Distribution view={view} />;
 }
-function Dictionary({view}: {view: Model}) {
+type Row = DictionaryModel['table']['rows'][number];
+// Routing rules count their hits in flow records; DNS rules have no such count.
+const hitsColumn = (t: Translator): TableColumn<Row> => ({
+  id: 'hits',
+  label: t('rule.hits'),
+  minWidth: 60,
+  grow: 0,
+  align: 'end',
+  drop: 1,
+  render: row => row.hits
+});
+// One rule list with its add and remove dialogs; the routing list and each DNS list render through it.
+export function RuleDictionary({view}: {view: DictionaryModel}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
   const mustHelpId = useId();
@@ -40,8 +52,9 @@ function Dictionary({view}: {view: Model}) {
     latest.current = view;
   });
   const {canWrite, busy} = view;
+  const {target, hits} = view.copy;
   const columns = useMemo(
-    (): TableColumn<Model['table']['rows'][number]>[] => [
+    (): TableColumn<Row>[] => [
       {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
       {
         id: 'expression',
@@ -57,7 +70,7 @@ function Dictionary({view}: {view: Model}) {
       },
       {
         id: 'outbound',
-        label: t('ui.outbound'),
+        label: target,
         minWidth: 100,
         grow: 0,
         drop: 4,
@@ -69,7 +82,7 @@ function Dictionary({view}: {view: Model}) {
         )
       },
       {id: 'source', label: t('rule.where'), minWidth: 116, grow: 0, drop: 2, render: row => row.position},
-      {id: 'hits', label: t('rule.hits'), minWidth: 60, grow: 0, align: 'end', drop: 1, render: row => row.hits},
+      ...(hits ? [hitsColumn(t)] : []),
       {
         id: 'actions',
         label: t('ui.actions'),
@@ -91,7 +104,7 @@ function Dictionary({view}: {view: Model}) {
         )
       }
     ],
-    [t, canWrite, busy]
+    [t, canWrite, busy, target, hits]
   );
   return (
     <div className="rp-col">
@@ -137,7 +150,7 @@ function Dictionary({view}: {view: Model}) {
       )}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
-        label={t('rule.listTitle')}
+        label={view.copy.label}
         loading={view.loading}
         rows={view.table.rows}
         selected={view.selected}
@@ -145,7 +158,7 @@ function Dictionary({view}: {view: Model}) {
         onSelect={view.select}
         height={560}
         fit
-        empty={t('rule.dictionaryEmpty')}
+        empty={view.copy.empty}
         cols={columns}
       />
       <ConfirmDialog
@@ -167,7 +180,7 @@ function Dictionary({view}: {view: Model}) {
         )}
         {dialog?.kind === 'add' && (
           <div className="rp-list">
-            <span className="rp-label">{t('rule.addHelp')}</span>
+            <span className="rp-label">{view.copy.addHelp}</span>
             <Segmented
               isDisabled={view.busy}
               label={t('rule.conditionMode')}
@@ -185,7 +198,7 @@ function Dictionary({view}: {view: Model}) {
                     isDisabled={view.busy}
                     label={t('rule.kind')}
                     value={pick.kind}
-                    onChange={kind => setPick({...pick, kind: kind as ConditionKind})}
+                    onChange={kind => setPick({...pick, kind: kind as RuleConditionKind})}
                     items={draft.choices}
                   />
                   <TextField
@@ -206,7 +219,7 @@ function Dictionary({view}: {view: Model}) {
                 isDisabled={view.busy}
                 label={t('rule.condition')}
                 value={form.condition}
-                placeholder="domain(geosite:netflix)"
+                placeholder={view.copy.placeholder}
                 isInvalid={draft.rawInvalid}
                 spellCheck={false}
                 onChange={condition => setForm({...form, condition})}
@@ -215,18 +228,22 @@ function Dictionary({view}: {view: Model}) {
             <div className="rp-toolbar end">
               <LabeledSelect
                 isDisabled={view.busy}
-                label={t('ui.outbound')}
+                label={target}
                 value={form.outbound}
                 onChange={outbound => setForm({...form, outbound})}
                 items={view.table.outbounds}
               />
-              <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
-                {t('rule.must')} <code>must</code>
-              </Switch>
+              {view.copy.must && (
+                <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
+                  {t('rule.must')} <code>must</code>
+                </Switch>
+              )}
             </div>
-            <span id={mustHelpId} className="rp-label">
-              {t('rule.mustHelp')}
-            </span>
+            {view.copy.must && (
+              <span id={mustHelpId} className="rp-label">
+                {t('rule.mustHelp')}
+              </span>
+            )}
             <LabeledSelect
               isDisabled={view.busy}
               label={t('rule.position')}

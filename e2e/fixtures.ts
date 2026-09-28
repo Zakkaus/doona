@@ -167,6 +167,7 @@ export async function mockBackend(page: Page, options: {faults?: boolean} = {}) 
     version: () => api.version(),
     config: () => api.config(),
     rules: () => api.rules(),
+    'dns/rules': () => api.dnsRules(),
     groups: () => api.groups(),
     nodes: request => api.nodes(query(request)),
     providers: () => api.providers(),

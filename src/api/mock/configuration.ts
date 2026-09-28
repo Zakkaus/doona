@@ -8,10 +8,12 @@ import {globMatch, newSourcePathProblem, resolveIncludePath} from '../../dae/new
 import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
 import {faultRules} from './rules';
+import {dnsRulesOf} from './dnsRules';
 
 type ConfigurationApi = Pick<
   Api,
   | 'rules'
+  | 'dnsRules'
   | 'config'
   | 'validateConfig'
   | 'replaceConfigSource'
@@ -165,6 +167,12 @@ export function createConfiguration(
       signal?.throwIfAborted();
       if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
       return ruleSnapshot();
+    },
+    dnsRules: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.dns_rules.available) throw new ApiError(404, 'capability_not_supported', 'The DNS rule list is unavailable');
+      await loadSources();
+      return dnsRulesOf(sources!.filter(ruleFile), String(configRevision));
     },
     config: async signal => {
       signal?.throwIfAborted();

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import type {ConfigSource, RoutingRule} from '../api/model';
-import {addRule, removeRule, ruleAnchor, sourceFor} from './ruleText';
+import type {ConfigSource, DnsRoutingRule, RoutingRule} from '../api/model';
+import {addRule, dnsRuleAnchor, dnsUpstreamNames, removeRule, ruleAnchor, sourceFor} from './ruleText';
 
 const rule: RoutingRule = {
   rule_id: 'r1',
@@ -72,4 +72,72 @@ it('refuses a line that no longer holds the listed rule', () => {
   const listed: RoutingRule = {...rule, expression: 'pname(b)', outbound: 'direct', source: {...rule.source!, line: 2}};
   expect(ruleAnchor({id: 'source', content} as ConfigSource, listed)).toBeNull();
   expect(ruleAnchor({id: 'source', content} as ConfigSource, {...listed, expression: 'pname(a)', outbound: 'block'})).toBeNull();
+});
+
+const dnsText = `dns {
+  upstream {
+    googledns: 'tcp+udp://8.8.8.8:53'
+    'alidns': 'udp://223.5.5.5:53'
+  }
+  routing {
+    request {
+      qname(geosite: cn) -> alidns
+      fallback: googledns
+    }
+    response {
+      ip(geoip: private) -> reject
+      default: accept
+    }
+  }
+}
+routing {
+  qname(geosite: cn) -> alidns
+  fallback: direct
+}
+`;
+const dnsSource = {id: 'dns', content: dnsText} as ConfigSource;
+const dnsRule = (
+  line: number,
+  expression: string,
+  action: DnsRoutingRule['action'],
+  upstream: string | null,
+  kind: 'rule' | 'fallback' = 'rule'
+): DnsRoutingRule => ({
+  rule_id: `r${line}`,
+  index: 0,
+  expression,
+  action,
+  upstream,
+  kind,
+  source: {file: 'config.dae', source_id: 'dns', line, column: 7}
+});
+
+it('anchors DNS rules inside their own list and inserts before them', () => {
+  // honk resolves upstream names without regard to case, so the list may spell one differently.
+  const request = dnsRule(8, 'qname(geosite: cn) -> alidns', 'upstream', 'AliDNS');
+  const anchor = dnsRuleAnchor(dnsSource, request, 'request')!;
+  expect(addRule(dnsText, anchor, 'qtype(HTTPS)', 'reject', false)).toContain(
+    '    request {\n      qtype(HTTPS) -> reject\n      qname(geosite: cn) -> alidns\n'
+  );
+  expect(removeRule(dnsText, anchor)).not.toContain('      qname(geosite: cn) -> alidns');
+  expect(dnsRuleAnchor(dnsSource, request, 'response')).toBeNull();
+  expect(dnsRuleAnchor(dnsSource, dnsRule(9, 'fallback: googledns', 'upstream', 'googledns', 'fallback'), 'request')).not.toBeNull();
+  expect(dnsRuleAnchor(dnsSource, dnsRule(13, 'default: accept', 'accept', null, 'fallback'), 'response')).not.toBeNull();
+  expect(dnsRuleAnchor(dnsSource, dnsRule(12, 'ip(geoip: private) -> reject', 'reject', null), 'response')).not.toBeNull();
+});
+
+it('refuses a DNS anchor whose line no longer holds the listed rule', () => {
+  expect(dnsRuleAnchor(dnsSource, dnsRule(8, 'qname(geosite: cn) -> alidns', 'upstream', 'googledns'), 'request')).toBeNull();
+  expect(dnsRuleAnchor(dnsSource, dnsRule(8, 'qname(geosite: us) -> alidns', 'upstream', 'alidns'), 'request')).toBeNull();
+  expect(dnsRuleAnchor(dnsSource, dnsRule(12, 'ip(geoip: private) -> reject', 'accept', null), 'response')).toBeNull();
+  // The traffic routing block is not a DNS list, even when a line there reads the same.
+  expect(dnsRuleAnchor(dnsSource, dnsRule(18, 'qname(geosite: cn) -> alidns', 'upstream', 'alidns'), 'request')).toBeNull();
+  // Several statements on one line cannot be spliced one at a time.
+  const inline = {...dnsSource, content: 'dns {\n  routing {\n    request { qname(geosite: cn) -> alidns; fallback: googledns }\n  }\n}\n'};
+  expect(dnsRuleAnchor(inline, dnsRule(3, 'qname(geosite: cn) -> alidns', 'upstream', 'alidns'), 'request')).toBeNull();
+});
+
+it('reads the upstream names a dns section defines', () => {
+  expect(dnsUpstreamNames(dnsText)).toEqual(['googledns', 'alidns']);
+  expect(dnsUpstreamNames('routing {\n  fallback: direct\n}\n')).toEqual([]);
 });

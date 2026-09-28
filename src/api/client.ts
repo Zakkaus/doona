@@ -276,6 +276,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     deleteNode: async (id, signal) => read(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
     geodata: async signal => read(await client.GET('/api/v1/geodata', {signal})),
     rules: async signal => read(await client.GET('/api/v1/rules', {signal})),
+    dnsRules: async signal => read(await client.GET('/api/v1/dns/rules', {signal})),
     updateGeodata: async signal => accepted(await client.POST('/api/v1/geodata/update', {headers: once(), signal})),
     config: async signal => read(await client.GET('/api/v1/config', {signal})),
     validateConfig: async (body, signal) => read(await client.POST('/api/v1/config/validate', {body, signal})),

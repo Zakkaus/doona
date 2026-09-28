@@ -199,7 +199,7 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   rules.generation_id = 'changed-generation';
   config.generation_id = rules.generation_id;
   changed();
-  await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('changed-generation');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('changed-generation');
   const before = reads;
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
@@ -217,7 +217,7 @@ test('a source shifted since the rule list was read offers no rule edits', async
   main.content_sha256 = await sha256(main.content);
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/rules?tab=list');
-  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   await expect(panel.getByRole('row').nth(1)).toBeVisible();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
@@ -753,7 +753,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   }
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
-  const rows = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=row][data-key]');
+  const rows = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][data-key]');
   await expect(rows).toHaveCount(10);
   await rows.nth(8).getByRole('button', {name: 'Remove rule', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
@@ -769,7 +769,7 @@ test('withheld rule source disables editing and explains the restriction', async
   await page.goto('/#/rules?tab=list');
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
-  await expect(page.getByRole('tabpanel', {name: 'Rule list'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
 });
 
 test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {
