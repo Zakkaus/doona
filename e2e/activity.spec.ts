@@ -619,3 +619,10 @@ test.describe(() => {
     await expect(status).toHaveClass(/\bwarn\b/);
   });
 });
+
+test('the active connections tile opens the connection list', async ({page}) => {
+  await page.goto('/#/activity');
+  await page.getByRole('link', {name: 'Active connections', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
+  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+});
