@@ -53,6 +53,8 @@ export type RuleEditorOptions<R extends EditedRule> = {
   // What a new rule targets first: an outbound, or a DNS action or upstream.
   target: () => string;
   anchor: (source: ConfigSource, rule: R) => RuleAnchor | null;
+  // Where a rule goes at the end of a list whose fallback is not written, if anywhere.
+  end?: (sources: ConfigSource[]) => {source: ConfigSource; anchor: RuleAnchor} | null;
   kinds: readonly RuleConditionKind[];
   reasons?: ReasonKeys;
   // What Cancel does beyond closing the dialog, such as dropping a navigation's seed.
@@ -61,7 +63,19 @@ export type RuleEditorOptions<R extends EditedRule> = {
 
 // The add and remove dialogs of a rule list, which write by splicing one line into the source that holds the rule
 // and replacing that source whole.
-export function useRuleEditor<R extends EditedRule>({canWrite, list, config, retry, positions, target, anchor, kinds, reasons, onClose}: RuleEditorOptions<R>) {
+export function useRuleEditor<R extends EditedRule>({
+  canWrite,
+  list,
+  config,
+  retry,
+  positions,
+  target,
+  anchor,
+  end,
+  kinds,
+  reasons,
+  onClose
+}: RuleEditorOptions<R>) {
   const t = useT();
   const editor = useConfigEditor(retry);
   const report = useEffectEvent((error: Error) => toastFailure(error, t, t('ui.writeFailed')));
@@ -127,8 +141,9 @@ export function useRuleEditor<R extends EditedRule>({canWrite, list, config, ret
     }
     const rule =
       dialog.kind === 'remove' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
-    const source = dialog.sources.find(source => source.id === rule?.source?.source_id);
-    const at = source && rule ? anchor(source, rule) : null;
+    const appended = dialog.kind === 'add' && form.before === 'end' && !rule?.source ? (end?.(dialog.sources) ?? null) : null;
+    const source = appended?.source ?? dialog.sources.find(source => source.id === rule?.source?.source_id);
+    const at = appended?.anchor ?? (source && rule ? anchor(source, rule) : null);
     if (condition === null) return;
     if (!source || !at) {
       stale();

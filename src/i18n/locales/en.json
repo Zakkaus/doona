@@ -1299,7 +1299,7 @@
   "rule.dns.kind.qtype": "Query type",
   "rule.dns.kind.upstream": "Answering upstream",
   "rule.dns.request": "Request rules",
-  "rule.dns.requestNote": "Checked in order to pick the upstream that resolves each query; the fallback applies when no rule matches.",
+  "rule.dns.requestNote": "Checked in order to decide how each query is handled; the fallback applies when no rule matches.",
   "rule.dns.response": "Response rules",
   "rule.dns.responseNote": "Checked in order to accept an answer, reject it, or query again through another upstream.",
   "rule.dnsHeading": "DNS: {name}",

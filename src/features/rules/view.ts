@@ -15,16 +15,16 @@ import {enumLabel} from '../../i18n/enum';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
-import {isFragment, scanConfig} from '../../dae/text';
+import {isFragment, scanConfig, unquote} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
+import {conditionKinds, isWritableName, quoteName, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from './flows/view';
 import {word} from '../../api/labels';
-import {dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
-import {pickTab, within} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
 import {recorderEmpty} from '../shared/recorder';
@@ -123,7 +123,8 @@ export function traceReason(
 // A rule of either list as the dictionary shows it: GET /rules and GET /dns/rules entries share these fields.
 type Listed = {rule_id: string; index: number; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
 // The rows and insertion points of a rule list; `anchor` locates a rule in its source, and only a rule doona can
-// locate is offered for removal or as an insertion point.
+// locate is offered for removal or as an insertion point. `end` says whether a list whose fallback is not written can
+// still take a rule at its end.
 function listedRows<R extends Listed>(
   rules: R[],
   config: ConfigSource[],
@@ -131,7 +132,8 @@ function listedRows<R extends Listed>(
   // The target, hits and, when it differs from the listed text, the expression a row shows.
   fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string},
   t: Translator,
-  lang: Lang
+  lang: Lang,
+  end = false
 ): Pick<DictionaryView, 'rows' | 'positions'> {
   const locale = LOCALE[lang];
   const byId = new Map(config.map(source => [source.id, source]));
@@ -163,7 +165,7 @@ function listedRows<R extends Listed>(
   return {
     rows,
     positions: [
-      ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+      ...((fallback?.source ? anchored(fallback) : end) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
       ...rules
         .filter((_, i) => rows[i].removable)
         .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
@@ -204,9 +206,11 @@ export function dictionaryView(
 }
 // The actions a new DNS rule can take, first the keywords and then the upstreams: a request rule sends the query to an
 // upstream, to its original destination or answers it empty; a response rule keeps or empties the answer, or resolves
-// the query again through an upstream.
+// the query again through an upstream. An upstream is written as its name, quoted when it is not bare.
 function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Choice[] {
-  const names = upstreams.map(id => ({id, label: id, ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
+  const names = upstreams
+    .filter(isWritableName)
+    .map(name => ({id: quoteName(name), label: name, ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
   return list === 'request'
     ? [...names, {id: 'asis', label: 'asis', desc: t('rule.dns.action.asis')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectQuery')}]
     : [{id: 'accept', label: 'accept', desc: t('rule.dns.action.accept')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectAnswer')}, ...names];
@@ -214,8 +218,8 @@ function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Ch
 // A DNS rule's expression is its source line; the table shows the target in its own column, so a rule shows only its
 // condition, as a routing rule does.
 function dnsCondition(rule: DnsRoutingRule): string {
-  const arrow = /\s*->\s*(\S+)$/.exec(rule.expression);
-  return rule.kind === 'rule' && arrow && arrow[1].toLowerCase() === dnsRuleTarget(rule).toLowerCase()
+  const arrow = /\s*->\s*('[^']*'|"[^"]*"|\S+)$/.exec(rule.expression);
+  return rule.kind === 'rule' && arrow && unquote(arrow[1]).toLowerCase() === dnsRuleTarget(rule).toLowerCase()
     ? rule.expression.slice(0, arrow.index)
     : rule.expression;
 }
@@ -239,7 +243,8 @@ export function dnsDictionaryView(
       (source, rule, scan) => dnsRuleAnchor(source, rule, list, scan),
       rule => ({expression: dnsCondition(rule), outbound: dnsRuleTarget(rule), must: false, hits: '—'}),
       t,
-      lang
+      lang,
+      dnsListEnd(config, list) !== null
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
     outbounds: dnsActions(list, [...new Set([...defined, ...named])], t)
@@ -361,6 +366,12 @@ export function rulesView(resources: Capabilities['resources'] | undefined, quer
     ),
     fallback: resources ? first : null
   };
+}
+// The address of another tab. The map's grouping, and the pinned path it shares with the flow records, go with them:
+// left behind a tab that stays out of the address, they would read as an old map link and reopen the map.
+export function rulesTabQuery(query: string, next: string, fallback: string | null): string {
+  const left = {...(next === 'map' ? {} : {by: null}), ...(next === 'map' || next === 'flows' ? {} : {path: null})};
+  return tabQuery(within(query, left), next, fallback);
 }
 
 const outcomes: Record<string, Key> = {

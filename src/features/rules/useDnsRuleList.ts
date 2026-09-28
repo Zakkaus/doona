@@ -4,7 +4,7 @@ import {useLang, useT} from '../../i18n';
 import type {DnsRoutingRule} from '../../api/model';
 import {dnsConditionKinds} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
-import {dnsRuleAnchor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, type DnsRuleListId} from '../../dae/ruleText';
 import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
 import {useRuleEditor} from './useRuleEditor';
@@ -37,6 +37,7 @@ export function useDnsRuleList({go}: PageProps, list: DnsRuleListId): Dictionary
     positions: table.positions,
     target: () => table.outbounds[0]?.id ?? '',
     anchor: (source, rule) => dnsRuleAnchor(source, rule, list),
+    end: sources => dnsListEnd(sources, list),
     kinds: dnsConditionKinds[list],
     reasons: {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'}
   });

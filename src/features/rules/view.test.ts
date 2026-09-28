@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import type {ConfigSource, RoutingRule} from '../../api/model';
+import type {Capabilities, ConfigSource, DnsRoutingRule, RoutingRule} from '../../api/model';
+import {normalizeCapabilities} from '../../api/capabilities';
 import {translate, type Translator} from '../../i18n';
 import {
   addRuleReason,
@@ -13,6 +14,7 @@ import {
   evaluationView,
   removalView,
   ruleDraftView,
+  rulesTabQuery,
   rulesView,
   traceStatusView,
   distributionEmpty
@@ -244,6 +246,23 @@ it('puts the rule lists first, routing then DNS, and offers DNS only when the ba
   expect(rulesView(resources, 'tab=dns', t).tab).toBe('list');
 });
 
+it('opens the rules page without a DNS tab on a backend that does not report DNS rules', async () => {
+  const raw = await createMockApi().capabilities();
+  const older = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key !== 'dns_rules')) as Capabilities['resources'];
+  const {resources} = normalizeCapabilities({...raw, resources: older});
+  expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'map', 'flows', 'trace']);
+});
+
+it('leaves an old map link behind when another tab is chosen', async () => {
+  const {resources} = await createMockApi().capabilities();
+  expect(rulesView(resources, 'by=client', t).tab).toBe('map');
+  // The routing rules are the default tab, which stays out of the address; the map's grouping must not reopen the map.
+  expect(rulesTabQuery('by=client', 'list', 'list')).toBe('');
+  expect(rulesView(resources, rulesTabQuery('by=client&path=a', 'list', 'list'), t).tab).toBe('list');
+  expect(rulesTabQuery('by=client&path=a', 'flows', 'list')).toBe('path=a&tab=flows');
+  expect(rulesTabQuery('by=client&path=a&tab=flows', 'map', 'list')).toBe('by=client&path=a&tab=map');
+});
+
 it('lists DNS request and response rules with their actions, locations and insertion points', async () => {
   const api = createMockApi();
   const [dns, config] = await Promise.all([api.dnsRules(), api.config()]);
@@ -277,4 +296,38 @@ it('explains an invalid DNS condition and a missing action in DNS terms', () => 
   expect(addRuleReason(ruleDraftView('qnameSuffix', '', false, '', 'qname', t, ['qnameSuffix']), 'alidns', t, keys)).toBe(t('rule.dns.conditionInvalid'));
   expect(addRuleReason(ruleDraftView('qtype', 'A', true, 'qtype(A)', '', t, ['qtype']), '', t, keys)).toBe(t('rule.dns.actionMissing'));
   expect(ruleDraftView('qtype', '', true, null, '', t, ['qnameSuffix', 'qtype']).choices.map(choice => choice.id)).toEqual(['qnameSuffix', 'qtype']);
+});
+
+it('appends DNS rules inside the list block when the fallback is not written, and quotes upstream names', async () => {
+  const [base] = (await createMockApi().config()).sources;
+  const content =
+    "dns {\n  upstream {\n    'my dns': 'udp://1.1.1.1:53'\n  }\n  routing {\n    request {\n    }\n    response {\n      qtype(A) -> 'my dns'\n    }\n  }\n}\n";
+  const sources = [{...base, content, writable: true}];
+  const fallback = (action: DnsRoutingRule['action']): DnsRoutingRule => ({
+    rule_id: 'fb',
+    index: 0,
+    kind: 'fallback',
+    expression: `fallback: ${action}`,
+    action,
+    upstream: null,
+    source: null
+  });
+  const request = dnsDictionaryView('request', [fallback('asis')], 'g', sources, t, 'en');
+  expect(request.positions.map(position => position.id)).toEqual(['end']);
+  expect(request.outbounds.find(choice => choice.label === 'my dns')?.id).toBe("'my dns'");
+  const rule: DnsRoutingRule = {
+    rule_id: 'r9',
+    index: 0,
+    kind: 'rule',
+    expression: "qtype(A) -> 'my dns'",
+    action: 'requery',
+    upstream: 'my dns',
+    source: {file: 'config.dae', source_id: base.id, line: 9, column: 7}
+  };
+  const response = dnsDictionaryView('response', [rule, fallback('accept')], 'g', sources, t, 'en');
+  expect(response.rows[0]).toMatchObject({expression: 'qtype(A)', outbound: 'my dns', removable: true});
+  expect(response.positions.map(position => position.id)).toEqual(['end', 'r9']);
+  // A written fallback that doona cannot locate is not replaced by the block's end.
+  const written = {...fallback('accept'), source: {file: 'config.dae', source_id: base.id, line: 2, column: 1}};
+  expect(dnsDictionaryView('response', [rule, written], 'g', sources, t, 'en').positions.map(position => position.id)).toEqual(['r9']);
 });

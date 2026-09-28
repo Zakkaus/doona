@@ -1,8 +1,7 @@
 import {useCapabilities, useFlowDemand} from '../../store';
 import {useT} from '../../i18n';
 import type {PageProps} from '../../shell/routes';
-import {rulesView} from './view';
-import {tabQuery} from '../../shell/route';
+import {rulesTabQuery, rulesView} from './view';
 
 export function useRulesPage({go, query}: PageProps) {
   const t = useT();
@@ -15,6 +14,6 @@ export function useRulesPage({go, query}: PageProps) {
     loading: capabilities.loading && !capabilities.data,
     error: capabilities.error,
     retry: capabilities.refetch,
-    changeTab: (tab: string) => go('rules', tabQuery(query, tab, view.fallback))
+    changeTab: (tab: string) => go('rules', rulesTabQuery(query, tab, view.fallback))
   };
 }
