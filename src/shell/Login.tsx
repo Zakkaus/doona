@@ -143,7 +143,7 @@ export function Login({profileId, api, backend, rejected, lang, pickLang, dark, 
                 )}
                 {view.kind !== 'no-api' && (
                   <Button accent className="rp-login-submit" type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
-                    {t(view.kind === 'setup' ? 'login.create' : view.kind === 'login' ? 'login.signIn' : 'login.submit')}
+                    {view.submitText}
                   </Button>
                 )}
               </form>

@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {credentialProblems, loginAlert, loginProfiles, predatesAuth, resolveSignInKind, signIn, signInRefusal, storeToken} from './useLogin';
+import {credentialProblems, loginAlert, loginProfiles, predatesAuth, resolveSignInKind, secondsLeft, signIn, signInRefusal, storeToken} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
 import {translate, type Translator} from '../i18n';
@@ -70,7 +70,8 @@ it('maps refusals by code and follows a moved account state', () => {
   expect(signInRefusal(new ApiError(401, 'invalid_credentials', 'x'))).toEqual({key: 'login.invalidCredentials'});
   expect(signInRefusal(new ApiError(409, 'setup_required', 'x'))?.switchTo).toBe('setup');
   expect(signInRefusal(new ApiError(409, 'setup_already_completed', 'x'))?.switchTo).toBe('login');
-  expect(signInRefusal(new ApiError(429, 'rate_limited', 'x', null, null, 7))).toEqual({key: 'login.rateLimited', params: {n: 7}});
+  expect(signInRefusal(new ApiError(429, 'rate_limited', 'x', null, null, 7))).toEqual({key: 'login.rateLimited', params: {n: 7}, wait: 7});
+  expect(signInRefusal(new ApiError(429, 'rate_limited', 'x'))?.wait).toBe(60);
   expect(signInRefusal(new ApiError(500, 'internal', 'x'))).toBeNull();
   expect(signInKind(null)).toBe('token');
   expect(signInKind({mode: 'password', setup_required: true})).toBe('setup');
@@ -169,4 +170,12 @@ it('focuses a refusal anew on each attempt and shows the arrival notes only with
   expect(loginAlert({...arrival, kind: 'token', ended: false, rejected: true}, t)).toMatchObject({text: t('login.rejected'), focus: false});
   expect(loginAlert({...arrival, kind: 'login', ended: false, rejected: true}, t)).toBeNull();
   expect(loginAlert({...refused, kind: 'no-api', attempt: 1}, t)).toBeNull();
+});
+
+it('counts the rate-limit wait down in whole seconds, rounded up, and stops at zero', () => {
+  expect(secondsLeft(10_000, 7_000)).toBe(3);
+  expect(secondsLeft(10_000, 7_001)).toBe(3);
+  expect(secondsLeft(10_000, 9_999)).toBe(1);
+  expect(secondsLeft(10_000, 10_000)).toBe(0);
+  expect(secondsLeft(0, 5_000)).toBe(0);
 });

@@ -705,6 +705,7 @@
   "login.rateLimited": "尝试次数过多，请在 {n} 秒后重试。",
   "login.rejected": "后端拒绝了已保存的 Token；请输入新的 Token。",
   "login.requirements": "原生 API 要求",
+  "login.retryIn": "{n} 秒后可重试",
   "login.sessionEnded": "会话已结束，请重新登录。",
   "login.settings": "更改后端网址",
   "login.setupNote": "{backend} 尚未设置管理员，创建后即登录。仅接受来自本机、私有网络或链路本地地址的创建请求。",

@@ -28,7 +28,8 @@ export function credentialProblems(kind: 'setup' | 'login', username: string, pa
   return problems;
 }
 
-type Refusal = {key: Key; params?: Params; switchTo?: SignIn};
+// `wait` is how many seconds the backend refuses another attempt for.
+type Refusal = {key: Key; params?: Params; switchTo?: SignIn; wait?: number};
 // Branches on the error code, never the message; a conflict means the account state moved, so the form follows it.
 export function signInRefusal(error: unknown): Refusal | null {
   if (!(error instanceof ApiError)) return null;
@@ -36,7 +37,10 @@ export function signInRefusal(error: unknown): Refusal | null {
   if (error.code === 'setup_required') return {key: 'login.needsSetup', switchTo: 'setup'};
   if (error.code === 'setup_already_completed') return {key: 'login.alreadySetUp', switchTo: 'login'};
   if (error.code === 'permission_denied') return {key: 'login.setupPeer'};
-  if (error.code === 'rate_limited') return {key: 'login.rateLimited', params: {n: error.retryAfter ?? 60}};
+  if (error.code === 'rate_limited') {
+    const wait = error.retryAfter ?? 60;
+    return {key: 'login.rateLimited', params: {n: wait}, wait};
+  }
   return null;
 }
 
@@ -108,6 +112,11 @@ export function loginAlert(
   return null;
 }
 
+// Whole seconds left before `until`, rounded up so the form never opens early.
+export function secondsLeft(until: number, now: number): number {
+  return Math.max(0, Math.ceil((until - now) / 1000));
+}
+
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
   const t = useT();
   const lang = useLang();
@@ -139,6 +148,16 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const [problems, setProblems] = useState<Partial<Record<Field, Key>>>({});
   const [failure, setFailure] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // A rate-limited attempt keeps the form from submitting until the backend's wait has passed.
+  const [until, setUntil] = useState(0);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (until <= now) return;
+    // Wakes when the count next drops a second, and stops once it reaches zero.
+    const timer = setTimeout(() => setNow(Date.now()), (until - now) % 1000 || 1000);
+    return () => clearTimeout(timer);
+  }, [until, now]);
+  const wait = secondsLeft(until, now);
   const edit = (field: Field, set: (value: string) => void) => (value: string) => {
     set(value);
     if (problems[field]) setProblems(({[field]: _, ...rest}) => rest);
@@ -163,6 +182,11 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     if ('error' in refused) {
       setFailure(t('login.failed', {error: errorText(refused.error, t)}));
       return;
+    }
+    if (refused.wait) {
+      const at = Date.now();
+      setNow(at);
+      setUntil(at + refused.wait * 1000);
     }
     if (refused.switchTo) {
       setKind(refused.switchTo);
@@ -200,14 +224,16 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     setConfirm: edit('confirm', setConfirm),
     confirmError: fieldError('confirm'),
     submit: () => {
-      if (busy || kind === 'no-api') return;
+      if (busy || wait || kind === 'no-api') return;
       setFailure(null);
       setAttempt(value => value + 1);
       if (usesPassword) void submitPassword(kind);
       else submitToken();
     },
     // Credentials are checked on submit and each problem shows on its field, so the button stays enabled for them.
-    canSubmit: kind !== 'no-api' && (usesPassword || !!token.trim()),
+    canSubmit: kind !== 'no-api' && !wait && (usesPassword || !!token.trim()),
+    // While the backend refuses attempts, the button counts down to the next one.
+    submitText: wait ? t('login.retryIn', {n: wait}) : t(kind === 'setup' ? 'login.create' : kind === 'login' ? 'login.signIn' : 'login.submit'),
     secretType: shown ? 'text' : 'password',
     toggle: () => setShown(value => !value),
     toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken'),

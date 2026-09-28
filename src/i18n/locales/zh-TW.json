@@ -705,6 +705,7 @@
   "login.rateLimited": "嘗試次數過多，請在 {n} 秒後重試。",
   "login.rejected": "後端拒絕了已儲存的 Token；請輸入新的 Token。",
   "login.requirements": "原生 API 要求",
+  "login.retryIn": "{n} 秒後可重試",
   "login.sessionEnded": "工作階段已結束，請重新登入。",
   "login.settings": "變更後端網址",
   "login.setupNote": "{backend} 尚未設定管理員，建立後即登入。僅接受來自本機、私有網路或鏈路本地位址的建立請求。",
