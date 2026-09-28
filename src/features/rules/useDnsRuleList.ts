@@ -1,5 +1,7 @@
 import {useMemo} from 'react';
-import {useCapabilities, useConfig, useDnsRules} from '../../store';
+import {pendingRules, useCapabilities, useConfig, useDnsRules, usePendingRules} from '../../store';
+import {pendingView} from '../shared/pending';
+import {useApplyHeld} from '../shared/usePendingApply';
 import {useLang, useT} from '../../i18n';
 import type {DnsRoutingRule} from '../../api/model';
 import {dnsConditionKinds} from '../../dae/groups';
@@ -52,6 +54,10 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     },
     link: {key: seed, open: preset && {kind: 'add', preset}}
   });
+  const held = usePendingRules();
+  const applyHeld = useApplyHeld();
+  // A link to review the held rules focuses the first DNS list that holds any.
+  const reviewHeld = new URLSearchParams(query).has('held') && (list === 'request' || !held.rules.some(rule => rule.list === 'request'));
   return {
     ...editor.model,
     table,
@@ -64,9 +70,13 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
       must: false,
       hits: false
     },
-    held: null,
-    discard: () => {},
-    applying: false,
+    held: pendingView(held.rules, list, held.failure, config.data?.sources ?? [], t),
+    discard: (id: number) => {
+      if (!held.applying) pendingRules.remove([id]);
+    },
+    applying: held.applying,
+    applyHeld: () => void applyHeld.apply(),
+    reviewHeld,
     loading: rules.loading && !rules.data,
     error: rules.error ?? config.error,
     retry,

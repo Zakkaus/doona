@@ -324,7 +324,7 @@ it('appends DNS rules inside the list block when the fallback is not written, an
   });
   const request = dnsDictionaryView('request', [fallback('asis')], 'g', sources, t, 'en');
   expect(request.positions.map(position => position.id)).toEqual(['end']);
-  expect(request.positions[0]).toEqual({id: 'end', label: t('rule.positionEnd')});
+  expect(request.positions[0]).toEqual({id: 'end', label: t('rule.positionLast')});
   // A list with no block offers the end of the dns routing block, where the add writes a new one.
   const absent = [{...base, content: content.replace("    response {\n      qtype(A) -> 'my dns'\n    }\n", ''), writable: true}];
   expect(dnsDictionaryView('response', [fallback('accept')], 'g', absent, t, 'en').positions).toEqual([

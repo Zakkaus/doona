@@ -6,6 +6,7 @@ import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
 import {fileName, restartRequired} from '../../dae/sources';
 import {dnsListEnd, dnsRuleAnchor, ruleAnchor, ruleLine, type RuleAnchor} from '../../dae/ruleText';
+import {dnsEndPosition} from './rule';
 
 // Where a held rule goes in the text as it is now, or null when the rule it names is no longer where the list said. A
 // rule for the end of a DNS list goes where that list ends now, and only while that is in the file it was held for.
@@ -71,22 +72,32 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   };
 }
 
-// The held rules of one list as that list shows them, or null when it holds none.
-export function pendingView(rules: PendingRule[], list: PendingRule['list'], failure: PendingFailure | null, t: Translator) {
+// The held rules of one list as that list shows them, or null when it holds none. An apply writes every held rule, so
+// the rules other lists hold are counted too.
+export function pendingView(rules: PendingRule[], list: PendingRule['list'], failure: PendingFailure | null, sources: ConfigSource[], t: Translator) {
   const files = byFile(rules).length;
   const shown = rules.filter(rule => rule.list === list);
+  const elsewhere = rules.length - shown.length;
   return shown.length
     ? {
         title: t('rule.pending', {n: shown.length}),
         files: files > 1 ? t('rule.pendingFiles', {n: files}) : null,
+        elsewhere: elsewhere ? t('rule.pendingElsewhere', {n: elsewhere}) : null,
         failure,
         rows: shown.map(rule => ({
           id: rule.id,
           line: ruleLine(rule.condition, rule.outbound, rule.must),
-          position: !rule.before || rule.before.kind === 'fallback' ? t('rule.positionEnd') : t('rule.positionBefore', {n: rule.before.index + 1})
+          position: heldPlace(rule, sources, t)
         }))
       }
     : null;
+}
+
+// Where a held rule goes: before the rule it names, last before the fallback, or at the end of a DNS list that writes
+// none, where that list ends now, as an apply writes it.
+function heldPlace(rule: PendingRule, sources: ConfigSource[], t: Translator): string {
+  if (rule.list !== 'routing' && !rule.before) return dnsEndPosition(dnsListEnd(sources, rule.list)?.anchor, rule.list, t).label;
+  return rule.before && rule.before.kind !== 'fallback' ? t('rule.positionBefore', {n: rule.before.index + 1}) : t('rule.positionEnd');
 }
 
 // A failure after earlier files were written: those rules are in place and reloaded, so it leads with them.

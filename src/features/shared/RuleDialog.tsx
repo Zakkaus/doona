@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, StaticField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
 
 export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
@@ -41,11 +41,17 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           ))}
           <ErrorMessage error={dialog.loadError} onRetry={dialog.retry} />
           <span className="rp-label">{t('rule.holdHelp')}</span>
+          {dialog.lists && <LabeledSelect isDisabled={dialog.busy} label={t('rule.list')} value={dialog.list} onChange={dialog.setList} items={dialog.lists} />}
           {dialog.targets && (
             <LabeledSelect isDisabled={dialog.busy} label={t('rule.kind')} value={dialog.target} onChange={dialog.setTarget} items={dialog.targets} />
           )}
+          {dialog.type && (
+            <Switch isSelected={dialog.typed} isDisabled={dialog.busy} onChange={dialog.setTyped}>
+              {dialog.type}
+            </Switch>
+          )}
           <div className="rp-toolbar top">
-            <LabeledSelect isDisabled={dialog.busy} label={t('ui.outbound')} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
+            <LabeledSelect isDisabled={dialog.busy} label={dialog.targetLabel} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
             {!dialog.writable ? null : dialog.positions.length === 1 ? (
               <StaticField label={t('rule.position')} value={dialog.positions[0].label} description={dialog.positions[0].desc} />
             ) : (
@@ -60,7 +66,17 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           </div>
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
           {dialog.earlier && !dialog.moved && <p className="rp-note">{t('rule.earlierMayMatch')}</p>}
-          {dialog.unplaceable && <p className="rp-note">{t('conn.ruleNoPosition')}</p>}
+          {dialog.unplaceable &&
+            (dialog.configHref ? (
+              <p className="rp-note">
+                {t('rule.dns.noPlace')}{' '}
+                <Link appearance="link" external href={dialog.configHref}>
+                  {t('dns.openConfig')}
+                </Link>
+              </p>
+            ) : (
+              <p className="rp-note">{t('conn.ruleNoPosition')}</p>
+            ))}
           {dialog.duplicate && <p className="rp-note">{dialog.duplicate}</p>}
           <DaeCode text={dialog.preview} />
         </div>

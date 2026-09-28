@@ -1,60 +1,101 @@
 import {useState} from 'react';
-import {pendingRules, useCapabilities, useConfig, useGroups, usePendingRules, useRules} from '../../store';
-import type {RoutingRule} from '../../api/model';
+import {pendingRules, useCapabilities, useConfig, useDnsRules, useGroups, usePendingRules, useRules, type HeldRule, type PendingPlace} from '../../store';
 import {offered} from '../../api/capabilities';
 import {getApi} from '../../api/index';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
-import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from './usePendingApply';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {copyText} from './copy';
-import {acceptedRule, duplicateOf, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type QuickRuleSeed, type RuleTarget} from './rule';
+import {sectionSourceHref} from './link';
+import {
+  acceptedRule,
+  answeredUpstream,
+  dnsActions,
+  dnsRulePositions,
+  dnsUpstreamChoices,
+  duplicateOf,
+  pinnedPosition,
+  ruleDialogReason,
+  ruleKindLabels,
+  ruleListLabels,
+  ruleLists,
+  rulePositions,
+  ruleTargets,
+  typedCondition,
+  type PositionPin,
+  type QuickRuleSeed,
+  type RuleList
+} from './rule';
 
 export type {QuickRuleSeed} from './rule';
-type Pin = {generation: string; rule: RoutingRule};
-type Draft = {targets: RuleTarget[]; matched: QuickRuleSeed['matched']; current: string | null; target: number; outbound: string; pin: Pin | null};
-// The add-rule dialog, shared by the pages that observe traffic. It keeps the seed's targets from when it opened, since
+// `typed` narrows a DNS rule to the record type the seed asked for.
+type Draft = {seed: QuickRuleSeed; lists: RuleList[]; list: RuleList; target: number; typed: boolean; outbound: string; pin: PositionPin | null};
+type DnsQuery = NonNullable<NonNullable<QuickRuleSeed['dns']>['query']>;
+// The add-rule dialog, shared by the pages that observe traffic and DNS. It keeps the seed from when it opened, since
 // the item may leave its snapshot while the dialog is open, and reads the rules, sources and groups only while it is
-// open.
-export function useQuickRule(go: PageProps['go']) {
+// open. A DNS origin passes `queryAgain`, which Query again calls once a DNS rule is written.
+export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (query: DnsQuery) => void} = {}) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
   const listable = offered(resources, 'rules', {whileLoading: false});
-  // Without a writable configuration the dialog still opens, to copy the rule it would have written.
-  const canWrite = listable && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
+  const dnsListable = offered(resources, 'dns_rules', {whileLoading: false});
+  const configWritable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [failure, setFailure] = useState<{id: number; text: string; lines: string[]} | null>(null);
   const open = !!draft;
-  const rules = useRules(listable && open);
-  const config = useConfig(canWrite && open);
+  const routing = draft?.list === 'routing';
+  const dnsList = draft && draft.list !== 'routing' ? draft.list : null;
+  // Without a writable configuration the dialog still opens, to copy the rule it would have written.
+  const canWrite = configWritable && (routing ? listable : dnsListable);
+  const rules = useRules(listable && open && draft.lists.includes('routing'));
+  const dnsRules = useDnsRules(dnsListable && open && draft.lists.some(list => list !== 'routing'));
+  const config = useConfig(configWritable && open);
   const hasGroups = offered(resources, 'groups', {whileLoading: false});
-  const groups = useGroups(open && hasGroups);
+  const groups = useGroups(open && hasGroups && draft.lists.includes('routing'));
   const retry = () => {
-    rules.refetch();
+    if (draft?.lists.includes('routing')) rules.refetch();
+    if (dnsList) dnsRules.refetch();
     config.refetch();
-    if (hasGroups) groups.refetch();
+    if (hasGroups && draft?.lists.includes('routing')) groups.refetch();
   };
   const pending = usePendingApply();
   const sources = config.data?.sources ?? [];
-  const positions = rulePositions(rules.data?.rules ?? [], sources, draft?.matched ?? null, t);
-  const outbounds = ruleOutbounds(groups.data ?? []);
-  // Until the groups are read the outbound the traffic took may not be listed yet, so nothing is written.
-  const groupsRead = !hasGroups || !!groups.data;
-  // The outbound the traffic took, when the configuration names it, so the rule starts from what is routed now.
-  // Otherwise the person chooses one: guessing the first would route the traffic somewhere it never went.
-  const outbound = draft?.outbound || outbounds.find(item => item.id === draft?.current)?.id || '';
-  const generation = rules.data?.generation_id;
-  const pinOf = (id: string | undefined): Pin | null => {
-    const rule = rules.data?.rules.find(rule => rule.rule_id === id);
-    return rule && generation ? {generation, rule} : null;
+  const listedDns = dnsList ? dnsRules.data?.[dnsList] : undefined;
+  const generation = routing ? rules.data?.generation_id : dnsRules.data?.generation_id;
+  const positions = routing
+    ? rulePositions(rules.data?.rules ?? [], sources, draft.seed.matched, t)
+    : dnsList
+      ? dnsRulePositions(dnsList, listedDns ?? [], sources, t)
+      : [];
+  const upstreams = dnsList ? dnsUpstreamChoices(listedDns ?? [], sources) : [];
+  const choices = routing ? ruleOutbounds(groups.data ?? []) : dnsList ? dnsActions(dnsList, [...new Set(upstreams.map(upstream => upstream.name))], t) : [];
+  // Until the groups, or for a DNS rule the upstreams, are read, the target the traffic took may not be listed yet,
+  // so nothing is written.
+  const ready = routing ? !hasGroups || !!groups.data : !canWrite || !!config.data;
+  // The outbound the traffic took, or the upstream that answered a query, when the configuration names exactly that
+  // one, so the rule starts from what happens now. Otherwise the person chooses: guessing would route the traffic
+  // somewhere it never went. A DNS response starts with no action.
+  const preset = routing
+    ? choices.find(item => item.id === draft.seed.outbound)?.id
+    : dnsList === 'request'
+      ? answeredUpstream(upstreams, draft?.seed.dns?.upstream)
+      : null;
+  const outbound = draft?.outbound || preset || '';
+  const pinOf = (id: string | undefined): PositionPin | null => {
+    const position = positions.find(position => position.id === id);
+    return position && generation ? {generation, id: position.id, desc: position.desc} : null;
   };
-  // The position is pinned to a rule and generation as soon as it is known, so a reload never moves it silently.
+  // The position is pinned as soon as it is known, so a reload never moves it silently.
   const {before, moved} = pinnedPosition(positions, draft?.pin ?? null, generation);
   const firstPin = draft && !draft.pin ? pinOf(before) : null;
   if (firstPin) setDraft({...draft!, pin: firstPin});
-  const target = draft?.targets[draft.target];
+  const targets = draft ? ruleTargets(draft.seed, draft.list) : [];
+  const target = targets[draft?.target ?? 0];
+  const type = dnsList ? (draft?.seed.dns?.type ?? null) : null;
+  const condition = target ? typedCondition(target.condition, draft?.typed ? type : null) : '';
   const edit = (patch: Partial<Draft>) => {
     if (draft && !pending.busy) setDraft({...draft, ...patch});
   };
@@ -70,31 +111,45 @@ export function useQuickRule(go: PageProps['go']) {
   const stale = () => {
     toast('negative', t('rule.stale'));
     retry();
+    return null;
+  };
+  // Where the rule goes in the list and file it was placed in, or null after reporting that they have changed.
+  const place = (): (PendingPlace & {sourceId: string}) | null => {
+    if (routing) {
+      const rule = rules.data?.rules.find(rule => rule.rule_id === before);
+      const source = sources.find(source => source.id === rule?.source?.source_id);
+      return rule && source && ruleAnchor(source, rule) ? {list: 'routing', before: rule, sourceId: source.id} : null;
+    }
+    if (!dnsList) return null;
+    if (before === 'end') {
+      const end = dnsListEnd(sources, dnsList);
+      return end && {list: dnsList, before: null, sourceId: end.source.id};
+    }
+    const rule = listedDns?.find(rule => rule.rule_id === before);
+    const source = sources.find(source => source.id === rule?.source?.source_id);
+    return rule && source && dnsRuleAnchor(source, rule, dnsList) ? {list: dnsList, before: rule, sourceId: source.id} : null;
   };
   // The rule to write, or null after reporting that the list it was placed in has changed.
-  const written = () => {
-    const rule = rules.data?.rules.find(rule => rule.rule_id === before);
-    const source = sources.find(source => source.id === rule?.source?.source_id);
-    if (!target || !rule || !source || !ruleAnchor(source, rule) || rules.data?.generation_id !== config.data?.generation_id) {
-      stale();
-      return null;
-    }
-    // Writing after the dialog said the matched rule changed takes the position it now shows.
+  const written = (): HeldRule | null => {
+    const placed = target && generation === config.data?.generation_id ? place() : null;
+    if (!placed) return stale();
+    // Writing after the dialog said the chosen place changed takes the position it now shows.
     if (moved) setDraft({...draft!, pin: pinOf(before)});
-    return {list: 'routing' as const, condition: target.condition, outbound, must: false, before: rule, sourceId: source.id};
+    return {...placed, condition, outbound, must: false};
   };
   const hold = () => {
     const rule = written();
     if (!rule) return;
     pendingRules.add(rule);
-    // A held rule has only a local number, not a rule ID, so its link opens the held section rather than a rule.
-    const review = () => go('rules', within('', {tab: 'list', held: '1'}));
+    // A held rule has only a local number, not a rule ID, so its link opens the held section of its list's tab.
+    const review = () => go('rules', within('', {tab: rule.list === 'routing' ? 'list' : 'dns', held: '1'}));
     toast('positive', t('rule.held'), {action: {label: t('rule.reviewHeld'), onAction: review, closeOnAction: true}});
     close();
   };
   const applyNow = async () => {
     const rule = written();
     if (!rule) return;
+    const query = draft?.seed.dns?.query;
     setFailure(null);
     const outcome = await pending.apply([{...rule, id: 0}]);
     if (!outcome) return;
@@ -108,6 +163,12 @@ export function useQuickRule(go: PageProps['go']) {
       toast('negative', outcome.failure.text);
       return;
     }
+    if (rule.list !== 'routing') {
+      // A DNS rule shows in what the resolver answers, so the origin can ask again.
+      const again = query && queryAgain;
+      toast('positive', t('rule.added'), again ? {action: {label: t('rule.queryAgain'), onAction: () => again(query), closeOnAction: true}} : undefined);
+      return;
+    }
     // The reload that follows the write may not have landed yet, so View rule reads the list itself. Without the rule
     // there, it opens the list with nothing selected.
     const view = async () => {
@@ -119,37 +180,59 @@ export function useQuickRule(go: PageProps['go']) {
     };
     toast('positive', t('rule.added'), {action: {label: t('rule.view'), onAction: () => void view(), closeOnAction: true}});
   };
-  const loadError = rules.error ?? config.error ?? groups.error;
-  const unplaceable = canWrite && !!rules.data && !!config.data && !positions.length;
-  const waiting = !target || !before || !groupsRead;
+  const listData = routing ? rules.data : dnsRules.data;
+  const loadError = (routing ? rules.error : dnsRules.error) ?? config.error ?? (routing ? groups.error : null);
+  const unplaceable = canWrite && !!listData && !!config.data && !positions.length;
+  const waiting = !target || !before || !ready;
   const disabled = !canWrite || waiting || !outbound;
   const position = positions.find(position => position.id === before);
-  const preview = target ? (outbound ? ruleLine(target.condition, outbound) : target.condition) : '';
+  const preview = target ? (outbound ? ruleLine(condition, outbound) : condition) : '';
   const held = usePendingRules().rules;
+  const listed = routing
+    ? (rules.data?.rules ?? []).map(rule => ({...rule, target: rule.outbound ?? ''}))
+    : (listedDns ?? []).map(rule => ({...rule, target: dnsRuleTarget(rule)}));
   const copy = async () => {
     const copied = await copyText(preview);
     toast(copied ? 'positive' : 'negative', t(copied ? 'rule.copied' : 'rule.copyFailed'));
   };
+  const kinds = targets.map(item => item.kind);
   return {
     // Whether the seed gives the dialog a condition to match; writing it is up to the dialog.
-    canAdd: (seed: QuickRuleSeed) => ruleTargets(seed).length > 0,
+    canAdd: (seed: QuickRuleSeed) => ruleLists(seed, dnsListable).length > 0,
     open: (seed: QuickRuleSeed) => {
-      const targets = ruleTargets(seed);
-      if (targets.length) setDraft({targets, matched: seed.matched, current: seed.outbound, target: 0, outbound: '', pin: null});
+      const lists = ruleLists(seed, dnsListable);
+      if (lists.length) setDraft({seed, lists, list: lists[0], target: 0, typed: false, outbound: '', pin: null});
     },
     dialog: draft && {
-      targets: draft.targets.length > 1 ? draft.targets.map((item, i) => ({id: String(i), label: t(`rule.kind.${item.kind}`)})) : null,
+      lists: draft.lists.length > 1 ? draft.lists.map(id => ({id, label: t(ruleListLabels[id])})) : null,
+      list: draft.list,
+      // Another list has other conditions, targets and places, so they start over.
+      setList: (value: string) => edit({list: value as RuleList, target: 0, typed: false, outbound: '', pin: null}),
+      targets:
+        targets.length > 1
+          ? targets.map((item, i) => ({
+              id: String(i),
+              label: t(ruleKindLabels[item.kind]),
+              // Two conditions of one kind, such as two answered addresses, differ by their text.
+              ...(kinds.indexOf(item.kind) !== kinds.lastIndexOf(item.kind) ? {desc: item.condition} : {})
+            }))
+          : null,
       target: String(draft.target),
       setTarget: (value: string) => edit({target: Number(value)}),
-      outbounds,
+      // A DNS rule may be narrowed to the record type the query asked for.
+      type: type && t('rule.dns.onlyType', {type}),
+      typed: draft.typed,
+      setTyped: (typed: boolean) => edit({typed}),
+      targetLabel: t(routing ? 'ui.outbound' : 'rule.dns.action'),
+      outbounds: choices,
       outbound,
       setOutbound: (value: string) => edit({outbound: value}),
       positions,
       before: before ?? '',
       setBefore: (value: string) => edit({pin: pinOf(value)}),
       preview,
-      // Advisory: the same condition and outbound elsewhere still leaves the choice, since position sets precedence.
-      duplicate: target && outbound ? duplicateOf(rules.data?.rules ?? [], held, target.condition, outbound, t) : null,
+      // Advisory: the same condition and target elsewhere still leaves the choice, since position sets precedence.
+      duplicate: target && outbound ? duplicateOf(draft.list, listed, held, condition, outbound, t) : null,
       writable: canWrite,
       // Copying stands in for writing when no file can take the rule.
       copyable: !canWrite || unplaceable,
@@ -161,8 +244,11 @@ export function useQuickRule(go: PageProps['go']) {
       // Rules before the chosen place may take the traffic first unless it is the rule the traffic matched.
       earlier: !!position && !position.matched && !position.first,
       unplaceable,
+      // A DNS list with no place has no single dns routing section to add it to; the section is written in the
+      // configuration, which opens beside the dialog so the rule stays here.
+      configHref: unplaceable && dnsList ? sectionSourceHref(sources, 'dns') : null,
       disabled,
-      reason: ruleDialogReason({readOnly: !canWrite, waiting, outbound: !!outbound, busy: pending.busy, failed: !!loadError, unplaceable}, t),
+      reason: ruleDialogReason({readOnly: !canWrite, waiting, outbound: !!outbound, busy: pending.busy, failed: !!loadError, unplaceable, dns: !!dnsList}, t),
       failure,
       hold,
       applyNow: () => void applyNow(),

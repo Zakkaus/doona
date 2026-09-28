@@ -1,5 +1,5 @@
 import type {ConfigSource, DnsRoutingRule, RoutingRule, RuleSource} from '../api/model';
-import {blockFields, scanConfig, uncomment, type TextBlock} from './text';
+import {blockFields, scanConfig, uncomment, unquote, type TextBlock} from './text';
 import {builtinOutboundNames} from './vocab';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
@@ -123,16 +123,20 @@ function blockEnd(source: ConfigSource, block: TextBlock): {source: ConfigSource
   const inner = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? closing + (closing.slice(0, closing.length / block.depth) || '    ');
   return {source, anchor: {from, to, indent: inner, text: text.slice(from, to)}, closing};
 }
-// The upstream names `dns { upstream { … } }` defines, in the order written and with their quotes: honk keeps a key's
-// quotes in its name, so `->` must repeat the key verbatim.
-export function dnsUpstreamNames(text: string, scan = scanConfig(text)): string[] {
+// The upstreams `dns { upstream { … } }` defines, in the order written: each name with its quotes, since honk keeps a
+// key's quotes in its name and `->` must repeat the key verbatim, and the address it is written with.
+export function dnsUpstreams(text: string, scan = scanConfig(text)): Array<{name: string; address: string}> {
   return scan.blocks
     .filter(block => block.name === 'dns')
     .flatMap(dns => dns.children.filter(child => child.name === 'upstream'))
     .flatMap(upstream =>
-      blockFields(text, upstream, scan.tokens).map(field => text.slice(field.from, scan.tokens.find(token => token.from === field.from)!.to))
+      blockFields(text, upstream, scan.tokens).map(field => ({
+        name: text.slice(field.from, scan.tokens.find(token => token.from === field.from)!.to),
+        address: unquote(field.value)
+      }))
     );
 }
+export const dnsUpstreamNames = (text: string, scan = scanConfig(text)): string[] => dnsUpstreams(text, scan).map(upstream => upstream.name);
 
 export const ruleLine = (condition: string, outbound: string, must = false) => `${condition} -> ${outbound}${must ? '(must)' : ''}`;
 // What a new rule can route to: the groups the configuration defines, then the two built-in outbounds.

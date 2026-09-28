@@ -171,6 +171,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
           <div className="rp-cluster">
             <h3 className="rp-h3">{view.held.title}</h3>
             {view.held.files && <span className="rp-label">{view.held.files}</span>}
+            {view.held.elsewhere && <span className="rp-label">{view.held.elsewhere}</span>}
             <span className="rp-grow" />
             {view.applyHeld && (
               <Button small isPending={view.applying} onPress={view.applyHeld}>
