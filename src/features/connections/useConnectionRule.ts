@@ -12,8 +12,8 @@ type Pin = {generation: string; rule: RoutingRule};
 type Draft = {targets: RuleTarget[]; matched: string | null; current: string | null; target: number; outbound: string; pin: Pin | null};
 // The add-rule dialog of one connection. It keeps the connection's targets from when it opened, since the connection
 // may leave the snapshot while the dialog is open. It reads the rules and sources while it is open, and while a
-// connection that matched a rule is shown, to tell whether that rule can be edited.
-export function useConnectionRule(connection: Connection | undefined) {
+// connection that matched a rule is shown, to tell whether that rule can be edited. `review` opens the held rules.
+export function useConnectionRule(connection: Connection | undefined, review: () => void) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
   const canWrite =
@@ -82,7 +82,7 @@ export function useConnectionRule(connection: Connection | undefined) {
     const rule = held();
     if (!rule) return;
     pendingRules.add(rule);
-    toast('positive', t('rule.held'));
+    toast('positive', t('rule.held'), {action: {label: t('rule.reviewHeld'), onAction: review, closeOnAction: true}});
     close();
   };
   const applyNow = async () => {

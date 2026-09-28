@@ -191,6 +191,20 @@ test('a refused apply keeps the held rules and shows the diagnostics in the rule
   await expect(top(page).getByRole('button', {name: 'Reload honk', exact: true})).toBeVisible();
 });
 
+test('the held toast opens the held rules, which apply from their own section', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await hold(page, '1');
+  await page.locator('.rp-toast.positive', {hasText: 'Rule held; not written yet'}).getByRole('button', {name: 'Review held rules', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&held=1$/);
+  const held = page.getByRole('region', {name: 'Pending: 1'});
+  await expect(held).toBeFocused();
+  await held.getByRole('button', {name: 'Apply held rules', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: '1 rule written; reloading'})).toBeVisible();
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+  await expect(held).toHaveCount(0);
+  await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
+});
+
 test('refresh re-reads the data and writes nothing, even with rules held', async ({page}) => {
   const {requests} = await mockBackend(page);
   await hold(page, '1');

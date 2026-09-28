@@ -1,6 +1,7 @@
 import {useMemo, useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useFlows, useGroups, usePendingRules, useRules, useRuntimeSettings} from '../../store';
 import {pendingView} from '../shared/pending';
+import {useApplyHeld} from '../shared/usePendingApply';
 import {useLang, useT} from '../../i18n';
 import type {RoutingRule} from '../../api/model';
 import {conditionKinds} from '../../dae/groups';
@@ -42,6 +43,10 @@ export type DictionaryModel = RuleEditorModel & {
   select?: (row: string | null) => void;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
+  // Writes every held rule, as the top bar's apply does; only the routing list holds rules.
+  applyHeld?: () => void;
+  // The list was opened to review the held rules, so their section takes focus.
+  reviewHeld?: boolean;
   // An apply has already taken its copy of the held rules, so a discard now would still be written.
   applying: boolean;
   loading: boolean;
@@ -73,6 +78,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
   };
   const params = new URLSearchParams(query);
   const landed = params.get('rule');
+  const reviewHeld = params.has('held');
   const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
   const selected = picked.landed === landed ? picked.row : landed;
   const [source, setSource] = useState('all');
@@ -111,6 +117,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
       : {key: seed, open: parsedSeed && {kind: 'add', preset: parsedSeed}}
   });
   const held = usePendingRules();
+  const applyHeld = useApplyHeld();
   return {
     ...editor.model,
     kind: dictionary ? ('dictionary' as const) : ('distribution' as const),
@@ -134,6 +141,8 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
       if (!held.applying) pendingRules.remove([id]);
     },
     applying: held.applying,
+    applyHeld: () => void applyHeld.apply(),
+    reviewHeld,
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
     retry: dictionary ? retry : flows.refetch,
