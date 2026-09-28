@@ -3,7 +3,7 @@ import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {normalizeResourceKey} from '../api/inflight';
 import {capabilities} from '../api/mock/fixtures';
-import {eventStatus, historyLost, reopenEvents, subscribeEvents} from './events';
+import {eventStatus, historyLost, holdFlowDemand, reopenEvents, subscribeEvents, wantsFlowDemand} from './events';
 import {refetchResource, watchResource} from './resourceCore';
 import type {ApiEvent, EventOptions} from '../api/model';
 
@@ -251,4 +251,33 @@ it('keeps a stream refusal that follows a capabilities error once the capabiliti
   await vi.advanceTimersByTimeAsync(5000);
   expect(api.capabilities).toHaveBeenCalledTimes(3);
   expect(eventStatus(api).error).toMatchObject({status: 403});
+});
+
+it('holds one flow-demand stream for all holders and closes it after the last release', async () => {
+  const api = createMockApi();
+  const signals: AbortSignal[] = [];
+  api.subscribeEvents = vi.fn(({signal, kinds}: EventOptions) => {
+    expect(kinds?.some(kind => kind.startsWith('flow.'))).toBe(true);
+    signals.push(signal!);
+    return new Promise<void>(() => {});
+  });
+  const first = holdFlowDemand(api);
+  const second = holdFlowDemand(api);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
+  first();
+  expect(signals[0].aborted).toBe(false);
+  second();
+  expect(signals[0].aborted).toBe(true);
+  holdFlowDemand(api)();
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
+});
+
+it('asks for flows only where the backend offers them and may send flow.gap', () => {
+  const resources = structuredClone(capabilities.resources);
+  expect(wantsFlowDemand(resources)).toBe(true);
+  expect(wantsFlowDemand(undefined)).toBe(false);
+  expect(wantsFlowDemand({...resources, events: {...resources.events, kinds: undefined}})).toBe(true);
+  expect(wantsFlowDemand({...resources, events: {...resources.events, kinds: ['stream.ready']}})).toBe(false);
+  expect(wantsFlowDemand({...resources, events: {...resources.events, available: false}})).toBe(false);
+  expect(wantsFlowDemand({...resources, flows: {...resources.flows, available: false}})).toBe(false);
 });

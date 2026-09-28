@@ -144,3 +144,32 @@ export function useEvents(onEvent: Listener, replayRecent = false) {
   const getSnapshot = useCallback(() => eventStatus(api), [api]);
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+// A backend in `auto` mode records flows only while a stream asks for flow events; the shared stream has no kinds
+// filter, so it does not count. `flow.gap` is rare, so this stream costs almost nothing and duplicates no updates.
+const flowDemands = new Map<Api, {holders: number; controller: AbortController}>();
+export function holdFlowDemand(api: Api) {
+  let demand = flowDemands.get(api);
+  if (!demand) {
+    const controller = new AbortController();
+    demand = {holders: 0, controller};
+    flowDemands.set(api, demand);
+    // The shared stream reports refusals and connection state; this one only holds the demand.
+    void api.subscribeEvents({kinds: ['flow.gap'], signal: controller.signal, onEvent: () => {}}).catch(() => {});
+  }
+  const held = demand;
+  held.holders++;
+  return () => {
+    if (--held.holders) return;
+    held.controller.abort();
+    flowDemands.delete(api);
+  };
+}
+// Held only where the backend offers flows and an events stream that may carry `flow.gap`; a backend that does not
+// list its kinds is asked anyway, and a refusal is ignored.
+export const wantsFlowDemand = (resources: Capabilities['resources'] | undefined) =>
+  resources?.flows.available === true && resources.events.available && (resources.events.kinds?.includes('flow.gap') ?? true);
+export function useFlowDemand(resources: Capabilities['resources'] | undefined) {
+  const api = getApi();
+  const enabled = wantsFlowDemand(resources);
+  useEffect(() => (enabled ? holdFlowDemand(api) : undefined), [api, enabled]);
+}
