@@ -7,6 +7,9 @@ import {href} from '../../shell/route';
 // Where a rule sits in the rule list, when the backend lists rules and the reference names one.
 export const ruleHref = (ruleId: string | null, listed: boolean) => (listed && ruleId ? href('rules', {tab: 'list', rule: ruleId}) : undefined);
 
+// The Settings card holding what the backend records and keeps: log level, flow and DNS recording, retention.
+export const recordingSettingsHref = href('settings', {card: 'runtime'});
+
 // A condition a link prefills in the add-rule dialog of the routing list, or with `tab: 'dns'` of the DNS request list.
 export type RuleSeed = {kind: RuleConditionKind; value: string};
 export function parseRuleSeed(value: string | null, kinds: readonly RuleConditionKind[] = conditionKinds): RuleSeed | null {

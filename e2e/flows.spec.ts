@@ -266,3 +266,10 @@ test('the connection topology card is titled like the other chart cards', async 
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   await expect(topology.getByRole('heading', {level: 3, name: 'Connection topology', exact: true})).toHaveClass(/\brp-h3\b/);
 });
+
+test('the flow records open the recording settings', async ({page}) => {
+  await page.goto('/#/flows?tab=records');
+  await page.getByRole('link', {name: 'Recording settings', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
+  await expect(page.getByRole('heading', {name: 'Backend options', exact: true})).toBeInViewport();
+});

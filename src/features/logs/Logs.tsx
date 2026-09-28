@@ -4,12 +4,13 @@ import {useT} from '../../i18n';
 import {ActionGroup, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
+import type {PageProps} from '../../shell/routes';
 
 type LogRow = ReturnType<typeof useLogs>['rows'][number];
 
-export function Logs() {
+export function Logs({go}: PageProps) {
   const t = useT();
-  const vm = useLogs();
+  const vm = useLogs({go});
   // Stable column definitions: a new array on every stream tick would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<LogRow>[] => [
@@ -86,7 +87,8 @@ export function Logs() {
         <ActionGroup
           actions={[
             {id: 'clear', label: t('log.clear'), isDisabled: !vm.rows.length, onAction: vm.clear},
-            {id: 'export', label: t('log.export'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export}
+            {id: 'export', label: t('log.export'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+            ...(vm.openRecording ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: vm.openRecording}] : [])
           ]}
         />
       </div>

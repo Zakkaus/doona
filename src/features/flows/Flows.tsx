@@ -155,6 +155,14 @@ function FlowRecords(props: PageProps) {
           </Button>
         )}
         {view.coverage && <Coverage view={view.coverage} />}
+        {view.recordingHref && (
+          <>
+            <span className="rp-grow" />
+            <Link appearance="button" quiet small href={view.recordingHref}>
+              {t('ui.recordingSettings')}
+            </Link>
+          </>
+        )}
       </div>
       <div className="rp-with-panel" data-open={view.panelOpen ? '' : undefined}>
         <DataTable

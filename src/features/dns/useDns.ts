@@ -69,8 +69,11 @@ export function useDns({go, query}: PageProps) {
     cacheHref: ids.includes('cache') ? href('dns', {tab: 'cache'}) : null,
     // A statistics ranking row opens the log filtered to that domain or device.
     logHref: (by: 'domain' | 'device', value: string) => href('dns', {tab: 'log', [by]: value}),
-    // The log's toolbar leads to the lists that decide its answers.
-    logLinks: offered(resources, 'dns_rules', {whileLoading: false}) ? [{id: 'rules', label: t('rule.dnsTitle'), onAction: () => go('rules', 'tab=dns')}] : [],
+    // The log's toolbar leads to the lists that decide its answers and to the settings that record it.
+    logLinks: [
+      ...(offered(resources, 'dns_rules', {whileLoading: false}) ? [{id: 'rules', label: t('rule.dnsTitle'), onAction: () => go('rules', 'tab=dns')}] : []),
+      ...(resources?.runtime_settings.available ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: () => go('settings', 'card=runtime')}] : [])
+    ],
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
     logEnabled: resources?.dns_log.available,
     viewCache: () => go('dns', within(query, {tab: 'cache', domain: result?.domain ?? ''})),

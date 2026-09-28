@@ -410,3 +410,11 @@ test('the resolution log toolbar opens the DNS rules', async ({page}) => {
   await page.goBack();
   await expect(page).toHaveURL(/#\/dns\?tab=log$/);
 });
+
+test('the resolution log toolbar opens the recording settings, from the overflow menu on a phone', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/dns?tab=log');
+  await page.getByRole('button', {name: 'More actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Recording settings', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
+});

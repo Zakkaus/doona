@@ -1553,6 +1553,7 @@
   "ui.probeUnsupported": "此后端不提供该目标的 TCP 探测",
   "ui.process": "进程名称",
   "ui.protocol": "协议",
+  "ui.recordingSettings": "记录设置",
   "ui.refreshFailed": "无法刷新数据",
   "ui.refreshed": "数据已刷新。",
   "ui.reloadPage": "重新加载",
