@@ -19,6 +19,25 @@ export function groupQuery(groups: ReadonlyArray<{id: string; name: string}> | u
   return id ? within('', {group: id}) : '';
 }
 
+// The routing trace with its form filled in from a link: the target, and the source when the link knows it. The person
+// runs the trace.
+export type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string};
+const traceKeys = ['network', 'domain', 'dst_ip', 'dst_port', 'src_ip'] as const;
+export const traceQuery = (link: Partial<TraceLink>) => within('', {tab: 'trace', ...Object.fromEntries(traceKeys.map(key => [key, link[key] || null]))});
+// Null when the link names no target, so a plain visit to the tab keeps what was typed.
+export function parseTraceLink(query: string): TraceLink | null {
+  const params = new URLSearchParams(query);
+  const value = (key: (typeof traceKeys)[number]) => params.get(key) ?? '';
+  if (!value('domain') && !value('dst_ip')) return null;
+  return {
+    network: value('network') === 'udp' ? 'udp' : 'tcp',
+    domain: value('domain'),
+    dst_ip: value('dst_ip'),
+    dst_port: value('dst_port'),
+    src_ip: value('src_ip')
+  };
+}
+
 // The Settings card holding what the backend records and keeps: log level, flow and DNS recording, retention.
 export const recordingSettingsHref = href('settings', {card: 'runtime'});
 

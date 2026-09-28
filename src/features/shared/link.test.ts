@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
-import {groupQuery, nodeHref, parseRuleSeed, ruleSeedHref, sectionSourceHref} from './link';
+import {groupQuery, nodeHref, parseRuleSeed, parseTraceLink, ruleSeedHref, sectionSourceHref, traceQuery} from './link';
 
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
   for (const seed of [
@@ -59,4 +59,14 @@ it('focuses a group by its backend id, and opens the page unfocused before the l
   expect(groupQuery(groups, 'proxy')).toBe('group=group-proxy');
   expect(groupQuery(groups, 'new')).toBe('');
   expect(groupQuery(undefined, 'proxy')).toBe('');
+});
+
+it('carries a trace target and source through the address and back', () => {
+  const link = {network: 'udp', domain: 'example.com', dst_ip: '2001:db8::1', dst_port: '443', src_ip: '10.0.0.2'} as const;
+  expect(parseTraceLink(traceQuery(link))).toEqual(link);
+  // Empty values stay out of the address; a missing network is TCP.
+  expect(traceQuery({dst_ip: '1.1.1.1', domain: '', dst_port: '53'})).toBe('tab=trace&dst_ip=1.1.1.1&dst_port=53');
+  expect(parseTraceLink('tab=trace&dst_ip=1.1.1.1')).toEqual({network: 'tcp', domain: '', dst_ip: '1.1.1.1', dst_port: '', src_ip: ''});
+  expect(parseTraceLink('tab=trace&src_ip=10.0.0.2')).toBeNull();
+  expect(parseTraceLink('tab=trace')).toBeNull();
 });

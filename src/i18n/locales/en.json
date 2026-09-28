@@ -471,6 +471,7 @@
   "conn.stateHelp.routing": "Matching the routing rules.",
   "conn.tab.list": "Connections",
   "conn.tab.traffic": "Traffic",
+  "conn.trace": "Trace this connection",
   "conn.truncated": "The connection list is truncated; only some records are shown.",
   "conn.ungrouped": "None",
   "conn.viewFlow": "View flow",

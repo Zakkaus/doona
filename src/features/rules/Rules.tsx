@@ -28,7 +28,7 @@ import type {EvaluationView} from './view';
 export function Rules(props: PageProps) {
   const t = useT();
   const view = useRulesPage(props);
-  const traceForm = useTraceForm();
+  const traceForm = useTraceForm(props.query);
   const content = {
     list: <RuleList {...props} />,
     dns: <DnsRules {...props} />,

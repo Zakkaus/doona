@@ -12,6 +12,7 @@ import {
   nodeLabel,
   outboundLabel,
   sourceIp,
+  addressPort,
   type MessageRef,
   type OutboundNames
 } from '../../api/selectors';
@@ -22,7 +23,7 @@ import type {Key} from '../../i18n';
 import type {SortDescriptor} from 'react-aria-components';
 import type {Help} from '../../ui/ui';
 import {csvLine} from '../../ui/ui';
-import {ruleHref} from '../shared/link';
+import {ruleHref, traceQuery} from '../shared/link';
 import {within} from '../../shell/route';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
 // Where the chain came from: captured when the connection was routed, rebuilt from retained records, or not known.
@@ -346,6 +347,17 @@ export function connectionDetail(
           ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
         ),
         flowQuery: within('', {tab: 'records', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
+        // The trace of this connection's target, from its source; null when it has neither a domain nor an address.
+        traceQuery:
+          current.domain || sourceIp(current.dst)
+            ? traceQuery({
+                network: current.network === 'udp' ? 'udp' : 'tcp',
+                domain: current.domain ?? '',
+                dst_ip: sourceIp(current.dst),
+                dst_port: addressPort(current.dst),
+                src_ip: sourceIp(current.src)
+              })
+            : null,
         source: current.src ? (sourceIp(current.src) ?? current.src) : null,
         closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing',
         stateHelp: connectionStateHelp(current.state, t)

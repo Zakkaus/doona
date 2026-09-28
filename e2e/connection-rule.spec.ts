@@ -112,12 +112,14 @@ for (const width of [360, 768, 1440])
     const close = detail(page).getByRole('button', {name: 'Close connection', exact: true});
     await expect(close).toBeVisible();
     const boxes = await detail(page)
-      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Only this device|Close connection)$/})
+      .getByRole('button', {
+        name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Trace this connection|Only this device|Close connection)$/
+      })
       .evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().toJSON() as DOMRect));
-    expect(boxes).toHaveLength(6);
+    expect(boxes).toHaveLength(7);
     // One button style: a quiet button beside a filled one reads as a misaligned label.
     const fills = await detail(page)
-      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Only this device)$/})
+      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Trace this connection|Only this device)$/})
       .evaluateAll(buttons => buttons.map(button => getComputedStyle(button).backgroundColor));
     expect(new Set(fills).size).toBe(1);
     expect(new Set(boxes.map(box => box.height)).size).toBe(1);
@@ -132,7 +134,7 @@ for (const width of [360, 768, 1440])
     for (const gap of [...gaps, ...leading]) expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(1);
     expect(lines.every(line => Math.abs(line[0].left - boxes[0].left) <= 1)).toBe(true);
     // The destructive action ends the group on a line of its own.
-    expect(lines.at(-1)).toEqual([boxes[5]]);
+    expect(lines.at(-1)).toEqual([boxes[6]]);
   });
 
 const top = (page: import('@playwright/test').Page) => page.locator('.rp-top');
