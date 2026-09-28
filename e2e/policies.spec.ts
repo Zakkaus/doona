@@ -162,12 +162,14 @@ test('a check URL another client changed while the dialog was open is not overwr
   await save.click();
   await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
   await expect(dialog).toBeVisible();
-  // The dialog now shows the URL the group holds, so a further save tests against it.
-  await expect(dialog.getByRole('textbox', {name: 'Check URL'})).toHaveValue(remote);
+  // The dialog keeps the edit and shows the URL the group holds, which a further save tests against.
+  const url = dialog.getByRole('textbox', {name: 'Check URL'});
+  await expect(url).toHaveValue('https://cp.cloudflare.com/generate_204');
+  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Saving again replaces it with the value here.`);
   expect((await api.group('resilient')).config.check_url).toBe(remote);
 });
 
-test('a check save refused with 409 reads the group again and shows what it holds now', async ({page}) => {
+test('a check save refused with 409 keeps the edit and shows what the group holds now', async ({page}) => {
   const {api} = await mockBackend(page);
   expectLoadFailures(page, /\/groups\/resilient$/);
   await page.setViewportSize({width: 1440, height: 1000});
@@ -187,11 +189,13 @@ test('a check save refused with 409 reads the group again and shows what it hold
     refused = true;
     return route.fulfill({status: 409, json: {request_id: 'policies-test', error: {code: 'state_conflict', message: 'Patch test failed'}}});
   });
-  await url.fill('https://cp.cloudflare.com/generate_204');
+  const mine = 'https://cp.cloudflare.com/generate_204';
+  await url.fill(mine);
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
   await expect(dialog).toBeVisible();
-  await expect(url).toHaveValue(remote);
+  await expect(url).toHaveValue(mine);
+  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Saving again replaces it with the value here.`);
 });
 
 test('a disabled Test all does not blame TCP support when the probe limits rule it out', async ({page}) => {

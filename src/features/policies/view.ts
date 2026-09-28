@@ -50,12 +50,20 @@ export const checkDraft = (g: Group): CheckDraft => ({
   tolerance: countText(g.config.tolerance),
   idle_timeout: countText(g.config.idle_timeout)
 });
-// After a save refused as conflicting, the fields the group changed since `base` show its current value, the others keep
-// the user's edit, and the current values become the base the next save tests against.
-export function checkRebase(draft: {base: CheckDraft; value: CheckDraft}, current: CheckDraft): {base: CheckDraft; value: CheckDraft} {
+// `theirs`: the fields both the user and the group changed since the dialog opened, with the group's value.
+export type CheckEditDraft = {base: CheckDraft; value: CheckDraft; theirs: Partial<CheckDraft>};
+// After a save refused as conflicting, a field only the group changed takes its current value and a field the user
+// changed keeps the edit, with the group's value beside it. The current values become the base the next save tests
+// against, so saving again replaces the group's value with the user's.
+export function checkRebase(draft: CheckEditDraft, current: CheckDraft): CheckEditDraft {
   const value = {...draft.value};
-  for (const field of checkFieldOrder) if (current[field] !== draft.base[field]) value[field] = current[field];
-  return {base: current, value};
+  const theirs = {...draft.theirs};
+  for (const field of checkFieldOrder) {
+    if (current[field] === draft.base[field]) continue;
+    if (draft.value[field] === draft.base[field]) value[field] = current[field];
+    else if (draft.value[field] !== current[field]) theirs[field] = current[field];
+  }
+  return {base: current, value, theirs};
 }
 // The contract's floor: a check interval of at least one second, a tolerance or idle timeout of zero or more.
 const countMinimum: Record<CountField, number> = {check_interval: 1, tolerance: 0, idle_timeout: 0};
