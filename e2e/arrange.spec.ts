@@ -16,6 +16,7 @@ async function withRuleGroup(page: import('@playwright/test').Page) {
 test('arranging explains membership, stages edits by menu and drag, and applies them in one write', async ({page}) => {
   const backend = await withRuleGroup(page);
   await page.goto('/#/policies?tab=arrange');
+  await expect(page.getByRole('tab', {name: 'Group membership', exact: true})).toHaveAttribute('aria-selected', 'true');
   const card = (name: string) => page.locator('.rp-drop').filter({has: page.getByRole('heading', {name, exact: true})});
   // Why each group holds what it holds, in words.
   await expect(card('proxy')).toContainText('This group has no filter, so it holds every node.');

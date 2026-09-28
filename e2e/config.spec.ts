@@ -662,7 +662,7 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
   // The card's actions share one size; editing by hand differs only in being quiet.
-  const manual = routing.getByRole('button', {name: 'Edit by hand', exact: true});
+  const manual = routing.getByRole('button', {name: 'Open source file', exact: true});
   const size = (button: Locator) => button.evaluate(element => getComputedStyle(element).fontSize);
   expect(await size(manual)).toBe(await size(routing.locator('.rp-cluster > .rp-btn:not(.quiet)').first()));
   await manual.click();
@@ -727,7 +727,7 @@ test('modules show sections from read-only include files and open the file that 
   await expect(routing).toContainText('route.dae:1-3');
   await expect(routing).toContainText('0 rules, fallback: hk');
   await expect(routing.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
-  await routing.getByRole('button', {name: 'Edit by hand', exact: true}).click();
+  await routing.getByRole('button', {name: 'Open source file', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-route&line=1$/);
   await expect(page.locator('.cm-focusLine')).toContainText('routing {');
 });
