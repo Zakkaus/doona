@@ -1,6 +1,7 @@
 import type {
   Capabilities,
   ConfigSource,
+  DnsQueryResponse,
   DnsRoutingRule,
   FlowList,
   RecorderState,
@@ -17,7 +18,7 @@ import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../.
 import type {Key} from '../../i18n';
 import {isFragment, scanConfig, unquote} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
-import {outboundLabel, preferredHealth} from '../../api/selectors';
+import {outboundLabel, preferredHealth, simulatedAddress} from '../../api/selectors';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from './flows/view';
@@ -454,8 +455,30 @@ export function dnsView(dns: RoutingTraceResponse['dns'][number], t: Translator,
     ]
   };
 }
-export function traceStatusView(result: RoutingTraceResponse, t: Translator, lang: Lang): string {
+// A query-mode run's DNS query, shown apart from the simulations it fed: one row per record type with its answers, or
+// its status when it has none, and the address that type simulated.
+export function queryView(query: DnsQueryResponse, t: Translator, lang: Lang): DnsView {
+  const rows = query.results.map(result => {
+    const answers = formatList(
+      lang,
+      (result.answers ?? []).filter(answer => answer.type === result.type).map(answer => answer.data)
+    );
+    const simulated = simulatedAddress(result);
+    return [
+      result.type,
+      (answers || result.status) + (simulated ? t('ui.separator') + t('ui.valuePair', {label: t('rule.simulatedAddress'), value: simulated}) : '')
+    ] as [string, string];
+  });
+  const upstreams = [...new Set(query.results.map(result => (result.cached ? t('dns.hit') : (result.upstream ?? '—'))))];
+  return {
+    id: 'query',
+    heading: t('rule.queryHeading', {name: query.domain.replace(/\.$/, '')}),
+    fields: [...rows, [t('ui.upstream'), formatList(lang, upstreams)]]
+  };
+}
+export function traceStatusView(result: RoutingTraceResponse, query: DnsQueryResponse | null, t: Translator, lang: Lang): string {
   return (
+    (query ? t('ui.valuePair', {label: t('rule.queried'), value: localTime(query.query_time, LOCALE[lang])}) + t('ui.separator') : '') +
     t('ui.valuePair', {label: t('rule.observed'), value: localTime(result.observed_at, LOCALE[lang])}) +
     t('ui.separator') +
     t('ui.valuePair', {label: t('ui.generation'), value: result.generation_id})

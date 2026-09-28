@@ -1,10 +1,15 @@
 import {getApi} from '../api/index';
 import {poll} from './cadence';
 import type {Api} from '../api/api';
-import type {FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
+import type {DnsQueryResponse, FlowList, FlowQuery, RoutingTraceRequest, RoutingTraceResponse} from '../api/model';
 import {clientError} from '../api/error';
+import {simulatedAddress} from '../api/selectors';
 import {gated, pageSize, useResource, walk} from './resource';
 import {useCapabilities} from './runtime';
+
+// A query-mode run is two things: a DNS query and one simulation per simulated address. They stay apart, so the
+// page never presents the query's answer as DNS evidence of a trace.
+export type RoutingTraceRun = {traces: RoutingTraceResponse[]; query: DnsQueryResponse | null};
 
 export async function routingTrace(
   api: Api,
@@ -17,38 +22,27 @@ export async function routingTrace(
     recordTypes: string[];
   },
   signal: AbortSignal
-): Promise<RoutingTraceResponse> {
-  if (resolve !== 'query') return api.routingTrace({input, resolve}, signal);
-  const lookup = await api.dnsQuery(input.domain!, recordTypes, signal);
-  const dns: RoutingTraceResponse['dns'] = lookup.results.map(item => ({
-    lookup_id: `query:${item.type}`,
-    parent_lookup_id: null,
-    attempt_id: null,
-    purpose: 'dial_target',
-    name: lookup.domain,
-    qtype: item.type,
-    source: item.cached ? 'cache' : 'upstream',
-    upstream_transport: null,
-    carrier_transport: null,
-    cache: item.cached ? 'hit' : 'miss',
-    cache_entry_id: item.cache_entry_id,
-    upstream: item.upstream,
-    route_evaluation_ids: [],
-    status: item.status,
-    addresses: (item.answers ?? []).filter(answer => answer.type === item.type).map(answer => answer.data),
-    selected_ip: item.type === 'A' || item.type === 'AAAA' ? ((item.answers ?? []).find(answer => answer.type === item.type)?.data ?? null) : null,
-    error: null
-  }));
-  // A client dials one address per family, so the first A and the first AAAA answer are simulated; every lookup
-  // keeps its full answer list, with the simulated address as its selected IP.
-  const addresses = [...new Set(['A', 'AAAA'].flatMap(type => dns.find(item => item.qtype === type && item.selected_ip)?.selected_ip ?? []))];
+): Promise<RoutingTraceRun> {
+  if (resolve !== 'query') return {traces: [await api.routingTrace({input, resolve}, signal)], query: null};
+  const query = await api.dnsQuery(input.domain!, recordTypes, signal);
+  const addresses = [
+    ...new Set(
+      ['A', 'AAAA'].flatMap(
+        type =>
+          query.results
+            .filter(item => item.type === type)
+            .map(simulatedAddress)
+            .find(Boolean) ?? []
+      )
+    )
+  ];
   const traces: RoutingTraceResponse[] = [];
   for (const address of addresses.length ? addresses : [null]) {
     traces.push(await api.routingTrace({input: address ? {...input, dst_ip: address} : input, resolve: 'none'}, signal));
   }
   if (traces.some(trace => trace.instance_id !== traces[0].instance_id || trace.generation_id !== traces[0].generation_id))
     throw clientError(409, 'snapshot_unavailable', 'The routing generation changed during simulation; retry the query', 'ui.errGenerationChanged');
-  return {...traces[0], evaluations: traces.flatMap(trace => trace.evaluations), dns};
+  return {traces, query};
 }
 
 // The whole retained set, one snapshot per poll: a cursor is bound to a snapshot, so pages cannot be added to

@@ -31,16 +31,24 @@ function dual(v4: string[], v6: string[]): DnsQueryResponse {
 const request = {input: {domain: 'example.org', network: 'tcp' as const, dst_port: 443}, resolve: 'query' as const, recordTypes: ['A']};
 it('simulates the first IPv4 and the first IPv6 answer and keeps every answer', async () => {
   const api = createMockApi();
-  api.dnsQuery = vi.fn().mockResolvedValue(dual(['192.0.2.1', '198.51.100.1', '192.0.2.1'], ['2001:db8::1', '2001:db8::2']));
   const trace = api.routingTrace;
   api.routingTrace = vi.fn(trace);
+  const answer = dual(['192.0.2.1', '198.51.100.1', '192.0.2.1'], ['2001:db8::1', '2001:db8::2']);
+  api.dnsQuery = vi.fn().mockResolvedValue(answer);
   const result = await routingTrace(api, {...request, recordTypes: ['A', 'AAAA']}, new AbortController().signal);
-  expect(result.evaluations.map(item => item.dst_ip)).toEqual(['192.0.2.1', '2001:db8::1']);
   expect(api.routingTrace).toHaveBeenCalledTimes(2);
-  expect(result.dns.map(item => [item.qtype, item.addresses, item.selected_ip])).toEqual([
-    ['A', ['192.0.2.1', '198.51.100.1', '192.0.2.1'], '192.0.2.1'],
-    ['AAAA', ['2001:db8::1', '2001:db8::2'], '2001:db8::1']
-  ]);
+  expect(result.traces.map(trace => trace.evaluations.map(item => item.dst_ip))).toEqual([['192.0.2.1'], ['2001:db8::1']]);
+  // The query is returned as it came; no trace carries DNS evidence it did not produce.
+  expect(result.query).toBe(answer);
+  expect(result.traces.flatMap(trace => trace.dns)).toEqual([]);
+});
+it('runs one plain trace outside query mode', async () => {
+  const api = createMockApi();
+  api.dnsQuery = vi.fn();
+  const result = await routingTrace(api, {...request, resolve: 'live'}, new AbortController().signal);
+  expect(api.dnsQuery).not.toHaveBeenCalled();
+  expect(result.query).toBeNull();
+  expect(result.traces).toHaveLength(1);
 });
 it.each(['generation_id', 'instance_id'] as const)('rejects a batch spanning different %s values', async field => {
   const api = createMockApi();
