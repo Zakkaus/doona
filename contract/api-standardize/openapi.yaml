@@ -8114,6 +8114,25 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/LastReload'
+        degradations:
+          type: array
+          maxItems: 64
+          description: Features running reduced after a failure the backend recovered from. An absent or empty list means none are known. Codes are adapter-defined like other SafeError codes. A change to the list is announced by runtime.updated.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/SafeError'
+              - type: object
+                required:
+                  - component
+                  - since
+                properties:
+                  component:
+                    type: string
+                    minLength: 1
+                    description: Adapter-defined feature identifier, such as persistence or pname_routing. Stable across releases of one adapter; each component appears at most once.
+                  since:
+                    $ref: '#/components/schemas/Timestamp'
+                    description: When the feature started running reduced. A failure that repeats while the entry is listed keeps the original time.
     LastReload:
       type: object
       required:
@@ -12667,6 +12686,7 @@ components:
               - generation_id
     RuntimeUpdatedEvent:
       type: object
+      description: Coalesced invalidation of the runtime snapshot. Also sent when an entry is added to, changed in, or cleared from runtime degradations.
       required:
         - instance_id
         - observed_at
