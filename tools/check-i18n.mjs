@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import {readFileSync, readdirSync} from 'node:fs';
 import {checkCatalogues} from './catalogues.mjs';
-import {REFERENCE_LANG, langs as languages} from './languages.mjs';
+import {languages, REFERENCE_LANG} from './languages.mjs';
 
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const excluded = /(?:^src\/i18n\/|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/shared\/geo\.ts$|^src\/dae\/templates\.ts$)/;
@@ -52,10 +52,27 @@ for (const path of sources) {
 }
 
 // Every key of the reference catalogue must be named somewhere in the application.
-const catalogues = Object.fromEntries(languages.map(lang => [lang, JSON.parse(readFileSync(`src/i18n/locales/${lang}.json`, 'utf8'))]));
-failures.push(...checkCatalogues(catalogues, REFERENCE_LANG));
-const unused = Object.keys(catalogues[REFERENCE_LANG]).filter(key => !references.has(key));
+const catalogues = Object.fromEntries(languages.map(({id}) => [id, JSON.parse(readFileSync(`src/i18n/locales/${id}.json`, 'utf8'))]));
+const reference = catalogues[REFERENCE_LANG];
+const checked = checkCatalogues(catalogues, REFERENCE_LANG, new Set(languages.filter(language => language.complete).map(language => language.id)));
+failures.push(...checked.failures);
+const unused = Object.keys(reference).filter(key => !references.has(key));
 for (const key of unused) failures.push(`Unused message key: ${key}`);
+// `--missing <id>` lists what a language still lacks, grouped by the key's first segment, as lines to paste into its
+// catalogue with the English text to translate.
+const wanted = process.argv.includes('--missing') ? process.argv[process.argv.indexOf('--missing') + 1] : undefined;
+if (wanted !== undefined && !Object.hasOwn(checked.missing, wanted)) failures.push(`--missing: no language ${wanted} in src/i18n/languages.ts`);
+else if (wanted !== undefined) {
+  let group;
+  for (const key of checked.missing[wanted]) {
+    if (key.split('.')[0] !== group) console.log(`\n# ${(group = key.split('.')[0])}`);
+    console.log(`${JSON.stringify(key)}: ${JSON.stringify(reference[key])},`);
+  }
+}
+const total = Object.keys(reference).length;
+for (const {id, complete} of languages)
+  if (!complete)
+    console.log(`${id}: ${total - checked.missing[id].length} of ${total} keys (${Math.floor(((total - checked.missing[id].length) / total) * 100)}%)`);
 console.log(`i18n: ${cjkCount} CJK literals, ${unused.length} unused keys`);
 for (const failure of failures) console.error(failure);
 process.exitCode = failures.length ? 1 : 0;
