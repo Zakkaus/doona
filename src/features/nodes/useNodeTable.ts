@@ -20,6 +20,8 @@ type NodeTableInput = {
   names: OutboundNames;
   loading: boolean;
   label: string;
+  // Which source the table shows and how to change it, where there is more than one.
+  scope: string | null;
   query: string | null;
   source: MainSourceEdit;
   canManage: boolean;
@@ -116,6 +118,7 @@ export function useNodeTable(input: NodeTableInput) {
     shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
     label: input.label,
+    scope: input.scope,
     canManage,
     busy: input.busy,
     writable: source.writable,
@@ -157,6 +160,7 @@ export type NodeTableView = {
   shown: string;
   loading: boolean;
   label: string;
+  scope: string | null;
   canManage: boolean;
   busy: boolean;
   writable: boolean;

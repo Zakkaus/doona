@@ -6,6 +6,7 @@ import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import {writeInterval, type SubscriptionEntry} from './subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
 import {errorText} from '../../api/error';
+import type {useRefreshAll} from '../shared/useRefreshAll';
 
 type ProviderTableInput = {
   rows: ProviderRow[];
@@ -19,6 +20,7 @@ type ProviderTableInput = {
   entries: SubscriptionEntry[];
   reload: () => void;
   refresh: ReturnType<typeof useProviderRefresh>;
+  refreshAll: ReturnType<typeof useRefreshAll>;
   onAdd: () => void;
   onRemove: (item: Provider) => void;
 };
@@ -67,6 +69,8 @@ export function useProviderTable(input: ProviderTableInput) {
     writable: input.source.writable,
     sourceBusy: input.source.busy || !input.source.main,
     sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
+    // Refreshing every subscription, as Settings offers it, where the backend can refresh them.
+    refreshAll: input.canRefresh ? input.refreshAll : null,
     onAdd: input.onAdd
   };
 }
@@ -107,5 +111,6 @@ export type ProviderTableView = {
   writable: boolean;
   sourceBusy: boolean;
   sourceTip?: string;
+  refreshAll: ReturnType<typeof useRefreshAll> | null;
   onAdd: () => void;
 };

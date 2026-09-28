@@ -139,10 +139,6 @@ export function runtimeApplyReason({busy, invalid, changed}: {busy: boolean; inv
   return changed ? null : t('config.noChanges');
 }
 
-export function refreshAllReason({ready, busy, count}: {ready: boolean; busy: boolean; count: number}, t: Translator): string | null {
-  return ready && !busy && !count ? t('settings.noSubscriptions') : null;
-}
-
 export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; loaded: boolean; failed: boolean}, t: Translator): string | null {
   return !busy && !loaded && failed ? t('settings.geodataUnread') : null;
 }

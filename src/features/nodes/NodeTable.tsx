@@ -49,14 +49,15 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {
         id: 'actions',
         label: t('ui.actions'),
-        minWidth: canManage ? 108 : 72,
+        minWidth: (canManage ? 108 : 72) + (writable ? 112 : 0),
         grow: 0,
         render: row => (
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
             {writable && (
-              <ChoiceMenu quiet chevron={false} label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join}>
+              <ChoiceMenu quiet label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join}>
                 <AddCircle />
+                {t('nodes.addToGroup')}
               </ChoiceMenu>
             )}
             {row.removable && (
@@ -73,6 +74,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
   return (
     <>
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
+      {m.scope && <p className="rp-label">{m.scope}</p>}
       <div className="rp-toolbar">
         <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
         <LabeledSelect label={t('nodes.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />

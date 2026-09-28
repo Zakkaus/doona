@@ -12,7 +12,7 @@ import {useDraftGuard} from '../../shell/draft';
 // A rule of either list as the editor needs it: GET /rules and GET /dns/rules entries share these fields.
 export type EditedRule = {rule_id: string; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
 // An edit changes only what the rule routes to; `outbound` and `must` are its current target.
-type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
+export type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
 type Dialog<R> = Opened<R> & {
   generation: string;
   sources: ConfigSource[];
@@ -237,5 +237,6 @@ export function useRuleEditor<R extends EditedRule>({
       setPick({...pick, on: mode === 'pick'});
     }
   };
-  return {model};
+  // `open` lets a list open a dialog its own rows start, such as editing a routing rule's outbound.
+  return {model, open};
 }

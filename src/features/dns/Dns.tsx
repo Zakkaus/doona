@@ -277,6 +277,16 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           )}
         </DetailPanel>
       </div>
+      {/* On a phone the toolbar's copy is in its overflow menu, so the log's continuation also sits at its end. */}
+      {vm.hasOlder && (
+        <div className="rp-narrow-only">
+          <div className="rp-cluster">
+            <Button small isPending={vm.loadingOlder} onPress={vm.loadOlder}>
+              {t('dns.loadOlder')}
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

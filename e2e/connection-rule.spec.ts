@@ -608,3 +608,28 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite: telegram) -> proxy', 'domain(geosite: telegram) -> gaming')});
   await expect(page.getByRole('row', {name: /domain\(geosite: telegram\)/})).toContainText('gaming');
 });
+
+test('a routing rule edits its outbound from its own row, and a read-only file disables that with the reason', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content!;
+  await page.goto('/#/rules?tab=list');
+  const row = page.getByRole('row', {name: /domain\(geosite: telegram\)/});
+  await row.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});
+  await expect(dialog.locator('.rp-code')).toContainText('domain(geosite: telegram)');
+  await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await page.getByRole('option', {name: 'gaming', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule updated'})).toBeVisible();
+  const writes = requests.filter(request => request.method() === 'PUT');
+  expect(writes).toHaveLength(1);
+  expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite: telegram) -> proxy', 'domain(geosite: telegram) -> gaming')});
+  // The same row in a file honk will not write keeps the action, disabled, and says why.
+  const config = await api.config();
+  handlers['GET config'] = async () => ({...config, sources: config.sources.map(source => ({...source, writable: false}))});
+  await top(page).getByRole('button', {name: 'Refresh', exact: true}).click();
+  const locked = row.getByRole('button', {name: 'Edit outbound settings', exact: true});
+  await expect(locked).toBeDisabled();
+  await locked.locator('..').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('This file is read-only');
+});

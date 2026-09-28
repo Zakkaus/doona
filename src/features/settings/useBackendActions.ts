@@ -10,10 +10,11 @@ import {
   useVersion
 } from '../../store';
 import {useLifecycle} from '../shared/useLifecycle';
+import {useRefreshAll} from '../shared/useRefreshAll';
 import {closedAllTone} from '../../api/selectors';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
-import {geodataFromConfig, geodataRows, geodataUpdateReason, refreshAllReason} from './view';
+import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {geodataConfigurable} from './nav';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
@@ -42,34 +43,9 @@ export function useBackendActions() {
     !!resources?.providers.can_refresh ||
     !!resources?.connections.can_close ||
     (plainGeodata && !!resources?.geodata.can_update);
-  const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');
-  const providersReady = !!providers.data && !providers.error && !providers.loading;
   const connectionsReady = !!connections.data && !connections.error && !connections.loading;
   const liveCount = connectionsReady ? connections.data!.total_tcp + connections.data!.total_udp : null;
-  const refreshingAll = refresh.busy === '*';
-  // Failures fold into the one summary toast, which names the first error: a toast per subscription would bury it.
-  const refreshAll = () => {
-    const failures: unknown[] = [];
-    let degraded = false;
-    return refresh
-      .refreshMany(
-        subscriptions.map(item => item.id),
-        (_id, error) => failures.push(error),
-        () => (degraded = true)
-      )
-      .then(
-        done => {
-          // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
-          if (done === undefined) return;
-          const counts = {n: done, total: subscriptions.length};
-          const kind = done === subscriptions.length ? 'positive' : done ? 'info' : 'negative';
-          if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), {detail: errorText(failures[0], t)});
-          else toast(kind, t('settings.refreshedAll', counts));
-          if (degraded) toast('info', t('settings.refreshedDegraded'));
-        },
-        error => toast('negative', t('settings.refreshAllFailed'), {detail: errorText(error, t)})
-      );
-  };
+  const refreshAll = useRefreshAll(providers, refresh);
   const closeAll = () =>
     closing.closeAll({ids: [], query: {all: true}}).then(
       tally => {
@@ -115,11 +91,11 @@ export function useBackendActions() {
     // Only while capabilities are on their way; a failed load is reported by the page banner, not a spinner.
     waiting: !resources && !capabilities.error,
     note: t(anyAction ? 'settings.actionsNote' : 'settings.actionsNone'),
-    refreshingAll,
-    refreshAll,
-    refreshDisabled: !providersReady || !!refresh.busy || !subscriptions.length,
-    refreshReason: refreshAllReason({ready: providersReady, busy: !!refresh.busy, count: subscriptions.length}, t),
-    refreshLabel: t('settings.refreshAll', {n: providersReady ? subscriptions.length : '—'}),
+    refreshingAll: refreshAll.refreshing,
+    refreshAll: refreshAll.run,
+    refreshDisabled: refreshAll.disabled,
+    refreshReason: refreshAll.reason,
+    refreshLabel: refreshAll.label,
     canFlush: !!(resources?.dns_cache.available && resources.dns_cache.flush),
     canRefresh: !!resources?.providers.can_refresh,
     canClose: !!resources?.connections.can_close,
