@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useGroups} from '../../store';
+import {useCapabilities, useGroups, useVersion} from '../../store';
 import {useConfig} from '../../store/config';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
@@ -9,6 +9,7 @@ import {readMode, writeMode, type OutboundMode} from './mode';
 import {modeLabels, modeReasons, modeView} from './view';
 import {offered} from '../../api/capabilities';
 import {LocalError} from '../../api/error';
+import {engineOf} from '../../api/engines';
 
 export function useMode() {
   const t = useT();
@@ -16,10 +17,15 @@ export function useMode() {
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const {main, writable, busy, error, retry, apply: write} = useMainSourceEdit();
-  const content = (main ?? config.data?.sources.find(source => source.kind === 'main'))?.content;
+  // The mode is a rule doona writes into dae text, so another engine's configuration neither shows nor takes one.
+  // Until the version names the engine the card waits as it does for the configuration.
+  const version = useVersion().data;
+  const daeText = engineOf(version).daeText;
+  const content = daeText ? (main ?? config.data?.sources.find(source => source.kind === 'main'))?.content : undefined;
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
-  const view = modeView(current, staged, groups.data ?? [], writable && !!main, !!resources?.config.available, t, content != null);
+  const configAvailable = (daeText || !version) && !!resources?.config.available;
+  const view = modeView(current, staged, groups.data ?? [], daeText && writable && !!main, configAvailable, t, content != null);
   const guard = useDraftGuard(view.dirty, () => setStaged(null));
   const apply = async () => {
     if (!staged || view.incomplete) return;

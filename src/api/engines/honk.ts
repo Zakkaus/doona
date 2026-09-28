@@ -78,5 +78,6 @@ export const honk: Engine = {
   redactedSections: blocks =>
     blocks
       .filter(block => block.name === 'experimental' && block.children.some(child => child.name === 'native_api'))
-      .map(block => ({block, name: 'experimental.native_api'}))
+      .map(block => ({block, name: 'experimental.native_api'})),
+  daeText: true
 };

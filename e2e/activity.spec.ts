@@ -434,6 +434,43 @@ test.describe('many outbounds', () => {
   });
 });
 
+test('an engine whose configuration syntax doona does not write shows no mode and takes no change', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const marked = main.content!.replace('\nrouting {\n', '\nrouting {\n  l4proto(tcp, udp) -> proxy # doona: outbound mode\n');
+  await api.pollOperation(await api.replaceConfigSource(main.id, marked, `"${main.content_sha256}"`));
+  const version = await api.version();
+  handlers['GET version'] = async () => ({...version, api: {...version.api, name: 'other/backend'}});
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-version')).toBeVisible();
+  const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
+  await expect(page.getByText('Not provided by this backend', {exact: true}).first()).toBeVisible();
+  for (const name of ['Rule', 'Direct', 'Global']) {
+    await expect(mode.getByRole('radio', {name, exact: true})).toBeDisabled();
+    await expect(mode.getByRole('radio', {name, exact: true})).not.toBeChecked();
+  }
+  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toHaveCount(0);
+  expect(requests.filter(request => request.method() !== 'GET')).toEqual([]);
+});
+
+test('the mode card waits for the version before saying the mode is not provided', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const version = await api.version();
+  let answer = () => {};
+  const held = new Promise<void>(resolve => (answer = resolve));
+  handlers['GET version'] = async () => {
+    await held;
+    return version;
+  };
+  await page.goto('/#/activity');
+  // While the engine is unknown the card looks as it does before the configuration arrives.
+  await expect(page.getByRole('button', {name: 'Why is the mode read-only?'})).toBeVisible();
+  await expect(page.getByText('Not provided by this backend', {exact: true})).toHaveCount(0);
+  answer();
+  await expect(page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Not provided by this backend', {exact: true})).toHaveCount(0);
+});
+
 test('staged mode changes require discard before navigation', async ({page}) => {
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});

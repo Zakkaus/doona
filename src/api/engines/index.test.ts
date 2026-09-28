@@ -103,5 +103,6 @@ describe('an unknown engine', () => {
       expect(other.reason(subject, off)).toBeUndefined();
     expect(other.holdsCredentials({content: listener})).toBe(false);
     expect(other.redactedSections(scanConfig(listener).blocks)).toEqual([]);
+    expect(other.daeText).toBe(false);
   });
 });
