@@ -10,13 +10,14 @@ import {queryTypes, useGroups, useNodeProbe, useNodes, useRules} from '../../sto
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast, toastFailure, useLinked} from '../../ui/ui';
 import {dnsView, evaluationView, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
+import {parseTraceLink} from '../shared/link';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -31,10 +32,17 @@ const blankForm = {
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };
-// Held by the rules page rather than the trace tab, so what was typed survives a tab switch.
-export function useTraceForm() {
-  const [form, setForm] = useState(blankForm);
-  const [advanced, setAdvanced] = useState(false);
+// Held by the rules page rather than the trace tab, so what was typed survives a tab switch. A link that names a
+// target fills the form in, opening the advanced fields when it names the source; it does not run the trace.
+export function useTraceForm(query: string) {
+  const linked = useMemo(() => parseTraceLink(query), [query]);
+  const [form, setForm] = useState(() => (linked ? {...blankForm, ...linked} : blankForm));
+  const [advanced, setAdvanced] = useState(!!linked?.src_ip);
+  useLinked(linked && JSON.stringify(linked), () => {
+    if (!linked) return;
+    setForm({...blankForm, ...linked});
+    setAdvanced(!!linked.src_ip);
+  });
   return {form, setForm, advanced, setAdvanced};
 }
 export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>, go: PageProps['go']) {

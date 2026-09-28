@@ -263,6 +263,10 @@ it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
   const model = connectionsView([row], {...connections, visibility: 'partial'}, undefined, 'all', 'all', 'en-US', t);
   expect(connectionDetail(row, 'en-US', t, new Map(), false)?.flowQuery).toBe('tab=records&connection_id=a%2Fb');
+  expect(
+    connectionDetail({...row, domain: 'example.com', dst: '[2001:db8::1]:443', src: '10.0.0.2:5353', network: 'udp'}, 'en-US', t, new Map(), false)?.traceQuery
+  ).toBe('tab=trace&network=udp&domain=example.com&dst_ip=2001%3Adb8%3A%3A1&dst_port=443&src_ip=10.0.0.2');
+  expect(connectionDetail({...row, domain: null, dst: undefined}, 'en-US', t, new Map(), false)?.traceQuery).toBeNull();
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
 });

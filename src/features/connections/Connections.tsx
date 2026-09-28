@@ -116,6 +116,7 @@ export function Connections(props: PageProps) {
                   {vm.ruleAction.canShow && <Button onPress={() => vm.showRule()}>{t('conn.showRule')}</Button>}
                   {vm.ruleAction.canEdit && <Button onPress={() => vm.showRule(true)}>{t('conn.editRule')}</Button>}
                   {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
+                  {vm.canTrace && <Button onPress={vm.traceConnection}>{t('conn.trace')}</Button>}
                   {cur.source && <Button onPress={vm.onlyClient}>{t('conn.onlyThisClient')}</Button>}
                 </div>
                 {vm.canClose && cur.closable && (

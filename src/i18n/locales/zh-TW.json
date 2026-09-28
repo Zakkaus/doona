@@ -393,6 +393,7 @@
   "conn.stateHelp.routing": "正在比對路由規則。",
   "conn.tab.list": "連線",
   "conn.tab.traffic": "流量",
+  "conn.trace": "追蹤此連線",
   "conn.truncated": "連線清單已截斷，僅顯示部分記錄。",
   "conn.ungrouped": "不分組",
   "conn.viewFlow": "查看流程",

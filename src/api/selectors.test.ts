@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent, GroupSummary} from './model';
-import {eventSummary, memoryTone, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
+import {addressPort, eventSummary, memoryTone, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
 import {formatNumber, LOCALE, readLang, translate} from '../i18n';
 import {createMockApi} from './mock';
 
@@ -81,4 +81,12 @@ it('files a node under its provider, or under the built-in or unattributed owner
 
 it('tones memory use by its share of the limit', () => {
   expect([0, 75, 75.5, 90, 90.5].map(memoryTone)).toEqual(['ok', 'ok', 'warn', 'warn', 'err']);
+});
+
+it('reads the port of an address, including a bracketed IPv6 one', () => {
+  expect(addressPort('149.154.167.220:443')).toBe('443');
+  expect(addressPort('[2001:db8::1]:8443')).toBe('8443');
+  expect(addressPort('2001:db8::1')).toBeUndefined();
+  expect(addressPort('10.0.0.2')).toBeUndefined();
+  expect(addressPort(undefined)).toBeUndefined();
 });

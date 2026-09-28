@@ -254,6 +254,10 @@ export function useConnectionsPage({go, query}: PageProps) {
     showRule: (edit = false) => {
       if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id, edit: edit ? cur.rule_id : null}));
     },
+    canTrace: offered(capabilities.data?.resources, 'routing_trace', {whileLoading: false}) && !!model.detail?.traceQuery,
+    traceConnection: () => {
+      if (model.detail?.traceQuery) go('rules', model.detail.traceQuery);
+    },
     showFlow: () => {
       if (model.detail && canViewFlow) go('flows', model.detail.flowQuery);
     },

@@ -94,6 +94,8 @@ export function sourceIp(src: string | undefined): string | undefined {
   if (!src) return undefined;
   return ipLiteral(src.startsWith('[') ? src.slice(1, src.indexOf(']')) : src.split(':').length === 2 ? src.split(':')[0] : src);
 }
+// The port of an `ip:port` or `[ipv6]:port` address; a bare address has none.
+export const addressPort = (address: string | undefined) => address?.match(/^(?:\[[^\]]+\]|[^:]+):(\d+)$/)?.[1];
 
 export function outboundLabel(name: string | null, label: LabelFn): string {
   return name === 'direct' ? label('ui.direct') : name === 'block' ? label('ui.block') : name === null || name === 'unknown' ? label('ui.unknown') : name;
