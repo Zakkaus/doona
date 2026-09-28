@@ -132,14 +132,35 @@ it('explains a degraded datapath by whether the runtime is degraded too, and an 
   expect(help(datapathFields(datapath, 'unknown', t, 'en-US'), 'ov.f.kind')).toBeUndefined();
 });
 
-it('explains the cgroup scope by its value', () => {
+it('explains the cgroup scope by its value and leaves out an unknown one', () => {
   for (const [scope, key] of [
     ['service', 'ov.cgroupHelp.service'],
-    ['shared', 'ov.cgroupHelp.shared'],
-    ['unknown', 'ov.cgroupHelp.unknown']
+    ['shared', 'ov.cgroupHelp.shared']
   ] as const) {
     const row = field(memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope}}, t, 'en-US'), t('ov.f.cgroupScope'));
     expect(row?.help).toEqual({title: t('ov.f.cgroupScope'), text: t('ui.valuePair', {label: row!.value, value: t(key)})});
   }
+  expect(field(memoryFields({...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, scope: 'unknown'}}, t, 'en-US'), t('ov.f.cgroupScope'))).toBeUndefined();
   expect(field(memoryFields({...runtimeMemory, cgroup: null}, t, 'en-US'), t('ov.f.cgroupScope'))?.help).toBeUndefined();
+});
+
+it('says a reported null cgroup limit is no limit and leaves out uncollected kernel memory', () => {
+  const unlimited = {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, limit_bytes: null}, kernel: null};
+  const fields = overviewView({capabilities, memory: unlimited}, loading, 'en-US', t).memory.fields;
+  expect(fields).toContainEqual([t('ov.f.cgroupLimit'), t('ov.noLimit')]);
+  expect(field(fields, t('ov.f.ebpfBytes'))).toBeUndefined();
+  // Without the metric in the capabilities, a null limit is only missing.
+  const unreported = {...capabilities, resources: {...capabilities.resources, runtime_memory: {available: true, metrics: []}}};
+  expect(overviewView({capabilities: unreported, memory: unlimited}, loading, 'en-US', t).memory.fields).toContainEqual([t('ov.f.cgroupLimit'), '—']);
+  expect(field(memoryFields(runtimeMemory, t, 'en-US'), t('ov.f.ebpfBytes'))?.value).toBe(formatBytes('18874368', 'en-US'));
+});
+
+it('shows only the capacity of maps whose occupancy is not read and leaves out partial eBPF visibility', () => {
+  const maps = {state: 'partial' as const, conn_state: {occupancy: null, capacity: 524288, occupancy_known: false}};
+  const fields = datapathFields({...datapath, visibility: 'partial', ebpf: {...datapath.ebpf!, maps}}, 'unknown', t, 'en-US');
+  expect(fields).toContainEqual([t('ov.f.maps'), t('ov.mapCapacity', {capacity: '524,288'})]);
+  expect(t('ov.mapCapacity', {capacity: '524,288'})).toBe('Capacity 524,288');
+  expect(field(fields, t('ov.f.connState'))).toBeUndefined();
+  expect(field(fields, t('ov.f.visibility'))).toBeUndefined();
+  expect(field(datapathFields({...datapath, visibility: 'partial', ebpf: null}, 'unknown', t, 'en-US'), t('ov.f.visibility'))?.value).toBe(t('ov.v.partial'));
 });
