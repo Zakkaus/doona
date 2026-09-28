@@ -8,11 +8,13 @@ import {dnsListEnd, dnsRuleAnchor, type DnsRuleListId} from '../../dae/ruleText'
 import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
 import {useRuleEditor} from './useRuleEditor';
+import {parseRuleSeed} from '../shared/link';
+import {within} from '../../shell/route';
 import type {DictionaryModel} from './useRuleList';
 
 // One list of GET /dns/rules as the rule dictionary renders it. Edits splice the source that holds the rule, as
 // routing rules do; there is no rule-level write endpoint.
-export function useDnsRuleList({go}: PageProps, list: DnsRuleListId): DictionaryModel {
+export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): DictionaryModel {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
@@ -29,6 +31,9 @@ export function useDnsRuleList({go}: PageProps, list: DnsRuleListId): Dictionary
     () => dnsDictionaryView(list, listed ?? [], rules.data?.generation_id, config.data?.sources ?? [], t, lang),
     [list, listed, rules.data?.generation_id, config.data, t, lang]
   );
+  // A seed from the DNS log prefills a request rule; the response list leaves it alone.
+  const seed = list === 'request' ? new URLSearchParams(query).get('add') : null;
+  const preset = useMemo(() => parseRuleSeed(seed, dnsConditionKinds.request), [seed]);
   const editor = useRuleEditor<DnsRoutingRule>({
     canWrite,
     list: rules.data && listed ? {rules: listed, generation_id: rules.data.generation_id} : undefined,
@@ -39,7 +44,11 @@ export function useDnsRuleList({go}: PageProps, list: DnsRuleListId): Dictionary
     anchor: (source, rule) => dnsRuleAnchor(source, rule, list),
     end: sources => dnsListEnd(sources, list),
     kinds: dnsConditionKinds[list],
-    reasons: {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'}
+    reasons: {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'},
+    onClose: () => {
+      if (seed) go('rules', within(query, {add: null}));
+    },
+    link: {key: seed, open: preset && {kind: 'add', preset}}
   });
   return {
     ...editor.model,
