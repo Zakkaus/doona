@@ -68,7 +68,11 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
         failedLoad && (expectedHttpErrors.get(page)?.has(message.location().url) || expectedLoadFailures.get(page)?.test(message.location().url));
       if (message.type() === 'error' && !discovery && !expectedHttp) errors.push(`console: ${message.text()}`);
     });
-    page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
+    // A ResizeObserver whose callback changes layout defers the rest of its notifications to the next frame and the
+    // browser reports that as an error; nothing is lost, and WebKit raises it at random under CI load.
+    page.on('pageerror', error => {
+      if (!/^ResizeObserver loop/.test(error.message)) errors.push(`pageerror: ${error.message}`);
+    });
     // Seeds run on every navigation, so they only fill keys the page has not written itself:
     // a preference changed in the page must survive a reload the way it does for a user.
     await page.addInitScript(
