@@ -1,7 +1,7 @@
 import {useEffect, useEffectEvent, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {useGroupControl} from '../../store';
-import type {HealthObservation} from '../../api/model';
+import type {GroupSummary, HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
@@ -18,11 +18,13 @@ export type PolicyGroupInput = {
   source: MainSourceEdit;
   declaration: PolicyDeclaration;
   members: number;
+  // The selection the groups list last reported.
+  selection: GroupSummary['selection'];
   // An off-screen card keeps what it shows and stops polling until it scrolls back.
   paused: boolean;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
-  const {id, health, refreshGroups, refreshNodes, source, declaration, paused} = input;
+  const {id, health, refreshGroups, refreshNodes, source, declaration, selection, paused} = input;
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
@@ -33,6 +35,14 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (control.actionError) report(control.actionError);
   }, [control.actionError]);
   const g = control.data;
+  // The list polls faster than each group, so a selection it reports that this group does not show yet reads the group again.
+  const {refetch} = control;
+  const shown = g?.runtime.selection;
+  const behind =
+    !paused && !!shown && (selection.tcp_member_id !== (shown.tcp?.member_id ?? null) || selection.udp_member_id !== (shown.udp?.member_id ?? null));
+  useEffect(() => {
+    if (behind) refetch();
+  }, [behind, selection, refetch]);
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, declaration);

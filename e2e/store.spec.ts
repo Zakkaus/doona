@@ -115,3 +115,25 @@ for (const [route, path, most] of [
     }
     expect(count()).toBeLessThanOrEqual(most);
   });
+
+test('an open Policies page shows a selection made elsewhere and stops polling while hidden', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  await page.clock.install();
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'proxy', exact: true});
+  // TCP and UDP start on different members, so no member is the selection yet.
+  const member = card.getByRole('button', {name: /^sg-01 /});
+  await expect(member).toHaveAttribute('aria-pressed', 'false');
+  await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});
+  await page.clock.fastForward(5500);
+  await expect(member).toHaveAttribute('aria-pressed', 'true');
+  const listReads = () => requests.filter(request => request.method() === 'GET' && new URL(request.url()).pathname === '/api/v1/groups').length;
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});
+    Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => 'hidden'});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const before = listReads();
+  await page.clock.fastForward(30000);
+  expect(listReads()).toBe(before);
+});

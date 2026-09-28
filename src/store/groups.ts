@@ -67,9 +67,10 @@ export function groupActions(group: Group, capabilities: Capabilities | undefine
     }
   };
 }
-export function useGroups(enabled = true) {
+// A page that shows each group's selection asks for a faster cadence than the inventory's.
+export function useGroups(enabled = true, every: number = poll.inventory) {
   const api = getApi();
-  return useResource({key: ['groups'], every: poll.inventory, fetch: signal => api.groups(signal)}, {enabled});
+  return useResource({key: ['groups'], every, fetch: signal => api.groups(signal)}, {enabled});
 }
 export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void, paused = false) {
   const api = getApi();
