@@ -646,7 +646,9 @@ export interface paths {
          *     next only when one fails: a connection error, a status other than 200
          *     (redirects are not followed), the per-URL deadline, or a sha256 mismatch
          *     against a checksum published at the URL with .sha256sum appended. The
-         *     checksum goes through the same route as its file. Every request leaves
+         *     checksum goes through the same route as its file. With
+         *     GeoDataSettings.verify_checksum false, no checksum is requested and the
+         *     file is accepted unverified. Every request leaves
          *     through the route in GeoDataSettings.download; a URL the route cannot reach,
          *     because a group has no usable member or the routing rules block it, fails like
          *     a connection error and the next URL is tried. The backend never falls back to
@@ -1019,8 +1021,9 @@ export interface paths {
          *     and an authenticated caller; the anonymous loopback principal gets 403
          *     permission_denied. The backend stores it and does not change the top-level
          *     source. A geodata patch merges into the stored settings. Patching geosite or
-         *     geoip stores both URL lists (geodata.source becomes db); auto_update is
-         *     stored on its own; null deletes everything stored. It never downloads; POST
+         *     geoip stores both URL lists (geodata.source becomes db); auto_update,
+         *     download and verify_checksum are each stored on their own; null deletes
+         *     everything stored. It never downloads; POST
          *     /geodata/update does. The stored settings are the only ones in force. At
          *     startup, the backend writes each geodata download URL the configuration file
          *     names into the stored settings, replacing a list a patch stored, and deletes
@@ -1132,6 +1135,42 @@ export interface paths {
         put?: never;
         /** Flush the complete runtime DNS cache */
         post: operations["flushDnsCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dns/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the running generation's DNS routing rules
+         * @description Requires resources.dns_rules.available. Return the DNS routing rules of the
+         *     running generation, which is the accepted configuration, as two ordered lists:
+         *     request rules pick how a query is resolved, and response rules decide whether
+         *     an answer is accepted, rejected or re-queried. Each list is in evaluation order
+         *     and ends with exactly one fallback entry. A fallback the configuration does not
+         *     write still appears, with the backend's default action and a null source.
+         *     A rule the configuration parser omitted with a diagnostic is not listed.
+         *     This resource is read-only. Rules are edited by replacing the source that holds
+         *     them with PUT /api/v1/config/sources/{source_id}, the same as traffic rules;
+         *     there is no rule-level write endpoint. rule_id is stable within a generation
+         *     and addresses the rule; it is unique across both lists. expression is the
+         *     source text as written; upstream is the name as the engine resolved it and may
+         *     differ in case from the source text. generation_id identifies the rules'
+         *     routing generation; refetch after generation.changed. There is no paginated snapshot. If a coherent
+         *     generation cannot be pinned, return 503 snapshot_unavailable. If either list
+         *     exceeds resources.dns_rules.max_rules, return 503 temporarily_unavailable
+         *     rather than silently truncate it.
+         */
+        get: operations["listDnsRules"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1528,6 +1567,11 @@ export interface components {
                     max_records?: components["schemas"]["SafeUInt"];
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
+                dns_rules: {
+                    available: boolean;
+                    /** @description Maximum size of each DNS rule list, including its fallback entry; never a truncation limit. */
+                    max_rules?: components["schemas"]["SafeUInt"];
+                };
                 runtime_settings: {
                     available: boolean;
                     /** @description The settings PATCH /runtime/settings accepts on this backend; others return 400. */
@@ -1696,6 +1740,7 @@ export interface components {
             traffic: components["schemas"]["TrafficSummary"];
             process: {
                 pid?: number | null;
+                /** @description CPU time the engine process used over the adapter's latest sampling interval, as a percentage of one CPU. 100 means one core fully busy; the value may exceed 100 on multi-core hosts. Null until two samples exist or when unmeasurable. */
                 cpu_percent: number | null;
             };
             last_reload: null | components["schemas"]["LastReload"];
@@ -2011,7 +2056,7 @@ export interface components {
             source_redacted: string | null;
             /** @description Display-only URL the loaded file was downloaded from, redacted like source_redacted. Null when the backend did not download the loaded file, for example a file installed by a package. Reported when resources.geodata.configurable_sources is true. */
             fetched_url_redacted?: string | null;
-            /** @description The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published or the backend did not download the file. Reported when resources.geodata.configurable_sources is true. */
+            /** @description The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published, verification was off, or the backend did not download the file. Reported when resources.geodata.configurable_sources is true. */
             verified?: boolean;
             /** @description The route the loaded file was downloaded through. route is the GeoDataSettings.download route in force for that download. group_id is the group the request went through, the one the routing rules chose for route routing, and null for direct, for routing rules that chose direct or a single node, and for a group that no longer exists. Null when the backend did not download the loaded file. Reported when resources.geodata.configurable_sources is true. */
             download_route?: null | components["schemas"]["GeoDataDownload"];
@@ -2101,16 +2146,19 @@ export interface components {
              *     }
              */
             download: components["schemas"]["GeoDataDownload"];
+            /** @description Whether an update fetches each URL with .sha256sum appended and rejects a file that does not match it. true when nothing is stored, and a backend that omits the field behaves as true. false sends no checksum request and accepts the file unverified, with verified false, for a mirror that answers the checksum URL with an error page or a status other than 404. The configuration file never sets it. */
+            verify_checksum?: boolean;
         };
         GeoDataSourcesPatch: {
             /** @description Replaces the whole list; order is fallback order. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
-        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update and download are each stored on their own. null deletes everything stored. */
+        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update, download and verify_checksum are each stored on their own. null deletes everything stored. */
         GeoDataSettingsPatch: null | {
             geosite?: components["schemas"]["GeoDataSourcesPatch"];
             geoip?: components["schemas"]["GeoDataSourcesPatch"];
             download?: components["schemas"]["GeoDataDownloadPatch"];
+            verify_checksum?: boolean;
             auto_update?: {
                 enabled?: boolean;
                 interval_hours?: number;
@@ -2427,7 +2475,9 @@ export interface components {
             observed_by: components["schemas"]["ObservedBy"];
             upload_bytes: components["schemas"]["NullableUInt64"];
             download_bytes: components["schemas"]["NullableUInt64"];
+            /** @description Visible upload rate, or null when the adapter does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
             upload_bytes_per_second: components["schemas"]["NullableUInt64"];
+            /** @description Visible download rate, or null when the adapter does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
             download_bytes_per_second: components["schemas"]["NullableUInt64"];
         };
         ConnectionList: {
@@ -3019,6 +3069,40 @@ export interface components {
             total: components["schemas"]["SafeUInt"];
             next_cursor: string | null;
             records: components["schemas"]["DnsLogRecord"][];
+        };
+        DnsRoutingRule: {
+            /** @description Stable within the generation and unique across both lists; addresses the rule. Opaque to clients. */
+            rule_id: string;
+            /** @description Zero-based evaluation order within its list and generation, not a cross-generation identity. */
+            index: components["schemas"]["SafeUInt"];
+            /** @description The rule's source text as written, for display; not an editable source representation. */
+            expression: string;
+            /**
+             * @description Request rules: upstream sends the query to the named upstream, asis sends it
+             *     to the original destination, reject answers it empty. Response rules: accept
+             *     keeps the answer, reject replaces it with an empty one, requery resolves the
+             *     query again through the named upstream.
+             * @enum {string}
+             */
+            action: "upstream" | "asis" | "reject" | "accept" | "requery";
+            /** @description Upstream name for upstream and requery, as the engine resolved it; it may differ in case from the source text. Null for other actions. */
+            upstream: string | null;
+            source: components["schemas"]["RuleSource"];
+            /** @enum {string} */
+            kind: "rule" | "fallback";
+        };
+        DnsRuleList: {
+            generation_id: string;
+            /** @description Request rules in evaluation order with unique rule_id and index values, ending with exactly one fallback entry. */
+            request: (components["schemas"]["DnsRoutingRule"] & {
+                /** @enum {unknown} */
+                action?: "upstream" | "asis" | "reject";
+            })[];
+            /** @description Response rules in evaluation order with unique rule_id and index values, ending with exactly one fallback entry. */
+            response: (components["schemas"]["DnsRoutingRule"] & {
+                /** @enum {unknown} */
+                action?: "accept" | "reject" | "requery";
+            })[];
         };
         DeleteCount: {
             deleted: number;
@@ -5773,6 +5857,44 @@ export interface operations {
             404: components["responses"]["NotFound"];
             415: components["responses"]["UnsupportedMediaType"];
             503: components["responses"]["Unavailable"];
+        };
+    };
+    listDnsRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ordered request and response rules, each with its fallback, from one running generation */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DnsRuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description A list exceeds max_rules (temporarily_unavailable), or a coherent generation could not be pinned (snapshot_unavailable) */
+            503: {
+                headers: {
+                    /** @description Retry delay in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     startReload: {
