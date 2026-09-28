@@ -1,6 +1,7 @@
 export {cx} from './cx';
 export {
   useSlider,
+  useScrollStrip,
   useContentWidth,
   useFillHeight,
   useDebounced,

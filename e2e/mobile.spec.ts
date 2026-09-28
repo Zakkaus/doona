@@ -324,23 +324,32 @@ for (const [scheme, palette] of [
   });
 }
 
-// A common phone width: every hub's pages fit side by side in every language.
+// A common phone width: every hub's pages are reachable in every language. A set wider than the phone scrolls inside
+// its strip, never the page, and the current page is scrolled into view.
 test.describe('360px', () => {
   test.use({viewport: {width: 360, height: 780}});
   for (const lang of ['en', 'zh-TW', 'zh-CN'])
     test.describe(lang, () => {
       test.use({storage: {'doona-lang': lang}});
-      test('every hub shows all its pages above the content without scrolling sideways', async ({page}) => {
+      test('every hub reaches all its pages above the content without scrolling the page sideways', async ({page}) => {
         for (const hub of hubs) {
-          await page.goto(`/#/${hub.pages[0]}`);
-          const tabs = page.locator('.rp-hubnav .rp-btn');
-          await expect(tabs).toHaveCount(hub.pages.length);
-          const fit = await page.locator('.rp-hubnav').evaluate(nav => {
-            const box = nav.getBoundingClientRect();
-            const seg = nav.querySelector('.rp-seg')!;
-            return seg.scrollWidth <= seg.clientWidth && [...nav.querySelectorAll('.rp-btn')].every(tab => tab.getBoundingClientRect().right <= box.right + 1);
-          });
-          expect(fit, hub.id).toBe(true);
+          for (const route of hub.pages) {
+            await page.goto(`/#/${route}`);
+            await expect(page.locator('.rp-hubnav .rp-btn')).toHaveCount(hub.pages.length);
+            const strip = () =>
+              page.locator('.rp-hubnav').evaluate(nav => {
+                const box = nav.getBoundingClientRect();
+                const seg = nav.querySelector<HTMLElement>('.rp-seg')!;
+                const current = nav.querySelector('[aria-current="page"]')!.getBoundingClientRect();
+                return {
+                  visible: current.left >= box.left - 1 && current.right <= box.right + 1,
+                  contained: seg.scrollWidth <= seg.clientWidth || getComputedStyle(seg).overflowX === 'auto',
+                  pageScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth
+                };
+              });
+            await expect.poll(async () => (await strip()).visible, {message: `${hub.id} ${route}`}).toBe(true);
+            expect(await strip(), `${hub.id} ${route}`).toMatchObject({contained: true, pageScroll: 0});
+          }
         }
       });
     });
