@@ -2,7 +2,8 @@ import {useCapabilities, useConfig, useRules} from '../../store';
 import type {Connection} from '../../api/model';
 import {offered} from '../../api/capabilities';
 import {sourceIp} from '../../api/selectors';
-import {ruleWritable} from '../shared/rule';
+import {useT} from '../../i18n';
+import {ruleTargets, ruleWritable} from '../shared/rule';
 import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
 
 // What a connection tells the add-rule dialog.
@@ -18,6 +19,7 @@ export const connectionSeed = (c: Connection): QuickRuleSeed => ({
 // matched. The rules and sources are read while a connection that matched a rule is shown, to tell whether that rule
 // can be edited. `review` opens the held rules.
 export function useConnectionRule(connection: Connection | undefined, review: () => void) {
+  const t = useT();
   const resources = useCapabilities().data?.resources;
   const quick = useQuickRule(review);
   const canWrite =
@@ -27,7 +29,10 @@ export function useConnectionRule(connection: Connection | undefined, review: ()
   const config = useConfig(!!matched);
   const seed = connection && connectionSeed(connection);
   return {
+    canWrite: quick.canWrite,
     canAdd: !!seed && quick.canAdd(seed),
+    // Why the list toolbar's Add rule, which acts on the selected connection, cannot open.
+    addTip: !seed ? t('conn.ruleSelect') : !ruleTargets(seed).length ? t('conn.ruleNoTarget') : undefined,
     // Showing the matched rule only reads the rule list.
     canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
     canEdit:

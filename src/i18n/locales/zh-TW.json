@@ -376,6 +376,8 @@
   "conn.ruleBeforeMatched": "命中規則之前",
   "conn.ruleMoved": "命中的規則已變動，規則將加在 doona 可寫入的最前位置。",
   "conn.ruleNoPosition": "沒有規則位於 doona 可寫入的檔案中，無法決定插入位置。",
+  "conn.ruleNoTarget": "此連線沒有可比對的網域或 IP 位址",
+  "conn.ruleSelect": "請先選取連線",
   "conn.ruleTop": "最前",
   "conn.showRule": "查看命中的規則",
   "conn.state.active": "進行中",

@@ -19,6 +19,7 @@ import {
   type TableColumn
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
+import {RuleDialog} from '../shared/RuleDialog';
 import {DnsRules} from './DnsRules';
 import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
@@ -31,7 +32,7 @@ export function Rules(props: PageProps) {
   const content = {
     list: <RuleList {...props} />,
     dns: <DnsRules {...props} />,
-    trace: <Trace form={traceForm} />
+    trace: <Trace form={traceForm} go={props.go} />
   };
   if (view.loading) return <Loading />;
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
@@ -42,9 +43,9 @@ export function Rules(props: PageProps) {
   );
 }
 
-function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
+function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: PageProps['go']}) {
   const t = useT();
-  const trace = useRoutingTrace(state);
+  const trace = useRoutingTrace(state, go);
   const {form, setForm} = trace;
   // Stable columns: an inline array would re-render every rule row of every result card on each keystroke.
   const columns = useMemo(
@@ -159,6 +160,11 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
                     {evaluation.probe.label}
                   </Button>
                 )}
+                {evaluation.canAdd && (
+                  <Button small onPress={() => trace.addRule(i)}>
+                    {t('rule.add')}
+                  </Button>
+                )}
               </div>
               {evaluation.hint && <p className="rp-label">{evaluation.hint}</p>}
               <DataTable label={evaluation.label} height={360} rows={evaluation.rows} cols={columns} />
@@ -172,6 +178,7 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
           ))}
         </section>
       )}
+      <RuleDialog dialog={trace.ruleDialog} />
     </>
   );
 }
