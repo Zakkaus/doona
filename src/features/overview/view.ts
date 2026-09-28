@@ -4,7 +4,7 @@ import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
+import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels, type LimitGroup} from '../shared/limits';
 import {engineStatus} from '../shared/engineStatus';
@@ -222,8 +222,9 @@ export function overviewView(
         datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error)
           ? t('ui.backendMessage', {message: datapath.ebpf.last_error})
           : null,
-      // Features the engine keeps running reduced. The runtime reports them; they sit with the datapath warnings.
-      degradations: runtime?.degradations?.map(d => ({id: d.component, tooltip: d.code, text: backendCode(d.code, t)})) ?? []
+      // Features the engine keeps running reduced. The runtime reports them, so they show whether or not the datapath
+      // was read; they sit with its warnings. An unknown code shows the backend's message.
+      degradations: runtime?.degradations?.map(d => ({id: d.component, tooltip: d.code, text: oneLine(backendMessage(d.code, d.message, t), t)})) ?? []
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),

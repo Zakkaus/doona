@@ -33,13 +33,13 @@ it('marks shared memory as shared and omits selected fields without losing zero 
   expect(field(fields, t('ov.f.oomKill'))?.value).toBe('0');
 });
 
-it('lists runtime degradations in their own words, an unknown code as it is, and nothing when there are none', () => {
+it('lists runtime degradations in their own words, an unknown code by the backend message, and nothing when there are none', () => {
   const entry = {code: 'quic_probe_disabled', message: 'm', component: 'quic_probe', since: runtime.observed_at};
-  const other = {...entry, code: 'future_issue', component: 'future'};
+  const other = {...entry, code: 'future_issue', message: 'Cannot persist state', component: 'future'};
   const view = overviewView({runtime: {...runtime, degradations: [entry, other]}}, loading, 'en-US', t);
   expect(view.datapath.degradations).toEqual([
     {id: 'quic_probe', tooltip: 'quic_probe_disabled', text: t('ui.backend.quicProbeDisabled')},
-    {id: 'future', tooltip: 'future_issue', text: 'future_issue'}
+    {id: 'future', tooltip: 'future_issue', text: t('ui.backendMessage', {message: 'Cannot persist state'})}
   ]);
   expect(overviewView({runtime: {...runtime, degradations: []}}, loading, 'en-US', t).datapath.degradations).toEqual([]);
   expect(overviewView({runtime: {...runtime, degradations: undefined}}, loading, 'en-US', t).datapath.degradations).toEqual([]);
