@@ -1149,6 +1149,8 @@
   "palette.nord": "Nord",
   "palette.nordVariants": "Snow Storm / Polar Night",
   "palette.qiangguo": "China",
+  "palette.qiangguoBad": "Severe test",
+  "palette.qiangguoGood": "Improving",
   "palette.qiangguoModes": "Clock-in / All-nighter",
   "palette.rosePine": "Rosé Pine",
   "palette.semi": "Semi Design",

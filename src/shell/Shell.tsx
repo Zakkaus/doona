@@ -1,7 +1,7 @@
 import './install';
 import {lazy, Suspense, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
-import {LangContext, LOCALE, useT, type Lang} from '../i18n';
+import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
 import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
@@ -13,6 +13,7 @@ import {HubBar, HubPages} from './HubBar';
 import {TopBar} from './TopBar';
 import {AboutContext, useShell, type ShellModel} from './useShell';
 import {applyAppearance} from './useAppearance';
+import {paletteWords} from './palettes';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import type {PageProps} from './routes';
@@ -32,23 +33,25 @@ export function Shell({lang: initial}: {lang: Lang}) {
     useShellController(initial);
   return (
     <LangContext.Provider value={lang}>
-      {/* The mirrored layout turns React Aria right to left too; the locale keeps its strings and formats. */}
-      <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
-        <RouterProvider navigate={navigate}>
-          <DraftContext.Provider value={draft}>
-            <ShellFrame settings={settings} lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={openSearch} mac={mac} />
-          </DraftContext.Provider>
-          <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
-          {searchOpen && (
-            <LoadBoundary>
-              <Suspense fallback={null}>
-                <searchDialog.Component onClose={closeSearch} go={go} />
-              </Suspense>
-            </LoadBoundary>
-          )}
-          <ToastHost placement={ap.toastPlacement} />
-        </RouterProvider>
-      </I18nProvider>
+      <RewordingContext.Provider value={paletteWords(ap.palette)}>
+        {/* The mirrored layout turns React Aria right to left too; the locale keeps its strings and formats. */}
+        <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
+          <RouterProvider navigate={navigate}>
+            <DraftContext.Provider value={draft}>
+              <ShellFrame settings={settings} lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={openSearch} mac={mac} />
+            </DraftContext.Provider>
+            <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
+            {searchOpen && (
+              <LoadBoundary>
+                <Suspense fallback={null}>
+                  <searchDialog.Component onClose={closeSearch} go={go} />
+                </Suspense>
+              </LoadBoundary>
+            )}
+            <ToastHost placement={ap.toastPlacement} />
+          </RouterProvider>
+        </I18nProvider>
+      </RewordingContext.Provider>
     </LangContext.Provider>
   );
 }
