@@ -2,7 +2,7 @@ import type {ConfigSource, Node} from '../../api/model';
 import {nodeOwner} from '../../api/selectors';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {scanConfig} from '../../dae/text';
-import {readTag, tagId} from './taggedId';
+import {readTag} from './taggedId';
 import {href, within} from '../../shell/route';
 
 // Where a rule sits in the rule list, when the backend lists rules and the reference names one.
@@ -45,9 +45,6 @@ export const recordingSettingsHref = href('settings', {card: 'runtime'});
 export type RuleSeed = {kind: RuleConditionKind; value: string};
 export function parseRuleSeed(value: string | null, kinds: readonly RuleConditionKind[] = conditionKinds): RuleSeed | null {
   return value ? readTag(value, kinds) : null;
-}
-export function ruleSeedHref(seed: RuleSeed, tab: 'list' | 'dns' = 'list'): string {
-  return href('rules', {tab, add: tagId(seed.kind, seed.value)});
 }
 
 // The Sources tab at the first line of the first top-level `name { … }` section the main file or an include holds, as

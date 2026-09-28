@@ -12,7 +12,8 @@ import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dns
 import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
 import {cacheCard, cacheCardState} from './cache';
-import {ruleSeedHref, sectionSourceHref} from '../shared/link';
+import {sectionSourceHref} from '../shared/link';
+import {useQuickRule} from '../shared/useQuickRule';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -32,13 +33,13 @@ export function useDns({go, query}: PageProps) {
   const ids = view.tabs.map(item => item.id);
   const linked = params.has('domain') || params.has('device');
   const fallback = ids.includes('log') ? (linked ? 'log' : 'stats') : ids.includes('query') ? 'query' : (ids[0] ?? 'query');
-  const submit = async () => {
+  const submit = async (asked = {domain, type}) => {
     try {
       await run('query', async signal => {
         const value = await queryTypes(
           api.dnsQuery,
-          domain.trim(),
-          type === 'all' ? view.types : [type],
+          asked.domain.trim(),
+          asked.type === 'all' ? view.types : [asked.type],
           resources?.dns_query.limits?.max_types_per_request ?? 1,
           signal
         );
@@ -49,8 +50,21 @@ export function useDns({go, query}: PageProps) {
       // The failure stays on the page as its banner until the next query; a toast would say it twice.
     }
   };
+  // The add-rule dialog of the log, the query results and the cache. Once a DNS rule is written, Query again asks the
+  // query tab for the name the rule was added from.
+  const rule = useQuickRule(go, {
+    queryAgain: asked => {
+      const name = asked.name.replace(/\.$/, '');
+      const again = {domain: name, type: view.types.includes(asked.type) ? asked.type : 'all'};
+      setDomain(again.domain);
+      setType(again.type);
+      go('dns', within(query, {tab: 'query'}));
+      void submit(again);
+    }
+  });
   return {
     ...view,
+    rule,
     domain,
     setDomain,
     type,
@@ -90,6 +104,9 @@ export function useDnsCacheTab(domain: string) {
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
     [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
   );
+  // The selected entry, while it is still listed, starts a new rule.
+  const [selected, setSelected] = useState<string | null>(null);
+  const picked = view.rows.find(row => row.id === selected);
   const {remove: removeEntry} = dns;
   // Stable, so the cache table's columns, which call it, stay the same across polls.
   const remove = useCallback(
@@ -110,6 +127,9 @@ export function useDnsCacheTab(domain: string) {
   };
   return {
     ...view,
+    selected: picked ? selected : null,
+    setSelected,
+    seed: picked?.seed ?? null,
     // Delete failures arrive as toasts, flush failures in its dialog, and the shell reports the capabilities.
     error: dns.cache.error,
     retry: dns.cache.refetch,
@@ -228,15 +248,10 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
   const types = capabilities.data?.resources.dns_query.record_types;
   const view = useMemo(() => dnsLogView(data, enabled, t, types), [data, enabled, t, types]);
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
-  // A new DNS rule for the record's domain needs the DNS rules tab and a configuration doona can write.
-  const resources = capabilities.data?.resources;
-  const canAddRule =
-    offered(resources, 'dns_rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   return {
     ...view,
     detail,
     detailTitle: detail?.title ?? '',
-    ruleHref: detail && canAddRule ? ruleSeedHref({kind: 'qnameSuffix', value: detail.title.replace(/\.$/, '')}, 'dns') : null,
     name,
     newerWaiting,
     setName,

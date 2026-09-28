@@ -5,6 +5,31 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {csvLine} from '../../ui/ui';
 import type {Key} from '../../i18n';
 import {dnsTabs} from './nav';
+import {sourceIp} from '../../api/selectors';
+import {answerAddresses, type QuickRuleSeed} from '../shared/rule';
+
+type Answer = NonNullable<DnsQueryResponse['results'][number]['answers']>[number];
+// The add-rule seed for a queried name: the name for a routing or request rule, the answered A and AAAA addresses for
+// a response rule, the client that asked, and the upstream that answered.
+export function nameSeed(name: string, type: string, answers: readonly Answer[], upstream: string | null, src: string | null): QuickRuleSeed {
+  return {
+    domain: name,
+    dip: null,
+    sip: (src && sourceIp(src)) ?? null,
+    outbound: null,
+    matched: null,
+    dns: {type, answers: answerAddresses(answers), upstream, query: {name, type}}
+  };
+}
+// The add-rule seed for one answered address: a routing rule by destination, or a response rule by answer.
+const addressSeed = (address: string, name: string, type: string): QuickRuleSeed => ({
+  domain: null,
+  dip: address,
+  sip: null,
+  outbound: null,
+  matched: null,
+  dns: {type, answers: [address], upstream: null, query: {name, type}}
+});
 
 const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
@@ -46,7 +71,17 @@ export function dnsQueryView(
             ? null
             : t(type === 'all' ? 'dns.noTypes' : 'dns.typeUnsupported'),
     showCache: !!resources?.dns_cache.available,
-    cards: result?.results.map(item => ({id: item.type, title: `${result.domain} ${item.type}`, ...dnsAnswerView(item, t)})) ?? [],
+    cards:
+      result?.results.map(item => ({
+        id: item.type,
+        title: `${result.domain} ${item.type}`,
+        ...dnsAnswerView(item, t),
+        seed: nameSeed(result.domain, item.type, item.answers ?? [], item.upstream, null),
+        // Each A or AAAA answer, in the order shown, starts a rule of its own; other records carry no address.
+        answerSeeds: (item.answers ?? []).map(answer =>
+          answerAddresses([answer]).length ? {address: answer.data, seed: addressSeed(answer.data, result.domain, item.type)} : null
+        )
+      })) ?? [],
     tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))
   };
 }
@@ -92,6 +127,7 @@ export function dnsCacheView(
       expiresAt: entry.expires_at,
       staleUntil: entry.stale_until,
       deleteLabel: t('dns.deleteEntry', {domain: entry.domain, type: entry.type}),
+      seed: nameSeed(entry.domain, entry.type, [], null, null),
       pending: busy === entry.entry_id,
       disabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.delete_entry
     }))
@@ -106,6 +142,7 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     id: record.id,
     title: record.question.name,
     answers: answer.answers,
+    seed: nameSeed(record.question.name, record.question.type, record.answers, record.upstream, record.src),
     fields: [
       [t('ui.type'), record.question.type],
       [t('ui.device'), record.src ?? '—'],

@@ -23,16 +23,19 @@ import {
   Card,
   cardClass,
   HelpRow,
-  Link,
   type Action,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
+import {RuleDialog} from '../shared/RuleDialog';
+import type {useQuickRule} from '../shared/useQuickRule';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
+// What a tab needs of the page's add-rule dialog.
+type QuickRule = Pick<ReturnType<typeof useQuickRule>, 'canAdd' | 'open'>;
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -66,20 +69,35 @@ export function Dns(props: PageProps) {
                   <h3 className="rp-h3">{card.title}</h3>
                   <Badge tone={card.cacheTone}>{card.cacheText}</Badge>
                 </div>
-                {vm.showCache && (
-                  <Button quiet small onPress={vm.viewCache}>
-                    {t('dns.viewCache')}
-                  </Button>
-                )}
+                <div className="rp-cluster">
+                  {vm.rule.canAdd(card.seed) && (
+                    <Button quiet small onPress={() => vm.rule.open(card.seed)}>
+                      {t('rule.add')}
+                    </Button>
+                  )}
+                  {vm.showCache && (
+                    <Button quiet small onPress={vm.viewCache}>
+                      {t('dns.viewCache')}
+                    </Button>
+                  )}
+                </div>
               </div>
               <Kv inline items={card.fields} />
               {card.answers.length ? (
                 <div className="rp-list">
-                  {card.answers.map((answer, i) => (
-                    <div key={i} className="rp-code">
-                      {answer}
-                    </div>
-                  ))}
+                  {card.answers.map((answer, i) => {
+                    const address = card.answerSeeds[i];
+                    return (
+                      <div key={i} className="rp-cluster">
+                        <div className="rp-code">{answer}</div>
+                        {address && vm.rule.canAdd(address.seed) && (
+                          <Button quiet small label={t('dns.addRuleFor', {value: address.address})} onPress={() => vm.rule.open(address.seed)}>
+                            {t('rule.add')}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <Empty>{t('dns.noAnswers')}</Empty>
@@ -93,17 +111,18 @@ export function Dns(props: PageProps) {
   const content: Record<string, React.ReactNode> = {
     stats: <DnsStats enabled={vm.logEnabled} links={{cache: vm.cacheHref, log: vm.logHref}} />,
     query: queryTab,
-    cache: <DnsCache domain={vm.filterDomain} clearFilter={vm.clearCacheFilter} />,
-    log: <DnsLog enabled={vm.logEnabled} initialName={vm.filterDomain} initialSrc={vm.filterDevice} links={vm.logLinks} />
+    cache: <DnsCache domain={vm.filterDomain} clearFilter={vm.clearCacheFilter} rule={vm.rule} />,
+    log: <DnsLog enabled={vm.logEnabled} initialName={vm.filterDomain} initialSrc={vm.filterDevice} links={vm.logLinks} rule={vm.rule} />
   };
   return (
     <div className="rp-page">
       <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
+      <RuleDialog dialog={vm.rule.dialog} />
     </div>
   );
 }
 
-function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => void}) {
+function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () => void; rule: QuickRule}) {
   const t = useT();
   const vm = useDnsCacheTab(domain);
   const {remove} = vm;
@@ -156,6 +175,9 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
             </Button>
           )}
           <span className="rp-grow" />
+          <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} tip={vm.seed ? undefined : t('dns.selectEntry')} onPress={() => vm.seed && rule.open(vm.seed)}>
+            {t('rule.add')}
+          </Button>
           <ConfirmButton
             label={t('dns.flushAll')}
             confirmationText={vm.confirmationText}
@@ -167,15 +189,38 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
         </div>
       </ActionHelp>
       <ActionHelp reason={vm.deleteReason} above>
-        <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
+        <DataTable
+          label={t('ui.cache')}
+          height={442}
+          fit
+          rows={vm.rows}
+          selected={vm.selected}
+          onSelect={vm.setSelected}
+          loading={vm.loading}
+          empty={vm.empty}
+          cols={columns}
+        />
       </ActionHelp>
     </>
   );
 }
 
-function DnsLog({enabled, initialName, initialSrc, links}: {enabled: boolean | undefined; initialName: string; initialSrc: string; links: Action[]}) {
+function DnsLog({
+  enabled,
+  initialName,
+  initialSrc,
+  links,
+  rule
+}: {
+  enabled: boolean | undefined;
+  initialName: string;
+  initialSrc: string;
+  links: Action[];
+  rule: QuickRule;
+}) {
   const t = useT();
   const vm = useDnsLogTab(enabled, initialName, initialSrc);
+  const seed = vm.detail?.seed;
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
@@ -233,6 +278,7 @@ function DnsLog({enabled, initialName, initialSrc, links}: {enabled: boolean | u
           actions={[
             {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
             {id: 'refresh', label: t('refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+            {id: 'rule', label: t('rule.add'), isDisabled: !seed || !rule.canAdd(seed), onAction: () => seed && rule.open(seed)},
             ...links,
             ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
           ]}
@@ -256,11 +302,11 @@ function DnsLog({enabled, initialName, initialSrc, links}: {enabled: boolean | u
         <DetailPanel open={!!vm.detail} title={vm.detailTitle} onClose={() => vm.setSelected(null)}>
           {vm.detail && (
             <>
-              {vm.ruleHref && (
+              {rule.canAdd(vm.detail.seed) && (
                 <div className="rp-cluster">
-                  <Link appearance="button" small href={vm.ruleHref}>
-                    {t('dns.newRule')}
-                  </Link>
+                  <Button small onPress={() => rule.open(vm.detail!.seed)}>
+                    {t('rule.add')}
+                  </Button>
                 </div>
               )}
               <Kv inline items={vm.detail.fields} />
