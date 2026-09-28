@@ -18,7 +18,7 @@ import {
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
-import {RuleDialog} from './RuleDialog';
+import {RuleDialog} from '../shared/RuleDialog';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';

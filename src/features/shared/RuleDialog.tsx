@@ -1,9 +1,9 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Segmented, StaticField} from '../../ui/ui';
-import type {useConnectionRule} from './useConnectionRule';
+import type {QuickRuleDialog} from './useQuickRule';
 
-export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRule>['dialog']}) {
+export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
   const t = useT();
   return (
     <ModalDialog
