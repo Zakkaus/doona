@@ -3,34 +3,69 @@ import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {Translator} from '../../i18n';
 import {ruleAnchor} from '../../dae/ruleText';
 
+// What an origin knows about the traffic a new rule is for: its domain, destination and source IP, the outbound it
+// took, and the rule it matched when the origin vouches for that match. Each page that offers the add-rule dialog turns
+// its own item into one.
+export type QuickRuleSeed = {
+  domain: string | null;
+  dip: string | null;
+  sip: string | null;
+  outbound: string | null;
+  matched: {id: string; expression: string | null} | null;
+};
+
 export type RuleTarget = {kind: ConditionKind; condition: string};
-// A domain is matched exactly or with its subdomains; without one that dae can hold, the rule matches the destination IP.
-export function ruleTargets(seed: {domain: string | null; dip: string | null}): RuleTarget[] {
-  const targets = (seeds: Array<[ConditionKind, string]>) =>
-    seeds.flatMap(([kind, value]) => {
-      const condition = ruleCondition(kind, value);
-      return condition ? [{kind, condition}] : [];
-    });
-  const domain = seed.domain
-    ? targets([
-        ['domain', seed.domain],
-        ['domainSuffix', seed.domain]
-      ])
-    : [];
-  return domain.length ? domain : seed.dip ? targets([['dip', seed.dip]]) : [];
+// Every condition the seed allows, the default first: the exact domain, then its subdomains, the destination IP and the
+// source IP, each address as one host. A value dae cannot hold is left out.
+export function ruleTargets(seed: Pick<QuickRuleSeed, 'domain' | 'dip' | 'sip'>): RuleTarget[] {
+  // A name as the resolver writes it ends in a dot, which a domain rule does not.
+  const domain = seed.domain?.replace(/\.$/, '');
+  const host = (ip: string | null) => ip && `${ip}/${ip.includes(':') ? 128 : 32}`;
+  const seeds: Array<[ConditionKind, string | null | undefined]> = [
+    ['domain', domain],
+    ['domainSuffix', domain],
+    ['dip', host(seed.dip)],
+    ['sip', host(seed.sip)]
+  ];
+  return seeds.flatMap(([kind, value]) => {
+    const condition = value ? ruleCondition(kind, value) : null;
+    return condition ? [{kind, condition}] : [];
+  });
 }
 
-// Before the rule the connection matched, so the new rule takes over its traffic, and at the earliest place doona
-// can write: before the first rule, or the first one in a writable source when earlier ones are not. Only a rule doona
-// can locate in a writable source is offered; the first choice is the default.
-export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: string | null, t: Translator) {
+// A listed rule's condition without the target the backend may display after it, a bare or quoted outbound with or
+// without `(must)`, and without spaces, so the same condition compares equal however it was spelt. Not a semantic
+// comparison: `dip(1.1.1.1)` and `dip(1.1.1.1/32)` differ.
+export function conditionKey(expression: string): string {
+  return expression
+    .replace(/\s*->\s*("[^"]*"|'[^']*'|[^\s()'"]+)(\(must\))?\s*$/, '')
+    .replace(/\s+/g, '')
+    .replace(/"/g, "'");
+}
+
+// Where a new rule can go, the default first: before the rule the traffic matched, when the origin vouched for the match
+// and the rule still reads as it did, so the new rule takes over that traffic; otherwise before the fallback, where
+// earlier rules may still match first. The earliest place doona can write is offered too. Only a rule doona can locate
+// in a writable source is offered.
+export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: QuickRuleSeed['matched'], t: Translator) {
   const anchored = (rule: RoutingRule) => ruleWritable(rule, sources);
-  const hit = rules.find(rule => rule.rule_id === matched && anchored(rule));
+  const hit =
+    matched &&
+    rules.find(
+      rule =>
+        rule.rule_id === matched.id && anchored(rule) && (matched.expression === null || conditionKey(matched.expression) === conditionKey(rule.expression))
+    );
+  const end = rules.find(rule => rule.kind === 'fallback' && anchored(rule));
   const top = rules.find(anchored);
   const topLabel = (rule: RoutingRule) => (rule === rules[0] ? t('conn.ruleTop') : t('rule.positionBefore', {n: rule.index + 1}));
-  return [...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []), ...(top && top !== hit ? [{rule: top, label: topLabel(top)}] : [])].map(
-    ({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression})
-  );
+  const offered = [
+    ...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []),
+    ...(end ? [{rule: end, label: t('rule.positionEnd')}] : []),
+    ...(top ? [{rule: top, label: topLabel(top)}] : [])
+  ];
+  return offered
+    .filter((item, i) => offered.findIndex(other => other.rule === item.rule) === i)
+    .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression, matched: rule === hit, first: rule === rules[0]}));
 }
 
 // Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.
@@ -47,11 +82,13 @@ export function pinnedPosition(positions: Array<{id: string; desc: string}>, pin
   return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
 
-// Why the add-rule dialog cannot write yet: the rules, sources or groups it needs are still being read. Null while it
-// can write, while a write is in flight, or when a failed read or a missing position is already shown in the dialog.
+// Why the add-rule dialog cannot write yet: the rules, sources or groups it needs are still being read, or no outbound
+// is chosen. Null while it can write, while a write is in flight, or when a failed read or a missing position is
+// already shown in the dialog.
 export function ruleDialogReason(
-  {disabled, busy, failed, unplaceable}: {disabled: boolean; busy: boolean; failed: boolean; unplaceable: boolean},
+  {waiting, outbound, busy, failed, unplaceable}: {waiting: boolean; outbound: boolean; busy: boolean; failed: boolean; unplaceable: boolean},
   t: Translator
 ): string | null {
-  return disabled && !busy && !failed && !unplaceable ? t('ui.loading') : null;
+  if (busy || failed || unplaceable) return null;
+  return waiting ? t('ui.loading') : outbound ? null : t('rule.outboundMissing');
 }

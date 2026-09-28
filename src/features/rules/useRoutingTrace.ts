@@ -11,13 +11,13 @@ import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure} from '../../ui/ui';
-import {dnsView, evaluationView, queryView, traceReason, traceStatusView} from './view';
+import {dnsView, evaluationView, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
-import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
+import {useQuickRule} from '../shared/useQuickRule';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -134,17 +134,9 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
           const outbound = evaluation.outbound ?? likely;
           const selected =
             outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
-          // What the add-rule dialog starts from: the traced target as this evaluation saw it.
-          const seed: QuickRuleSeed = {
-            domain: accepted.input.domain ?? null,
-            dip: evaluation.dst_ip ?? accepted.input.dst_ip ?? null,
-            sip: accepted.input.src_ip ?? null,
-            outbound: evaluation.outbound,
-            matched: matched?.rule_id ?? null
-          };
           return {
             ...evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang),
-            seed
+            seed: traceSeed(accepted.input, evaluation)
           };
         }) ?? [],
     [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]

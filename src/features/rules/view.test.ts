@@ -16,6 +16,7 @@ import {
   removalView,
   ruleDraftView,
   rulesView,
+  traceSeed,
   traceStatusView,
   distributionEmpty
 } from './view';
@@ -349,4 +350,21 @@ it('appends DNS rules inside the list block when the fallback is not written, an
   // A written fallback that doona cannot locate is not replaced by the block's end.
   const written = {...fallback('accept'), source: {file: 'config.dae', source_id: base.id, line: 2, column: 1}};
   expect(dnsDictionaryView('response', [rule, written], 'g', sources, t, 'en').positions.map(position => position.id)).toEqual(['r9']);
+});
+
+it('seeds the add-rule dialog from the evaluated target and only a decided match', async () => {
+  const input = {network: 'tcp' as const, domain: 'a.example.', dst_port: 443, src_ip: '10.0.0.2'};
+  const result = await createMockApi().routingTrace({input, resolve: 'none'});
+  const matched = {rule_id: 'r5', expression: 'domain(geosite: telegram)', result: 'matched' as const, missing_inputs: [], conditions: []};
+  const evaluation = {...result.evaluations[0], dst_ip: '1.1.1.1', decision: 'determinate' as const, outbound: 'proxy', rules: [matched]};
+  expect(traceSeed(input, evaluation)).toEqual({
+    domain: 'a.example.',
+    dip: '1.1.1.1',
+    sip: '10.0.0.2',
+    outbound: 'proxy',
+    matched: {id: 'r5', expression: 'domain(geosite: telegram)'}
+  });
+  // The traced address stands in when the evaluation resolved none; an undecided match is not vouched for.
+  const undecided = traceSeed({...input, dst_ip: '2001:db8::5'}, {...evaluation, dst_ip: null, decision: 'indeterminate', outbound: null});
+  expect(undecided).toMatchObject({dip: '2001:db8::5', outbound: null, matched: null});
 });

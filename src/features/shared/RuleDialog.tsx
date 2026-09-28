@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Segmented, StaticField} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, StaticField} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
 
 export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
@@ -41,7 +41,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           <ErrorMessage error={dialog.loadError} onRetry={dialog.retry} />
           <span className="rp-label">{t('rule.holdHelp')}</span>
           {dialog.targets && (
-            <Segmented isDisabled={dialog.busy} label={t('rule.kind')} value={dialog.target} onChange={dialog.setTarget} items={dialog.targets} />
+            <LabeledSelect isDisabled={dialog.busy} label={t('rule.kind')} value={dialog.target} onChange={dialog.setTarget} items={dialog.targets} />
           )}
           <div className="rp-toolbar top">
             <LabeledSelect isDisabled={dialog.busy} label={t('ui.outbound')} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
@@ -58,6 +58,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
             )}
           </div>
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
+          {dialog.earlier && !dialog.moved && <p className="rp-note">{t('rule.earlierMayMatch')}</p>}
           {dialog.unplaceable && <p className="rp-note">{t('conn.ruleNoPosition')}</p>}
           <DaeCode text={dialog.preview} />
         </div>

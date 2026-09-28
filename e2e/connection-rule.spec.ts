@@ -25,7 +25,8 @@ test('a rule added from a connection is written before the rule it matched, in o
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await dialog.getByRole('radio', {name: 'Domain suffix', exact: true}).click();
+  await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Domain suffix', exact: true}).click();
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
@@ -74,7 +75,7 @@ test('show matched rule opens the rule list on that rule', async ({page}) => {
   await expect(selected).toContainText('domain(geosite: telegram)');
 });
 
-test('a connection with no recorded rule only adds, first in the list', async ({page}) => {
+test('a connection with no recorded rule adds before the fallback and says earlier rules may match first', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   handlers['GET connections'] = async () => {
     const list = await api.connections({detail: 'full', limit: 1000});
@@ -84,11 +85,13 @@ test('a connection with no recorded rule only adds, first in the list', async ({
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  // The one place it can go reads as text, with the rule it goes before as help, not as a picker.
-  const position = page.getByRole('dialog', {name: 'Add rule'}).getByRole('group', {name: 'Insert', exact: true});
-  await expect(position).toContainText('First');
-  await expect(position).toHaveAccessibleDescription(/^pname\(NetworkManager/);
-  await expect(position.getByRole('button')).toHaveCount(0);
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
+  await expect(dialog).toContainText('Earlier rules may still match this traffic first.');
+  // First is still offered, and nothing comes before it.
+  await dialog.getByRole('button', {name: /Insert$/}).click();
+  await page.getByRole('option', {name: /^First/}).click();
+  await expect(dialog).not.toContainText('Earlier rules may still match this traffic first.');
 });
 
 test('without a writable configuration only adding a rule is hidden; showing the matched rule only reads', async ({page}) => {
@@ -265,13 +268,13 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
-  await expect(dialog).toContainText('The matched rule changed; the rule will be added at the earliest place doona can write.');
-  await expect(dialog.getByRole('group', {name: 'Insert', exact: true})).toContainText('First');
+  await expect(dialog).toContainText('The matched rule changed; the rule will be inserted at the position shown below.');
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/rules?tab=list');
-  await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('Before rule 1');
+  await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('Last, before the fallback');
 });
 
 test('an apply that fails in a later file keeps what it could not write and says what it wrote', async ({page}) => {
