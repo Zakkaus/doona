@@ -1,4 +1,5 @@
 import {expect, it} from 'vitest';
+import type {PendingRule} from '../../store';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
@@ -174,9 +175,13 @@ it('names where the same condition and outbound already is, listed before held, 
   const api = createMockApi();
   const {rules} = await api.rules();
   const r5 = rules.find(rule => rule.rule_id === 'r5')!;
-  const held = [{id: 1, condition: 'domain(full: a.example)', outbound: 'proxy', must: false, before: r5, sourceId: 'src-main'}];
+  const held: PendingRule[] = [
+    {list: 'routing', id: 1, condition: 'domain(full: a.example)', outbound: 'proxy', must: false, before: r5, sourceId: 'src-main'}
+  ];
   expect(duplicateOf(rules, held, r5.expression, r5.outbound!, t)).toBe(`Rule ${r5.index + 1} already has the same condition and outbound.`);
   expect(duplicateOf(rules, held, 'domain( full: a.example )', 'proxy', t)).toBe('A held rule already has the same condition and outbound.');
   expect(duplicateOf(rules, held, 'domain(full: a.example)', 'direct', t)).toBeNull();
+  // A DNS rule held with the same text is in another list.
+  expect(duplicateOf(rules, [{...held[0], list: 'request', before: null}], 'domain(full: a.example)', 'proxy', t)).toBeNull();
   expect(duplicateOf(rules, [], 'domain(full: b.example)', 'proxy', t)).toBeNull();
 });

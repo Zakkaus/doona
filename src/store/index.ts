@@ -21,5 +21,5 @@ export {smallerOnRefusal, queryTypes, useDnsLog, useDnsCacheUsage, useDnsControl
 export {useConfig, useConfigCreate, useConfigEditor, readConfigFresh} from './config';
 export {useLogFeed, useEventFeed, useNoticeFeed, LOG_FEED_LIMIT} from './logs';
 export {historyLost, reopenEvents, useFlowDemand, EVENT_FEED_LIMIT} from './events';
-export {pendingRules, usePendingRules, type PendingRule, type PendingFailure} from './pendingRules';
+export {pendingRules, usePendingRules, type PendingRule, type HeldRule, type PendingPlace, type PendingFailure} from './pendingRules';
 export {poll} from './cadence';

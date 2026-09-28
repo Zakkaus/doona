@@ -138,7 +138,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     setSource,
     selected,
     select: (row: string | null) => setPicked({landed, row}),
-    held: pendingView(held.rules, held.failure, t),
+    held: pendingView(held.rules, 'routing', held.failure, t),
     discard: (id: number) => {
       if (!held.applying) pendingRules.remove([id]);
     },

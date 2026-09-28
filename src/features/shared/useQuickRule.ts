@@ -81,7 +81,7 @@ export function useQuickRule(go: PageProps['go']) {
     }
     // Writing after the dialog said the matched rule changed takes the position it now shows.
     if (moved) setDraft({...draft!, pin: pinOf(before)});
-    return {condition: target.condition, outbound, must: false, before: rule, sourceId: source.id};
+    return {list: 'routing' as const, condition: target.condition, outbound, must: false, before: rule, sourceId: source.id};
   };
   const hold = () => {
     const rule = written();
