@@ -9,6 +9,7 @@ import {
   checkFields,
   checkInvalid,
   checkPatch,
+  checkRebase,
   groupConfigFields,
   groupActionsReason,
   memberViews,
@@ -214,6 +215,14 @@ it('refuses a check change another client made to the same field since the dialo
   expect(patchGroupConfig(otherField, checkPatch(otherField, base, draft)).config).toMatchObject({
     check_url: 'http://mine.example/',
     check_interval: 60
+  });
+});
+it('rebases a refused check draft on the group read again, keeping the edits to fields the group kept', () => {
+  const base = {check_url: '', check_interval: '30'};
+  const current = {check_url: 'http://theirs.example/', check_interval: '30'};
+  expect(checkRebase({base, value: {check_url: 'http://mine.example/', check_interval: '60'}}, current)).toEqual({
+    base: current,
+    value: {check_url: 'http://theirs.example/', check_interval: '60'}
   });
 });
 it('accepts only a safe http URL and a positive whole interval, or an empty field', () => {

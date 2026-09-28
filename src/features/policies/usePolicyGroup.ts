@@ -9,6 +9,7 @@ import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeS
 import {usePolicyEdit} from './usePolicyEdit';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
+import {ApiError} from '../../api/error';
 export type PolicyGroupInput = {
   id: string;
   name: string;
@@ -36,7 +37,8 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, entry);
-  const check = useCheckEdit(g, control.patchConfig, !!control.busy);
+  const conflict = control.actionError instanceof ApiError && control.actionError.status === 409;
+  const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
   const probe = () =>
     void control.probe().then(result => {

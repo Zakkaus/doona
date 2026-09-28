@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
   const {requests} = await mockBackend(page);
@@ -162,7 +162,36 @@ test('a check URL another client changed while the dialog was open is not overwr
   await save.click();
   await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
   await expect(dialog).toBeVisible();
+  // The dialog now shows the URL the group holds, so a further save tests against it.
+  await expect(dialog.getByRole('textbox', {name: 'Check URL'})).toHaveValue(remote);
   expect((await api.group('resilient')).config.check_url).toBe(remote);
+});
+
+test('a check save refused with 409 reads the group again and shows what it holds now', async ({page}) => {
+  const {api} = await mockBackend(page);
+  expectLoadFailures(page, /\/groups\/resilient$/);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'resilient', exact: true});
+  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
+  const url = dialog.getByRole('textbox', {name: 'Check URL'});
+  await expect(url).toHaveValue('');
+  const remote = 'http://remote.example/';
+  const accepted = await api.patchGroup('resilient', [{op: 'replace', path: '/config/check_url', value: remote}], '"40"');
+  await expect.poll(async () => 'operation_id' in accepted && (await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  // The page still holds the revision it loaded; the backend refuses the save once, as it would a failed test op.
+  let refused = false;
+  await page.route('**/api/v1/groups/resilient', route => {
+    if (route.request().method() !== 'PATCH' || refused) return route.fallback();
+    refused = true;
+    return route.fulfill({status: 409, json: {request_id: 'policies-test', error: {code: 'state_conflict', message: 'Patch test failed'}}});
+  });
+  await url.fill('https://cp.cloudflare.com/generate_204');
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
+  await expect(dialog).toBeVisible();
+  await expect(url).toHaveValue(remote);
 });
 
 test('a disabled Test all does not blame TCP support when the probe limits rule it out', async ({page}) => {
