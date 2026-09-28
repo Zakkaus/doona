@@ -1,6 +1,6 @@
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {ActionHelp, Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, Link, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -8,6 +8,7 @@ import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
+import {openShortcuts} from '../../shell/shortcuts';
 import type {PageProps} from '../../shell/routes';
 import {settingsCard, settingsCards, type SettingsCardId} from './nav';
 
@@ -56,6 +57,7 @@ export function Settings({query}: PageProps) {
     versionWarning,
     install,
     installHint,
+    guide,
     addProfile,
     renameProfile,
     dialogTitle,
@@ -210,6 +212,10 @@ export function Settings({query}: PageProps) {
         )}
         <div className="rp-cluster">
           <About trigger={<Button>{t('about.title')}</Button>} />
+          <Button onPress={openShortcuts}>{t('shell.shortcuts')}</Button>
+          <Link appearance="button" href={guide} external>
+            {t('shell.guide')}
+          </Link>
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
           {installHint && <p className="rp-note">{installHint}</p>}
         </div>

@@ -325,3 +325,13 @@ test('the service actions stay buttons on a phone and run when pressed', async (
   await actions.getByRole('button', {name: t('ov.reload'), exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText(`${t('ov.reload')}: `);
 });
+
+test('the About card opens the keyboard shortcuts and links the guide', async ({page}) => {
+  await page.goto('/#/settings?card=about');
+  await page.getByRole('button', {name: 'Keyboard shortcuts', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Keyboard shortcuts', exact: true});
+  await expect(dialog).toContainText('Search');
+  await dialog.getByRole('button', {name: 'Close', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('link', {name: /^Setup guide/})).toHaveAttribute('href', /^https:\/\/zakkaus\.github\.io\/doona-docs\//);
+});
