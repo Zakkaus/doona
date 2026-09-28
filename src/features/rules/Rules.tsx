@@ -13,7 +13,9 @@ import {
   TextTooltip,
   Kv,
   LabeledSelect,
+  Link,
   Light,
+  RuleRef,
   Tabs,
   TextField,
   type TableColumn
@@ -23,7 +25,7 @@ import {RuleDialog} from '../shared/RuleDialog';
 import {DnsRules} from './DnsRules';
 import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
-import type {EvaluationView} from './view';
+import type {EvaluationView, ResultLink} from './view';
 
 export function Rules(props: PageProps) {
   const t = useT();
@@ -57,9 +59,9 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
         grow: 2,
         isRowHeader: true,
         render: row => (
-          <TextTooltip className="rp-code" text={row.id}>
-            {row.expression}
-          </TextTooltip>
+          <span className="rp-rule">
+            <RuleRef className="rp-code" expression={row.expression} tooltip={row.id} href={row.href} />
+          </span>
         )
       },
       {
@@ -141,7 +143,10 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           </div>
           {trace.result.query && (
             <Card>
-              <h3 className="rp-h3">{trace.result.query.heading}</h3>
+              <div className="rp-row">
+                <h3 className="rp-h3">{trace.result.query.heading}</h3>
+                <ResultLinks links={trace.result.query.links} />
+              </div>
               <Kv inline items={trace.result.query.fields} />
             </Card>
           )}
@@ -165,6 +170,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
                     {t('rule.add')}
                   </Button>
                 )}
+                <ResultLinks links={evaluation.links} />
               </div>
               {evaluation.hint && <p className="rp-label">{evaluation.hint}</p>}
               <DataTable label={evaluation.label} height={360} rows={evaluation.rows} cols={columns} />
@@ -172,7 +178,10 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           ))}
           {trace.result.dns.map(dns => (
             <Card key={dns.id}>
-              <h3 className="rp-h3">{dns.heading}</h3>
+              <div className="rp-row">
+                <h3 className="rp-h3">{dns.heading}</h3>
+                <ResultLinks links={dns.links} />
+              </div>
               <Kv inline items={dns.fields} />
             </Card>
           ))}
@@ -181,4 +190,13 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
       <RuleDialog dialog={trace.ruleDialog} />
     </>
   );
+}
+
+// The groups and node a result card names, or its DNS name, each on its own page.
+function ResultLinks({links}: {links: ResultLink[]}) {
+  return links.map(link => (
+    <Link key={link.id} appearance="button" small href={link.href}>
+      {link.label}
+    </Link>
+  ));
 }
