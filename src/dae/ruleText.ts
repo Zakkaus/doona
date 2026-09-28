@@ -20,6 +20,8 @@ type Placement = {
   foldCase?: boolean;
 };
 
+const unquoteWhole = (value: string) => (/^(['"]).*\1$/.test(value) ? value.slice(1, -1) : value);
+
 function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
   if (!rule.source || rule.source.source_id !== source.id || source.content === undefined) return null;
   const text = source.content;
@@ -43,10 +45,12 @@ function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: R
   const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
   const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
   const target = place.target.replace(/\s+/g, '');
-  if (!arrow || fold(bare(arrow.to, last.to)) !== fold(target)) return null;
+  // A name that is not bare is written quoted, while the list gives it bare.
+  if (!arrow || fold(unquoteWhole(bare(arrow.to, last.to))) !== fold(target)) return null;
   // The display expression may end with its target, as the contract shows it (`pname(curl) -> direct`), or not.
   const shown = rule.expression.replace(/\s+/g, '');
-  const condition = fold(shown).endsWith(fold('->' + target)) ? shown.slice(0, -target.length - 2) : shown;
+  const tail = ['', "'", '"'].map(mark => `->${mark}${target}${mark}`).find(tail => fold(shown).endsWith(fold(tail)));
+  const condition = tail ? shown.slice(0, -tail.length) : shown;
   if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== condition) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
@@ -72,22 +76,39 @@ export type DnsRuleListId = 'request' | 'response';
 export const dnsRuleTarget = (rule: Pick<DnsRoutingRule, 'action' | 'upstream'>) =>
   rule.action === 'upstream' || rule.action === 'requery' ? (rule.upstream ?? '') : rule.action;
 // A DNS rule sits in `dns { routing { request { … } response { … } } }`; honk also reads `default:` as the fallback.
+const named = (blocks: TextBlock[], name: string) => blocks.filter(block => block.name === name);
+const dnsListBlocks = (blocks: TextBlock[], list: DnsRuleListId) =>
+  named(blocks, 'dns')
+    .flatMap(dns => named(dns.children, 'routing'))
+    .flatMap(routing => named(routing.children, list));
 export function dnsRuleAnchor(source: ConfigSource, rule: DnsRoutingRule, list: DnsRuleListId, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
-  const named = (list: TextBlock[], name: string) => list.filter(block => block.name === name);
   return anchorAt(
     source,
     rule,
     {
-      within: blocks =>
-        named(blocks, 'dns')
-          .flatMap(dns => named(dns.children, 'routing'))
-          .flatMap(routing => named(routing.children, list)),
+      within: blocks => dnsListBlocks(blocks, list),
       fallbacks: ['fallback', 'default'],
       target: dnsRuleTarget(rule),
       foldCase: true
     },
     scan
   );
+}
+// Where a rule goes at the end of a DNS list that writes no fallback: before the line closing the list's block, indented
+// as its rules are. Only a list written as one block, in a writable source, whose closing brace starts its line qualifies.
+export function dnsListEnd(sources: ConfigSource[], list: DnsRuleListId): {source: ConfigSource; anchor: RuleAnchor} | null {
+  const found = sources.flatMap(source =>
+    source.content === undefined ? [] : dnsListBlocks(scanConfig(source.content).blocks, list).map(block => ({source, text: source.content!, block}))
+  );
+  if (found.length !== 1 || !found[0].source.writable) return null;
+  const {source, text, block} = found[0];
+  const from = text.lastIndexOf('\n', block.close - 1) + 1;
+  const indent = text.slice(from, block.close);
+  if (from <= block.open || !/^[ \t]*$/.test(indent)) return null;
+  const newline = text.indexOf('\n', block.close);
+  const to = newline === -1 ? text.length : newline + 1;
+  const inner = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent.slice(0, indent.length / block.depth) || '    ');
+  return {source, anchor: {from, to, indent: inner, text: text.slice(from, to)}};
 }
 // The upstream names `dns { upstream { … } }` defines, in the order written.
 export function dnsUpstreamNames(text: string, scan = scanConfig(text)): string[] {

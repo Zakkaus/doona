@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource, DnsRoutingRule, RoutingRule} from '../api/model';
-import {addRule, dnsRuleAnchor, dnsUpstreamNames, removeRule, ruleAnchor, sourceFor} from './ruleText';
+import {addRule, dnsListEnd, dnsRuleAnchor, dnsUpstreamNames, removeRule, ruleAnchor, sourceFor} from './ruleText';
 
 const rule: RoutingRule = {
   rule_id: 'r1',
@@ -140,4 +140,39 @@ it('refuses a DNS anchor whose line no longer holds the listed rule', () => {
 it('reads the upstream names a dns section defines', () => {
   expect(dnsUpstreamNames(dnsText)).toEqual(['googledns', 'alidns']);
   expect(dnsUpstreamNames('routing {\n  fallback: direct\n}\n')).toEqual([]);
+});
+
+it('anchors a DNS rule whose upstream name is written quoted', () => {
+  const text = "dns {\n  upstream {\n    'my dns': 'udp://1.1.1.1:53'\n  }\n  routing {\n    request {\n      qtype(A) -> 'my dns'\n    }\n  }\n}\n";
+  const source = {id: 'dns', content: text} as ConfigSource;
+  expect(dnsUpstreamNames(text)).toEqual(['my dns']);
+  // The list gives the name bare; its expression may carry the name quoted or bare.
+  for (const expression of ["qtype(A) -> 'my dns'", 'qtype(A) -> my dns', 'qtype(A)']) {
+    expect(dnsRuleAnchor(source, dnsRule(7, expression, 'upstream', 'my dns'), 'request')).not.toBeNull();
+  }
+  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(AAAA) -> 'my dns'", 'upstream', 'my dns'), 'request')).toBeNull();
+  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(A) -> 'my dns'", 'upstream', 'other'), 'request')).toBeNull();
+});
+
+it('appends to a DNS list that writes no fallback, before the line closing its block', () => {
+  const text =
+    'dns {\n  routing {\n    request {\n    }\n    response {\n      ip(geoip: private) -> reject # private\n    }\n  }\n}\nrouting {\n  fallback: direct\n}\n';
+  const source = {id: 'dns', content: text, writable: true} as ConfigSource;
+  const request = dnsListEnd([source], 'request')!;
+  expect(request.source).toBe(source);
+  expect(addRule(text, request.anchor, 'qtype(A)', "'my dns'", false)).toContain("    request {\n      qtype(A) -> 'my dns'\n    }\n    response {");
+  const response = dnsListEnd([source], 'response')!;
+  expect(addRule(text, response.anchor, 'qtype(A)', 'accept', false)).toContain(
+    '      ip(geoip: private) -> reject # private\n      qtype(A) -> accept\n    }\n  }\n}\n'
+  );
+  // An empty block indented with tabs takes one more tab.
+  const tabbed = 'dns {\n\trouting {\n\t\trequest {\n\t\t}\n\t}\n}\n';
+  const end = dnsListEnd([{...source, content: tabbed}], 'request')!;
+  expect(addRule(tabbed, end.anchor, 'qtype(A)', 'reject', false)).toBe('dns {\n\trouting {\n\t\trequest {\n\t\t\tqtype(A) -> reject\n\t\t}\n\t}\n}\n');
+  // No block, a block closed on a line that holds more, a read-only source, or two blocks to choose between: no end.
+  expect(dnsListEnd([{...source, content: 'dns {\n  routing {\n  }\n}\n'}], 'request')).toBeNull();
+  expect(dnsListEnd([{...source, content: 'dns {\n  routing {\n    request {}\n  }\n}\n'}], 'request')).toBeNull();
+  expect(dnsListEnd([{...source, writable: false}], 'request')).toBeNull();
+  expect(dnsListEnd([source, {...source, id: 'other'}], 'request')).toBeNull();
+  expect(dnsListEnd([{...source, content: undefined}], 'request')).toBeNull();
 });

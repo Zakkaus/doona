@@ -18,6 +18,7 @@ const resourceKeys = [
   'flows',
   'routing_trace',
   'rules',
+  'dns_rules',
   'events',
   'logs',
   'dns_query',
