@@ -2,8 +2,8 @@ import {useState} from 'react';
 import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
-import {toast} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, noChangesReason, type CheckDraft, type CheckField} from './view';
+import {toast, useLinked} from '../../ui/ui';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, noChangesReason, type CheckDraft, type CheckField} from './view';
 export type CheckEditView = {
   title: string;
   open: boolean;
@@ -20,14 +20,25 @@ export type CheckEditView = {
 const labels = {check_url: 'policy.cfg.checkUrl', check_interval: 'policy.cfg.checkInterval'} as const;
 const help = {check_url: 'policy.checkUrlHelp', check_interval: 'policy.checkIntervalHelp'} as const;
 const invalid = {check_url: 'policy.checkUrlInvalid', check_interval: 'policy.checkIntervalInvalid'} as const;
-// The group's check URL and interval, each offered only when the backend lists it as writable.
-export function useCheckEdit(g: Group | undefined, patchConfig: (ops: JsonPatch) => Promise<true | undefined>, busy: boolean): CheckEditView {
+// The group's check URL and interval, each offered only when the backend lists it as writable. `conflict`: the last save
+// was refused with 409, so the group is read again.
+export function useCheckEdit(
+  g: Group | undefined,
+  patchConfig: (ops: JsonPatch) => Promise<true | undefined>,
+  busy: boolean,
+  conflict: boolean
+): CheckEditView {
   const t = useT();
   // `base` is what the dialog opened with; only fields that differ from it are sent.
   const [draft, setDraft] = useState<{base: CheckDraft; value: CheckDraft} | null>(null);
   // Field errors show once a save was tried, then follow each edit.
   const [tried, setTried] = useState(false);
   const session = useDialogSession();
+  // After a conflict the open dialog follows the group as read again, instead of testing against values it no longer holds.
+  const current = conflict && g ? checkDraft(g) : null;
+  useLinked(current && JSON.stringify(current), () => {
+    if (current) setDraft(prev => (prev ? checkRebase(prev, current) : prev));
+  });
   const fields = g ? checkFields(g) : [];
   const ops = g && draft ? checkPatch(g, draft.base, draft.value) : [];
   const reset = () => {

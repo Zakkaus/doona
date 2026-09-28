@@ -43,6 +43,13 @@ export const checkDraft = (g: Group): CheckDraft => ({
   check_url: g.config.check_url ?? '',
   check_interval: g.config.check_interval === null ? '' : String(g.config.check_interval)
 });
+// After a save refused as conflicting, the fields the group changed since `base` show its current value, the others keep
+// the user's edit, and the current values become the base the next save tests against.
+export function checkRebase(draft: {base: CheckDraft; value: CheckDraft}, current: CheckDraft): {base: CheckDraft; value: CheckDraft} {
+  const value = {...draft.value};
+  for (const field of ['check_url', 'check_interval'] as const) if (current[field] !== draft.base[field]) value[field] = current[field];
+  return {base: current, value};
+}
 // An empty field is valid: it clears the group's own value, so the global one applies.
 export function checkInvalid(field: CheckField, value: string): boolean {
   const text = value.trim();

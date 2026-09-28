@@ -90,8 +90,9 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
         try {
           await patchConfig(api, resource.data, ops, signal);
         } catch (error) {
-          // Someone else changed the group first: fetch it, so the next attempt carries the current revision.
-          if (error instanceof ApiError && error.status === 412) refetch();
+          // Someone else changed the group first: fetch it, so the next attempt carries the current revision and the
+          // check dialog can show what the group holds now.
+          if (error instanceof ApiError && (error.status === 409 || error.status === 412)) refetch();
           throw error;
         }
         return true as const;
