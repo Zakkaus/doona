@@ -14,6 +14,7 @@ import {
   recorderView,
   recordingNote,
   runtimeApplyReason,
+  flowRecordingNote,
   type Numeric,
   type Recorder,
   type RecorderChoice
@@ -88,6 +89,7 @@ export function useRuntimeSettingsForm() {
     numeric,
     recorders,
     recordingNote: recordingNote(baseline?.recording, t),
+    flowNote: fields.has('record_flows') ? flowRecordingNote(edits.modes.record_flows ?? modeOf('record_flows'), t) : null,
     level,
     setLevel: (value: string) => {
       if (!settings.busy) setDraft({...edits, level: value});

@@ -71,6 +71,7 @@ export function RuntimeSettingsCard() {
                     </div>
                   ))}
                   {m.recordingNote && <span className="rp-label">{m.recordingNote}</span>}
+                  {m.flowNote && <span className="rp-label">{m.flowNote}</span>}
                 </div>
               )}
               <ActionHelp reason={m.reason}>

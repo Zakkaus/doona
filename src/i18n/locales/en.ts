@@ -1143,6 +1143,8 @@ export const messages = {
   'settings.recordLogs': 'Log recording',
   'settings.recordDnsLog': 'DNS log',
   'settings.record.auto': 'With panel',
+  'settings.record.autoFlows': 'While Connections or Rules is open',
+  'settings.recordFlowsAuto': 'Flows are recorded only while Connections or Rules is open and for {n} s after it closes.',
   'settings.record.on': 'Always',
   'settings.record.off': 'Off',
   'settings.recordingActive': 'Recording',

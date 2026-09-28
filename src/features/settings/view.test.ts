@@ -13,6 +13,7 @@ import {
   profileView,
   recorderPatchValue,
   recorderView,
+  flowRecordingNote,
   recordingNote,
   refreshAllReason,
   runtimeApplyReason
@@ -66,6 +67,16 @@ it('recorder controls follow the reported state and the wire form', () => {
   expect(recordingNote(recording, t)).toBe('settings.recordingDetached');
   expect(recordingNote({...(recording as object), grace_remaining_seconds: 42} as never, t)).toBe('settings.recordingGrace:{"n":42}');
   expect(recordingNote(undefined, t)).toBeNull();
+});
+
+it('names the pages that make automatic flow recording capture', () => {
+  const auto = (id: 'record_flows' | 'record_logs') => recorderView(id, 'auto', undefined, t).items.find(item => item.id === 'auto')?.label;
+  expect(auto('record_flows')).toBe('While Connections or Rules is open');
+  expect(auto('record_logs')).toBe('With panel');
+  expect(flowRecordingNote('auto', t)).toContain('60');
+  expect(flowRecordingNote('on', t)).toBeNull();
+  for (const lang of ['zh-TW', 'zh-CN'] as const)
+    for (const key of ['settings.record.autoFlows', 'settings.recordFlowsAuto'] as const) expect(translate(lang, key)).not.toBe(translate('en', key));
 });
 
 it('names why a connection test failed and ignores a cancelled test', () => {
