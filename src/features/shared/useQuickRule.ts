@@ -2,19 +2,22 @@ import {useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useGroups, useRules} from '../../store';
 import type {RoutingRule} from '../../api/model';
 import {offered} from '../../api/capabilities';
+import {getApi} from '../../api/index';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from './usePendingApply';
-import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type QuickRuleSeed, type RuleTarget} from './rule';
+import {within} from '../../shell/route';
+import type {PageProps} from '../../shell/routes';
+import {acceptedRule, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type QuickRuleSeed, type RuleTarget} from './rule';
 
 export type {QuickRuleSeed} from './rule';
 type Pin = {generation: string; rule: RoutingRule};
 type Draft = {targets: RuleTarget[]; matched: QuickRuleSeed['matched']; current: string | null; target: number; outbound: string; pin: Pin | null};
 // The add-rule dialog, shared by the pages that observe traffic. It keeps the seed's targets from when it opened, since
 // the item may leave its snapshot while the dialog is open, and reads the rules, sources and groups only while it is
-// open. `review` opens the held rules.
-export function useQuickRule(review: () => void) {
+// open.
+export function useQuickRule(go: PageProps['go']) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
   const canWrite =
@@ -82,6 +85,8 @@ export function useQuickRule(review: () => void) {
     const rule = held();
     if (!rule) return;
     pendingRules.add(rule);
+    // A held rule has only a local number, not a rule ID, so its link opens the held section rather than a rule.
+    const review = () => go('rules', within('', {tab: 'list', held: '1'}));
     toast('positive', t('rule.held'), {action: {label: t('rule.reviewHeld'), onAction: review, closeOnAction: true}});
     close();
   };
@@ -96,8 +101,21 @@ export function useQuickRule(review: () => void) {
       return;
     }
     // A rule in its file closes the dialog even when the reload failed, so it is not inserted twice.
-    toast(outcome.failure ? 'negative' : 'positive', outcome.failure ? outcome.failure.text : t('rule.added'));
     setDraft(null);
+    if (outcome.failure) {
+      toast('negative', outcome.failure.text);
+      return;
+    }
+    // The reload that follows the write may not have landed yet, so View rule reads the list itself. Without the rule
+    // there, it opens the list with nothing selected.
+    const view = async () => {
+      const listed = await getApi()
+        .rules()
+        .catch(() => null);
+      const id = listed && acceptedRule(listed.rules, rule.condition, rule.outbound, rule.before);
+      go('rules', within('', {tab: 'list', rule: id}));
+    };
+    toast('positive', t('rule.added'), {action: {label: t('rule.view'), onAction: () => void view(), closeOnAction: true}});
   };
   const loadError = rules.error ?? config.error ?? groups.error;
   const unplaceable = !!rules.data && !!config.data && !positions.length;

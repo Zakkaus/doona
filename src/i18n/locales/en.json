@@ -1430,6 +1430,7 @@
   "rule.valuesHelp": "Separate multiple values with commas",
   "rule.valuesInvalid": "Values cannot contain an apostrophe, #, ->, braces or unmatched parentheses.",
   "rule.valuesMissing": "Enter the values",
+  "rule.view": "View rule",
   "rule.where": "Where",
   "search": "Search pages, connections, nodes, groups and sources",
   "search.groups": "Groups",

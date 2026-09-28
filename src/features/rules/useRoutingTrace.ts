@@ -15,7 +15,6 @@ import {dnsView, evaluationView, queryView, traceReason, traceSeed, traceStatusV
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
-import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
@@ -48,7 +47,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const probe = useNodeProbe(nodes.refetch);
-  const quick = useQuickRule(() => go('rules', within('', {tab: 'list', held: '1'})));
+  const quick = useQuickRule(go);
   const groupsByName = useMemo(() => new Map(groups.data?.map(group => [group.name, group]) ?? []), [groups.data]);
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);

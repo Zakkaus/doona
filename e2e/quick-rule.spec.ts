@@ -58,3 +58,22 @@ test('a trace result adds a rule for the traced target', async ({page}) => {
   await dialogOf(page).getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=trace$/);
 });
+
+test('adding and reloading ends with View rule, which selects the new rule in the list', async ({page}) => {
+  await page.goto('/#/connections?tab=list&id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialogOf(page).getByRole('button', {name: 'Apply now', exact: true}).click();
+  const toast = page.locator('.rp-toast.positive', {hasText: 'Rule written'});
+  await toast.getByRole('button', {name: 'View rule', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
+  await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(full: api.telegram.org)');
+});
+
+test('holding ends with Review held rules, which opens the held section', async ({page}) => {
+  await page.goto('/#/connections?tab=list&id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialogOf(page).getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.locator('.rp-toast.positive', {hasText: 'Rule held'}).getByRole('button', {name: 'Review held rules', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&held=1$/);
+  await expect(page.getByRole('region', {name: 'Pending: 1'})).toBeFocused();
+});

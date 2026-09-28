@@ -37,7 +37,7 @@ export function useFlowRecords({go, query}: PageProps) {
   const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
   const row = view.rows.find(flow => flow.id === id);
   const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, t, lang, row), [detail.data, t, lang, row]);
-  const quick = useQuickRule(() => go('rules', within('', {tab: 'list', held: '1'})));
+  const quick = useQuickRule(go);
   return {
     ...view,
     detail: detailView,
