@@ -11,4 +11,3 @@ if ! diff -u src/api/types.ts "$tmp"; then
   exit 1
 fi
 
-node tools/gen-locales.mjs --check

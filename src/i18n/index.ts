@@ -1,8 +1,9 @@
 import {createContext, useContext, useMemo} from 'react';
-import type {Key} from './locales/zh-TW';
+import type en from './locales/en.json';
 import {storageKeys} from '../api/storage';
 import {browserLang, DEFAULT_LANG, isLang, languages, type Lang} from './languages';
-export type {Key};
+// English is the reference: every catalogue's keys are among its keys.
+export type Key = keyof typeof en;
 export {browserLang, DEFAULT_LANG, languages, type Lang};
 
 export type Message = string | {one: string; other: string};
@@ -26,22 +27,23 @@ export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly str
   if (isLang(value)) return value;
   return browserLang(tags ?? (typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]));
 }
+export type Catalogue = Record<Key, Message>;
 // Each language is its own chunk, loaded on first use; `translate` reads only what has loaded. Vite expands the
-// template imports into one chunk per matching file, and Node, where the e2e specs import this module, resolves them
-// as written. A language with ideograph faces brings their stylesheet, so they are declared before the page renders
-// in it; a face stylesheet that fails to load leaves the text to the system font.
-function loader(lang: Lang): Promise<{messages: Record<Key, Message>}> {
+// template import into one chunk per catalogue. A language with ideograph faces brings their stylesheet, so they are
+// declared before the page renders in it; a face stylesheet that fails to load leaves the text to the system font.
+function readCatalogue(lang: Lang): Promise<Catalogue> {
   const {fonts} = languages.find(language => language.id === lang)!;
-  const catalogue = import(`./locales/${lang}.ts`) as Promise<{messages: Record<Key, Message>}>;
-  return fonts ? Promise.all([catalogue, import(`../fonts-${fonts}.css`).catch(() => undefined)]).then(([module]) => module) : catalogue;
+  const catalogue = (import(`./locales/${lang}.json`) as Promise<{default: Catalogue}>).then(module => module.default);
+  return fonts ? Promise.all([catalogue, import(`../fonts-${fonts}.css`).catch(() => undefined)]).then(([messages]) => messages) : catalogue;
 }
-const catalogues = new Map<Lang, Record<Key, Message>>();
+const catalogues = new Map<Lang, Catalogue>();
 const loading = new Map<Lang, Promise<void>>();
-export function loadLanguage(lang: Lang): Promise<void> {
+// Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
+export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Catalogue> = readCatalogue): Promise<void> {
   let pending = loading.get(lang);
   if (!pending) {
-    pending = loader(lang).then(
-      module => void catalogues.set(lang, module.messages),
+    pending = read(lang).then(
+      messages => void catalogues.set(lang, messages),
       (error: unknown) => {
         // A failed chunk (offline, a new deploy) can be asked for again.
         loading.delete(lang);

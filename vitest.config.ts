@@ -9,7 +9,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**'],
-      exclude: ['src/api/types.ts', 'src/**/messages.ts', 'src/i18n/locales/**', 'src/api/mock/**'],
+      exclude: ['src/api/types.ts', 'src/api/mock/**'],
       thresholds: {lines: 15, statements: 15}
     }
   }

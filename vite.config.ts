@@ -104,6 +104,8 @@ export default defineConfig({
       }
     }
   ],
+  // Catalogues are read whole as their default export, so each key needs no named export of its own.
+  json: {namedExports: false},
   build: {
     manifest: true,
     target: ['es2022'],

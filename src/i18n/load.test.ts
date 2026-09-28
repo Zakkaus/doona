@@ -3,7 +3,7 @@ import {beforeEach, expect, it, vi} from 'vitest';
 // The setup file loads every language; these tests start from a fresh module with none loaded.
 beforeEach(() => {
   vi.resetModules();
-  vi.doUnmock('./locales/en');
+  vi.doUnmock('./locales/en.json');
 });
 
 it('loads only the language asked for, once', async () => {
@@ -18,13 +18,13 @@ it('loads only the language asked for, once', async () => {
 });
 
 it('can ask again after a failed load', async () => {
-  vi.doMock('./locales/en', () => {
+  vi.doMock('./locales/en.json', () => {
     throw new Error('offline');
   });
   const i18n = await import('./index');
   await expect(i18n.loadLanguage('en')).rejects.toThrow();
   expect(i18n.isLoaded('en')).toBe(false);
-  vi.doUnmock('./locales/en');
+  vi.doUnmock('./locales/en.json');
   await i18n.loadLanguage('en');
   expect(i18n.isLoaded('en')).toBe(true);
 });

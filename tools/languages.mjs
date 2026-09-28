@@ -21,5 +21,5 @@ for (const statement of source.statements)
 
 /** @type {Array<{id: string, name: string, locale: string, docs: string, fonts: string | null}>} */
 export const languages = literal(constants.languages);
-export const DEFAULT_LANG = literal(constants.DEFAULT_LANG);
+export const REFERENCE_LANG = literal(constants.REFERENCE_LANG);
 export const langs = languages.map(language => language.id);
