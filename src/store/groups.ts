@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult} from '../api/model';
@@ -48,6 +48,25 @@ export async function patchConfig(api: Api, group: Group, ops: JsonPatch, signal
   const result = await api.patchGroup(group.id, ops, etag(group.config_revision), signal);
   if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
 }
+// honk offers selection and config writes for groups as a whole (resources.groups) and for each group (its capabilities);
+// the group shows only the actions both offer, and none until capabilities load. The contract lists both top-level
+// flags whenever groups are available, so an absent one leaves the group's own flags in charge.
+export function groupActions(group: Group, capabilities: Capabilities | undefined): Group {
+  const groups = capabilities?.resources.groups;
+  const selection = !!groups && groups.selection !== false;
+  const patch = !!groups && groups.config_patch !== false;
+  if (selection && patch) return group;
+  const {can_select, can_override, mutable_config} = group.capabilities;
+  return {
+    ...group,
+    capabilities: {
+      ...group.capabilities,
+      can_select: selection && can_select,
+      can_override: selection && can_override,
+      mutable_config: patch ? mutable_config : []
+    }
+  };
+}
 export function useGroups(enabled = true) {
   const api = getApi();
   return useResource({key: ['groups'], every: poll.inventory, fetch: signal => api.groups(signal)}, {enabled});
@@ -57,6 +76,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   const capabilities = useCapabilities().data;
   const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
+  const data = useMemo(() => resource.data && groupActions(resource.data, capabilities), [resource.data, capabilities]);
   const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
   const action = useAction<'selection' | 'probe' | 'config'>({scope: id});
   const {run: act} = action;
@@ -101,6 +121,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   );
   return {
     ...resource,
+    data,
     // The load error stays with the resource (shown inline); `actionError` is the last control that failed.
     actionError: action.error,
     network,
