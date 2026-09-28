@@ -2,8 +2,9 @@ import type {Key} from '../i18n';
 
 // The one list of palettes, in menu order. The type, the appearance menu, the stored-value check and the first-paint
 // script (vite.config.ts injects the ids into tools/stamp.js) all read it. An id is `family/flavour`, the two data
-// attributes palettes.css keys on. Each entry pairs the light variant with a dark one; the description names both with
-// their official variant names, and consecutive entries with the same group share a menu section.
+// attributes src/ui/styles/palettes/<family>.css keys on. Each entry pairs the light variant with a dark one; the
+// description names both with their official variant names, and consecutive entries with the same group share a menu
+// section.
 export const palettes = [
   {id: 'rose-pine/main', group: 'palette.rosePine', label: 'palette.rosePine', desc: 'palette.dawnMain'},
   {id: 'rose-pine/moon', group: 'palette.rosePine', label: 'palette.moon', desc: 'palette.dawnMoon'},
