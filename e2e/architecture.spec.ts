@@ -15,12 +15,12 @@ async function backend(page: Page) {
     config: () => api.config(),
     rules: () => api.rules(),
     groups: () => api.groups(),
-    nodes: () => api.nodes(),
-    providers: () => api.providers(),
-    flows: () => api.flows(),
-    connections: () => api.connections(),
+    nodes: () => api.nodes({limit: 1000}),
+    providers: () => api.providers({limit: 1000}),
+    flows: () => api.flows({detail: 'full', limit: 1000}),
+    connections: () => api.connections({detail: 'full', limit: 1000}),
     runtime: () => api.runtime(),
-    datapath: () => api.datapath(),
+    datapath: () => api.datapath('full'),
     geodata: () => api.geodata(),
     'runtime/settings': () => api.runtimeSettings(),
     'runtime/memory': () => api.runtimeMemory(),
@@ -365,7 +365,7 @@ test('trace headings and selected leaves retain the submitted domain and network
 
 test('search keeps the keyboard target when an earlier connection disappears', async ({page}) => {
   const api = await backend(page);
-  const snapshot = await api.connections();
+  const snapshot = await api.connections({detail: 'full', limit: 1000});
   snapshot.tcp = snapshot.tcp.slice(0, 3).map((connection, index) => ({...connection, domain: `stable-${index}.example`}));
   snapshot.udp = [];
   await page.route('**/api/v1/connections**', route => route.fulfill({json: snapshot}));
@@ -585,13 +585,13 @@ test('provider host labels cannot enable interval writes without node tag metada
   const main = config.sources.find(source => source.kind === 'main')!;
   main.content = "subscription {\n  main: {\n    url: 'https://shared.example/sub'\n    interval: '2h'\n  }\n}\n";
   main.content_sha256 = await sha256(main.content);
-  const providers = await api.providers();
+  const providers = await api.providers({limit: 1000});
   const subscription = providers.providers.find(provider => provider.kind === 'subscription')!;
   providers.providers = [
     {...subscription, id: 'main-provider', name: 'opaque-main', url_redacted: 'https://shared.example/redacted'},
     {...subscription, id: 'include-provider', name: 'opaque-include', url_redacted: 'https://shared.example/redacted'}
   ];
-  const nodes = await api.nodes();
+  const nodes = await api.nodes({limit: 1000});
   nodes.nodes = [];
   nodes.next_cursor = null;
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -609,10 +609,10 @@ httpTest('backend inventory failures expose independent retries without claiming
   let failConnections = true;
   const failure = (message: string) => ({status: 503, json: {request_id: 'inventory', error: {code: 'service_unavailable', message, details: null}}});
   await page.route('**/api/v1/providers?*', async route =>
-    route.fulfill(failProviders ? failure('Provider inventory unavailable') : {json: await api.providers()})
+    route.fulfill(failProviders ? failure('Provider inventory unavailable') : {json: await api.providers({limit: 1000})})
   );
   await page.route('**/api/v1/connections?*', async route =>
-    route.fulfill(failConnections ? failure('Connection inventory unavailable') : {json: await api.connections()})
+    route.fulfill(failConnections ? failure('Connection inventory unavailable') : {json: await api.connections({detail: 'full', limit: 1000})})
   );
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Backend actions'});
@@ -658,7 +658,7 @@ httpTest('failed reads on activity, DNS and settings each offer a retry', async 
 
 test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {
   const api = await backend(page);
-  const snapshot = await api.flows();
+  const snapshot = await api.flows({detail: 'full', limit: 1000});
   const base = snapshot.flows[0];
   snapshot.flows = [
     {...base, id: 'missing', outbound: null, chain: [], rule_id: null, rule_expression: null},
@@ -778,7 +778,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
   dictionary.rules = Array.from({length: 4096}, (_, i) => ({...dictionary.rules[0], rule_id: String(i), expression: `rule-${i}`, outbound: 'direct'}));
   const groups = await api.groups();
   groups[0].policy = {...groups[0].policy, kind: 'urltest', native: 'min_avg10'};
-  const flows = {...(await api.flows()), flows: []};
+  const flows = {...(await api.flows({detail: 'full', limit: 1000})), flows: []};
   await page.route('**/api/v1/rules', route => route.fulfill({json: dictionary}));
   await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));

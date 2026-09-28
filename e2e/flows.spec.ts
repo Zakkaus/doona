@@ -176,7 +176,7 @@ test('the tree waits for the nodes before it draws', async ({page}) => {
   const pending = new Promise<void>(resolve => (release = resolve));
   handlers['GET nodes'] = async () => {
     await pending;
-    return api.nodes();
+    return api.nodes({limit: 1000});
   };
   await page.goto('/#/rules?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});

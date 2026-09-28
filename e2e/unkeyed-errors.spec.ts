@@ -115,7 +115,7 @@ for (const how of Object.keys(failures) as Failure[])
 
     test('removing a subscription reports the failure and can be confirmed again', async ({page}) => {
       const {api, handlers} = await mockBackend(page);
-      const provider = (await api.providers()).providers.find(item => item.kind !== 'inline')!;
+      const provider = (await api.providers({limit: 1000})).providers.find(item => item.kind !== 'inline')!;
       const counted = await failOnce(page, handlers, 'DELETE', `providers/${provider.id}`, how, () => api.deleteProvider(provider.id));
       await page.goto('/#/nodes?tab=list');
       await page.getByRole('button', {name: `Remove ${provider.name}`, exact: true}).click();

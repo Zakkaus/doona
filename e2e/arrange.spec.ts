@@ -130,7 +130,7 @@ test('a failed node list is shown with a retry instead of loading forever', asyn
   let fail = true;
   backend.handlers['GET nodes'] = async () => {
     if (fail) throw new ApiError(503, 'unavailable', 'Node list unavailable');
-    return backend.api.nodes();
+    return backend.api.nodes({limit: 1000});
   };
   await page.goto('/#/policies?tab=arrange');
   const alert = page.getByRole('alert').filter({hasText: 'Node list unavailable'});

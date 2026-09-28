@@ -65,14 +65,14 @@ test('search respects destination capabilities, preserves loose-node ownership a
   capabilities.resources.dns_query.available = false;
   capabilities.resources.dns_log.available = false;
   capabilities.resources.routing_trace.available = false;
-  const nodes = await api.nodes();
+  const nodes = await api.nodes({limit: 1000});
   nodes.nodes = [
     {...nodes.nodes[0], id: 'direct', name: 'direct', protocol: 'direct', provider_id: null},
     {...nodes.nodes[0], id: 'orphan-id', name: 'orphan', provider_id: null}
   ];
-  const providers = await api.providers();
+  const providers = await api.providers({limit: 1000});
   providers.providers = [{...providers.providers[0], id: 'unattributed'}];
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   connections.truncated = true;
   const responses: Record<string, unknown> = {
     '/capabilities': capabilities,
@@ -122,13 +122,13 @@ test('search reads live connection addresses, node and group names, and availabl
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   const connection = connections.tcp[0];
   connection.id = 'live/id:1';
   connection.domain = 'live-search.example';
   connection.dst = '198.51.100.42:443';
   connection.src = '192.0.2.42:3210';
-  const nodes = await api.nodes();
+  const nodes = await api.nodes({limit: 1000});
   nodes.nodes[0].name = 'Live node';
   const groups = await api.groups();
   groups[0].name = 'Live group';

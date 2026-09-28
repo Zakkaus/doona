@@ -162,6 +162,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
     },
     datapath: async (detail, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.datapath.available) throw new ApiError(404, 'capability_not_supported', 'Datapath unavailable');
       const snapshot = structuredClone(datapath);
       if (detail !== 'full' && snapshot.ebpf) {
         delete snapshot.ebpf.attachments;
@@ -171,6 +172,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
     },
     runtimeMemory: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_memory.available) throw new ApiError(404, 'capability_not_supported', 'Runtime memory unavailable');
       const memory = structuredClone(memoryFixture);
       const now = Date.now();
       const values = memoryValues(now);

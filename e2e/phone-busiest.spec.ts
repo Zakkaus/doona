@@ -13,7 +13,7 @@ const long = 'cn-gdfs-ct-01-12.upos-sz-mirrorcos.vod.bilivideo.com';
 async function longHost(page: Page) {
   const backend = await mockBackend(page);
   backend.handlers['GET connections'] = async () => {
-    const list = await backend.api.connections();
+    const list = await backend.api.connections({detail: 'full', limit: 1000});
     const rename = <T extends {domain?: string | null}>(row: T) => (row.domain === 'cdn.bilibili.com' ? {...row, domain: long} : row);
     return {...list, tcp: list.tcp.map(rename), udp: list.udp.map(rename)};
   };

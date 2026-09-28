@@ -233,7 +233,7 @@ test('a read the backend never answers fails at the deadline and recovers on ret
   expectLoadFailures(page, /\/api\/v1\/datapath/);
   let hold = true;
   // The connection is accepted and never answered.
-  backend.handlers['GET datapath'] = async () => (hold ? new Promise(() => {}) : backend.api.datapath());
+  backend.handlers['GET datapath'] = async () => (hold ? new Promise(() => {}) : backend.api.datapath('full'));
   await page.clock.install();
   await page.goto('/#/overview');
   await expect.poll(() => backend.requests.some(request => new URL(request.url()).pathname === '/api/v1/datapath')).toBe(true);

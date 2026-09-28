@@ -179,9 +179,9 @@ test('built-in and unattributed provenance stay separate without granting inline
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
   capabilities.resources.nodes.available = true;
   capabilities.resources.providers.available = true;
-  const providers = await api.providers();
+  const providers = await api.providers({limit: 1000});
   const inline = providers.providers.find(provider => provider.kind === 'inline')!;
-  const snapshot = await api.nodes();
+  const snapshot = await api.nodes({limit: 1000});
   const node = snapshot.nodes[0];
   snapshot.nodes = [
     {...node, id: 'direct', name: 'direct', protocol: 'direct', provider_id: null},
@@ -233,7 +233,7 @@ test('without a node list the page shows providers alone, with no latency tab', 
 
 test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  const node = (await api.nodes()).nodes.find(item => item.provider_id === 'inline')!;
+  const node = (await api.nodes({limit: 1000})).nodes.find(item => item.provider_id === 'inline')!;
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
   handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
@@ -269,7 +269,7 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
     await new Promise(resolve => setTimeout(resolve, 300));
     return read();
   };
-  backend.handlers['GET providers'] = slow(() => backend.api.providers());
+  backend.handlers['GET providers'] = slow(() => backend.api.providers({limit: 1000}));
   backend.handlers['GET geodata'] = slow(() => backend.api.geodata());
   const whole = (cell: Locator) => cell.evaluate(element => element.scrollWidth <= element.clientWidth);
   await page.goto('/#/nodes');
@@ -317,7 +317,7 @@ test.describe('in Traditional Chinese', () => {
   test('a failed subscription refresh names its cause in the page language', async ({page}) => {
     const {api, handlers} = await mockBackend(page);
     handlers['GET providers'] = async () => {
-      const list = await api.providers();
+      const list = await api.providers({limit: 1000});
       const subscription = list.providers.find(item => item.kind === 'subscription')!;
       subscription.status = 'error';
       subscription.last_error = {code: 'fetch_failed', message: 'Provider refresh did not complete successfully.', details: null};

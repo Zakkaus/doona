@@ -3,25 +3,35 @@ import {uuid} from '../hash';
 import {normalizeResourceKey} from '../inflight';
 import type {ResourceName} from '../invalidation';
 
-export function createPager(resource: ResourceName) {
+// The shared Limit1000 page size: 100 rows unless the caller asks, and never more than 1000.
+export function pageLimit(limit = 100): number {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) throw new ApiError(400, 'invalid_request', 'Invalid page size');
+  return limit;
+}
+
+// A page ends early once its rows pass `budget` bytes of JSON, as a backend's response budget ends it; it still
+// carries at least one row, however large, and the cursor goes on from there.
+export function createPager(resource: ResourceName, budget = Infinity) {
   const snapshots = new Map<string, {items: unknown[]; key: string; expires: number}>();
   return <T>(items: T[], query: {cursor?: string; limit?: number} = {}) => {
-    const {cursor, limit = 1000, ...filters} = query;
+    const {cursor, limit: asked, ...filters} = query;
+    const limit = pageLimit(asked);
     const key = normalizeResourceKey([resource, filters]);
-    if (!Number.isSafeInteger(limit) || limit < 1) throw new ApiError(400, 'invalid_request', 'Invalid page size');
     for (const [id, snapshot] of snapshots) if (snapshot.expires <= Date.now()) snapshots.delete(id);
     const [id, offset, extra] = cursor?.split(':') ?? [uuid(), '0'];
     const start = Number(offset);
-    let snapshot = cursor ? snapshots.get(id) : undefined;
-    if (cursor && (extra !== undefined || !snapshot || snapshot.key !== key || !Number.isSafeInteger(start) || start < 1 || start >= snapshot.items.length))
+    const snapshot = cursor ? snapshots.get(id) : {items: items as unknown[], key, expires: Date.now() + 30000};
+    if (!snapshot || extra !== undefined || snapshot.key !== key || !Number.isSafeInteger(start) || (cursor && (start < 1 || start >= snapshot.items.length)))
       throw new ApiError(resource === 'flows' ? 410 : 400, resource === 'flows' ? 'snapshot_expired' : 'invalid_request', 'Unknown or expired cursor');
-    if (!snapshot) {
-      if (items.length <= limit) return {items: structuredClone(items), total: items.length, next_cursor: null};
-      snapshot = {items: structuredClone(items), key, expires: Date.now() + 30000};
+    const page = snapshot.items.slice(start, start + limit);
+    let size = 0;
+    const over = page.findIndex(item => (size += JSON.stringify(item).length) > budget);
+    const end = start + (over < 0 ? page.length : Math.max(1, over));
+    if (!cursor && end < items.length) {
+      snapshot.items = structuredClone(items);
       if (snapshots.size >= 32) snapshots.delete(snapshots.keys().next().value!);
       snapshots.set(id, snapshot);
     }
-    const end = start + limit;
     return {
       items: structuredClone(snapshot.items.slice(start, end)) as T[],
       total: snapshot.items.length,
