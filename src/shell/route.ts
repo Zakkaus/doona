@@ -155,11 +155,3 @@ export function useRoute(api: string | null) {
   };
   return {...loc, go, setDirty, revision, pending, discard, cancel: () => setPending(null)};
 }
-
-// A link can ask to replace the current history entry, as the hub navigation does: moving between top-level
-// destinations does not pile up under Back.
-declare module 'react-aria-components' {
-  interface RouterConfig {
-    routerOptions: {replace?: boolean};
-  }
-}

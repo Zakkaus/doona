@@ -221,6 +221,19 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'])
 
 test.describe('desktop', () => {
   test.use({viewport: {width: 1280, height: 900}});
+  test('moving between pages in the side navigation adds history entries that Back retraces', async ({page}) => {
+    await page.goto('/logo.svg');
+    await page.goto('/#/overview');
+    const nav = (route: string) => page.locator(`.rp-side .rp-nav[href="#/${route}"]`);
+    for (const route of ['dns', 'rules', 'policies']) {
+      await nav(route).click();
+      await expect(page).toHaveURL(new RegExp(`#/${route}$`));
+    }
+    for (const back of [/#\/rules$/, /#\/dns$/, /#\/overview$/, /\/logo\.svg$/]) {
+      await page.goBack();
+      await expect(page).toHaveURL(back);
+    }
+  });
   test('groups the side navigation into the four hubs and hides the phone navigation', async ({page}) => {
     await page.goto('/#/overview');
     const sections = page.locator('.rp-side [data-group]');
@@ -393,30 +406,30 @@ test.describe('360px actions', () => {
       expect(stranded).toEqual([]);
     });
 
-  test('moving between hubs and their pages does not stack history', async ({page}) => {
+  test('moving between hubs and their pages adds history entries that Back retraces', async ({page}) => {
     // A same-origin page before the app stands for wherever the user came from.
     await page.goto('/logo.svg');
     await page.goto('/#/overview');
     await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
-    const entries = await page.evaluate(() => history.length);
     const pages = page.locator('.rp-hubnav');
-    for (const [where, name] of [
-      [bar(page), 'Monitor'],
-      [pages, 'DNS'],
-      [pages, 'Logs'],
-      [bar(page), 'Monitor'],
-      [bar(page), 'Routing'],
-      [pages, 'Nodes'],
-      [bar(page), 'Settings'],
-      [pages, 'Configuration'],
-      [bar(page), 'Activity'],
-      [pages, 'Activity']
-    ] as const)
-      await where.getByRole('link', {name, exact: true}).click();
-    await expect(page).toHaveURL(/#\/activity$/);
+    await bar(page).getByRole('link', {name: 'Monitor', exact: true}).click();
+    await expect(page).toHaveURL(/#\/connections$/);
+    await pages.getByRole('link', {name: 'DNS', exact: true}).click();
+    await expect(page).toHaveURL(/#\/dns$/);
+    await page.getByRole('tab', {name: 'Cache', exact: true}).click();
+    await expect(page).toHaveURL(/#\/dns\?tab=cache$/);
+    await bar(page).getByRole('link', {name: 'Routing', exact: true}).click();
+    await expect(page).toHaveURL(/#\/policies$/);
+    // The page already open adds no entry.
+    const entries = await page.evaluate(() => history.length);
+    await pages.getByRole('link', {name: 'Policies', exact: true}).click();
     expect(await page.evaluate(() => history.length)).toBe(entries);
-    await page.goBack();
-    await expect(page).toHaveURL(/\/logo\.svg$/);
+    await pages.getByRole('link', {name: 'Rules', exact: true}).click();
+    await expect(page).toHaveURL(/#\/rules$/);
+    for (const back of [/#\/policies$/, /#\/dns\?tab=cache$/, /#\/dns$/, /#\/connections$/, /#\/overview$/, /\/logo\.svg$/]) {
+      await page.goBack();
+      await expect(page).toHaveURL(back);
+    }
   });
 
   test('toolbar actions past the first move into a menu', async ({page}) => {
