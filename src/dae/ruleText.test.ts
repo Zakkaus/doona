@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource, DnsRoutingRule, RoutingRule} from '../api/model';
-import {addRule, dnsListEnd, dnsRuleAnchor, dnsUpstreamNames, removeRule, ruleAnchor, sourceFor} from './ruleText';
+import {addRule, dnsListEnd, dnsRuleAnchor, dnsUpstreamNames, removeRule, replaceRuleTarget, ruleAnchor, sourceFor} from './ruleText';
 
 const rule: RoutingRule = {
   rule_id: 'r1',
@@ -43,6 +43,18 @@ it('anchors a rule whose display expression ends with its outbound', () => {
   expect(ruleAnchor(source, shown)).not.toBeNull();
   expect(ruleAnchor(source, {...shown, expression: 'l4proto(tcp) -> mix'})).toBeNull();
   expect(ruleAnchor(source, {...shown, expression: 'l4proto(tcp, udp) -> mix(must)'})).toBeNull();
+});
+
+it('replaces only the target of a rule, keeping its condition, continuation lines and comment', () => {
+  expect(replaceRuleTarget(text, ruleAnchor(source, rule)!, 'proxy', true)).toBe(text.replace('-> mix #', '-> proxy(must) #'));
+  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback', outbound: 'direct', source: {...rule.source!, line: 3}})!;
+  expect(replaceRuleTarget(text, fallback, 'block', false)).toBe(text.replace('fallback: direct', 'fallback: block'));
+  const multi = 'routing {\n  domain(suffix: a.com,\n    suffix: b.com) ->proxy(must)\n}\n';
+  const anchor = ruleAnchor({id: 'source', content: multi} as ConfigSource, {...rule, outbound: 'proxy', must: true})!;
+  expect(replaceRuleTarget(multi, anchor, 'direct', false)).toBe(multi.replace('->proxy(must)', '-> direct'));
+  expect(replaceRuleTarget(text.replace('mix', 'block'), ruleAnchor(source, rule)!, 'proxy', false)).toBeNull();
+  // An insertion point, such as the end of a DNS list, has no target to replace.
+  expect(replaceRuleTarget(multi, {...anchor, target: undefined}, 'direct', false)).toBeNull();
 });
 
 it('links rule sources by ID even when display names match', () => {

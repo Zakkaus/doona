@@ -250,8 +250,9 @@ export function useConnectionsPage({go, query}: PageProps) {
     },
     close: {pending: closing.busy === cur?.id, disabled: !!closing.busy, run: () => void close()},
     ruleAction,
-    showRule: () => {
-      if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id}));
+    // Editing opens the rule list's dialog for the matched rule, beside the rule itself.
+    showRule: (edit = false) => {
+      if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id, edit: edit ? cur.rule_id : null}));
     },
     showFlow: () => {
       if (model.detail && canViewFlow) go('rules', model.detail.flowQuery);

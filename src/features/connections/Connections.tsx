@@ -110,7 +110,8 @@ export function Connections(props: PageProps) {
               <div className="rp-cluster">
                 <div className="rp-cluster">
                   {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
-                  {vm.ruleAction.canShow && <Button onPress={vm.showRule}>{t('conn.showRule')}</Button>}
+                  {vm.ruleAction.canShow && <Button onPress={() => vm.showRule()}>{t('conn.showRule')}</Button>}
+                  {vm.ruleAction.canEdit && <Button onPress={() => vm.showRule(true)}>{t('conn.editRule')}</Button>}
                   {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
                   {cur.source && <Button onPress={vm.onlyClient}>{t('conn.onlyThisClient')}</Button>}
                 </div>
