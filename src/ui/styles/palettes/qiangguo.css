@@ -1,7 +1,7 @@
 /* A parody palette with no upstream, so the official-values rule does not apply.
-   Clock-in (light) follows a patriotic proxy app: pale rice-paper pages, white cards with the Great Wall faint in a
-   corner, and a flag-red banner with the five stars across the top. All-nighter (dark) is a red and gold poster after
-   midnight, with the poster's sun rays behind the page. */
+   Clock-in (light) follows a patriotic proxy app: a flag-red hero at the top of the page fading into pale rice paper,
+   and white cards with the Great Wall faint in a corner. All-nighter (dark) is a red and gold poster after midnight,
+   with the same hero at night. */
 :root[data-family='qiangguo'] {
   --rp-base: #fffaf6;
   --rp-surface: #f8ebe5;
@@ -62,7 +62,7 @@
   --rp-hl-low: #3a0002;
   --rp-hl-med: #8a0a10;
   --rp-hl-high: #b8862b;
-  --rp-shadow: 0 0 0 1px #b8862b, 0 0 18px rgba(255, 59, 48, 0.35);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   --rp-on-accent: #2a0000;
   --rp-line: rgba(255, 215, 0, 0.3);
   --rp-fill: #5a0006;
@@ -71,45 +71,114 @@
   --rp-negative-tile-text: var(--rp-text);
   --rp-subtle-text: var(--rp-text);
 }
-/* The banner: flag red with the five stars, and the top bar's own controls read in the flag's gold. After midnight
-   the same banner in the red of a lantern at night. */
+/* The hero at the top of the page, as on the app: a red sky with the five stars at the start and Tiananmen at the
+   end, and a few faint diagonal folds across the whole sky so it reads as cloth on a second look, all fading down
+   into the page so the title and the first cards sit on paper. The top bar has no banner of its own: its controls
+   sit on the hero, which the shell paints and the bar repaints in the same place, so the bar stays the sky's top edge
+   once it is pinned and the page scrolls under it. On a wide screen the hero spans the content column and the side
+   navigation keeps the paper.
+   The square is cut from three photographs on Wikimedia Commons and tinted cream by day and gold at night:
+   Tiananmen, https://commons.wikimedia.org/wiki/File:20200110_Tiananmen-6.jpg, and a huabiao,
+   https://commons.wikimedia.org/wiki/File:20200110_Tiananmen_statue-1.jpg, both by Balon Greyjoy (CC0); the
+   Monument to the People's Heroes, https://commons.wikimedia.org/wiki/File:Beijing_(November_2016)_-_234.jpg, by
+   Another Believer (CC BY-SA 4.0), so the square images are CC BY-SA 4.0 as well. The stars keep the geometry of Zeng
+   Liansong's flag, https://commons.wikimedia.org/wiki/File:Flag_of_the_People%27s_Republic_of_China.svg (public
+   domain). */
 :root[data-family='qiangguo'] {
-  --qg-night-banner: linear-gradient(100deg, #3a0003, #6e0a0f 45%, #4a0004);
+  --qg-sky: linear-gradient(#b8141b, #de2910 45%, #e8452a);
+  --qg-flag: url('./qiangguo-flag-light.svg');
+  --qg-fold-lit: rgba(255, 236, 200, 0.2);
+  --qg-fold-shade: rgba(90, 0, 4, 0.24);
+  --qg-square: url('./qiangguo-square-light.webp');
+  --qg-bar-ink: rgba(90, 0, 4, 0.55);
+  /* Where the hero starts and ends across the shell, how tall it is from the top of the page, where it turns to
+     paper, how far above its end the title sits, how wide its start fades into the side column, and the boxes of the
+     flag and the square. */
+  --qg-start: 0px;
+  --qg-end: 0px;
+  --qg-hero: 250px;
+  --qg-fade-from: 44%;
+  --qg-fade-to: 78%;
+  --qg-title: 66px;
+  --qg-flag-h: 160px;
+  --qg-flag-y: 0px;
+  --qg-gate-h: 150px;
+  --qg-gate-end: -118px;
+  --qg-gate-top: 66px;
+  --qg-soft: 0px;
+  --qg-hero-bg:
+    linear-gradient(transparent var(--qg-fade-from), var(--rp-surface) var(--qg-fade-to)) no-repeat var(--qg-start) 0 /
+      calc(100% - var(--qg-start) - var(--qg-end)) var(--qg-hero),
+    linear-gradient(90deg, var(--rp-base), transparent) no-repeat var(--qg-start) 0 / var(--qg-soft) var(--qg-hero),
+    var(--qg-flag) no-repeat var(--qg-start) var(--qg-flag-y) / auto var(--qg-flag-h),
+    var(--qg-square) no-repeat right var(--qg-gate-end) top var(--qg-gate-top) / auto var(--qg-gate-h),
+    linear-gradient(
+        115deg,
+        transparent 6%,
+        var(--qg-fold-lit) 18%,
+        var(--qg-fold-shade) 32%,
+        transparent 44%,
+        var(--qg-fold-lit) 60%,
+        var(--qg-fold-shade) 76%,
+        transparent 90%
+      )
+      no-repeat var(--qg-start) 0 / calc(100% - var(--qg-start) - var(--qg-end)) var(--qg-hero),
+    var(--qg-sky) no-repeat var(--qg-start) 0 / calc(100% - var(--qg-start) - var(--qg-end)) var(--qg-hero);
+}
+:root[data-family='qiangguo'][data-scheme='dark'] {
+  --qg-sky: linear-gradient(#5c0006, #1a0000);
+  --qg-flag: url('./qiangguo-flag-dark.svg');
+  --qg-fold-lit: rgba(255, 150, 120, 0.12);
+  --qg-fold-shade: rgba(0, 0, 0, 0.45);
+  --qg-square: url('./qiangguo-square-dark.webp');
+  --qg-bar-ink: rgba(0, 0, 0, 0.6);
+}
+@media (min-width: 1024px) {
+  :root[data-family='qiangguo'] {
+    --qg-start: 240px;
+    --qg-end: 16px;
+    --qg-hero: 250px;
+    --qg-fade-from: 46%;
+    --qg-fade-to: 84%;
+    --qg-title: 62px;
+    --qg-flag-h: 190px;
+    --qg-flag-y: -16px;
+    --qg-gate-h: 180px;
+    --qg-gate-end: var(--qg-end);
+    --qg-gate-top: 44px;
+    --qg-soft: 40px;
+  }
+}
+:root[data-family='qiangguo'] .rp-shell {
+  background: var(--qg-hero-bg);
+}
+/* The bar has no banner of its own: on a phone its controls sit on the hero, in cream with a soft shadow. On a wide
+   screen the brand keeps the paper above the side navigation, and only the search and the actions meet the hero. */
+:root[data-family='qiangguo'] {
+  --qg-paper: var(--rp-base);
+  --qg-ink: var(--rp-text);
+  --qg-ink-subtle: var(--rp-subtle);
 }
 :root[data-family='qiangguo'] .rp-top {
-  --rp-text: #fff6d5;
-  --rp-subtle: #ffe3a3;
-  --rp-muted: #ffc9a8;
+  --rp-text: #fff6e0;
+  --rp-subtle: #ffe9c2;
+  --rp-muted: #ffd3b0;
   --rp-accent: #ffde00;
   --rp-base: #a50f15;
-  --rp-surface: #b8141b;
+  --rp-surface: rgba(90, 0, 4, 0.28);
   --rp-overlay: #8e0c11;
-  --rp-hl-med: #ff6b5b;
+  --rp-hl-med: rgba(255, 246, 224, 0.55);
   color: var(--rp-text);
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Cdefs%3E%3Cpath id='s' d='M0-1 .588.809-.951-.309H.951L-.588.809Z' fill='%23ffde00'/%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(25 25) scale(15)'/%3E%3Cuse href='%23s' transform='translate(50 10) rotate(23) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 20) rotate(46) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 35) rotate(70) scale(5)'/%3E%3Cuse href='%23s' transform='translate(50 45) rotate(21) scale(5)'/%3E%3C/svg%3E")
-      no-repeat 210px 50% / 84px 56px,
-    linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
-}
-:root[data-family='qiangguo'] .rp-hubbar {
-  background: linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
-  --rp-text: #fff6d5;
-  --rp-subtle: #ffe3a3;
-  --rp-accent: #ffde00;
+    var(--qg-hero-bg),
+    var(--qg-sky) no-repeat 0 0 / 100% var(--qg-hero);
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-top {
   --rp-base: #3a0003;
-  --rp-surface: #5c0006;
   --rp-overlay: #2a0000;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Cdefs%3E%3Cpath id='s' d='M0-1 .588.809-.951-.309H.951L-.588.809Z' fill='%23ffde00'/%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(25 25) scale(15)'/%3E%3Cuse href='%23s' transform='translate(50 10) rotate(23) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 20) rotate(46) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 35) rotate(70) scale(5)'/%3E%3Cuse href='%23s' transform='translate(50 45) rotate(21) scale(5)'/%3E%3C/svg%3E")
-      no-repeat 210px 50% / 84px 56px,
-    var(--qg-night-banner);
-  box-shadow: 0 1px 0 rgba(255, 215, 0, 0.35);
 }
-:root[data-family='qiangguo'][data-scheme='dark'] .rp-hubbar {
-  background: var(--qg-night-banner);
-  box-shadow: 0 -1px 0 rgba(255, 215, 0, 0.35);
+:root[data-family='qiangguo'] .rp-top :is(.rp-brand-text, svg) {
+  filter: drop-shadow(0 1px 1.5px var(--qg-bar-ink));
 }
 :root[data-family='qiangguo'] .rp-top .rp-brand-text > span:first-child {
   background: linear-gradient(90deg, #ffde00, #fff6d5, #ffde00);
@@ -117,12 +186,57 @@
   background-clip: text;
   color: transparent;
 }
-@media (max-width: 1023px) {
+@media (min-width: 1024px) {
   :root[data-family='qiangguo'] .rp-top {
-    background: linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
+    background: var(--qg-hero-bg), var(--qg-paper);
   }
-  :root[data-family='qiangguo'][data-scheme='dark'] .rp-top {
-    background: var(--qg-night-banner);
+  :root[data-family='qiangguo'] .rp-top .rp-brand {
+    --rp-text: var(--qg-ink);
+    --rp-subtle: var(--qg-ink-subtle);
+    color: var(--rp-text);
+  }
+  /* On paper the name takes the same red and yellow gradient as the About dialog. */
+  :root[data-family='qiangguo'] .rp-top .rp-brand :is(.rp-brand-text, svg) {
+    filter: none;
+  }
+  :root[data-family='qiangguo'] .rp-top .rp-brand-text > span:first-child {
+    background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
+/* The page shows the hero through its top and turns to paper where the hero ends. */
+:root[data-family='qiangguo'] .rp-main {
+  padding-top: calc(var(--qg-hero) - var(--rp-topbar) - var(--qg-title));
+  background: linear-gradient(transparent calc(var(--qg-hero) - var(--rp-topbar)), var(--rp-surface) 0);
+}
+@media (max-width: 1023px) {
+  :root[data-family='qiangguo'] .rp-main {
+    border-radius: 0;
+  }
+}
+/* The hub bar is the app's frosted pill floating over the page. */
+@media (max-width: 1023.98px) {
+  :root[data-family='qiangguo'] .rp-hubbar {
+    inset: auto 12px calc(8px + env(safe-area-inset-bottom));
+    padding: 0 4px;
+    border-radius: var(--rp-r-pill);
+    background: rgba(255, 250, 246, 0.72);
+    backdrop-filter: blur(20px) saturate(1.6);
+    box-shadow:
+      0 0 0 1px rgba(176, 18, 26, 0.08),
+      0 8px 24px rgba(120, 10, 10, 0.16);
+  }
+  :root[data-family='qiangguo'][data-scheme='dark'] .rp-hubbar {
+    background: rgba(42, 0, 0, 0.72);
+    box-shadow:
+      0 0 0 1px rgba(255, 215, 0, 0.3),
+      0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    :root[data-family='qiangguo'] .rp-hubbar {
+      background: var(--rp-base);
+    }
   }
 }
 /* The Great Wall faint in the corner of each card, as on the app's cards: j4p4n's "Great Wall of China" from
@@ -135,7 +249,7 @@
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card {
   background-image: url('./qiangguo-wall-dark.webp');
 }
-/* Titles in bold flag red, like the app's section heads; after midnight they turn gold and glow. */
+/* Titles in bold flag red, like the app's section heads; gold after midnight. */
 :root[data-family='qiangguo'] h1 {
   color: #b0121a;
   font-weight: 800;
@@ -143,13 +257,8 @@
 }
 :root[data-family='qiangguo'][data-scheme='dark'] h1 {
   color: #ffd700;
-  text-shadow:
-    2px 2px 0 #7a0a06,
-    0 0 12px rgba(255, 215, 0, 0.45);
 }
-/* The poster's sun, faint behind the dark page under the banner. */
-:root[data-family='qiangguo'][data-scheme='dark'] body {
-  background:
-    repeating-conic-gradient(from -8deg at 8% -12%, rgba(255, 59, 48, 0.1) 0deg 5deg, transparent 5deg 12deg) fixed,
-    var(--rp-base);
+/* At night the selected tab's icon is gold like its label, not the coral accent. */
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-hubbar > [aria-current='page'] .rp-hubbar-pill {
+  color: var(--rp-text);
 }

@@ -62,3 +62,18 @@ path = ["src/ui/styles/palettes/qiangguo-wall-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC0-1.0"
+
+# The square is cut from Balon Greyjoy's CC0 photographs and Another Believer's CC BY-SA 4.0 photograph, so the
+# combined images carry CC BY-SA 4.0. Sources are listed in NOTICE.
+[[annotations]]
+path = ["src/ui/styles/palettes/qiangguo-square-*.webp"]
+precedence = "override"
+SPDX-FileCopyrightText = ["Balon Greyjoy", "Another Believer", "doona contributors"]
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# The five stars follow the public-domain flag geometry.
+[[annotations]]
+path = ["src/ui/styles/palettes/qiangguo-flag-*.svg"]
+precedence = "override"
+SPDX-FileCopyrightText = "NOASSERTION"
+SPDX-License-Identifier = "CC0-1.0"
