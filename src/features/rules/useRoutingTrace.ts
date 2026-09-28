@@ -15,6 +15,9 @@ import {dnsView, evaluationView, queryView, traceReason, traceStatusView} from '
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
+import {within} from '../../shell/route';
+import type {PageProps} from '../../shell/routes';
+import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -35,7 +38,7 @@ export function useTraceForm() {
   const [advanced, setAdvanced] = useState(false);
   return {form, setForm, advanced, setAdvanced};
 }
-export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>) {
+export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>, go: PageProps['go']) {
   const t = useT();
   const lang = useLang();
   const api = getApi();
@@ -45,6 +48,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const probe = useNodeProbe(nodes.refetch);
+  const quick = useQuickRule(() => go('rules', within('', {tab: 'list', held: '1'})));
   const groupsByName = useMemo(() => new Map(groups.data?.map(group => [group.name, group]) ?? []), [groups.data]);
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
@@ -130,7 +134,18 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
           const outbound = evaluation.outbound ?? likely;
           const selected =
             outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
-          return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
+          // What the add-rule dialog starts from: the traced target as this evaluation saw it.
+          const seed: QuickRuleSeed = {
+            domain: accepted.input.domain ?? null,
+            dip: evaluation.dst_ip ?? accepted.input.dst_ip ?? null,
+            sip: accepted.input.src_ip ?? null,
+            outbound: evaluation.outbound,
+            matched: matched?.rule_id ?? null
+          };
+          return {
+            ...evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang),
+            seed
+          };
         }) ?? [],
     [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]
   );
@@ -178,7 +193,12 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port',
     setAdvanced,
     ipOnly: !invalid && !!form.dst_ip.trim() && !form.domain.trim(),
-    result: result && {...result, evaluations},
-    probeNode
+    result: result && {...result, evaluations: evaluations.map(({seed, ...evaluation}) => ({...evaluation, canAdd: quick.canAdd(seed)}))},
+    probeNode,
+    addRule: (index: number) => {
+      const seed = evaluations[index]?.seed;
+      if (seed) quick.open(seed);
+    },
+    ruleDialog: quick.dialog
   };
 }

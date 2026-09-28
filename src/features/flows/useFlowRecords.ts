@@ -9,6 +9,7 @@ import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 import {offered} from '../../api/capabilities';
 import {recordingSettingsHref} from '../shared/link';
+import {useQuickRule} from '../shared/useQuickRule';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
@@ -25,7 +26,6 @@ export function useFlowRecords({go, query}: PageProps) {
   const resource = useFlows({connection_id: connectionId, network, state}, offered(resources, 'flows', {whileLoading: true}));
   const rulesListed = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(rulesListed);
-  const canAdd = rulesListed && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const names = useOutboundNames();
   const id = params.get('id');
   const detail = useFlow(id);
@@ -36,10 +36,19 @@ export function useFlowRecords({go, query}: PageProps) {
   }, [resource.data, pinned, rules.data]);
   const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
   const row = view.rows.find(flow => flow.id === id);
-  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, canAdd, t, lang, row), [detail.data, canAdd, t, lang, row]);
+  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, t, lang, row), [detail.data, t, lang, row]);
+  const quick = useQuickRule(() => go('rules', within('', {tab: 'list', held: '1'})));
   return {
     ...view,
     detail: detailView,
+    // The dialog keeps the record's input from when it opened, so it stays usable after the record expires.
+    rule: {
+      canAdd: !!detailView && quick.canAdd(detailView.seed),
+      open: () => {
+        if (detailView) quick.open(detailView.seed);
+      },
+      dialog: quick.dialog
+    },
     network,
     setNetwork: (value: string) => go('flows', within(query, {network: value === 'all' ? null : value})),
     state,

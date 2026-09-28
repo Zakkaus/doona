@@ -454,6 +454,8 @@
   "conn.ruleBeforeMatched": "Before the matched rule",
   "conn.ruleMoved": "The matched rule changed; the rule will be added at the earliest place doona can write.",
   "conn.ruleNoPosition": "No rule is in a file doona can write, so there is no place to insert.",
+  "conn.ruleNoTarget": "This connection has no domain or IP address to match",
+  "conn.ruleSelect": "Select a connection first",
   "conn.ruleTop": "First",
   "conn.showRule": "Show matched rule",
   "conn.state.active": "Active",

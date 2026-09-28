@@ -80,6 +80,11 @@ export function Connections(props: PageProps) {
           </TextTooltip>
         )}
         <span className="rp-grow" />
+        {vm.ruleAction.canWrite && (
+          <Button isDisabled={!vm.ruleAction.canAdd} tip={vm.ruleAction.addTip} onPress={vm.ruleAction.openAdd}>
+            {t('rule.add')}
+          </Button>
+        )}
         {vm.canClose && <ConfirmButton label={t('conn.closeAll')} {...vm.closeAll} />}
         <Button isDisabled={!vm.canExport} onPress={vm.export}>
           <Download />

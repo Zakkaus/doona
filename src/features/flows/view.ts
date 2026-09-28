@@ -12,7 +12,7 @@ import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {stageOf, treeIndex, treeRows} from './map';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {flowsTabs, type FlowTab} from './nav';
-import {ruleSeedHref} from '../shared/link';
+import type {QuickRuleSeed} from '../shared/useQuickRule';
 const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',
@@ -205,7 +205,8 @@ type FlowDetailView = {
   revision: string;
   fields: [string, string][];
   connectionHref: string | null;
-  seedHref: string | null;
+  // What the add-rule dialog starts from.
+  seed: QuickRuleSeed;
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
@@ -231,15 +232,12 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
 // `row` is the record's line in the list: the drawer repeats its node path and rule, which the list cuts short.
 export function flowDetailView(
   detail: FlowDetail | undefined,
-  canAdd: boolean,
   t: Translator,
   lang: Lang,
   row?: Pick<FlowRow, 'node' | 'path' | 'expression'>
 ): FlowDetailView | null {
   if (!detail) return null;
   const locale = LOCALE[lang];
-  const ip = sourceIp(detail.input.dst ?? undefined);
-  const seed = detail.input.domain ? {kind: 'domainSuffix' as const, value: detail.input.domain} : ip ? {kind: 'dip' as const, value: ip} : null;
   return {
     title: detail.input.domain || detail.input.dst || detail.id,
     status: enumLabel(traceStates, detail.trace.status, t),
@@ -263,7 +261,13 @@ export function flowDetailView(
         : [])
     ],
     connectionHref: detail.connection_id ? href('connections', {id: detail.connection_id}) : null,
-    seedHref: canAdd && seed ? ruleSeedHref(seed) : null,
+    seed: {
+      domain: detail.input.domain,
+      dip: sourceIp(detail.input.dst ?? undefined) ?? null,
+      sip: sourceIp(detail.input.src ?? undefined) ?? null,
+      outbound: detail.outbound,
+      matched: detail.rule_id
+    },
     steps: [...detail.trace.steps]
       .sort((a, b) => a.seq - b.seq)
       .map(step => {

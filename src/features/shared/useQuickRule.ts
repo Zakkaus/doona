@@ -105,6 +105,7 @@ export function useQuickRule(review: () => void) {
   const unplaceable = !!rules.data && !!config.data && !positions.length;
   const disabled = !target || !before || !groupsRead;
   return {
+    canWrite,
     // Whether the dialog can write a rule for this seed.
     canAdd: (seed: QuickRuleSeed) => canWrite && ruleTargets(seed).length > 0,
     open: (seed: QuickRuleSeed) => {
