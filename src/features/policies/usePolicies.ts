@@ -9,6 +9,7 @@ import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
 import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
+import {openGroup} from '../shared/openGroup';
 import {useNearViewport} from '../../ui/ui';
 
 export function usePolicies({go, query}: PageProps) {
@@ -82,6 +83,8 @@ export function usePolicies({go, query}: PageProps) {
   }, [refreshGroups, refreshNodes]);
   return {
     tab: pickTab(query, ['groups', 'arrange'], 'groups'),
+    // After an arrangement is written: the one group it changed, or the Groups tab when it changed several.
+    viewGroup: (name: string | null) => (name === null ? go('policies') : openGroup(go, name)),
     setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),
     cards,
     focus,

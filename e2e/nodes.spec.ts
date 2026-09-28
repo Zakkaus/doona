@@ -61,8 +61,13 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await dialog.getByLabel('Name').fill('sub-d');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'})).toBeVisible();
+  const added = page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'});
+  await expect(added).toBeVisible();
   await expect(sources).toHaveCount(3);
+  // The toast opens the new subscription's nodes.
+  await added.getByRole('button', {name: 'View nodes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/nodes\?provider=[^&]+$/);
+  await expect(page.getByText(/Showing nodes from sub-d\./)).toBeVisible();
   await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
   await page.getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-c', exact: true}).click();
@@ -378,4 +383,14 @@ test('a latency row opens its node in the list', async ({page}) => {
   await expect(page.getByRole('tab', {name: 'Nodes', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(name);
   await expect(page.getByRole('grid').last()).toContainText(name);
+});
+
+test('adding a node to a group offers the group on the policies page', async ({page}) => {
+  await page.goto('/#/nodes?tab=list&provider=inline');
+  await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+  await page.getByRole('menuitem', {name: /^gaming/}).click();
+  const joined = page.locator('.rp-toast.positive', {hasText: 'gaming'});
+  await joined.getByRole('button', {name: 'View group', exact: true}).click();
+  await expect(page).toHaveURL(/#\/policies\?group=gaming$/);
+  await expect(page.locator('#group-gaming')).toBeInViewport();
 });

@@ -41,7 +41,10 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   }, [complete, current, state]);
   const {text} = preview;
   const busy = !!editor.busy;
-  const dirty = preview.error !== null || (complete === true && text !== baseline);
+  // What was just written, until the form changes again. It is no draft: the reload that follows the save, or any later
+  // change to the file, loads the file into the form.
+  const [saved, setSaved] = useState(false);
+  const dirty = !saved && (preview.error !== null || (complete === true && text !== baseline));
   // An empty file is written as generated, so the untouched form is already something to save; it does not count as
   // a draft to guard.
   const pending = dirty || (complete === true && !current.trim());
@@ -66,6 +69,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const valid = subscriptionsValid && networkValid;
   const patch = (next: Partial<WizardState>) => {
     setFound(null);
+    setSaved(false);
     setState(prev => ({...prev, ...next}));
   };
   // Editing a line hands it to the form; the original text is no longer written back for it.
@@ -86,6 +90,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     }
     toast('positive', t('config.saved', {path: label}));
     guard.clear();
+    setSaved(true);
     onDone();
   };
   const label = sourceView(main, locale, t).label;
@@ -112,6 +117,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     discard: reset,
     saveDisabled: !complete || !valid || busy || !pending || conflict,
     saving: editor.busy === 'save',
+    saved,
     saveReason: saveReason(
       {
         busy,

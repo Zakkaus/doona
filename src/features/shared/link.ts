@@ -3,7 +3,7 @@ import {nodeOwner} from '../../api/selectors';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {scanConfig} from '../../dae/text';
 import {readTag, tagId} from './taggedId';
-import {href} from '../../shell/route';
+import {href, within} from '../../shell/route';
 
 // Where a rule sits in the rule list, when the backend lists rules and the reference names one.
 export const ruleHref = (ruleId: string | null, listed: boolean) => (listed && ruleId ? href('rules', {tab: 'list', rule: ruleId}) : undefined);
@@ -11,6 +11,13 @@ export const ruleHref = (ruleId: string | null, listed: boolean) => (listed && r
 // A node on the Nodes page: under the owner the page files it under, found by its name.
 export const nodeHref = (node: Pick<Node, 'provider_id' | 'protocol' | 'name'>, providers: ReadonlyArray<{id: string}>) =>
   href('nodes', {provider: nodeOwner(node, providers), q: node.name});
+
+// The Policies page focuses a group by the id the backend gives it, which a group written by name does not carry. A
+// group the list does not hold opens the page without a focus.
+export function groupQuery(groups: ReadonlyArray<{id: string; name: string}> | undefined, name: string): string {
+  const id = groups?.find(group => group.name === name)?.id;
+  return id ? within('', {group: id}) : '';
+}
 
 // The Settings card holding what the backend records and keeps: log level, flow and DNS recording, retention.
 export const recordingSettingsHref = href('settings', {card: 'runtime'});

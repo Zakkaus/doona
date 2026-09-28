@@ -192,7 +192,7 @@ export function Policies(props: PageProps) {
             label: t('policy.tab.arrange'),
             content: (
               <Suspense fallback={<Loading />}>
-                <Arrange source={m.source} groups={m.groups} />
+                <Arrange source={m.source} groups={m.groups} viewGroup={m.viewGroup} />
               </Suspense>
             )
           }

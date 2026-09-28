@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
-import {nodeHref, parseRuleSeed, ruleSeedHref, sectionSourceHref} from './link';
+import {groupQuery, nodeHref, parseRuleSeed, ruleSeedHref, sectionSourceHref} from './link';
 
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
   for (const seed of [
@@ -52,4 +52,11 @@ it('opens a node under the owner the nodes page files it under', () => {
   expect(nodeHref({provider_id: 'sub', protocol: 'vmess', name: 'hk 01'}, [])).toBe('#/nodes?provider=sub&q=hk+01');
   // A built-in node has no provider; the page's stand-in owner steps past a provider that took its id.
   expect(nodeHref({provider_id: null, protocol: 'direct', name: 'direct'}, [{id: 'builtin'}])).toBe('#/nodes?provider=builtin-&q=direct');
+});
+
+it('focuses a group by its backend id, and opens the page unfocused before the list holds it', () => {
+  const groups = [{id: 'group-proxy', name: 'proxy'}];
+  expect(groupQuery(groups, 'proxy')).toBe('group=group-proxy');
+  expect(groupQuery(groups, 'new')).toBe('');
+  expect(groupQuery(undefined, 'proxy')).toBe('');
 });

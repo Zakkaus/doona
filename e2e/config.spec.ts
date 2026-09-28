@@ -295,6 +295,19 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
   await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
+  // The saved form stays and offers the pages that use what it wrote, and the file.
+  await expect(page).toHaveURL(/#\/config\?tab=setup$/);
+  // The reload after the save loads the written file into the form rather than reading it as a change on disk.
+  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://example.org/sub?token=abc&type=v2ray');
+  await expect(card.getByText(/changed on disk/)).toHaveCount(0);
+  await expect(card.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  for (const [name, url] of [
+    ['Nodes', '#/nodes'],
+    ['Policies', '#/policies'],
+    ['Routing rules', '#/rules?tab=list']
+  ])
+    await expect(card.getByRole('link', {name, exact: true})).toHaveAttribute('href', url);
+  await card.getByRole('link', {name: 'Open source', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
   const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
   await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');

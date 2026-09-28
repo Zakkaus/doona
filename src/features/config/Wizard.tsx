@@ -2,13 +2,21 @@ import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import type {ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
-import {ActionHelp, Button, Card, LabeledSelect, Light, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, LabeledSelect, Light, Link, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import type {WizardState} from '../../dae/setup';
 import {useWizard} from './useWizard';
 import {ChangedOnDisk} from './ChangedOnDisk';
-export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
+export function Wizard({
+  next,
+  ...props
+}: {
+  main: ConfigSource;
+  editor: ConfigEditor;
+  onDone: () => void;
+  next: Array<{id: string; label: string; href: string}>;
+}) {
   const t = useT();
   const {
     state,
@@ -29,6 +37,7 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
     discard,
     saveDisabled,
     saving,
+    saved,
     saveReason,
     writeHelp,
     showLan,
@@ -153,6 +162,12 @@ export function Wizard(props: {main: ConfigSource; editor: ConfigEditor; onDone:
             {t('config.save')}
           </Button>
           {writeHelp && <span className="rp-label">{writeHelp}</span>}
+          {saved &&
+            next.map(link => (
+              <Link key={link.id} appearance="button" quiet href={link.href}>
+                {link.label}
+              </Link>
+            ))}
         </div>
       </ActionHelp>
     </Card>

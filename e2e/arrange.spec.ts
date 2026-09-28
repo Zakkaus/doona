@@ -76,13 +76,18 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
     if (request.method() === 'PUT' && request.url().includes('/config/sources/')) writes.push(request.postDataJSON().content);
   });
   await review.getByRole('button', {name: 'Apply and reload', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('Applied 3 changes and reloaded.');
+  const applied = page.locator('.rp-toast.positive', {hasText: 'Applied 3 changes and reloaded.'});
+  await expect(applied).toBeVisible();
   expect(writes).toHaveLength(1);
   const written = (await backend.api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(written).toContain('filter: name(jp-01, hk-02, sg-01, us-01)');
   expect(written).toContain('filter: name(sg-01, us-01)');
   expect(written).toContain("hkauto { filter: name(keyword: 'hk') policy: min_moving_avg }");
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toHaveCount(0);
+  // Two groups changed, so the toast opens the group list.
+  await applied.getByRole('button', {name: 'View groups', exact: true}).click();
+  await expect(page).toHaveURL(/#\/policies$/);
+  await expect(page.getByRole('tab', {name: 'Groups', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('a new group needs a member before it can be applied, and undoing a change drops it', async ({page}) => {
