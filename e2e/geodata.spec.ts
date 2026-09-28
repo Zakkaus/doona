@@ -1,11 +1,11 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, loadCatalogues, mockBackend, test} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 import {geodataPreset} from '../src/dae/geodata';
-import {LANGS, loadLanguage, translate} from '../src/i18n';
+import {translate} from '../src/i18n';
 import type {RuntimeSettings} from '../src/api/model';
 
-test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
+test.beforeAll(loadCatalogues);
 const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
 const full = geodataPreset('metacubex');
 const loyal = geodataPreset('loyalsoldier');

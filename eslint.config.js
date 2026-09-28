@@ -142,9 +142,9 @@ export default [
     }
   },
   {
-    // G8 on top of the rules above; catalogues and tests may name an engine.
+    // G8 on top of the rules above; tests may name an engine.
     files: ['src/{features,shell,store}/**/*.{ts,tsx}'],
-    ignores: ['src/**/messages.ts', 'src/**/*.test.*'],
+    ignores: ['src/**/*.test.*'],
     rules: {'no-restricted-syntax': ['error', ...outsideUi, ...engineChecks]}
   },
   {

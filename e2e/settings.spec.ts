@@ -1,9 +1,9 @@
 import {test as browserTest} from '@playwright/test';
-import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
-import {LANGS, loadLanguage, translate} from '../src/i18n';
+import {expect, expectLoadFailures, loadCatalogues, mockBackend, test} from './fixtures';
+import {translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
-test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
+test.beforeAll(loadCatalogues);
 
 const t = (key: Parameters<typeof translate>[1]) => translate('en', key);
 

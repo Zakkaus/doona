@@ -1,8 +1,8 @@
-import {expect, expectLoadFailures, routes, test} from './fixtures';
-import {LANGS, LOCALE, loadLanguage, translate} from '../src/i18n';
+import {expect, expectLoadFailures, loadCatalogues, routes, test} from './fixtures';
+import {LANGS, LOCALE, translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
-test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
+test.beforeAll(loadCatalogues);
 for (const [lang] of LANGS) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
@@ -32,7 +32,7 @@ for (const [lang] of LANGS) {
 }
 
 const localeChunk = (lang?: string) =>
-  new RegExp(lang ? `(?:locale-${lang}-[^/]*\\.js|/i18n/locales/${lang}\\.ts)` : `(?:locale-[^/]*\\.js|/i18n/locales/[^/]*\\.ts)`);
+  new RegExp(lang ? `(?:locale-${lang}-[^/]*\\.js|/i18n/locales/${lang}\\.json)` : `(?:locale-[^/]*\\.js|/i18n/locales/[^/]*\\.json)`);
 
 test.describe('language loading', () => {
   // Chunks fetched by the service worker would bypass page.route.

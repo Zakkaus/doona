@@ -2,6 +2,7 @@ import {test as base, expect, type Download, type Locator, type Page, type Reque
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import type {OperationAccepted} from '../src/api/model';
+import {languages, loadLanguage, type Catalogue} from '../src/i18n';
 
 const expectedHttpErrors = new WeakMap<Page, Set<string>>();
 const expectedLoadFailures = new WeakMap<Page, RegExp>();
@@ -11,6 +12,15 @@ export function expectLoadFailures(page: Page, url: RegExp) {
 }
 
 export {routePaths as routes} from '../src/shell/routes';
+
+// Specs that name strings load every catalogue; Node imports JSON only with the type attribute, which Vite 6 does not
+// expand in the app's own loader.
+export const loadCatalogues = () =>
+  Promise.all(
+    languages.map(({id}) =>
+      loadLanguage(id, async lang => ((await import(`../src/i18n/locales/${lang}.json`, {with: {type: 'json'}})) as {default: Catalogue}).default)
+    )
+  );
 
 // DOONA_API and optional DOONA_TOKEN run read-only specs against a live backend; e2e has no Node globals.
 // Example: DOONA_API=http://127.0.0.1:9527 DOONA_TOKEN=... pnpm e2e:live

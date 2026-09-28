@@ -1,9 +1,10 @@
 import ts from 'typescript';
 import {readFileSync, readdirSync} from 'node:fs';
-import {DEFAULT_LANG, langs as languages} from './languages.mjs';
+import {checkCatalogues} from './catalogues.mjs';
+import {REFERENCE_LANG, langs as languages} from './languages.mjs';
 
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
-const excluded = /(?:^src\/i18n\/|\/messages\.ts$|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/shared\/geo\.ts$|^src\/dae\/templates\.ts$)/;
+const excluded = /(?:^src\/i18n\/|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/shared\/geo\.ts$|^src\/dae\/templates\.ts$)/;
 function files(path) {
   return readdirSync(path, {withFileTypes: true}).flatMap(entry => (entry.isDirectory() ? files(`${path}/${entry.name}`) : [`${path}/${entry.name}`]));
 }
@@ -14,14 +15,12 @@ function visit(node, callback) {
   callback(node);
   ts.forEachChild(node, child => visit(child, callback));
 }
-// The generated per-language modules hold every key as a literal, so they are neither sources nor usages.
-const generated = /^src\/i18n\/locales\//;
 const sources = files('src').filter(path => /\.(?:ts|tsx)$/.test(path));
 const references = new Set();
 const literal = new Set(['doona', 'must']);
 let cjkCount = 0;
 const failures = [];
-for (const path of sources.filter(path => !path.endsWith('/messages.ts') && !generated.test(path))) {
+for (const path of sources) {
   const ast = parse(path);
   const test = /\.test\.tsx?$/.test(path);
   visit(ast, node => {
@@ -52,69 +51,11 @@ for (const path of sources.filter(path => !path.endsWith('/messages.ts') && !gen
   });
 }
 
-const authored = /^src\/(?:shell|ui|features\/[^/]+|features\/[^/]+\/[^/]+)\/messages\.ts$/;
-function generatedKeys(lang) {
-  const path = `src/i18n/locales/${lang}.ts`;
-  let found;
-  visit(parse(path), node => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'messages') {
-      const value = ts.isSatisfiesExpression(node.initializer) ? node.initializer.expression : node.initializer;
-      if (ts.isObjectLiteralExpression(value)) found = value.properties.map(entry => entry.name.text).sort();
-    }
-  });
-  if (!found) throw new Error(`${path}: expected an exported messages object`);
-  return found;
-}
-const keys = new Set();
-let mismatches = 0;
-for (const path of sources.filter(path => path.endsWith('/messages.ts'))) {
-  let catalog;
-  const ast = parse(path);
-  visit(ast, node => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === 'messages' &&
-      ts.isCallExpression(node.initializer) &&
-      node.initializer.expression.getText(ast) === 'defineMessages'
-    ) {
-      catalog = node.initializer.arguments[0];
-    }
-  });
-  if (!catalog || !ts.isObjectLiteralExpression(catalog)) throw new Error(`${path}: expected defineMessages with literal language tables`);
-  const sets = new Map();
-  // Each key's placeholders per language, from every string in its value (a plural's forms included).
-  const slots = new Map();
-  for (const property of catalog.properties) {
-    if (!ts.isPropertyAssignment(property) || !ts.isObjectLiteralExpression(property.initializer)) throw new Error(`${path}: expected a language table`);
-    sets.set(property.name.text, property.initializer.properties.map(entry => entry.name.text).sort());
-    for (const entry of property.initializer.properties) {
-      const names = new Set();
-      visit(entry, node => {
-        if (ts.isStringLiteralLike(node) && node !== entry.name) for (const [, name] of node.text.matchAll(/\{(\w+)\}/g)) names.add(name);
-      });
-      if (!slots.has(entry.name.text)) slots.set(entry.name.text, new Map());
-      slots.get(entry.name.text).set(property.name.text, [...names].sort().join(','));
-    }
-  }
-  // A placeholder renamed or dropped in one language renders `{name}` on screen or loses the value.
-  for (const [key, byLang] of slots)
-    if (new Set(byLang.values()).size > 1)
-      failures.push(`${path}: ${key} placeholders differ: ${[...byLang].map(([lang, names]) => `${lang} {${names}}`).join(' ')}`);
-  const expected = sets.get(DEFAULT_LANG);
-  if (sets.size !== languages.length || !expected || languages.some(lang => JSON.stringify(sets.get(lang)) !== JSON.stringify(expected))) {
-    failures.push(`${path}: language key sets differ`);
-    mismatches++;
-  }
-  if (!authored.test(path)) failures.push(`${path}: not read by tools/gen-locales.mjs`);
-  else for (const key of expected ?? []) keys.add(key);
-  console.log(`${path}: ${expected?.length ?? 0} keys`);
-}
-const all = JSON.stringify([...keys].sort());
-for (const lang of languages)
-  if (JSON.stringify(generatedKeys(lang)) !== all) failures.push(`src/i18n/locales/${lang}.ts: keys differ from the messages.ts sources; run pnpm gen:locales`);
-const unused = [...keys].filter(key => !references.has(key));
+// Every key of the reference catalogue must be named somewhere in the application.
+const catalogues = Object.fromEntries(languages.map(lang => [lang, JSON.parse(readFileSync(`src/i18n/locales/${lang}.json`, 'utf8'))]));
+failures.push(...checkCatalogues(catalogues, REFERENCE_LANG));
+const unused = Object.keys(catalogues[REFERENCE_LANG]).filter(key => !references.has(key));
 for (const key of unused) failures.push(`Unused message key: ${key}`);
-console.log(`i18n: ${cjkCount} CJK literals, ${unused.length} unused keys, ${mismatches} language key-set mismatches`);
+console.log(`i18n: ${cjkCount} CJK literals, ${unused.length} unused keys`);
 for (const failure of failures) console.error(failure);
 process.exitCode = failures.length ? 1 : 0;

@@ -25,7 +25,6 @@
     "test:coverage": "vitest run --coverage",
     "conformance": "node tools/conformance.mjs",
     "e2e:live": "pnpm build && DOONA_LIVE_OBSERVE=1 playwright test e2e/a11y.spec.ts e2e/mobile.spec.ts e2e/keyboard.spec.ts",
-    "gen:locales": "node tools/gen-locales.mjs",
     "gen:api": "openapi-typescript contract/api-standardize/openapi.yaml -o \"${OPENAPI_OUTPUT:-src/api/types.ts}\"",
     "lint": "eslint . && stylelint \"src/**/*.css\"",
     "format": "prettier --write .",
