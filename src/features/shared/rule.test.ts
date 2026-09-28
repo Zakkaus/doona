@@ -3,7 +3,24 @@ import type {PendingRule} from '../../store';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
-import {acceptedRule, conditionKey, duplicateOf, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
+import {
+  acceptedRule,
+  answerAddresses,
+  answeredUpstream,
+  conditionKey,
+  dnsActions,
+  dnsRulePositions,
+  dnsUpstreamChoices,
+  duplicateOf,
+  pinnedPosition,
+  ruleDialogReason,
+  ruleLists,
+  rulePositions,
+  ruleTargets,
+  ruleWritable,
+  typedCondition,
+  type QuickRuleSeed
+} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers the exact domain first, then its subdomains, the destination IP and the source IP as one host', () => {
@@ -97,10 +114,11 @@ it('keeps the pinned position while its rule exists and reports it moved after a
   const api = createMockApi();
   const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
   const positions = rulePositions(rules, sources, {id: 'r5', expression: null}, t);
-  const pin = {generation: '40', rule: rules.find(rule => rule.rule_id === 'r5')!};
+  const r5 = rules.find(rule => rule.rule_id === 'r5')!;
+  const pin = {generation: '40', id: r5.rule_id, desc: r5.expression};
   expect(pinnedPosition(positions, null, '40')).toEqual({before: 'r5', moved: false});
   expect(pinnedPosition(positions, pin, '40')).toEqual({before: 'r5', moved: false});
-  expect(pinnedPosition(positions, {...pin, rule: {...pin.rule, rule_id: 'r1'}}, '40')).toEqual({before: 'r1', moved: false});
+  expect(pinnedPosition(positions, {...pin, id: 'r1'}, '40')).toEqual({before: 'r1', moved: false});
   const reloaded = rulePositions(
     rules.filter(rule => rule.rule_id !== 'r5'),
     sources,
@@ -178,10 +196,115 @@ it('names where the same condition and outbound already is, listed before held, 
   const held: PendingRule[] = [
     {list: 'routing', id: 1, condition: 'domain(full: a.example)', outbound: 'proxy', must: false, before: r5, sourceId: 'src-main'}
   ];
-  expect(duplicateOf(rules, held, r5.expression, r5.outbound!, t)).toBe(`Rule ${r5.index + 1} already has the same condition and outbound.`);
-  expect(duplicateOf(rules, held, 'domain( full: a.example )', 'proxy', t)).toBe('A held rule already has the same condition and outbound.');
-  expect(duplicateOf(rules, held, 'domain(full: a.example)', 'direct', t)).toBeNull();
+  const listed = rules.map(rule => ({...rule, target: rule.outbound ?? ''}));
+  expect(duplicateOf('routing', listed, held, r5.expression, r5.outbound!, t)).toBe(`Rule ${r5.index + 1} already has the same condition and outbound.`);
+  expect(duplicateOf('routing', listed, held, 'domain( full: a.example )', 'proxy', t)).toBe('A held rule already has the same condition and outbound.');
+  expect(duplicateOf('routing', listed, held, 'domain(full: a.example)', 'direct', t)).toBeNull();
   // A DNS rule held with the same text is in another list.
-  expect(duplicateOf(rules, [{...held[0], list: 'request', before: null}], 'domain(full: a.example)', 'proxy', t)).toBeNull();
-  expect(duplicateOf(rules, [], 'domain(full: b.example)', 'proxy', t)).toBeNull();
+  expect(duplicateOf('routing', listed, [{...held[0], list: 'request', before: null}], 'domain(full: a.example)', 'proxy', t)).toBeNull();
+  expect(duplicateOf('routing', listed, [], 'domain(full: b.example)', 'proxy', t)).toBeNull();
+});
+
+it('starts a DNS origin in the DNS lists: the name for a request, each answered A or AAAA address for a response', () => {
+  const seed: QuickRuleSeed = {
+    domain: 'api.telegram.org.',
+    dip: null,
+    sip: '10.0.0.12',
+    outbound: null,
+    matched: null,
+    dns: {
+      type: 'A',
+      answers: answerAddresses([
+        {type: 'CNAME', data: 'edge.telegram.org.'},
+        {type: 'A', data: '149.154.167.99'},
+        {type: 'AAAA', data: '2001:67c:4e8::a'}
+      ]),
+      upstream: null,
+      query: {name: 'api.telegram.org.', type: 'A'}
+    }
+  };
+  expect(ruleLists(seed, true)).toEqual(['request', 'response', 'routing']);
+  expect(ruleLists(seed, false)).toEqual(['routing']);
+  expect(ruleLists({...seed, dns: undefined}, true)).toEqual(['routing']);
+  expect(ruleTargets(seed, 'request').map(target => target.condition)).toEqual([
+    'qname(full: api.telegram.org)',
+    'qname(suffix: api.telegram.org)',
+    'sip(10.0.0.12/32)'
+  ]);
+  expect(ruleTargets(seed, 'response').map(target => target.condition)).toEqual(['ip(149.154.167.99/32)', "ip('2001:67c:4e8::a/128')", 'sip(10.0.0.12/32)']);
+  // Without an answered address a response rule would only match the client, so the list is not offered.
+  expect(ruleLists({...seed, dns: {...seed.dns!, answers: []}}, true)).toEqual(['request', 'routing']);
+  expect(typedCondition('qname(full: a.example)', 'AAAA')).toBe('qname(full: a.example) && qtype(AAAA)');
+  expect(typedCondition('qname(full: a.example)', null)).toBe('qname(full: a.example)');
+});
+
+it('places a DNS rule before a written fallback, else at the list end, in a new block when the list has none', async () => {
+  const api = createMockApi();
+  const [dns, {sources}] = await Promise.all([api.dnsRules(), api.config()]);
+  expect(dnsRulePositions('request', dns.request, sources, t).map(position => position.label)).toEqual(['Last, before the fallback', 'First']);
+  const main = sources.find(source => source.id === 'src-main')!;
+  const unfinished = main.content!.replace('      fallback: accept\n', '');
+  const listed = dns.response.filter(rule => rule.kind === 'rule');
+  expect(dnsRulePositions('response', listed, [{...main, content: unfinished}], t).map(position => position.label)).toEqual(['Last', 'First']);
+  const content = main.content!.replace(/ {4}response \{\n[\s\S]*? {4}\}\n/, '');
+  const unwritten = {...dns.response[0], rule_id: 'response:fallback', kind: 'fallback' as const, source: null, expression: 'fallback: accept'};
+  const absent = dnsRulePositions('response', [unwritten], [{...main, content}], t);
+  expect(absent).toEqual([
+    {id: 'end', label: 'New response block, as its first rule', desc: t('rule.dns.positionNewHelp', {name: 'response'}), first: false, matched: false}
+  ]);
+  // With no dns routing section, or with two, there is no place; nor in a file doona cannot write.
+  expect(dnsRulePositions('response', [unwritten], [{...main, content: 'routing {\n  fallback: direct\n}\n'}], t)).toEqual([]);
+  expect(
+    dnsRulePositions(
+      'response',
+      [unwritten],
+      [
+        {...main, content},
+        {...main, id: 'other', content}
+      ],
+      t
+    )
+  ).toEqual([]);
+  expect(
+    dnsRulePositions(
+      'request',
+      dns.request,
+      sources.map(source => ({...source, writable: false})),
+      t
+    )
+  ).toEqual([]);
+});
+
+it('offers the DNS actions of each list and picks the upstream that answered only when one upstream matches it', async () => {
+  const api = createMockApi();
+  const [dns, {sources}] = await Promise.all([api.dnsRules(), api.config()]);
+  const upstreams = dnsUpstreamChoices(dns.request, sources);
+  expect(upstreams).toEqual([
+    {name: 'cloudflare', address: 'tls://1.1.1.1:853'},
+    {name: 'alidns', address: 'udp://223.5.5.5:53'}
+  ]);
+  expect(dnsActions('request', ['alidns'], t).map(action => action.id)).toEqual(['alidns', 'asis', 'reject']);
+  expect(dnsActions('response', ['alidns'], t).map(action => [action.id, action.desc])).toEqual([
+    ['accept', 'Keep the answer'],
+    ['reject', 'Replace the answer with an empty one'],
+    ['alidns', 'Query again through this upstream']
+  ]);
+  // The log names an upstream by its address without the port the configuration writes.
+  const answered = (await api.dnsLog()).records.find(record => record.upstream?.startsWith('udp://223.5.5.5'))!;
+  expect(answered.upstream).toBe('udp://223.5.5.5');
+  expect(answeredUpstream(upstreams, answered.upstream)).toBe('alidns');
+  expect(answeredUpstream(upstreams, 'AliDNS')).toBe('alidns');
+  expect(answeredUpstream(upstreams, 'tcp://223.5.5.5')).toBeNull();
+  expect(answeredUpstream(upstreams, 'udp://192.0.2.53')).toBeNull();
+  // A host two upstreams share, on different ports, names neither.
+  expect(answeredUpstream([...upstreams, {name: 'backup', address: 'udp://223.5.5.5:5353'}], 'udp://223.5.5.5')).toBeNull();
+  expect(answeredUpstream(upstreams, null)).toBeNull();
+});
+
+it('names a DNS duplicate by its action, comparing upstreams without case, and only within its list', () => {
+  const listed = [{kind: 'rule' as const, index: 3, expression: 'qname(full: a.example) -> AliDNS', target: 'AliDNS'}];
+  expect(duplicateOf('request', listed, [], 'qname(full: a.example)', 'alidns', t)).toBe('Rule 4 already has the same condition and action.');
+  const held: PendingRule[] = [{list: 'response', id: 1, condition: 'ip(1.2.3.4/32)', outbound: 'reject', must: false, before: null, sourceId: 'src-main'}];
+  expect(duplicateOf('response', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBe('A held rule already has the same condition and action.');
+  expect(duplicateOf('request', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBeNull();
 });

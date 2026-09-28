@@ -43,7 +43,7 @@ export type DictionaryModel = RuleEditorModel & {
   select?: (row: string | null) => void;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
-  // Writes every held rule, as the top bar's apply does; only the routing list holds rules.
+  // Writes every held rule, of every list, as the top bar's apply does.
   applyHeld?: () => void;
   // The list was opened to review the held rules, so their section takes focus.
   reviewHeld?: boolean;
@@ -138,7 +138,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     setSource,
     selected,
     select: (row: string | null) => setPicked({landed, row}),
-    held: pendingView(held.rules, 'routing', held.failure, t),
+    held: pendingView(held.rules, 'routing', held.failure, config.data?.sources ?? [], t),
     discard: (id: number) => {
       if (!held.applying) pendingRules.remove([id]);
     },

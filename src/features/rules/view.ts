@@ -24,36 +24,16 @@ import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
-import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
 import {href, pickTab, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {nodeHref} from '../shared/link';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
-import type {QuickRuleSeed} from '../shared/rule';
+import {dnsActions, dnsEndPosition, dnsUpstreamChoices, ruleKindLabels, type QuickRuleSeed} from '../shared/rule';
 import {recorderEmpty} from '../shared/recorder';
 
-const kindLabels: Record<RuleConditionKind, Key> = {
-  domainSuffix: 'rule.kind.domainSuffix',
-  domain: 'rule.kind.domain',
-  geosite: 'rule.kind.geosite',
-  dip: 'rule.kind.dip',
-  geoip: 'rule.kind.geoip',
-  sip: 'rule.kind.sip',
-  dport: 'rule.kind.dport',
-  sport: 'rule.kind.sport',
-  pname: 'rule.kind.pname',
-  l4proto: 'rule.kind.l4proto',
-  qnameSuffix: 'rule.kind.domainSuffix',
-  qnameFull: 'rule.kind.domain',
-  qnameKeyword: 'rule.dns.kind.keyword',
-  qnameGeosite: 'rule.kind.geosite',
-  qtype: 'rule.dns.kind.qtype',
-  upstream: 'rule.dns.kind.upstream',
-  answerIp: 'rule.dns.kind.answerIp',
-  answerGeoip: 'rule.dns.kind.answerGeoip'
-};
 const kindHints: Record<RuleConditionKind, string> = {
   domainSuffix: 'example.com, example.org',
   domain: 'www.example.com',
@@ -217,15 +197,6 @@ export function dictionaryView(
     outbounds: ruleOutbounds(groups)
   };
 }
-// The actions a new DNS rule can take, first the keywords and then the upstreams: a request rule sends the query to an
-// upstream, to its original destination or answers it empty; a response rule keeps or empties the answer, or resolves
-// the query again through an upstream. An upstream is written as its key is, quotes included, and shown without them.
-function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Choice[] {
-  const names = upstreams.map(id => ({id, label: unquote(id), ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
-  return list === 'request'
-    ? [...names, {id: 'asis', label: 'asis', desc: t('rule.dns.action.asis')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectQuery')}]
-    : [{id: 'accept', label: 'accept', desc: t('rule.dns.action.accept')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectAnswer')}, ...names];
-}
 // A DNS rule's expression is its source line; the table shows the target in its own column, so a rule shows only its
 // condition, as a routing rule does.
 function dnsCondition(rule: DnsRoutingRule): string {
@@ -244,10 +215,8 @@ export function dnsDictionaryView(
   t: Translator,
   lang: Lang
 ): DictionaryView {
-  const defined = config.flatMap(source => (source.content === undefined ? [] : dnsUpstreamNames(source.content)));
   const end = dnsListEnd(config, list);
-  const known = new Set(defined.map(name => name.toLowerCase()));
-  const named = rules.flatMap(rule => (rule.upstream && !known.has(rule.upstream.toLowerCase()) ? [rule.upstream] : []));
+  const upstreams = [...new Set(dnsUpstreamChoices(rules, config).map(upstream => upstream.name))];
   return {
     ...listedRows(
       rules,
@@ -256,13 +225,10 @@ export function dnsDictionaryView(
       rule => ({expression: dnsCondition(rule), outbound: unquote(dnsRuleTarget(rule)), must: false, hits: '—'}),
       t,
       lang,
-      end &&
-        (end.anchor.open
-          ? {id: 'end', label: t('rule.dns.positionNew', {name: list}), desc: t('rule.dns.positionNewHelp', {name: list})}
-          : {id: 'end', label: t('rule.positionEnd')})
+      end && {id: 'end', ...dnsEndPosition(end.anchor, list, t)}
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
-    outbounds: dnsActions(list, [...new Set([...defined, ...named])], t)
+    outbounds: dnsActions(list, upstreams, t)
   };
 }
 type DistributionRow = {
@@ -348,7 +314,7 @@ export function ruleDraftView(
 ) {
   const picked = value.trim() !== '';
   return {
-    choices: kinds.map(id => ({id, label: t(kindLabels[id])})),
+    choices: kinds.map(id => ({id, label: t(ruleKindLabels[id])})),
     hint: kindHints[kind],
     preview: on && picked ? condition : null,
     mode: on ? 'pick' : 'text',
