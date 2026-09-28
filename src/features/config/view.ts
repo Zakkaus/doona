@@ -137,6 +137,16 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
   }
 }
 
+// The page that shows and edits what a section defines.
+const sectionPages: Record<SectionKind, string | null> = {
+  global: null,
+  subscription: routeHref('nodes'),
+  node: routeHref('nodes'),
+  group: routeHref('policies'),
+  dns: routeHref('rules', {tab: 'dns'}),
+  routing: routeHref('rules', {tab: 'list'})
+};
+
 // Card ids count occurrences rather than offsets, so an edit elsewhere in the file keeps an open editor on its card.
 // A section counts wherever the main file or an include defines it; a read-only file still shows its sections.
 export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: Lang, t: Translator): ModuleSection[] {
@@ -144,7 +154,7 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
   const main = sources.find(source => source.kind === 'main') ?? null;
   const sections = sectionKinds.flatMap<ModuleSection>(kind => {
-    const href = kind === 'group' ? routeHref('policies') : kind === 'node' || kind === 'subscription' ? routeHref('nodes') : null;
+    const href = sectionPages[kind];
     const occurrences = parsed.flatMap(({source, blocks, tokens}) =>
       blocks
         .filter(block => block.name === kind)

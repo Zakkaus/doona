@@ -24,6 +24,7 @@ import {
   cardClass,
   HelpRow,
   Link,
+  type Action,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
@@ -90,10 +91,10 @@ export function Dns(props: PageProps) {
     </>
   );
   const content: Record<string, React.ReactNode> = {
-    stats: <DnsStats enabled={vm.logEnabled} />,
+    stats: <DnsStats enabled={vm.logEnabled} links={{cache: vm.cacheHref, log: vm.logHref}} />,
     query: queryTab,
     cache: <DnsCache domain={vm.filterDomain} clearFilter={vm.clearCacheFilter} />,
-    log: <DnsLog enabled={vm.logEnabled} initialName={vm.filterDomain} />
+    log: <DnsLog enabled={vm.logEnabled} initialName={vm.filterDomain} initialSrc={vm.filterDevice} links={vm.logLinks} />
   };
   return (
     <div className="rp-page">
@@ -172,9 +173,9 @@ function DnsCache({domain, clearFilter}: {domain: string; clearFilter: () => voi
   );
 }
 
-function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialName: string}) {
+function DnsLog({enabled, initialName, initialSrc, links}: {enabled: boolean | undefined; initialName: string; initialSrc: string; links: Action[]}) {
   const t = useT();
-  const vm = useDnsLogTab(enabled, initialName);
+  const vm = useDnsLogTab(enabled, initialName, initialSrc);
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
@@ -232,6 +233,7 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
           actions={[
             {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
             {id: 'refresh', label: t('refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+            ...links,
             ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
           ]}
         />

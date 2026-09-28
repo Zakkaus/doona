@@ -372,3 +372,41 @@ test('on a phone, Load older records stays in view at the end of the log', async
   await older.click();
   await expect(older).toHaveCount(0);
 });
+
+test('the statistics lead to the DNS configuration, the cache and the log filtered to a ranked item', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/dns');
+  await page.getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
+  // The link opens the dns section's first line in the main file.
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
+  await expect(page.locator('.cm-activeLine')).toContainText('dns {');
+  await page.goBack();
+  await page.getByRole('region', {name: 'Cache', exact: true}).getByRole('link', {name: 'View cache', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=cache$/);
+  await expect(page.getByRole('tab', {name: 'Cache', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await page.goBack();
+  const ranking = page.getByRole('region', {name: 'Top queries', exact: true});
+  const device = ranking.getByRole('link').first();
+  const address = (await device.innerText()).trim();
+  await device.click();
+  await expect(page).toHaveURL(new RegExp(`#/dns\\?tab=log&device=${encodeURIComponent(address).replace(/[.[\]]/g, '\\$&')}$`));
+  await expect(page.getByRole('searchbox', {name: 'Device', exact: true})).toHaveValue(address);
+  await expect(page.getByRole('grid', {name: 'Resolution log'}).getByRole('row').nth(1)).toContainText(address);
+  await page.goBack();
+  await ranking.getByRole('radio', {name: 'Domains', exact: true}).click();
+  const domain = ranking.getByRole('link').first();
+  const name = (await domain.innerText()).trim();
+  await domain.click();
+  await expect(page).toHaveURL(new RegExp(`#/dns\\?tab=log&domain=${name.replace(/\./g, '\\.')}$`));
+  await expect(page.getByRole('searchbox', {name: 'Domain', exact: true})).toHaveValue(name);
+  await expect(page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader').first()).toContainText(name);
+});
+
+test('the resolution log toolbar opens the DNS rules', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/dns?tab=log');
+  await page.getByRole('button', {name: 'DNS rules', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/dns\?tab=log$/);
+});

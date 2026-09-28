@@ -8,8 +8,8 @@ import {dnsListEnd, dnsRuleAnchor, type DnsRuleListId} from '../../dae/ruleText'
 import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
 import {useRuleEditor} from './useRuleEditor';
-import {parseRuleSeed} from '../shared/link';
-import {within} from '../../shell/route';
+import {parseRuleSeed, sectionSourceHref} from '../shared/link';
+import {href, within} from '../../shell/route';
 import type {DictionaryModel} from './useRuleList';
 
 // One list of GET /dns/rules as the rule dictionary renders it. Edits splice the source that holds the rule, as
@@ -71,5 +71,19 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     error: rules.error ?? config.error,
     retry,
     openSource: (query: string) => go('config', query)
+  };
+}
+
+// Where the DNS lists are observed and where they are written: the resolution log, and the `dns` section of the
+// configuration the rules were read from.
+export function useDnsRuleLinks() {
+  const resources = useCapabilities().data?.resources;
+  const readable = offered(resources, 'dns_rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false});
+  const config = useConfig(readable);
+  const sources = config.data?.sources;
+  const configHref = useMemo(() => (readable && sources ? sectionSourceHref(sources, 'dns') : null), [readable, sources]);
+  return {
+    logHref: offered(resources, 'dns_log', {whileLoading: false}) ? href('dns', {tab: 'log'}) : null,
+    configHref
   };
 }

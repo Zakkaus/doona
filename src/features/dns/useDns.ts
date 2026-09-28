@@ -1,6 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {queryTypes, smallerOnRefusal, useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
+import {queryTypes, smallerOnRefusal, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
@@ -9,10 +9,10 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
-import {pickTab, within, tabQuery} from '../../shell/route';
+import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
 import {cacheCard, cacheCardState} from './cache';
-import {ruleSeedHref} from '../shared/link';
+import {ruleSeedHref, sectionSourceHref} from '../shared/link';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -27,10 +27,11 @@ export function useDns({go, query}: PageProps) {
   const {busy, error, run} = useAction<'query'>({rethrow: true});
   const resources = capabilities.data?.resources;
   const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
-  // The statistics open the page, but a link that filters the log by domain opens the log. Without a log the query
-  // opens it: the cache is a listing to browse, not a starting point.
+  // The statistics open the page, but a link that filters the log by domain or device opens the log. Without a log the
+  // query opens it: the cache is a listing to browse, not a starting point.
   const ids = view.tabs.map(item => item.id);
-  const fallback = ids.includes('log') ? (params.has('domain') ? 'log' : 'stats') : ids.includes('query') ? 'query' : (ids[0] ?? 'query');
+  const linked = params.has('domain') || params.has('device');
+  const fallback = ids.includes('log') ? (linked ? 'log' : 'stats') : ids.includes('query') ? 'query' : (ids[0] ?? 'query');
   const submit = async () => {
     try {
       await run('query', async signal => {
@@ -57,13 +58,19 @@ export function useDns({go, query}: PageProps) {
     pending: busy === 'query',
     queryError: error,
     submit: () => void submit(),
-    setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !params.has('domain') ? fallback : null)),
+    setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !linked ? fallback : null)),
     tab: pickTab(
       query,
       view.tabs.map(item => item.id),
       fallback
     ),
     filterDomain: params.get('domain') ?? '',
+    filterDevice: params.get('device') ?? '',
+    cacheHref: ids.includes('cache') ? href('dns', {tab: 'cache'}) : null,
+    // A statistics ranking row opens the log filtered to that domain or device.
+    logHref: (by: 'domain' | 'device', value: string) => href('dns', {tab: 'log', [by]: value}),
+    // The log's toolbar leads to the lists that decide its answers.
+    logLinks: offered(resources, 'dns_rules', {whileLoading: false}) ? [{id: 'rules', label: t('rule.dnsTitle'), onAction: () => go('rules', 'tab=dns')}] : [],
     // undefined while capabilities are still loading: the tab must not claim the backend lacks a log yet.
     logEnabled: resources?.dns_log.available,
     viewCache: () => go('dns', within(query, {tab: 'cache', domain: result?.domain ?? ''})),
@@ -119,7 +126,17 @@ export function useDnsCacheTab(domain: string) {
 export function useDnsStatsTab(enabled: boolean | undefined) {
   const log = useDnsLog({}, enabled === true);
   const resources = useCapabilities().data?.resources;
-  return {log, cacheListed: offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true};
+  // The upstreams the statistics chart, and the rules that pick them, are written in the configuration's `dns` section.
+  const configReadable = offered(resources, 'config', {whileLoading: false});
+  const config = useConfig(enabled === true && configReadable);
+  // Shown once the sources are read, so the link never opens the file before the section's line is known.
+  const sources = config.data?.sources;
+  const configHref = useMemo(() => (configReadable && sources ? sectionSourceHref(sources, 'dns') : null), [configReadable, sources]);
+  return {
+    log,
+    cacheListed: offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true,
+    configHref
+  };
 }
 
 // The cache card reads usage once a minute while it is near the viewport; off screen or in a hidden tab it keeps its
@@ -142,13 +159,14 @@ export function useDnsCacheCard(listed: boolean) {
   };
 }
 
-export function useDnsLogTab(enabled: boolean | undefined, initialName: string) {
+export function useDnsLogTab(enabled: boolean | undefined, initialName: string, initialSrc: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const [name, setName] = useState(initialName);
   useLinked(initialName, setName);
   const [type, setType] = useState('all');
-  const [src, setSrc] = useState('');
+  const [src, setSrc] = useState(initialSrc);
+  useLinked(initialSrc, setSrc);
   const api = getApi();
   const capabilities = useCapabilities();
   const typedSrc = useDebounced(src);
