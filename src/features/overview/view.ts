@@ -4,7 +4,7 @@ import {formatDuration, localTime, formatBytes} from '../../i18n/format';
 import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
-import {backendMessage, oneLine} from '../../i18n/backend';
+import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels, type LimitGroup} from '../shared/limits';
 import {engineStatus} from '../shared/engineStatus';
@@ -207,7 +207,9 @@ export function overviewView(
       warning:
         datapath?.ebpf?.last_error && !datapath.errors.some(error => error.message === datapath.ebpf?.last_error)
           ? t('ui.backendMessage', {message: datapath.ebpf.last_error})
-          : null
+          : null,
+      // Features the engine keeps running reduced. The runtime reports them; they sit with the datapath warnings.
+      degradations: runtime?.degradations?.map(d => ({id: d.component, tooltip: d.code, text: backendCode(d.code, t)})) ?? []
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),

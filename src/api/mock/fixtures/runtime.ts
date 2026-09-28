@@ -105,7 +105,16 @@ export const runtime: Runtime = {
     rates: {window_seconds: 10, upload_bytes_per_second: String(current.up), download_bytes_per_second: String(current.down)}
   },
   process: {pid: 1842, cpu_percent: 2.1},
-  last_reload: {operation_id: 'op-1182', status: 'succeeded', finished_at: ago(170), error: null}
+  last_reload: {operation_id: 'op-1182', status: 'succeeded', finished_at: ago(170), error: null},
+  // The last reload turned on QUIC score probes, which honk can only start on a restart.
+  degradations: [
+    {
+      code: 'quic_probe_disabled',
+      message: 'Score QUIC probes are disabled; node scores use other probes only.',
+      component: 'quic_probe',
+      since: ago(170)
+    }
+  ]
 };
 export const datapath: Datapath = {
   observed_at: observedAt,
