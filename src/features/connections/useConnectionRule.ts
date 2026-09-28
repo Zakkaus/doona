@@ -30,7 +30,6 @@ export function useConnectionRule(connection: Connection | undefined, go: PagePr
   const config = useConfig(!!matched);
   const seed = connection && connectionSeed(connection);
   return {
-    canWrite: quick.canWrite,
     canAdd: !!seed && quick.canAdd(seed),
     // Why the list toolbar's Add rule, which acts on the selected connection, cannot open.
     addTip: !seed ? t('conn.ruleSelect') : !ruleTargets(seed).length ? t('conn.ruleNoTarget') : undefined,

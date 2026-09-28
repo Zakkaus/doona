@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
-import {acceptedRule, conditionKey, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
+import {acceptedRule, conditionKey, duplicateOf, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers the exact domain first, then its subdomains, the destination IP and the source IP as one host', () => {
@@ -118,7 +118,8 @@ it('keeps the pinned position while its rule exists and reports it moved after a
 });
 
 it('says the add-rule dialog is loading while what it needs is read, then that an outbound is missing', () => {
-  const idle = {waiting: true, outbound: false, busy: false, failed: false, unplaceable: false};
+  const idle = {readOnly: false, waiting: true, outbound: false, busy: false, failed: false, unplaceable: false};
+  expect(ruleDialogReason({...idle, readOnly: true}, t)).toBe('Configuration writes are unavailable here. Copy the rule instead.');
   expect(ruleDialogReason(idle, t)).toBe('Loading…');
   expect(ruleDialogReason({...idle, waiting: false}, t)).toBe('Choose an outbound');
   expect(ruleDialogReason({...idle, waiting: false, outbound: true}, t)).toBeNull();
@@ -167,4 +168,15 @@ it('finds the rule a write added in the reloaded list, the nearest before the ru
   const other = {...r5.source!, source_id: 'elsewhere'};
   const between = [added('n1', 0), ...rules.slice(0, at), added('n2', at), rules[0], added('n3', at, other), ...rules.slice(at)];
   expect(acceptedRule(between, 'domain(full: a.example)', 'proxy', r5)).toBe('n2');
+});
+
+it('names where the same condition and outbound already is, listed before held, and nothing for another outbound', async () => {
+  const api = createMockApi();
+  const {rules} = await api.rules();
+  const r5 = rules.find(rule => rule.rule_id === 'r5')!;
+  const held = [{id: 1, condition: 'domain(full: a.example)', outbound: 'proxy', must: false, before: r5, sourceId: 'src-main'}];
+  expect(duplicateOf(rules, held, r5.expression, r5.outbound!, t)).toBe(`Rule ${r5.index + 1} already has the same condition and outbound.`);
+  expect(duplicateOf(rules, held, 'domain( full: a.example )', 'proxy', t)).toBe('A held rule already has the same condition and outbound.');
+  expect(duplicateOf(rules, held, 'domain(full: a.example)', 'direct', t)).toBeNull();
+  expect(duplicateOf(rules, [], 'domain(full: b.example)', 'proxy', t)).toBeNull();
 });

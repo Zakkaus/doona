@@ -1,6 +1,7 @@
 import type {ConfigSource, RoutingRule} from '../../api/model';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {Translator} from '../../i18n';
+import type {PendingRule} from '../../store';
 import {ruleAnchor} from '../../dae/ruleText';
 
 // What an origin knows about the traffic a new rule is for: its domain, destination and source IP, the outbound it
@@ -86,6 +87,15 @@ export function acceptedRule(rules: RoutingRule[], condition: string, outbound: 
   return (placed ?? rules.find(same))?.rule_id ?? null;
 }
 
+// Where the list already holds a rule with this condition and outbound, or a held rule does, as the dialog says it;
+// null when neither does. The accepted rule is named first, since it already routes the traffic.
+export function duplicateOf(rules: RoutingRule[], held: PendingRule[], condition: string, outbound: string, t: Translator): string | null {
+  const key = conditionKey(condition);
+  const listed = rules.find(rule => rule.kind === 'rule' && rule.outbound === outbound && conditionKey(rule.expression) === key);
+  if (listed) return t('rule.duplicateListed', {n: listed.index + 1});
+  return held.some(rule => rule.outbound === outbound && conditionKey(rule.condition) === key) ? t('rule.duplicateHeld') : null;
+}
+
 // Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.
 export function ruleWritable(rule: RoutingRule | undefined, sources: ConfigSource[]): boolean {
   const source = rule && sources.find(source => source.id === rule.source?.source_id);
@@ -100,13 +110,21 @@ export function pinnedPosition(positions: Array<{id: string; desc: string}>, pin
   return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
 
-// Why the add-rule dialog cannot write yet: the rules, sources or groups it needs are still being read, or no outbound
-// is chosen. Null while it can write, while a write is in flight, or when a failed read or a missing position is
-// already shown in the dialog.
+// Why the add-rule dialog cannot write: the configuration cannot be written at all, the rules, sources or groups it
+// needs are still being read, or no outbound is chosen. Null while it can write, while a write is in flight, or when a
+// failed read or a missing position is already shown in the dialog.
 export function ruleDialogReason(
-  {waiting, outbound, busy, failed, unplaceable}: {waiting: boolean; outbound: boolean; busy: boolean; failed: boolean; unplaceable: boolean},
+  {
+    readOnly,
+    waiting,
+    outbound,
+    busy,
+    failed,
+    unplaceable
+  }: {readOnly: boolean; waiting: boolean; outbound: boolean; busy: boolean; failed: boolean; unplaceable: boolean},
   t: Translator
 ): string | null {
+  if (readOnly) return t('rule.copyOnly');
   if (busy || failed || unplaceable) return null;
   return waiting ? t('ui.loading') : outbound ? null : t('rule.outboundMissing');
 }

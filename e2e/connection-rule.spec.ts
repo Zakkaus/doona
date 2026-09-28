@@ -94,13 +94,12 @@ test('a connection with no recorded rule adds before the fallback and says earli
   await expect(dialog).not.toContainText('Earlier rules may still match this traffic first.');
 });
 
-test('without a writable configuration only adding a rule is hidden; showing the matched rule only reads', async ({page}) => {
+test('without a writable configuration showing the matched rule only reads', async ({page}) => {
   const {capabilities} = await mockBackend(page);
   capabilities.resources.config.writable = false;
   await page.goto('/#/connections?id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await expect(detail(page).getByRole('link', {name: /in the rule list$/})).toBeVisible();
-  await expect(detail(page).getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Show matched rule', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
 });
