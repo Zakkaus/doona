@@ -298,10 +298,10 @@ it('explains an invalid DNS condition and a missing action in DNS terms', () => 
   expect(ruleDraftView('qtype', '', true, null, '', t, ['qnameSuffix', 'qtype']).choices.map(choice => choice.id)).toEqual(['qnameSuffix', 'qtype']);
 });
 
-it('appends DNS rules inside the list block when the fallback is not written, and quotes upstream names', async () => {
+it('appends DNS rules inside the list block when the fallback is not written, and writes upstream keys as declared', async () => {
   const [base] = (await createMockApi().config()).sources;
   const content =
-    "dns {\n  upstream {\n    'my dns': 'udp://1.1.1.1:53'\n  }\n  routing {\n    request {\n    }\n    response {\n      qtype(A) -> 'my dns'\n    }\n  }\n}\n";
+    "dns {\n  upstream {\n    'my dns': 'udp://1.1.1.1:53'\n    \"other dns\": 'udp://8.8.8.8:53'\n    alidns: 'udp://223.5.5.5:53'\n  }\n  routing {\n    request {\n    }\n    response {\n      qtype(A) -> 'my dns'\n    }\n  }\n}\n";
   const sources = [{...base, content, writable: true}];
   const fallback = (action: DnsRoutingRule['action']): DnsRoutingRule => ({
     rule_id: 'fb',
@@ -314,15 +314,21 @@ it('appends DNS rules inside the list block when the fallback is not written, an
   });
   const request = dnsDictionaryView('request', [fallback('asis')], 'g', sources, t, 'en');
   expect(request.positions.map(position => position.id)).toEqual(['end']);
-  expect(request.outbounds.find(choice => choice.label === 'my dns')?.id).toBe("'my dns'");
+  expect(request.outbounds.map(({id, label}) => ({id, label}))).toEqual([
+    {id: "'my dns'", label: 'my dns'},
+    {id: '"other dns"', label: 'other dns'},
+    {id: 'alidns', label: 'alidns'},
+    {id: 'asis', label: 'asis'},
+    {id: 'reject', label: 'reject'}
+  ]);
   const rule: DnsRoutingRule = {
     rule_id: 'r9',
     index: 0,
     kind: 'rule',
     expression: "qtype(A) -> 'my dns'",
     action: 'requery',
-    upstream: 'my dns',
-    source: {file: 'config.dae', source_id: base.id, line: 9, column: 7}
+    upstream: "'my dns'",
+    source: {file: 'config.dae', source_id: base.id, line: 11, column: 7}
   };
   const response = dnsDictionaryView('response', [rule, fallback('accept')], 'g', sources, t, 'en');
   expect(response.rows[0]).toMatchObject({expression: 'qtype(A)', outbound: 'my dns', removable: true});

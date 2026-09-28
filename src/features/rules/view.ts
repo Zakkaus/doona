@@ -18,7 +18,7 @@ import type {Key} from '../../i18n';
 import {isFragment, scanConfig, unquote} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {conditionKinds, isWritableName, quoteName, type RuleConditionKind} from '../../dae/groups';
+import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from './flows/view';
 import {word} from '../../api/labels';
@@ -206,11 +206,9 @@ export function dictionaryView(
 }
 // The actions a new DNS rule can take, first the keywords and then the upstreams: a request rule sends the query to an
 // upstream, to its original destination or answers it empty; a response rule keeps or empties the answer, or resolves
-// the query again through an upstream. An upstream is written as its name, quoted when it is not bare.
+// the query again through an upstream. An upstream is written as its key is, quotes included, and shown without them.
 function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Choice[] {
-  const names = upstreams
-    .filter(isWritableName)
-    .map(name => ({id: quoteName(name), label: name, ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
+  const names = upstreams.map(id => ({id, label: unquote(id), ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
   return list === 'request'
     ? [...names, {id: 'asis', label: 'asis', desc: t('rule.dns.action.asis')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectQuery')}]
     : [{id: 'accept', label: 'accept', desc: t('rule.dns.action.accept')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectAnswer')}, ...names];
@@ -219,7 +217,7 @@ function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Ch
 // condition, as a routing rule does.
 function dnsCondition(rule: DnsRoutingRule): string {
   const arrow = /\s*->\s*('[^']*'|"[^"]*"|\S+)$/.exec(rule.expression);
-  return rule.kind === 'rule' && arrow && unquote(arrow[1]).toLowerCase() === dnsRuleTarget(rule).toLowerCase()
+  return rule.kind === 'rule' && arrow && arrow[1].toLowerCase() === dnsRuleTarget(rule).toLowerCase()
     ? rule.expression.slice(0, arrow.index)
     : rule.expression;
 }
@@ -241,7 +239,7 @@ export function dnsDictionaryView(
       rules,
       config,
       (source, rule, scan) => dnsRuleAnchor(source, rule, list, scan),
-      rule => ({expression: dnsCondition(rule), outbound: dnsRuleTarget(rule), must: false, hits: '—'}),
+      rule => ({expression: dnsCondition(rule), outbound: unquote(dnsRuleTarget(rule)), must: false, hits: '—'}),
       t,
       lang,
       dnsListEnd(config, list) !== null

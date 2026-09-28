@@ -21,8 +21,6 @@ type Placement = {
   foldCase?: boolean;
 };
 
-const unquoteWhole = (value: string) => (/^(['"]).*\1$/.test(value) ? value.slice(1, -1) : value);
-
 function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
   if (!rule.source || rule.source.source_id !== source.id || source.content === undefined) return null;
   const text = source.content;
@@ -46,12 +44,10 @@ function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: R
   const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
   const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
   const target = place.target.replace(/\s+/g, '');
-  // A name that is not bare is written quoted, while the list gives it bare.
-  if (!arrow || fold(unquoteWhole(bare(arrow.to, last.to))) !== fold(target)) return null;
+  if (!arrow || fold(bare(arrow.to, last.to)) !== fold(target)) return null;
   // The display expression may end with its target, as the contract shows it (`pname(curl) -> direct`), or not.
   const shown = rule.expression.replace(/\s+/g, '');
-  const tail = ['', "'", '"'].map(mark => `->${mark}${target}${mark}`).find(tail => fold(shown).endsWith(fold(tail)));
-  const condition = tail ? shown.slice(0, -tail.length) : shown;
+  const condition = fold(shown).endsWith(fold('->' + target)) ? shown.slice(0, -target.length - 2) : shown;
   if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== condition) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
@@ -111,12 +107,15 @@ export function dnsListEnd(sources: ConfigSource[], list: DnsRuleListId): {sourc
   const inner = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent.slice(0, indent.length / block.depth) || '    ');
   return {source, anchor: {from, to, indent: inner, text: text.slice(from, to)}};
 }
-// The upstream names `dns { upstream { … } }` defines, in the order written.
+// The upstream names `dns { upstream { … } }` defines, in the order written and with their quotes: honk keeps a key's
+// quotes in its name, so `->` must repeat the key verbatim.
 export function dnsUpstreamNames(text: string, scan = scanConfig(text)): string[] {
   return scan.blocks
     .filter(block => block.name === 'dns')
     .flatMap(dns => dns.children.filter(child => child.name === 'upstream'))
-    .flatMap(upstream => blockFields(text, upstream, scan.tokens).map(field => field.name));
+    .flatMap(upstream =>
+      blockFields(text, upstream, scan.tokens).map(field => text.slice(field.from, scan.tokens.find(token => token.from === field.from)!.to))
+    );
 }
 
 export const ruleLine = (condition: string, outbound: string, must = false) => `${condition} -> ${outbound}${must ? '(must)' : ''}`;

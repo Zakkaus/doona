@@ -89,7 +89,7 @@ it('refuses a line that no longer holds the listed rule', () => {
 const dnsText = `dns {
   upstream {
     googledns: 'tcp+udp://8.8.8.8:53'
-    'alidns': 'udp://223.5.5.5:53'
+    alidns: 'udp://223.5.5.5:53'
   }
   routing {
     request {
@@ -154,16 +154,22 @@ it('reads the upstream names a dns section defines', () => {
   expect(dnsUpstreamNames('routing {\n  fallback: direct\n}\n')).toEqual([]);
 });
 
-it('anchors a DNS rule whose upstream name is written quoted', () => {
+it("keeps an upstream key's quotes, as honk does, and anchors a rule by the name the list returns", () => {
   const text = "dns {\n  upstream {\n    'my dns': 'udp://1.1.1.1:53'\n  }\n  routing {\n    request {\n      qtype(A) -> 'my dns'\n    }\n  }\n}\n";
   const source = {id: 'dns', content: text} as ConfigSource;
-  expect(dnsUpstreamNames(text)).toEqual(['my dns']);
-  // The list gives the name bare; its expression may carry the name quoted or bare.
-  for (const expression of ["qtype(A) -> 'my dns'", 'qtype(A) -> my dns', 'qtype(A)']) {
-    expect(dnsRuleAnchor(source, dnsRule(7, expression, 'upstream', 'my dns'), 'request')).not.toBeNull();
+  expect(dnsUpstreamNames(text)).toEqual(["'my dns'"]);
+  expect(dnsUpstreamNames("dns {\n  upstream {\n    \"my dns\": 'udp://1.1.1.1:53'\n    alidns: 'udp://223.5.5.5:53'\n  }\n}\n")).toEqual([
+    '"my dns"',
+    'alidns'
+  ]);
+  // GET /dns/rules gives the upstream with its quotes; the expression may or may not end with the target.
+  for (const expression of ["qtype(A) -> 'my dns'", 'qtype(A)']) {
+    expect(dnsRuleAnchor(source, dnsRule(7, expression, 'upstream', "'my dns'"), 'request')).not.toBeNull();
   }
-  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(AAAA) -> 'my dns'", 'upstream', 'my dns'), 'request')).toBeNull();
-  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(A) -> 'my dns'", 'upstream', 'other'), 'request')).toBeNull();
+  // honk would not resolve these to the key the line names.
+  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(A) -> 'my dns'", 'upstream', 'my dns'), 'request')).toBeNull();
+  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(A) -> 'my dns'", 'upstream', '"my dns"'), 'request')).toBeNull();
+  expect(dnsRuleAnchor(source, dnsRule(7, "qtype(AAAA) -> 'my dns'", 'upstream', "'my dns'"), 'request')).toBeNull();
 });
 
 it('appends to a DNS list that writes no fallback, before the line closing its block', () => {
