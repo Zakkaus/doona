@@ -77,3 +77,41 @@ test('holding ends with Review held rules, which opens the held section', async 
   await expect(page).toHaveURL(/#\/rules\?tab=list&held=1$/);
   await expect(page.getByRole('region', {name: 'Pending: 1'})).toBeFocused();
 });
+
+test('a rule already listed or held with the same condition and outbound is named, without blocking', async ({page}) => {
+  await page.goto('/#/connections?tab=list&id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = dialogOf(page);
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
+  await expect(dialog).not.toContainText('same condition and outbound');
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await expect(dialog).toContainText('A held rule already has the same condition and outbound.');
+  await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  // A rule the list already holds is named by its number.
+  await page.goto('/#/connections?tab=list&id=2');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
+  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  await expect(dialog).toContainText(/Rule \d+ already has the same condition and outbound\./);
+  await expect(dialog.getByRole('button', {name: 'Apply now', exact: true})).toBeEnabled();
+});
+
+test('without a writable configuration the dialog still opens and copies the rule', async ({page, context}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const {capabilities} = await mockBackend(page);
+  capabilities.resources.config.writable = false;
+  await page.goto('/#/connections?tab=list&id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = dialogOf(page);
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
+  await expect(dialog.getByRole('button', {name: 'Apply now', exact: true})).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
+  await expect(dialog).toContainText('Configuration writes are unavailable here. Copy the rule instead.');
+  await dialog.getByRole('button', {name: 'Copy rule', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule copied'})).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('domain(full: api.telegram.org) -> proxy');
+});

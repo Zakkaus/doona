@@ -17,6 +17,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
       footer={() => (
         <>
           <Button onPress={() => dialog?.close()}>{t('ui.cancel')}</Button>
+          {dialog?.copyable && <Button onPress={dialog.copy}>{t('rule.copy')}</Button>}
           <Button isDisabled={dialog?.disabled} isPending={dialog?.busy} onPress={() => dialog?.applyNow()}>
             {t('rule.addApply')}
           </Button>
@@ -45,7 +46,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           )}
           <div className="rp-toolbar top">
             <LabeledSelect isDisabled={dialog.busy} label={t('ui.outbound')} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
-            {dialog.positions.length === 1 ? (
+            {!dialog.writable ? null : dialog.positions.length === 1 ? (
               <StaticField label={t('rule.position')} value={dialog.positions[0].label} description={dialog.positions[0].desc} />
             ) : (
               <LabeledSelect
@@ -60,6 +61,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
           {dialog.earlier && !dialog.moved && <p className="rp-note">{t('rule.earlierMayMatch')}</p>}
           {dialog.unplaceable && <p className="rp-note">{t('conn.ruleNoPosition')}</p>}
+          {dialog.duplicate && <p className="rp-note">{dialog.duplicate}</p>}
           <DaeCode text={dialog.preview} />
         </div>
       )}

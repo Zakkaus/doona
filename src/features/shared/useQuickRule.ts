@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {pendingRules, useCapabilities, useConfig, useGroups, useRules} from '../../store';
+import {pendingRules, useCapabilities, useConfig, useGroups, usePendingRules, useRules} from '../../store';
 import type {RoutingRule} from '../../api/model';
 import {offered} from '../../api/capabilities';
 import {getApi} from '../../api/index';
@@ -9,7 +9,8 @@ import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from './usePendingApply';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
-import {acceptedRule, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type QuickRuleSeed, type RuleTarget} from './rule';
+import {copyText} from './copy';
+import {acceptedRule, duplicateOf, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type QuickRuleSeed, type RuleTarget} from './rule';
 
 export type {QuickRuleSeed} from './rule';
 type Pin = {generation: string; rule: RoutingRule};
@@ -20,13 +21,14 @@ type Draft = {targets: RuleTarget[]; matched: QuickRuleSeed['matched']; current:
 export function useQuickRule(go: PageProps['go']) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const canWrite =
-    offered(resources, 'rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
+  const listable = offered(resources, 'rules', {whileLoading: false});
+  // Without a writable configuration the dialog still opens, to copy the rule it would have written.
+  const canWrite = listable && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [failure, setFailure] = useState<{id: number; text: string; lines: string[]} | null>(null);
   const open = !!draft;
-  const rules = useRules(open);
-  const config = useConfig(open);
+  const rules = useRules(listable && open);
+  const config = useConfig(canWrite && open);
   const hasGroups = offered(resources, 'groups', {whileLoading: false});
   const groups = useGroups(open && hasGroups);
   const retry = () => {
@@ -70,7 +72,7 @@ export function useQuickRule(go: PageProps['go']) {
     retry();
   };
   // The rule to write, or null after reporting that the list it was placed in has changed.
-  const held = () => {
+  const written = () => {
     const rule = rules.data?.rules.find(rule => rule.rule_id === before);
     const source = sources.find(source => source.id === rule?.source?.source_id);
     if (!target || !rule || !source || !ruleAnchor(source, rule) || rules.data?.generation_id !== config.data?.generation_id) {
@@ -82,7 +84,7 @@ export function useQuickRule(go: PageProps['go']) {
     return {condition: target.condition, outbound, must: false, before: rule, sourceId: source.id};
   };
   const hold = () => {
-    const rule = held();
+    const rule = written();
     if (!rule) return;
     pendingRules.add(rule);
     // A held rule has only a local number, not a rule ID, so its link opens the held section rather than a rule.
@@ -91,7 +93,7 @@ export function useQuickRule(go: PageProps['go']) {
     close();
   };
   const applyNow = async () => {
-    const rule = held();
+    const rule = written();
     if (!rule) return;
     setFailure(null);
     const outcome = await pending.apply([{...rule, id: 0}]);
@@ -118,14 +120,19 @@ export function useQuickRule(go: PageProps['go']) {
     toast('positive', t('rule.added'), {action: {label: t('rule.view'), onAction: () => void view(), closeOnAction: true}});
   };
   const loadError = rules.error ?? config.error ?? groups.error;
-  const unplaceable = !!rules.data && !!config.data && !positions.length;
+  const unplaceable = canWrite && !!rules.data && !!config.data && !positions.length;
   const waiting = !target || !before || !groupsRead;
-  const disabled = waiting || !outbound;
+  const disabled = !canWrite || waiting || !outbound;
   const position = positions.find(position => position.id === before);
+  const preview = target ? (outbound ? ruleLine(target.condition, outbound) : target.condition) : '';
+  const held = usePendingRules().rules;
+  const copy = async () => {
+    const copied = await copyText(preview);
+    toast(copied ? 'positive' : 'negative', t(copied ? 'rule.copied' : 'rule.copyFailed'));
+  };
   return {
-    canWrite,
-    // Whether the dialog can write a rule for this seed.
-    canAdd: (seed: QuickRuleSeed) => canWrite && ruleTargets(seed).length > 0,
+    // Whether the seed gives the dialog a condition to match; writing it is up to the dialog.
+    canAdd: (seed: QuickRuleSeed) => ruleTargets(seed).length > 0,
     open: (seed: QuickRuleSeed) => {
       const targets = ruleTargets(seed);
       if (targets.length) setDraft({targets, matched: seed.matched, current: seed.outbound, target: 0, outbound: '', pin: null});
@@ -140,7 +147,13 @@ export function useQuickRule(go: PageProps['go']) {
       positions,
       before: before ?? '',
       setBefore: (value: string) => edit({pin: pinOf(value)}),
-      preview: target ? (outbound ? ruleLine(target.condition, outbound) : target.condition) : '',
+      preview,
+      // Advisory: the same condition and outbound elsewhere still leaves the choice, since position sets precedence.
+      duplicate: target && outbound ? duplicateOf(rules.data?.rules ?? [], held, target.condition, outbound, t) : null,
+      writable: canWrite,
+      // Copying stands in for writing when no file can take the rule.
+      copyable: !canWrite || unplaceable,
+      copy: () => void copy(),
       busy: pending.busy,
       loadError,
       retry,
@@ -149,7 +162,7 @@ export function useQuickRule(go: PageProps['go']) {
       earlier: !!position && !position.matched && !position.first,
       unplaceable,
       disabled,
-      reason: ruleDialogReason({waiting, outbound: !!outbound, busy: pending.busy, failed: !!loadError, unplaceable}, t),
+      reason: ruleDialogReason({readOnly: !canWrite, waiting, outbound: !!outbound, busy: pending.busy, failed: !!loadError, unplaceable}, t),
       failure,
       hold,
       applyNow: () => void applyNow(),
