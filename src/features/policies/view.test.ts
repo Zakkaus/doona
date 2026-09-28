@@ -237,14 +237,18 @@ it('refuses a check change another client made to the same field since the dialo
     check_interval: 60
   });
 });
-it('rebases a refused check draft on the group read again, keeping the edits to fields the group kept', () => {
+it('rebases a refused check draft on the group read again, keeping every edit and noting the values the group took', () => {
   const base = {check_url: '', check_interval: '30', tolerance: '10', idle_timeout: '1800'};
   const current = {check_url: 'http://theirs.example/', check_interval: '30', tolerance: '10', idle_timeout: '600'};
   const value = {check_url: 'http://mine.example/', check_interval: '60', tolerance: '50', idle_timeout: '900'};
-  expect(checkRebase({base, value}, current)).toEqual({
-    base: current,
-    value: {check_url: 'http://theirs.example/', check_interval: '60', tolerance: '50', idle_timeout: '600'}
+  // tolerance: the user and the group made the same change; check_interval: only the user changed it.
+  expect(checkRebase({base, value, theirs: {}}, {...current, tolerance: '50'})).toEqual({
+    base: {...current, tolerance: '50'},
+    value,
+    theirs: {check_url: 'http://theirs.example/', idle_timeout: '600'}
   });
+  // A field only the group changed follows it.
+  expect(checkRebase({base, value: {...value, idle_timeout: '1800'}, theirs: {}}, current).value.idle_timeout).toBe('600');
 });
 it('accepts only a safe http URL, a positive whole interval and a whole tolerance and idle timeout, or an empty field', () => {
   for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1']) expect(checkInvalid('check_url', url)).toBe(false);

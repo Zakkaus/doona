@@ -1011,6 +1011,7 @@
   "policy.cfg.millis": "{n} ms",
   "policy.cfg.seconds": "{n} 秒",
   "policy.cfg.tolerance": "容忍差值",
+  "policy.checkChangedElsewhere": "打开后，此项已在后端改为 {value}。再次保存会以此处的值覆盖。",
   "policy.checkEdit": "检测设置",
   "policy.checkEditTitle": "{name} 的检测设置",
   "policy.checkIntervalHelp": "两次检测之间的秒数。留空则使用全局间隔。",

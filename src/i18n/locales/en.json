@@ -1182,6 +1182,7 @@
   "policy.cfg.millis": "{n} ms",
   "policy.cfg.seconds": "{n} s",
   "policy.cfg.tolerance": "Tolerance",
+  "policy.checkChangedElsewhere": "Changed to {value} on the backend after this opened. Saving again replaces it with the value here.",
   "policy.checkEdit": "Check settings",
   "policy.checkEditTitle": "Check settings for {name}",
   "policy.checkIntervalHelp": "Seconds between checks. Leave empty to use the global interval.",
