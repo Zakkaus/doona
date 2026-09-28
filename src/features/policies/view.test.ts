@@ -3,6 +3,7 @@ import {nodeFixtures} from '../../api/mock/fixtures';
 import {patchGroupConfig} from '../../api/mock/control';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
+import type {ConfigSource} from '../../api/model';
 import {
   actionErrorText,
   checkDraft,
@@ -10,6 +11,8 @@ import {
   checkInvalid,
   checkPatch,
   checkRebase,
+  editBlocked,
+  groupOwners,
   groupConfigFields,
   groupActionsReason,
   memberViews,
@@ -277,17 +280,41 @@ it('offers Test all for untested members only where the group takes a probe', ()
 });
 
 it("says why a group's Edit or Test all is disabled, Edit first, and nothing while a change is in flight", () => {
-  const edit = {shown: true, busy: false, main: true, entry: true, error: null};
+  const edit = {shown: true, busy: false, blocked: null};
   const probe = {busy: false, canProbe: true};
   expect(groupActionsReason(edit, probe, t)).toBeNull();
-  expect(groupActionsReason({...edit, main: false}, probe, t)).toBe(t('policy.editNoMain'));
-  expect(groupActionsReason({...edit, main: false, error: new LocalError('ui.groupNotLoaded')}, probe, t)).toBe(t('ui.groupNotLoaded'));
-  expect(groupActionsReason({...edit, entry: false}, {...probe, canProbe: false}, t)).toBe(t('policy.editNoEntry'));
+  expect(groupActionsReason({...edit, blocked: t('policy.editNoEntry')}, {...probe, canProbe: false}, t)).toBe(t('policy.editNoEntry'));
   expect(groupActionsReason(edit, {...probe, canProbe: false}, t)).toBe('Test all is not available for this group');
   // A hidden or busy Edit gives no reason of its own.
-  expect(groupActionsReason({...edit, shown: false, entry: false}, probe, t)).toBeNull();
-  expect(groupActionsReason({...edit, busy: true, entry: false}, {...probe, canProbe: false}, t)).toBe(t('policy.noProbe'));
+  expect(groupActionsReason({...edit, shown: false, blocked: t('policy.editNoEntry')}, probe, t)).toBeNull();
+  expect(groupActionsReason({...edit, busy: true, blocked: t('policy.editNoEntry')}, {...probe, canProbe: false}, t)).toBe(t('policy.noProbe'));
   expect(groupActionsReason(edit, {busy: true, canProbe: false}, t)).toBeNull();
+});
+
+it('finds the one source that declares each group, and none when two entries do', () => {
+  const source = (id: string, content: string | undefined, writable = true) =>
+    ({id, path: id + '.dae', kind: 'include', content, content_sha256: '', writable, loaded_at: ''}) as ConfigSource;
+  const main = source('main', 'group {\n  proxy { policy: fixed(0) }\n  twice { policy: fixed(0) }\n}\n');
+  const extra = source('extra', 'group {\n  media { filter: name(hk-01) policy: min }\n  twice { policy: min }\n}\n');
+  const owners = groupOwners([main, extra, source('withheld', undefined)]);
+  expect(owners.get('proxy')).toMatchObject({origin: {id: 'main'}, entry: {name: 'proxy', policy: 'fixed(0)'}});
+  expect(owners.get('media')).toMatchObject({origin: {id: 'extra'}, entry: {filters: ['name(hk-01)']}});
+  expect(owners.get('twice')).toBe('ambiguous');
+  expect(owners.has('other')).toBe(false);
+});
+
+it('says why a group cannot be edited in the source that declares it', () => {
+  const origin = {id: 'extra', path: '/etc/honk/extra.dae', writable: true} as ConfigSource;
+  const owner = {entry: {name: 'media', written: 'media', filters: [], policy: null, from: 1, to: 1}, origin};
+  const state = {loaded: true, complete: true, error: null};
+  expect(editBlocked(owner, state, t)).toBeNull();
+  expect(editBlocked(owner, {...state, error: new LocalError('ui.groupNotLoaded')}, t)).toBe(t('ui.groupNotLoaded'));
+  expect(editBlocked(undefined, {...state, loaded: false}, t)).toBe(t('policy.editNoConfig'));
+  expect(editBlocked(undefined, state, t)).toBe(t('policy.editNoEntry'));
+  expect(editBlocked('ambiguous', state, t)).toBe(t('policy.editAmbiguous'));
+  expect(editBlocked({...owner, origin: {...origin, writable: false}}, state, t)).toBe('This group is defined in /etc/honk/extra.dae, which is read-only');
+  expect(editBlocked(owner, {...state, complete: undefined}, t)).toBe(t('policy.editNoConfig'));
+  expect(editBlocked(owner, {...state, complete: false}, t)).toBe(t('config.incomplete'));
 });
 
 it('says Save has nothing to save until a value changes, and nothing while a save is in flight', () => {

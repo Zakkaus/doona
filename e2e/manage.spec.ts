@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, mockBackend, test} from './fixtures';
 
 test('close all closes what the backend owns and skips the rest', async ({page}) => {
   await page.goto('/#/connections?tab=list');
@@ -54,6 +54,39 @@ test('a pairing link fills the backend form and leaves the address bar clean', a
   await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('http://127.0.0.1:9527');
   await expect(page.locator('.rp-content')).toContainText('filled in from the link');
   await expect(page).toHaveURL(/#\/settings$/);
+});
+
+test('a group declared in an include is edited there while the main source is read-only', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  // Move gaming from the main source's group section into the rules include.
+  const before = await api.config();
+  const main = before.sources.find(source => source.kind === 'main')!;
+  const include = before.sources.find(source => source.id === 'src-rules')!;
+  const gaming = main.content!.split('\n').find(line => line.trim().startsWith('gaming {'))!;
+  await api.pollOperation(await api.replaceConfigSource(include.id, include.content + `\ngroup {\n${gaming}\n}\n`, `"${include.content_sha256}"`));
+  await api.pollOperation(await api.replaceConfigSource(main.id, main.content!.replace(gaming + '\n', ''), `"${main.content_sha256}"`));
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    for (const source of config.sources) if (source.kind === 'main') source.writable = false;
+    return config;
+  };
+  await page.goto('/#/policies');
+  // A group the read-only main source declares says why it cannot be edited.
+  const proxy = page.getByRole('region', {name: 'proxy', exact: true});
+  await expect(proxy.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  await expect(proxy.getByText('This group is defined in /etc/honk/config.dae, which is read-only', {exact: true})).toBeVisible();
+  const card = page.getByRole('region', {name: 'gaming', exact: true});
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('textbox', {name: 'Filter 1', exact: true}).fill('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  const writes = requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname);
+  expect(writes).toEqual(['/api/v1/config/sources/src-rules']);
+  const after = await api.config();
+  expect(after.sources.find(source => source.id === 'src-rules')!.content).toMatch(/gaming \{\s+filter: name\(hk-01\)/);
+  expect(after.sources.find(source => source.kind === 'main')!.content).toBe(main.content!.replace(gaming + '\n', ''));
 });
 
 test('policy editing discards a cancelled draft and saves filters through the main source', async ({page}) => {

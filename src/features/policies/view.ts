@@ -1,6 +1,7 @@
 import {compareNames, formatLatency} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
-import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
+import type {ConfigSource, Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
+import {readGroupEntries, type GroupEntry} from '../../dae/groups';
 import type {Key} from '../../i18n';
 import {compareLatency, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
@@ -231,18 +232,43 @@ export function untestedHelp(untested: string | null, canProbe: boolean, t: Tran
   return untested ? {title: untested, text: [t('policy.untestedHelp'), t(canProbe ? 'policy.untestedProbe' : 'policy.untestedNoProbe')]} : null;
 }
 
+// Where a group is declared: its entry and the source whose group section holds it. 'ambiguous' when more than one
+// entry declares the name, since editing one would leave the other in force.
+export type GroupOwner = {entry: GroupEntry; origin: ConfigSource} | 'ambiguous';
+export function groupOwners(sources: ConfigSource[]): Map<string, GroupOwner> {
+  const owners = new Map<string, GroupOwner>();
+  for (const origin of sources) {
+    if (origin.content === undefined) continue;
+    for (const entry of readGroupEntries(origin.content)) owners.set(entry.name, owners.has(entry.name) ? 'ambiguous' : {entry, origin});
+  }
+  return owners;
+}
+
+// Why a group's Edit is disabled, or null when it can open: the configuration is read, the group is declared once, and
+// the declaring source is writable and complete. `complete` is undefined while its digest is being checked. A failed
+// fetch explains a missing declaration better than its absence does.
+export function editBlocked(
+  owner: GroupOwner | undefined,
+  state: {loaded: boolean; complete: boolean | undefined; error: Error | null},
+  t: Translator
+): string | null {
+  if (state.error) return errorText(state.error, t);
+  if (!state.loaded) return t('policy.editNoConfig');
+  if (!owner) return t('policy.editNoEntry');
+  if (owner === 'ambiguous') return t('policy.editAmbiguous');
+  if (!owner.origin.writable) return t('policy.editReadOnly', {file: owner.origin.path});
+  if (state.complete === undefined) return t('policy.editNoConfig');
+  return state.complete ? null : t('config.incomplete');
+}
+
 // Why a group's header actions are disabled, shown under them: Edit first, then Test all. Null while both can run, while
-// Edit is hidden, or while a change is in flight (the pending button shows that). A failed fetch explains a missing main
-// configuration better than its absence does.
+// Edit is hidden, or while a change is in flight (the pending button shows that).
 export function groupActionsReason(
-  edit: {shown: boolean; busy: boolean; main: boolean; entry: boolean; error: Error | null},
+  edit: {shown: boolean; busy: boolean; blocked: string | null},
   probe: {busy: boolean; canProbe: boolean},
   t: Translator
 ): string | null {
-  if (edit.shown && !edit.busy) {
-    if (!edit.main) return edit.error ? errorText(edit.error, t) : t('policy.editNoMain');
-    if (!edit.entry) return t('policy.editNoEntry');
-  }
+  if (edit.shown && !edit.busy && edit.blocked) return edit.blocked;
   return probe.busy || probe.canProbe ? null : t('policy.noProbe');
 }
 

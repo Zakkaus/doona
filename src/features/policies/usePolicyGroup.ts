@@ -3,10 +3,9 @@ import {useT} from '../../i18n';
 import {useGroupControl} from '../../store';
 import type {HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
-import type {GroupEntry} from '../../dae/groups';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
-import {usePolicyEdit} from './usePolicyEdit';
+import {usePolicyEdit, type PolicyDeclaration} from './usePolicyEdit';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {ApiError} from '../../api/error';
@@ -17,13 +16,13 @@ export type PolicyGroupInput = {
   refreshGroups: () => void;
   refreshNodes: () => void;
   source: MainSourceEdit;
-  entry: GroupEntry | undefined;
+  declaration: PolicyDeclaration;
   members: number;
   // An off-screen card keeps what it shows and stops polling until it scrolls back.
   paused: boolean;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
-  const {id, health, refreshGroups, refreshNodes, source, entry, paused} = input;
+  const {id, health, refreshGroups, refreshNodes, source, declaration, paused} = input;
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
@@ -36,7 +35,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const g = control.data;
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
-  const edit = usePolicyEdit(g?.name ?? input.name, source, entry);
+  const edit = usePolicyEdit(g?.name ?? input.name, source, declaration);
   const conflict = control.actionError instanceof ApiError && control.actionError.status === 409;
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
@@ -95,7 +94,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     probeDisabled: !!control.busy || !control.canProbe,
     probeTip: !control.canProbe ? t('policy.noProbe') : undefined,
     actionsReason: groupActionsReason(
-      {shown: edit.available, busy: source.busy, main: !!source.main, entry: !!entry, error: source.error},
+      {shown: edit.available, busy: source.busy, blocked: edit.tip ?? null},
       {busy: !!control.busy, canProbe: !!control.canProbe},
       t
     ),
