@@ -106,6 +106,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           dark={ap.dark}
           themeLabel={menu.themeLabel}
           toggleScheme={ap.toggle}
+          palette={{ap, paletteSections, wordmarks: menu.wordmarks}}
           wordmark={view.wordmark}
           error={view.error}
           onRetry={view.refresh}

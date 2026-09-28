@@ -13,11 +13,11 @@ import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
 import {Button, ChoiceMenu, Divider} from '../ui/ui';
 import type {SettingsContext} from './preferences';
-import type {PaletteId, Scheme, Wordmark} from './preferences';
+import type {Scheme} from './preferences';
 import type {AppearanceMenu, BackendView, PaletteSection} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
-import {LanguageMenu, SchemeToggle} from './AppearanceControls';
+import {LanguageMenu, PaletteMenu, SchemeToggle, usePaletteChoices} from './AppearanceControls';
 
 type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
 
@@ -64,12 +64,9 @@ export const TopBar = memo(function TopBar({
   menu
 }: TopBarProps) {
   const t = useT();
-  // The palette icon turns in when the palette changes, like the scheme icon; not on first paint.
-  const [firstPalette] = useState(ap.palette);
-  const palettes = paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)}));
+  const {palettes, wordmarks} = usePaletteChoices({ap, paletteSections, wordmarks: menu.wordmarks});
   const narrowMenu = useRef<HTMLSpanElement>(null);
   const [backendOpen, setBackendOpen] = useState(false);
-  const wordmarks = {title: t('wordmark'), items: menu.wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)};
   return (
     <header className="rp-top">
       <About
@@ -110,9 +107,7 @@ export const TopBar = memo(function TopBar({
         <span className="rp-wide-only">
           <Divider />
           <LanguageMenu lang={lang} pickLang={pickLang} />
-          <ChoiceMenu quiet chevron={false} label={t('palette')} sections={[...palettes, wordmarks]}>
-            <Color key={ap.palette} className={ap.palette !== firstPalette ? 'rp-icon-in' : undefined} />
-          </ChoiceMenu>
+          <PaletteMenu ap={ap} paletteSections={paletteSections} wordmarks={menu.wordmarks} />
           <SchemeToggle dark={ap.dark} label={menu.themeLabel} toggle={ap.toggle} />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>

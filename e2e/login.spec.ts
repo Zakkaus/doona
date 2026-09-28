@@ -49,6 +49,21 @@ test.describe('the demo', () => {
     await expect(controls.getByRole('button', {name: '主題：暗色', exact: true})).toBeVisible();
   });
 
+  test('picks a palette from the sign-in page, and the page keeps it after a reload', async ({page}) => {
+    await page.goto('/#/activity');
+    const controls = page.locator('.rp-login-controls');
+    await expect(page.locator('html')).not.toHaveAttribute('data-family', 'nord');
+    await controls.getByRole('button', {name: 'Palette', exact: true}).click();
+    await page.getByRole('menuitemradio', {name: /Nord/}).click();
+    await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+    await page.reload();
+    await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('Sign in');
+    await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+    // The backend settings reached before sign-in draw the top bar, which offers the same menu.
+    await page.locator('.rp-login-page').getByRole('link', {name: 'Change backend URL'}).click();
+    await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
+  });
+
   test('fits a 360px screen without the showcase, and shows the showcase panel from 1024px', async ({page}) => {
     await page.setViewportSize({width: 360, height: 740});
     await page.goto('/#/activity');
