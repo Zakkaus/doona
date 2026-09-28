@@ -139,3 +139,29 @@ it('says why Query, Clear all cache and Delete are disabled when the backend doe
   expect(dnsCacheView(dnsCache, readOnly, 'nothing-matches', null, 'en-US', t).deleteReason).toBeNull();
   expect(dnsCacheView(dnsCache, readOnly, '', 'flush', 'en-US', t).flushReason).toBeNull();
 });
+
+it('seeds a new rule from the typed answer records, the client address and the upstream that answered', () => {
+  const answers = [
+    {name: 'example.com.', type: 'CNAME', class: 'IN', ttl: 60, data: 'edge.example.net.'},
+    {name: 'edge.example.net.', type: 'A', class: 'IN', ttl: 60, data: '192.0.2.1'},
+    {name: 'edge.example.net.', type: 'AAAA', class: 'IN', ttl: 60, data: '2001:db8::1'}
+  ];
+  const logged = {...record, src: '[2001:db8::12]:40001', cached: false, upstream: 'tls://1.1.1.1', answers};
+  expect(dnsLogDetail({observed_at: '', total: 1, next_cursor: null, records: [logged]}, 'dns-1', 'en', t)!.seed).toEqual({
+    domain: 'example.com.',
+    dip: null,
+    sip: '2001:db8::12',
+    outbound: null,
+    matched: null,
+    dns: {type: 'A', answers: ['192.0.2.1', '2001:db8::1'], upstream: 'tls://1.1.1.1', query: {name: 'example.com.', type: 'A'}}
+  });
+  const result = {...record, type: 'A', cache_entry_id: null, answers};
+  const query: DnsQueryResponse = {domain: 'example.com', cache_mode: 'normal', query_time: '2026-01-01T00:00:00Z', results: [result]};
+  const card = dnsQueryView(query, capabilities.resources, 'A', 'example.com', false, t).cards[0];
+  expect(card.seed.dns?.answers).toEqual(['192.0.2.1', '2001:db8::1']);
+  // The CNAME carries a name, not an address, so only the A and AAAA answers start a rule of their own.
+  expect(card.answerSeeds.map(answer => answer?.address ?? null)).toEqual([null, '192.0.2.1', '2001:db8::1']);
+  expect(card.answerSeeds[2]!.seed).toMatchObject({domain: null, dip: '2001:db8::1', dns: {answers: ['2001:db8::1'], query: {name: 'example.com', type: 'A'}}});
+  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en', t).rows[0];
+  expect(entry.seed).toMatchObject({domain: entry.domain, dns: {type: entry.type, answers: []}});
+});
