@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Card, ErrorMessage, Light, Loading, TextTooltip} from '../../ui/ui';
+import {Card, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode} from './useActivityNode';
 import {NodeMenu} from './NodeMenu';
@@ -16,7 +16,14 @@ export function NodeCard() {
         ) : (
           <>
             <span className="rp-tile-val">
-              <span className="rp-big">{vm.latency}</span>
+              {/* The value opens the node on the nodes page, as the connections tile opens the list it counts. */}
+              {vm.href ? (
+                <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>
+                  <span className="rp-big">{vm.latency}</span>
+                </Link>
+              ) : (
+                <span className="rp-big">{vm.latency}</span>
+              )}
             </span>
             <TextTooltip text={vm.healthError}>
               <Light small tone={vm.tone}>

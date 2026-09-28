@@ -367,3 +367,15 @@ test('the node list names its source, groups a node by a labelled menu, and refr
   await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
 });
+
+test('a latency row opens its node in the list', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes?tab=latency');
+  const row = page.locator('.rp-markerplot .row .name').getByRole('link').first();
+  const name = (await row.innerText()).trim();
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(`#/nodes\\?provider=[^&]+&q=${encodeURIComponent(name)}$`));
+  await expect(page.getByRole('tab', {name: 'Nodes', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(name);
+  await expect(page.getByRole('grid').last()).toContainText(name);
+});

@@ -9,6 +9,7 @@ import {pctU64} from '../../api/u64';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
 import {engineStatus} from '../shared/engineStatus';
+import {href} from '../../shell/route';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -157,6 +158,8 @@ export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, local
       name: outboundLabel(row.name, t),
       value: row.percent === null ? null : Math.round(row.percent),
       text: formatBytes(row.bytes, locale),
+      // The connections through this outbound now; the usage counts since the counters started.
+      href: href('connections', {out: row.name}),
       color: row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[i % colors.cat.length]
     }))
   };
@@ -167,6 +170,8 @@ export function activityRanking(connections: ConnectionList | undefined, by: str
     name: row.name,
     value: row.percent === null ? formatBytes(row.download, locale) : t('ui.share', {bytes: formatBytes(row.download, locale), percent: row.percent}),
     pct: row.percent ?? 0,
-    color: colors.cat[i % colors.cat.length]
+    color: colors.cat[i % colors.cat.length],
+    // The connection list filtered to the device, or searched for the domain or address.
+    href: href('connections', by === 'dev' ? {src: row.name} : {q: row.name})
   }));
 }

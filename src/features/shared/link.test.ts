@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
-import {parseRuleSeed, ruleSeedHref, sectionSourceHref} from './link';
+import {nodeHref, parseRuleSeed, ruleSeedHref, sectionSourceHref} from './link';
 
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
   for (const seed of [
@@ -46,4 +46,10 @@ it('opens the first line of a section wherever an authored file holds it, else t
   const withheld = source('secret', 'include', undefined);
   expect(query(sectionSourceHref([generated, withheld, main], 'dns'))).toEqual({tab: 'source', source: 'main'});
   expect(query(sectionSourceHref([], 'dns'))).toEqual({tab: 'source'});
+});
+
+it('opens a node under the owner the nodes page files it under', () => {
+  expect(nodeHref({provider_id: 'sub', protocol: 'vmess', name: 'hk 01'}, [])).toBe('#/nodes?provider=sub&q=hk+01');
+  // A built-in node has no provider; the page's stand-in owner steps past a provider that took its id.
+  expect(nodeHref({provider_id: null, protocol: 'direct', name: 'direct'}, [{id: 'builtin'}])).toBe('#/nodes?provider=builtin-&q=direct');
 });

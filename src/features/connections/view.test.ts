@@ -261,7 +261,7 @@ it('captures IDs without expanding the confirmed selection when live rows arrive
 
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
-  const model = connectionsView([row], {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
+  const model = connectionsView([row], {...connections, visibility: 'partial'}, undefined, 'all', 'all', 'en-US', t);
   expect(connectionDetail(row, 'en-US', t, new Map(), false)?.flowQuery).toBe('tab=records&connection_id=a%2Fb');
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
@@ -331,7 +331,7 @@ it('reuses a projected row until the connection or a label input changes', () =>
 it('folds the secondary filters into one menu that counts the ones in force', () => {
   const rows = connections.tcp.map(row => ({...row, network: 'tcp'}));
   const src = connections.tcp[0]!.src!.split(':')[0];
-  const lists = connectionsView(rows, connections, src, 'all', 'en-US', t);
+  const lists = connectionsView(rows, connections, src, 'all', 'all', 'en-US', t);
   const menu = filterMenu(lists, {network: 'tcp', out: 'all', src, rule: 'all'}, t);
   expect(menu.active).toBe(2);
   expect(menu.submenus.map(submenu => submenu.label)).toEqual(['Network protocol', 'Outbound', 'Device', 'Rule']);
@@ -343,6 +343,10 @@ it('folds the secondary filters into one menu that counts the ones in force', ()
   expect(rule.items[0]).toEqual({id: 'rule:all', label: 'All rules'});
   expect(rule.value).toBe('rule:all');
   expect(filterMenu(lists, {network: 'all', out: 'all', src: undefined, rule: 'all'}, t).active).toBe(0);
+  // An outbound a link filters by stays a choice while no open connection uses it.
+  const idle = connectionsView(rows, connections, undefined, 'all', 'idle-group', 'en-US', t);
+  expect(idle.outbounds.map(item => item.id)).toContain('idle-group');
+  expect(lists.outbounds.map(item => item.id)).not.toContain('idle-group');
 });
 
 it('lists devices and rules with equal counts in the same order whatever order the rows arrive in', () => {
@@ -351,7 +355,8 @@ it('lists devices and rules with equal counts in the same order whatever order t
     {...c, id: 'a', src: '10.0.0.9:1', rule_expression: 'domain(b)'},
     {...c, id: 'b', src: '10.0.0.1:1', rule_expression: 'domain(a)'}
   ];
-  const menus = (list: typeof rows) => connectionsView(list, connections, undefined, 'all', 'en-US', t).picks.map(pick => pick.items.map(item => item.label));
+  const menus = (list: typeof rows) =>
+    connectionsView(list, connections, undefined, 'all', 'all', 'en-US', t).picks.map(pick => pick.items.map(item => item.label));
   expect(menus(rows)).toEqual([
     ['10.0.0.1', '10.0.0.9'],
     ['domain(a)', 'domain(b)']

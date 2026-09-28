@@ -1,15 +1,16 @@
 import {useState, type ReactNode} from 'react';
-import {Button} from '../Button';
+import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
 
 export type MarkerKind = 'dot' | 'diamond' | 'tick';
 // `description` is what the row says to a screen reader: every value it draws, in words.
-// `details` are the hover tip's lines under the row's name.
+// `details` are the hover tip's lines under the row's name. With `href` the name opens what it names.
 export type MarkerRow = {
   id: string;
   label: string;
+  href?: string;
   values: Partial<Record<MarkerKind, number>>;
   text: string;
   description: string;
@@ -80,7 +81,15 @@ export function MarkerPlot({
             const high = at(Math.max(...values));
             return (
               <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details])}>
-                <span className="name">{row.label}</span>
+                <span className="name">
+                  {row.href ? (
+                    <Link appearance="link" href={row.href}>
+                      {row.label}
+                    </Link>
+                  ) : (
+                    row.label
+                  )}
+                </span>
                 <div className="track" role="img" aria-label={row.label + t('ui.separator') + row.description}>
                   {ticks.map(tick => (
                     <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />

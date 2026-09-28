@@ -9,6 +9,28 @@ import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels, type LimitGroup} from '../shared/limits';
 import {engineStatus} from '../shared/engineStatus';
 import {engineOf} from '../../api/engines';
+import {href} from '../../shell/route';
+// Where each feature is used, so the list of features that are on opens them.
+const resourcePages: Record<keyof typeof resourceLabels, string> = {
+  connections: href('connections', {tab: 'list'}),
+  flows: href('flows', {tab: 'records'}),
+  routing_trace: href('rules', {tab: 'trace'}),
+  dns_query: href('dns', {tab: 'query'}),
+  dns_cache: href('dns', {tab: 'cache'}),
+  dns_log: href('dns', {tab: 'log'}),
+  events: href('events'),
+  probes: href('nodes', {tab: 'latency'}),
+  traffic_history: href('activity'),
+  memory_history: href('activity'),
+  runtime_outbounds: href('activity'),
+  logs: href('logs'),
+  providers: href('nodes'),
+  rules: href('rules', {tab: 'list'}),
+  config: href('config'),
+  config_validate: href('config', {tab: 'validate'}),
+  runtime_settings: href('settings', {card: 'runtime'}),
+  geodata: href('settings', {card: 'geodata'})
+};
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -248,7 +270,7 @@ export function overviewView(
       rows: capabilities
         ? (Object.keys(resourceLabels) as Array<keyof typeof resourceLabels>)
             .filter(id => !limits.some(group => group.items.some(item => item.id === id)))
-            .map(id => ({id, label: t(resourceLabels[id]), text: t('ov.available')}))
+            .map(id => ({id, label: t(resourceLabels[id]), text: t('ov.available'), href: resourcePages[id]}))
         : []
     },
     limits,
