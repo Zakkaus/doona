@@ -163,28 +163,28 @@ const withInterval = <G extends ReturnType<typeof nodeFixtures>['groups'][number
 });
 it('offers the check fields a group lists as writable, whatever its policy', () => {
   const [proxy, resilient] = nodeFixtures(0).groups;
-  // honk lists no check field for a selector group; a backend that probes one lists check_url and gets it.
-  expect(checkFields(proxy)).toEqual([]);
-  expect(checkFields(withInterval(proxy))).toEqual(['check_interval']);
-  // honk lists check_url only; a backend that also lists check_interval gets both fields.
-  expect(checkFields(resilient)).toEqual(['check_url']);
-  expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval']);
+  // The mock lists no check_url or idle_timeout for a selector group; a backend that probes one lists them and gets them.
+  expect(checkFields(proxy)).toEqual(['tolerance']);
+  expect(checkFields(withInterval(proxy))).toEqual(['check_interval', 'tolerance']);
+  // honk lists no check_interval; a backend that also lists it gets every field, in the dialog's order.
+  expect(checkFields(resilient)).toEqual(['check_url', 'tolerance', 'idle_timeout']);
+  expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval', 'tolerance', 'idle_timeout']);
 });
 it('patches only the check fields that changed, testing each against its opening value and sending null for an empty one', () => {
   const g = withInterval(nodeFixtures(0).groups[1]);
   const base = checkDraft(g);
-  expect(checkPatch(g, base, {check_url: '', check_interval: '30'})).toEqual([]);
+  expect(checkPatch(g, base, {...base, check_url: '', check_interval: '30'})).toEqual([]);
   // An unset field tests against null: honk and the contract hold it as null, not as an absent path.
-  expect(checkPatch(g, base, {check_url: ' https://cp.cloudflare.com/ ', check_interval: '30'})).toEqual([
+  expect(checkPatch(g, base, {...base, check_url: ' https://cp.cloudflare.com/ '})).toEqual([
     {op: 'test', path: '/config/check_url', value: null},
     {op: 'replace', path: '/config/check_url', value: 'https://cp.cloudflare.com/'}
   ]);
-  expect(checkPatch(g, base, {check_url: '', check_interval: ''})).toEqual([
+  expect(checkPatch(g, base, {...base, check_interval: ''})).toEqual([
     {op: 'test', path: '/config/check_interval', value: 30},
     {op: 'replace', path: '/config/check_interval', value: null}
   ]);
   const set = {...g, config: {...g.config, check_url: 'http://a.example/'}};
-  expect(checkPatch(set, checkDraft(set), {check_url: '', check_interval: '60'})).toEqual([
+  expect(checkPatch(set, checkDraft(set), {...base, check_url: '', check_interval: '60'})).toEqual([
     {op: 'test', path: '/config/check_url', value: 'http://a.example/'},
     {op: 'replace', path: '/config/check_url', value: null},
     {op: 'test', path: '/config/check_interval', value: 30},
@@ -192,14 +192,34 @@ it('patches only the check fields that changed, testing each against its opening
   ]);
   // A field the backend does not list is never sent.
   const urlOnly = {...g, capabilities: {...g.capabilities, mutable_config: ['check_url' as const]}};
-  expect(checkPatch(urlOnly, base, {check_url: '', check_interval: '60'})).toEqual([]);
+  expect(checkPatch(urlOnly, base, {...base, check_interval: '60', tolerance: '50', idle_timeout: ''})).toEqual([]);
+});
+it('patches the tolerance and idle timeout like the interval, in their units, and the mock accepts them', () => {
+  const g = nodeFixtures(0).groups[1];
+  const base = checkDraft(g);
+  expect(base).toMatchObject({tolerance: '10', idle_timeout: '1800'});
+  const ops = checkPatch(g, base, {...base, tolerance: ' 0 ', idle_timeout: ''});
+  expect(ops).toEqual([
+    {op: 'test', path: '/config/tolerance', value: 10},
+    {op: 'replace', path: '/config/tolerance', value: 0},
+    {op: 'test', path: '/config/idle_timeout', value: 1800},
+    {op: 'replace', path: '/config/idle_timeout', value: null}
+  ]);
+  expect(patchGroupConfig(g, ops).config).toMatchObject({tolerance: 0, idle_timeout: null});
+  // The selector group lists the tolerance but not the idle timeout, so only the tolerance is sent.
+  const proxy = nodeFixtures(0).groups[0];
+  const selector = checkDraft(proxy);
+  expect(checkPatch(proxy, selector, {...selector, tolerance: '50', idle_timeout: '60'})).toEqual([
+    {op: 'test', path: '/config/tolerance', value: 10},
+    {op: 'replace', path: '/config/tolerance', value: 50}
+  ]);
 });
 it('sends only the check fields the user changed, not ones the group changed since the dialog opened', () => {
   const g = withInterval(nodeFixtures(0).groups[1]);
-  const base = {check_url: '', check_interval: '30'};
+  const base = checkDraft(g);
   // Another client set the interval to 60 while the dialog was open; the user edited the URL only.
   const moved = {...g, config: {...g.config, check_interval: 60}};
-  expect(checkPatch(moved, base, {check_url: 'http://a.example/', check_interval: '30'})).toEqual([
+  expect(checkPatch(moved, base, {...base, check_url: 'http://a.example/'})).toEqual([
     {op: 'test', path: '/config/check_url', value: null},
     {op: 'replace', path: '/config/check_url', value: 'http://a.example/'}
   ]);
@@ -218,14 +238,15 @@ it('refuses a check change another client made to the same field since the dialo
   });
 });
 it('rebases a refused check draft on the group read again, keeping the edits to fields the group kept', () => {
-  const base = {check_url: '', check_interval: '30'};
-  const current = {check_url: 'http://theirs.example/', check_interval: '30'};
-  expect(checkRebase({base, value: {check_url: 'http://mine.example/', check_interval: '60'}}, current)).toEqual({
+  const base = {check_url: '', check_interval: '30', tolerance: '10', idle_timeout: '1800'};
+  const current = {check_url: 'http://theirs.example/', check_interval: '30', tolerance: '10', idle_timeout: '600'};
+  const value = {check_url: 'http://mine.example/', check_interval: '60', tolerance: '50', idle_timeout: '900'};
+  expect(checkRebase({base, value}, current)).toEqual({
     base: current,
-    value: {check_url: 'http://theirs.example/', check_interval: '60'}
+    value: {check_url: 'http://theirs.example/', check_interval: '60', tolerance: '50', idle_timeout: '600'}
   });
 });
-it('accepts only a safe http URL and a positive whole interval, or an empty field', () => {
+it('accepts only a safe http URL, a positive whole interval and a whole tolerance and idle timeout, or an empty field', () => {
   for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1']) expect(checkInvalid('check_url', url)).toBe(false);
   for (const url of [
     'ftp://a.example/',
@@ -239,6 +260,10 @@ it('accepts only a safe http URL and a positive whole interval, or an empty fiel
     expect(checkInvalid('check_url', url)).toBe(true);
   for (const interval of ['', '1', ' 30 ']) expect(checkInvalid('check_interval', interval)).toBe(false);
   for (const interval of ['0', '-1', '1.5', '1e3', 'x']) expect(checkInvalid('check_interval', interval)).toBe(true);
+  for (const field of ['tolerance', 'idle_timeout'] as const) {
+    for (const value of ['', '0', ' 50 ']) expect(checkInvalid(field, value)).toBe(false);
+    for (const value of ['-1', '1.5', '1e3', 'x', '9007199254740993']) expect(checkInvalid(field, value)).toBe(true);
+  }
 });
 
 it('offers Test all for untested members only where the group takes a probe', () => {
