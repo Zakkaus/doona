@@ -5,7 +5,7 @@ import {detail, expect, mockBackend, test} from './fixtures';
 // full text is on screen without needing the tooltip at all.
 test('a truncated rule expression in the detail drawer wraps on phones instead of relying on a tap-only tooltip', async ({page}) => {
   const {api} = await mockBackend(page);
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
   await page.setViewportSize({width: 390, height: 844});
   await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);
@@ -16,7 +16,7 @@ test('a truncated rule expression in the detail drawer wraps on phones instead o
 
 test('the same value stays a single-line truncation with its tooltip on desktop', async ({page}) => {
   const {api} = await mockBackend(page);
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
   await page.setViewportSize({width: 1280, height: 900});
   await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);

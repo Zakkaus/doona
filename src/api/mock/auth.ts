@@ -10,6 +10,7 @@ const LIFETIME = 12 * 3600_000;
 export function mockDiscovery(): AuthDiscovery {
   return {mode: 'password', setup_required: false};
 }
+const authLinks = {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'} as const;
 
 export function mockOpenSession(kind: 'setup' | 'login', credentials: AuthCredentials): AuthSession {
   if (kind === 'setup') throw new ApiError(409, 'setup_already_completed', 'Setup already completed');
@@ -23,8 +24,31 @@ export function mockSessionValid(token: string | null | undefined): boolean {
   return !!token?.startsWith(PREFIX);
 }
 
-// Without a session every read is refused as a real backend refuses it, so the shell asks for sign-in.
+// A signed-in demo reads the admitted discovery with the same password auth that sign-in reads.
+export function withPasswordAuth<T extends Api>(api: T): T {
+  return {
+    ...api,
+    discovery: async signal => {
+      const discovery = await api.discovery(signal);
+      if (!('status' in discovery)) return discovery;
+      return {
+        ...discovery,
+        links: {...discovery.links, ...authLinks, auth_logout: '/api/v1/auth/logout'},
+        auth: {...mockDiscovery(), anonymous_loopback: false}
+      };
+    }
+  };
+}
+
+// Without a session only the public discovery answers; every other read is refused as a real backend refuses it,
+// so the shell asks for sign-in.
 export function refuseWithoutSession<T extends Api>(api: T): T {
   const refuse = () => Promise.reject(new ApiError(401, 'authentication_required', 'Authentication required'));
-  return new Proxy(api, {get: (target, key, receiver) => (typeof Reflect.get(target, key, receiver) === 'function' ? refuse : undefined)});
+  const discovery: Api['discovery'] = async signal => {
+    signal?.throwIfAborted();
+    return {name: 'dae/honk-native', api_major: 1, links: {...authLinks}, auth: mockDiscovery()};
+  };
+  return new Proxy(api, {
+    get: (target, key, receiver) => (key === 'discovery' ? discovery : typeof Reflect.get(target, key, receiver) === 'function' ? refuse : undefined)
+  });
 }

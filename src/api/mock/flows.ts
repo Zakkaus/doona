@@ -54,6 +54,12 @@ function ruleFor(domain: string): {id: string; expression: string} | null {
   return null;
 }
 
+// An observed "ip:port" endpoint, bracketed for IPv6, split into the routing input's address and port.
+function endpoint(value: string | null): [string | null, number | null] {
+  const at = value?.lastIndexOf(':') ?? -1;
+  return value && at > 0 ? [value.slice(0, at).replace(/^\[(.*)\]$/, '$1'), Number(value.slice(at + 1))] : [null, null];
+}
+
 export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', observedAt: string, instanceId: string): FlowDetail {
   const input: FlowDetail['input'] = {
     src: connection.src ?? null,
@@ -68,6 +74,8 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     dscp: 0,
     mark: 0
   };
+  const [src_ip, src_port] = endpoint(input.src);
+  const [dst_ip, dst_port] = endpoint(input.dst);
   const common = {observed_at: observedAt, elapsed_us: 0, generation_id: generationId, evidence: 'observed' as const};
   const direct = connection.outbound === 'direct';
   const blocked = connection.state === 'blocked';
@@ -99,7 +107,20 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
         outbound: connection.outbound,
         must: blocked,
         mark: 0,
-        input: null,
+        input: {
+          network,
+          src_ip,
+          src_port,
+          dst_ip,
+          dst_port,
+          domain: input.domain,
+          pname: connection.pname ?? null,
+          src_mac: input.src_mac,
+          dscp: input.dscp,
+          mark: input.mark,
+          ingress: input.ingress,
+          domain_rule_ids: input.domain_rule_ids
+        },
         dns_action: null
       }
     },

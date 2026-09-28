@@ -55,7 +55,7 @@ test('a truncated table cell exposes the full value on hover and keyboard focus'
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   const full = 'a-very-long-destination-name-that-does-not-fit-in-the-table-column.example.test';
   connections.tcp[0].domain = full;
   const responses: Record<string, unknown> = {

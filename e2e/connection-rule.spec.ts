@@ -77,7 +77,7 @@ test('show matched rule opens the rule list on that rule', async ({page}) => {
 test('a connection with no recorded rule only adds, first in the list', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   handlers['GET connections'] = async () => {
-    const list = await api.connections();
+    const list = await api.connections({detail: 'full', limit: 1000});
     return {...list, tcp: list.tcp.map(row => ({...row, rule_id: null, rule_expression: null, rule_source: 'unknown'}))};
   };
   await page.goto('/#/connections?id=1');

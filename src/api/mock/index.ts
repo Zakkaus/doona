@@ -7,7 +7,7 @@ import {createLifecycle} from './lifecycle';
 import {createNetwork} from './network';
 import {createRuntime} from './runtime';
 import {createGeodataState} from './geodata';
-import {mockSessionValid, refuseWithoutSession} from './auth';
+import {mockSessionValid, refuseWithoutSession, withPasswordAuth} from './auth';
 
 export type MockApi = Api & OperationReader;
 
@@ -75,5 +75,6 @@ export function createMockApi(options: MockOptions = {}): MockApi {
   const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot, busy, faults);
   const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt, geodata, faults);
   const api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
-  return options.signIn && !mockSessionValid(options.session) ? refuseWithoutSession(api) : api;
+  if (!options.signIn) return api;
+  return mockSessionValid(options.session) ? withPasswordAuth(api) : refuseWithoutSession(api);
 }

@@ -4,7 +4,7 @@ import {ApiError} from '../error';
 import {ipLiteral, sourceIp} from '../selectors';
 import * as fixtures from './fixtures/network';
 import {instanceId, observedAt} from './fixtures/clock';
-import {found, createPager} from './common';
+import {found, createPager, pageLimit} from './common';
 import {routingTrace} from './routing';
 
 const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
@@ -44,12 +44,22 @@ function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
       cached,
       upstream,
       route: {source: 'default', rule: null},
-      elapsed_ms: cached ? 0.3 : denied ? 1.8 : failed ? 3000 + (i % 3) * 400 : i % 9 === 2 ? 150 + (i % 7) * 32 : 8 + (i % 31),
-      answers: cached
-        ? (entry?.answers ?? [])
-        : status === 'NOERROR'
-          ? [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::20' : '192.0.2.20'}]
-          : []
+      elapsed_ms: cached ? 0 : denied ? 2 : failed ? 3000 + (i % 3) * 400 : i % 9 === 2 ? 150 + (i % 7) * 32 : 8 + (i % 31),
+      // In the faults ring one upstream answer (record 242, a fresh NOERROR) outgrows a page's response budget and ends that page early.
+      answers:
+        faults && i === 241
+          ? Array.from({length: 3000}, (_, n) => ({
+              name,
+              type,
+              class: 'IN',
+              ttl: 300,
+              data: type === 'AAAA' ? `2001:db8::${n.toString(16)}` : `198.18.${n >> 8}.${n & 255}`
+            }))
+          : cached
+            ? (entry?.answers ?? [])
+            : status === 'NOERROR'
+              ? [{name, type, class: 'IN', ttl: 300, data: type === 'AAAA' ? '2001:db8::20' : '192.0.2.20'}]
+              : []
     };
   });
 }
@@ -79,7 +89,8 @@ export function createNetwork(
 ) {
   const flowPage = createPager('flows');
   const cachePage = createPager('dnsCache');
-  const logPage = createPager('dnsLog');
+  // 256 KiB, which a full page of the demo's ordinary records stays under.
+  const logPage = createPager('dnsLog', 262144);
   const large = big ? fixtures.connectionFixtures() : undefined;
   const flows = large?.flows ?? structuredClone(fixtures.flows);
   const connections = large?.connections ?? structuredClone(fixtures.connections);
@@ -115,24 +126,31 @@ export function createNetwork(
   const api: NetworkApi = {
     connections: async (query, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.connections.available) throw new ApiError(404, 'capability_not_supported', 'Connections are unavailable');
       if (busy)
         for (const c of [...connections.tcp, ...connections.udp]) if (c.state === 'active') c.download_bytes = String(BigInt(c.download_bytes ?? '0') + 1460n);
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
       if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
       const tcp = query?.type === 'udp' ? [] : connections.tcp.filter(c => !src || sourceIp(c.src) === src);
       const udp = query?.type === 'tcp' ? [] : connections.udp.filter(c => !src || sourceIp(c.src) === src);
-      const limit = query?.limit ?? 1000;
+      const limit = pageLimit(query?.limit);
+      // A summary leaves out the endpoints and the domain, which only the full detail carries.
+      const shown = <T extends object>(rows: T[]) =>
+        query?.detail === 'full'
+          ? structuredClone(rows)
+          : rows.map(({src, dst, domain, ...row}: T & {src?: unknown; dst?: unknown; domain?: unknown}) => structuredClone(row));
       return {
         ...connections,
         total_tcp: tcp.length,
         total_udp: udp.length,
-        tcp: structuredClone(tcp.slice(0, limit)),
-        udp: structuredClone(udp.slice(0, Math.max(0, limit - tcp.length))),
+        tcp: shown(tcp.slice(0, limit)),
+        udp: shown(udp.slice(0, Math.max(0, limit - tcp.length))),
         truncated: tcp.length + udp.length > limit
       };
     },
     flows: async (query, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.flows.available) throw new ApiError(404, 'capability_not_supported', 'Flows are unavailable');
       const result = flowPage(
         flows.filter(
           f =>
@@ -160,6 +178,7 @@ export function createNetwork(
     },
     flow: async (id, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.flows.available) throw new ApiError(404, 'capability_not_supported', 'Flows are unavailable');
       return structuredClone(
         found(
           flows.find(f => f.id === id),
@@ -174,12 +193,15 @@ export function createNetwork(
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.dns_cache.available) throw new ApiError(404, 'capability_not_supported', 'DNS cache unavailable');
       const name = query?.name ?? query?.domain;
       const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
       const result = cachePage(entries, query);
       // Usage covers the whole cache, whatever the listing's filters.
       const usage = {entries: String(dnsCache.entries.length), entry_capacity: '256'};
-      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: result.items, total: result.total, next_cursor: result.next_cursor, usage};
+      // A summary leaves out the answers, which only the full detail carries.
+      const shown = query?.detail === 'full' ? result.items : result.items.map(({answers, ...entry}) => entry);
+      return {...dnsCache, coverage: {...dnsCache.coverage}, entries: shown, total: result.total, next_cursor: result.next_cursor, usage};
     },
     dnsLog: async (query, signal) => {
       signal?.throwIfAborted();
@@ -202,6 +224,7 @@ export function createNetwork(
     },
     dnsQuery: async (domain, types, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.dns_query.available) throw new ApiError(404, 'capability_not_supported', 'DNS query unavailable');
       const name = domain.trim().toLowerCase().replace(/\.$/, '') + '.';
       return {
         domain: name,
@@ -217,7 +240,7 @@ export function createNetwork(
             upstream: entry ? null : 'udp://192.0.2.53',
             route: {source: 'default' as const, rule: null},
             status: entry?.status ?? 'NOERROR',
-            elapsed_ms: entry ? 0.1 : 8.4,
+            elapsed_ms: entry ? 0 : 8,
             question: {name, type},
             answers: entry ? structuredClone(entry.answers ?? []) : [{name, type, class: 'IN', ttl: 60, data}]
           };

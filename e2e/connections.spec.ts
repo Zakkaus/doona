@@ -404,7 +404,7 @@ test('closing a connection removes it from the list and clears the selection', a
 
 test('a connection opened while another closes stays selected', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  const [closed, opened] = (await api.connections()).tcp;
+  const [closed, opened] = (await api.connections({detail: 'full', limit: 1000})).tcp;
   let release = () => {};
   const pending = new Promise<void>(resolve => (release = resolve));
   handlers[`DELETE connections/${closed.id}`] = async () => {
@@ -427,7 +427,7 @@ test('a connection opened while another closes stays selected', async ({page}) =
 test('phone details retain routing diagnostics and omit unsupported flow actions', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
   capabilities.resources.flows.available = false;
-  const connections = await api.connections();
+  const connections = await api.connections({detail: 'full', limit: 1000});
   const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
   await page.setViewportSize({width: 390, height: 844});
   await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);
@@ -510,7 +510,7 @@ test('general IP search matches destinations while explicit source links constra
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
-  const list = await api.connections();
+  const list = await api.connections({detail: 'full', limit: 1000});
   list.tcp = [{...list.tcp[0], id: 'destination', src: '10.0.0.12:1234', dst: '198.51.100.42:443'}];
   list.udp = [];
   list.truncated = false;
@@ -519,7 +519,7 @@ test('general IP search matches destinations while explicit source links constra
     '/version': await api.version(),
     '/runtime': await api.runtime(),
     '/groups': await api.groups(),
-    '/nodes': await api.nodes()
+    '/nodes': await api.nodes({limit: 1000})
   };
   const sources: Array<string | null> = [];
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
@@ -549,7 +549,7 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   capabilities.resources.connections.max_bulk_close = 1;
-  const list = await api.connections();
+  const list = await api.connections({detail: 'full', limit: 1000});
   list.tcp = [
     {...list.tcp[0], id: 'first'},
     {...list.tcp[0], id: 'second'}
@@ -561,7 +561,7 @@ test('close confirmation freezes listed IDs above the bulk limit and excludes ne
     '/version': await api.version(),
     '/runtime': await api.runtime(),
     '/groups': await api.groups(),
-    '/nodes': await api.nodes()
+    '/nodes': await api.nodes({limit: 1000})
   };
   const deleted: string[] = [];
   await page.clock.install();
@@ -596,7 +596,7 @@ test('close all reports skipped connections as information, as Settings does', a
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   capabilities.resources.connections.max_bulk_close = 1;
-  const list = await api.connections();
+  const list = await api.connections({detail: 'full', limit: 1000});
   list.tcp = [
     {...list.tcp[0], id: 'first'},
     {...list.tcp[0], id: 'gone'}
@@ -608,7 +608,7 @@ test('close all reports skipped connections as information, as Settings does', a
     '/version': await api.version(),
     '/runtime': await api.runtime(),
     '/groups': await api.groups(),
-    '/nodes': await api.nodes()
+    '/nodes': await api.nodes({limit: 1000})
   };
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/**', async route => {
@@ -648,7 +648,7 @@ test('clearing the filter that opened the table keeps the table open', async ({p
 
 test('an empty connection list keeps its message in view on a narrow screen', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  handlers['GET connections'] = async () => ({...(await api.connections()), tcp: [], udp: [], truncated: false});
+  handlers['GET connections'] = async () => ({...(await api.connections({detail: 'full', limit: 1000})), tcp: [], udp: [], truncated: false});
   await page.setViewportSize({width: 360, height: 800});
   await page.goto('/#/connections?tab=list');
   // Inside the same sticky wrapper DataTable uses, so a table wider than the screen cannot carry it out of view.

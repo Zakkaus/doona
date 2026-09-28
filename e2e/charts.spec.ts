@@ -99,7 +99,7 @@ test('the weighted median counts the connections whose node has no latency', asy
 test('without connection chains the latency card plots every node alike', async ({page}) => {
   const backend = await mockBackend(page);
   backend.handlers['GET connections'] = async () => {
-    const list = await backend.api.connections();
+    const list = await backend.api.connections({detail: 'full', limit: 1000});
     return {...list, tcp: list.tcp.map(row => ({...row, chain: []})), udp: list.udp.map(row => ({...row, chain: []}))};
   };
   await page.goto('/#/connections');

@@ -102,7 +102,7 @@ it('admits AnyTLS share links and retains their protocol through reload', async 
   const operation = await api.startReload();
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.operation(operation.operation_id)).status).toBe('succeeded');
-  expect((await api.nodes()).nodes.find(node => node.id === created.id)?.protocol).toBe('anytls');
+  expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.protocol).toBe('anytls');
 });
 
 it('refuses names the configuration cannot quote instead of altering them', async () => {

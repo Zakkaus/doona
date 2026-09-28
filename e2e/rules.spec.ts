@@ -8,7 +8,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   capabilities.resources.rules.available = false;
-  const flows = await api.flows();
+  const flows = await api.flows({detail: 'full', limit: 1000});
   await page.clock.install();
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
@@ -47,7 +47,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   capabilities.resources.rules.available = false;
-  const snapshot = await api.flows();
+  const snapshot = await api.flows({detail: 'full', limit: 1000});
   const flow = snapshot.flows[0];
   snapshot.flows = Array.from({length: 13}, (_, i) => ({
     ...flow,
@@ -144,7 +144,7 @@ test('without a rule dictionary, Retry refetches the flows the distribution is b
   let fail = true;
   handlers['GET flows'] = async () => {
     if (fail) throw new ApiError(500, 'internal', 'Flows unavailable');
-    return api.flows();
+    return api.flows({detail: 'full', limit: 1000});
   };
   // Frozen timers: only the retry, not the next poll, can bring the flows back.
   await page.clock.install();

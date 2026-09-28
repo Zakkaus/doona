@@ -14,8 +14,8 @@ test('home charts collect memory polls and change the traffic history range', as
     '/capabilities': capabilities,
     '/runtime': await api.runtime(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
-    '/connections': await api.connections(),
-    '/nodes': await api.nodes(),
+    '/connections': await api.connections({detail: 'full', limit: 1000}),
+    '/nodes': await api.nodes({limit: 1000}),
     '/groups': await api.groups()
   };
   let memoryPoll = 0;
@@ -110,8 +110,8 @@ test('read-only main configuration keeps the current mode and explains the write
     '/runtime/memory/history': await api.memoryHistory(),
     '/runtime/outbounds': await api.runtimeOutbounds(),
     '/runtime/traffic/history': await api.trafficHistory(),
-    '/connections': await api.connections(),
-    '/nodes': await api.nodes(),
+    '/connections': await api.connections({detail: 'full', limit: 1000}),
+    '/nodes': await api.nodes({limit: 1000}),
     '/groups': await api.groups(),
     '/config': config
   };
@@ -456,7 +456,7 @@ test('local traffic renders without history and duplicate node names retain inde
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
   capabilities.resources.nodes.available = true;
   capabilities.resources.runtime.available = true;
-  const nodes = await api.nodes();
+  const nodes = await api.nodes({limit: 1000});
   const healthy = nodes.nodes.find(node => node.name === 'hk-01')!;
   const unavailable = nodes.nodes.find(node => node.name === 'jp-01')!;
   nodes.nodes = [

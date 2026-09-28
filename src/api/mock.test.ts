@@ -50,7 +50,7 @@ it('serves cumulative outbound counters independently of live connection bytes',
     expect(BigInt(row.total_connections)).toBeGreaterThanOrEqual(BigInt(row.active_connections));
     expect(BigInt(row.errors)).toBeGreaterThanOrEqual(0n);
   }
-  const live = await api.connections();
+  const live = await api.connections({detail: 'full', limit: 1000});
   const active = [...live.tcp, ...live.udp].filter(row => row.state === 'active');
   expect(active.length).toBe(53);
   expect(new Set(active.map(row => sourceIp(row.src))).size).toBeGreaterThanOrEqual(5);
@@ -137,13 +137,21 @@ it('turns the faults scenario on and off from the page address, and keeps the ch
   }
 });
 
+// The whole DNS log ring, walked by cursor: a page may end early at the faults ring's oversized answer.
+async function wholeDnsLog(api: ReturnType<typeof createMockApi>) {
+  let page = await api.dnsLog({limit: 500});
+  const records = [...page.records];
+  while (page.next_cursor) records.push(...(page = await api.dnsLog({limit: 500, cursor: page.next_cursor})).records);
+  return {...page, records};
+}
+
 it('keeps the fuller demo history, cache and rankings internally consistent', async () => {
   const api = faultsApi();
   const [dns, cache, nodes, flows, rules, memory] = await Promise.all([
-    api.dnsLog({limit: 500}),
-    api.dnsCache(),
-    api.nodes(),
-    api.flows(),
+    wholeDnsLog(api),
+    api.dnsCache({detail: 'full'}),
+    api.nodes({limit: 1000}),
+    api.flows({limit: 1000}),
     api.rules(),
     api.runtimeMemory()
   ]);
@@ -253,11 +261,11 @@ it('limits the large connection snapshot without losing totals or deterministic 
   expect(Math.min(...ages)).toBe(0);
   expect(Math.max(...ages)).toBe(3597000);
   const api = createMockApi();
-  const snapshot = await api.connections({limit: 1000});
+  const snapshot = await api.connections({limit: 1000, detail: 'full'});
   expect(snapshot).toMatchObject({total_tcp: fixture.total_tcp, total_udp: fixture.total_udp, truncated: true});
   expect(snapshot.total_tcp + snapshot.total_udp).toBe(1200);
   expect([...snapshot.tcp, ...snapshot.udp].map(row => row.id)).toEqual([...fixture.tcp, ...fixture.udp].slice(0, 1000).map(row => row.id));
-  expect(await api.connections({type: 'udp', limit: 1000})).toMatchObject({
+  expect(await api.connections({type: 'udp', limit: 1000, detail: 'full'})).toMatchObject({
     total_tcp: 0,
     total_udp: fixture.total_udp,
     truncated: false,
