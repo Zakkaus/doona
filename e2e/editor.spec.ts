@@ -48,4 +48,13 @@ test('the editing commands menu undoes an edit', async ({page}) => {
   await page.getByRole('menuitem', {name: 'Undo', exact: true}).click();
   await expect(editor).toHaveText(original, {useInnerText: true});
   await expect(unsaved).toHaveCount(0);
+  await page.getByRole('button', {name: 'Editing commands', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Redo', exact: true}).click();
+  await expect(editor).toContainText('# typed');
+  const first = editor.locator('.cm-line').first();
+  await expect(first).toHaveText(/^#/);
+  await first.click();
+  await page.getByRole('button', {name: 'Editing commands', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Toggle comment', exact: true}).click();
+  await expect(first).not.toHaveText(/^#/);
 });
