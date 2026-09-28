@@ -179,7 +179,10 @@ it('coalesces one event subscription for consumers sharing a resource', async ()
     key: ['runtime'] as ResourceKey,
     every: 0,
     fetch,
-    events: (listener: Parameters<typeof subscribeEvents>[1]) => subscribeEvents(api, listener)
+    events: (listener: Parameters<typeof subscribeEvents>[1], onBaseline: () => void) => {
+      onBaseline();
+      return subscribeEvents(api, listener);
+    }
   };
   const first = watchResource(api, descriptor, () => {});
   const second = watchResource(api, descriptor, () => {});

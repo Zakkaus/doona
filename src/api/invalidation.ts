@@ -54,7 +54,10 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   }
 };
 
-export function shouldRefetch(resource: ResourceName, event: Pick<ApiEvent, 'event'>, reconnected = false): boolean {
+// `reconnected` is true after a ready that may follow a gap, or lists the kinds a filter change may have held back.
+export type Reconnected = boolean | readonly EventKind[];
+export function shouldRefetch(resource: ResourceName, event: Pick<ApiEvent, 'event'>, reconnected: Reconnected = false): boolean {
+  if (event.event === 'stream.ready' && Array.isArray(reconnected)) return reconnected.some(kind => shouldRefetch(resource, {event: kind}));
   if (!Object.hasOwn(invalidations, event.event) || (event.event === 'stream.ready' && !reconnected)) return false;
   const {now} = invalidations[event.event];
   return now === 'all' || now.includes(resource);

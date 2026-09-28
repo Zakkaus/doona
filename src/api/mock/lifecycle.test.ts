@@ -1,6 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
 import type {ApiEvent, LogRecord} from '../model';
+import {eventKinds} from '../selectors';
 
 afterEach(() => vi.useRealTimers());
 
@@ -40,6 +41,19 @@ it('binds event cursors to the producing instance and filters and expires evicte
   });
   await vi.advanceTimersByTimeAsync(301000);
   await expect(api.subscribeEvents({kinds: ['runtime.updated'], lastEventId: cursor, onEvent: vi.fn()})).rejects.toMatchObject({code: 'event_cursor_expired'});
+});
+
+it('keeps an events cursor when the stream names every kind instead of none', async () => {
+  const api = createMockApi();
+  const events: ApiEvent[] = [];
+  const controller = new AbortController();
+  const stream = api.subscribeEvents({signal: controller.signal, onEvent: event => events.push(event)});
+  controller.abort();
+  await stream;
+  const resumed = new AbortController();
+  const resumedStream = api.subscribeEvents({kinds: eventKinds, lastEventId: events.at(-1)!.id, signal: resumed.signal, onEvent: vi.fn()});
+  resumed.abort();
+  await expect(resumedStream).resolves.toBeUndefined();
 });
 
 it('binds log cursors to filters and the retained buffer', async () => {
