@@ -173,7 +173,7 @@
   align-items: center;
   column-gap: 8px;
   min-height: var(--rp-control);
-  padding: 0 8px 0 8px;
+  padding: 4px 8px;
   border-radius: var(--rp-r-md);
   cursor: default;
   outline: none;
@@ -201,6 +201,19 @@
 .rp-item.plain {
   grid-template-columns: minmax(0, 1fr) auto;
   padding-inline-start: 12px;
+}
+/* A narrow menu keeps the whole title: a description that no longer fits beside it wraps onto the lines below it. */
+.rp-item-text {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+.rp-item-text > .desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .rp-item .desc {
   color: var(--rp-subtle);

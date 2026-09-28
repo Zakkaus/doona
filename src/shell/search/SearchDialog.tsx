@@ -42,8 +42,10 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
               <Header className="rp-sec-h">{section.title}</Header>
               {section.items.map(item => (
                 <ListBoxItem key={item.id} id={item.id} className="rp-item plain" textValue={item.label}>
-                  <span>{item.label}</span>
-                  {item.description && <span className="desc">{item.description}</span>}
+                  <span className="rp-item-text">
+                    <span>{item.label}</span>
+                    {item.description && <span className="desc">{item.description}</span>}
+                  </span>
                 </ListBoxItem>
               ))}
             </ListBoxSection>
