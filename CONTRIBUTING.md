@@ -169,7 +169,7 @@ To correct a translation:
 
 1. Find the key. Search the catalogue for the text, then search for the key under `src/` to see where it appears.
 2. Change the value in the catalogue.
-3. Run `pnpm check`. `check:i18n` fails when a complete language lacks a key, when a catalogue holds a key English lacks, when a key's placeholders such as `{n}` differ from English, when keys are out of order, when a key is unused, and when a component writes interface text itself instead of taking it from a catalogue.
+3. Run `pnpm check`. `check:i18n` fails when a complete language lacks a key, when a catalogue file is missing, when a message is empty, when a catalogue holds a key English lacks, when a key's placeholders such as `{n}` differ from English, when keys are out of order, when a key is unused, and when a component writes interface text itself instead of taking it from a catalogue.
 4. In the pull request, say what was wrong. Add a screenshot when the new text is longer, since labels have to fit a phone.
 
 A change that adds a string adds its key to `en.json` and to every complete language's catalogue in the same pull request.
