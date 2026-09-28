@@ -106,11 +106,15 @@ export function routeLabel(route: GeoDataDownload, groups: GroupSummary[] | unde
 // whether their checksums were verified.
 export function statusLine(data: GeoData | undefined, updating: boolean, now: number, locale: string, t: Translator) {
   if (updating) return {text: t('settings.geodataUpdating'), error: false};
-  if (data?.last_error)
+  // last_error's code is the failed stage and its message is always the same, so a stage without words of its own
+  // shows its code beside the message.
+  if (data?.last_error) {
+    const {code, message} = data.last_error;
     return {
-      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(backendMessage(data.last_error.code, data.last_error.message, t), t)}),
+      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(backendMessage(code, message, t, {stage: code}), t)}),
       error: true
     };
+  }
   const at = data?.last_updated_at;
   const when = !data ? '—' : at ? relativeStart(at, locale, now) : t('settings.geodataNever');
   const checked = data?.assets.length && data.assets.every(asset => asset.verified !== undefined);
