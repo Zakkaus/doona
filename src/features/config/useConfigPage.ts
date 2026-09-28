@@ -7,7 +7,7 @@ import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
-import {pickTab, tabQuery, within} from '../../shell/route';
+import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {configMetadata, saveReason, saveView, validateReason, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
 import {configTabs, setupAvailable} from './nav';
 import {useDraftGuard} from '../../shell/draft';
@@ -99,8 +99,22 @@ export function useConfigPage({go, query}: PageProps) {
         focusLine
       }
     : null;
+  // A saved setup stays on its tab, which an emptied file's default would otherwise move away from, and offers the pages
+  // that use what it wrote, and the file itself.
   const wizardProps =
-    setup && mainSource ? {main: mainSource, editor, onDone: () => go('config', within(query, {tab: 'source', source: mainSource.id}))} : null;
+    setup && mainSource
+      ? {
+          main: mainSource,
+          editor,
+          onDone: () => go('config', within(query, {tab: 'setup'}), {replace: true}),
+          next: [
+            {id: 'nodes', label: t('nav.nodes'), href: href('nodes')},
+            {id: 'policies', label: t('nav.policies'), href: href('policies')},
+            {id: 'rules', label: t('rule.listTitle'), href: href('rules', {tab: 'list'})},
+            {id: 'source', label: t('config.openSource'), href: href('config', {tab: 'source', source: mainSource.id})}
+          ]
+        }
+      : null;
   const newSourceProps: NewSourceProps | null =
     resources?.config.create === true && resources.config.writable === true
       ? {sources, contentOffered: resources.config.content === true, refetch: config.refetch, open: id => openSource(id, null)}

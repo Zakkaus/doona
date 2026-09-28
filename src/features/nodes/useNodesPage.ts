@@ -17,7 +17,8 @@ import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {errorText, noticeText} from '../../api/error';
-import {pickTab, tabQuery} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
+import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
@@ -72,15 +73,18 @@ export function useNodesPage({go, query}: PageProps) {
     return ownedNodes(nodes.data ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
   }, [nodes.data, list, selectedId]);
   const {apply} = source;
+  // A written group and an added subscription each offer the next place to look.
+  const viewGroup = useCallback((group: string) => ({label: t('policy.viewGroup'), onAction: () => openGroup(go, group), closeOnAction: true}), [go, t]);
+  const viewNodes = (id: string) => ({label: t('nodes.viewNodes'), onAction: () => go('nodes', within('', {provider: id})), closeOnAction: true});
   const joinExistingGroup = useCallback(
     (node: Node, group: string) => {
       void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
-        if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}));
+        if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}), {action: viewGroup(group)});
         const problem = editProblem(result, t);
         if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
       });
     },
-    [apply, t]
+    [apply, t, viewGroup]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
@@ -112,15 +116,15 @@ export function useNodesPage({go, query}: PageProps) {
             void refreshing.refresh(created.id).then(
               result => {
                 if (!result) return;
-                if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}));
-                else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}));
+                if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}), {action: viewNodes(created.id)});
+                else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}), {action: viewNodes(created.id)});
               },
               error => toastFailure(error, t, t('nodes.addedRefreshFailed', {name}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})
             );
           fetchAdded();
           return;
         }
-        toast('positive', t('nodes.added', {name}));
+        toast('positive', t('nodes.added', {name}), {action: viewNodes(created.id)});
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
@@ -137,7 +141,7 @@ export function useNodesPage({go, query}: PageProps) {
         const problem = editProblem(result, t);
         if (problem) refuse(noticeText(problem, t));
         if (result.kind !== 'ok') return;
-        toast('positive', t('nodes.joined', {name: node, group}));
+        toast('positive', t('nodes.joined', {name: node, group}), {action: viewGroup(group)});
       } else if (dialog.kind === 'removeProvider') {
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));

@@ -53,9 +53,9 @@ import {PLACEABLE, useArrange} from './useArrange';
 type Model = ReturnType<typeof useArrange>;
 type Source = Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>;
 
-export function Arrange({source, groups}: {source: Source; groups: GroupSummary[] | undefined}) {
+export function Arrange({source, groups, viewGroup}: {source: Source; groups: GroupSummary[] | undefined; viewGroup: (name: string | null) => void}) {
   const t = useT();
-  const m = useArrange(source);
+  const m = useArrange(source, viewGroup);
   // The live summary of each group, for the same header the Groups tab shows.
   const live = useMemo(() => new Map((groups ?? []).map(group => [group.name, group])), [groups]);
   if (m.error) return <ErrorMessage error={m.error} onRetry={m.retry} />;

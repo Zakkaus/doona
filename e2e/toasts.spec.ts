@@ -15,6 +15,7 @@ async function failingFirstFetch(page: Page, failures: number) {
       if (fetches++ < failures) throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
       return backend.api.refreshProvider(created.id);
     };
+    backend.handlers[`DELETE providers/${created.id}`] = () => backend.api.deleteProvider(created.id);
     return created;
   };
   return {fetches: () => fetches};
@@ -45,11 +46,13 @@ test('a failed first fetch of a new subscription offers Retry, which stays until
   for (let i = 0; i < 4 && !(await retry.evaluate(button => button === document.activeElement)); i++) await page.keyboard.press('Tab');
   await expect(retry).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-t added and refreshed'})).toBeVisible();
+  const success = page.locator('.rp-toast.positive', {hasText: 'sub-t added and refreshed'});
+  await expect(success).toBeVisible();
   await expect(failure).toHaveCount(0);
   expect(backend.fetches()).toBe(2);
-  // The success toast has no action, so it times out as before.
+  // The success toast offers the new nodes, so it also waits until used.
   await page.clock.fastForward(6_000);
+  await success.getByRole('button', {name: 'View nodes', exact: true}).click();
   await expect(page.locator('.rp-toast')).toHaveCount(0);
 });
 
@@ -87,12 +90,18 @@ for (const width of [1280, 390])
     for (const middle of [boxes.icon!.middle, boxes.close.middle]) expect(Math.abs(middle - (boxes.summary.top + 10))).toBeLessThanOrEqual(1);
     expect(boxes.action!.top).toBeGreaterThanOrEqual(boxes.detail!.bottom);
     expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
-    // A toast with neither an action nor a stack behind it has no footer row, and one without a detail only its summary.
+    // A toast without a detail shows only its summary, and one with neither an action nor a stack behind it has no
+    // footer row.
     await failure.getByRole('button', {name: 'Retry', exact: true}).click();
     const success = page.locator('.rp-toast.positive');
     await expect(success).toBeVisible();
-    await expect(success.locator('.foot')).toHaveCount(0);
     await expect(success.locator('[slot="description"]')).toHaveCount(0);
+    await success.getByRole('button', {name: 'View nodes', exact: true}).click();
+    await page.getByRole('button', {name: 'Remove sub-w', exact: true}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-w', exact: true}).click();
+    const removed = page.locator('.rp-toast.positive', {hasText: 'sub-w removed'});
+    await expect(removed).toBeVisible();
+    await expect(removed.locator('.foot')).toHaveCount(0);
   });
 
 for (const width of [1280, 390])

@@ -15,7 +15,7 @@ import {offered} from '../../../api/capabilities';
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
 
-export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>) {
+export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>, viewGroup: (name: string | null) => void) {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
@@ -68,7 +68,12 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
       if (result.kind === 'invalid') setFailure(t('ui.writeInvalid', {n: result.errors}));
       if (result.kind === 'failed') setFailure(t('arrange.failed', {error: errorText(result.error, t)}));
       if (result.kind === 'ok') {
-        toast('positive', t('arrange.applied', {n: changes.length}));
+        // The written groups are where the change shows: the one group, or the list when several changed.
+        const touched = [...new Set(changes.map(change => change.group))];
+        const one = touched.length === 1 ? touched[0] : null;
+        toast('positive', t('arrange.applied', {n: changes.length}), {
+          action: {label: t(one === null ? 'policy.viewGroups' : 'policy.viewGroup'), onAction: () => viewGroup(one), closeOnAction: true}
+        });
         setChanges([]);
         guard.clear();
         setReviewing(false);
