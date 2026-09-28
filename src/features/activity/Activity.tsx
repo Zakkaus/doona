@@ -62,7 +62,7 @@ export function Activity() {
             </span>
           </div>
         </Card>
-        <CardLink href={href('connections')} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
+        <CardLink href={href('connections', {tab: 'list'})} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.connections}</span>
