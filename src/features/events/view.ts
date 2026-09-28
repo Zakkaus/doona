@@ -4,8 +4,11 @@ import {eventKindLabels, eventSummary} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
 import type {Key, Translator as LabelFn} from '../../i18n';
 import type {Help} from '../../ui/ui';
+import {href} from '../../shell/route';
+import {recordingSettingsHref} from '../shared/link';
 
-type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string; help?: Help};
+type EventLink = {id: string; label: string; href: string};
+type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string; help?: Help; links: EventLink[]};
 // The gaps that lose flow records under load are explained: whether anything needs doing depends on the reason.
 const gapHelp: Record<string, [Key, Key]> = {
   buffer_overflow: ['event.gap.overflow', 'event.gapHelp.overflow'],
@@ -14,6 +17,21 @@ const gapHelp: Record<string, [Key, Key]> = {
 export function eventHelp(event: ApiEvent, t: LabelFn): Help | undefined {
   const keys = event.event === 'flow.gap' && Object.hasOwn(gapHelp, event.data.reason) ? gapHelp[event.data.reason] : undefined;
   return keys && {title: t(keys[0]), text: t(keys[1])};
+}
+// Where an event's subject is shown: the flow record it names, the configuration a new generation was loaded from,
+// and, for a gap in the flow records, the settings that decide what is recorded and kept.
+export function eventLinks(event: ApiEvent, t: LabelFn): EventLink[] {
+  const flow = (id: string | null): EventLink[] => (id ? [{id: 'flow', label: t('event.viewFlow'), href: href('flows', {tab: 'records', id})}] : []);
+  switch (event.event) {
+    case 'flow.updated':
+      return flow(event.data.resource_id);
+    case 'flow.gap':
+      return [...flow(event.data.resource_id), {id: 'recording', label: t('ui.recordingSettings'), href: recordingSettingsHref}];
+    case 'generation.changed':
+      return [{id: 'config', label: t('event.viewConfig'), href: href('config')}];
+    default:
+      return [];
+  }
 }
 // An event never changes once received, so its row is built once per locale and the table sees the same object.
 const rows = new WeakMap<ApiEvent, {locale: string; row: EventRow}>();
@@ -28,7 +46,8 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     kind: event.event,
     kindText: enumLabel(eventKindLabels, event.event, t),
     summary: t(summary.key, summary.params),
-    help: eventHelp(event, t)
+    help: eventHelp(event, t),
+    links: eventLinks(event, t)
   };
   rows.set(event, {locale, row});
   return row;

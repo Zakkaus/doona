@@ -620,6 +620,8 @@
   "event.resource": "{resource}",
   "event.summary": "Summary",
   "event.unavailable": "This backend does not provide an event stream",
+  "event.viewConfig": "View configuration",
+  "event.viewFlow": "View flow record",
   "event.withoutRuntime": "Exclude runtime updates",
   "flow.addRule": "Add a rule for this target",
   "flow.allStates": "All states",

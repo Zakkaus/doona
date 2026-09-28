@@ -515,6 +515,8 @@
   "event.resource": "{resource}",
   "event.summary": "摘要",
   "event.unavailable": "此后端不提供事件流",
+  "event.viewConfig": "查看配置",
+  "event.viewFlow": "查看流程记录",
   "event.withoutRuntime": "排除运行状态更新",
   "flow.addRule": "为此目标新建规则",
   "flow.allStates": "全部状态",

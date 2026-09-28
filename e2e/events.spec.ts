@@ -111,3 +111,33 @@ test('a long gap summary on a phone keeps its help button in view', async ({page
   await help.click();
   await expect(page.getByRole('dialog').getByText('Some flow records could not be kept.', {exact: false})).toBeVisible();
 });
+
+test('an event row links the flow it names, the configuration and the recording settings', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  const flow = (await api.flows()).flows[0].id;
+  // Back on the page reopens the stream; each opening gets the same events.
+  await page.route(/\/api\/v1\/events(\?.*)?$/, route =>
+    fulfillStream(route, [
+      {id: 'events:1', event: 'flow.updated', data: {...data, resource_id: flow, revision: 1, href: `/api/v1/flows/${flow}`}},
+      {id: 'events:2', event: 'generation.changed', data: {...data, previous_generation_id: '40', generation_id: '41'}},
+      {id: 'events:3', event: 'flow.gap', data: {...data, resource_id: null, reason: 'evicted', dropped_records: '2'}}
+    ])
+  );
+  await page.goto('/#/events');
+  const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  await grid.getByRole('gridcell', {name: 'Flow updated', exact: true}).click();
+  await page.getByRole('link', {name: 'View flow record', exact: true}).click();
+  await expect(page).toHaveURL(new RegExp(`#/flows\\?tab=records&id=${flow}$`));
+  await expect(page.locator('.rp-panel')).toBeVisible();
+  await page.goBack();
+  await grid.getByRole('gridcell', {name: 'Configuration activated', exact: true}).click();
+  await page.getByRole('link', {name: 'View configuration', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config$/);
+  await page.goBack();
+  await grid.getByRole('gridcell', {name: 'Flow records lost', exact: true}).click();
+  await page.getByRole('link', {name: 'Recording settings', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
+});

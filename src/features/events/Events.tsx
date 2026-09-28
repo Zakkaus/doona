@@ -1,6 +1,6 @@
 import {useCallback, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, DataTable, HelpRow, LabeledSelect, Light, ErrorMessage, TextTooltip, type TableColumn, Kv} from '../../ui/ui';
+import {Button, DataTable, HelpRow, LabeledSelect, Light, Link, ErrorMessage, TextTooltip, type TableColumn, Kv} from '../../ui/ui';
 import {useEventsPage} from './useEventsPage';
 import Download from '../../ui/icons/Download';
 
@@ -39,17 +39,28 @@ export function Events() {
     ],
     [t]
   );
-  // The summary column cuts a long summary; a pressed row shows the whole event.
+  // The summary column cuts a long summary; a pressed row shows the whole event and links what it names.
   const detail = useCallback(
     (event: EventRow) => (
-      <Kv
-        inline
-        items={[
-          [t('ui.time'), event.timestamp],
-          [t('event.kind'), event.kindText],
-          [t('event.summary'), event.summary]
-        ]}
-      />
+      <>
+        <Kv
+          inline
+          items={[
+            [t('ui.time'), event.timestamp],
+            [t('event.kind'), event.kindText],
+            [t('event.summary'), event.summary]
+          ]}
+        />
+        {event.links.length > 0 && (
+          <div className="rp-cluster">
+            {event.links.map(link => (
+              <Link key={link.id} appearance="button" small href={link.href}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </>
     ),
     [t]
   );

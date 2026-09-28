@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ApiEvent} from '../../api/model';
 import {localTime} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
-import {eventHelp, eventsExport, eventsView} from './view';
+import {eventHelp, eventLinks, eventsExport, eventsView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('exports only the selected event kind while preserving raw data', () => {
@@ -61,4 +61,19 @@ it('explains the gaps that lose flow records and leaves other events alone', () 
   expect(eventHelp(gap('buffer_overflow'), t)).toEqual({title: t('event.gap.overflow'), text: t('event.gapHelp.overflow')});
   expect(eventHelp(gap('evicted'), t)).toEqual({title: t('event.gap.evicted'), text: t('event.gapHelp.evicted')});
   expect(eventHelp(gap('sampled'), t)).toBeUndefined();
+});
+
+it('links the flow an event names, the configuration of a new generation and the recording settings of a gap', () => {
+  const data = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z'};
+  const links = (event: ApiEvent) => eventLinks(event, t).map(link => [link.label, link.href]);
+  const flow = ['View flow record', '#/flows?tab=records&id=f1'];
+  const recording = ['Recording settings', '#/settings?card=runtime'];
+  expect(links({id: '1', event: 'flow.updated', data: {...data, resource_id: 'f1', revision: 2, href: '/api/v1/flows/f1'}} as ApiEvent)).toEqual([flow]);
+  const gap = (resource_id: string | null): ApiEvent => ({id: '2', event: 'flow.gap', data: {...data, resource_id, reason: 'evicted', dropped_records: '1'}});
+  expect(links(gap('f1'))).toEqual([flow, recording]);
+  expect(links(gap(null))).toEqual([recording]);
+  expect(links({id: '3', event: 'generation.changed', data: {...data, previous_generation_id: '1', generation_id: '2'}} as ApiEvent)).toEqual([
+    ['View configuration', '#/config']
+  ]);
+  expect(links({id: '4', event: 'stream.ready', data} as ApiEvent)).toEqual([]);
 });
