@@ -132,6 +132,21 @@ it('explains a degraded datapath by whether the runtime is degraded too, and an 
   expect(help(datapathFields(datapath, 'unknown', t, 'en-US'), 'ov.f.kind')).toBeUndefined();
 });
 
+it('reads hooks an engine does not check as not verified, and says why', () => {
+  const unchecked = {
+    ...healthy,
+    ebpf: {...healthy.ebpf!, hooks: 'unknown' as const}
+  };
+  const view = overviewView({version, datapath: unchecked}, loading, 'en-US', t).datapath;
+  expect(field(view.fields, t('ov.f.hooks'))).toMatchObject({
+    value: t('ov.v.notVerified'),
+    help: {title: t('ov.v.notVerified'), text: t('ov.notVerifiedHelp', {hooks: 'cgroup, sk_lookup, and dae0peer'})}
+  });
+  // An engine doona does not know gives no reason, so the value stays unknown.
+  const other = overviewView({datapath: unchecked}, loading, 'en-US', t).datapath;
+  expect(field(other.fields, t('ov.f.hooks'))).toMatchObject({value: t('ov.v.unknown'), help: {title: t('ov.v.unknown'), text: t('ov.unknownHelp')}});
+});
+
 it('explains the cgroup scope by its value and leaves out an unknown one', () => {
   for (const [scope, key] of [
     ['service', 'ov.cgroupHelp.service'],
