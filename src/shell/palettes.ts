@@ -16,7 +16,8 @@ export const palettes = [
   {id: 'antd/antd', group: 'palette.antd', label: 'palette.antd', desc: 'palette.defaultDark'},
   {id: 'arco/arco', group: 'palette.bytedance', label: 'palette.arco', desc: 'palette.lightDark'},
   {id: 'semi/semi', group: 'palette.bytedance', label: 'palette.semi', desc: 'palette.lightDark'},
-  {id: 'glass/glass', group: 'palette.glassName', label: 'palette.glassName', desc: 'palette.glass'}
+  {id: 'glass/glass', group: 'palette.glassName', label: 'palette.glassName', desc: 'palette.glass'},
+  {id: 'qiangguo/qiangguo', group: 'palette.qiangguo', label: 'palette.qiangguo', desc: 'palette.qiangguoModes'}
 ] as const satisfies ReadonlyArray<{id: `${string}/${string}`; group: Key; label: Key; desc: Key}>;
 
 export type PaletteId = (typeof palettes)[number]['id'];

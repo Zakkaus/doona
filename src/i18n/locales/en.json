@@ -1148,6 +1148,8 @@
   "palette.moon": "Moon",
   "palette.nord": "Nord",
   "palette.nordVariants": "Snow Storm / Polar Night",
+  "palette.qiangguo": "China",
+  "palette.qiangguoModes": "Clock-in / All-nighter",
   "palette.rosePine": "Rosé Pine",
   "palette.semi": "Semi Design",
   "policy.actionFailed": "Could not complete the action on {name}: {error}",

@@ -1,0 +1,155 @@
+/* A parody palette with no upstream, so the official-values rule does not apply.
+   Clock-in (light) follows a patriotic proxy app: pale rice-paper pages, white cards with the Great Wall faint in a
+   corner, and a flag-red banner with the five stars across the top. All-nighter (dark) is a red and gold poster after
+   midnight, with the poster's sun rays behind the page. */
+:root[data-family='qiangguo'] {
+  --rp-base: #fffaf6;
+  --rp-surface: #f8ebe5;
+  --rp-overlay: #f3dcd3;
+  --rp-muted: #a8786b;
+  --rp-subtle: #7a2e22;
+  --rp-text: #2b0a0a;
+  --rp-love: #b0121a;
+  --rp-gold: #7d4d00;
+  --rp-rose: #d9542b;
+  --rp-pine: #b0121a;
+  --rp-foam: #1d6322;
+  --rp-iris: #8e44ad;
+  --rp-c1: #d7263d;
+  --rp-c2: #f28c28;
+  --rp-c3: #f2c14e;
+  --rp-c4: #9b59b6;
+  --rp-c5: #e84a7f;
+  --rp-c6: #b22222;
+  --rp-c7: #3b82f6;
+  --rp-c8: #c49a6c;
+  --rp-hl-low: #fbefea;
+  --rp-hl-med: #f2d3c9;
+  --rp-hl-high: #e3b2a4;
+  --rp-shadow: 0 2px 10px rgba(200, 22, 29, 0.08);
+  --rp-on-accent: #ffffff;
+  --rp-line: var(--rp-hl-med);
+  --rp-fill: var(--rp-hl-med);
+  --rp-subtle-text: var(--rp-text);
+  /* Tones on a tile are just under 4.5:1, so tiles take the body text. */
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-notice-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+}
+:root[data-family='qiangguo'][data-scheme='dark'] {
+  --rp-base: #2a0000;
+  --rp-surface: #4a0004;
+  --rp-overlay: #6a0008;
+  --rp-muted: #b8862b;
+  --rp-subtle: #f5c542;
+  --rp-text: #ffd700;
+  --rp-love: #ff8a7a;
+  --rp-gold: #fff3c4;
+  --rp-rose: #ffb38a;
+  --rp-pine: #ff6b5b;
+  --rp-foam: #b8f2a0;
+  --rp-iris: #ffc2dc;
+  --rp-c1: #ff3b30;
+  --rp-c2: #ffd700;
+  --rp-c3: #ff9f43;
+  --rp-c4: #fff3c4;
+  --rp-c5: #ff6b5b;
+  --rp-c6: #f5c542;
+  --rp-c7: #ffb38a;
+  --rp-c8: #ffffff;
+  --rp-hl-low: #3a0002;
+  --rp-hl-med: #8a0a10;
+  --rp-hl-high: #b8862b;
+  --rp-shadow: 0 0 0 1px #b8862b, 0 0 18px rgba(255, 59, 48, 0.35);
+  --rp-on-accent: #2a0000;
+  --rp-line: rgba(255, 215, 0, 0.3);
+  --rp-fill: #5a0006;
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-negative-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
+}
+/* The banner: flag red with the five stars, and the top bar's own controls read in the flag's gold. After midnight
+   the same banner in the red of a lantern at night. */
+:root[data-family='qiangguo'] {
+  --qg-night-banner: linear-gradient(100deg, #3a0003, #6e0a0f 45%, #4a0004);
+}
+:root[data-family='qiangguo'] .rp-top {
+  --rp-text: #fff6d5;
+  --rp-subtle: #ffe3a3;
+  --rp-muted: #ffc9a8;
+  --rp-accent: #ffde00;
+  --rp-base: #a50f15;
+  --rp-surface: #b8141b;
+  --rp-overlay: #8e0c11;
+  --rp-hl-med: #ff6b5b;
+  color: var(--rp-text);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Cdefs%3E%3Cpath id='s' d='M0-1 .588.809-.951-.309H.951L-.588.809Z' fill='%23ffde00'/%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(25 25) scale(15)'/%3E%3Cuse href='%23s' transform='translate(50 10) rotate(23) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 20) rotate(46) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 35) rotate(70) scale(5)'/%3E%3Cuse href='%23s' transform='translate(50 45) rotate(21) scale(5)'/%3E%3C/svg%3E")
+      no-repeat 210px 50% / 84px 56px,
+    linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
+}
+:root[data-family='qiangguo'] .rp-hubbar {
+  background: linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
+  --rp-text: #fff6d5;
+  --rp-subtle: #ffe3a3;
+  --rp-accent: #ffde00;
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-top {
+  --rp-base: #3a0003;
+  --rp-surface: #5c0006;
+  --rp-overlay: #2a0000;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Cdefs%3E%3Cpath id='s' d='M0-1 .588.809-.951-.309H.951L-.588.809Z' fill='%23ffde00'/%3E%3C/defs%3E%3Cuse href='%23s' transform='translate(25 25) scale(15)'/%3E%3Cuse href='%23s' transform='translate(50 10) rotate(23) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 20) rotate(46) scale(5)'/%3E%3Cuse href='%23s' transform='translate(60 35) rotate(70) scale(5)'/%3E%3Cuse href='%23s' transform='translate(50 45) rotate(21) scale(5)'/%3E%3C/svg%3E")
+      no-repeat 210px 50% / 84px 56px,
+    var(--qg-night-banner);
+  box-shadow: 0 1px 0 rgba(255, 215, 0, 0.35);
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-hubbar {
+  background: var(--qg-night-banner);
+  box-shadow: 0 -1px 0 rgba(255, 215, 0, 0.35);
+}
+:root[data-family='qiangguo'] .rp-top .rp-brand-text > span:first-child {
+  background: linear-gradient(90deg, #ffde00, #fff6d5, #ffde00);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@media (max-width: 1023px) {
+  :root[data-family='qiangguo'] .rp-top {
+    background: linear-gradient(100deg, #b8141b, #de2910 45%, #c8161d);
+  }
+  :root[data-family='qiangguo'][data-scheme='dark'] .rp-top {
+    background: var(--qg-night-banner);
+  }
+}
+/* The Great Wall faint in the corner of each card, as on the app's cards: j4p4n's "Great Wall of China" from
+   Openclipart (public domain), tinted flag red by day and gold after midnight, and faded towards the text. */
+:root[data-family='qiangguo'] .rp-card {
+  background:
+    url('./qiangguo-wall-light.webp') no-repeat right bottom / min(60%, 300px) auto,
+    var(--rp-base);
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-card {
+  background-image: url('./qiangguo-wall-dark.webp');
+}
+/* Titles in bold flag red, like the app's section heads; after midnight they turn gold and glow. */
+:root[data-family='qiangguo'] h1 {
+  color: #b0121a;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+:root[data-family='qiangguo'][data-scheme='dark'] h1 {
+  color: #ffd700;
+  text-shadow:
+    2px 2px 0 #7a0a06,
+    0 0 12px rgba(255, 215, 0, 0.45);
+}
+/* The poster's sun, faint behind the dark page under the banner. */
+:root[data-family='qiangguo'][data-scheme='dark'] body {
+  background:
+    repeating-conic-gradient(from -8deg at 8% -12%, rgba(255, 59, 48, 0.1) 0deg 5deg, transparent 5deg 12deg) fixed,
+    var(--rp-base);
+}

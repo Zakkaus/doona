@@ -55,3 +55,10 @@ path = ["install/gentoo/**"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Gentoo Authors"
 SPDX-License-Identifier = "GPL-2.0-only"
+
+# j4p4n's Openclipart drawing is in the public domain; the crop and tint are dedicated to it as well.
+[[annotations]]
+path = ["src/ui/styles/palettes/qiangguo-wall-*.webp"]
+precedence = "override"
+SPDX-FileCopyrightText = "NOASSERTION"
+SPDX-License-Identifier = "CC0-1.0"

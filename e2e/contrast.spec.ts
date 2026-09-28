@@ -16,7 +16,8 @@ const palettes = {
   'glass/glass': 0,
   'antd/antd': 1,
   'arco/arco': 1,
-  'semi/semi': 1
+  'semi/semi': 1,
+  'qiangguo/qiangguo': 1
 } satisfies Record<PaletteId, 0 | 1>;
 const roles = ['accent', 'negative', 'notice', 'positive', 'info'];
 // Page-level secondary text reads the palette's own subtle, a known exception on the base and surface as in the a11y
