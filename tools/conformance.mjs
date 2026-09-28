@@ -9,7 +9,7 @@ import {parse} from 'yaml';
 let contract, operations, byId, schemas;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
 const firstPaths = ['/api', '/api/v1/version', '/api/v1/capabilities'];
-const resourceByOperation = {
+export const resourceByOperation = {
   getConfig: 'config',
   getConfigSource: 'config',
   getRuntime: 'runtime',
@@ -71,6 +71,18 @@ function schemaErrors(schema, body) {
   }
   if (validate(body)) return [];
   return validate.errors.map(error => `${error.instancePath || '/'} ${error.message}`);
+}
+
+/** Body-only check for an in-process backend without headers: the status must be listed and the body must match its schema. */
+export function validateBody({operationId, status, body}) {
+  const operation = byId.get(operationId);
+  if (!operation) throw new Error('Unknown operationId');
+  const listed = operation.responses[String(status)];
+  if (!listed) return [`HTTP ${status} is not listed`];
+  const response = resolve(listed);
+  if (!response.content) return body === undefined ? [] : ['the contract defines no response body'];
+  const schema = response.content['application/json']?.schema;
+  return schema ? schemaErrors(schema, body) : ['no JSON response schema'];
 }
 
 function check(operation, suffix, status, detail, variant = '') {
