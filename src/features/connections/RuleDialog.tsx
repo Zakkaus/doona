@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Segmented} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Segmented, StaticField} from '../../ui/ui';
 import type {useConnectionRule} from './useConnectionRule';
 
 export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRule>['dialog']}) {
@@ -45,13 +45,17 @@ export function RuleDialog({dialog}: {dialog: ReturnType<typeof useConnectionRul
           )}
           <div className="rp-toolbar top">
             <LabeledSelect isDisabled={dialog.busy} label={t('ui.outbound')} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
-            <LabeledSelect
-              isDisabled={dialog.busy || !dialog.positions.length}
-              label={t('rule.position')}
-              value={dialog.before}
-              onChange={dialog.setBefore}
-              items={dialog.positions}
-            />
+            {dialog.positions.length === 1 ? (
+              <StaticField label={t('rule.position')} value={dialog.positions[0].label} description={dialog.positions[0].desc} />
+            ) : (
+              <LabeledSelect
+                isDisabled={dialog.busy || !dialog.positions.length}
+                label={t('rule.position')}
+                value={dialog.before}
+                onChange={dialog.setBefore}
+                items={dialog.positions}
+              />
+            )}
           </div>
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
           {dialog.unplaceable && <p className="rp-note">{t('conn.ruleNoPosition')}</p>}

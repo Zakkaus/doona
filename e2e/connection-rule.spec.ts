@@ -84,7 +84,11 @@ test('a connection with no recorded rule only adds, first in the list', async ({
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.getByRole('dialog', {name: 'Add rule'}).getByRole('button', {name: /Insert$/})).toContainText('First');
+  // The one place it can go reads as text, with the rule it goes before as help, not as a picker.
+  const position = page.getByRole('dialog', {name: 'Add rule'}).getByRole('group', {name: 'Insert', exact: true});
+  await expect(position).toContainText('First');
+  await expect(position).toHaveAccessibleDescription(/^pname\(NetworkManager/);
+  await expect(position.getByRole('button')).toHaveCount(0);
 });
 
 test('without a writable configuration only adding a rule is hidden; showing the matched rule only reads', async ({page}) => {
@@ -248,7 +252,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toContainText('The matched rule changed; the rule will be added at the earliest place doona can write.');
-  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('First');
+  await expect(dialog.getByRole('group', {name: 'Insert', exact: true})).toContainText('First');
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toHaveCount(0);
