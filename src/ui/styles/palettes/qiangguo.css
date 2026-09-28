@@ -1,7 +1,7 @@
 /* A parody palette with no upstream, so the official-values rule does not apply.
    Clock-in (light) follows a patriotic proxy app: a flag-red hero at the top of the page fading into pale rice paper,
-   and white cards with the Great Wall faint in a corner. All-nighter (dark) is a red and gold poster after midnight,
-   with the same hero at night. */
+   and white cards with a landmark faint in a corner: the Great Wall, Mount Tai, the Three Gorges or Sun Moon Lake.
+   All-nighter (dark) is a red and gold poster after midnight, with the same hero at night. */
 :root[data-family='qiangguo'] {
   --rp-base: #fffaf6;
   --rp-surface: #f8ebe5;
@@ -239,7 +239,7 @@
     }
   }
 }
-/* The Great Wall faint in the corner of each card, as on the app's cards: j4p4n's "Great Wall of China" from
+/* A landmark faint in the corner of each card, as on the app's cards. The first is j4p4n's "Great Wall of China" from
    Openclipart (public domain), tinted flag red by day and gold after midnight, and faded towards the text. */
 :root[data-family='qiangguo'] .rp-card {
   background:
@@ -248,6 +248,26 @@
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card {
   background-image: url('./qiangguo-wall-dark.webp');
+}
+/* Neighbouring cards take turns with Mount Tai's South Gate of Heaven, Kuimen in the Three Gorges and Sun Moon Lake,
+   cut from photographs into the same strokes (sources in NOTICE). */
+:root[data-family='qiangguo'] .rp-card:nth-child(4n + 2) {
+  background-image: url('./qiangguo-taishan-light.webp');
+}
+:root[data-family='qiangguo'] .rp-card:nth-child(4n + 3) {
+  background-image: url('./qiangguo-gorges-light.webp');
+}
+:root[data-family='qiangguo'] .rp-card:nth-child(4n) {
+  background-image: url('./qiangguo-lake-light.webp');
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n + 2) {
+  background-image: url('./qiangguo-taishan-dark.webp');
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n + 3) {
+  background-image: url('./qiangguo-gorges-dark.webp');
+}
+:root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n) {
+  background-image: url('./qiangguo-lake-dark.webp');
 }
 /* Titles in bold flag red, like the app's section heads; gold after midnight. */
 :root[data-family='qiangguo'] h1 {
