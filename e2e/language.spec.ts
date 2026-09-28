@@ -3,7 +3,7 @@ import {LANGS, LOCALE, loadLanguage, translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
 test.beforeAll(() => Promise.all(LANGS.map(([lang]) => loadLanguage(lang))));
-for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
+for (const [lang] of LANGS) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
     test('renders navigation without browser errors', async ({page}) => {

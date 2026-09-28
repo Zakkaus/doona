@@ -1,5 +1,5 @@
-// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts, and
-// the right-to-left scripts from src/i18n/direction.ts.
+// Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts, the
+// language locales and default from src/i18n/languages.ts, and the right-to-left scripts from src/i18n/direction.ts.
 (function () {
   var read = function (key) {
     try {
@@ -19,7 +19,8 @@
   d.dataset.family = parts[0];
   d.dataset.flavour = parts[1];
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
-  d.lang = lang === 'zh-CN' ? 'zh-CN' : lang === 'en' ? 'en-US' : 'zh-TW';
+  var locales = '__LOCALES__';
+  d.lang = Object.hasOwn(locales, lang) ? locales[lang] : '__DEFAULT_LOCALE__';
   // The direction as pageDirection in src/i18n/direction.ts decides it: right to left in the mirrored layout, else the
   // locale's text info, else its likely script.
   var mirrored = read('doona-mirror') === 'on';

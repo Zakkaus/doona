@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import type {Lang} from '../../i18n';
+import {languages} from '../../i18n';
 import {DOCS_URL, docsHref} from './docs';
 
 it('links the page that holds the anchor, in the UI language', () => {
@@ -13,6 +13,6 @@ it('links the docs home without an anchor', () => {
   expect(docsHref('en')).toBe(`${DOCS_URL}en/`);
 });
 
-it('falls back to English for a UI language the docs do not have', () => {
-  expect(docsHref('ja' as Lang, 'sign-in')).toBe(`${DOCS_URL}en/troubleshooting.html#sign-in`);
+it('links each language to a docs folder the docs site has', () => {
+  for (const {id} of languages) expect(docsHref(id)).toMatch(new RegExp(`^${DOCS_URL}(zh-TW|zh-CN|en)/$`));
 });

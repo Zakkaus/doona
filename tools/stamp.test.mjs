@@ -2,13 +2,15 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {expect, it} from 'vitest';
 import {DEFAULT_PALETTE, palettes} from '../src/shell/palettes';
-import {LANGS, LOCALE} from '../src/i18n';
+import {DEFAULT_LANG, LANGS, LOCALE} from '../src/i18n';
 import {pageDirection, rtlScripts, textDirection} from '../src/i18n/direction';
 
 // The same injection vite.config.ts makes at build.
 const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8')
   .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
   .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
+  .replace("'__LOCALES__'", JSON.stringify(LOCALE))
+  .replace("'__DEFAULT_LOCALE__'", JSON.stringify(LOCALE[DEFAULT_LANG]))
   .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
 // `intl` stands in for the engine's Intl; the script's own context has the real one.
 const prepaint = (stored, dark, intl) => {
@@ -45,6 +47,10 @@ it('keeps a supported palette and follows the system for an invalid scheme', () 
 
 it('stamps the language and direction the app sets for every language', () => {
   for (const [lang] of LANGS) expect(prepaint({'doona-lang': lang}, false)).toMatchObject({lang: LOCALE[lang], dir: textDirection(LOCALE[lang])});
+});
+
+it('stamps the default language for a missing or unknown one', () => {
+  for (const lang of [null, 'ja', 'en-US', 'constructor', '__proto__']) expect(prepaint({'doona-lang': lang}, false).lang).toBe(LOCALE[DEFAULT_LANG]);
 });
 
 it('reads the direction from the text info, or else from the likely script', () => {
