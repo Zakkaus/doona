@@ -12,6 +12,7 @@ import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dns
 import {pickTab, within, tabQuery} from '../../shell/route';
 import {errorText} from '../../api/error';
 import {cacheCard, cacheCardState} from './cache';
+import {ruleSeedHref} from '../shared/link';
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -195,10 +196,15 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
   const types = capabilities.data?.resources.dns_query.record_types;
   const view = useMemo(() => dnsLogView(data, enabled, t, types), [data, enabled, t, types]);
   const detail = useMemo(() => dnsLogDetail(data, selected, locale, t), [data, selected, locale, t]);
+  // A new DNS rule for the record's domain needs the DNS rules tab and a configuration doona can write.
+  const resources = capabilities.data?.resources;
+  const canAddRule =
+    offered(resources, 'dns_rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   return {
     ...view,
     detail,
     detailTitle: detail?.title ?? '',
+    ruleHref: detail && canAddRule ? ruleSeedHref({kind: 'qnameSuffix', value: detail.title.replace(/\.$/, '')}, 'dns') : null,
     name,
     newerWaiting,
     setName,

@@ -13,3 +13,11 @@ it('round trips IPv6 and reserved URL characters without reinterpreting the cond
   expect(parseRuleSeed('domainSuffix')).toBeNull();
   expect(parseRuleSeed(null)).toBeNull();
 });
+
+it('seeds a DNS request rule on the DNS tab, readable only with the DNS condition kinds', () => {
+  const href = ruleSeedHref({kind: 'qnameSuffix', value: 'example.com'}, 'dns');
+  const params = new URLSearchParams(href.split('?')[1]);
+  expect(params.get('tab')).toBe('dns');
+  expect(parseRuleSeed(params.get('add'), ['qnameSuffix', 'qnameFull'])).toEqual({kind: 'qnameSuffix', value: 'example.com'});
+  expect(parseRuleSeed(params.get('add'))).toBeNull();
+});

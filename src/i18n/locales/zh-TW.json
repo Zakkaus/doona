@@ -451,6 +451,7 @@
   "dns.logUnavailable": "此後端不提供解析記錄",
   "dns.miss": "快取未命中",
   "dns.negative": "負快取",
+  "dns.newRule": "為此網域新增 DNS 規則",
   "dns.newerWaiting": "有較新的記錄等待載入。重新整理會取代目前已載入的記錄。",
   "dns.noAnswers": "沒有回答記錄",
   "dns.noTypes": "此後端未提供可查詢的記錄類型",

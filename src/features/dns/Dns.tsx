@@ -23,6 +23,7 @@ import {
   Card,
   cardClass,
   HelpRow,
+  Link,
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
@@ -253,6 +254,13 @@ function DnsLog({enabled, initialName}: {enabled: boolean | undefined; initialNa
         <DetailPanel open={!!vm.detail} title={vm.detailTitle} onClose={() => vm.setSelected(null)}>
           {vm.detail && (
             <>
+              {vm.ruleHref && (
+                <div className="rp-cluster">
+                  <Link appearance="button" small href={vm.ruleHref}>
+                    {t('dns.newRule')}
+                  </Link>
+                </div>
+              )}
               <Kv inline items={vm.detail.fields} />
               {vm.detail.answers.length ? (
                 <div className="rp-list">

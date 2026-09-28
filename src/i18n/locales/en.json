@@ -553,6 +553,7 @@
   "dns.logUnavailable": "This backend does not provide a resolution log",
   "dns.miss": "Cache miss",
   "dns.negative": "Negative cache",
+  "dns.newRule": "Add a DNS rule for this domain",
   "dns.newerWaiting": "Newer records are waiting. Refresh replaces the loaded records.",
   "dns.noAnswers": "No answers",
   "dns.noTypes": "This backend offers no record types to query",

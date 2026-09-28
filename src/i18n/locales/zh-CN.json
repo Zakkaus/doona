@@ -451,6 +451,7 @@
   "dns.logUnavailable": "此后端不提供解析记录",
   "dns.miss": "缓存未命中",
   "dns.negative": "负缓存",
+  "dns.newRule": "为此域名新建 DNS 规则",
   "dns.newerWaiting": "有较新的记录等待加载。刷新会替换当前已加载的记录。",
   "dns.noAnswers": "暂无应答记录",
   "dns.noTypes": "此后端未提供可查询的记录类型",

@@ -68,3 +68,21 @@ test('a DNS request rule is added through the source splice and removed again', 
   await expect(request).toHaveCount(5);
   expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).not.toContain('qtype(AAAA)');
 });
+test('a resolution record opens the DNS request rule dialog with its domain prefilled', async ({page}) => {
+  await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/dns?tab=log');
+  const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
+  const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
+  await first.click();
+  await page.locator('.rp-panel').getByRole('link', {name: 'Add a DNS rule for this domain', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?.*tab=dns/);
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue(name);
+  await expect(dialog).toContainText(`qname(suffix: ${name})`);
+  // Only the request list takes the seed.
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).not.toHaveURL(/add=/);
+});
