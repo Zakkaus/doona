@@ -8,7 +8,7 @@ const bar = (page: Page) => page.getByRole('navigation', {name: 'Sections'});
 
 test('each hub opens its first page, then the page last seen in it', async ({page}) => {
   await page.goto('/#/activity');
-  await expect(bar(page).getByRole('link', {name: 'Overview'})).toHaveAttribute('aria-current', 'page');
+  await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
   await bar(page).getByRole('link', {name: 'Traffic'}).click();
   await expect(page).toHaveURL(/#\/connections$/);
   await page.locator('.rp-hubnav').getByText('Logs', {exact: true}).click();
@@ -21,7 +21,7 @@ test('each hub opens its first page, then the page last seen in it', async ({pag
   await expect(page).toHaveURL(/#\/logs$/);
   // The memory lasts the session, through a reload.
   await page.reload();
-  await bar(page).getByRole('link', {name: 'Overview'}).click();
+  await bar(page).getByRole('link', {name: 'Activity'}).click();
   await expect(page).toHaveURL(/#\/activity$/);
   for (const box of await bar(page)
     .getByRole('link')
@@ -225,7 +225,7 @@ test.describe('desktop', () => {
     await page.goto('/#/overview');
     const sections = page.locator('.rp-side [data-group]');
     await expect(sections).toHaveCount(4);
-    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Overview', 'Traffic', 'Routing', 'Settings']);
+    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Activity', 'Traffic', 'Routing', 'Settings']);
     for (const [index, hub] of hubs.entries())
       expect(
         await sections
@@ -388,7 +388,7 @@ test.describe('360px actions', () => {
     // A same-origin page before the app stands for wherever the user came from.
     await page.goto('/logo.svg');
     await page.goto('/#/overview');
-    await expect(bar(page).getByRole('link', {name: 'Overview'})).toHaveAttribute('aria-current', 'page');
+    await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
     const entries = await page.evaluate(() => history.length);
     const pages = page.locator('.rp-hubnav');
     for (const [where, name] of [
@@ -400,7 +400,7 @@ test.describe('360px actions', () => {
       [pages, 'Nodes'],
       [bar(page), 'Settings'],
       [pages, 'Configuration'],
-      [bar(page), 'Overview'],
+      [bar(page), 'Activity'],
       [pages, 'Activity']
     ] as const)
       await where.getByRole('link', {name, exact: true}).click();
