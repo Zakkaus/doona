@@ -7,12 +7,14 @@ import type {Api} from '../api/api';
 import type {ApiEvent} from '../api/model';
 import {ApiError} from '../api/error';
 import {inflight, normalizeResourceKey, type RequestLease, type ResourceKey} from '../api/inflight';
-import {shouldRefetch} from '../api/invalidation';
+import {shouldRefetch, type Reconnected} from '../api/invalidation';
 import {replaceEqualDeep} from './share';
 
 export type RefreshOutcome = {key: string} & ({ok: true} | {ok: false; error: Error});
-// Subscribes to the events that bring a fetch forward; returns the unsubscribe.
-export type EventFeed = (listener: (event: ApiEvent, reconnected: boolean) => void) => () => void;
+// Subscribes to the events that bring a fetch forward, and calls `onBaseline` once a first read may start: after
+// the stream is ready, so no change falls between the read and the stream. While a stream stays silent it calls
+// again at a slow cadence, for the resources that follow events alone. Returns the unsubscribe.
+export type EventFeed = (listener: (event: ApiEvent, reconnected: Reconnected) => void, onBaseline: () => void) => () => void;
 export type Resource<T> = {
   key: ResourceKey;
   every?: number;
@@ -313,14 +315,19 @@ function createWatcher<T>(
       else load();
     }
   };
+  let started = false;
+  const start = () => {
+    if (started && every > 0) return;
+    started = true;
+    if (document.hidden) dirty = true;
+    else load();
+  };
+  document.addEventListener('visibilitychange', visibility);
   const unsubscribe = events
     ? events((event, reconnected) => {
-        if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected);
-      })
-    : () => {};
-  document.addEventListener('visibilitychange', visibility);
-  if (document.hidden) dirty = true;
-  else load();
+        if (shouldRefetch(key[0], event, reconnected) && (acceptEvent?.(event) ?? true)) invalidate(reconnected !== false);
+      }, start)
+    : (start(), () => {});
   return {
     refetch,
     invalidate,

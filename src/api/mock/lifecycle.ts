@@ -15,6 +15,7 @@ import type {
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import {found} from './common';
+import {eventKinds} from '../selectors';
 import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
 
@@ -236,7 +237,8 @@ export function createLifecycle(
   async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     if (signal?.aborted) return;
     if (!eventsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Events are unavailable');
-    const filter = JSON.stringify([...new Set(kinds ?? [])].sort());
+    // No `kinds` means every kind, so naming them all keeps the cursor.
+    const filter = JSON.stringify([...new Set(kinds?.length ? kinds : eventKinds)].sort());
     const emit = (event: ApiEvent) => {
       if (event.event === 'stream.ready' || !kinds?.length || kinds.includes(event.event))
         onEvent({...structuredClone(event), id: issueCursor('events', filter, Number(event.id.split(':')[1]))});

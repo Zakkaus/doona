@@ -8,6 +8,17 @@ import {refetchResource, watchResource} from './resourceCore';
 import type {ApiEvent, EventOptions} from '../api/model';
 
 const disposers: Array<() => void> = [];
+const ready = (id: string): ApiEvent => ({id, event: 'stream.ready', data: {instance_id: 'i', observed_at: ''}});
+const pending = () => new Promise<void>(() => {});
+function watchConfig(api: ReturnType<typeof createMockApi>, fetch: () => Promise<unknown>) {
+  const resource = watchResource(
+    api,
+    {key: ['config'], every: 0, fetch, events: (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline})},
+    () => {}
+  );
+  disposers.push(resource.dispose);
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
@@ -133,13 +144,19 @@ it('leaves history and connection polling on their own cadence under runtime hea
     const fetch = vi.fn(async () => name);
     const resource = watchResource(
       api,
-      {key: [name as 'trafficHistory' | 'memoryHistory' | 'connections'], every: 5000, fetch, events: listener => subscribeEvents(api, listener)},
+      {
+        key: [name as 'trafficHistory' | 'memoryHistory' | 'connections'],
+        every: 5000,
+        fetch,
+        events: (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline})
+      },
       () => {}
     );
     disposers.push(resource.dispose);
     return fetch;
   });
   await vi.advanceTimersByTimeAsync(0);
+  options.onEvent(ready('r0'));
   for (let second = 0; second < 15; second++) {
     options.onEvent({id: String(second), event: 'runtime.updated', data: {instance_id: 'first', observed_at: '', href: '/api/v1/runtime'}});
     await vi.advanceTimersByTimeAsync(1000);
@@ -191,7 +208,7 @@ it('marks the ready event that follows an expired cursor as lost history, also f
   options.onEvent({id: 'r3', event: 'stream.ready', data});
   expect(received.map(historyLost)).toEqual([false, true, true, false]);
   const late: ApiEvent[] = [];
-  disposers.push(subscribeEvents(api, event => late.push(event), undefined, true));
+  disposers.push(subscribeEvents(api, event => late.push(event), {replayRecent: true}));
   expect(late.map(historyLost)).toEqual([false, true, true, false]);
 });
 
@@ -253,30 +270,123 @@ it('keeps a stream refusal that follows a capabilities error once the capabiliti
   expect(eventStatus(api).error).toMatchObject({status: 403});
 });
 
-it('holds one flow-demand stream for all holders and closes it after the last release', async () => {
+it('reads a baseline after the first stream.ready and applies the events that arrive during it afterwards', async () => {
   const api = createMockApi();
-  const signals: AbortSignal[] = [];
-  api.subscribeEvents = vi.fn(({signal, kinds}: EventOptions) => {
-    expect(kinds?.some(kind => kind.startsWith('flow.'))).toBe(true);
-    signals.push(signal!);
-    return new Promise<void>(() => {});
-  });
-  const first = holdFlowDemand(api);
-  const second = holdFlowDemand(api);
-  expect(api.subscribeEvents).toHaveBeenCalledTimes(1);
-  first();
-  expect(signals[0].aborted).toBe(false);
-  second();
-  expect(signals[0].aborted).toBe(true);
-  holdFlowDemand(api)();
-  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
+  const opened: EventOptions[] = [];
+  api.subscribeEvents = vi.fn((value: EventOptions) => (opened.push(value), pending()));
+  let settle: (value: string) => void = () => {};
+  const fetch = vi.fn(() => new Promise<string>(resolve => (settle = resolve)));
+  watchConfig(api, fetch);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledOnce();
+  expect(fetch).not.toHaveBeenCalled();
+  opened[0].onEvent(ready('r1'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(fetch).toHaveBeenCalledOnce();
+  opened[0].onEvent({id: 'g1', event: 'generation.changed', data: {instance_id: 'i', observed_at: '', previous_generation_id: 'a', generation_id: 'b'}});
+  settle('first');
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  settle('second');
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  // A later ready may follow a gap, so it reads once more.
+  opened[0].onEvent(ready('r2'));
+  settle('third');
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(fetch).toHaveBeenCalledTimes(3);
 });
 
-it('asks for flows only where the backend offers them and may send flow.gap', () => {
+it('reads at once where the backend offers no stream', async () => {
+  const api = createMockApi();
+  const unavailable = structuredClone(capabilities);
+  unavailable.resources.events.available = false;
+  api.capabilities = vi.fn().mockResolvedValue(unavailable);
+  const fetch = vi.fn(async () => 'config');
+  watchConfig(api, fetch);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('polls event-only resources while the stream stays silent, and stops once it is ready', async () => {
+  const api = createMockApi();
+  const opened: EventOptions[] = [];
+  api.subscribeEvents = vi.fn((value: EventOptions) => (opened.push(value), pending()));
+  let value = 'first';
+  const fetch = vi.fn(async () => value);
+  const resource = watchResource(
+    api,
+    {key: ['config'], every: 0, fetch, events: (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline})},
+    () => {}
+  );
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(4999);
+  expect(fetch).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  expect(resource.getSnapshot().data).toBe('first');
+  value = 'changed';
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(resource.getSnapshot().data).toBe('changed');
+  // The ready that arrives late reads once more; the stream then carries the changes.
+  opened[0].onEvent(ready('r1'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(fetch).toHaveBeenCalledTimes(3);
+  await vi.advanceTimersByTimeAsync(120000);
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it('carries flow demand on the shared stream and reads again what the filter change may have held back', async () => {
+  const api = createMockApi();
+  const opened: EventOptions[] = [];
+  api.subscribeEvents = vi.fn((value: EventOptions) => (opened.push(value), pending()));
+  const config = vi.fn(async () => 'config');
+  const flows = vi.fn(async () => 'flows');
+  watchConfig(api, config);
+  const flowList = watchResource(
+    api,
+    {key: ['flows'], every: 0, fetch: flows, events: (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline})},
+    () => {}
+  );
+  disposers.push(flowList.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  opened[0].onEvent(ready('r1'));
+  await vi.advanceTimersByTimeAsync(0);
+  const first = holdFlowDemand(api);
+  const second = holdFlowDemand(api);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
+  expect(opened[0].signal?.aborted).toBe(true);
+  expect(opened[1]).toMatchObject({kinds: capabilities.resources.events.kinds, lastEventId: 'r1'});
+  opened[1].onEvent(ready('r1'));
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(config).toHaveBeenCalledOnce();
+  expect(flows).toHaveBeenCalledTimes(2);
+  first();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(2);
+  second();
+  // A page that hands the demand to the next one in the same commit does not reconnect.
+  holdFlowDemand(api)();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledTimes(3);
+  expect(opened[2]).toMatchObject({kinds: undefined, lastEventId: 'r1'});
+});
+
+it('reports a refused flow-demand stream like any other refusal', async () => {
+  const api = createMockApi();
+  api.subscribeEvents = vi.fn(({kinds}: EventOptions) => (kinds ? Promise.reject(new ApiError(429, 'rate_limited', 'too many streams')) : pending()));
+  disposers.push(holdFlowDemand(api));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(api.subscribeEvents).toHaveBeenCalledOnce();
+  expect(eventStatus(api).error).toMatchObject({status: 429});
+});
+
+it('asks for flows only where the backend offers them and may send a flow event', () => {
   const resources = structuredClone(capabilities.resources);
   expect(wantsFlowDemand(resources)).toBe(true);
   expect(wantsFlowDemand(undefined)).toBe(false);
   expect(wantsFlowDemand({...resources, events: {...resources.events, kinds: undefined}})).toBe(true);
+  expect(wantsFlowDemand({...resources, events: {...resources.events, kinds: ['stream.ready', 'flow.updated']}})).toBe(true);
   expect(wantsFlowDemand({...resources, events: {...resources.events, kinds: ['stream.ready']}})).toBe(false);
   expect(wantsFlowDemand({...resources, events: {...resources.events, available: false}})).toBe(false);
   expect(wantsFlowDemand({...resources, flows: {...resources.flows, available: false}})).toBe(false);

@@ -28,7 +28,7 @@ export function useResource<T>(
       if (!enabled) return () => {};
       if (paused) return retainInactive(api, name);
       const {followEvents = true, ...resource} = current.current;
-      const events: EventFeed | undefined = followEvents ? listener => subscribeEvents(api, listener) : undefined;
+      const events: EventFeed | undefined = followEvents ? (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline}) : undefined;
       return watchResource(api, {...resource, events}, notify, name).dispose;
     },
     [api, name, enabled, paused]
