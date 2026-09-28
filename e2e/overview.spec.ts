@@ -209,6 +209,13 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
   }
 });
 
+test('a runtime degradation shows as one warning line in the Datapath card', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/overview');
+  const card = page.getByRole('region', {name: 'Datapath', exact: true});
+  const line = card.locator('.rp-cluster .rp-light.warn', {hasText: 'QUIC probes are off, so node scores use other probes only'});
+  await expect(line).toHaveCount(1);
+});
 test('the cgroup scope explains itself in a help popover', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/overview');

@@ -58,6 +58,14 @@ const known: Record<string, Key> = {
   probe_cancelled: 'ui.backend.probeCancelled',
   probe_deadline: 'ui.backend.probeDeadline',
   probe_failed: 'ui.backend.probeFailed',
+  // Codes honk sets on runtime degradations.
+  persistence_unavailable: 'ui.backend.persistenceUnavailable',
+  state_cache_unavailable: 'ui.backend.stateCacheUnavailable',
+  interface_watcher_disabled: 'ui.backend.interfaceWatcherDisabled',
+  pname_routing_reduced: 'ui.backend.pnameRoutingReduced',
+  pname_routing_disabled: 'ui.backend.pnameRoutingDisabled',
+  udp_trace_unavailable: 'ui.backend.udpTraceUnavailable',
+  quic_probe_disabled: 'ui.backend.quicProbeDisabled',
   // Codes honk sets on config diagnostics.
   'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };

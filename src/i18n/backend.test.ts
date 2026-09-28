@@ -77,3 +77,18 @@ it('shows an unknown bare code as it is', () => {
   expect(backendCode('probe_failed', t)).toBe(t('ui.backend.probeFailed'));
   expect(backendCode('adapter_specific', t)).toBe('adapter_specific');
 });
+
+it.each(LANGS.map(([lang]) => lang))('names every runtime degradation code honk sets in %s', (lang: Lang) => {
+  const t: Translator = (key, params) => translate(lang, key, params);
+  const codes = [
+    'persistence_unavailable',
+    'state_cache_unavailable',
+    'interface_watcher_disabled',
+    'pname_routing_reduced',
+    'pname_routing_disabled',
+    'udp_trace_unavailable',
+    'quic_probe_disabled'
+  ];
+  for (const code of codes) expect(backendCode(code, t), code).not.toMatch(/ui\.backend\.|_/);
+  expect(new Set(codes.map(code => backendCode(code, t))).size).toBe(codes.length);
+});

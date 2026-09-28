@@ -172,7 +172,7 @@ export function Overview({query}: PageProps) {
                   ]}
                 />
               )}
-              {(vm.datapath.errors.length > 0 || vm.datapath.warning) && (
+              {(vm.datapath.errors.length > 0 || vm.datapath.warning || vm.datapath.degradations.length > 0) && (
                 <div className="rp-cluster">
                   {vm.datapath.errors.map((error, i) => (
                     <TextTooltip key={i} text={error.tooltip}>
@@ -186,6 +186,13 @@ export function Overview({query}: PageProps) {
                       {vm.datapath.warning}
                     </Light>
                   )}
+                  {vm.datapath.degradations.map(d => (
+                    <TextTooltip key={d.id} text={d.tooltip}>
+                      <Light small tone="warn">
+                        {d.text}
+                      </Light>
+                    </TextTooltip>
+                  ))}
                 </div>
               )}
             </>
