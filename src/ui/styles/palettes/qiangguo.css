@@ -180,7 +180,7 @@
 :root[data-family='qiangguo'] .rp-top :is(.rp-brand-text, svg) {
   filter: drop-shadow(0 1px 1.5px var(--qg-bar-ink));
 }
-:root[data-family='qiangguo'] .rp-top .rp-brand-text > span:first-child {
+:root[data-family='qiangguo']:not([data-wordmark='plain']) .rp-top .rp-brand-text > span:first-child {
   background: linear-gradient(90deg, #ffde00, #fff6d5, #ffde00);
   -webkit-background-clip: text;
   background-clip: text;
@@ -199,7 +199,7 @@
   :root[data-family='qiangguo'] .rp-top .rp-brand :is(.rp-brand-text, svg) {
     filter: none;
   }
-  :root[data-family='qiangguo'] .rp-top .rp-brand-text > span:first-child {
+  :root[data-family='qiangguo']:not([data-wordmark='plain']) .rp-top .rp-brand-text > span:first-child {
     background: linear-gradient(90deg, var(--rp-c1), var(--rp-c3), var(--rp-c6));
     -webkit-background-clip: text;
     background-clip: text;
