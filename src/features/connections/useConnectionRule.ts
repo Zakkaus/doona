@@ -6,12 +6,13 @@ import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
 import {usePendingApply} from '../shared/usePendingApply';
-import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, type RuleTarget} from './rule';
+import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable, type RuleTarget} from './rule';
 
 type Pin = {generation: string; rule: RoutingRule};
 type Draft = {targets: RuleTarget[]; matched: string | null; current: string | null; target: number; outbound: string; pin: Pin | null};
 // The add-rule dialog of one connection. It keeps the connection's targets from when it opened, since the connection
-// may leave the snapshot while the dialog is open, and reads the rules and sources only while it is open.
+// may leave the snapshot while the dialog is open. It reads the rules and sources while it is open, and while a
+// connection that matched a rule is shown, to tell whether that rule can be edited.
 export function useConnectionRule(connection: Connection | undefined) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
@@ -20,8 +21,9 @@ export function useConnectionRule(connection: Connection | undefined) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [failure, setFailure] = useState<{id: number; text: string; lines: string[]} | null>(null);
   const open = !!draft;
-  const rules = useRules(open);
-  const config = useConfig(open);
+  const matched = canWrite ? (connection?.rule_id ?? null) : null;
+  const rules = useRules(open || !!matched);
+  const config = useConfig(open || !!matched);
   const hasGroups = offered(resources, 'groups', {whileLoading: false});
   const groups = useGroups(open && hasGroups);
   const retry = () => {
@@ -105,7 +107,12 @@ export function useConnectionRule(connection: Connection | undefined) {
     canAdd: canWrite && targets.length > 0,
     // Showing the matched rule only reads the rule list.
     canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
-    canEdit: canWrite && !!connection?.rule_id,
+    canEdit:
+      !!matched &&
+      ruleWritable(
+        rules.data?.rules.find(rule => rule.rule_id === matched),
+        sources
+      ),
     openAdd: () => {
       if (connection) setDraft({targets, matched: connection.rule_id, current: connection.outbound, target: 0, outbound: '', pin: null});
     },
