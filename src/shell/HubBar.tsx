@@ -5,9 +5,6 @@ import {Link, useScrollStrip, useSlider} from '../ui/ui';
 import type {NavGroup} from './view';
 
 const key = storageKeys.hubPages;
-// Moving between hubs, or between a hub's pages, replaces the history entry as an Android navigation bar does, so Back
-// leaves the app's top level instead of retracing every tap.
-const replace = {replace: true};
 function readLast(): Record<string, string> {
   try {
     return JSON.parse(sessionStorage.getItem(key) ?? '{}') ?? {};
@@ -17,7 +14,8 @@ function readLast(): Record<string, string> {
 }
 
 // Below the side navigation's breakpoint, the hubs sit in a bottom bar after the Material 3 navigation bar: an icon
-// and a label each, the open hub's icon on a pill. A hub opens on the page last seen in it this session.
+// and a label each, the open hub's icon on a pill. A hub opens on the page last seen in it this session. Moving between
+// hubs or pages adds a history entry, as a web page does, so Back returns to the page seen before.
 export function HubBar({groups}: {groups: NavGroup[]}) {
   const t = useT();
   const [last, setLast] = useState(readLast);
@@ -37,7 +35,6 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
         return (
           <Link
             key={group.id}
-            routerOptions={replace}
             href={(group.items.find(item => item.path === last[group.id]) ?? group.items[0]).href}
             aria-current={open?.[0] === group.id ? 'page' : undefined}
           >
@@ -63,7 +60,7 @@ export function HubPages({hub, route}: {hub: NavGroup; route: string}) {
       <div ref={ref} className="rp-seg">
         {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         {hub.items.map(item => (
-          <Link key={item.id} appearance="button" href={item.href} routerOptions={replace} aria-current={item.current ? 'page' : undefined}>
+          <Link key={item.id} appearance="button" href={item.href} aria-current={item.current ? 'page' : undefined}>
             {item.label}
           </Link>
         ))}
