@@ -31,11 +31,17 @@ const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
     <TextTooltip cut={cut}>{i.label}</TextTooltip>
   </span>
 );
+// The title and what follows it share a line while both fit; otherwise the rest moves under the title and wraps.
+const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
+  <span className="rp-item-text">
+    <ItemLabel i={i} />
+    {children ?? (i.desc && <span className="desc">{i.desc}</span>)}
+  </span>
+);
 const ItemBody = ({i}: {i: Item}) => (
   <>
     <Check />
-    <ItemLabel i={i} />
-    {i.desc && <span className="desc">{i.desc}</span>}
+    <ItemText i={i} />
   </>
 );
 // With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
@@ -86,8 +92,7 @@ export function MenuChoice({item, children}: {item: Item; children?: ReactNode})
   return (
     <MenuItem id={item.id} className="rp-item" textValue={item.label}>
       <Check />
-      <ItemLabel i={item} />
-      {children ?? (item.desc && <span className="desc">{item.desc}</span>)}
+      <ItemText i={item}>{children}</ItemText>
     </MenuItem>
   );
 }
