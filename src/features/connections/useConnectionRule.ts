@@ -105,6 +105,7 @@ export function useConnectionRule(connection: Connection | undefined) {
     canAdd: canWrite && targets.length > 0,
     // Showing the matched rule only reads the rule list.
     canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
+    canEdit: canWrite && !!connection?.rule_id,
     openAdd: () => {
       if (connection) setDraft({targets, matched: connection.rule_id, current: connection.outbound, target: 0, outbound: '', pin: null});
     },

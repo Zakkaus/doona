@@ -86,7 +86,11 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     () => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang, recorder)),
     [dictionary, flows.data, source, t, lang, recorder]
   );
+  // `add` prefills a new rule's condition; `edit`, which Connections links to, changes a rule's outbound.
   const seed = params.get('add');
+  const edit = params.get('edit');
+  const edited = edit ? rules.data?.rules.find(rule => rule.rule_id === edit) : undefined;
+  const parsedSeed = useMemo(() => parseRuleSeed(seed), [seed]);
   const editor = useRuleEditor<RoutingRule>({
     canWrite,
     list: rules.data,
@@ -97,26 +101,12 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     anchor: ruleAnchor,
     kinds: conditionKinds,
     onClose: () => {
-      if (seed) go('rules', within(query, {add: null}));
-    }
+      if (seed || edit) go('rules', within(query, {add: null, edit: null}));
+    },
+    link: edit
+      ? {key: `edit:${edit}`, open: edited ? {kind: 'edit', rule: edited, outbound: edited.outbound ?? '', must: edited.must} : null}
+      : {key: seed, open: parsedSeed && {kind: 'add', preset: parsedSeed}}
   });
-  const parsedSeed = useMemo(() => parseRuleSeed(seed), [seed]);
-  // Resource refreshes must not consume or reset a navigation's seed.
-  const [consumption, setConsumption] = useState<{seed: string | null; consumed: boolean}>({seed, consumed: false});
-  const current = consumption.seed === seed ? consumption : {seed, consumed: false};
-  if (consumption.seed !== seed) setConsumption(current);
-  if (
-    !current.consumed &&
-    parsedSeed &&
-    canWrite &&
-    rules.data &&
-    config.data &&
-    rules.data.generation_id === config.data.generation_id &&
-    table.positions.length
-  ) {
-    setConsumption({seed, consumed: true});
-    editor.initialize({kind: 'add'}, parsedSeed);
-  }
   const held = usePendingRules();
   return {
     ...editor.model,

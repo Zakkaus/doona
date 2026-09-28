@@ -4,14 +4,16 @@ import {useT} from '../../i18n';
 import type {ConfigSource, RuleSource} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {ruleCondition, type RuleConditionKind} from '../../dae/groups';
-import {addRule, removeRule, type RuleAnchor} from '../../dae/ruleText';
+import {addRule, removeRule, replaceRuleTarget, type RuleAnchor} from '../../dae/ruleText';
 import type {RuleSeed} from '../shared/link';
 import {addRuleReason, addRuleTip, removalView, ruleDraftView, type ReasonKeys, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
 
 // A rule of either list as the editor needs it: GET /rules and GET /dns/rules entries share these fields.
 export type EditedRule = {rule_id: string; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
-type Dialog<R> = ({kind: 'add'} | {kind: 'remove'; rule: R}) & {
+// An edit changes only what the rule routes to; `outbound` and `must` are its current target.
+type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
+type Dialog<R> = Opened<R> & {
   generation: string;
   sources: ConfigSource[];
   rules: R[];
@@ -26,7 +28,7 @@ export type RuleEditorModel = {
   // Why Add rule is disabled, shown under it; another change being applied is left to the tip.
   addReason: string | null;
   editHelp: string | null;
-  dialog: {kind: 'add'} | {kind: 'remove'; expression: string; help: string} | null;
+  dialog: {kind: 'add'} | {kind: 'remove'; expression: string; help: string} | {kind: 'edit'; expression: string} | null;
   dialogTitle: string;
   submitLabel: string;
   close: () => void;
@@ -59,6 +61,8 @@ export type RuleEditorOptions<R extends EditedRule> = {
   reasons?: ReasonKeys;
   // What Cancel does beyond closing the dialog, such as dropping a navigation's seed.
   onClose?: () => void;
+  // A dialog a link opens, named by `key`; `open` is null until the rule it names is read.
+  link?: {key: string | null; open: Opened<R> | null};
 };
 
 // The add and remove dialogs of a rule list, which write by splicing one line into the source that holds the rule
@@ -74,7 +78,8 @@ export function useRuleEditor<R extends EditedRule>({
   end,
   kinds,
   reasons,
-  onClose
+  onClose,
+  link
 }: RuleEditorOptions<R>) {
   const t = useT();
   const editor = useConfigEditor(retry);
@@ -94,13 +99,30 @@ export function useRuleEditor<R extends EditedRule>({
     toast('negative', t('rule.stale'));
     retry();
   };
-  const initialize = (next: {kind: 'add'} | {kind: 'remove'; rule: R}, preset?: RuleSeed) => {
+  const initialize = (next: Opened<R>) => {
     if (editor.busy || !list) return;
-    setForm({condition: '', outbound: target(), must: false, before: positions[0]?.id ?? 'end'});
-    setPick({on: true, kind: kinds[0], value: '', ...preset});
+    const edit = next.kind === 'edit' ? next : null;
+    setForm({condition: '', outbound: edit?.outbound ?? target(), must: edit?.must ?? false, before: positions[0]?.id ?? 'end'});
+    setPick({on: true, kind: kinds[0], value: '', ...(next.kind === 'add' ? next.preset : {})});
     setDialog({...next, generation: list.generation_id, sources, rules});
   };
-  const open = (next: {kind: 'add'} | {kind: 'remove'; rule: R}) => {
+  // A link opens its dialog once the list and sources are read in one generation; a refresh must not open it again.
+  const [linked, setLinked] = useState<{key: string | null; consumed: boolean}>({key: null, consumed: false});
+  const current = linked.key === (link?.key ?? null) ? linked : {key: link?.key ?? null, consumed: false};
+  if (current !== linked) setLinked(current);
+  if (
+    !current.consumed &&
+    link?.open &&
+    canWrite &&
+    list &&
+    config &&
+    list.generation_id === config.generation_id &&
+    (link.open.kind !== 'add' || positions.length)
+  ) {
+    setLinked({...current, consumed: true});
+    initialize(link.open);
+  }
+  const open = (next: Opened<R>) => {
     if (pending.current) return;
     if (list?.generation_id !== config?.generation_id) {
       stale();
@@ -140,7 +162,7 @@ export function useRuleEditor<R extends EditedRule>({
       return;
     }
     const rule =
-      dialog.kind === 'remove' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
+      dialog.kind !== 'add' ? dialog.rule : dialog.rules.find(rule => (form.before === 'end' ? rule.kind === 'fallback' : rule.rule_id === form.before));
     const appended = dialog.kind === 'add' && form.before === 'end' && !rule?.source ? (end?.(dialog.sources) ?? null) : null;
     const source = appended?.source ?? dialog.sources.find(source => source.id === rule?.source?.source_id);
     const at = appended?.anchor ?? (source && rule ? anchor(source, rule) : null);
@@ -151,9 +173,15 @@ export function useRuleEditor<R extends EditedRule>({
     }
     pending.current = true;
     try {
-      const written = await write(source, text => (dialog.kind === 'remove' ? removeRule(text, at) : addRule(text, at, condition, form.outbound, form.must)));
+      const written = await write(source, text =>
+        dialog.kind === 'remove'
+          ? removeRule(text, at)
+          : dialog.kind === 'edit'
+            ? replaceRuleTarget(text, at, form.outbound, form.must)
+            : addRule(text, at, condition, form.outbound, form.must)
+      );
       if (written) {
-        toast('positive', t(dialog.kind === 'remove' ? 'rule.removed' : 'rule.added'));
+        toast('positive', t(dialog.kind === 'remove' ? 'rule.removed' : dialog.kind === 'edit' ? 'rule.edited' : 'rule.added'));
         pending.current = false;
         dismiss();
       }
@@ -162,7 +190,12 @@ export function useRuleEditor<R extends EditedRule>({
     }
   };
   const draft = ruleDraftView(pick.kind, pick.value, pick.on, condition, form.condition, t, kinds);
-  const dialogView = dialog?.kind === 'remove' ? {kind: 'remove' as const, ...removalView(dialog.rule, sources, t)} : dialog ? {kind: dialog.kind} : null;
+  const dialogView =
+    dialog?.kind === 'remove'
+      ? {kind: 'remove' as const, ...removalView(dialog.rule, sources, t)}
+      : dialog?.kind === 'edit'
+        ? {kind: 'edit' as const, expression: dialog.rule.expression}
+        : dialog && {kind: dialog.kind};
   const noPosition = !!list && !!config && !positions.length;
   const model: RuleEditorModel = {
     canWrite,
@@ -172,8 +205,8 @@ export function useRuleEditor<R extends EditedRule>({
     addReason: addRuleTip(noPosition, false, t) ?? null,
     editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     dialog: dialogView,
-    dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : 'rule.add'),
-    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : 'rule.add'),
+    dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
+    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
     close,
     openAdd: () => {
       if (list) open({kind: 'add'});
@@ -192,7 +225,7 @@ export function useRuleEditor<R extends EditedRule>({
       if (!pending.current) setPick(next);
     },
     draft,
-    submitDisabled: dialog?.kind !== 'remove' && (!draft.valid || !form.outbound),
+    submitDisabled: dialog?.kind === 'add' ? !draft.valid || !form.outbound : dialog?.kind === 'edit' && !form.outbound,
     submitReason: dialog?.kind === 'add' && !editor.busy ? addRuleReason(draft, form.outbound, t, reasons) : null,
     changeMode: (mode: string) => {
       if (pending.current) return;
@@ -200,5 +233,5 @@ export function useRuleEditor<R extends EditedRule>({
       setPick({...pick, on: mode === 'pick'});
     }
   };
-  return {model, initialize, busy: !!editor.busy};
+  return {model, busy: !!editor.busy};
 }

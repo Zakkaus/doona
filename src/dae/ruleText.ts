@@ -7,7 +7,8 @@ export function sourceFor(list: ConfigSource[], source: RuleSource | null | unde
   return list.find(item => item.id === source.source_id);
 }
 
-export type RuleAnchor = {from: number; to: number; indent: string; text: string};
+// `target` spans what a listed rule writes after its arrow or fallback colon, with the space before it.
+export type RuleAnchor = {from: number; to: number; indent: string; text: string; target?: {from: number; to: number}};
 // A listed rule as the anchor reads it: where it is, whether it is the fallback, and the target written after the
 // arrow (an outbound, a DNS upstream or action).
 type Listed = {kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
@@ -55,7 +56,7 @@ function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: R
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
   const to = newline === -1 ? text.length : newline + 1;
-  return {from, to, indent: text.slice(from, first.from), text: text.slice(from, to)};
+  return {from, to, indent: text.slice(from, first.from), text: text.slice(from, to), target: {from: arrow.to, to: last.to}};
 }
 
 export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
@@ -125,6 +126,13 @@ export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(g
 export function addRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text
     ? text.slice(0, anchor.from) + `${anchor.indent}${ruleLine(condition, outbound, must)}\n` + text.slice(anchor.from)
+    : null;
+}
+
+// Rewrites only the rule's target, so its condition and any comment after it stay as written.
+export function replaceRuleTarget(text: string, anchor: RuleAnchor, outbound: string, must: boolean): string | null {
+  return anchor.target && text.slice(anchor.from, anchor.to) === anchor.text
+    ? text.slice(0, anchor.target.from) + ` ${outbound}${must ? '(must)' : ''}` + text.slice(anchor.target.to)
     : null;
 }
 

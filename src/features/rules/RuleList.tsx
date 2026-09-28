@@ -106,6 +106,30 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
     ],
     [t, canWrite, busy, target, hits]
   );
+  // What the rule routes to, which both adding and editing a rule set.
+  const targetFields = (
+    <>
+      <div className="rp-toolbar end">
+        <LabeledSelect
+          isDisabled={view.busy}
+          label={target}
+          value={form.outbound}
+          onChange={outbound => setForm({...form, outbound})}
+          items={view.table.outbounds}
+        />
+        {view.copy.must && (
+          <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
+            {t('rule.must')} <code>must</code>
+          </Switch>
+        )}
+      </div>
+      {view.copy.must && (
+        <span id={mustHelpId} className="rp-label">
+          {t('rule.mustHelp')}
+        </span>
+      )}
+    </>
+  );
   return (
     <div className="rp-col">
       <ActionHelp reason={view.canWrite ? view.addReason : null}>
@@ -178,6 +202,13 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
             <DaeCode text={dialog.expression} />
           </div>
         )}
+        {dialog?.kind === 'edit' && (
+          <div className="rp-list">
+            <span className="rp-label">{t('rule.editHelp')}</span>
+            <DaeCode text={dialog.expression} />
+            {targetFields}
+          </div>
+        )}
         {dialog?.kind === 'add' && (
           <div className="rp-list">
             <span className="rp-label">{view.copy.addHelp}</span>
@@ -225,25 +256,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
                 onChange={condition => setForm({...form, condition})}
               />
             )}
-            <div className="rp-toolbar end">
-              <LabeledSelect
-                isDisabled={view.busy}
-                label={target}
-                value={form.outbound}
-                onChange={outbound => setForm({...form, outbound})}
-                items={view.table.outbounds}
-              />
-              {view.copy.must && (
-                <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
-                  {t('rule.must')} <code>must</code>
-                </Switch>
-              )}
-            </div>
-            {view.copy.must && (
-              <span id={mustHelpId} className="rp-label">
-                {t('rule.mustHelp')}
-              </span>
-            )}
+            {targetFields}
             <LabeledSelect
               isDisabled={view.busy}
               label={t('rule.position')}
