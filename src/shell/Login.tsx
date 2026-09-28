@@ -7,7 +7,7 @@ import {LoadBoundary} from '../ui/LoadBoundary';
 import LinkOut from '../ui/icons/LinkOut';
 import logo from '../logo.svg';
 import {href} from './route';
-import {LanguageMenu, SchemeToggle} from './AppearanceControls';
+import {LanguageMenu, PaletteMenu, SchemeToggle, type PaletteMenuProps} from './AppearanceControls';
 
 // The panel beside the form loads only where it is shown, so the sign-in chunk stays the same size on a phone. Until it
 // arrives, or if it never does, the panel stays empty and the form works as before.
@@ -24,6 +24,7 @@ type LoginProps = {
   dark: boolean;
   themeLabel: string;
   toggleScheme: () => void;
+  palette: PaletteMenuProps;
   wordmark: string;
   // A failure the shell met besides the refusal, such as an unreachable version endpoint.
   error: Error | null;
@@ -31,7 +32,7 @@ type LoginProps = {
 };
 
 // The whole page until the backend accepts the credentials: nothing behind it works before then.
-export function Login({profileId, api, backend, rejected, lang, pickLang, dark, themeLabel, toggleScheme, wordmark, error, onRetry}: LoginProps) {
+export function Login({profileId, api, backend, rejected, lang, pickLang, dark, themeLabel, toggleScheme, palette, wordmark, error, onRetry}: LoginProps) {
   const t = useT();
   const view = useLogin(profileId, api, backend, rejected);
   const wide = useMediaQuery('(min-width: 1024px)');
@@ -52,6 +53,7 @@ export function Login({profileId, api, backend, rejected, lang, pickLang, dark, 
       <div className="rp-login-pane">
         <header className="rp-login-controls">
           <LanguageMenu lang={lang} pickLang={pickLang} />
+          <PaletteMenu {...palette} />
           <SchemeToggle dark={dark} label={themeLabel} toggle={toggleScheme} />
         </header>
         <main className="rp-login-column">
