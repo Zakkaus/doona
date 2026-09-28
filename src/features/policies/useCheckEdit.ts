@@ -17,10 +17,25 @@ export type CheckEditView = {
   close: () => void;
   save: (close: () => void) => void;
 };
-const labels = {check_url: 'policy.cfg.checkUrl', check_interval: 'policy.cfg.checkInterval'} as const;
-const help = {check_url: 'policy.checkUrlHelp', check_interval: 'policy.checkIntervalHelp'} as const;
-const invalid = {check_url: 'policy.checkUrlInvalid', check_interval: 'policy.checkIntervalInvalid'} as const;
-// The group's check URL and interval, each offered only when the backend lists it as writable. `conflict`: the last save
+const labels = {
+  check_url: 'policy.cfg.checkUrl',
+  check_interval: 'policy.cfg.checkInterval',
+  tolerance: 'policy.cfg.tolerance',
+  idle_timeout: 'policy.cfg.idleTimeout'
+} as const;
+const help = {
+  check_url: 'policy.checkUrlHelp',
+  check_interval: 'policy.checkIntervalHelp',
+  tolerance: 'policy.toleranceHelp',
+  idle_timeout: 'policy.idleTimeoutHelp'
+} as const;
+const invalid = {
+  check_url: 'policy.checkUrlInvalid',
+  check_interval: 'policy.checkIntervalInvalid',
+  tolerance: 'policy.toleranceInvalid',
+  idle_timeout: 'policy.idleTimeoutInvalid'
+} as const;
+// The group's check settings, each offered only when the backend lists it as writable. `conflict`: the last save
 // was refused with 409, so the group is read again.
 export function useCheckEdit(
   g: Group | undefined,
