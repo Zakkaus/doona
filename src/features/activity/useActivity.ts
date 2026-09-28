@@ -54,7 +54,7 @@ export function useActivity() {
     [runtime.data, memory.data, t, resources?.runtime.available, locale, datapath.data?.state]
   );
   const version = useVersion();
-  // Overview lists these with their reasons; here the status card only counts them.
+  // System status lists these with their reasons; here the status card only counts them.
   const limited = useMemo(
     () => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang).reduce((n, group) => n + group.items.length, 0) : 0),
     [capabilities.data, version.data, t, lang]

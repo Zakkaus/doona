@@ -60,7 +60,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 | Page          | Shows                                                                                                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients, notifications                                                                   |
-| Overview      | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                           |
+| System status | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                           |
 | Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all |
 | DNS           | Queries with their answers, cache, resolution log and statistics; create a DNS rule for a logged domain when writable; flush the cache                                            |
 | Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                   |
@@ -122,7 +122,7 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Activity, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme, palette and wordmark move into the top bar's overflow menu, a submenu each.
 
-Below 600 pixels wide, tables keep every column and scroll sideways; on wider screens they drop the columns that do not fit, in a set order. Toolbars wrap onto more rows. On Events and Logs, press a row to read its full text below the table. On Overview, DNS and Logs, the first page action stays a button and the rest move into a menu.
+Below 600 pixels wide, tables keep every column and scroll sideways; on wider screens they drop the columns that do not fit, in a set order. Toolbars wrap onto more rows. On Events and Logs, press a row to read its full text below the table. On System status, DNS and Logs, the first page action stays a button and the rest move into a menu.
 
 Over HTTPS or on localhost, doona installs as an app. In Chrome and Edge, the About card in Settings offers Install as an app. Safari has no install prompt, so the card shows the steps instead. On iPhone and iPad, tap Share, then Add to Home Screen. In Safari 26 on macOS, choose File > Add to Dock.
 

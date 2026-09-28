@@ -137,7 +137,7 @@ export function activityView(
 ) {
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const memoryLevel = percent === null ? null : memoryTone(percent);
-  // Overview's status; the card's own link already leads there, so the status carries no link of its own.
+  // The status the System status page shows; the card's own link already leads there, so the status carries no link of its own.
   const {tone, text} = engineStatus(runtime?.lifecycle.state, datapath, t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading'), t);
   return {
     status: {tone, text},
