@@ -116,6 +116,20 @@ describe('native transport', () => {
     await expect(api.deleteProvider('sub')).rejects.toMatchObject({status: 503});
     expect(request).toHaveBeenCalledTimes(2);
   });
+  it('does not replay a refused synchronous write, whose key the contract does not replay', async () => {
+    const keys: Array<string | null> = [];
+    const request = vi.fn(async (input: Request) => {
+      keys.push(input.headers.get('Idempotency-Key'));
+      return json({error: {code: 'temporarily_unavailable', message: 'busy'}, request_id: null}, 503, {'Retry-After': '1'});
+    });
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    await expect(api.closeConnections({src: '192.168.1.100'})).rejects.toMatchObject({status: 503});
+    await expect(api.closeConnection('conn-1')).rejects.toMatchObject({status: 503});
+    await expect(api.patchRuntimeSettings({log: {level: 'debug'}})).rejects.toMatchObject({status: 503});
+    expect(request).toHaveBeenCalledTimes(3);
+    expect(keys).toEqual([null, null, null]);
+  });
   it('does not replay an ambiguously failed mutation', async () => {
     const request = vi.fn().mockRejectedValue(new TypeError('network down'));
     vi.stubGlobal('fetch', request);
