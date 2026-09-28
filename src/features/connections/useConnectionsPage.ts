@@ -1,6 +1,6 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {readTag} from '../shared/taggedId';
-import {useCapabilities, useConnectionClose, useConnections, useNodes, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, phoneQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
@@ -89,6 +89,8 @@ export function useConnectionsPage({go, query}: PageProps) {
   const canClose = capabilities.data?.resources.connections.can_close === true;
   const rulesListed = offered(capabilities.data?.resources, 'rules', {whileLoading: false});
   const canViewFlow = offered(capabilities.data?.resources, 'flows', {whileLoading: false});
+  // Rows take their chain and rule from flow records, which the backend keeps only while a client asks for them.
+  useFlowDemand(capabilities.data?.resources);
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
   const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
