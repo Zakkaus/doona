@@ -20,6 +20,13 @@ it('rejects a cursor used with different filters, resources, or adapter instance
   await expect(api.providers({cursor})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(createMockApi().nodes({cursor})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
 });
+it('refuses a DNS log cursor whose snapshot was evicted', async () => {
+  const api = createMockApi();
+  const first = await api.dnsLog({limit: 1});
+  // The pager keeps 32 snapshots; each later first page evicts the oldest.
+  for (let i = 0; i < 32; i++) await api.dnsLog({limit: 1});
+  await expect(api.dnsLog({cursor: first.next_cursor!, limit: 1})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+});
 it('expires retained snapshots with resource-specific cursor errors', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
