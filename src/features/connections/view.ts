@@ -25,13 +25,24 @@ import {csvLine} from '../../ui/ui';
 import {ruleHref} from '../shared/link';
 import {within} from '../../shell/route';
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
+// Where the chain came from: captured when the connection was routed, rebuilt from retained records, or not known.
+const chainSources: Record<Connection['chain_source'], Key> = {
+  evaluation: 'conn.chainSource.evaluation',
+  reconstructed: 'conn.chainSource.reconstructed',
+  unknown: 'ui.unknown'
+};
 export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
+  // A backend that predates the field leaves it out, and the row with it.
+  const chainSource: Array<[Key, string | MessageRef]> = c.chain_source
+    ? [['conn.f.chainSource', chainSources[c.chain_source] ? {key: chainSources[c.chain_source]} : c.chain_source]]
+    : [];
   return [
     ['ui.device', c.src ?? '—'],
     ['conn.f.dst', c.dst ?? '—'],
     ['ui.domain', c.domain ?? '—'],
     ['conn.f.ingress', word(c.ingress)],
     ['conn.f.domainSource', word(c.domain_source)],
+    ...chainSource,
     ['ui.process', c.pname ?? '—'],
     ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by],
     ['ui.upload', formatBytes(c.upload_bytes, locale)],
