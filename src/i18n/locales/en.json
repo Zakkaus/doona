@@ -50,7 +50,7 @@
   "act.noIssues": "No issues require attention",
   "act.noOutbounds": "This backend does not provide outbound counters",
   "act.node": "Node",
-  "act.nodePickHelp": "Only changes which node's latency this card shows; routing stays the same.",
+  "act.nodePickHelp": "Selecting a node changes only the latency shown on this card; routing is unchanged.",
   "act.noticeRepeat": {
     "one": "{n} time",
     "other": "{n} times"
@@ -990,7 +990,7 @@
   "nodes.removeProviderHelp": "Deletes this source and its nodes from the main configuration and reloads.",
   "nodes.removeProviderTitle": "Remove source {name}",
   "nodes.removed": "{name} removed",
-  "nodes.scope": "Showing nodes from {name}. Select another source in the list above to see its nodes.",
+  "nodes.scope": "Showing nodes from {name}. Choose another source above to view its nodes.",
   "nodes.search": "Search nodes",
   "nodes.status.error": "Failed",
   "nodes.status.ok": "OK",
@@ -1369,7 +1369,7 @@
   "rule.mustHelp": "When locked, a match takes this outbound directly: no sniffing or rerouting by domain, and Global or Direct mode does not override it. direct(must) also keeps port 53 DNS out of transparent DNS takeover.",
   "rule.noMember": "The group currently has no selected member",
   "rule.node": "Node",
-  "rule.notLocated": "doona cannot find this rule's line in its file, so it cannot be edited here",
+  "rule.notLocated": "Cannot locate this rule's line in its source file; it cannot be edited here",
   "rule.note": "Simulates routing with the current configuration, not an actual connection. Enter a domain or destination IP. For live or query resolution, enter a domain and leave the destination IP empty.",
   "rule.observed": "Observed at",
   "rule.openSource": "Open source",

@@ -160,8 +160,8 @@ test('the latency node menu says it only changes the latency shown', async ({pag
   await page.goto('/#/activity');
   await page.getByRole('button', {name: 'Node', exact: true}).click();
   const menu = page.getByRole('menu', {name: 'Node', exact: true});
-  await expect(menu).toHaveAccessibleDescription("Only changes which node's latency this card shows; routing stays the same.");
-  await expect(page.getByText("Only changes which node's latency this card shows; routing stays the same.", {exact: true})).toBeVisible();
+  await expect(menu).toHaveAccessibleDescription('Selecting a node changes only the latency shown on this card; routing is unchanged.');
+  await expect(page.getByText('Selecting a node changes only the latency shown on this card; routing is unchanged.', {exact: true})).toBeVisible();
 });
 
 test('notices hide housekeeping events while the Events page retains them', async ({page}) => {

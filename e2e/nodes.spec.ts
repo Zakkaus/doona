@@ -361,7 +361,7 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
 
 test('the node list names its source, groups a node by a labelled menu, and refreshes every subscription', async ({page}) => {
   await page.goto('/#/nodes?tab=list&provider=inline');
-  await expect(page.getByText('Showing nodes from config.dae. Select another source in the list above to see its nodes.', {exact: true})).toBeVisible();
+  await expect(page.getByText('Showing nodes from config.dae. Choose another source above to view its nodes.', {exact: true})).toBeVisible();
   const join = page.getByRole('button', {name: 'Add hk-01 to a group', exact: true});
   await expect(join).toHaveText('Add to group');
   await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();

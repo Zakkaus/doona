@@ -149,7 +149,8 @@ function listedRows<R extends Listed>(
   // Why doona cannot locate a rule's line to rewrite it, or null when it can.
   const unanchored = (rule: R): string | null => {
     const source = rule.source && byId.get(rule.source.source_id);
-    if (!source?.writable) return t('config.readOnlyAttempt');
+    if (!source) return t('rule.notLocated');
+    if (!source.writable) return t('config.readOnlyAttempt');
     if (source.content === undefined) return t('config.incomplete');
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
     return anchor(source, rule, scans.get(source.id)!) === null ? t('rule.notLocated') : null;
