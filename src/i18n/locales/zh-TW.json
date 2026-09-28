@@ -1238,6 +1238,7 @@
   "rule.valuesHelp": "多個值以逗號分隔",
   "rule.valuesInvalid": "值不可包含單引號、#、->、大括號或未成對的括號。",
   "rule.valuesMissing": "須填寫值",
+  "rule.view": "檢視規則",
   "rule.where": "位置",
   "search": "搜尋頁面、連線、節點、群組與來源",
   "search.groups": "群組",

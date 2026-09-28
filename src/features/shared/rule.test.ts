@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
-import {conditionKey, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
+import {acceptedRule, conditionKey, pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritable} from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers the exact domain first, then its subdomains, the destination IP and the source IP as one host', () => {
@@ -142,4 +142,29 @@ it('offers editing a matched rule only when doona can locate it in a writable so
       sources.map(source => ({...source, writable: false}))
     )
   ).toBe(false);
+});
+
+it('finds the rule a write added in the reloaded list, the nearest before the rule it went before in its source', async () => {
+  const api = createMockApi();
+  const {rules} = await api.rules();
+  const r5 = rules.find(rule => rule.rule_id === 'r5')!;
+  const added = (id: string, index: number, source = r5.source) => ({
+    ...r5,
+    rule_id: id,
+    index,
+    source,
+    expression: 'domain(full: a.example)',
+    outbound: 'proxy'
+  });
+  const at = rules.indexOf(r5);
+  // The same rule held twice: once first in the list, once before the rule it was placed in front of.
+  const reloaded = [added('n1', 0), ...rules.slice(0, at), added('n2', at), ...rules.slice(at)];
+  expect(acceptedRule(reloaded, 'domain(full: a.example)', 'proxy', r5)).toBe('n2');
+  expect(acceptedRule(reloaded, 'domain(full: a.example)', 'proxy', {...r5, expression: 'dip(9.9.9.9)'})).toBe('n1');
+  expect(acceptedRule(reloaded, 'domain(full: a.example)', 'direct', r5)).toBeNull();
+  expect(acceptedRule(rules, 'domain(full: a.example)', 'proxy', r5)).toBeNull();
+  // Another write landed between the added rule and its anchor; a copy in another source does not count.
+  const other = {...r5.source!, source_id: 'elsewhere'};
+  const between = [added('n1', 0), ...rules.slice(0, at), added('n2', at), rules[0], added('n3', at, other), ...rules.slice(at)];
+  expect(acceptedRule(between, 'domain(full: a.example)', 'proxy', r5)).toBe('n2');
 });

@@ -5,6 +5,7 @@ import {sourceIp} from '../../api/selectors';
 import {useT} from '../../i18n';
 import {ruleTargets, ruleWritable} from '../shared/rule';
 import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
+import type {PageProps} from '../../shell/routes';
 
 // What a connection tells the add-rule dialog. The rule it matched counts only when the backend recorded the match.
 export const connectionSeed = (c: Connection): QuickRuleSeed => ({
@@ -17,11 +18,11 @@ export const connectionSeed = (c: Connection): QuickRuleSeed => ({
 
 // The rule actions of the shown connection: adding one through the shared dialog, and showing or editing the rule it
 // matched. The rules and sources are read while a connection that matched a rule is shown, to tell whether that rule
-// can be edited. `review` opens the held rules.
-export function useConnectionRule(connection: Connection | undefined, review: () => void) {
+// can be edited.
+export function useConnectionRule(connection: Connection | undefined, go: PageProps['go']) {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const quick = useQuickRule(review);
+  const quick = useQuickRule(go);
   const canWrite =
     offered(resources, 'rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const matched = canWrite ? (connection?.rule_id ?? null) : null;

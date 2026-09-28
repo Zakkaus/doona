@@ -68,6 +68,24 @@ export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], mat
     .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression, matched: rule === hit, first: rule === rules[0]}));
 }
 
+// The rule a write added, once the reloaded list shows it: the nearest rule with its condition and outbound before the
+// rule it was placed in front of, in the same source, since another write may have landed between them; else the first
+// with them. Null until the list shows one.
+export function acceptedRule(rules: RoutingRule[], condition: string, outbound: string, before: RoutingRule): string | null {
+  const key = conditionKey(condition);
+  const same = (rule: RoutingRule) => rule.kind === 'rule' && rule.outbound === outbound && conditionKey(rule.expression) === key;
+  const inSource = (rule: RoutingRule) => rule.source?.source_id === before.source?.source_id;
+  const anchor = rules.findIndex(rule => rule.kind === before.kind && inSource(rule) && conditionKey(rule.expression) === conditionKey(before.expression));
+  const placed =
+    anchor < 0
+      ? undefined
+      : rules
+          .slice(0, anchor)
+          .reverse()
+          .find(rule => same(rule) && inSource(rule));
+  return (placed ?? rules.find(same))?.rule_id ?? null;
+}
+
 // Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.
 export function ruleWritable(rule: RoutingRule | undefined, sources: ConfigSource[]): boolean {
   const source = rule && sources.find(source => source.id === rule.source?.source_id);
