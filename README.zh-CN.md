@@ -23,7 +23,7 @@ doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面：现在是 ho
 <details>
 <summary><strong>全部配色</strong></summary>
 
-十一套配色各有浅色与深色；Rosé Pine 与 Catppuccin 另有多种深色变体。配色在顶栏切换。
+十二套配色各有浅色与深色；Rosé Pine 与 Catppuccin 另有多种深色变体。配色在顶栏切换。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="全部配色的浅色与深色" width="100%">
 
