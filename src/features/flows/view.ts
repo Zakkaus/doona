@@ -266,7 +266,7 @@ export function flowDetailView(
       dip: sourceIp(detail.input.dst ?? undefined) ?? null,
       sip: sourceIp(detail.input.src ?? undefined) ?? null,
       outbound: detail.outbound,
-      matched: detail.rule_id
+      matched: detail.rule_id && detail.rule_source !== 'unknown' ? {id: detail.rule_id, expression: detail.rule_expression} : null
     },
     steps: [...detail.trace.steps]
       .sort((a, b) => a.seq - b.seq)

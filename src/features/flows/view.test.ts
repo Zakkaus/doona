@@ -22,7 +22,12 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   detail.trace.steps.reverse();
   const view = {...flowRecordsView([{...list.flows[0], input: undefined}], list, new Map(), t, 'en'), detail: flowDetailView(detail, t, 'en')};
   expect(view.rows[0].target).toBe(list.flows[0].id);
-  expect(view.detail!.seed).toMatchObject({domain: null, dip: '2001:db8::5', outbound: detail.outbound, matched: detail.rule_id});
+  expect(view.detail!.seed).toMatchObject({
+    domain: null,
+    dip: '2001:db8::5',
+    outbound: detail.outbound,
+    matched: detail.rule_id ? {id: detail.rule_id, expression: detail.rule_expression} : null
+  });
   const inputStep = detail.trace.steps.find(step => step.stage === 'input')!;
   expect(view.detail!.steps.map(step => step.id)).toEqual(detail.trace.steps.map(step => step.seq).sort((a, b) => a - b));
   expect(view.detail!.steps.find(step => step.stage === t('flow.stage.input'))?.fields).toContainEqual([t('conn.f.dst'), inputStep.data.values.dst]);
@@ -31,6 +36,8 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(fields).toContainEqual([t('conn.node'), 'Proxy → hk-01']);
   expect(fields).toContainEqual([t('conn.rule'), 'domain(geosite:cn)']);
   expect(flowDetailView(undefined, t, 'en')).toBeNull();
+  // A match the backend did not record is not vouched for.
+  expect(flowDetailView({...detail, rule_id: 'r5', rule_source: 'unknown'}, t, 'en')!.seed.matched).toBeNull();
 });
 
 it('prepares tile labels with configured destinations, nested policies and unknown nodes', async () => {

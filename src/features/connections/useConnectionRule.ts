@@ -6,13 +6,13 @@ import {useT} from '../../i18n';
 import {ruleTargets, ruleWritable} from '../shared/rule';
 import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
 
-// What a connection tells the add-rule dialog.
+// What a connection tells the add-rule dialog. The rule it matched counts only when the backend recorded the match.
 export const connectionSeed = (c: Connection): QuickRuleSeed => ({
   domain: c.domain ?? null,
   dip: sourceIp(c.dst) ?? null,
   sip: sourceIp(c.src) ?? null,
   outbound: c.outbound,
-  matched: c.rule_id
+  matched: c.rule_id && c.rule_source !== 'unknown' ? {id: c.rule_id, expression: c.rule_expression} : null
 });
 
 // The rule actions of the shown connection: adding one through the shared dialog, and showing or editing the rule it

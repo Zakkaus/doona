@@ -9,6 +9,7 @@ import type {
   Node,
   RoutingEvaluation,
   RoutingRule,
+  RoutingTraceRequest,
   RoutingTraceResponse,
   RuleSource
 } from '../../api/model';
@@ -28,6 +29,7 @@ import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
+import type {QuickRuleSeed} from '../shared/rule';
 import {recorderEmpty} from '../shared/recorder';
 
 const kindLabels: Record<RuleConditionKind, Key> = {
@@ -436,6 +438,18 @@ export function evaluationView(
       tone: rule.result === 'matched' ? 'ok' : rule.result === 'indeterminate' ? 'warn' : rule.result === 'skipped' ? 'muted' : 'neutral',
       missing: formatList(lang, rule.missing_inputs) || '—'
     }))
+  };
+}
+// What the add-rule dialog starts from for one evaluation: the traced target as the evaluation saw it, and the rule it
+// matched when the evaluation was decided.
+export function traceSeed(input: RoutingTraceRequest['input'], evaluation: RoutingEvaluation): QuickRuleSeed {
+  const matched = evaluation.rules.find(rule => rule.result === 'matched');
+  return {
+    domain: input.domain ?? null,
+    dip: evaluation.dst_ip ?? input.dst_ip ?? null,
+    sip: input.src_ip ?? null,
+    outbound: evaluation.outbound,
+    matched: matched && evaluation.decision === 'determinate' ? {id: matched.rule_id, expression: matched.expression ?? null} : null
   };
 }
 type DnsView = {id: string; heading: string; fields: [string, string][]};
