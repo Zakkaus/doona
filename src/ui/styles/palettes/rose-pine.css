@@ -1,0 +1,106 @@
+/* Rosé Pine: Dawn is light, Moon and Main are dark. Dawn is also the :root default, so a token a family leaves unset
+   reads Dawn's value. */
+:root,
+:root[data-family='rose-pine'] {
+  --rp-base: #faf4ed;
+  --rp-surface: #fffaf3;
+  --rp-overlay: #f2e9e1;
+  --rp-muted: #9893a5;
+  --rp-subtle: #797593;
+  --rp-text: #464261;
+  --rp-love: #b4637a;
+  --rp-gold: #ea9d34;
+  --rp-rose: #d7827e;
+  --rp-pine: #286983;
+  --rp-foam: #56949f;
+  --rp-iris: #907aa9;
+  --rp-c1: var(--rp-pine);
+  --rp-c2: var(--rp-foam);
+  --rp-c3: var(--rp-iris);
+  --rp-c4: var(--rp-gold);
+  --rp-c5: var(--rp-rose);
+  --rp-c6: var(--rp-love);
+  --rp-c7: var(--rp-pine);
+  --rp-c8: var(--rp-foam);
+  --rp-hl-low: #f4ede8;
+  --rp-hl-med: #dfdad9;
+  --rp-hl-high: #cecacd;
+  --rp-shadow: 0 1px 2px rgba(87, 82, 121, 0.08);
+}
+/* Dawn's love, gold and foam are under 4.5:1 as text, and pine is under it on a selected tile. Subtle is under 4.5:1 on
+   the tiles of every Rosé Pine flavour. Glass shares the defaults above and keeps its own tones. */
+:root[data-family='rose-pine'] {
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
+}
+:root[data-family='rose-pine'][data-scheme='dark'],
+:root[data-flavour='moon'][data-scheme='dark'] {
+  --rp-base: #232136;
+  --rp-surface: #2a273f;
+  --rp-overlay: #393552;
+  --rp-muted: #6e6a86;
+  --rp-subtle: #908caa;
+  --rp-text: #e0def4;
+  --rp-love: #eb6f92;
+  --rp-gold: #f6c177;
+  --rp-rose: #ea9a97;
+  --rp-pine: #3e8fb0;
+  --rp-foam: #9ccfd8;
+  --rp-iris: #c4a7e7;
+  --rp-c1: var(--rp-pine);
+  --rp-c2: var(--rp-foam);
+  --rp-c3: var(--rp-iris);
+  --rp-c4: var(--rp-gold);
+  --rp-c5: var(--rp-rose);
+  --rp-c6: var(--rp-love);
+  --rp-c7: var(--rp-pine);
+  --rp-c8: var(--rp-foam);
+  --rp-hl-low: #2a283e;
+  --rp-hl-med: #44415a;
+  --rp-hl-high: #56526e;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Highlight low is the surface's own step here, so lines and fills on a card take the next step. */
+  --rp-line: var(--rp-hl-med);
+  --rp-fill: var(--rp-hl-med);
+  /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
+  --rp-on-accent: #191724;
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-text);
+  /* Love is under 4.5:1 on Moon's tiles. */
+  --rp-negative-tile-text: var(--rp-text);
+}
+:root[data-flavour='main'][data-scheme='dark'] {
+  --rp-base: #191724;
+  --rp-surface: #1f1d2e;
+  --rp-overlay: #26233a;
+  --rp-muted: #6e6a86;
+  --rp-subtle: #908caa;
+  --rp-text: #e0def4;
+  --rp-love: #eb6f92;
+  --rp-gold: #f6c177;
+  --rp-rose: #ebbcba;
+  --rp-pine: #31748f;
+  --rp-foam: #9ccfd8;
+  --rp-iris: #c4a7e7;
+  --rp-c1: var(--rp-pine);
+  --rp-c2: var(--rp-foam);
+  --rp-c3: var(--rp-iris);
+  --rp-c4: var(--rp-gold);
+  --rp-c5: var(--rp-rose);
+  --rp-c6: var(--rp-love);
+  --rp-c7: var(--rp-pine);
+  --rp-c8: var(--rp-foam);
+  --rp-hl-low: #21202e;
+  --rp-hl-med: #403d52;
+  --rp-hl-high: #524f67;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --rp-on-accent: #ffffff;
+  --rp-negative-tile-text: var(--rp-negative);
+}

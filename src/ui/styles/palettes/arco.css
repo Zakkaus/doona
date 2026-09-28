@@ -1,0 +1,72 @@
+/* Arco Design (ByteDance): tokens from @arco-design/web-react's arco.css, light body and body[arco-theme=dark]. */
+:root[data-family='arco'] {
+  --rp-base: #ffffff;
+  --rp-surface: #ffffff;
+  --rp-overlay: #f2f3f5;
+  --rp-muted: #c9cdd4;
+  --rp-subtle: #86909c;
+  --rp-text: #1d2129;
+  --rp-love: #f53f3f;
+  --rp-gold: #f7ba1e;
+  --rp-rose: #ff7d00;
+  --rp-pine: #165dff;
+  --rp-foam: #00b42a;
+  --rp-iris: #722ed1;
+  --rp-c1: #4080ff;
+  --rp-c2: #4cd263;
+  --rp-c3: #a871e3;
+  --rp-c4: #ff7d00;
+  --rp-c5: #14c9c9;
+  --rp-c6: #f979b7;
+  --rp-c7: #f7ba1e;
+  --rp-c8: #9fdb1d;
+  --rp-hl-low: #f2f3f5;
+  --rp-hl-med: #e5e6eb;
+  --rp-hl-high: #c9cdd4;
+  --rp-on-accent: #ffffff;
+  --rp-on-text: #ffffff;
+  --rp-line: #e5e6eb;
+  --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --rp-negative-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-subtle-text: var(--rp-text);
+}
+:root[data-family='arco'][data-scheme='dark'] {
+  --rp-base: #17171a;
+  --rp-surface: #232324;
+  --rp-overlay: rgba(255, 255, 255, 0.08);
+  --rp-muted: rgba(255, 255, 255, 0.3);
+  --rp-subtle: rgba(255, 255, 255, 0.5);
+  --rp-text: rgba(255, 255, 255, 0.9);
+  --rp-love: #f76965;
+  --rp-gold: #f9cc44;
+  --rp-rose: #ff9626;
+  --rp-pine: #3c7eff;
+  --rp-foam: #27c346;
+  --rp-iris: #8e51da;
+  --rp-c1: #306fff;
+  --rp-c2: #129a37;
+  --rp-c3: #5a25b0;
+  --rp-c4: #ff9626;
+  --rp-c5: #3fd4cf;
+  --rp-c6: #cb2b88;
+  --rp-c7: #f9cc44;
+  --rp-c8: #b8e24b;
+  --rp-hl-low: rgba(255, 255, 255, 0.08);
+  --rp-hl-med: #333335;
+  --rp-hl-high: rgba(255, 255, 255, 0.16);
+  --rp-on-accent: var(--rp-base);
+  --rp-on-text: #17171a;
+  --rp-line: #333335;
+  --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --rp-accent-text: var(--rp-text);
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-text);
+  /* Red is under 4.5:1 on a tile. */
+  --rp-negative-tile-text: var(--rp-text);
+}
