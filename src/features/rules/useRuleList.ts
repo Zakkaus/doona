@@ -97,7 +97,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     config: config.data,
     retry,
     positions: table.positions,
-    target: () => groups.data?.[0]?.name ?? 'direct',
+    target: groups.data?.[0]?.name ?? 'direct',
     anchor: ruleAnchor,
     kinds: conditionKinds,
     onClose: () => {

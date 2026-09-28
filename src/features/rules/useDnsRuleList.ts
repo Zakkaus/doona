@@ -40,7 +40,7 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     config: config.data,
     retry,
     positions: table.positions,
-    target: () => table.outbounds[0]?.id ?? '',
+    target: table.outbounds[0]?.id ?? '',
     anchor: (source, rule) => dnsRuleAnchor(source, rule, list),
     end: sources => dnsListEnd(sources, list),
     kinds: dnsConditionKinds[list],
