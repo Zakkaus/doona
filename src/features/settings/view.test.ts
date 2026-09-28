@@ -74,7 +74,7 @@ it('recorder controls follow the reported state and the wire form', () => {
 
 it('names the pages that make automatic flow recording capture', () => {
   const auto = (id: 'record_flows' | 'record_logs') => recorderView(id, 'auto', undefined, t).items.find(item => item.id === 'auto')?.label;
-  expect(auto('record_flows')).toBe('While Connections or Rules is open');
+  expect(auto('record_flows')).toBe('On flow demand');
   expect(auto('record_logs')).toBe('With panel');
   expect(flowRecordingNote('auto', t)).toContain('60');
   expect(flowRecordingNote('on', t)).toBeNull();

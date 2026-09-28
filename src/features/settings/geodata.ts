@@ -104,7 +104,7 @@ export function routeLabel(route: GeoDataDownload, groups: GroupSummary[] | unde
 
 // The status row: an update in progress, else the last error in error tone, else when the files last changed and
 // whether their checksums were verified.
-// canSkipChecksum: the backend verifies checksums and lets that be turned off, which a checksum failure then points at.
+// canSkipChecksum: the backend verifies checksums and lets that be turned off, which a checksum failure then explains.
 export function statusLine(data: GeoData | undefined, updating: boolean, now: number, locale: string, t: Translator, canSkipChecksum = false) {
   if (updating) return {text: t('settings.geodataUpdating'), error: false};
   // last_error's code is the failed stage and its message is always the same, so a stage without words of its own
@@ -114,9 +114,13 @@ export function statusLine(data: GeoData | undefined, updating: boolean, now: nu
     return {
       text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(backendMessage(code, message, t, {stage: code}), t)}),
       error: true,
+      // A mismatch may be a damaged or altered file, so it is not worded as a reason to turn verification off.
       help:
         canSkipChecksum && (code === 'checksum_unavailable' || code === 'checksum_mismatch')
-          ? {title: t('settings.geodataVerifyChecksum'), text: t('settings.geodataChecksumSkipHelp')}
+          ? {
+              title: t('settings.geodataVerifyChecksum'),
+              text: t(code === 'checksum_mismatch' ? 'settings.geodataChecksumMismatchHelp' : 'settings.geodataVerifyChecksumHelp')
+            }
           : undefined
     };
   }

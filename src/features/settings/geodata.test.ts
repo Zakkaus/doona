@@ -153,11 +153,11 @@ describe('rows', () => {
       })
     );
   });
-  it('points a checksum failure at the verify switch only where the backend offers it', () => {
-    const hint = {title: t('settings.geodataVerifyChecksum'), text: t('settings.geodataChecksumSkipHelp')};
-    for (const code of ['checksum_unavailable', 'checksum_mismatch']) {
+  it('explains a checksum failure beside the verify switch only where the backend offers it', () => {
+    const text = {checksum_unavailable: 'settings.geodataVerifyChecksumHelp', checksum_mismatch: 'settings.geodataChecksumMismatchHelp'} as const;
+    for (const code of ['checksum_unavailable', 'checksum_mismatch'] as const) {
       const failed = status({last_error: {code, message: 'x', details: null}});
-      expect(statusLine(failed, false, now, 'en-US', t, true).help).toEqual(hint);
+      expect(statusLine(failed, false, now, 'en-US', t, true).help).toEqual({title: t('settings.geodataVerifyChecksum'), text: t(text[code])});
       expect(statusLine(failed, false, now, 'en-US', t).help).toBeUndefined();
     }
     const other = status({last_error: {code: 'download_timeout', message: 'x', details: null}});

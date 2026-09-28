@@ -106,12 +106,12 @@ for (const width of [360, 768, 1440])
     const close = detail(page).getByRole('button', {name: 'Close connection', exact: true});
     await expect(close).toBeVisible();
     const boxes = await detail(page)
-      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule|View flow|Only this device|Close connection)$/})
+      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Only this device|Close connection)$/})
       .evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().toJSON() as DOMRect));
     expect(boxes).toHaveLength(6);
     // One button style: a quiet button beside a filled one reads as a misaligned label.
     const fills = await detail(page)
-      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule|View flow|Only this device)$/})
+      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Only this device)$/})
       .evaluateAll(buttons => buttons.map(button => getComputedStyle(button).backgroundColor));
     expect(new Set(fills).size).toBe(1);
     expect(new Set(boxes.map(box => box.height)).size).toBe(1);
@@ -574,13 +574,13 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   const {api, requests} = await mockBackend(page);
   const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content!;
   await page.goto('/#/connections?id=1');
-  await detail(page).getByRole('button', {name: 'Edit matched rule', exact: true}).click();
+  await detail(page).getByRole('button', {name: "Edit matched rule's outbound settings", exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?.*edit=/);
-  const dialog = page.getByRole('dialog', {name: 'Edit rule'});
+  const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});
   await expect(dialog.locator('.rp-code')).toContainText('domain(geosite: telegram)');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule updated'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   await expect(page).not.toHaveURL(/edit=/);

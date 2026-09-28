@@ -12,8 +12,8 @@ export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_log
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder | 'geodata'>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
 export const recorderFields: Recorder[] = ['record_flows', 'record_logs', 'record_dns_log'];
-export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key; autoLabel?: Key}> = {
-  record_flows: {state: 'flows', label: 'settings.recordFlows', autoLabel: 'settings.record.autoFlows'},
+export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {
+  record_flows: {state: 'flows', label: 'settings.recordFlows'},
   record_logs: {state: 'logs', label: 'settings.recordLogs'},
   record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
 };
@@ -28,7 +28,8 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
     value: choice,
     items: (['auto', 'on', 'off'] as const).map(mode => ({
       id: mode,
-      label: t(mode === 'auto' ? (recorderAccess[id].autoLabel ?? recorderChoiceLabel.auto) : recorderChoiceLabel[mode])
+      // Automatic flow recording follows flow demand, which its label names.
+      label: t(mode === 'auto' && id === 'record_flows' ? 'settings.record.autoFlows' : recorderChoiceLabel[mode])
     })),
     disabled: forbidden,
     tone: forbidden ? ('muted' as const) : state?.active ? ('ok' as const) : ('neutral' as const),
