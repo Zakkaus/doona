@@ -37,6 +37,17 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=36$/);
 });
 
+test('the DNS rules lead to the resolution log and to the dns section of the configuration', async ({page}) => {
+  await page.goto('/#/rules?tab=dns');
+  const request = section(page, 'Request rules');
+  await request.getByRole('link', {name: 'Resolution log', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=log$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+  await section(page, 'Request rules').getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
+});
+
 test('a DNS request rule is added through the source splice and removed again', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.goto('/#/rules?tab=dns');

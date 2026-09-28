@@ -2,7 +2,7 @@ import {formatLatency} from '../../i18n/format';
 import {useMemo, useState, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
-import {Card, Bar, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
+import {Card, Bar, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
 import type {DnsLogRecord} from '../../api/model';
 import {usePalette, Beeswarm, FactStrip, LegendItem, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
 import {dnsAnalysis, dnsOutcomes, shortPage, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
@@ -18,9 +18,12 @@ const labels: Record<DnsOutcome, 'dns.outcome.cached' | 'dns.outcome.answered' |
   failed: 'dns.outcome.failed'
 };
 
-export function DnsStats({enabled}: {enabled: boolean | undefined}) {
+// Where the statistics lead besides the configuration: the cache tab, and the log filtered to a ranked domain or device.
+type StatsLinks = {cache: string | null; log: (by: 'domain' | 'device', value: string) => string};
+
+export function DnsStats({enabled, links}: {enabled: boolean | undefined; links: StatsLinks}) {
   const t = useT();
-  const {log, cacheListed} = useDnsStatsTab(enabled);
+  const {log, cacheListed, configHref} = useDnsStatsTab(enabled);
   if (enabled === false) return <Empty>{t('dns.logUnavailable')}</Empty>;
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
@@ -33,11 +36,25 @@ export function DnsStats({enabled}: {enabled: boolean | undefined}) {
   ) : shortPage(log.data, log.limit) ? (
     <p className="rp-note">{t('dns.chart.shortPage', {n: log.data!.records.length, limit: log.limit!})}</p>
   ) : null;
-  return <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} notice={notice} cacheListed={cacheListed} />;
+  return (
+    <DnsAnalysis records={log.data?.records ?? noRecords} pending={pending} notice={notice} cacheListed={cacheListed} links={{...links, config: configHref}} />
+  );
 }
 const noRecords: DnsLogRecord[] = [];
 
-function DnsAnalysis({records, pending, notice, cacheListed}: {records: DnsLogRecord[]; pending: ReactNode; notice: ReactNode; cacheListed: boolean}) {
+function DnsAnalysis({
+  records,
+  pending,
+  notice,
+  cacheListed,
+  links
+}: {
+  records: DnsLogRecord[];
+  pending: ReactNode;
+  notice: ReactNode;
+  cacheListed: boolean;
+  links: StatsLinks & {config: string | null};
+}) {
   const t = useT();
   const p = usePalette();
   const a = useMemo(() => dnsAnalysis(records), [records]);
@@ -71,6 +88,13 @@ function DnsAnalysis({records, pending, notice, cacheListed}: {records: DnsLogRe
         <Card
           title={t('dns.chart.speed', {n: a.samples.length})}
           note={standIn ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
+          aside={
+            links.config && (
+              <Link appearance="link" href={links.config}>
+                {t('dns.openConfig')}
+              </Link>
+            )
+          }
         >
           {standIn ?? (
             <>
@@ -119,20 +143,32 @@ function DnsAnalysis({records, pending, notice, cacheListed}: {records: DnsLogRe
         </Card>
       </div>
       <div className="rp-g21">
-        <RankingCard analysis={a} standIn={standIn} />
-        <CacheCard listed={cacheListed} />
+        <RankingCard analysis={a} standIn={standIn} logHref={links.log} />
+        <CacheCard listed={cacheListed} href={links.cache} />
       </div>
     </div>
   );
 }
 
 // How full the cache is, from the usage the backend reports, and what kinds of answer it keeps.
-function CacheCard({listed}: {listed: boolean}) {
+function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
   const t = useT();
   const p = usePalette();
   const {ref, ...vm} = useDnsCacheCard(listed);
   return (
-    <Card ref={ref} title={t('dns.chart.cache')} note={vm.state === 'ready' ? vm.card?.note : undefined}>
+    <Card
+      ref={ref}
+      title={t('dns.chart.cache')}
+      note={vm.state === 'ready' ? vm.card?.note : undefined}
+      aside={
+        listed &&
+        href && (
+          <Link appearance="link" href={href}>
+            {t('dns.viewCache')}
+          </Link>
+        )
+      }
+    >
       {vm.state === 'unlisted' ? (
         <Empty>{t('dns.cacheUnavailable')}</Empty>
       ) : vm.state === 'unavailable' ? (
@@ -157,7 +193,7 @@ function CacheCard({listed}: {listed: boolean}) {
 }
 
 // Who asks the most, or what is asked the most, as the activity page ranks traffic.
-function RankingCard({analysis, standIn}: {analysis: Analysis; standIn: ReactNode}) {
+function RankingCard({analysis, standIn, logHref}: {analysis: Analysis; standIn: ReactNode; logHref: StatsLinks['log']}) {
   const t = useT();
   const p = usePalette();
   const [by, setBy] = useState('device');
@@ -186,7 +222,16 @@ function RankingCard({analysis, standIn}: {analysis: Analysis; standIn: ReactNod
             {ranking.top.map(item => (
               <Bar
                 key={item.key ?? ''}
-                label={item.key ?? t('dns.chart.resolver')}
+                // A row opens the log filtered to it; the resolver's own lookups have no device to filter by.
+                label={
+                  item.key === null ? (
+                    t('dns.chart.resolver')
+                  ) : (
+                    <Link appearance="link" href={logHref(by === 'device' ? 'device' : 'domain', item.key)}>
+                      <TextTooltip>{item.key}</TextTooltip>
+                    </Link>
+                  )
+                }
                 value={t('dns.chart.count', {n: item.count})}
                 pct={(item.count / top) * 100}
                 color={by === 'device' ? p.cat[0] : p.cat[3]}

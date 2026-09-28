@@ -463,6 +463,7 @@
   "dns.noTypes": "此後端未提供可查詢的記錄類型",
   "dns.notCovered": "不涵蓋",
   "dns.olderExpired": "無法載入較舊記錄，正從最新記錄重新載入。",
+  "dns.openConfig": "開啟 DNS 組態",
   "dns.outcome.answered": "上游回答",
   "dns.outcome.cached": "快取命中",
   "dns.outcome.failed": "失敗",

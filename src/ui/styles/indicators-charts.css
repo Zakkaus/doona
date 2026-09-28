@@ -84,6 +84,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A label that opens what it names is a link only as tall as the text, so the bar keeps its row height; the label cuts
+   overflow, so the focus ring is drawn inside the link. */
+.rp-bar .top .l > .rp-link {
+  display: flex;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0;
+}
+.rp-bar .top .l > .rp-link[data-focus-visible] {
+  outline-offset: -2px;
+}
 .rp-bar .top .v {
   color: var(--rp-subtle);
   flex-shrink: 0;

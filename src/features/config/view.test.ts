@@ -209,6 +209,8 @@ routing {
   ]);
   expect(cards[0].block).toBeNull();
   expect(cards[0].summary).toContain('config.dae');
+  // Each section links the page for what it defines; the rule sections open their rule lists.
+  expect(cards.map(card => card.href)).toEqual([null, '#/nodes', '#/nodes', '#/policies', '#/rules?tab=dns', '#/rules?tab=list', '#/rules?tab=list']);
 });
 
 it('carries a section draft over a change outside it and stops at a change to the section itself', () => {

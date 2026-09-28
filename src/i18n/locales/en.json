@@ -565,6 +565,7 @@
   "dns.noTypes": "This backend offers no record types to query",
   "dns.notCovered": "Not covered",
   "dns.olderExpired": "Could not load older records; reloading from the newest page.",
+  "dns.openConfig": "Open DNS configuration",
   "dns.outcome.answered": "Answered upstream",
   "dns.outcome.cached": "From the cache",
   "dns.outcome.failed": "Failed",

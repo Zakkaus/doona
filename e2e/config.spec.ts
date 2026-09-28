@@ -660,6 +660,19 @@ test('a module card opens its section in the Sources tab for editing by hand', a
   await expect(page.locator('.cm-cursorLayer')).toHaveCount(1);
 });
 
+test('the dns and routing module cards open their rule lists', async ({page}) => {
+  await configBackend(page);
+  await page.goto('/#/config');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  await modules.getByRole('region', {name: 'dns', exact: true}).getByRole('link', {name: 'Open page', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+  await expect(page.getByRole('tab', {name: 'DNS rules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await page.goBack();
+  await modules.getByRole('region', {name: 'routing', exact: true}).first().getByRole('link', {name: 'Open page', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
+  await expect(page.getByRole('tab', {name: 'Routing rules', exact: true})).toHaveAttribute('aria-selected', 'true');
+});
+
 test('modules show sections from read-only include files and open the file that defines them', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
@@ -816,9 +829,14 @@ test('code scrolled sideways passes under the line numbers', async ({page}) => {
   await routing.getByRole('button', {name: 'Edit', exact: true}).click();
   await routing.locator('.cm-content').fill(`routing {\n  domain(${'long.'.repeat(40)}example.org) -> proxy\n  fallback: resilient\n}`);
   const gutter = routing.locator('.cm-gutters');
-  const before = await gutter.screenshot();
+  // Clear of the phone's bottom bar, whose translucent surface shows the scrolled code behind it. The comparison leaves
+  // out the editor's rounded border, whose anti-aliasing can differ by a shade between two captures.
+  await gutter.evaluate(element => element.scrollIntoView({block: 'center'}));
+  const box = (await gutter.boundingBox())!;
+  const clip = {x: box.x + 3, y: box.y + 3, width: box.width - 6, height: box.height - 6};
+  const before = await page.screenshot({clip});
   await routing.locator('.cm-scroller').evaluate(scroller => (scroller.scrollLeft = 120));
-  expect(await gutter.screenshot()).toEqual(before);
+  expect(await page.screenshot({clip})).toEqual(before);
 });
 
 test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
