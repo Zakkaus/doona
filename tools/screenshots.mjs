@@ -45,17 +45,32 @@ const looks = [
   ['Semi Design Light', 'semi/semi', 'light'],
   ['Semi Design Dark', 'semi/semi', 'dark'],
   ['Glass Light', 'glass/glass', 'light'],
-  ['Glass Dark', 'glass/glass', 'dark']
+  ['Glass Dark', 'glass/glass', 'dark'],
+  ['China Clock-in', 'qiangguo/qiangguo', 'light'],
+  ['China All-nighter', 'qiangguo/qiangguo', 'dark']
 ];
 const gallery = new Map([
   ['Rosé Pine Dawn', 'rose-pine-light'],
+  ['Rosé Pine Main', 'rose-pine-main-dark'],
   ['Rosé Pine Moon', 'rose-pine-dark'],
   ['Catppuccin Latte', 'catppuccin-light'],
+  ['Catppuccin Frappé', 'catppuccin-frappe-dark'],
+  ['Catppuccin Macchiato', 'catppuccin-macchiato-dark'],
   ['Catppuccin Mocha', 'catppuccin-dark'],
   ['Nord Light', 'nord-light'],
   ['Nord Dark', 'nord-dark'],
+  ['Kary Pro Colors Light', 'kary-light'],
+  ['Kary Pro Colors Dark', 'kary-dark'],
+  ['Ant Design Light', 'antd-light'],
+  ['Ant Design Dark', 'antd-dark'],
+  ['Arco Design Light', 'arco-light'],
+  ['Arco Design Dark', 'arco-dark'],
+  ['Semi Design Light', 'semi-light'],
+  ['Semi Design Dark', 'semi-dark'],
   ['Glass Light', 'glass-light'],
-  ['Glass Dark', 'glass-dark']
+  ['Glass Dark', 'glass-dark'],
+  ['China Clock-in', 'qiangguo-light'],
+  ['China All-nighter', 'qiangguo-dark']
 ]);
 // The page tour: the content panel without the side navigation, from its top down to the bottom of `until`.
 const tour = [

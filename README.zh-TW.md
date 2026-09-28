@@ -23,7 +23,7 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 ho
 <details>
 <summary><strong>全部配色</strong></summary>
 
-十二套配色各有淺色與深色；Rosé Pine 與 Catppuccin 另有多種深色變體。配色在頂欄切換。
+十二套配色各有淺色與深色。Rosé Pine 有兩種，Catppuccin 有三種；其餘七種為 Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design、玻璃與中國（打卡版／通宵版）。中國配色將良好與運作中顯示為穩中向好，將無法使用與降級顯示為嚴峻挑戰。可在頂欄或登入頁切換配色。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
 
@@ -31,7 +31,7 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 ho
 
 ## 配色範例
 
-下圖展示活動頁的四種配色。可在頂欄切換配色和模式。
+下圖展示活動頁的五種配色。可在頂欄切換配色和模式。
 
 | 配色       | 淺色                                                                                                | 深色                                                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -39,6 +39,7 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面：現在是 ho
 | Catppuccin | ![Catppuccin 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
 | Nord       | ![Nord 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
 | Glass      | ![Glass 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)           | ![Glass 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)           |
+| 中國       | ![中國打卡版](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)        | ![中國通宵版](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp)        |
 
 ## 狀態
 
@@ -46,9 +47,9 @@ doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚�
 
 ## 安裝
 
-doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發布頁](https://github.com/Zakkaus/doona/releases)的標籤上。將其解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。
+doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。發行檔（`doona-<version>.tar.gz`、選用的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 與 SC）、`SHA256SUMS`）附在[發布頁](https://github.com/Zakkaus/doona/releases)的標籤上。將 `doona-<version>.tar.gz` 解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。
 
-自 v0.1.0-beta.8 起，在 honk 發行含原生 API 的正式版本之前，每個 doona 發行版也附上該 `debug` 版本預先建置的 `honk-core-debug-<target>[-stock].tar.gz`，使用者不需自行編譯 honk。`HONK-SOURCE.txt` 註明建置所用的 honk 提交，`honk-source-<commit>.tar.gz` 為該提交的原始碼，`SHA256SUMS` 涵蓋除自身以外的所有發布附件。[安裝 honk](https://zakkaus.github.io/doona-docs/zh-TW/install.html#install) 說明如何依閘道器選擇封存檔。
+自 v0.1.0-beta.8 起，在 honk 發行含原生 API 的正式版本之前，每個 doona 發行版也附上預先建置的 `honk-core-debug-<target>[-stock].tar.gz`，使用者不需自行編譯 honk。beta.9 的封存檔包含 honk `debug.2026.9.28.native-api.4`（提交 `3ff52762`），提供 DNS 規則、執行期降級與地理資料 SHA-256 驗證開關。`HONK-SOURCE.txt` 註明建置所用的 honk 提交，`honk-source-<commit>.tar.gz` 為該提交的原始碼，`SHA256SUMS` 涵蓋除自身以外的所有發布附件。[安裝 honk](https://zakkaus.github.io/doona-docs/zh-TW/install.html#install) 說明如何依閘道器選擇封存檔。
 
 [文件](https://zakkaus.github.io/doona-docs/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
 
@@ -56,22 +57,24 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
 
-| 頁面       | 內容                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------- |
-| 活動       | 出站模式、流量與記憶體、活動連線、節點延遲、出站用量、流量最高的客戶端、通知           |
-| 概覽       | 引擎與 eBPF 狀態、程序 CPU 使用率、流量計數、後端能力與未開啟的功能、狀態 JSON 匯出    |
-| 連線       | 即時連線的來源、目的、規則、鏈路、流量與傳輸速率；收合分組；關閉單條或全部             |
-| DNS        | 查詢與解析結果、快取、日誌；清空快取                                                   |
-| 策略       | 群組、成員與健康；選擇、手動固定、恢復自動選擇、測試、編輯與健康檢查網址               |
-| 規則       | 從規則或設備經出站到所選節點的分流樹、規則列表與命中數、流程記錄、對指定目標的追蹤模擬 |
-| 節點       | 訂閱與更新間隔、組態內節點、新增與移除、測試、加入群組                                 |
-| 組態       | 新增來源檔案並直接編輯、診斷、驗證、快速設定、匯出                                     |
-| 事件、日誌 | 後端事件串流；日誌串流，可篩選、暫停、匯出                                             |
-| 設定       | 後端、執行期設定與後端操作、語言、外觀、配色與通知位置                                 |
+| 頁面       | 內容                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| 活動       | 出站模式、流量與記憶體、活動連線、節點延遲、出站用量、流量最高的客戶端、通知                               |
+| 概覽       | 引擎與 eBPF 狀態、程序 CPU 使用率、流量計數、執行期降級、後端能力與未開啟的功能、狀態 JSON 匯出            |
+| 連線       | 即時連線的來源、目的、命中規則、鏈及其來源、流量與傳輸速率；修改可寫入規則的出站；收合分組，關閉單條或全部 |
+| DNS        | 查詢與解析結果、快取、解析記錄與統計；組態可寫入時依記錄中的網域新增 DNS 規則；清空快取                    |
+| 策略       | 群組、成員與健康；選擇、手動固定、測試、編輯、健康檢查網址，以及可修改的容忍差值與閒置逾時                 |
+| 規則       | 路由規則與 DNS 請求及回答規則，可在可寫入來源中編輯；分流總覽、命中數、流程記錄與追蹤模擬                  |
+| 節點       | 訂閱與更新間隔、組態內節點、新增與移除、測試、加入群組                                                     |
+| 組態       | 新增來源檔案並直接編輯、診斷、驗證、快速設定、匯出                                                         |
+| 事件、日誌 | 後端事件串流；日誌串流，可篩選、暫停、匯出                                                                 |
+| 設定       | 後端、執行期設定與操作、地理資料來源與支援時的 SHA-256 驗證、語言、外觀、配色與通知位置                    |
 
-只有頁面需要的資源全部不可用時，頁面才會標為不可用。任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[功能](https://zakkaus.github.io/doona-docs/zh-TW/features.html#pages)一頁。不易理解的狀態與術語旁設有說明按鈕，按下即顯示說明。
+只有頁面需要的資源全部不可用時，頁面才會標為不可用。後端列出 DNS 規則時才顯示對應分頁；編輯須有可寫入的來源檔案。連線與規則頁開啟期間會請求流程，無須將流程記錄設為常開。
 
-登入為獨立頁面，頁內提供語言選單與主題切換。視窗寬度不小於 1024 像素時，表單旁的面板顯示施工場景，按下後啟動 Flappy Duck 小遊戲。示範版預先填入使用者名稱 `demo` 與密碼 `demo`。
+任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[功能](https://zakkaus.github.io/doona-docs/zh-TW/features.html#pages)一頁。不易理解的狀態與術語旁設有說明按鈕，按下即顯示說明。
+
+登入為獨立頁面，頁內提供語言和配色選單與主題切換。視窗寬度不小於 1024 像素時，表單旁的面板顯示施工場景，按下後啟動 Flappy Duck 小遊戲。示範版預先填入使用者名稱 `demo` 與密碼 `demo`。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
 
@@ -93,7 +96,7 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ### DNS
 
-統計分頁顯示解析時間的中位數與 P95、快取命中率、失敗率、各上游在延遲刻度上的查詢分布，以及查詢的結果分類。
+統計分頁顯示解析時間的中位數與 P95、快取命中率、失敗率、各上游在延遲刻度上的查詢分布，以及查詢的結果分類。後端提供 DNS 規則且組態可寫入時，可從解析記錄為其網域新增 DNS 請求規則，預填的後綴條件也會比對子網域。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/dns.webp" alt="DNS 頁的統計分頁" width="100%">
 
@@ -117,7 +120,7 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ## 手機版面
 
-視窗寬度小於 1024 像素時，側邊導覽改為底部列，分為概覽、流量、路由與設定四組。每組開啟時顯示本次工作階段最後瀏覽的頁面，組內各頁排成一列，位於內容上方。語言、主題、配色與字標移入頂欄的溢位選單，各為一個子選單。
+視窗寬度小於 1024 像素時，側邊導覽改為底部列，分為活動、流量、路由與設定四組。每組開啟時顯示本次工作階段最後瀏覽的頁面，組內各頁排成一列，位於內容上方。語言、主題、配色與字標移入頂欄的溢位選單，各為一個子選單。
 
 視窗寬度小於 600 像素時，表格保留所有欄位並可橫向捲動；更寬時依預設順序隱藏放不下的欄位。工具列換行排列。在事件與日誌頁，按下某一列即可在表格下方閱讀完整文字。在概覽、DNS 與日誌頁，第一個操作保留為按鈕，其餘收進選單。
 

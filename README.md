@@ -23,7 +23,7 @@ doona is a static web UI for the native API the daeuniverse engines share: honk 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Twelve palettes support light and dark modes; Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
+Twelve palettes support light and dark modes: Rosé Pine (two flavours), Catppuccin (three), Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China (Clock-in / All-nighter). In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar or on the sign-in page.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -31,7 +31,7 @@ Twelve palettes support light and dark modes; Rosé Pine and Catppuccin include 
 
 ## Theme gallery
 
-The activity page in four palettes. Select a palette and mode from the top bar.
+The activity page in five palettes. Select a palette and mode from the top bar.
 
 | Theme gallery | Light                                                                                                | Dark                                                                                               |
 | ------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -39,6 +39,7 @@ The activity page in four palettes. Select a palette and mode from the top bar.
 | Catppuccin    | ![Catppuccin Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
 | Nord          | ![Nord Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
 | Glass         | ![Glass Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)           | ![Glass Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)           |
+| China         | ![China Clock-in](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)     | ![China All-nighter](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp) |
 
 ## Status
 
@@ -46,9 +47,9 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 
 ## Install
 
-doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Extract them into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`.
+doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Extract `doona-<version>.tar.gz` into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`.
 
-From v0.1.0-beta.8 on, until honk publishes a release with the native API, each doona release also attaches prebuilt `honk-core-debug-<target>[-stock].tar.gz` archives from that `debug` release, so no one needs to compile honk. `HONK-SOURCE.txt` names the honk commit they were built from, `honk-source-<commit>.tar.gz` holds that commit's source, and `SHA256SUMS` covers every release asset except itself. [Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which archive fits a gateway.
+From v0.1.0-beta.8 on, until honk publishes a release with the native API, each doona release also attaches prebuilt `honk-core-debug-<target>[-stock].tar.gz` archives, so no one needs to compile honk. The beta.9 archives contain honk `debug.2026.9.28.native-api.4` (commit `3ff52762`), which supplies DNS rules, runtime degradations and the geodata checksum switch. `HONK-SOURCE.txt` names the honk commit they were built from, `honk-source-<commit>.tar.gz` holds that commit's source, and `SHA256SUMS` covers every release asset except itself. [Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which archive fits a gateway.
 
 The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
@@ -56,22 +57,24 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
 
-| Page          | Shows                                                                                                                        |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients, notifications              |
-| Overview      | Engine and eBPF state, process CPU, traffic counters, backend capabilities and the features that are off, the status as JSON |
-| Connections   | Live connections with source, destination, rule, chain, traffic and transfer rates; fold groups, close one or all            |
-| DNS           | Queries with their answers, the cache, the log; a flush                                                                      |
-| Policies      | Groups, their members and health; selection, pinning, probing, editing and health-check URLs                                 |
-| Rules         | A routing tree from rules or devices through outbounds to nodes, the rule list with hits, the flow log, a trace              |
-| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                               |
-| Configuration | Create source files and edit them in place, diagnostics, validation, quick setup and export                                  |
-| Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                      |
-| Settings      | Backends, runtime settings and backend actions, language, appearance, palette and notification placement                     |
+| Page          | Shows                                                                                                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients, notifications                                                                   |
+| Overview      | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                           |
+| Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all |
+| DNS           | Queries with their answers, cache, resolution log and statistics; create a DNS rule for a logged domain when writable; flush the cache                                            |
+| Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                   |
+| Rules         | Routing and DNS request and response rules, editable in their source when writable; routing map, rule hits, flow records and trace simulation                                     |
+| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                                                                                    |
+| Configuration | Create source files and edit them in place, diagnostics, validation, quick setup and export                                                                                       |
+| Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                           |
+| Settings      | Backends, runtime settings and actions, geodata sources and SHA-256 verification when supported, language, appearance, palette and notification placement                         |
 
-A page is marked unavailable only when every resource it needs is unavailable. `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
+A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections and Rules request flows while open, without setting Flow recording to Always.
 
-Sign-in is a page of its own with the language menu and scheme toggle. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
+`Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
+
+Sign-in is a page of its own with language and palette menus and a scheme toggle. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
@@ -93,7 +96,7 @@ The Traffic tab of Connections plots each connection's upload against its downlo
 
 ### DNS
 
-The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended.
+The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. A resolution log entry can open a new DNS request rule for its domain, with a suffix condition that also matches subdomains, when DNS rules and configuration writes are available.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 
