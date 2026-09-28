@@ -36,6 +36,21 @@ it('signs in from the public discovery view a backend gives a caller it does not
   expect(fetcher.mock.calls.map(([input]) => String(input))).toEqual(['https://router.test/api', 'https://router.test/api']);
 });
 
+it('reports a contract refusal from discovery instead of taking it for an older backend', async () => {
+  const refuse = (status: number, code: string) =>
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response(JSON.stringify({error: {code, message: 'Refused'}}), {status, headers: {'Content-Type': 'application/json'}})
+    );
+  refuse(403, 'permission_denied');
+  await expect(resolveSignInKind('https://router.test')).rejects.toMatchObject({status: 403, code: 'permission_denied'});
+  refuse(401, 'invalid_credentials');
+  await expect(resolveSignInKind('https://router.test')).rejects.toMatchObject({status: 401, code: 'invalid_credentials'});
+  // The Clash API of a honk before the native API answers 401 without a code.
+  vi.stubGlobal('fetch', async () => new Response(JSON.stringify({message: 'Unauthorized'}), {status: 401}));
+  expect(await resolveSignInKind('https://router.test')).toBe('token');
+});
+
 it('rejects a removed or repointed profile without changing its credentials', () => {
   const repointed = {...challenged, api: 'https://other.test', token: 'other-secret'};
   expect(loginProfiles([repointed], challenged.id, challenged.api, 'secret')).toBeNull();
@@ -80,6 +95,7 @@ it('maps refusals by code and follows a moved account state', () => {
 
 it('takes only a missing or protected discovery for a backend that predates password login', () => {
   expect(predatesAuth(new ApiError(404, 'not_found', 'Not found'))).toBe(true);
+  expect(predatesAuth(new ApiError(401, '', 'Unauthorized'))).toBe(true);
   expect(predatesAuth(new ApiError(401, 'authentication_required', 'Token required'))).toBe(true);
   expect(predatesAuth(new SyntaxError('Unexpected token <'))).toBe(true);
   // A backend that cannot be reached or fails says nothing about its sign-in; the page asks to retry instead.
