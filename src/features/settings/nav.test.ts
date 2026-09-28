@@ -4,6 +4,10 @@ import {capabilities, capabilitiesBase} from '../../api/mock/fixtures/capabiliti
 import {geodataConfigurable, settingsCardList} from './nav';
 
 describe('capability', () => {
+  it('lists the cards in page order', () => {
+    expect(settingsCardList(capabilities.resources).map(card => card.id)).toEqual(['backend', 'runtime', 'geodata', 'appearance', 'actions', 'about']);
+  });
+
   it('shows the geodata card only with configurable sources and the geodata settings field', () => {
     expect(geodataConfigurable(capabilities.resources)).toBe(true);
     expect(settingsCardList(capabilities.resources).map(card => card.id)).toContain('geodata');

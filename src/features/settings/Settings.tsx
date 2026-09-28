@@ -1,4 +1,4 @@
-import {useId} from 'react';
+import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {ActionHelp, Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
@@ -9,7 +9,7 @@ import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
 import type {PageProps} from '../../shell/routes';
-import {settingsCard} from './nav';
+import {settingsCard, settingsCards, type SettingsCardId} from './nav';
 
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
@@ -65,10 +65,8 @@ export function Settings({query}: PageProps) {
   } = useSettingsPage(query);
   const mirrorHelpId = useId();
 
-  return (
-    <div className="rp-page">
-      {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
-      {paired && <p className="rp-note">{t('settings.paired')}</p>}
+  const content: Record<SettingsCardId, ReactNode> = {
+    backend: (
       <Card level={2} title={t(cards.backend.titleKey)} titleId={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
         <ActionHelp reason={profileReason}>
@@ -145,9 +143,10 @@ export function Settings({query}: PageProps) {
           )}
         </form>
       </Card>
-      <RuntimeSettingsCard />
-      <GeodataSettingsCard />
-      <BackendActionsCard />
+    ),
+    runtime: <RuntimeSettingsCard />,
+    geodata: <GeodataSettingsCard />,
+    appearance: (
       <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
         <div className="rp-toolbar">
           <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
@@ -200,6 +199,9 @@ export function Settings({query}: PageProps) {
           </span>
         </div>
       </Card>
+    ),
+    actions: <BackendActionsCard />,
+    about: (
       <Card level={2} title={t(cards.about.titleKey)} titleId={cards.about.headingId}>
         {versionWarning && (
           <Light small tone="warn">
@@ -212,6 +214,16 @@ export function Settings({query}: PageProps) {
           {installHint && <p className="rp-note">{installHint}</p>}
         </div>
       </Card>
+    )
+  };
+
+  return (
+    <div className="rp-page">
+      {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
+      {paired && <p className="rp-note">{t('settings.paired')}</p>}
+      {settingsCards.map(card => (
+        <Fragment key={card.id}>{content[card.id]}</Fragment>
+      ))}
       <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={switchPending}

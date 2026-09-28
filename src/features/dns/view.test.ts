@@ -35,12 +35,16 @@ it('uses the same nullable field and answer projection for queries and log detai
   expect(dnsLogsExport([record])).toContain('192.0.2.1');
 });
 
+it('lists the statistics and the two listings before the query', () => {
+  expect(dnsQueryView(null, capabilities.resources, 'A', '', false, t).tabs.map(tab => tab.id)).toEqual(['stats', 'log', 'cache', 'query']);
+});
+
 it('disables unsupported query types and omits explicitly unavailable tabs', () => {
   const resources = {...capabilities.resources, dns_query: {...capabilities.resources.dns_query, record_types: ['A']}, dns_log: {available: false as const}};
   expect(dnsQueryView(null, resources, 'AAAA', 'example.com', false, t).disabled).toBe(true);
   expect(dnsQueryView(null, resources, 'all', 'example.com', false, t).disabled).toBe(false);
   expect(dnsQueryView(null, resources, 'A', ' ', false, t).disabled).toBe(true);
-  expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['query', 'cache']);
+  expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['cache', 'query']);
 });
 
 it('filters cache rows case-insensitively without narrowing the flush scope or coverage', () => {

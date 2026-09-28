@@ -1,15 +1,15 @@
 import type {Capabilities} from '../../api/model';
 import type {Key} from '../../i18n';
 
-// The page's cards in order. Search lists the same cards, so the page takes its titles from here; `?card=` scrolls
-// to the card's heading, id `settings-{id}`.
-type SettingsCardId = 'backend' | 'runtime' | 'geodata' | 'actions' | 'appearance' | 'about';
+// The page's cards in order. The page renders them in this order and search lists the same
+// cards, so both take their titles from here; `?card=` scrolls to the card's heading, id `settings-{id}`.
+export type SettingsCardId = 'backend' | 'runtime' | 'geodata' | 'actions' | 'appearance' | 'about';
 export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> = [
   {id: 'backend', titleKey: 'settings.backend'},
   {id: 'runtime', titleKey: 'settings.runtime'},
   {id: 'geodata', titleKey: 'settings.geodata'},
-  {id: 'actions', titleKey: 'settings.actions'},
   {id: 'appearance', titleKey: 'settings.appearance'},
+  {id: 'actions', titleKey: 'settings.actions'},
   {id: 'about', titleKey: 'settings.about'}
 ];
 // The cards the page shows for a backend: the geodata card only where its sources can be configured.

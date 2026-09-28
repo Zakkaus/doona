@@ -26,8 +26,10 @@ export function useDns({go, query}: PageProps) {
   const {busy, error, run} = useAction<'query'>({rethrow: true});
   const resources = capabilities.data?.resources;
   const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
-  // A link that filters the log by domain opens the log, not the statistics.
-  const fallback = params.has('domain') && view.tabs.some(item => item.id === 'log') ? 'log' : (view.tabs[0]?.id ?? 'query');
+  // The statistics open the page, but a link that filters the log by domain opens the log. Without a log the query
+  // opens it: the cache is a listing to browse, not a starting point.
+  const ids = view.tabs.map(item => item.id);
+  const fallback = ids.includes('log') ? (params.has('domain') ? 'log' : 'stats') : ids.includes('query') ? 'query' : (ids[0] ?? 'query');
   const submit = async () => {
     try {
       await run('query', async signal => {
