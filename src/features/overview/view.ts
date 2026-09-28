@@ -51,10 +51,12 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
     const help = valueHelp(value, runtimeDegraded, label);
     return help ? {label: label(key), value: datapathValue(value, label), help} : [label(key), datapathValue(value, label)];
   };
+  const maps = ebpf?.maps?.state ?? 'unknown';
   return [
     row('ov.f.kind', datapath.kind),
     row('ov.f.state', datapath.state),
-    row('ov.f.visibility', datapath.visibility),
+    // The eBPF backend checks only the hooks on host interfaces, so its partial visibility says nothing and is left out.
+    ...(datapath.visibility === 'partial' && ebpf ? [] : [row('ov.f.visibility', datapath.visibility)]),
     ...(ebpf
       ? [
           row('ov.f.backend', ebpf.backend),
@@ -62,26 +64,29 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
           row('ov.f.hooks', ebpf.hooks),
           row('ov.f.routing', ebpf.routing.state),
           row('ov.f.health', ebpf.health),
-          row('ov.f.maps', ebpf.maps?.state ?? 'unknown'),
-          [
-            label('ov.f.connState'),
-            occupancy?.occupancy_known && occupancy.occupancy !== null
-              ? label('ui.fraction', {part: formatNumber(occupancy.occupancy, locale), whole: formatNumber(occupancy.capacity, locale)})
-              : occupancy
-                ? label('ov.occupancyUnknown', {capacity: formatNumber(occupancy.capacity, locale)})
-                : unknown
-          ] as KvItem
+          // Maps that are partial only because the occupancy is not read show just the capacity.
+          ...(maps === 'partial' && occupancy && !occupancy.occupancy_known
+            ? [[label('ov.f.maps'), label('ov.mapCapacity', {capacity: formatNumber(occupancy.capacity, locale)})] as KvItem]
+            : [
+                row('ov.f.maps', maps),
+                [
+                  label('ov.f.connState'),
+                  occupancy?.occupancy_known && occupancy.occupancy !== null
+                    ? label('ui.fraction', {part: formatNumber(occupancy.occupancy, locale), whole: formatNumber(occupancy.capacity, locale)})
+                    : occupancy
+                      ? label('ov.occupancyUnknown', {capacity: formatNumber(occupancy.capacity, locale)})
+                      : unknown
+                ] as KvItem
+              ])
         ]
       : [])
   ];
 }
-const cgroupScopes: Record<'service' | 'shared' | 'unknown', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared', unknown: 'ui.unknown'};
-const cgroupHelp: Record<'service' | 'shared' | 'unknown', Key> = {
-  service: 'ov.cgroupHelp.service',
-  shared: 'ov.cgroupHelp.shared',
-  unknown: 'ov.cgroupHelp.unknown'
-};
-export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: string, omit: Key[] = []): KvItem[] {
+const cgroupScopes: Record<'service' | 'shared', Key> = {service: 'ov.v.cgroupService', shared: 'ov.v.cgroupShared'};
+const cgroupHelp: Record<'service' | 'shared', Key> = {service: 'ov.cgroupHelp.service', shared: 'ov.cgroupHelp.shared'};
+// `limitReported` is whether the capabilities list the cgroup limit, so a null limit means none is set.
+export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: string, omit: Key[] = [], limitReported = false): KvItem[] {
+  const scope = memory.cgroup?.scope;
   const count = (value: string | null | undefined) => {
     const parsed = parseU64(value ?? null);
     return parsed === null ? '—' : formatNumber(parsed, locale);
@@ -89,19 +94,20 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
   const rows: Array<[Key, string]> = [
     ['ov.f.rss', formatBytes(memory.process?.rss_bytes ?? null, locale)],
     ['ov.f.cgroupCurrent', formatBytes(memory.cgroup?.current_bytes ?? null, locale)],
-    ['ov.f.cgroupLimit', formatBytes(memory.cgroup?.limit_bytes ?? null, locale)],
-    // Distinguish service, shared, and unknown cgroups so shared usage is not attributed solely to the engine.
-    ['ov.f.cgroupScope', memory.cgroup ? label(cgroupScopes[memory.cgroup.scope]) : '—'],
+    ['ov.f.cgroupLimit', limitReported && memory.cgroup?.limit_bytes === null ? label('ov.noLimit') : formatBytes(memory.cgroup?.limit_bytes ?? null, locale)],
+    // Distinguish service and shared cgroups so shared usage is not attributed solely to the engine.
+    ['ov.f.cgroupScope', scope && scope !== 'unknown' ? label(cgroupScopes[scope]) : '—'],
     ['ov.f.oomHigh', count(memory.cgroup?.events?.high)],
     ['ov.f.oom', count(memory.cgroup?.events?.oom)],
     ['ov.f.oomKill', count(memory.cgroup?.events?.oom_kill)],
     ['ov.f.ebpfBytes', formatBytes(memory.kernel?.ebpf_bytes ?? null, locale)]
   ];
-  const scope = memory.cgroup?.scope;
+  // An unknown scope and an uncollected kernel figure have nothing to show, so their rows are left out.
+  const hidden: Key[] = [...omit, ...(scope === 'unknown' ? ['ov.f.cgroupScope' as const] : []), ...(memory.kernel ? [] : ['ov.f.ebpfBytes' as const])];
   return rows
-    .filter(([key]) => !omit.includes(key))
+    .filter(([key]) => !hidden.includes(key))
     .map(([key, value]): KvItem =>
-      key === 'ov.f.cgroupScope' && scope
+      key === 'ov.f.cgroupScope' && scope && scope !== 'unknown'
         ? {label: label(key), value, help: {title: label(key), text: label('ui.valuePair', {label: value, value: label(cgroupHelp[scope])})}}
         : [label(key), value]
     );
@@ -178,7 +184,15 @@ export function overviewView(
     },
     memory: {
       state: section(!!memory, loading.capabilities || loading.memory),
-      fields: memory ? memoryFields(memory, t, locale, percent === null ? [] : ['ov.f.cgroupCurrent', 'ov.f.cgroupLimit']) : [],
+      fields: memory
+        ? memoryFields(
+            memory,
+            t,
+            locale,
+            percent === null ? [] : ['ov.f.cgroupCurrent', 'ov.f.cgroupLimit'],
+            !!capabilities?.resources.runtime_memory.metrics?.includes('cgroup.limit_bytes')
+          )
+        : [],
       bar:
         percent === null
           ? null
