@@ -1,7 +1,8 @@
 const PREFIX = `doona-shell:${self.registration.scope}:`;
 const CACHE = PREFIX + '__BUILD_HASH__';
 const PRECACHE = '__PRECACHE__';
-// Each language's catalogue and stylesheets in this build, cached only for a language a reader uses.
+// Each language's catalogue and stylesheets in this build, cached only for a language a reader uses. A partial
+// language's list holds the reference language's files too, since it loads them.
 const LANGUAGES = '__LANGUAGES__';
 // The mock backend's chunk, cached only for a page that runs on it.
 const MOCK = '__MOCK__';

@@ -9,16 +9,16 @@ import {initializeApi, startedOnMock} from './api';
 import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
+import {DEFAULT_LANG, LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
 import {unloaded} from './i18n/unloaded';
 
 stampAppearance();
-// The saved language, or zh-TW when its catalogue cannot be fetched; rejects only when neither loads.
+// The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
 function startLanguage(): Promise<Lang> {
   const saved = readLang();
   return loadLanguage(saved).then(
     () => saved,
-    error => (saved === 'zh-TW' ? Promise.reject(error) : loadLanguage('zh-TW').then(() => 'zh-TW' as const))
+    error => (saved === DEFAULT_LANG ? Promise.reject(error) : loadLanguage(DEFAULT_LANG).then(() => DEFAULT_LANG))
   );
 }
 let startup: Promise<unknown> | undefined;
@@ -59,7 +59,7 @@ function Startup() {
   if (ready && lang) return <Shell lang={lang} />;
   const [problem, retry] = unloaded(readLang());
   return (
-    <LangContext.Provider value={lang ?? 'zh-TW'}>
+    <LangContext.Provider value={lang ?? DEFAULT_LANG}>
       <div className="rp-shell">
         <header className="rp-top">
           <div className="rp-brand">
