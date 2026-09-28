@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {signInDemo} from './demo-session.mjs';
+import {langs} from './languages.mjs';
 
 const require = createRequire(import.meta.url);
 let browserModule;
@@ -290,7 +291,7 @@ try {
   mkdirSync(dir, {recursive: true});
   await screenshot(sheet, join(dir, 'palettes'), {fullPage: true});
   await sheet.close();
-  for (const lang of ['en', 'zh-TW', 'zh-CN']) {
+  for (const lang of langs) {
     mkdirSync(join(dir, lang), {recursive: true});
     for (const [name, scheme, route] of shots) {
       const context = await browser.newContext({viewport: {width: 1440, height: 920}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});

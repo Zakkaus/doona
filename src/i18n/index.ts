@@ -1,31 +1,20 @@
 import {createContext, useContext, useMemo} from 'react';
 import type {Key} from './locales/zh-TW';
 import {storageKeys} from '../api/storage';
+import {browserLang, DEFAULT_LANG, isLang, languages, type Lang} from './languages';
 export type {Key};
+export {browserLang, DEFAULT_LANG, languages, type Lang};
 
-export type Lang = 'zh-TW' | 'zh-CN' | 'en';
 export type Message = string | {one: string; other: string};
 export type Params = Record<string, string | number>;
 export type Translator = (key: Key, params?: Params) => string;
-export const LANGS: Array<[Lang, string]> = [
-  ['zh-TW', '繁體中文'],
-  ['zh-CN', '简体中文'],
-  ['en', 'English']
-];
-export const LOCALE: Record<Lang, string> = {'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US'};
+export const LANGS: Array<[Lang, string]> = languages.map(language => [language.id, language.name]);
+export const LOCALE = Object.fromEntries(languages.map(language => [language.id, language.locale])) as Record<Lang, string>;
 export {pageDirection, textDirection, type Dir} from './direction';
 
-export const LangContext = createContext<Lang>('zh-TW');
+export const LangContext = createContext<Lang>(DEFAULT_LANG);
 export function useLang() {
   return useContext(LangContext);
-}
-// The browser's first preference decides: a Hant script or a TW, HK or MO region reads Traditional, any other Chinese
-// Simplified, and every other language English.
-export function browserLang(tags: readonly string[]): Lang {
-  const tag = tags[0]?.toLowerCase() ?? '';
-  if (tag !== 'zh' && !tag.startsWith('zh-')) return 'en';
-  if (/-hans\b/.test(tag)) return 'zh-CN';
-  return /-(hant|tw|hk|mo)\b/.test(tag) ? 'zh-TW' : 'zh-CN';
 }
 export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly string[]): Lang {
   let value: string | null = null;
@@ -34,23 +23,24 @@ export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly str
   } catch {
     // Storage blocked: fall through to the browser.
   }
-  if (value === 'zh-TW' || value === 'zh-CN' || value === 'en') return value;
+  if (isLang(value)) return value;
   return browserLang(tags ?? (typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]));
 }
-// Each language is its own chunk, loaded on first use; `translate` reads only what has loaded.
-const loaders: Record<Lang, () => Promise<{messages: Record<Key, Message>}>> = {
-  // Each Chinese catalogue brings its ideograph faces, so they are declared before the page renders in it; a face
-  // stylesheet that fails to load leaves the text to the system font.
-  'zh-TW': () => Promise.all([import('./locales/zh-TW'), import('../fonts-tc.css').catch(() => undefined)]).then(([module]) => module),
-  'zh-CN': () => Promise.all([import('./locales/zh-CN'), import('../fonts-sc.css').catch(() => undefined)]).then(([module]) => module),
-  en: () => import('./locales/en')
-};
+// Each language is its own chunk, loaded on first use; `translate` reads only what has loaded. Vite expands the
+// template imports into one chunk per matching file, and Node, where the e2e specs import this module, resolves them
+// as written. A language with ideograph faces brings their stylesheet, so they are declared before the page renders
+// in it; a face stylesheet that fails to load leaves the text to the system font.
+function loader(lang: Lang): Promise<{messages: Record<Key, Message>}> {
+  const {fonts} = languages.find(language => language.id === lang)!;
+  const catalogue = import(`./locales/${lang}.ts`) as Promise<{messages: Record<Key, Message>}>;
+  return fonts ? Promise.all([catalogue, import(`../fonts-${fonts}.css`).catch(() => undefined)]).then(([module]) => module) : catalogue;
+}
 const catalogues = new Map<Lang, Record<Key, Message>>();
 const loading = new Map<Lang, Promise<void>>();
 export function loadLanguage(lang: Lang): Promise<void> {
   let pending = loading.get(lang);
   if (!pending) {
-    pending = loaders[lang]().then(
+    pending = loader(lang).then(
       module => void catalogues.set(lang, module.messages),
       (error: unknown) => {
         // A failed chunk (offline, a new deploy) can be asked for again.

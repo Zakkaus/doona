@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import {readFileSync, readdirSync} from 'node:fs';
+import {DEFAULT_LANG, langs as languages} from './languages.mjs';
 
-const languages = ['zh-TW', 'zh-CN', 'en'];
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const excluded = /(?:^src\/i18n\/|\/messages\.ts$|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/shared\/geo\.ts$|^src\/dae\/templates\.ts$)/;
 function files(path) {
@@ -101,7 +101,7 @@ for (const path of sources.filter(path => path.endsWith('/messages.ts'))) {
   for (const [key, byLang] of slots)
     if (new Set(byLang.values()).size > 1)
       failures.push(`${path}: ${key} placeholders differ: ${[...byLang].map(([lang, names]) => `${lang} {${names}}`).join(' ')}`);
-  const expected = sets.get('zh-TW');
+  const expected = sets.get(DEFAULT_LANG);
   if (sets.size !== languages.length || !expected || languages.some(lang => JSON.stringify(sets.get(lang)) !== JSON.stringify(expected))) {
     failures.push(`${path}: language key sets differ`);
     mismatches++;
