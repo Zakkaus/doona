@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {useT} from '../i18n';
 import {storageKeys} from '../api/storage';
-import {Link, useSlider} from '../ui/ui';
+import {Link, useScrollStrip, useSlider} from '../ui/ui';
 import type {NavGroup} from './view';
 
 const key = storageKeys.hubPages;
@@ -53,9 +53,11 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
 }
 
 // The open hub's pages, above the content: links in the segmented control's look, since picking one navigates rather
-// than sets a value, and the pages carry tabs of their own.
+// than sets a value, and the pages carry tabs of their own. Pages too wide for the phone scroll like a page's tabs, with
+// the current one kept in view.
 export function HubPages({hub, route}: {hub: NavGroup; route: string}) {
   const [ref, pos] = useSlider(route, '[aria-current="page"]');
+  useScrollStrip(ref, route, '[aria-current="page"]');
   return (
     <nav className="rp-hubnav" aria-label={hub.label}>
       <div ref={ref} className="rp-seg">
