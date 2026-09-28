@@ -75,7 +75,7 @@ test('a resolution record opens the DNS request rule dialog with its domain pref
   const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
   const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
   await first.click();
-  await page.locator('.rp-panel').getByRole('link', {name: 'Add a DNS rule for this domain', exact: true}).click();
+  await page.locator('.rp-panel').getByRole('link', {name: 'Add a DNS rule for this domain and its subdomains', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?.*tab=dns/);
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue(name);
