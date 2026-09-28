@@ -22,7 +22,7 @@ Check only claims that are true. A false claim closes the pull request.
 - [ ] This branch is based on the current `main`.
 - [ ] Each commit contains one coherent change with an English `type(scope): subject` and a short English body.
 - [ ] I ran `pnpm check`, `pnpm build`, `pnpm check:size` and `pnpm e2e`; the Verified section records the results.
-- [ ] I updated visible strings in all three locales when I changed interface text.
+- [ ] I updated the strings in `en.json` and in every complete language's catalogue when I changed interface text.
 - [ ] I attached light and dark screenshots when I changed the interface appearance.
 - [ ] I ran `pnpm gen:api` and `pnpm check:gen` when I changed the API contract.
 - [ ] I checked the boxes above without reading them.

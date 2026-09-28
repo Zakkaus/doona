@@ -1,7 +1,20 @@
 import ts from 'typescript';
-import {readFileSync, readdirSync} from 'node:fs';
-import {checkCatalogues} from './catalogues.mjs';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
+import {checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
 import {languages, REFERENCE_LANG} from './languages.mjs';
+
+// `--missing <id>` lists what a language still lacks, grouped by the key's first segment, as lines to paste into its
+// catalogue with the English text to translate. It works before the language's catalogue exists.
+let wanted;
+try {
+  wanted = missingLanguage(
+    process.argv.slice(2),
+    languages.map(language => language.id)
+  );
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 const cjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const excluded = /(?:^src\/i18n\/|^src\/api\/mock\/|^src\/api\/types\.ts$|^src\/features\/shared\/geo\.ts$|^src\/dae\/templates\.ts$)/;
@@ -52,17 +65,20 @@ for (const path of sources) {
 }
 
 // Every key of the reference catalogue must be named somewhere in the application.
-const catalogues = Object.fromEntries(languages.map(({id}) => [id, JSON.parse(readFileSync(`src/i18n/locales/${id}.json`, 'utf8'))]));
+const loaded = readCatalogues(languages, file => (existsSync(file) ? readFileSync(file, 'utf8') : undefined), wanted);
+failures.push(...loaded.failures);
+const {catalogues} = loaded;
+// Without the reference catalogue nothing else can be checked.
+if (!catalogues[REFERENCE_LANG]) {
+  for (const failure of failures) console.error(failure);
+  process.exit(1);
+}
 const reference = catalogues[REFERENCE_LANG];
 const checked = checkCatalogues(catalogues, REFERENCE_LANG, new Set(languages.filter(language => language.complete).map(language => language.id)));
 failures.push(...checked.failures);
 const unused = Object.keys(reference).filter(key => !references.has(key));
 for (const key of unused) failures.push(`Unused message key: ${key}`);
-// `--missing <id>` lists what a language still lacks, grouped by the key's first segment, as lines to paste into its
-// catalogue with the English text to translate.
-const wanted = process.argv.includes('--missing') ? process.argv[process.argv.indexOf('--missing') + 1] : undefined;
-if (wanted !== undefined && !Object.hasOwn(checked.missing, wanted)) failures.push(`--missing: no language ${wanted} in src/i18n/languages.ts`);
-else if (wanted !== undefined) {
+if (wanted !== undefined && Object.hasOwn(checked.missing, wanted)) {
   let group;
   for (const key of checked.missing[wanted]) {
     if (key.split('.')[0] !== group) console.log(`\n# ${(group = key.split('.')[0])}`);
