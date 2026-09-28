@@ -1176,6 +1176,8 @@
   "rule.position": "插入位置",
   "rule.positionBefore": "第 {n} 条之前",
   "rule.positionEnd": "最后（fallback 之前）",
+  "rule.queried": "查询时间",
+  "rule.queryHeading": "DNS 查询：{name}",
   "rule.reach": "连通性",
   "rule.refused": "校验未通过，未写入",
   "rule.remove": "移除规则",

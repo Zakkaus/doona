@@ -11,6 +11,7 @@ import {
   distributionView,
   dnsDictionaryView,
   dnsView,
+  queryView,
   evaluationView,
   removalView,
   ruleDraftView,
@@ -147,7 +148,8 @@ it('prepares uncertain evaluations, rule fallbacks and probe eligibility', async
     t('rule.reach'),
     t('rule.noMember')
   ]);
-  expect(traceStatusView(result, t, 'en')).toContain(t('ui.valuePair', {label: t('ui.generation'), value: result.generation_id}));
+  expect(traceStatusView(result, null, t, 'en')).toContain(t('ui.valuePair', {label: t('ui.generation'), value: result.generation_id}));
+  expect(traceStatusView(result, null, t, 'en')).not.toContain(t('rule.queried'));
 });
 
 it('prepares DNS diagnostics with missing addresses and errors', async () => {
@@ -157,6 +159,20 @@ it('prepares DNS diagnostics with missing addresses and errors', async () => {
   expect(view.heading).toBe('DNS: ' + dns.name);
   expect(view.fields).toContainEqual([t('rule.address'), '—']);
   expect(view.fields).toContainEqual([t('ui.error'), 'lookup failed']);
+});
+
+it('shows a DNS query apart from the simulations, one row per record type with the address it simulated', async () => {
+  const query = await createMockApi().dnsQuery('example.com', ['A', 'AAAA', 'TXT']);
+  const view = queryView({...query, domain: 'example.com.'}, t, 'en');
+  expect(view.heading).toBe(t('rule.queryHeading', {name: 'example.com'}));
+  const row = (type: string) => view.fields.find(([label]) => label === type)![1];
+  const first = (type: string) => query.results.find(result => result.type === type)!.answers![0].data;
+  expect(row('A')).toContain(t('ui.valuePair', {label: t('rule.simulatedAddress'), value: first('A')}));
+  expect(row('AAAA')).toContain(t('ui.valuePair', {label: t('rule.simulatedAddress'), value: first('AAAA')}));
+  expect(row('TXT')).not.toContain(t('rule.simulatedAddress'));
+  expect(view.fields.map(([label]) => label)).toEqual(['A', 'AAAA', 'TXT', t('ui.upstream')]);
+  const result = await createMockApi().routingTrace({input: {network: 'tcp', domain: 'example.com', dst_port: 443}, resolve: 'none'});
+  expect(traceStatusView(result, query, t, 'en')).toContain(t('rule.queried'));
 });
 
 it('sums current-expression hits across provenance without attributing historical rules', async () => {

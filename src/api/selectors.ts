@@ -1,6 +1,19 @@
 import type {Key} from '../i18n';
 import {formatNumber, LOCALE, readLang} from '../i18n';
-import type {ApiEvent, Connection, ConnectionList, EventKind, Group, GroupSummary, HealthObservation, LogLevel, Node, Runtime, RuntimeOutbounds} from './model';
+import type {
+  ApiEvent,
+  Connection,
+  ConnectionList,
+  DnsQueryResponse,
+  EventKind,
+  Group,
+  GroupSummary,
+  HealthObservation,
+  LogLevel,
+  Node,
+  Runtime,
+  RuntimeOutbounds
+} from './model';
 import {addU64, parseU64, pctU64} from './u64';
 import {isBuiltinOutbound} from '../dae/vocab';
 
@@ -45,6 +58,12 @@ export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
   }));
   rows.sort((a, b) => (a.bytes === b.bytes ? 0 : a.bytes === null ? 1 : b.bytes === null ? -1 : a.bytes > b.bytes ? -1 : 1));
   return {rows, total};
+}
+
+// A client dials one address per family, so the first answer of an A or AAAA result is the one simulated.
+export function simulatedAddress(result: DnsQueryResponse['results'][number]): string | null {
+  if (result.type !== 'A' && result.type !== 'AAAA') return null;
+  return (result.answers ?? []).find(answer => answer.type === result.type)?.data ?? null;
 }
 
 export function ipLiteral(text: string): string | undefined {

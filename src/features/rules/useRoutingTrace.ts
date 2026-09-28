@@ -2,16 +2,16 @@ import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import type {Key} from '../../i18n';
 import {getApi} from '../../api';
-import type {RoutingTraceRequest, RoutingTraceResponse} from '../../api/model';
+import type {RoutingTraceRequest} from '../../api/model';
 import {useAction} from '../../store/action';
 import {useCapabilities} from '../../store/runtime';
-import {routingTrace} from '../../store/flows';
+import {routingTrace, type RoutingTraceRun} from '../../store/flows';
 import {queryTypes, useGroups, useNodeProbe, useNodes, useRules} from '../../store';
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure} from '../../ui/ui';
-import {dnsView, evaluationView, traceReason, traceStatusView} from './view';
+import {dnsView, evaluationView, queryView, traceReason, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
@@ -49,7 +49,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
-  const [accepted, setResult] = useState<{response: RoutingTraceResponse; input: RoutingTraceRequest['input']} | null>(null);
+  const [accepted, setResult] = useState<{run: RoutingTraceRun; input: RoutingTraceRequest['input']} | null>(null);
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
   const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed'), {detail: errorText(error, t)}));
@@ -103,7 +103,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     if (form.src_ip.trim()) input.src_ip = address(form.src_ip);
     if (form.src_port.trim()) input.src_port = Number(form.src_port);
     if (form.pname.trim()) input.pname = form.pname.trim();
-    const response = await run('trace', signal =>
+    const traced = await run('trace', signal =>
       routingTrace(
         {
           ...api,
@@ -114,26 +114,35 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
       )
     );
     // The previous result stays up while a rerun is pending; a failed rerun clears it so it does not look current.
-    setResult(response ? {response, input} : null);
+    setResult(traced ? {run: traced, input} : null);
   }, [api, busy, canSubmit, form, resolve, recordTypes, maxTypes, run]);
   const generation = rules.data?.generation_id;
   const evaluations = useMemo(
     () =>
-      accepted?.response.evaluations.map((evaluation, index) => {
-        const matched = evaluation.rules.find(rule => rule.result === 'matched');
-        const likely =
-          evaluation.decision !== 'determinate' && !evaluation.outbound && generation === accepted.response.generation_id
-            ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
-            : null;
-        const outbound = evaluation.outbound ?? likely;
-        const selected =
-          outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
-        return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
-      }) ?? [],
+      accepted?.run.traces
+        .flatMap(trace => trace.evaluations)
+        .map((evaluation, index) => {
+          const matched = evaluation.rules.find(rule => rule.result === 'matched');
+          const likely =
+            evaluation.decision !== 'determinate' && !evaluation.outbound && generation === accepted.run.traces[0].generation_id
+              ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
+              : null;
+          const outbound = evaluation.outbound ?? likely;
+          const selected =
+            outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
+          return evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
+        }) ?? [],
     [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]
   );
   const result = useMemo(
-    () => (accepted ? {status: traceStatusView(accepted.response, t, lang), dns: accepted.response.dns.map(dns => dnsView(dns, t, lang))} : null),
+    () =>
+      accepted
+        ? {
+            status: traceStatusView(accepted.run.traces[0], accepted.run.query, t, lang),
+            query: accepted.run.query && queryView(accepted.run.query, t, lang),
+            dns: accepted.run.traces.flatMap(trace => trace.dns).map(dns => dnsView(dns, t, lang))
+          }
+        : null,
     [accepted, t, lang]
   );
   const probeNode = async (id: string) => {

@@ -135,6 +135,8 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   await expect(page.getByRole('heading', {name: '2001:db8::14', exact: true})).toBeVisible();
   await expect(page.getByRole('grid', {name: 'Rule evaluation 1', exact: true})).toBeVisible();
   await expect(page.getByRole('grid', {name: 'Rule evaluation 2', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'DNS query: trace.example', exact: true})).toHaveCount(1);
+  await expect(page.getByRole('heading', {name: /^DNS: /})).toHaveCount(0);
   expect(requested).toEqual([['A'], ['AAAA']]);
 });
 

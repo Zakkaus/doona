@@ -141,6 +141,12 @@ function Trace({form: state}: {form: ReturnType<typeof useTraceForm>}) {
               {trace.result.status}
             </TextTooltip>
           </div>
+          {trace.result.query && (
+            <Card>
+              <h3 className="rp-h3">{trace.result.query.heading}</h3>
+              <Kv inline items={trace.result.query.fields} />
+            </Card>
+          )}
           {trace.result.evaluations.map((evaluation, i) => (
             <Card key={i}>
               <div className="rp-row">

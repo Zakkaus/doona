@@ -1368,6 +1368,8 @@
   "rule.position": "Insert",
   "rule.positionBefore": "Before rule {n}",
   "rule.positionEnd": "Last, before the fallback",
+  "rule.queried": "Queried at",
+  "rule.queryHeading": "DNS query: {name}",
   "rule.reach": "Reachability",
   "rule.refused": "Validation did not pass; nothing written",
   "rule.remove": "Remove rule",
