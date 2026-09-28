@@ -1,6 +1,7 @@
 import type {
   Capabilities,
   ConfigSource,
+  DnsRoutingRule,
   FlowList,
   RecorderState,
   GroupSummary,
@@ -17,18 +18,18 @@ import type {Key} from '../../i18n';
 import {isFragment, scanConfig} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth} from '../../api/selectors';
-import {conditionKinds, type ConditionKind} from '../../dae/groups';
+import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from './flows/view';
 import {word} from '../../api/labels';
-import {ruleAnchor, ruleOutbounds, sourceFor} from '../../dae/ruleText';
+import {dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
 import {pickTab, within} from '../../shell/route';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
 import {recorderEmpty} from '../shared/recorder';
 
-const kindLabels: Record<ConditionKind, Key> = {
+const kindLabels: Record<RuleConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
   domain: 'rule.kind.domain',
   geosite: 'rule.kind.geosite',
@@ -38,9 +39,17 @@ const kindLabels: Record<ConditionKind, Key> = {
   dport: 'rule.kind.dport',
   sport: 'rule.kind.sport',
   pname: 'rule.kind.pname',
-  l4proto: 'rule.kind.l4proto'
+  l4proto: 'rule.kind.l4proto',
+  qnameSuffix: 'rule.kind.domainSuffix',
+  qnameFull: 'rule.kind.domain',
+  qnameKeyword: 'rule.dns.kind.keyword',
+  qnameGeosite: 'rule.kind.geosite',
+  qtype: 'rule.dns.kind.qtype',
+  upstream: 'rule.dns.kind.upstream',
+  answerIp: 'rule.dns.kind.answerIp',
+  answerGeoip: 'rule.dns.kind.answerGeoip'
 };
-const kindHints: Record<ConditionKind, string> = {
+const kindHints: Record<RuleConditionKind, string> = {
   domainSuffix: 'example.com, example.org',
   domain: 'www.example.com',
   geosite: 'netflix, cn',
@@ -50,7 +59,15 @@ const kindHints: Record<ConditionKind, string> = {
   dport: '80, 443',
   sport: '53',
   pname: 'curl, firefox',
-  l4proto: 'udp'
+  l4proto: 'udp',
+  qnameSuffix: 'example.com, lan',
+  qnameFull: 'www.example.com',
+  qnameKeyword: 'tracker',
+  qnameGeosite: 'cn, category-ads-all',
+  qtype: 'A, AAAA, HTTPS',
+  upstream: 'alidns',
+  answerIp: '0.0.0.0/32, 10.0.0.0/8',
+  answerGeoip: 'cn, private'
 };
 const sources: Record<string, Key> = {kernel: 'rule.sourceKernel', recomputed: 'rule.sourceRecomputed', unknown: 'rule.sourceUnknown'};
 const sourceHelp: Record<string, Key> = {kernel: 'rule.sourceHelp.kernel', recomputed: 'rule.sourceHelp.recomputed', unknown: 'rule.sourceHelp.unknown'};
@@ -75,13 +92,20 @@ function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): stri
 export const addRuleTip = (noPosition: boolean, busy: boolean, t: Translator) =>
   noPosition ? t('conn.ruleNoPosition') : busy ? t('ui.changeApplying') : undefined;
 
-// Why Add in the add-rule dialog is disabled, first applicable: the condition is missing or invalid, then no outbound.
-export function addRuleReason(draft: Pick<RuleDraftView, 'valid' | 'mode' | 'pickError' | 'rawInvalid'>, outbound: string, t: Translator): string | null {
+// Why Add in the add-rule dialog is disabled, first applicable: the condition is missing or invalid, then no target.
+export type ReasonKeys = {conditionInvalid: Key; targetMissing: Key};
+const routingReasons: ReasonKeys = {conditionInvalid: 'rule.conditionInvalid', targetMissing: 'rule.outboundMissing'};
+export function addRuleReason(
+  draft: Pick<RuleDraftView, 'valid' | 'mode' | 'pickError' | 'rawInvalid'>,
+  outbound: string,
+  t: Translator,
+  keys: ReasonKeys = routingReasons
+): string | null {
   if (!draft.valid) {
     if (draft.mode === 'pick') return draft.pickError ?? t('rule.valuesMissing');
-    return t(draft.rawInvalid ? 'rule.conditionInvalid' : 'rule.conditionMissing');
+    return t(draft.rawInvalid ? keys.conditionInvalid : 'rule.conditionMissing');
   }
-  return outbound ? null : t('rule.outboundMissing');
+  return outbound ? null : t(keys.targetMissing);
 }
 
 // Why Run trace is disabled, first applicable: the backend cannot trace, the form is incomplete or wrong, or the
@@ -96,6 +120,56 @@ export function traceReason(
   return modeOffered ? null : t('rule.resolveUnavailable');
 }
 
+// A rule of either list as the dictionary shows it: GET /rules and GET /dns/rules entries share these fields.
+type Listed = {rule_id: string; index: number; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
+// The rows and insertion points of a rule list; `anchor` locates a rule in its source, and only a rule doona can
+// locate is offered for removal or as an insertion point.
+function listedRows<R extends Listed>(
+  rules: R[],
+  config: ConfigSource[],
+  anchor: (source: ConfigSource, rule: R, scan: ReturnType<typeof scanConfig>) => unknown,
+  // The target, hits and, when it differs from the listed text, the expression a row shows.
+  fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string},
+  t: Translator,
+  lang: Lang
+): Pick<DictionaryView, 'rows' | 'positions'> {
+  const locale = LOCALE[lang];
+  const byId = new Map(config.map(source => [source.id, source]));
+  const resolve = (source: RuleSource | null | undefined) => {
+    if (!source) return undefined;
+    return byId.get(source.source_id);
+  };
+  const scans = new Map<string, ReturnType<typeof scanConfig>>();
+  const anchored = (rule: R) => {
+    const source = rule.source && byId.get(rule.source.source_id);
+    if (!source?.writable || source.content === undefined) return false;
+    if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
+    return anchor(source, rule, scans.get(source.id)!) !== null;
+  };
+  const rows = rules.map(rule => {
+    const linked = resolve(rule.source);
+    const label = rule.source ? sourceLabel(rule.source, linked) : '';
+    return {
+      id: rule.rule_id,
+      number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
+      expression: rule.expression,
+      ...fields(rule),
+      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
+      removable: rule.kind === 'rule' && anchored(rule),
+      sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
+    };
+  });
+  const fallback = rules.find(rule => rule.kind === 'fallback');
+  return {
+    rows,
+    positions: [
+      ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+      ...rules
+        .filter((_, i) => rows[i].removable)
+        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
+    ]
+  };
+}
 export function dictionaryView(
   rules: RoutingRule[],
   generation: string | undefined,
@@ -111,45 +185,64 @@ export function dictionaryView(
   for (const row of ruleDistribution(flows?.flows ?? [])) {
     if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
   }
-  const byId = new Map(config.map(source => [source.id, source]));
-  const resolve = (source: RuleSource | null | undefined) => {
-    if (!source) return undefined;
-    return byId.get(source.source_id);
-  };
-  // Only a rule doona can locate in its source is offered for removal or as an insertion point.
-  const scans = new Map<string, ReturnType<typeof scanConfig>>();
-  const anchored = (rule: RoutingRule) => {
-    const source = rule.source && byId.get(rule.source.source_id);
-    if (!source?.writable || source.content === undefined) return false;
-    if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
-    return ruleAnchor(source, rule, scans.get(source.id)) !== null;
-  };
-  const rows = rules.map(rule => {
-    const linked = resolve(rule.source);
-    const label = rule.source ? sourceLabel(rule.source, linked) : '';
-    return {
-      id: rule.rule_id,
-      number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
-      expression: rule.expression,
-      outbound: rule.outbound ?? '',
-      must: rule.must,
-      position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
-      hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—',
-      removable: rule.kind === 'rule' && anchored(rule),
-      sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
-    };
-  });
-  const fallback = rules.find(rule => rule.kind === 'fallback');
   return {
-    rows,
+    ...listedRows(
+      rules,
+      config,
+      ruleAnchor,
+      rule => ({
+        outbound: rule.outbound ?? '',
+        must: rule.must,
+        hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—'
+      }),
+      t,
+      lang
+    ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
-    positions: [
-      ...(fallback && anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
-      ...rules
-        .filter((_, i) => rows[i].removable)
-        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
-    ],
     outbounds: ruleOutbounds(groups)
+  };
+}
+// The actions a new DNS rule can take, first the keywords and then the upstreams: a request rule sends the query to an
+// upstream, to its original destination or answers it empty; a response rule keeps or empties the answer, or resolves
+// the query again through an upstream.
+function dnsActions(list: DnsRuleListId, upstreams: string[], t: Translator): Choice[] {
+  const names = upstreams.map(id => ({id, label: id, ...(list === 'response' ? {desc: t('rule.dns.action.requery')} : {})}));
+  return list === 'request'
+    ? [...names, {id: 'asis', label: 'asis', desc: t('rule.dns.action.asis')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectQuery')}]
+    : [{id: 'accept', label: 'accept', desc: t('rule.dns.action.accept')}, {id: 'reject', label: 'reject', desc: t('rule.dns.action.rejectAnswer')}, ...names];
+}
+// A DNS rule's expression is its source line; the table shows the target in its own column, so a rule shows only its
+// condition, as a routing rule does.
+function dnsCondition(rule: DnsRoutingRule): string {
+  const arrow = /\s*->\s*(\S+)$/.exec(rule.expression);
+  return rule.kind === 'rule' && arrow && arrow[1].toLowerCase() === dnsRuleTarget(rule).toLowerCase()
+    ? rule.expression.slice(0, arrow.index)
+    : rule.expression;
+}
+// One list of GET /dns/rules. The upstreams a new rule can name are those the configuration defines, and any the list
+// already names that the text doona holds does not show.
+export function dnsDictionaryView(
+  list: DnsRuleListId,
+  rules: DnsRoutingRule[],
+  generation: string | undefined,
+  config: ConfigSource[],
+  t: Translator,
+  lang: Lang
+): DictionaryView {
+  const defined = config.flatMap(source => (source.content === undefined ? [] : dnsUpstreamNames(source.content)));
+  const known = new Set(defined.map(name => name.toLowerCase()));
+  const named = rules.flatMap(rule => (rule.upstream && !known.has(rule.upstream.toLowerCase()) ? [rule.upstream] : []));
+  return {
+    ...listedRows(
+      rules,
+      config,
+      (source, rule, scan) => dnsRuleAnchor(source, rule, list, scan),
+      rule => ({expression: dnsCondition(rule), outbound: dnsRuleTarget(rule), must: false, hits: '—'}),
+      t,
+      lang
+    ),
+    caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
+    outbounds: dnsActions(list, [...new Set([...defined, ...named])], t)
   };
 }
 type DistributionRow = {
@@ -224,10 +317,18 @@ export type RuleDraftView = {
   rawInvalid: boolean;
   pickError: string | undefined;
 };
-export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, condition: string | null, raw: string, t: Translator) {
+export function ruleDraftView(
+  kind: RuleConditionKind,
+  value: string,
+  on: boolean,
+  condition: string | null,
+  raw: string,
+  t: Translator,
+  kinds: readonly RuleConditionKind[] = conditionKinds
+) {
   const picked = value.trim() !== '';
   return {
-    choices: conditionKinds.map(id => ({id, label: t(kindLabels[id])})),
+    choices: kinds.map(id => ({id, label: t(kindLabels[id])})),
     hint: kindHints[kind],
     preview: on && picked ? condition : null,
     mode: on ? 'pick' : 'text',
@@ -236,7 +337,7 @@ export function ruleDraftView(kind: ConditionKind, value: string, on: boolean, c
     pickError: picked && condition === null ? t('rule.valuesInvalid') : undefined
   };
 }
-export function removalView(rule: RoutingRule, sources: ConfigSource[], t: Translator) {
+export function removalView(rule: Pick<RoutingRule, 'expression' | 'source'>, sources: ConfigSource[], t: Translator) {
   return {
     expression: rule.expression,
     help: t('rule.removeHelp', {file: rule.source ? sourceLabel(rule.source, sourceFor(sources, rule.source)) : '', line: rule.source?.line ?? ''})
@@ -247,11 +348,14 @@ type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string; fallback: s
 // The default tab is the first one the backend offers; until the capabilities are known it is not fixed (null).
 export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
   const tabs = rulesTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
-  const first = tabs[0]?.id ?? 'map';
+  const first = tabs[0]?.id ?? 'list';
+  // The routing map was the default tab, so its links written then carry a pinned path or grouping but no tab.
+  const params = new URLSearchParams(query);
+  const legacyMap = !params.has('tab') && (params.has('path') || params.has('by'));
   return {
     tabs,
     tab: pickTab(
-      query,
+      legacyMap ? within(query, {tab: 'map'}) : query,
       tabs.map(tab => tab.id),
       first
     ),

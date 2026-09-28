@@ -138,6 +138,7 @@ it('refreshes generation-dependent resources but leaves DNS cache to its poll', 
     'providers',
     'geodata',
     'rules',
+    'dnsRules',
     'datapath',
     'flows',
     'flow'

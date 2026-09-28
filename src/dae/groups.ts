@@ -289,8 +289,17 @@ export const applyChanges = (text: string, changes: GroupChange[]) => changes.re
 
 export type ConditionKind = 'domain' | 'domainSuffix' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
 export const conditionKinds: ConditionKind[] = ['domainSuffix', 'domain', 'geosite', 'dip', 'geoip', 'sip', 'dport', 'sport', 'pname', 'l4proto'];
+// DNS rule conditions, as honk's parser reads them: request rules match the query by qname, qtype and sip; response
+// rules may also match the upstream that answered and the answer's addresses with ip.
+export type DnsConditionKind = 'qnameSuffix' | 'qnameFull' | 'qnameKeyword' | 'qnameGeosite' | 'qtype' | 'sip' | 'upstream' | 'answerIp' | 'answerGeoip';
+const dnsRequestKinds: DnsConditionKind[] = ['qnameSuffix', 'qnameFull', 'qnameKeyword', 'qnameGeosite', 'qtype', 'sip'];
+export const dnsConditionKinds: Record<'request' | 'response', DnsConditionKind[]> = {
+  request: dnsRequestKinds,
+  response: [...dnsRequestKinds, 'upstream', 'answerIp', 'answerGeoip']
+};
+export type RuleConditionKind = ConditionKind | DnsConditionKind;
 // Null when the values cannot be written as one condition, such as `a) # x` or an apostrophe that needs quoting.
-export function ruleCondition(kind: ConditionKind, value: string): string | null {
+export function ruleCondition(kind: RuleConditionKind, value: string): string | null {
   const values = value
     .split(/[,\s]+/)
     .map(v => v.trim())
@@ -303,7 +312,7 @@ export function ruleCondition(kind: ConditionKind, value: string): string | null
 // holding one is refused rather than written. A colon splits an argument into key and value, so a value with one (an
 // IPv6 range) is quoted, as the presets write 'ff00::/8'.
 const syntax = /[()'"#{}]|&&|->/;
-function conditionText(kind: ConditionKind, values: string[]): string {
+function conditionText(kind: RuleConditionKind, values: string[]): string {
   const written = values.map(v => (v.includes(':') ? quote(v) : v));
   const list = written.join(', ');
   const qualified = (prefix: string) => written.map(value => `${prefix}: ${value}`).join(', ');
@@ -328,5 +337,21 @@ function conditionText(kind: ConditionKind, values: string[]): string {
       return `pname(${list})`;
     case 'l4proto':
       return `l4proto(${list})`;
+    case 'qnameSuffix':
+      return `qname(${qualified('suffix')})`;
+    case 'qnameFull':
+      return `qname(${qualified('full')})`;
+    case 'qnameKeyword':
+      return `qname(${qualified('keyword')})`;
+    case 'qnameGeosite':
+      return `qname(${qualified('geosite')})`;
+    case 'qtype':
+      return `qtype(${list})`;
+    case 'upstream':
+      return `upstream(${list})`;
+    case 'answerIp':
+      return `ip(${list})`;
+    case 'answerGeoip':
+      return `ip(${qualified('geoip')})`;
   }
 }

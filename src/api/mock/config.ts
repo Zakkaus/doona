@@ -23,6 +23,15 @@ export function sectionLines(text: string, section: string, bare = false) {
   const {blocks} = scanConfig(text);
   const ranges = blocks.filter(block => block.name === section).flatMap(block => blockEntries(text, block).filter(entry => !entry.block));
   if (bare && !blocks.length) ranges.push({from: 0, to: text.length, block: undefined});
+  return linesOf(text, ranges);
+}
+// The statement lines directly inside one block, as sectionLines reads a top-level section.
+export const blockLines = (text: string, block: TextBlock) =>
+  linesOf(
+    text,
+    blockEntries(text, block).filter(entry => !entry.block)
+  );
+function linesOf(text: string, ranges: Array<{from: number; to: number}>) {
   return ranges.flatMap(({from, to}) => {
     const firstLine = text.slice(0, from).split('\n').length;
     return text

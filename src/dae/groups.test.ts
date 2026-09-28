@@ -10,6 +10,7 @@ import {
   removalWidens,
   removeNamesFromGroup,
   ruleCondition,
+  dnsConditionKinds,
   writeGroupEntry,
   type GroupChange
 } from './groups';
@@ -96,6 +97,18 @@ describe('group entries', () => {
     expect(ruleCondition('geoip', 'cn us')).toBe('dip(geoip: cn, geoip: us)');
     expect(ruleCondition('dport', '80 443')).toBe('dport(80, 443)');
     expect(ruleCondition('pname', 'curl')).toBe('pname(curl)');
+  });
+  it('composes DNS conditions in the qname, qtype, upstream and ip forms honk reads', () => {
+    expect(ruleCondition('qnameSuffix', 'lan home.arpa')).toBe('qname(suffix: lan, suffix: home.arpa)');
+    expect(ruleCondition('qnameFull', 'dns.google')).toBe('qname(full: dns.google)');
+    expect(ruleCondition('qnameKeyword', 'tracker')).toBe('qname(keyword: tracker)');
+    expect(ruleCondition('qnameGeosite', 'cn')).toBe('qname(geosite: cn)');
+    expect(ruleCondition('qtype', 'A, AAAA')).toBe('qtype(A, AAAA)');
+    expect(ruleCondition('upstream', 'alidns')).toBe('upstream(alidns)');
+    expect(ruleCondition('answerIp', '0.0.0.0/32, ::/128')).toBe("ip(0.0.0.0/32, '::/128')");
+    expect(ruleCondition('answerGeoip', 'private')).toBe('ip(geoip: private)');
+    expect(dnsConditionKinds.request).not.toContain('upstream');
+    expect(dnsConditionKinds.response).toEqual(expect.arrayContaining(dnsConditionKinds.request));
   });
   it('quotes a value with a colon and refuses one the rule grammar would read as syntax', () => {
     expect(ruleCondition('dip', '2001:db8::1, 10.0.0.0/8')).toBe("dip('2001:db8::1', 10.0.0.0/8)");

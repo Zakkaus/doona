@@ -5,6 +5,9 @@ import {expect, offered, routes, test} from './fixtures';
 // exception: Rosé Pine Dawn's subtle is 4.0:1 and Moon's 4.5:1. Any other pairing fails. Glass is not checked for
 // contrast: its text sits on translucent layers over a gradient, which axe cannot see and reads as white.
 const knownContrast = new Set(['#797593 on #faf4ed', '#797593 on #fffaf3', '#908caa on #232136', '#908caa on #2a273f']);
+// Rule text is highlighted in the palette's own accent colours, which are official values too; the rule list is the
+// rules page's first tab, so its highlighted rules are scanned.
+const highlighted = (html: string) => html.startsWith('<span class="rp-dae-');
 // The default look, its dark side, and glass, whose translucent surfaces depend on what lies beneath them.
 const looks = [
   ['rose-pine/moon', 'light'],
@@ -42,7 +45,9 @@ for (const [palette, scheme] of looks)
                   nodes:
                     palette === 'glass/glass'
                       ? []
-                      : rule.nodes.filter(node => !knownContrast.has(`${node.any[0]?.data?.fgColor} on ${node.any[0]?.data?.bgColor}`))
+                      : rule.nodes.filter(
+                          node => !highlighted(node.html) && !knownContrast.has(`${node.any[0]?.data?.fgColor} on ${node.any[0]?.data?.bgColor}`)
+                        )
                 }
               : rule
           )

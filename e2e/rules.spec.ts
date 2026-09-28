@@ -16,7 +16,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
   await page.goto('/#/rules?tab=list');
-  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
   const allCount = await rows.count();
@@ -68,7 +68,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/rules?tab=list');
-  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(15);
   const ids = await panel.getByRole('rowheader').allTextContents();
@@ -149,7 +149,7 @@ test('without a rule dictionary, Retry refetches the flows the distribution is b
   // Frozen timers: only the retry, not the next poll, can bring the flows back.
   await page.clock.install();
   await page.goto('/#/rules?tab=list');
-  const panel = page.getByRole('tabpanel', {name: 'Rule list'});
+  const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const alert = panel.getByRole('alert').filter({hasText: 'Flows unavailable'});
   await expect(alert).toBeVisible();
   fail = false;
@@ -184,7 +184,7 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
 
 test('the rule list fits its rows instead of holding a page of empty space', async ({page}) => {
   await page.goto('/#/rules?tab=list');
-  const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Rule list'})});
+  const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Routing rules'})});
   await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
   const rows = await table.locator('[role=row][data-key]').count();
   // Border, header and one row per rule; a fill-height table would stay at 560.

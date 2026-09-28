@@ -30,7 +30,7 @@ export const faultSettings: RuntimeSettings = {
 
 // Initial routing dictionary for fixture flow evidence and stable rule IDs.
 type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
-export const configRules: MockConfigRules = {generation_id: generationId, rules, fallback: {target: 'resilient', source: 'config.dae:44'}};
+export const configRules: MockConfigRules = {generation_id: generationId, rules, fallback: {target: 'resilient', source: 'config.dae:57'}};
 export {rules};
 const configMain = `global {
   tproxy_port: 12345
@@ -66,7 +66,18 @@ dns {
     alidns: 'udp://223.5.5.5:53'
   }
   routing {
-    request { qname(geosite: cn) -> alidns; fallback: cloudflare }
+    request {
+      qname(geosite: category-ads-all) -> reject
+      qname(suffix: lan, home.arpa) -> asis
+      qtype(HTTPS) && qname(geosite: cn) -> reject
+      qname(geosite: cn) -> alidns
+      fallback: cloudflare
+    }
+    response {
+      upstream(cloudflare) -> accept
+      ip(geoip: private) && !qname(geosite: cn) -> cloudflare
+      fallback: accept
+    }
   }
 }
 

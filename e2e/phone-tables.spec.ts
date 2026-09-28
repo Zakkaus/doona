@@ -20,8 +20,8 @@ const columnNames = (grid: Locator) =>
 for (const [width, url, heading, columns] of [
   [320, '/#/nodes?tab=list', 'Nodes', ['Source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-refresh', 'Expires', 'State', 'Actions']],
   [360, '/#/nodes?tab=list', 'Nodes', ['Source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-refresh', 'Expires', 'State', 'Actions']],
-  [320, '/#/rules?tab=list', 'Rule list', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']],
-  [360, '/#/rules?by=client&tab=list', 'Rule list', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']]
+  [320, '/#/rules?tab=list', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']],
+  [360, '/#/rules?by=client&tab=list', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']]
 ] as const) {
   test.describe(`${width}px`, () => {
     test.use({viewport: {width, height: 800}});
@@ -61,7 +61,7 @@ test.describe('column resizer touch target', () => {
 
   test('the resizer hit area is at least 24px wide under a coarse pointer, with the line still at the column edge', async ({page}) => {
     await page.goto('/#/rules?tab=list');
-    const header = page.getByRole('tabpanel', {name: 'Rule list'}).locator('[role=columnheader]').first();
+    const header = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=columnheader]').first();
     await expect(header).toBeVisible();
     const resizer = header.locator('.rp-resizer');
     const headerBox = await header.boundingBox();

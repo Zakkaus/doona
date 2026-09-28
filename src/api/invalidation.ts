@@ -21,7 +21,8 @@ export type ResourceName =
   | 'config'
   | 'providers'
   | 'geodata'
-  | 'rules';
+  | 'rules'
+  | 'dnsRules';
 
 // Event schemas do not define cross-resource invalidation, so the UI owns this policy.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
@@ -34,7 +35,22 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   // Every activation restores runtime settings, and a no-op one advances no generation.
   'operation.updated': {now: ['runtime', 'runtimeSettings']},
   'generation.changed': {
-    now: ['capabilities', 'runtime', 'runtimeSettings', 'config', 'groups', 'group', 'nodes', 'providers', 'geodata', 'rules', 'datapath', 'flows', 'flow']
+    now: [
+      'capabilities',
+      'runtime',
+      'runtimeSettings',
+      'config',
+      'groups',
+      'group',
+      'nodes',
+      'providers',
+      'geodata',
+      'rules',
+      'dnsRules',
+      'datapath',
+      'flows',
+      'flow'
+    ]
   }
 };
 
