@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {tcpProbe} from './action';
-import {patchConfig, probeGroup} from './groups';
+import {groupActions, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
 
@@ -86,4 +86,21 @@ it('writes a group check URL at its revision and refuses a stale revision or an 
     await expect(patchConfig(api, after, [{op: 'replace', path: '/config/check_url', value}])).rejects.toMatchObject({status: 422});
   // A selector group does not list the check URL as writable.
   await expect(patchConfig(api, await api.group('proxy'), [{op: 'replace', path: '/config/check_url', value: url}])).rejects.toMatchObject({status: 422});
+});
+
+it('offers a group only the actions the backend offers for groups as a whole', async () => {
+  const api = createMockApi();
+  const caps = await api.capabilities();
+  const group = await api.group('skylink');
+  group.capabilities = {...group.capabilities, can_select: true, can_override: true, mutable_config: ['interrupt_connections', 'check_url']};
+  const offered = (groups: Partial<typeof caps.resources.groups> | null) =>
+    groupActions(group, groups ? {...caps, resources: {...caps.resources, groups: {...caps.resources.groups, ...groups}}} : undefined).capabilities;
+
+  expect(groupActions(group, caps)).toBe(group);
+  expect(offered({selection: false})).toMatchObject({can_select: false, can_override: false, mutable_config: group.capabilities.mutable_config});
+  expect(offered({config_patch: false})).toMatchObject({can_select: true, can_override: true, mutable_config: []});
+  expect(offered(null)).toMatchObject({can_select: false, can_override: false, mutable_config: []});
+  // A discovery without the flags leaves the group's own in charge.
+  expect(offered({selection: undefined, config_patch: undefined})).toEqual(group.capabilities);
+  expect(group.capabilities.mutable_config).toEqual(['interrupt_connections', 'check_url']);
 });
