@@ -42,7 +42,7 @@ it('names a failed stage: in its own words when known, else beside the code', ()
   const t: Translator = (key, params) => translate('en', key, params);
   expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'asset_validation_failed'})).toEqual({summary: t('ui.backend.assetValidationFailed')});
   expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'checksum_unavailable'}).summary).toBe(
-    'The file downloaded, but its published .sha256sum could not be fetched (timeout, rate limit or network error). Try again, or use a faster route or mirror'
+    'The file downloaded, but its .sha256sum file could not be fetched. Try again'
   );
   expect(backendMessage('checksum_unavailable', '', t)).toEqual({summary: t('ui.backend.checksumUnavailable')});
   expect(backendMessage('geodata_update_failed', 'x', t, {stage: 'route_blocked'})).toEqual({summary: t('ui.backend.routeBlocked')});
