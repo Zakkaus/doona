@@ -44,4 +44,7 @@ export type Engine = {
   settingName(key: string): string;
   // The top-level sections whose text the engine redacts when it returns a source, each with the name the page shows.
   redactedSections(blocks: TextBlock[]): Array<{block: TextBlock; name: string}>;
+  // Whether the configuration text is dae's, which doona reads and writes; a page that infers settings from the text
+  // or edits it by hand checks this first.
+  daeText: boolean;
 };
