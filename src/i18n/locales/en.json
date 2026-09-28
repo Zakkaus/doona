@@ -250,7 +250,7 @@
     "one": "{n} group: {policies}",
     "other": "{n} groups: {policies}"
   },
-  "config.moduleManual": "Edit by hand",
+  "config.moduleManual": "Open source file",
   "config.moduleManualTip": "Open the whole file in the Sources tab at this section",
   "config.moduleNodes": {
     "one": "{n} node",
@@ -1273,7 +1273,7 @@
   "policy.selectedInterrupted": "{name} selected {member}; existing connections interrupted",
   "policy.selectedKept": "{name} selected {member}; existing connections kept",
   "policy.sort": "Sort",
-  "policy.tab.arrange": "Arrange",
+  "policy.tab.arrange": "Group membership",
   "policy.tab.groups": "Groups",
   "policy.toleranceHelp": "Minimum latency reduction, in milliseconds, before the group switches members. Leave empty to use the default.",
   "policy.toleranceInvalid": "Enter a whole number of milliseconds, 0 or more.",

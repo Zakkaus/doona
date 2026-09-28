@@ -80,9 +80,9 @@ Sign-in is a page of its own with language and palette menus and a scheme toggle
 
 ## Page tour
 
-### Arranging groups
+### Group membership
 
-On the Arrange tab of Policies, drag a node or a subscription from the list on the right onto a group to add it. Keyboard dragging does the same, and Add to group below the list adds the selected rows to a group. The changes stay staged until you open Review and apply and press Apply.
+On the Group membership tab of Policies, drag a node or a subscription from the list on the right onto a group to add it. Keyboard dragging does the same, and Add to group below the list adds the selected rows to a group. The changes stay staged until you open Review and apply and press Apply.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/arrange.webp" alt="Dragging the node us-01 onto the gaming group" width="100%">
 
