@@ -6,7 +6,7 @@ import {settingsCard} from './nav';
 
 const card = settingsCard('geodata');
 
-// Source, download route, automatic updates and status as labelled rows; each control saves as it changes. Only
+// Source, download route, checksum verification, automatic updates and status as labelled rows; each control saves as it changes. Only
 // mounted where the backend lets the sources be configured.
 export function GeodataSettingsCard() {
   const t = useT();
@@ -70,6 +70,15 @@ export function GeodataSettingsCard() {
                     isDisabled={m.busy}
                   />
                 )}
+              </div>
+            </div>
+          )}
+          {m.checksum && (
+            <div className="rp-ops-group">
+              <span className="rp-label">{t('settings.geodataVerifyChecksum')}</span>
+              <div className="rp-cluster">
+                <Switch aria-label={t('settings.geodataVerifyChecksum')} isSelected={m.checksum.enabled} isDisabled={m.busy} onChange={m.checksum.toggle} />
+                <span className="rp-label">{t('settings.geodataVerifyChecksumHelp')}</span>
               </div>
             </div>
           )}

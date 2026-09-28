@@ -28,6 +28,7 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
   let stored: Record<GeoAssetKind, string[]> | null = null;
   const auto = {enabled: true, interval_hours: 24};
   let download: GeoDataDownload = {route: 'routing', group_id: null};
+  let verifyChecksum = true;
   const data = structuredClone(fixtures.geodata);
   data.required_codes = requiredCodes([...rules, ...(faults ? faultRules : [])].map(rule => rule.cond));
   // In the faults scenario this morning's automatic check could not reach any URL; the files from three days ago stay.
@@ -59,7 +60,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
       geoip: {urls: urls().geoip},
       auto_update: {...auto},
       // A stored group that no longer exists reads as null.
-      download: {...download, group_id: download.group_id && groupIds().has(download.group_id) ? download.group_id : null}
+      download: {...download, group_id: download.group_id && groupIds().has(download.group_id) ? download.group_id : null},
+      verify_checksum: verifyChecksum
     }),
     // Checks the whole patch before storing any of it, as the backend does.
     patch(patch: GeoDataSettingsPatch) {
@@ -67,6 +69,7 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         stored = null;
         Object.assign(auto, {enabled: true, interval_hours: 24});
         download = {route: 'routing', group_id: null};
+        verifyChecksum = true;
       } else {
         for (const kind of kinds) {
           const list = patch[kind]?.urls;
@@ -86,6 +89,7 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         if (patch.geosite || patch.geoip) stored = {geosite: patch.geosite?.urls ?? urls().geosite, geoip: patch.geoip?.urls ?? urls().geoip};
         Object.assign(auto, patch.auto_update ?? {});
         if (route) download = {route: route.route, group_id: route.group_id ?? null};
+        if (patch.verify_checksum !== undefined) verifyChecksum = patch.verify_checksum;
       }
       data.next_check_at = nextCheck(Date.now());
     },
@@ -120,7 +124,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         asset.size_bytes = String((presetAt(asset.kind, url)?.sizes[asset.kind] ?? Number(asset.size_bytes)) + Math.floor(Math.random() * 65536));
         asset.source_redacted = redactUrl(url);
         asset.fetched_url_redacted = redactUrl(url);
-        asset.verified = publishesChecksum(url);
+        // With verification off the backend skips the .sha256sum request and loads the file unverified.
+        asset.verified = verifyChecksum && publishesChecksum(url);
         asset.download_route = {route: download.route, group_id: download.route === 'group' ? download.group_id : null};
       }
       data.last_updated_at = at;

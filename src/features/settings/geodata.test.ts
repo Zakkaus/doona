@@ -153,6 +153,16 @@ describe('rows', () => {
       })
     );
   });
+  it('points a checksum failure at the verify switch only where the backend offers it', () => {
+    const hint = {title: t('settings.geodataVerifyChecksum'), text: t('settings.geodataChecksumSkipHelp')};
+    for (const code of ['checksum_unavailable', 'checksum_mismatch']) {
+      const failed = status({last_error: {code, message: 'x', details: null}});
+      expect(statusLine(failed, false, now, 'en-US', t, true).help).toEqual(hint);
+      expect(statusLine(failed, false, now, 'en-US', t).help).toBeUndefined();
+    }
+    const other = status({last_error: {code: 'download_timeout', message: 'x', details: null}});
+    expect(statusLine(other, false, now, 'en-US', t, true).help).toBeUndefined();
+  });
   it('lists each asset with its size, host and route, and the full URL behind it', () => {
     const details = assetDetails(status(), [], 'en-US', t);
     expect(details[0]).toEqual({label: 'geosite', value: expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full: full.urls.geosite[0]});
