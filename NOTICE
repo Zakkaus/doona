@@ -12,3 +12,7 @@ Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name
 The fonts in public/fonts are the Google Fonts subsets of Noto Sans TC and SC
 from https://github.com/notofonts/noto-cjk.
 Licensed under the SIL Open Font License, Version 1.1; see public/fonts/OFL.txt.
+
+src/ui/styles/palettes/qiangguo-wall-*.webp are cropped, tinted and faded from
+"Great Wall of China" by j4p4n, public domain, via Openclipart:
+https://openclipart.org/detail/279931/great-wall-of-china

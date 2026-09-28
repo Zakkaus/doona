@@ -980,6 +980,8 @@
   "palette.moon": "Moon",
   "palette.nord": "Nord",
   "palette.nordVariants": "Snow Storm / Polar Night",
+  "palette.qiangguo": "中国",
+  "palette.qiangguoModes": "打卡版／通宵版",
   "palette.rosePine": "Rosé Pine",
   "palette.semi": "Semi Design",
   "policy.actionFailed": "无法完成 {name} 的操作：{error}",
