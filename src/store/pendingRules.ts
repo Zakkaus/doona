@@ -1,9 +1,15 @@
 import {useSyncExternalStore} from 'react';
-import type {RoutingRule} from '../api/model';
+import type {DnsRoutingRule, RoutingRule} from '../api/model';
 
-// A rule held to be written with the others at the next apply, one reload per file instead of one per rule. `before`
-// is the rule it goes in front of, as the rule list read it when the rule was held.
-export type PendingRule = {id: number; condition: string; outbound: string; must: boolean; before: RoutingRule; sourceId: string};
+// Where a held rule goes: its list, and the rule of that list it goes in front of, as the list read it when the rule
+// was held. A DNS list that writes no fallback has no such rule at its end, so `before` is null there and the rule
+// goes where the list ends when it is written, in a block of its own when the list has none yet.
+export type PendingPlace = {list: 'routing'; before: RoutingRule} | {list: 'request' | 'response'; before: DnsRoutingRule | null};
+// A rule held to be written with the others at the next apply, one reload per file instead of one per rule.
+// `outbound` is what the rule writes after its arrow: an outbound, or a DNS action or upstream. `sourceId` is the
+// file it was placed in; an apply writes it there or not at all.
+export type HeldRule = PendingPlace & {condition: string; outbound: string; must: boolean; sourceId: string};
+export type PendingRule = HeldRule & {id: number};
 export type PendingFailure = {text: string; lines: string[]};
 // `applying`: one apply at a time, whichever button started it.
 type State = {rules: PendingRule[]; failure: PendingFailure | null; applying: boolean};
@@ -27,7 +33,7 @@ export const pendingRules = {
     return () => void listeners.delete(notify);
   },
   snapshot: () => state,
-  add: (rule: Omit<PendingRule, 'id'>) => set({rules: [...state.rules, {...rule, id: nextId++}], failure: null}),
+  add: (rule: HeldRule) => set({rules: [...state.rules, {...rule, id: nextId++}], failure: null}),
   // The failure was about the rules as they were, so it goes once any of them leaves.
   remove: (ids: number[]) => {
     const rules = state.rules.filter(rule => !ids.includes(rule.id));

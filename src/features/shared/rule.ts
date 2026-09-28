@@ -93,7 +93,7 @@ export function duplicateOf(rules: RoutingRule[], held: PendingRule[], condition
   const key = conditionKey(condition);
   const listed = rules.find(rule => rule.kind === 'rule' && rule.outbound === outbound && conditionKey(rule.expression) === key);
   if (listed) return t('rule.duplicateListed', {n: listed.index + 1});
-  return held.some(rule => rule.outbound === outbound && conditionKey(rule.condition) === key) ? t('rule.duplicateHeld') : null;
+  return held.some(rule => rule.list === 'routing' && rule.outbound === outbound && conditionKey(rule.condition) === key) ? t('rule.duplicateHeld') : null;
 }
 
 // Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.

@@ -28,7 +28,7 @@ export function usePendingApply() {
       sources = (await readConfigFresh(getApi(), signal)).sources;
       if (signal.aborted) return undefined;
       const source = sources.find(source => source.id === group[0].sourceId);
-      const result = source && (await editor.apply(source, () => (text = insertRules(source, group))));
+      const result = source && (await editor.apply(source, () => (text = insertRules(sources, source, group))));
       if (!source || text === null) {
         reread();
         return {written: false, failure: {text: t('rule.stale'), lines: []}};
