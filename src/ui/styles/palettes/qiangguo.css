@@ -74,9 +74,9 @@
 /* The hero at the top of the page, as on the app: a red sky with the five stars at the start and Tiananmen at the
    end, and a few faint diagonal folds across the whole sky so it reads as cloth on a second look, all fading down
    into the page so the title and the first cards sit on paper. The top bar has no banner of its own: its controls
-   sit on the hero, which the shell paints and the bar repaints in the same place, so the bar stays the sky's top edge
-   once it is pinned and the page scrolls under it. On a wide screen the hero spans the content column and the side
-   navigation keeps the paper.
+   sit on the hero, which the shell paints and the bar repaints in the same place. Once the page scrolls under the
+   pinned bar, the bar keeps only the plain top of the sky. On a wide screen the hero spans the content column and
+   the side navigation keeps the paper.
    The square is cut from three photographs on Wikimedia Commons and tinted cream by day and gold at night:
    Tiananmen, https://commons.wikimedia.org/wiki/File:20200110_Tiananmen-6.jpg, and a huabiao,
    https://commons.wikimedia.org/wiki/File:20200110_Tiananmen_statue-1.jpg, both by Balon Greyjoy (CC0); the
@@ -86,6 +86,7 @@
    domain). */
 :root[data-family='qiangguo'] {
   --qg-sky: linear-gradient(#b8141b, #de2910 45%, #e8452a);
+  --qg-sky-top: #b8141b;
   --qg-flag: url('./qiangguo-flag-light.svg');
   --qg-fold-lit: rgba(255, 236, 200, 0.2);
   --qg-fold-shade: rgba(90, 0, 4, 0.24);
@@ -127,6 +128,7 @@
 }
 :root[data-family='qiangguo'][data-scheme='dark'] {
   --qg-sky: linear-gradient(#5c0006, #1a0000);
+  --qg-sky-top: #5c0006;
   --qg-flag: url('./qiangguo-flag-dark.svg');
   --qg-fold-lit: rgba(255, 150, 120, 0.12);
   --qg-fold-shade: rgba(0, 0, 0, 0.45);
@@ -204,6 +206,14 @@
     -webkit-background-clip: text;
     background-clip: text;
   }
+}
+/* Pinned over a scrolled page, a repainted slice of the flag or the square would ride over the content, so the bar
+   takes the plain top of the sky instead. On a wide screen the side columns keep their paper, as the hero does. */
+:root[data-family='qiangguo'][data-scrolled] .rp-top {
+  background:
+    linear-gradient(var(--qg-paper), var(--qg-paper)) no-repeat 0 0 / var(--qg-start) 100%,
+    linear-gradient(var(--qg-paper), var(--qg-paper)) no-repeat 100% 0 / var(--qg-end) 100%,
+    var(--qg-sky-top);
 }
 /* The page shows the hero through its top and turns to paper where the hero ends. */
 :root[data-family='qiangguo'] .rp-main {

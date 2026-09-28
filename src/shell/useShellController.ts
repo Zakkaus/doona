@@ -28,6 +28,14 @@ export function useShellController(initial: Lang) {
     d.dir = pageDirection(LOCALE[lang], mirrored);
     d.toggleAttribute('data-mirror', mirrored);
   }, [lang, mirrored]);
+  // `data-scrolled` on the root while the page is off its top, for a palette whose pinned top bar changes once content
+  // runs under it. The listener only reads the offset and toggles the attribute, which is a no-op when it holds.
+  useEffect(() => {
+    const mark = () => document.documentElement.toggleAttribute('data-scrolled', scrollY > 0);
+    mark();
+    addEventListener('scroll', mark, {passive: true});
+    return () => removeEventListener('scroll', mark);
+  }, []);
   const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
   const [searchOpen, setSearchOpen] = useState(false);
   // The page keeps its language until the new catalogue has loaded; of several quick choices, the last one wins.
