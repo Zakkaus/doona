@@ -344,32 +344,41 @@ export function CodeEditor({
   }, [focusLine]);
   // The toolbar runs the keymap's own commands. Find and Go to line only move and select, so they stay in a read-only
   // source; the editing menu is disabled there, and a preview without onChange, which never becomes editable, has none.
+  // A compact preview keeps its reduced height and has no toolbar.
   const run = (command: Command) => {
     if (view.current) command(view.current);
   };
   return (
     <>
-      <div className="rp-toolbar">
-        <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
-        <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
-        {onChange && (
-          <MenuButton
-            label={t('cm.commands')}
-            isDisabled={readOnly}
-            content={
-              <Menu aria-label={t('cm.commands')} onAction={key => run(editCommands.find(command => command.id === key)!.run)}>
-                {editCommands.map(command => (
-                  <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
-                    {t(command.label)}
-                  </MenuItem>
-                ))}
-              </Menu>
-            }
-          >
-            {t('cm.commands')}
-          </MenuButton>
-        )}
-      </div>
+      {!compact && (
+        <div className="rp-toolbar">
+          <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
+          <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
+          {onChange && (
+            <MenuButton
+              label={t('cm.commands')}
+              isDisabled={readOnly}
+              content={
+                <Menu
+                  aria-label={t('cm.commands')}
+                  onAction={key => {
+                    const command = editCommands.find(command => command.id === key);
+                    if (command) run(command.run);
+                  }}
+                >
+                  {editCommands.map(command => (
+                    <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
+                      {t(command.label)}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              }
+            >
+              {t('cm.commands')}
+            </MenuButton>
+          )}
+        </div>
+      )}
       <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />
     </>
   );
