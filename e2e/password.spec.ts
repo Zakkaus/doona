@@ -32,6 +32,7 @@ async function passwordBackend(page: import('@playwright/test').Page, setupRequi
   backend.handlers['POST auth/login'] = async request => {
     record('login')(request);
     const {password} = request.postDataJSON();
+    if (password === 'too many attempts') throw new ApiError(429, 'rate_limited', 'Too many requests', null, null, 2);
     if (password !== 'correct horse battery') throw new ApiError(401, 'invalid_credentials', 'Invalid credentials');
     return session;
   };
@@ -123,6 +124,23 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
   await page.reload();
   await expect(page.locator('.rp-login').getByRole('status')).toHaveText('The session has ended; sign in again.');
   expect(await page.evaluate(() => sessionStorage.getItem('doona-session'))).toBeNull();
+});
+
+test('a rate-limited sign-in keeps the button disabled and counts down the wait', async ({page}) => {
+  const state = await passwordBackend(page, false);
+  await page.goto('/#/activity');
+  const form = page.locator('.rp-login-page');
+  await form.getByLabel('Username', {exact: true}).fill('admin');
+  await form.getByLabel('Password', {exact: true}).fill('too many attempts');
+  await form.getByRole('button', {name: 'Sign in'}).click();
+  await expect(form.locator('.rp-alert')).toHaveText('Too many attempts. Try again in 2 seconds.');
+  const submit = form.locator('.rp-login-submit');
+  await expect(submit).toBeDisabled();
+  await expect(submit).toHaveText(/^Try again in [12] seconds?$/);
+  await form.getByLabel('Password', {exact: true}).press('Enter');
+  await expect(submit).toHaveText('Sign in', {timeout: 4000});
+  await expect(submit).toBeEnabled();
+  expect(state.attempts.filter(attempt => attempt.path === 'login')).toHaveLength(1);
 });
 
 test('a session the tab cannot store asks to allow storage instead of reporting a failed sign-in', async ({page}) => {

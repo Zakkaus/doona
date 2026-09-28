@@ -843,6 +843,10 @@
   },
   "login.rejected": "The backend rejected the saved token; enter a new one.",
   "login.requirements": "Native API requirements",
+  "login.retryIn": {
+    "one": "Try again in {n} second",
+    "other": "Try again in {n} seconds"
+  },
   "login.sessionEnded": "The session has ended; sign in again.",
   "login.settings": "Change backend URL",
   "login.setupNote": "{backend} has no administrator yet; creating one signs you in. Accepted only from loopback, private or link-local addresses.",
