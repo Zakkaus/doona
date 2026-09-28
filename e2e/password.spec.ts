@@ -140,6 +140,7 @@ test('a rate-limited sign-in keeps the button disabled and counts down the wait'
   await form.getByLabel('Password', {exact: true}).press('Enter');
   await expect(submit).toHaveText('Sign in', {timeout: 4000});
   await expect(submit).toBeEnabled();
+  await expect(form.locator('.rp-alert')).toHaveCount(0);
   expect(state.attempts.filter(attempt => attempt.path === 'login')).toHaveLength(1);
 });
 

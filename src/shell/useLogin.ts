@@ -112,6 +112,8 @@ export function loginAlert(
   return null;
 }
 
+const isRateLimit = (failure: Failure) => typeof failure !== 'string' && failure.key === 'login.rateLimited';
+
 // Whole seconds left before `until`, rounded up so the form never opens early.
 export function secondsLeft(until: number, now: number): number {
   return Math.max(0, Math.ceil((until - now) / 1000));
@@ -210,7 +212,8 @@ export function useLogin(profileId: string, api: string, backend: string, reject
             ? t('login.connectedTo', {backend})
             : t('login.note', {backend}),
     demoNote: demo && kind === 'login' ? t('login.demoNote', DEMO_ACCOUNT) : null,
-    alert: loginAlert({kind, failure, attempt, ended, rejected}, t),
+    // The rate-limit note names the wait the backend gave; it goes once that wait is over.
+    alert: loginAlert({kind, failure: failure && !wait && isRateLimit(failure) ? null : failure, attempt, ended, rejected}, t),
     busy,
     token,
     setToken,
