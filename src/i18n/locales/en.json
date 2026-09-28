@@ -1283,6 +1283,7 @@
     "other": "{n} rules written; reloading"
   },
   "rule.applyFiles": "Apply and reload ({n}); writes {files} files",
+  "rule.applyHeld": "Apply held rules",
   "rule.applyPending": "Apply and reload ({n})",
   "rule.condition": "Condition",
   "rule.conditionInvalid": "The condition must be a single line containing a call such as domain(…), with balanced parentheses and no ->, # comment or braces",
@@ -1398,6 +1399,7 @@
   "rule.result.matched": "Matched",
   "rule.result.not_matched": "Not matched",
   "rule.result.skipped": "Skipped",
+  "rule.reviewHeld": "Review held rules",
   "rule.run": "Run trace",
   "rule.share": "Share",
   "rule.simulatedAddress": "Simulated address",

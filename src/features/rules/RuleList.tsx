@@ -1,4 +1,4 @@
-import {useId, useLayoutEffect, useMemo, useRef} from 'react';
+import {useEffect, useId, useLayoutEffect, useMemo, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {
@@ -54,6 +54,12 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
   });
   const {canWrite, busy} = view;
   const {target, hits} = view.copy;
+  // A link to review the held rules moves focus, and so the view, to their section once it is shown.
+  const heldRef = useRef<HTMLElement>(null);
+  const reviewing = !!view.reviewHeld && !!view.held;
+  useEffect(() => {
+    if (reviewing) heldRef.current?.focus();
+  }, [reviewing]);
   const columns = useMemo(
     (): TableColumn<Row>[] => [
       {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
@@ -146,10 +152,16 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
       </ActionHelp>
       {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       {view.held && (
-        <Card className="rp-list" aria-label={view.held.title}>
+        <Card className="rp-list" aria-label={view.held.title} ref={heldRef} tabIndex={-1}>
           <div className="rp-cluster">
             <h3 className="rp-h3">{view.held.title}</h3>
             {view.held.files && <span className="rp-label">{view.held.files}</span>}
+            <span className="rp-grow" />
+            {view.applyHeld && (
+              <Button small isPending={view.applying} onPress={view.applyHeld}>
+                {t('rule.applyHeld')}
+              </Button>
+            )}
           </div>
           {view.held.failure && (
             <InlineAlert>

@@ -127,7 +127,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     setRevealed(target.token);
     setCollapse(expandGroup(collapse, target.group));
   }
-  const ruleAction = useConnectionRule(cur);
+  const ruleAction = useConnectionRule(cur, () => go('rules', within('', {tab: 'list', held: '1'})));
   const lists = useMemo(() => connectionsView(rows, resource.data, src, rule, locale, t), [rows, resource.data, src, rule, locale, t]);
   const detail = useMemo(() => connectionDetail(cur, locale, t, names, rulesListed), [cur, locale, t, names, rulesListed]);
   const model = {...lists, detail};
