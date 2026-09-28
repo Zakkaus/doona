@@ -81,10 +81,14 @@ export function translate(lang: Lang, key: Key, params?: Params): string {
   }
   return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => param(lang, params[name])) : text;
 }
-// One translator per language, so effects and memos that list `t` do not re-run every render.
+// Keys to read in place of others, such as the palette's own words for a few statuses (src/shell/palettes.ts).
+export type Rewording = Readonly<Partial<Record<Key, Key>>>;
+export const RewordingContext = createContext<Rewording | undefined>(undefined);
+// One translator per language and rewording, so effects and memos that list `t` do not re-run every render.
 export function useT(): Translator {
   const lang = useLang();
-  return useMemo(() => (key: Key, params?: Params) => translate(lang, key, params), [lang]);
+  const rewording = useContext(RewordingContext);
+  return useMemo(() => (key: Key, params?: Params) => translate(lang, rewording?.[key] ?? key, params), [lang, rewording]);
 }
 
 const lists = new Map<Lang, Intl.ListFormat>();
