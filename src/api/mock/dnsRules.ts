@@ -27,8 +27,8 @@ export function dnsRulesOf(files: Array<ConfigSource & {content: string}>, gener
         const list = block.name as List;
         if (list !== 'request' && list !== 'response') continue;
         for (const {code, raw, line} of blockLines(file.content, block)) {
-          const fallback = /^(?:fallback|default):\s*(\S+)$/.exec(code);
-          const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
+          const fallback = /^(?:fallback|default):\s*('[^']*'|"[^"]*"|\S+)$/.exec(code);
+          const rule = /^(.+?)\s*->\s*('[^']*'|"[^"]*"|\S+)$/.exec(code);
           if (!fallback && !rule) continue;
           const column = new TextEncoder().encode(raw.slice(0, raw.search(/\S/))).length + 1;
           const source = {file: file.path.split('/').pop()!, source_id: file.id, line, column};
