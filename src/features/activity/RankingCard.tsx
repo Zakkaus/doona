@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Bar, Card, Empty, ErrorMessage, Loading, Segmented, TextTooltip} from '../../ui/ui';
+import {Badge, Bar, Card, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
 import {useRankingCard} from './useRankingCard';
 
 // Top clients owns its own connections subscription: a 20-second poll over up to 1,000 connections
@@ -44,7 +44,17 @@ export function RankingCard() {
       ) : (
         <div className="rp-list">
           {rows.map(row => (
-            <Bar key={row.name} label={row.name} value={row.value} pct={row.pct} color={row.color} />
+            <Bar
+              key={row.name}
+              label={
+                <Link appearance="link" href={row.href}>
+                  <TextTooltip>{row.name}</TextTooltip>
+                </Link>
+              }
+              value={row.value}
+              pct={row.pct}
+              color={row.color}
+            />
           ))}
         </div>
       )}

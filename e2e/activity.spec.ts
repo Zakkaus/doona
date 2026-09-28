@@ -626,3 +626,39 @@ test('the active connections tile opens the connection list', async ({page}) => 
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
   await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
+
+test('the rankings, outbound usage and latency tile open the connections and node they name', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/activity');
+  const escape = (text: string) => encodeURIComponent(text).replace(/[.[\]()*+?]/g, '\\$&');
+  // The list groups rows by default, so it is a tree grid.
+  const list = page.getByRole('treegrid', {name: 'Connections'}).or(page.getByRole('grid', {name: 'Connections'}));
+  const ranking = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Top traffic', exact: true})});
+  const device = ranking.getByRole('link').first();
+  const address = (await device.innerText()).trim();
+  await device.click();
+  await expect(page).toHaveURL(new RegExp(`#/connections\\?src=${escape(address)}$`));
+  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(list).toContainText(address);
+  await page.goBack();
+  await ranking.getByRole('radio', {name: 'Domains', exact: true}).click();
+  const domain = ranking.getByRole('link').first();
+  const name = (await domain.innerText()).trim();
+  await domain.click();
+  await expect(page).toHaveURL(new RegExp(`#/connections\\?q=${escape(name)}$`));
+  await expect(page.getByRole('searchbox', {name: 'Filter'})).toHaveValue(name);
+  await page.goBack();
+  const usage = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Outbound downloads', exact: true})});
+  await usage.getByRole('link', {name: 'proxy', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections\?out=proxy$/);
+  // The outbound picker shows the filter the link set.
+  await expect(page.getByRole('button', {name: 'proxy Outbound', exact: true})).toBeVisible();
+  await page.goBack();
+  const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
+  const node = tile.getByRole('link');
+  await expect(node).toHaveAccessibleName(/^\S+: /);
+  const nodeName = (await node.getAttribute('aria-label'))!.split(':')[0];
+  await node.click();
+  await expect(page).toHaveURL(new RegExp(`#/nodes\\?provider=[^&]+&q=${escape(nodeName)}$`));
+  await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(nodeName);
+});

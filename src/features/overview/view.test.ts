@@ -49,6 +49,9 @@ it('distinguishes loading and unavailable sections and deduplicates datapath err
   const view = overviewView({capabilities, runtime, version, datapath, memory: runtimeMemory}, loading, 'en-US', t);
   expect(view.datapath.warning).toBeNull();
   expect(view.datapath.errors.map(error => error.text)).toEqual([t('ui.backend.sampleDelayed')]);
+  // Each feature that is on opens where it is used.
+  expect(view.resources.rows.find(row => row.id === 'dns_cache')?.href).toBe('#/dns?tab=cache');
+  expect(view.resources.rows.every(row => row.href.startsWith('#/'))).toBe(true);
   for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
     const localized = (key: Parameters<Translator>[0], params?: Parameters<Translator>[1]) => translate(lang, key, params);
     const rendered = overviewView({datapath}, loading, lang, localized);

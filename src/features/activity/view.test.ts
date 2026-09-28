@@ -20,6 +20,11 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
   expect(activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
   const ranking = activityRanking(connections, 'dev', colors, 'en', t);
   expect(ranking[0].pct).toBeGreaterThan(ranking[1].pct);
+  expect(ranking[0].href).toBe(`#/connections?src=${ranking[0].name}`);
+  const domains = activityRanking(connections, 'host', colors, 'en', t);
+  expect(domains[0].href).toBe(`#/connections?q=${encodeURIComponent(domains[0].name)}`);
+  const usage = activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows;
+  expect(usage.find(row => row.name === t('ui.block'))?.href).toBe('#/connections?out=block');
 });
 
 it('chooses measured nodes and preserves an explicitly selected unavailable node', () => {

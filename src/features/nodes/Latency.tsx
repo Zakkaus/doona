@@ -17,7 +17,7 @@ export function NodeLatency() {
   const t = useT();
   const lang = useLang();
   const p = usePalette();
-  const {nodes, by, setBy, view} = useLatencyTab();
+  const {nodes, by, setBy, view, hrefs} = useLatencyTab();
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
@@ -107,6 +107,7 @@ export function NodeLatency() {
               return {
                 id: row.id,
                 label: row.name,
+                href: hrefs.get(row.id),
                 values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
                 text: formatLatency(row.latest, t),
                 tone: tone[latencyTone(row.latest)],

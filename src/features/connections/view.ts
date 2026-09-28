@@ -245,9 +245,14 @@ export function connectionsView(
   data: ConnectionList | undefined,
   src: string | undefined,
   rule: string,
+  out: string,
   locale: string,
   t: LabelFn
 ) {
+  // A link can filter by an outbound no open connection uses, such as one from the usage totals; it stays listed so the
+  // picker still shows it.
+  const outbounds = new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])));
+  if (out !== 'all') outbounds.add(out);
   // Equal counts keep one order across refreshes rather than the order the rows arrived in.
   const seen = (values: Array<string | null | undefined>) => {
     const present = values.flatMap(value => (value ? [value] : []));
@@ -259,10 +264,7 @@ export function connectionsView(
       ['tcp', t('ui.tcp')],
       ['udp', t('ui.udp')]
     ] as Array<[string, string]>,
-    outbounds: [
-      {id: 'all', label: t('conn.allOutbounds')},
-      ...[...new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])))].map(id => ({id, label: outboundLabel(id, t)}))
-    ],
+    outbounds: [{id: 'all', label: t('conn.allOutbounds')}, ...[...outbounds].map(id => ({id, label: outboundLabel(id, t)}))],
     picks: [
       {
         title: t('ui.device'),

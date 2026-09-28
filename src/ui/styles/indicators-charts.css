@@ -95,6 +95,20 @@
 .rp-bar .top .l > .rp-link[data-focus-visible] {
   outline-offset: -2px;
 }
+/* The same for a label that cuts its own text: the link carries the ellipsis. */
+.rp-donut .r .n > .rp-link,
+.rp-capability .rp-light > span > .rp-link {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-donut .r .n > .rp-link[data-focus-visible],
+.rp-capability .rp-light > span > .rp-link[data-focus-visible] {
+  outline-offset: -2px;
+}
 .rp-bar .top .v {
   color: var(--rp-subtle);
   flex-shrink: 0;

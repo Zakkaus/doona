@@ -3,6 +3,7 @@ import type {ComponentProps} from 'react';
 import {useT} from '../../i18n';
 import {LoadBoundary} from '../LoadBoundary';
 import {LegendItem} from './LegendItem';
+import {Link} from '../Button';
 export type Series = {label: string; color: string; values: Array<number | null>};
 const LazyAreaChart = lazy(() => import('./AreaChart').then(module => ({default: module.AreaPlot})));
 const LazySpark = lazy(() => import('./Sparkline').then(module => ({default: module.SparkPlot})));
@@ -36,9 +37,17 @@ export const Spark = memo(function Spark(props: ComponentProps<typeof LazySpark>
     </LoadBoundary>
   );
 });
-// Scroll long legends so the chart does not stretch adjacent cards.
+// Scroll long legends so the chart does not stretch adjacent cards. A row with `href` names what it opens.
 export const Donut = memo(
-  function Donut({label, rows, total}: {label: string; rows: Array<{name: string; value: number | null; text: string; color: string}>; total: string}) {
+  function Donut({
+    label,
+    rows,
+    total
+  }: {
+    label: string;
+    rows: Array<{name: string; value: number | null; text: string; color: string; href?: string}>;
+    total: string;
+  }) {
     const t = useT();
     const legend = useMemo(() => rows.map(row => ({...row, percent: row.value === null ? '—' : t('ui.percent', {n: row.value})})), [rows, t]);
     return (
@@ -55,7 +64,15 @@ export const Donut = memo(
           {legend.map(r => (
             <div key={r.name} className="r">
               <i className="dot" style={{background: r.color}} />
-              <span className="n">{r.name}</span>
+              <span className="n">
+                {r.href ? (
+                  <Link appearance="link" href={r.href}>
+                    {r.name}
+                  </Link>
+                ) : (
+                  r.name
+                )}
+              </span>
               <span>{r.text}</span>
               <span className="p">{r.percent}</span>
             </div>
@@ -71,6 +88,6 @@ export const Donut = memo(
       (previous.rows.length === next.rows.length &&
         previous.rows.every((row, index) => {
           const other = next.rows[index];
-          return row.name === other.name && row.value === other.value && row.text === other.text && row.color === other.color;
+          return row.name === other.name && row.value === other.value && row.text === other.text && row.color === other.color && row.href === other.href;
         })))
 );

@@ -209,7 +209,11 @@ export function Overview({query}: PageProps) {
               {vm.resources.rows.map(row => (
                 <div key={row.id} className="rp-capability">
                   {/* The dot leads its label, so a wide column cannot set it nearer the next label than its own. */}
-                  <Light tone="ok">{row.label}</Light>
+                  <Light tone="ok">
+                    <Link appearance="link" href={row.href}>
+                      {row.label}
+                    </Link>
+                  </Light>
                   {/* The status is the dot alone; the text still reaches assistive technology. */}
                   <VisuallyHidden>{row.text}</VisuallyHidden>
                 </div>

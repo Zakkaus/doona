@@ -220,6 +220,17 @@
   white-space: nowrap;
   font-size: var(--rp-text-sm);
 }
+/* A name that opens its node is a link only as tall as the text, so the row keeps its height. */
+.rp-markerplot .row .name > .rp-link {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-markerplot .row .name > .rp-link[data-focus-visible] {
+  outline-offset: -2px;
+}
 .rp-markerplot .row .value {
   text-align: end;
   font-size: var(--rp-text-sm);

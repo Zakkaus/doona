@@ -140,7 +140,7 @@ test('backend features lead with a dot, keep whole labels and share columns', as
   await expect(card.getByText('Connections', {exact: true})).toBeVisible();
   const rows = await card.locator('.rp-capability').evaluateAll(elements =>
     elements.map(element => {
-      const label = element.querySelector('.rp-light > span')!;
+      const label = element.querySelector('.rp-light .rp-link')!;
       return {left: Math.round(element.getBoundingClientRect().left), cut: label.scrollWidth > label.clientWidth, text: element.textContent};
     })
   );
@@ -298,4 +298,16 @@ test.describe(() => {
     await expect(status).toHaveAttribute('href', '#/overview?card=datapath');
     await expect(status.locator('.rp-light')).toHaveClass(/\bwarn\b/);
   });
+});
+
+test('a backend feature that is on opens where it is used', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/overview');
+  const card = page.getByRole('region', {name: 'Backend features', exact: true});
+  await card.getByRole('link', {name: 'DNS cache', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=cache$/);
+  await expect(page.getByRole('tab', {name: 'Cache', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await page.goBack();
+  await card.getByRole('link', {name: 'Connections', exact: true}).click();
+  await expect(page).toHaveURL(/#\/connections\?tab=list$/);
 });

@@ -399,6 +399,11 @@
   gap: 8px;
   white-space: nowrap;
 }
+/* A value that opens what it measures is a link only as tall as the value, so the tile keeps its height. */
+.rp-tile-val > .rp-link {
+  min-height: 0;
+  padding: 0;
+}
 .rp-big {
   font-size: var(--rp-text-3xl);
   font-weight: 700;
