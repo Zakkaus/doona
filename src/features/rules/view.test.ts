@@ -33,6 +33,8 @@ it('offers edits only at writable sources and preserves source locations when pa
   expect(view.positions[0].id).toBe('end');
   expect(view.rows.at(-1)?.number).toBe('—');
   expect(view.rows.at(-1)?.removable).toBe(false);
+  // The written fallback cannot be removed, but its outbound can be edited.
+  expect(view.rows.at(-1)?.editReason).toBeNull();
   const locked = dictionaryView(
     rules.rules,
     rules.generation_id,
@@ -44,6 +46,7 @@ it('offers edits only at writable sources and preserves source locations when pa
   );
   expect(locked.positions).toEqual([]);
   expect(locked.rows.some(row => row.removable)).toBe(false);
+  expect(locked.rows[0].editReason).toBe(t('config.readOnlyAttempt'));
   const withheld = dictionaryView(
     rules.rules,
     rules.generation_id,
@@ -55,6 +58,7 @@ it('offers edits only at writable sources and preserves source locations when pa
   );
   expect(withheld.positions).toEqual([]);
   expect(withheld.rows.some(row => row.removable)).toBe(false);
+  expect(withheld.rows[0].editReason).toBe(t('config.incomplete'));
   const redacted = {...first, source: {file: '<redacted>', source_id: 'src-main', line: 40, column: null}};
   expect(dictionaryView([redacted], undefined, undefined, [], [], t, 'en').rows[0].position).toBe(t('rule.lineOnly', {n: '40'}));
   expect(removalView(redacted, [], t).help).toBe(t('rule.removeHelp', {file: '', line: '40'}));
@@ -73,6 +77,7 @@ it('does not offer rules it cannot locate in their source for removal or inserti
   const bare = {id: 'bare', path: 'bare.dae', writable: true, content: 'pname(a) -> direct\n'} as ConfigSource;
   const view = dictionaryView([rule], '1', undefined, [bare], [], t, 'en');
   expect(view.rows[0].removable).toBe(false);
+  expect(view.rows[0].editReason).toBe(t('rule.notLocated'));
   expect(view.positions).toEqual([]);
 });
 

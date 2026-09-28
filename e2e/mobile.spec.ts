@@ -427,8 +427,8 @@ test.describe('360px actions', () => {
     ] as const) {
       await page.goto(`/#/${route}`);
       const content = page.locator('.rp-content');
-      // The search fields carry a Clear button of their own.
-      const action = (name: string) => content.locator('button.rp-btn').filter({hasText: new RegExp(`^${name}$`)});
+      // The search fields carry a Clear button of their own, and the DNS log repeats Load older records at its end.
+      const action = (name: string) => content.locator('button.rp-btn:not(.rp-narrow-only button)').filter({hasText: new RegExp(`^${name}$`)});
       await expect(action(visible)).toBeVisible();
       for (const name of collapsed) await expect(action(name)).toBeHidden();
       await content.getByRole('button', {name: 'More actions'}).click();

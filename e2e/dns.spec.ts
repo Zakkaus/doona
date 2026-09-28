@@ -354,3 +354,21 @@ test('a rate-limited query says how long it waits before retrying', async ({page
   await expect(notice).toBeHidden({timeout: 10000});
   await expect(page.getByRole('heading', {name: /^example\.com\. /}).first()).toBeVisible();
 });
+
+test('on a phone, Load older records stays in view at the end of the log', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 1;
+  const seed = await api.dnsLog();
+  handlers['GET dns/log'] = async request => {
+    const cursor = new URL(request.url()).searchParams.get('cursor');
+    return {...seed, total: 2, records: [seed.records[cursor ? 1 : 0]], next_cursor: cursor ? null : 'older'};
+  };
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/dns?tab=log');
+  const older = page.getByRole('button', {name: 'Load older records', exact: true});
+  await expect(older).toBeVisible();
+  const [table, button] = [(await page.getByRole('grid', {name: 'Resolution log'}).boundingBox())!, (await older.boundingBox())!];
+  expect(button.y).toBeGreaterThanOrEqual(table.y + table.height);
+  await older.click();
+  await expect(older).toHaveCount(0);
+});

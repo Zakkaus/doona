@@ -18,7 +18,6 @@ import {
   recorderView,
   flowRecordingNote,
   recordingNote,
-  refreshAllReason,
   runtimeApplyReason
 } from './view';
 import {ApiError} from '../../api/error';
@@ -111,13 +110,6 @@ it('says why Apply for backend options is disabled: a value out of range first, 
   expect(runtimeApplyReason({...idle, changed: false}, t)).toBe('No changes to apply');
   expect(runtimeApplyReason({...idle, changed: false, invalid: 'Flow table size'}, t)).toBe('Flow table size must be a whole number within the range shown');
   expect(runtimeApplyReason({busy: true, invalid: 'x', changed: false}, t)).toBeNull();
-});
-
-it('says why refreshing every subscription is disabled only once the list is read and empty', () => {
-  expect(refreshAllReason({ready: true, busy: false, count: 0}, t)).toBe('No subscriptions to refresh');
-  expect(refreshAllReason({ready: false, busy: false, count: 0}, t)).toBeNull();
-  expect(refreshAllReason({ready: true, busy: true, count: 0}, t)).toBeNull();
-  expect(refreshAllReason({ready: true, busy: false, count: 2}, t)).toBeNull();
 });
 
 it('says a geodata update needs its status, and nothing while it loads', () => {

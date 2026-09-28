@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Button, DataTable, Light, ChoiceMenu, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionHelp, Badge, Button, DataTable, Light, ChoiceMenu, TextTooltip, TimeCell} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
 import Close from '../../ui/icons/Close';
 import type {ProviderTableView} from './useProviderTable';
@@ -8,13 +8,22 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
   const t = useT();
   return (
     <>
-      {m.canManage && (
-        <div className="rp-toolbar">
-          <span className="rp-grow" />
-          <Button small onPress={m.onAdd}>
-            {t('nodes.addProvider')}
-          </Button>
-        </div>
+      {(m.canManage || m.refreshAll) && (
+        <ActionHelp reason={m.refreshAll?.reason}>
+          <div className="rp-toolbar">
+            <span className="rp-grow" />
+            {m.refreshAll && (
+              <Button small isPending={m.refreshAll.refreshing} isDisabled={m.refreshAll.disabled} onPress={() => void m.refreshAll!.run()}>
+                {m.refreshAll.label}
+              </Button>
+            )}
+            {m.canManage && (
+              <Button small onPress={m.onAdd}>
+                {t('nodes.addProvider')}
+              </Button>
+            )}
+          </div>
+        </ActionHelp>
       )}
       <DataTable
         label={t('nodes.providers')}

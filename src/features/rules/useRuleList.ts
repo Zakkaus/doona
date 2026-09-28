@@ -53,6 +53,8 @@ export type DictionaryModel = RuleEditorModel & {
   error: Error | null;
   retry: () => void;
   openSource: (query: string) => void;
+  // Only the routing list edits a rule's outbound from its row.
+  openEdit?: (id: string) => void;
 };
 export type RuleListModel = DictionaryModel & {
   kind: 'dictionary' | 'distribution';
@@ -146,6 +148,10 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     loading: dictionary ? rules.loading && !rules.data : flows.loading && !flows.data,
     error: dictionary ? (rules.error ?? config.error) : flows.error,
     retry: dictionary ? retry : flows.refetch,
-    openSource: (query: string) => go('config', query)
+    openSource: (query: string) => go('config', query),
+    openEdit: (id: string) => {
+      const rule = rules.data?.rules.find(rule => rule.rule_id === id);
+      if (rule) editor.open({kind: 'edit', rule, outbound: rule.outbound ?? '', must: rule.must});
+    }
   };
 }

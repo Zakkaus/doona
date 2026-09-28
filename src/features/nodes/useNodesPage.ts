@@ -12,6 +12,7 @@ import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
 import {intervalItems, isNodeLink, nodeFormReason, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
 import {useProviderTable} from './useProviderTable';
+import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
@@ -58,6 +59,7 @@ export function useNodesPage({go, query}: PageProps) {
   }, [refetchProviders, refetchNodes]);
   const manage = useNodeManage(reload);
   const refreshing = useProviderRefresh(reload);
+  const refreshAll = useRefreshAll(providers, refreshing);
   const source = useMainSourceEdit();
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
@@ -195,6 +197,7 @@ export function useNodesPage({go, query}: PageProps) {
     entries,
     reload,
     refresh: refreshing,
+    refreshAll,
     onAdd: () => open({kind: 'provider'}),
     onRemove: item => open({kind: 'removeProvider', item})
   });
@@ -204,6 +207,7 @@ export function useNodesPage({go, query}: PageProps) {
     names,
     loading: nodes.loading && !nodes.data,
     label: provider ? t('nodes.of', {name: provider.displayName ?? provider.name}) : t('nav.nodes'),
+    scope: provider && list.length > 1 ? t('nodes.scope', {name: provider.displayName ?? provider.name}) : null,
     query: params.get('q'),
     source,
     canManage: !!resources?.nodes.can_manage,

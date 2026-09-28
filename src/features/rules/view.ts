@@ -82,6 +82,8 @@ type DictionaryRow = {
   position: string;
   hits: string;
   removable: boolean;
+  // Why the rule's target cannot be edited here, or null when it can.
+  editReason: string | null;
   sourceQuery: string | null;
 };
 export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; positions: Choice[]; outbounds: Choice[]};
@@ -144,22 +146,26 @@ function listedRows<R extends Listed>(
     return byId.get(source.source_id);
   };
   const scans = new Map<string, ReturnType<typeof scanConfig>>();
-  const anchored = (rule: R) => {
+  // Why doona cannot locate a rule's line to rewrite it, or null when it can.
+  const unanchored = (rule: R): string | null => {
     const source = rule.source && byId.get(rule.source.source_id);
-    if (!source?.writable || source.content === undefined) return false;
+    if (!source?.writable) return t('config.readOnlyAttempt');
+    if (source.content === undefined) return t('config.incomplete');
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
-    return anchor(source, rule, scans.get(source.id)!) !== null;
+    return anchor(source, rule, scans.get(source.id)!) === null ? t('rule.notLocated') : null;
   };
   const rows = rules.map(rule => {
     const linked = resolve(rule.source);
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
+    const editReason = unanchored(rule);
     return {
       id: rule.rule_id,
       number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
       expression: rule.expression,
       ...fields(rule),
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
-      removable: rule.kind === 'rule' && anchored(rule),
+      removable: rule.kind === 'rule' && editReason === null,
+      editReason,
       sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
   });
@@ -167,7 +173,7 @@ function listedRows<R extends Listed>(
   return {
     rows,
     positions: [
-      ...(fallback?.source ? (anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []) : end ? [end] : []),
+      ...(fallback?.source ? (unanchored(fallback) === null ? [{id: 'end', label: t('rule.positionEnd')}] : []) : end ? [end] : []),
       ...rules
         .filter((_, i) => rows[i].removable)
         .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))

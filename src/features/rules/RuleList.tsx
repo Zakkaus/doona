@@ -21,6 +21,7 @@ import {
   type TableColumn
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
+import Edit from '../../ui/icons/Edit';
 import FileText from '../../ui/icons/FileText';
 import type {RuleConditionKind} from '../../dae/groups';
 import {Coverage} from '../shared/Coverage';
@@ -54,6 +55,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
   });
   const {canWrite, busy} = view;
   const {target, hits} = view.copy;
+  const editable = canWrite && !!view.openEdit;
   // A link to review the held rules moves focus, and so the view, to their section once it is shown.
   const heldRef = useRef<HTMLElement>(null);
   const reviewing = !!view.reviewHeld && !!view.held;
@@ -93,13 +95,26 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
       {
         id: 'actions',
         label: t('ui.actions'),
-        minWidth: canWrite ? 96 : 56,
+        minWidth: editable ? 136 : canWrite ? 96 : 56,
         grow: 0,
         render: row => (
           <span className="rp-chain">
             {row.sourceQuery && (
               <Button small quiet icon label={t('rule.openSource')} onPress={() => latest.current.openSource(row.sourceQuery!)}>
                 <FileText />
+              </Button>
+            )}
+            {editable && (
+              <Button
+                small
+                quiet
+                icon
+                isDisabled={busy || row.editReason !== null}
+                tip={row.editReason ?? undefined}
+                label={t('rule.edit')}
+                onPress={() => latest.current.openEdit?.(row.id)}
+              >
+                <Edit />
               </Button>
             )}
             {canWrite && row.removable && (
@@ -111,7 +126,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
         )
       }
     ],
-    [t, canWrite, busy, target, hits]
+    [t, canWrite, editable, busy, target, hits]
   );
   // What the rule routes to, which both adding and editing a rule set.
   const targetFields = (

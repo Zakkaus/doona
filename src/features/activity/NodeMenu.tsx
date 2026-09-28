@@ -1,4 +1,4 @@
-import {Suspense, useMemo, type ComponentProps} from 'react';
+import {Suspense, useId, useMemo, type ComponentProps} from 'react';
 import {Header, Menu, MenuSection} from 'react-aria-components';
 import {MenuButton, MenuChoice, pickMenuKey, TextField} from '../../ui/ui';
 import {preloadable} from '../../ui/preloadable';
@@ -16,8 +16,15 @@ const preloadNodeSearch = () => void nodeSearch.preload().catch(() => undefined)
 
 export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
   const t = useT();
+  const noteId = useId();
   // The popover renders its content only while open, so the list below is not rebuilt on polls while closed.
-  const menu = <NodeList model={vm} label={label} />;
+  const menu = <NodeList model={vm} label={label} describedBy={noteId} />;
+  // Picking a node here only chooses whose latency the card shows, which a routing choice could be mistaken for.
+  const note = (
+    <p id={noteId} className="rp-label rp-menu-note">
+      {t('act.nodePickHelp')}
+    </p>
+  );
   const warm = vm.big ? preloadNodeSearch : undefined;
   return (
     <span className="rp-contents" onPointerEnter={warm} onFocus={warm}>
@@ -26,20 +33,23 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
         placement="bottom start"
         label={label}
         content={
-          vm.big ? (
-            <Suspense
-              fallback={
-                <>
-                  <TextField search label={t('policy.filter')} isDisabled className="rp-menu-search" />
-                  <div className="rp-menu-scroll rp-menu-pending" />
-                </>
-              }
-            >
-              <nodeSearch.Component>{menu}</nodeSearch.Component>
-            </Suspense>
-          ) : (
-            menu
-          )
+          <>
+            {note}
+            {vm.big ? (
+              <Suspense
+                fallback={
+                  <>
+                    <TextField search label={t('policy.filter')} isDisabled className="rp-menu-search" />
+                    <div className="rp-menu-scroll rp-menu-pending" />
+                  </>
+                }
+              >
+                <nodeSearch.Component>{menu}</nodeSearch.Component>
+              </Suspense>
+            ) : (
+              menu
+            )}
+          </>
         }
       >
         <span className="rp-il">
@@ -51,7 +61,7 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
   );
 }
 
-function NodeList({model: vm, label}: {model: Model; label: string}) {
+function NodeList({model: vm, label, describedBy}: {model: Model; label: string; describedBy: string}) {
   const t = useT();
   const views = useMemo(() => menuViews(vm.options, t), [vm.options, t]);
   const item = (node: (typeof views.items)[number]) => (
@@ -62,6 +72,7 @@ function NodeList({model: vm, label}: {model: Model; label: string}) {
   return (
     <Menu
       aria-label={label}
+      aria-describedby={describedBy}
       className="rp-menu-scroll"
       selectionMode={vm.big ? undefined : 'single'}
       selectedKeys={vm.big ? undefined : [vm.id]}

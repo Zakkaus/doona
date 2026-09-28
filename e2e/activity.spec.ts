@@ -156,6 +156,14 @@ test('the compact node menu selects by keyboard and returns focus to its trigger
   await expect(trigger).toBeFocused();
 });
 
+test('the latency node menu says it only changes the latency shown', async ({page}) => {
+  await page.goto('/#/activity');
+  await page.getByRole('button', {name: 'Node', exact: true}).click();
+  const menu = page.getByRole('menu', {name: 'Node', exact: true});
+  await expect(menu).toHaveAccessibleDescription("Only changes which node's latency this card shows; routing stays the same.");
+  await expect(page.getByText("Only changes which node's latency this card shows; routing stays the same.", {exact: true})).toBeVisible();
+});
+
 test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
