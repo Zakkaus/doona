@@ -10,6 +10,7 @@ const unknown: Engine = {
   reason: () => undefined,
   holdsCredentials: () => false,
   snippet: settings => settings.map(({key, value}) => `${key}: ${value}`).join('\n'),
+  settingName: key => key,
   redactedSections: () => []
 };
 

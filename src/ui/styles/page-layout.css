@@ -289,6 +289,10 @@
 .rp-geodata-note.negative {
   color: var(--rp-negative-text);
 }
+/* The configuration keys in the note are long unbroken names; they wrap anywhere rather than widen a phone card. */
+.rp-geodata-from-config {
+  overflow-wrap: anywhere;
+}
 /* One asset per line, wrapping, so its size, host and route read whole; the full URL is the tooltip. */
 .rp-geodata-details .rp-kv {
   grid-template-columns: minmax(0, 1fr);
