@@ -1,12 +1,13 @@
 import {useState} from 'react';
 import {useT} from '../../i18n';
-import {writeGroupEntry, type GroupEntry} from '../../dae/groups';
+import {writeGroupEntry} from '../../dae/groups';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
-import {errorText, noticeText} from '../../api/error';
+import {noticeText} from '../../api/error';
 import {groupEditSafe} from '../shared/policyText';
+import {editBlocked, type GroupOwner} from './view';
 export type PolicyEditView = {
   title: string;
   open: boolean;
@@ -24,8 +25,15 @@ export type PolicyEditView = {
   add: () => void;
   save: (close: () => void) => void;
 };
-export function usePolicyEdit(name: string, source: MainSourceEdit, entry: GroupEntry | undefined): PolicyEditView {
+// Where the group is declared, and whether that source's text is complete and the configuration read.
+export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolean | undefined; loaded: boolean; error: Error | null};
+// Edits the group in the source that declares it; `source` carries the write and whether the backend takes one.
+export function usePolicyEdit(name: string, source: MainSourceEdit, declaration: PolicyDeclaration): PolicyEditView {
   const t = useT();
+  const {owner} = declaration;
+  const declared = owner === 'ambiguous' ? undefined : owner;
+  const entry = declared?.entry;
+  const blocked = editBlocked(owner, declaration, t);
   const [draft, setDraft] = useState<{name: string; origin: ConfigSource; policy: string | null; filters: string[]} | null>(null);
   const session = useDialogSession();
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
@@ -70,8 +78,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     title: t('policy.editTitle', {name}),
     open: !!draft,
     available: !!draft || source.writable,
-    disabled: source.busy || !entry || !source.main,
-    tip: source.error ? errorText(source.error, t) : !source.main ? t('policy.editNoMain') : !entry ? t('policy.editNoEntry') : undefined,
+    disabled: source.busy || blocked !== null,
+    tip: blocked ?? undefined,
     busy: source.busy,
     problem,
     policy: draft?.policy ?? null,
@@ -86,7 +94,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, entry: Group
     show: () => {
       session.next();
       setProblem(null);
-      if (entry && source.main) setDraft({name: entry.name, origin: source.main, policy: entry.policy, filters: entry.filters});
+      if (declared && !blocked) setDraft({name: declared.entry.name, origin: declared.origin, policy: declared.entry.policy, filters: declared.entry.filters});
     },
     close: () => {
       session.next();

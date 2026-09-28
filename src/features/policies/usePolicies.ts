@@ -2,7 +2,8 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import {useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
-import {readGroupEntries} from '../../dae/groups';
+import {useCompleteness, useConfig} from '../../store/config';
+import {groupOwners} from './view';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
@@ -23,17 +24,29 @@ export function usePolicies({go, query}: PageProps) {
   const sourceState = useMainSourceEdit();
   const {main, writable, busy, apply, error, retry} = sourceState;
   const source = useMemo(() => ({main, writable, busy, apply, error, retry}), [main, writable, busy, apply, error, retry]);
-  const entries = useMemo(() => new Map(readGroupEntries(source.main?.content ?? '').map(entry => [entry.name, entry])), [source.main?.content]);
+  // A group is edited in the source that declares it, which need not be the main one.
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
+  const sources = config.data?.sources;
+  const owners = useMemo(() => groupOwners(sources ?? []), [sources]);
+  const isComplete = useCompleteness(useMemo(() => sources ?? [], [sources]));
   const cards = useMemo(
     () =>
-      (groups.data ?? []).map(group => ({
-        id: group.id,
-        domId: 'group-' + group.id,
-        name: group.name,
-        members: group.member_count,
-        entry: entries.get(group.name)
-      })),
-    [groups.data, entries]
+      (groups.data ?? []).map(group => {
+        const owner = owners.get(group.name);
+        return {
+          id: group.id,
+          domId: 'group-' + group.id,
+          name: group.name,
+          members: group.member_count,
+          declaration: {
+            owner,
+            complete: owner && owner !== 'ambiguous' ? isComplete(owner.origin) : undefined,
+            loaded: !!sources,
+            error: config.error
+          }
+        };
+      }),
+    [groups.data, owners, isComplete, sources, config.error]
   );
   const ready = !!groups.data;
   // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
