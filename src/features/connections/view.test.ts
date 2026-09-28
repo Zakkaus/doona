@@ -127,6 +127,12 @@ it('groups, sorts and describes by the displayed labels', () => {
   expect(sorted.map(row => row.id)).toEqual([...list].sort((x, y) => compareNames(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id));
   const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
   expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
+  expect(connectionDetails(c, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
+  expect(connectionDetails({...c, chain_source: 'reconstructed'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.reconstructed'}]);
+  expect(connectionDetails({...c, chain_source: 'unknown'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'ui.unknown'}]);
+  // A backend that predates the field leaves it out, and the detail shows no row for it.
+  const {chain_source: _omitted, ...older} = c;
+  expect(connectionDetails(older as typeof c, 'en-US').some(([key]) => key === 'conn.f.chainSource')).toBe(false);
 });
 
 it('computes each sort key once and keeps equal keys in their order', () => {
