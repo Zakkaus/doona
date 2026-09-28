@@ -23,7 +23,7 @@ doona is a static web UI for the native API the daeuniverse engines share: honk 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Eleven palettes support light and dark modes; Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
+Twelve palettes support light and dark modes; Rosé Pine and Catppuccin include multiple dark flavours. Use the palette picker in the top bar.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 

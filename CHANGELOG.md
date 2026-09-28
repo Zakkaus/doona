@@ -2,6 +2,49 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.9] - 2026-09-28
+
+### Added
+
+- Rules has a DNS rules tab beside the routing rules. It lists the request and response rules the backend returns from `GET /dns/rules` and adds, edits and removes them in the source that declares them, as the routing rules do. A DNS upstream is written with its quotes exactly as declared. The tab appears when the backend lists DNS rules. (#148, #151)
+- The connection detail can edit the matched rule's outbound: the rule's dialog opens on Rules and changes only the target, keeping the condition and any comment. The action appears only when the rule is found in a writable source. (#150, #158)
+- A DNS resolution record opens a new DNS request rule for its domain, prefilled with a suffix condition that also matches subdomains. The link appears when the backend lists DNS rules and the configuration is writable. (#150, #158)
+- The China palette. Clock-in (light) is rice paper with a flag-red banner and All-nighter (dark) a red and gold poster. A red sky with the five stars and Tiananmen Square runs across the top of the page, and cards take turns with faint drawings of the Great Wall, Mount Tai's South Gate of Heaven, Kuimen and Sun Moon Lake. In this palette a healthy or running state reads Improving and an unavailable or degraded one Severe test. NOTICE and `REUSE.toml` credit the Openclipart and Wikimedia Commons sources. (#143, #155, #156, #158)
+- The sign-in page offers the palette menu between the language menu and the theme toggle. (#139)
+- The geodata card has a Verify checksum switch when the backend reports one, for mirrors that answer a missing `.sha256sum` file with an error page. The two checksum failures point to it; a mismatch says the file may be damaged or altered and that verification should be turned off only when a trusted mirror's `.sha256sum` file is known to be wrong. (#144, #158)
+- The check settings dialog on Policies edits a group's tolerance and idle timeout when the group lists them as changeable. (#147)
+- The connection detail shows where the chain came from: recorded during routing or reconstructed from retained records. (#147)
+- Overview shows runtime degradations, the features honk keeps running reduced after a recovered failure, as warnings on the Datapath card. They show even when the datapath cannot be read. (#152, #158)
+
+### Changed
+
+- The release attaches honk-core builds of honk 3ff52762 (`debug.2026.9.28.native-api.4`), which serves the DNS rules, runtime degradations and the checksum switch. (#161)
+- The first navigation hub is named Activity and lists Activity before Overview, so it opens on its first tab. (#140)
+- Rules lists its tabs as Routing rules, DNS rules, Routing map, Flow records and Trace simulation, and opens on Routing rules; a link to the map still opens the map. DNS lists Statistics, Resolution log, Cache and Query, and Settings shows Appearance before Backend actions. (#148, #149)
+- Automatic flow recording is labelled On flow demand, and a note says that any client's flow requests start it and that it continues for 60 seconds after they end. (#136, #158)
+- Without the state database, the backend actions card says that honk takes the geodata URLs from `geosite_download_url` and `geoip_download_url` in `experimental.native_api` and does not update on a schedule, and links the documentation and Configuration. Known geodata download failure stages have their own message; an unknown stage shows its code. (#142)
+- Overview shows No limit when the cgroup sets no memory limit, leaves out the cgroup scope when it is unknown and eBPF kernel memory when it is not reported, and hides partial eBPF hook visibility. A map whose occupancy is not read shows only its capacity. (#153)
+
+### Fixed
+
+- On a stock honk, Connections and Rules showed no flows unless flow recording was set to On. They now request flows while open. (#136)
+- Pages no longer miss a change made while they open, such as another client's configuration or rule edit: they read their data once the event stream is ready. Behind a proxy that holds the stream back, pages still load after five seconds, and the configuration and rules refresh every 30 seconds while the stream stays silent. (#160)
+- Connections and Rules request flows on the shared event stream instead of opening a second one, so they no longer count twice against the backend's client limit and also work on backends that send flow updates without flow gaps. (#160)
+- Pages with tabs no longer move by a tab's height after the first frame, and the Connections table no longer resizes itself after opening. (#141)
+- When another client changed a group's check settings, every save from the open dialog was refused as a conflict. The dialog now reads the group again, keeps the fields the user edited, shows the values the group took, and the next save checks for conflicts against them. (#145, #158)
+- Policies no longer offers group switching or check settings when the backend turns them off for all groups, where every save failed. (#157)
+- After a rate-limited sign-in, the button stays disabled and counts down the wait instead of meeting another refusal, and the note above the form clears when the wait ends. (#157, #162)
+- The rule lists link each rule to its line on a read-only backend too. The DNS rules tab no longer breaks Rules on an older backend, and a DNS list without a written fallback takes new rules inside its block. `upstream()` in DNS rules is highlighted as a call. (#148, #158)
+- In the Glass palette, quiet negative buttons such as Close all are filled with Apple's increased-contrast red, and red text uses that red, so both meet contrast on the translucent surfaces. A quiet button pressed by keyboard or touch shows its pressed fill. (#154)
+- The demo answers as the API contract describes: required fields are present, elapsed times are whole milliseconds, lists page 100 rows by default and at most 1000, discovery serves its public view before sign-in, and features a profile turns off are refused. (#159)
+
+### For contributors
+
+- Each language's strings are in one JSON catalogue, `src/i18n/locales/<id>.json`, and `src/i18n/languages.ts` lists the languages once. A language can be partial and fall back to English. `check:i18n` checks every catalogue against `en.json`, including each plural form's placeholders and repeated keys, and `--missing <id>` lists what a language lacks. CONTRIBUTING describes how to add a language. (#137, #158)
+- Each palette family has its own stylesheet, a palette can reword a few statuses, and CONTRIBUTING describes how to add a palette. (#138, #143)
+- `pnpm check` validates the demo backend in each profile against the bundled OpenAPI contract, and `check:gen` fails when the vendored contract no longer matches the SHA-256 pinned in `SOURCE.md`. (#159)
+- The API contract is pinned at api-standardize aa7103a. (#144, #152)
+
 ## [0.1.0-beta.8] - 2026-09-28
 
 ### Added
@@ -318,6 +361,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
+[0.1.0-beta.9]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.8...v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.7...v0.1.0-beta.8
 [0.1.0-beta.7]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.6...v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.5...v0.1.0-beta.6
