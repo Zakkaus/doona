@@ -88,7 +88,7 @@ it('excludes unavailable DNS and Rules destinations even when their parent page 
   expect(searchView('query', sources, t).byId.has('page:dns?tab=query')).toBe(false);
   expect(searchView('cache', sources, t).byId.has('page:dns?tab=cache')).toBe(true);
   expect(searchView('trace', sources, t).byId.has('page:rules?tab=trace')).toBe(false);
-  expect(searchView('flow', sources, t).byId.has('page:rules?tab=flows')).toBe(true);
+  expect(searchView('record', sources, t).byId.has('page:flows?tab=records')).toBe(true);
 });
 
 it('resolves loose nodes through collision-safe provider rows and qualifies an empty truncated search', async () => {

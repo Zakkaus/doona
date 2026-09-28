@@ -157,7 +157,7 @@ export default [
     // Single-consumer collection compositions; one moves into src/ui when a second consumer appears.
     files: [
       'src/features/policies/arrange/Arrange.tsx',
-      'src/features/rules/flows/Tree.tsx',
+      'src/features/flows/Tree.tsx',
       'src/features/activity/{NodeMenu,NodeSearch}.tsx',
       'src/shell/search/SearchDialog.tsx'
     ],

@@ -15,7 +15,6 @@ import {
   evaluationView,
   removalView,
   ruleDraftView,
-  rulesTabQuery,
   rulesView,
   traceStatusView,
   distributionEmpty
@@ -249,16 +248,13 @@ it('says why Run trace is disabled, and nothing while the capabilities load or a
 it('puts the rule lists first, routing then DNS, and offers DNS only when the backend lists its rules', async () => {
   const {resources} = await createMockApi().capabilities();
   const view = rulesView(resources, '', t);
-  expect(view.tabs.map(tab => tab.id)).toEqual(['list', 'dns', 'map', 'flows', 'trace']);
-  expect(view.tabs.map(tab => tab.label)).toEqual(['Routing rules', 'DNS rules', 'Routing map', 'Flow records', 'Trace simulation']);
+  expect(view.tabs.map(tab => tab.id)).toEqual(['list', 'dns', 'trace']);
+  expect(view.tabs.map(tab => tab.label)).toEqual(['Routing rules', 'DNS rules', 'Trace simulation']);
   expect(view).toMatchObject({tab: 'list', fallback: 'list'});
   expect(rulesView(resources, 'tab=dns', t).tab).toBe('dns');
   expect(rulesView(resources, 'tab=trace', t).tab).toBe('trace');
-  // A map link from when the map was the default tab carries its pinned path but no tab.
-  expect(rulesView(resources, 'path=a', t).tab).toBe('map');
-  expect(rulesView(resources, 'by=client', t).tab).toBe('map');
   resources.dns_rules.available = false;
-  expect(rulesView(resources, 'tab=dns', t).tabs.map(tab => tab.id)).toEqual(['list', 'map', 'flows', 'trace']);
+  expect(rulesView(resources, 'tab=dns', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
   expect(rulesView(resources, 'tab=dns', t).tab).toBe('list');
 });
 
@@ -266,17 +262,7 @@ it('opens the rules page without a DNS tab on a backend that does not report DNS
   const raw = await createMockApi().capabilities();
   const older = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key !== 'dns_rules')) as Capabilities['resources'];
   const {resources} = normalizeCapabilities({...raw, resources: older});
-  expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'map', 'flows', 'trace']);
-});
-
-it('leaves an old map link behind when another tab is chosen', async () => {
-  const {resources} = await createMockApi().capabilities();
-  expect(rulesView(resources, 'by=client', t).tab).toBe('map');
-  // The routing rules are the default tab, which stays out of the address; the map's grouping must not reopen the map.
-  expect(rulesTabQuery('by=client', 'list', 'list')).toBe('');
-  expect(rulesView(resources, rulesTabQuery('by=client&path=a', 'list', 'list'), t).tab).toBe('list');
-  expect(rulesTabQuery('by=client&path=a', 'flows', 'list')).toBe('path=a&tab=flows');
-  expect(rulesTabQuery('by=client&path=a&tab=flows', 'map', 'list')).toBe('by=client&path=a&tab=map');
+  expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
 });
 
 it('lists DNS request and response rules with their actions, locations and insertion points', async () => {

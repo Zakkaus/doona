@@ -8,7 +8,7 @@ test('the rules page has no DNS rules tab when the backend does not list DNS rul
   capabilities.resources.dns_rules.available = false;
   await page.goto('/#/rules?tab=dns');
   const tabs = page.getByRole('tablist', {name: 'Rules', exact: true}).getByRole('tab');
-  await expect(tabs).toHaveText(['Routing rules', 'Routing map', 'Flow records', 'Trace simulation']);
+  await expect(tabs).toHaveText(['Routing rules', 'Trace simulation']);
   await expect(page.getByRole('tab', {name: 'Routing rules', exact: true})).toHaveAttribute('aria-selected', 'true');
   expect(requests.some(request => request.url().includes('/dns/rules'))).toBe(false);
 });
@@ -16,7 +16,7 @@ test('the rules page has no DNS rules tab when the backend does not list DNS rul
 test('the DNS rules tab lists request and response rules, each ending with its fallback', async ({page}) => {
   await page.goto('/#/rules');
   const tabs = page.getByRole('tablist', {name: 'Rules', exact: true}).getByRole('tab');
-  await expect(tabs).toHaveText(['Routing rules', 'DNS rules', 'Routing map', 'Flow records', 'Trace simulation']);
+  await expect(tabs).toHaveText(['Routing rules', 'DNS rules', 'Trace simulation']);
   await expect(page.getByRole('tab', {name: 'Routing rules', exact: true})).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', {name: 'DNS rules', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=dns$/);

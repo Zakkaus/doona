@@ -1,23 +1,10 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../../api/mock';
-import {translate, type Translator} from '../../../i18n';
-import {coverageView, flowDetailView, flowRecordsView, routingMapView, tileViews, treeGeometry, treeWindow} from './view';
+import {createMockApi} from '../../api/mock';
+import {translate, type Translator} from '../../i18n';
+import {flowDetailView, flowRecordsView, flowsTabQuery, flowsView, routingMapView, tileViews, treeGeometry, treeWindow} from './view';
 import {routingTree, treeIndex, treeReach} from './map';
 
 const t: Translator = (key, params) => translate('en', key, params);
-
-it('suppresses full coverage and keeps exact dropped counts and partial scopes', async () => {
-  const list = await createMockApi().flows();
-  const coverage = Object.fromEntries(Object.keys(list.coverage).map(scope => [scope, 'full'])) as typeof list.coverage;
-  expect(coverageView({coverage, dropped_records: null}, t, 'en')).toBeNull();
-  const view = coverageView({coverage: {...coverage, userspace_tcp: 'partial', kernel_direct: 'none'}, dropped_records: '18446744073709551615'}, t, 'en')!;
-  expect(view.dropped).toContain('18,446,744,073,709,551,615');
-  expect(view.summary).toBe(t('flow.coverageSummary', {n: 2}));
-  expect(view.detail).toContain(t('flow.userspaceTcp'));
-  expect(view.detail).toContain(t('flow.partialVisibility'));
-  expect(view.detail).toContain(t('flow.kernelDirect'));
-  expect(view.detail).toContain(t('ui.none'));
-});
 
 it('distinguishes map readiness and supplies the pinned flow count', () => {
   const empty = routingTree([], [], [], []);
@@ -136,4 +123,21 @@ it('shows a connection state from a newer backend as sent', async () => {
   step.data = {...step.data, state: 'closing' as typeof step.data.state};
   const view = flowDetailView(detail, false, t, 'en')!;
   expect(view.steps.find(row => row.id === step.seq)!.fields).toContainEqual([t('ui.state'), 'closing']);
+});
+
+it('opens on the map and offers the records beside it', async () => {
+  const {resources} = await createMockApi().capabilities();
+  const view = flowsView(resources, '', t);
+  expect(view.tabs.map(tab => tab.label)).toEqual(['Map', 'Records']);
+  expect(view).toMatchObject({tab: 'map', fallback: 'map'});
+  expect(flowsView(resources, 'tab=records', t).tab).toBe('records');
+  expect(flowsView(undefined, '', t).fallback).toBeNull();
+  resources.flows.available = false;
+  expect(flowsView(resources, 'tab=records', t).tabs).toEqual([]);
+});
+
+it('carries the pinned path between tabs and leaves the state of the other tab behind', () => {
+  expect(flowsTabQuery('by=client&path=a', 'records', 'map')).toBe('path=a&tab=records');
+  // The map stays out of the address, so a record selection left behind would read as an old records link.
+  expect(flowsTabQuery('tab=records&id=f&connection_id=1&path=a', 'map', 'map')).toBe('path=a');
 });

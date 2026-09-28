@@ -6,7 +6,7 @@ import {expect, test} from './fixtures';
 test.use({viewport: {width: 1440, height: 900}, launchOptions: {ignoreDefaultArgs: ['--hide-scrollbars']}});
 test.skip(({browserName}) => browserName !== 'chromium', 'classic scrollbars are a Chromium launch option');
 
-const pages = ['rules?tab=flows', 'rules?tab=list', 'connections?tab=list', 'nodes', 'logs', 'events', 'dns', 'config', 'settings', 'policies'];
+const pages = ['flows?tab=records', 'rules?tab=list', 'connections?tab=list', 'nodes', 'logs', 'events', 'dns', 'config', 'settings', 'policies'];
 
 for (const path of pages) {
   test(`${path}: table columns hold still while the page loads`, async ({page}) => {

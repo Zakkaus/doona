@@ -23,7 +23,7 @@ const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules?tab=map']
+  ['rules', 'light', '#/flows']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -204,7 +204,7 @@ async function recordArrange(browser, lang, path) {
 }
 // Selects a rule, then a node, on the routing map, then clears the selection so the loop starts where it ends.
 async function recordRouting(browser, lang, path) {
-  const page = await openPage(browser, lang, '#/rules?tab=map', '.rp-tree-tile');
+  const page = await openPage(browser, lang, '#/flows', '.rp-tree-tile');
   const tile = (stage, text) => page.locator(`.rp-tree-tile[data-stage=${stage}]`).filter({hasText: text}).first();
   const rule = tile('rule', 'fallback');
   const node = tile('node', 'hk-01');

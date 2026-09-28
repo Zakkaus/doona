@@ -226,7 +226,7 @@ test('a source shifted since the rule list was read offers no rule edits', async
 test('routing map shows a failed rules request and retries it', async ({page}) => {
   await backend(page);
   await page.route('**/api/v1/rules', route => route.fulfill({contentType: 'application/json', body: 'invalid JSON'}), {times: 1});
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const panel = page.getByRole('tabpanel');
   await expect(panel.getByRole('alert')).toBeVisible();
   await panel.getByRole('button', {name: 'Retry', exact: true}).click();
@@ -666,7 +666,7 @@ test('routing map selections separate missing outbounds from a backend name of u
   ];
   snapshot.next_cursor = null;
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const missing = page.locator('.rp-tree-tile[data-id="outbound:"]');
   const known = page.locator('.rp-tree-tile[data-id="outbound:unknown"]');
   await expect(missing).toBeVisible();
@@ -782,7 +782,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
   await page.route('**/api/v1/rules', route => route.fulfill({json: dictionary}));
   await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
   await expect(leaves).toHaveCount(30);
   await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('Fastest on average');
@@ -806,7 +806,7 @@ test('flow input identifiers stay literal beside localized enums and incomplete 
   const input = detail.trace.steps.find(step => step.stage === 'input')!;
   input.data.values = {...input.data.values, domain: 'cache', pname: 'drop'};
   await page.route('**/api/v1/flows/flow-1', route => route.fulfill({json: detail}));
-  await page.goto('/#/rules?tab=flows&id=flow-1');
+  await page.goto('/#/flows?tab=records&id=flow-1');
   const step = page.locator('.rp-step').filter({hasText: 'Input'});
   await expect(step.getByText('cache', {exact: true})).toBeVisible();
   await expect(step.getByText('drop', {exact: true})).toBeVisible();

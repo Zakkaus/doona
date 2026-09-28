@@ -178,7 +178,7 @@ const localTime = /\d{1,2}\/\d{1,2}\/\d{2}, \d{1,2}:\d{2}:\d{2}\s?[AP]M$/;
 const isoTime = /^\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 for (const [route, column, tip] of [
   ['connections?tab=list', 'Started', localTime],
-  ['rules?tab=flows', 'Started', localTime],
+  ['flows?tab=records', 'Started', localTime],
   ['dns?tab=log', 'Time', localTime],
   ['events', 'Time', isoTime],
   ['logs', 'Time', isoTime]

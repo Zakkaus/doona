@@ -1,17 +1,18 @@
-import type {FlowDetail, FlowList, FlowStep, FlowSummary} from '../../../api/model';
-import {enumLabel} from '../../../i18n/enum';
-import type {Key} from '../../../i18n';
-import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../../i18n';
-import {chainPath, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../../api/selectors';
-import {word} from '../../../api/labels';
-import {localTime, formatLatency} from '../../../i18n/format';
-import {parseU64} from '../../../api/u64';
-import {latencyTone} from '../../../ui/ui';
-import {groupPolicyText} from '../../shared/policyText';
+import type {Capabilities, FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
+import {enumLabel} from '../../i18n/enum';
+import type {Key} from '../../i18n';
+import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
+import {chainPath, connectionStates, nodeLabel, outboundLabel, sourceIp, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {word} from '../../api/labels';
+import {localTime, formatLatency} from '../../i18n/format';
+import {coverageView, type CoverageView} from '../shared/coverage';
+import {latencyTone} from '../../ui/ui';
+import {groupPolicyText} from '../shared/policyText';
 import type {RoutingTree, TreeBy, TreeItem} from './map';
 import {stageOf, treeIndex, treeRows} from './map';
-import {href} from '../../../shell/route';
-import {ruleSeedHref} from '../../shared/link';
+import {href, pickTab, tabQuery, within} from '../../shell/route';
+import {flowsTabs, type FlowTab} from './nav';
+import {ruleSeedHref} from '../shared/link';
 const traceGaps: Record<string, Key> = {
   not_instrumented: 'flow.m.notInstrumented',
   started_late: 'flow.m.startedLate',
@@ -163,31 +164,6 @@ export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileVie
     if (to.length) parts.push(t('flow.treeTo', {names: formatList(lang, to)}));
     return {...tile, countText: formatNumber(tile.count, LOCALE[lang]), label: parts.join(t('ui.separator'))};
   });
-}
-
-const scopes: Record<string, Key> = {
-  userspace_tcp: 'flow.userspaceTcp',
-  userspace_udp: 'flow.userspaceUdp',
-  kernel_direct: 'flow.kernelDirect',
-  kernel_block: 'flow.kernelBlock',
-  dns_intercept: 'flow.dnsIntercept',
-  kernel_bypass: 'flow.kernelBypass'
-};
-const visibility: Record<string, Key> = {full: 'flow.full', partial: 'flow.partialVisibility', none: 'ui.none'};
-export type CoverageView = {summary: string | null; detail: string; dropped: string | null};
-export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'>, t: Translator, lang: Lang): CoverageView | null {
-  const partial = Object.entries(data.coverage).filter(([, value]) => value !== 'full');
-  const count = parseU64(data.dropped_records);
-  const dropped = count ? t('flow.dropped', {n: formatNumber(count, LOCALE[lang])}) : null;
-  if (!partial.length && !dropped) return null;
-  return {
-    summary: partial.length ? t('flow.coverageSummary', {n: partial.length}) : null,
-    detail: formatList(
-      lang,
-      partial.map(([scope, value]) => t('ui.valuePair', {label: enumLabel(scopes, scope, t), value: enumLabel(visibility, value, t)}))
-    ),
-    dropped
-  };
 }
 
 type RoutingMapView = {tree: RoutingTree; state: 'loading' | 'empty' | 'ready' | 'error'; pinLabel: string | null};
@@ -364,4 +340,27 @@ export function treeGeometry(tree: RoutingTree, measured: number | null, t: Tran
     placed,
     geometry
   };
+}
+
+type FlowsView = {tabs: {id: FlowTab; label: string}[]; tab: string; fallback: string | null};
+// The map is the default tab; until the capabilities are known it is not fixed (null).
+export function flowsView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): FlowsView {
+  const tabs = flowsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
+  const first = tabs[0]?.id ?? 'map';
+  return {
+    tabs,
+    tab: pickTab(
+      query,
+      tabs.map(tab => tab.id),
+      first
+    ),
+    fallback: resources ? first : null
+  };
+}
+// The address of another tab. The grouping belongs to the map, the selected record and the connection filter to the
+// records, and both share the pinned path. Left behind the map, which stays out of the address, a selected record or
+// connection would read as an old records link and reopen the records.
+export function flowsTabQuery(query: string, next: string, fallback: string | null): string {
+  const left: Record<string, null> = next === 'map' ? {id: null, connection_id: null} : {by: null};
+  return tabQuery(within(query, left), next, fallback);
 }

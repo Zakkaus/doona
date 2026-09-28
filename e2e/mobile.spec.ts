@@ -9,15 +9,15 @@ const bar = (page: Page) => page.getByRole('navigation', {name: 'Sections'});
 test('each hub opens its first page, then the page last seen in it', async ({page}) => {
   await page.goto('/#/activity');
   await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
-  await bar(page).getByRole('link', {name: 'Traffic'}).click();
+  await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/connections$/);
   await page.locator('.rp-hubnav').getByText('Logs', {exact: true}).click();
   await expect(page).toHaveURL(/#\/logs$/);
-  await expect(bar(page).getByRole('link', {name: 'Traffic'})).toHaveAttribute('aria-current', 'page');
+  await expect(bar(page).getByRole('link', {name: 'Monitor'})).toHaveAttribute('aria-current', 'page');
   await bar(page).getByRole('link', {name: 'Routing'}).click();
   await expect(page).toHaveURL(/#\/policies$/);
   await expect(bar(page).locator('[aria-current]')).toHaveCount(1);
-  await bar(page).getByRole('link', {name: 'Traffic'}).click();
+  await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/logs$/);
   // The memory lasts the session, through a reload.
   await page.reload();
@@ -47,8 +47,8 @@ test('every page is at most two taps away: its hub, then its page', async ({page
 
 test('the open hub lists its pages as links, the current one marked', async ({page}) => {
   await page.goto('/#/dns');
-  const pages = page.getByRole('navigation', {name: 'Traffic'});
-  await expect(pages.getByRole('link')).toHaveText(['Connections', 'DNS', 'Logs', 'Events']);
+  const pages = page.getByRole('navigation', {name: 'Monitor'});
+  await expect(pages.getByRole('link')).toHaveText(['Connections', 'Routing log', 'DNS', 'Logs', 'Events']);
   await expect(pages.getByRole('radio')).toHaveCount(0);
   await expect(pages.locator('[aria-current]')).toHaveCount(1);
   await expect(pages.getByRole('link', {name: 'DNS'})).toHaveAttribute('aria-current', 'page');
@@ -225,7 +225,7 @@ test.describe('desktop', () => {
     await page.goto('/#/overview');
     const sections = page.locator('.rp-side [data-group]');
     await expect(sections).toHaveCount(4);
-    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Activity', 'Traffic', 'Routing', 'Settings']);
+    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Activity', 'Monitor', 'Routing', 'Settings']);
     for (const [index, hub] of hubs.entries())
       expect(
         await sections
@@ -349,7 +349,7 @@ test.describe('360px', () => {
 // The narrowest supported phone: every page fits without scrolling sideways.
 test.describe('320px', () => {
   test.use({viewport: {width: 320, height: 640}});
-  for (const route of [...routes, 'flows']) {
+  for (const route of routes) {
     test(`no horizontal overflow on ${route}`, async ({page}) => {
       await page.goto(`/#/${route}`);
       await expect(page.locator('.rp-content > *').first()).toBeVisible();
@@ -392,10 +392,10 @@ test.describe('360px actions', () => {
     const entries = await page.evaluate(() => history.length);
     const pages = page.locator('.rp-hubnav');
     for (const [where, name] of [
-      [bar(page), 'Traffic'],
+      [bar(page), 'Monitor'],
       [pages, 'DNS'],
       [pages, 'Logs'],
-      [bar(page), 'Traffic'],
+      [bar(page), 'Monitor'],
       [bar(page), 'Routing'],
       [pages, 'Nodes'],
       [bar(page), 'Settings'],

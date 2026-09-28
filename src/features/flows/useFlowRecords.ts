@@ -1,13 +1,13 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../../store';
-import {connectionStates, outboundLabel} from '../../../api/selectors';
-import {useLang, useT} from '../../../i18n';
-import {within} from '../../../shell/route';
-import {panelQuery, useMediaQuery} from '../../../ui/ui';
-import type {PageProps} from '../../../shell/routes';
+import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
+import {connectionStates, outboundLabel} from '../../api/selectors';
+import {useLang, useT} from '../../i18n';
+import {within} from '../../shell/route';
+import {panelQuery, useMediaQuery} from '../../ui/ui';
+import type {PageProps} from '../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
-import {offered} from '../../../api/capabilities';
+import {offered} from '../../api/capabilities';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
@@ -40,9 +40,9 @@ export function useFlowRecords({go, query}: PageProps) {
     ...view,
     detail: detailView,
     network,
-    setNetwork: (value: string) => go('rules', within(query, {network: value === 'all' ? null : value})),
+    setNetwork: (value: string) => go('flows', within(query, {network: value === 'all' ? null : value})),
     state,
-    setState: (value: string) => go('rules', within(query, {state: value === 'all' ? null : value})),
+    setState: (value: string) => go('flows', within(query, {state: value === 'all' ? null : value})),
     wide,
     id,
     rulesListed,
@@ -55,14 +55,14 @@ export function useFlowRecords({go, query}: PageProps) {
     detailRetry: detail.refetch,
     detailLoading: !detail.data && detail.loading,
     // Opening a record adds a history entry; moving between records or closing replaces it, so Back skips the rows.
-    select: (value: string | null) => go('rules', within(query, {id: value}), {replace: id !== null}),
+    select: (value: string | null) => go('flows', within(query, {id: value}), {replace: id !== null}),
     pinLabel: pinned
       ? t('flow.mapFilter', {
           label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => (name === null ? t('flow.mapUnknown') : outboundLabel(name, t)))
         })
       : null,
-    clearPin: () => go('rules', within(query, {path: null})),
+    clearPin: () => go('flows', within(query, {path: null})),
     connectionLabel: connectionId ? t('flow.connectionFilter', {id: connectionId}) : null,
-    clearConnection: () => go('rules', within(query, {connection_id: null}))
+    clearConnection: () => go('flows', within(query, {connection_id: null}))
   };
 }

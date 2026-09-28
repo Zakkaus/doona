@@ -17,8 +17,7 @@ const bar = (page: Page) =>
 for (const [width, url, last] of [
   [320, '/#/config?tab=validate', 'validate'],
   [320, '/#/rules?tab=trace', 'trace'],
-  [390, '/#/rules?tab=trace', 'trace'],
-  [430, '/#/rules?tab=trace', 'trace'],
+  [390, '/#/config?tab=validate', 'validate'],
   [320, '/#/dns?tab=cache', 'cache'],
   [360, '/#/dns?tab=cache', 'cache']
 ] as const) {
