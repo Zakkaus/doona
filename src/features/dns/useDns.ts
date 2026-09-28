@@ -10,7 +10,7 @@ import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, us
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {pickTab, within, tabQuery} from '../../shell/route';
-import {errorText} from '../../api/error';
+import {ApiError, errorText} from '../../api/error';
 import {cacheCard, cacheCardState} from './cache';
 import {ruleSeedHref} from '../shared/link';
 
@@ -170,17 +170,28 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string) 
     void paging.run('older', async signal => {
       if (!data?.next_cursor) return;
       setHeld(data);
-      const {page} = await smallerOnRefusal(
-        query => api.dnsLog(query, signal),
-        {
-          name: filter.name.trim() || undefined,
-          type: type === 'all' ? undefined : type,
-          src: filter.src,
-          cursor: data.next_cursor,
-          limit: log.limit
-        },
-        signal
-      );
+      let page;
+      try {
+        ({page} = await smallerOnRefusal(
+          query => api.dnsLog(query, signal),
+          {
+            name: filter.name.trim() || undefined,
+            type: type === 'all' ? undefined : type,
+            src: filter.src,
+            cursor: data.next_cursor,
+            limit: log.limit
+          },
+          signal
+        ));
+      } catch (error) {
+        // A 400 invalid_request is the backend no longer holding the cursor's snapshot; asking again would fail the
+        // same way, so the log starts over from the newest page.
+        if (!(error instanceof ApiError) || error.status !== 400 || error.code !== 'invalid_request' || signal.aborted) throw error;
+        setHeld(null);
+        void log.refetch();
+        toast('info', t('dns.olderExpired'));
+        return;
+      }
       if (!signal.aborted) setHeld(appendDnsLog(data, page));
     });
   const refresh = () => {
