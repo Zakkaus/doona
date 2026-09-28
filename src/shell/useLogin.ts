@@ -44,10 +44,12 @@ export function signInRefusal(error: unknown): Refusal | null {
   return null;
 }
 
-// A missing discovery endpoint may still belong to a native API without auth reporting.
+// A missing discovery endpoint may still belong to a native API without auth reporting. A 401 that only asks for a
+// credential comes from a backend whose discovery predates the public view: honk's Clash API sends no error code, an
+// early native API sends authentication_required. Any other 401 or 403 is a real refusal.
 export function predatesAuth(error: unknown): boolean {
   if (error instanceof SyntaxError) return true;
-  return error instanceof ApiError && (error.status === 404 || error.status === 401 || error.status === 403);
+  return error instanceof ApiError && (error.status === 404 || (error.status === 401 && (!error.code || error.code === 'authentication_required')));
 }
 
 export async function resolveSignInKind(api: string, signal?: AbortSignal): Promise<SignIn | 'no-api'> {
