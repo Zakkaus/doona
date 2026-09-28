@@ -172,34 +172,35 @@ export function Overview({query}: PageProps) {
                   ]}
                 />
               )}
-              {(vm.datapath.errors.length > 0 || vm.datapath.warning || vm.datapath.degradations.length > 0) && (
-                <div className="rp-cluster">
-                  {vm.datapath.errors.map((error, i) => (
-                    <TextTooltip key={i} text={error.tooltip}>
-                      <Light small tone="err">
-                        {error.text}
-                      </Light>
-                    </TextTooltip>
-                  ))}
-                  {vm.datapath.warning && (
-                    <Light small tone="warn">
-                      {vm.datapath.warning}
-                    </Light>
-                  )}
-                  {vm.datapath.degradations.map(d => (
-                    <TextTooltip key={d.id} text={d.tooltip}>
-                      <Light small tone="warn">
-                        {d.text}
-                      </Light>
-                    </TextTooltip>
-                  ))}
-                </div>
-              )}
             </>
           ) : vm.datapath.state === 'loading' ? (
             <BodyWait cells={10} extra={attachmentsFloor} />
           ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
+          )}
+          {/* The runtime's degradations show even when the datapath could not be read. */}
+          {(vm.datapath.errors.length > 0 || vm.datapath.warning || vm.datapath.degradations.length > 0) && (
+            <div className="rp-cluster">
+              {vm.datapath.errors.map((error, i) => (
+                <TextTooltip key={i} text={error.tooltip}>
+                  <Light small tone="err">
+                    {error.text}
+                  </Light>
+                </TextTooltip>
+              ))}
+              {vm.datapath.warning && (
+                <Light small tone="warn">
+                  {vm.datapath.warning}
+                </Light>
+              )}
+              {vm.datapath.degradations.map(d => (
+                <TextTooltip key={d.id} text={d.tooltip}>
+                  <Light small tone="warn">
+                    {d.text}
+                  </Light>
+                </TextTooltip>
+              ))}
+            </div>
           )}
         </Card>
         <Card title={t('ov.resources')}>
