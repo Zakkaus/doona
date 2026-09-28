@@ -56,7 +56,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
     const kind = policyKind(native) ?? 'selector';
-    const config = groupConfig(null);
+    const config = groupConfig(kind, null);
     const block = blocks
       .filter(block => block.name === 'group')
       .flatMap(block => block.children)

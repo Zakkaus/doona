@@ -32,29 +32,38 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
     });
 }
 
-export type CheckField = 'check_url' | 'check_interval';
+// The settings the check dialog edits, in the order it shows them.
+export const checkFieldOrder = ['check_url', 'check_interval', 'tolerance', 'idle_timeout'] as const;
+export type CheckField = (typeof checkFieldOrder)[number];
+type CountField = Exclude<CheckField, 'check_url'>;
+const countFields = ['check_interval', 'tolerance', 'idle_timeout'] as const satisfies readonly CountField[];
 export type CheckDraft = Record<CheckField, string>;
 // The check settings a group takes writes to, as its mutable_config lists them. honk leaves check_url out for a
 // selector group, which it does not probe; a backend that probes one lists it.
 export function checkFields(g: Group): CheckField[] {
-  return (['check_url', 'check_interval'] as const).filter(field => g.capabilities.mutable_config.includes(field));
+  return checkFieldOrder.filter(field => g.capabilities.mutable_config.includes(field));
 }
+const countText = (value: number | null) => (value === null ? '' : String(value));
 export const checkDraft = (g: Group): CheckDraft => ({
   check_url: g.config.check_url ?? '',
-  check_interval: g.config.check_interval === null ? '' : String(g.config.check_interval)
+  check_interval: countText(g.config.check_interval),
+  tolerance: countText(g.config.tolerance),
+  idle_timeout: countText(g.config.idle_timeout)
 });
 // After a save refused as conflicting, the fields the group changed since `base` show its current value, the others keep
 // the user's edit, and the current values become the base the next save tests against.
 export function checkRebase(draft: {base: CheckDraft; value: CheckDraft}, current: CheckDraft): {base: CheckDraft; value: CheckDraft} {
   const value = {...draft.value};
-  for (const field of ['check_url', 'check_interval'] as const) if (current[field] !== draft.base[field]) value[field] = current[field];
+  for (const field of checkFieldOrder) if (current[field] !== draft.base[field]) value[field] = current[field];
   return {base: current, value};
 }
-// An empty field is valid: it clears the group's own value, so the global one applies.
+// The contract's floor: a check interval of at least one second, a tolerance or idle timeout of zero or more.
+const countMinimum: Record<CountField, number> = {check_interval: 1, tolerance: 0, idle_timeout: 0};
+// An empty field is valid: it clears the group's own value, so the global or default one applies.
 export function checkInvalid(field: CheckField, value: string): boolean {
   const text = value.trim();
   if (!text) return false;
-  return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < 1;
+  return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < countMinimum[field];
 }
 // For each offered field the user changed from `base`, the values the dialog opened with: a test that the group still holds
 // the base value, then the replace; an empty field sends null. A field the user left alone is not sent, so a change another
@@ -63,14 +72,15 @@ export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonP
   const fields = checkFields(g);
   const ops: JsonPatch = [];
   const url = (text: string) => text.trim() || null;
-  const interval = (text: string) => (text.trim() ? Number(text.trim()) : null);
+  const count = (text: string) => (text.trim() ? Number(text.trim()) : null);
   if (fields.includes('check_url') && url(draft.check_url) !== url(base.check_url)) {
     const path = '/config/check_url';
     ops.push({op: 'test', path, value: url(base.check_url)}, {op: 'replace', path, value: url(draft.check_url)});
   }
-  if (fields.includes('check_interval') && interval(draft.check_interval) !== interval(base.check_interval)) {
-    const path = '/config/check_interval';
-    ops.push({op: 'test', path, value: interval(base.check_interval)}, {op: 'replace', path, value: interval(draft.check_interval)});
+  for (const field of countFields) {
+    if (!fields.includes(field) || count(draft[field]) === count(base[field])) continue;
+    const path = `/config/${field}` as const;
+    ops.push({op: 'test', path, value: count(base[field])}, {op: 'replace', path, value: count(draft[field])});
   }
   return ops;
 }
