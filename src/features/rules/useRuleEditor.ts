@@ -53,7 +53,7 @@ export type RuleEditorOptions<R extends EditedRule> = {
   // Insertion points, by rule ID or `end` for before the fallback.
   positions: Array<{id: string}>;
   // What a new rule targets first: an outbound, or a DNS action or upstream.
-  target: () => string;
+  target: string;
   anchor: (source: ConfigSource, rule: R) => RuleAnchor | null;
   // Where a rule goes at the end of a list whose fallback is not written, if anywhere.
   end?: (sources: ConfigSource[]) => {source: ConfigSource; anchor: RuleAnchor} | null;
@@ -102,7 +102,7 @@ export function useRuleEditor<R extends EditedRule>({
   const initialize = (next: Opened<R>) => {
     if (editor.busy || !list) return;
     const edit = next.kind === 'edit' ? next : null;
-    setForm({condition: '', outbound: edit?.outbound ?? target(), must: edit?.must ?? false, before: positions[0]?.id ?? 'end'});
+    setForm({condition: '', outbound: edit?.outbound ?? target, must: edit?.must ?? false, before: positions[0]?.id ?? 'end'});
     setPick({on: true, kind: kinds[0], value: '', ...(next.kind === 'add' ? next.preset : {})});
     setDialog({...next, generation: list.generation_id, sources, rules});
   };
@@ -233,5 +233,5 @@ export function useRuleEditor<R extends EditedRule>({
       setPick({...pick, on: mode === 'pick'});
     }
   };
-  return {model, busy: !!editor.busy};
+  return {model};
 }
