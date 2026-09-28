@@ -39,7 +39,6 @@ src/features/dns/
   view.ts       projection
   cache.ts      pure sibling
   stats.ts      pure sibling
-  messages.ts   strings
   nav.ts        tabs
 ```
 
@@ -89,10 +88,10 @@ Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`. `
 | `src/api/engines` | Everything doona knows about a particular engine; the rest of the app gets engine-neutral data and reasons       |
 | `src/store`       | Watched server reads: resources, caches and live feeds, and the action hooks                                     |
 | `src/dae`         | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend |
-| `src/features`    | One folder per page, with its controller, projections, components, strings and tests                             |
+| `src/features`    | One folder per page, with its controller, projections, components and tests                                      |
 | `src/shell`       | Routing, navigation, drafts, appearance, shortcuts and search                                                    |
 | `src/ui`          | The presentational kit and its stylesheets                                                                       |
-| `src/i18n`        | Message loading and formatting                                                                                   |
+| `src/i18n`        | The language list, the catalogues, and message loading and formatting                                            |
 
 ### Data flow
 
@@ -122,7 +121,7 @@ _Solid arrows carry data. Dashed arrows are calls and actions._
 - `src/store` owns what pages watch and cache: resources, live feeds, and fresh reads such as `readConfigFresh`.
 - A feature's controller hook (`use*.ts`) reads through store hooks and owns URL state, drafts and actions. It calls `getApi()` only for actions and for one-off requests the person starts, such as a DNS query or loading older pages.
 - `view.ts` turns store data into what the page shows. It is pure: no React, no store, and a unit test beside it. A projection too large for one file may move into pure sibling modules such as `dns/cache.ts`, `dns/stats.ts` and `activity/ranking.ts`, under the same rules.
-- Components receive prepared values and callbacks, and never fetch, guard or format on their own. Visible strings live in the feature's `messages.ts`.
+- Components receive prepared values and callbacks, and never fetch, guard or format on their own. Visible strings live in the catalogues in `src/i18n/locales`.
 
 A small page need not have every piece; one with nothing to project has no `view.ts`. The rules are about which way data and imports go, not about having every file.
 
@@ -140,6 +139,7 @@ Some lists have one home, and everything else reads them:
 
 - Pages: `routePaths` in `src/shell/routes.ts` and the definition keyed by that path in `src/shell/registry.ts`.
 - Palettes: `src/shell/palettes.ts`, with one stylesheet per family in `src/ui/styles/palettes/`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
+- Languages: `src/i18n/languages.ts`. The build injects the locales and the default into `tools/stamp.js`, and the Node tools read the same file through `tools/languages.mjs`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
 ### How the rules are enforced
@@ -163,18 +163,27 @@ The user documentation lives in [Zakkaus/doona-docs](https://github.com/Zakkaus/
 
 ## Translations
 
-doona ships three languages: Traditional Chinese (`zh-TW`), Simplified Chinese (`zh-CN`) and English (`en`). Each feature keeps its strings in its own `messages.ts`, with the three tables side by side, so a translator sees every language of a key together. `src/i18n/locales/*.ts` is generated from those files; do not edit it.
+Each language has one catalogue, `src/i18n/locales/<id>.json`: a flat object from message key to text, with the keys sorted. A key starts with its feature or area, such as `dns.` or `ui.`. English is the reference: `en.json` is always complete, and no other catalogue may hold a key it lacks. `src/i18n/languages.ts` lists the languages; Traditional Chinese (`zh-TW`), Simplified Chinese (`zh-CN`) and English (`en`) are complete.
 
 To correct a translation:
 
-1. Find the key. Search for the text in the `messages.ts` files, then search for the key under `src/` to see where it appears.
-2. Change the value in `messages.ts` and run `pnpm gen:locales`.
-3. Run `pnpm check`. `check:i18n` fails when a language lacks a key, when a key's placeholders such as `{n}` differ between languages, when a key is unused, and when a component writes interface text itself instead of taking it from a catalogue.
+1. Find the key. Search the catalogue for the text, then search for the key under `src/` to see where it appears.
+2. Change the value in the catalogue.
+3. Run `pnpm check`. `check:i18n` fails when a complete language lacks a key, when a catalogue holds a key English lacks, when a key's placeholders such as `{n}` differ from English, when keys are out of order, when a key is unused, and when a component writes interface text itself instead of taking it from a catalogue.
 4. In the pull request, say what was wrong. Add a screenshot when the new text is longer, since labels have to fit a phone.
 
-Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A count in English uses `{one, other}` forms; Chinese needs only one form.
+A change that adds a string adds its key to `en.json` and to every complete language's catalogue in the same pull request.
 
-Every language must be complete: a key missing from one table fails `pnpm typecheck`, and there is no fallback to another language. To propose a new language, open an issue first, naming the language and who will review its strings.
+Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A count in English uses `{"one", "other"}` forms; Chinese needs only one form.
+
+To add a language:
+
+1. Open an issue first, naming the language and who will review its strings.
+2. Add an entry to `src/i18n/languages.ts` with `complete: false`: its id, its name in itself, its BCP 47 locale, the docs folder it links to (one of the languages doona-docs publishes, otherwise `en`; when doona-docs gains a language, widen the `docs` type there), and, only when its script needs faces doona ships, the `<name>` of the `src/fonts-<name>.css` stylesheet that declares them. If the browser's language tag needs more than its primary subtag to pick it, extend `browserLang` there.
+3. Create `src/i18n/locales/<id>.json`. `pnpm check:i18n --missing <id>`, which works before that file exists, prints the keys it lacks with their English text, grouped by prefix, as lines to paste in and translate.
+4. Run `pnpm check`, which also prints the language's coverage. The user documentation is translated separately, in doona-docs.
+
+A partial language shows English for the strings it lacks. Once it has every key, maintainers may mark it `complete: true`.
 
 ## UI components
 
@@ -209,7 +218,7 @@ Revisit this if S2 stops requiring the macro or the size budgets stop applying.
 
 1. Add an entry to `src/shell/palettes.ts`. The id is `family/flavour`; a family with one flavour repeats its name, as in `nord/nord`.
 2. Add `src/ui/styles/palettes/<family>.css` and import it from `src/ui/styles/palettes.css`. It holds a light block keyed on `:root[data-family='<family>']`, a dark block that adds `[data-scheme='dark']`, and a `[data-flavour]` block for each extra flavour. Each block sets every token in the table below.
-3. Add its names under the `palette.*` keys of the string catalogue, in every language (see Translations).
+3. Add its names under the `palette.*` keys in `en.json` and in every complete language's catalogue (see Translations).
 4. Add it to the map in `e2e/contrast.spec.ts` and run that spec.
 
 Use the palette's official values only. When a pair fails contrast, point the token that use reads at another official colour of the palette, such as `--rp-negative-text: var(--rp-text)`; never add a colour. `src/ui/styles/motion.css` sets those role tokens and says what each one covers.
