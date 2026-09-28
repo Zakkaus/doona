@@ -624,7 +624,6 @@
   "hint.overview": "服务状态与后端能力",
   "hint.policies": "策略组与其所选节点",
   "hint.rules": "规则列表、分流总览、流程记录与追踪模拟",
-  "hub.overview": "概览",
   "hub.routing": "路由",
   "hub.settings": "设置",
   "hub.traffic": "流量",

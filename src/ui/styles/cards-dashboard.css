@@ -426,7 +426,7 @@
 .rp-tint-c5 > svg {
   color: var(--rp-c5);
 }
-.rp-side [data-group='overview'] {
+.rp-side [data-group='activity'] {
   --rp-group: var(--rp-c1);
 }
 .rp-side [data-group='traffic'] {
@@ -447,7 +447,7 @@
   font-weight: 600;
   color: var(--rp-text);
 }
-.rp-side:has([data-group='overview'] [aria-current='page']) .rp-nav-slider {
+.rp-side:has([data-group='activity'] [aria-current='page']) .rp-nav-slider {
   --rp-group: var(--rp-c1);
 }
 .rp-side:has([data-group='traffic'] [aria-current='page']) .rp-nav-slider {

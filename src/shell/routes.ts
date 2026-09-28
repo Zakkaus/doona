@@ -9,7 +9,7 @@ export const defaultRoute: RoutePath = 'activity';
 // Every page belongs to one hub. The side navigation shows the hubs as its sections; a phone shows them in the bottom
 // bar, with the open hub's pages above the content. The first page is where a hub opens until another is visited.
 export const hubs = [
-  {id: 'overview', titleKey: 'hub.overview', pages: ['overview', 'activity']},
+  {id: 'activity', titleKey: 'nav.activity', pages: ['activity', 'overview']},
   {id: 'traffic', titleKey: 'hub.traffic', pages: ['connections', 'dns', 'logs', 'events']},
   {id: 'routing', titleKey: 'hub.routing', pages: ['policies', 'nodes', 'rules']},
   {id: 'settings', titleKey: 'hub.settings', pages: ['settings', 'config']}

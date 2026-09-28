@@ -79,7 +79,7 @@ it('puts every page in exactly one hub and shows the hubs as the navigation sect
   expect(hubs.flatMap(hub => hub.pages).sort()).toEqual([...routePaths].sort());
   const view = shellView(settings, 'dns', capabilitiesBase, null, version, null, t);
   expect(view.groups.map(group => [group.label, group.items.map(item => item.path)])).toEqual([
-    ['Overview', ['overview', 'activity']],
+    ['Activity', ['activity', 'overview']],
     ['Traffic', ['connections', 'dns', 'logs', 'events']],
     ['Routing', ['policies', 'nodes', 'rules']],
     ['Settings', ['settings', 'config']]

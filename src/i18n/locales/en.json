@@ -747,7 +747,6 @@
   "hint.overview": "Service state and backend features",
   "hint.policies": "Policy groups and their selected nodes",
   "hint.rules": "Rule list, routing map, flow records and trace simulation",
-  "hub.overview": "Overview",
   "hub.routing": "Routing",
   "hub.settings": "Settings",
   "hub.traffic": "Traffic",

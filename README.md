@@ -117,7 +117,7 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 ## On a phone
 
-Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Overview, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme, palette and wordmark move into the top bar's overflow menu, a submenu each.
+Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Activity, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme, palette and wordmark move into the top bar's overflow menu, a submenu each.
 
 Below 600 pixels wide, tables keep every column and scroll sideways; on wider screens they drop the columns that do not fit, in a set order. Toolbars wrap onto more rows. On Events and Logs, press a row to read its full text below the table. On Overview, DNS and Logs, the first page action stays a button and the rest move into a menu.
 
