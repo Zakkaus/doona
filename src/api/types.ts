@@ -1744,6 +1744,13 @@ export interface components {
                 cpu_percent: number | null;
             };
             last_reload: null | components["schemas"]["LastReload"];
+            /** @description Features running reduced after a failure the backend recovered from. An absent or empty list means none are known. Codes are adapter-defined like other SafeError codes. A change to the list is announced by runtime.updated. */
+            degradations?: (components["schemas"]["SafeError"] & {
+                /** @description Adapter-defined feature identifier, such as persistence or pname_routing. Stable across releases of one adapter; each component appears at most once. */
+                component: string;
+                /** @description When the feature started running reduced. A failure that repeats while the entry is listed keeps the original time. */
+                since: components["schemas"]["Timestamp"];
+            })[];
         };
         LastReload: {
             operation_id: string;
@@ -3301,6 +3308,7 @@ export interface components {
             instance_id: string;
             observed_at: components["schemas"]["Timestamp"];
         };
+        /** @description Coalesced invalidation of the runtime snapshot. Also sent when an entry is added to, changed in, or cleared from runtime degradations. */
         RuntimeUpdatedEvent: {
             instance_id: string;
             observed_at: components["schemas"]["Timestamp"];
