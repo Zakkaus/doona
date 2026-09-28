@@ -8,7 +8,8 @@ export function sourceFor(list: ConfigSource[], source: RuleSource | null | unde
 }
 
 // `target` spans what a listed rule writes after its arrow or fallback colon, with the space before it.
-export type RuleAnchor = {from: number; to: number; indent: string; text: string; target?: {from: number; to: number}};
+// `open` and `close` wrap an added rule in a block the text does not have yet.
+export type RuleAnchor = {from: number; to: number; indent: string; text: string; target?: {from: number; to: number}; open?: string; close?: string};
 // A listed rule as the anchor reads it: where it is, whether it is the fallback, and the target written after the
 // arrow (an outbound, a DNS upstream or action).
 type Listed = {kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
@@ -93,19 +94,34 @@ export function dnsRuleAnchor(source: ConfigSource, rule: DnsRoutingRule, list: 
 }
 // Where a rule goes at the end of a DNS list that writes no fallback: before the line closing the list's block, indented
 // as its rules are. Only a list written as one block, in a writable source, whose closing brace starts its line qualifies.
+// A list with no block at all gets a new one, `open` and `close` around the rule, at the end of the one
+// `dns { routing { … } }` block under the same conditions; honk reads an absent list as empty.
 export function dnsListEnd(sources: ConfigSource[], list: DnsRuleListId): {source: ConfigSource; anchor: RuleAnchor} | null {
-  const found = sources.flatMap(source =>
-    source.content === undefined ? [] : dnsListBlocks(scanConfig(source.content).blocks, list).map(block => ({source, text: source.content!, block}))
-  );
-  if (found.length !== 1 || !found[0].source.writable) return null;
-  const {source, text, block} = found[0];
+  const blocks = (within: (blocks: TextBlock[]) => TextBlock[]) =>
+    sources.flatMap(source => (source.content === undefined ? [] : within(scanConfig(source.content).blocks).map(block => ({source, block}))));
+  const lists = blocks(scanned => dnsListBlocks(scanned, list));
+  if (lists.length) {
+    const end = lists.length === 1 ? blockEnd(lists[0].source, lists[0].block) : null;
+    return end && {source: end.source, anchor: end.anchor};
+  }
+  const routings = blocks(scanned => named(scanned, 'dns').flatMap(dns => named(dns.children, 'routing')));
+  const end = routings.length === 1 ? blockEnd(routings[0].source, routings[0].block) : null;
+  if (!end) return null;
+  const {closing, anchor} = end;
+  const {indent} = anchor;
+  const step = indent.startsWith(closing) && indent.length > closing.length ? indent.slice(closing.length) : '    ';
+  return {source: end.source, anchor: {...anchor, indent: indent + step, open: `${indent}${list} {\n`, close: `${indent}}\n`}};
+}
+function blockEnd(source: ConfigSource, block: TextBlock): {source: ConfigSource; anchor: RuleAnchor; closing: string} | null {
+  const text = source.content!;
+  if (!source.writable) return null;
   const from = text.lastIndexOf('\n', block.close - 1) + 1;
-  const indent = text.slice(from, block.close);
-  if (from <= block.open || !/^[ \t]*$/.test(indent)) return null;
+  const closing = text.slice(from, block.close);
+  if (from <= block.open || !/^[ \t]*$/.test(closing)) return null;
   const newline = text.indexOf('\n', block.close);
   const to = newline === -1 ? text.length : newline + 1;
-  const inner = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? indent + (indent.slice(0, indent.length / block.depth) || '    ');
-  return {source, anchor: {from, to, indent: inner, text: text.slice(from, to)}};
+  const inner = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? closing + (closing.slice(0, closing.length / block.depth) || '    ');
+  return {source, anchor: {from, to, indent: inner, text: text.slice(from, to)}, closing};
 }
 // The upstream names `dns { upstream { … } }` defines, in the order written and with their quotes: honk keeps a key's
 // quotes in its name, so `->` must repeat the key verbatim.
@@ -124,7 +140,11 @@ export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(g
 
 export function addRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text
-    ? text.slice(0, anchor.from) + `${anchor.indent}${ruleLine(condition, outbound, must)}\n` + text.slice(anchor.from)
+    ? text.slice(0, anchor.from) +
+        (anchor.open ?? '') +
+        `${anchor.indent}${ruleLine(condition, outbound, must)}\n` +
+        (anchor.close ?? '') +
+        text.slice(anchor.from)
     : null;
 }
 

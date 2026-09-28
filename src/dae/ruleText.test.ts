@@ -187,10 +187,36 @@ it('appends to a DNS list that writes no fallback, before the line closing its b
   const tabbed = 'dns {\n\trouting {\n\t\trequest {\n\t\t}\n\t}\n}\n';
   const end = dnsListEnd([{...source, content: tabbed}], 'request')!;
   expect(addRule(tabbed, end.anchor, 'qtype(A)', 'reject', false)).toBe('dns {\n\trouting {\n\t\trequest {\n\t\t\tqtype(A) -> reject\n\t\t}\n\t}\n}\n');
-  // No block, a block closed on a line that holds more, a read-only source, or two blocks to choose between: no end.
-  expect(dnsListEnd([{...source, content: 'dns {\n  routing {\n  }\n}\n'}], 'request')).toBeNull();
+  // A block closed on a line that holds more, a read-only source, or two blocks to choose between: no end.
   expect(dnsListEnd([{...source, content: 'dns {\n  routing {\n    request {}\n  }\n}\n'}], 'request')).toBeNull();
   expect(dnsListEnd([{...source, writable: false}], 'request')).toBeNull();
   expect(dnsListEnd([source, {...source, id: 'other'}], 'request')).toBeNull();
   expect(dnsListEnd([{...source, content: undefined}], 'request')).toBeNull();
+});
+
+it('creates an absent DNS list block at the end of the dns routing block', () => {
+  const text = 'dns {\n  routing {\n    request {\n      fallback: asis\n    }\n  }\n}\n';
+  const source = {id: 'dns', content: text, writable: true} as ConfigSource;
+  const response = dnsListEnd([source], 'response')!;
+  expect(response.source).toBe(source);
+  expect(addRule(text, response.anchor, 'ip(geoip: private)', 'reject', false)).toBe(
+    'dns {\n  routing {\n    request {\n      fallback: asis\n    }\n    response {\n      ip(geoip: private) -> reject\n    }\n  }\n}\n'
+  );
+  // No fallback is written: honk gives a created list the fallback an absent one has (request: default, response: accept).
+  // honk-config's parser reads both results with no diagnostics.
+  const withUpstream =
+    "dns {\n  upstream {\n    alidns: 'udp://223.5.5.5:53'\n  }\n  routing {\n    response {\n      upstream(alidns) -> accept\n    }\n  }\n}\n";
+  const request = dnsListEnd([{...source, content: withUpstream}], 'request')!;
+  expect(addRule(withUpstream, request.anchor, 'qname(suffix: cn)', 'alidns', false)).toBe(
+    "dns {\n  upstream {\n    alidns: 'udp://223.5.5.5:53'\n  }\n  routing {\n    response {\n      upstream(alidns) -> accept\n    }\n    request {\n      qname(suffix: cn) -> alidns\n    }\n  }\n}\n"
+  );
+  // An empty routing block indented with tabs nests one tab per level.
+  const tabbed = 'dns {\n\trouting {\n\t}\n}\n';
+  const end = dnsListEnd([{...source, content: tabbed}], 'response')!;
+  expect(addRule(tabbed, end.anchor, 'qtype(A)', 'accept', false)).toBe('dns {\n\trouting {\n\t\tresponse {\n\t\t\tqtype(A) -> accept\n\t\t}\n\t}\n}\n');
+  // No routing block, one closed on a line that holds more, a read-only source, or two to choose between: no end.
+  expect(dnsListEnd([{...source, content: 'dns {\n  upstream {\n  }\n}\n'}], 'response')).toBeNull();
+  expect(dnsListEnd([{...source, content: 'dns {\n  routing {}\n}\n'}], 'response')).toBeNull();
+  expect(dnsListEnd([{...source, writable: false}], 'response')).toBeNull();
+  expect(dnsListEnd([source, {...source, id: 'other'}], 'response')).toBeNull();
 });

@@ -1120,6 +1120,8 @@
   "rule.dns.kind.keyword": "域名关键字",
   "rule.dns.kind.qtype": "查询类型",
   "rule.dns.kind.upstream": "提供应答的上游",
+  "rule.dns.positionNew": "新 {name} 区段的第一条规则",
+  "rule.dns.positionNewHelp": "dns routing 区段尚无 {name} 区段，写入规则时会一并创建。",
   "rule.dns.request": "请求规则",
   "rule.dns.requestNote": "按顺序匹配，决定如何处理每个查询；没有规则匹配时使用 fallback。",
   "rule.dns.response": "应答规则",

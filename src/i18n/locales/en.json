@@ -1309,6 +1309,8 @@
   "rule.dns.kind.keyword": "Domain keyword",
   "rule.dns.kind.qtype": "Query type",
   "rule.dns.kind.upstream": "Answering upstream",
+  "rule.dns.positionNew": "First rule of a new {name} block",
+  "rule.dns.positionNewHelp": "The dns routing section has no {name} block yet; it is created when the rule is written.",
   "rule.dns.request": "Request rules",
   "rule.dns.requestNote": "Checked in order to decide how each query is handled; the fallback applies when no rule matches.",
   "rule.dns.response": "Response rules",
