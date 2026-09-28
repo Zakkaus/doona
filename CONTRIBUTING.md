@@ -139,7 +139,7 @@ To add an engine, add `src/api/engines/<engine>.ts` that implements `Engine`, ad
 Some lists have one home, and everything else reads them:
 
 - Pages: `routePaths` in `src/shell/routes.ts` and the definition keyed by that path in `src/shell/registry.ts`.
-- Palettes: `src/shell/palettes.ts`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
+- Palettes: `src/shell/palettes.ts`, with one stylesheet per family in `src/ui/styles/palettes/`. The build injects the ids and the default into the first-paint script `tools/stamp.js`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
 ### How the rules are enforced
@@ -198,12 +198,34 @@ Each role has one kit component in `src/ui`. Variants are typed props, never cla
 
 What this leaves out, on purpose:
 
-- No S2 package, style macro or S2 theme tokens. Colours come from the official palettes in `src/ui/styles/palettes.css`.
+- No S2 package, style macro or S2 theme tokens. Colours come from the official palettes in `src/ui/styles/palettes/`.
 - No S2 icon package. The icons doona uses are copied one at a time from Adobe Spectrum under Apache-2.0 (see NOTICE).
 - No automatic S2 updates. When S2 changes a component's behaviour or look, doona follows by hand.
 - No second component library beside React Aria.
 
 Revisit this if S2 stops requiring the macro or the size budgets stop applying.
+
+### Add a palette
+
+1. Add an entry to `src/shell/palettes.ts`. The id is `family/flavour`; a family with one flavour repeats its name, as in `nord/nord`.
+2. Add `src/ui/styles/palettes/<family>.css` and import it from `src/ui/styles/palettes.css`. It holds a light block keyed on `:root[data-family='<family>']`, a dark block that adds `[data-scheme='dark']`, and a `[data-flavour]` block for each extra flavour. Each block sets every token in the table below.
+3. Add its names under the `palette.*` keys of the string catalogue, in every language (see Translations).
+4. Add it to the map in `e2e/contrast.spec.ts` and run that spec.
+
+Use the palette's official values only. When a pair fails contrast, point the token that use reads at another official colour of the palette, such as `--rp-negative-text: var(--rp-text)`; never add a colour. `src/ui/styles/motion.css` sets those role tokens and says what each one covers.
+
+| Token                                                                        | Meaning                                                                                                                |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--rp-base`                                                                  | Page background, and inputs and headers set into a card                                                                |
+| `--rp-surface`                                                               | Cards and panels                                                                                                       |
+| `--rp-overlay`                                                               | Tiles, buttons and menus: the step above a card                                                                        |
+| `--rp-text`                                                                  | Body text                                                                                                              |
+| `--rp-subtle`                                                                | Secondary text                                                                                                         |
+| `--rp-muted`                                                                 | The faintest text and marks: disabled and unavailable items                                                            |
+| `--rp-pine`, `--rp-foam`, `--rp-iris`, `--rp-gold`, `--rp-rose`, `--rp-love` | Accent colours. By default pine is the accent and info, foam positive, gold notice and love negative                   |
+| `--rp-c1` to `--rp-c8`                                                       | Chart series and group colours, in order                                                                               |
+| `--rp-hl-low`, `--rp-hl-med`, `--rp-hl-high`                                 | Highlights: low for dividers and quiet fills on a card, medium for hover and selection, high for tracks and scrollbars |
+| `--rp-shadow`                                                                | Card shadow                                                                                                            |
 
 ## Commit and pull request flow
 
