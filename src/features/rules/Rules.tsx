@@ -20,7 +20,6 @@ import {
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {DnsRules} from './DnsRules';
-import {FlowRecords, RoutingMap} from './flows/Flows';
 import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
 import type {EvaluationView} from './view';
@@ -32,8 +31,6 @@ export function Rules(props: PageProps) {
   const content = {
     list: <RuleList {...props} />,
     dns: <DnsRules {...props} />,
-    map: <RoutingMap {...props} />,
-    flows: <FlowRecords {...props} />,
     trace: <Trace form={traceForm} />
   };
   if (view.loading) return <Loading />;

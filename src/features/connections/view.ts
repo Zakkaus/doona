@@ -343,7 +343,7 @@ export function connectionDetail(
         fields: connectionDetails(current, locale).map(
           ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
         ),
-        flowQuery: within('', {tab: 'flows', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
+        flowQuery: within('', {tab: 'records', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
         source: current.src ? (sourceIp(current.src) ?? current.src) : null,
         closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing',
         stateHelp: connectionStateHelp(current.state, t)

@@ -6,7 +6,7 @@ import {chromium} from '@playwright/test';
 import {signInDemo} from './demo-session.mjs';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:4177';
-const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'rules?tab=map', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
+const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'flows', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
 const runs = Number(process.env.PERF_RUNS) || 3;
 const only = process.env.PERF_ONLY ? new RegExp(process.env.PERF_ONLY) : null;
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
@@ -34,7 +34,7 @@ async function ready(page) {
     connections: '.rp-scatter circle',
     dns: '[role=tabpanel]',
     policies: '.rp-node',
-    rules: '.rp-tree-tile',
+    flows: '.rp-tree-tile',
     nodes: '[role=rowheader]',
     config: '[role=tabpanel]',
     events: '[role=rowheader]',
@@ -212,8 +212,8 @@ await measure(
   },
   {busy: true}
 );
-await measure('rules: hover 20 tree tiles', async (page, session) => {
-  await page.goto(`${base}/#/rules?tab=map`);
+await measure('flows: hover 20 tree tiles', async (page, session) => {
+  await page.goto(`${base}/#/flows`);
   const tiles = page.locator('.rp-tree-tile');
   await tiles.first().waitFor();
   const count = Math.min(20, await tiles.count());

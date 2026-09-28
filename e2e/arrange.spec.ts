@@ -176,6 +176,6 @@ test('the arrange and routing tree styles load with their pages', async ({page})
   expect(await styled('.rp-tree')).toBe(false);
   await page.goto('/#/policies?tab=arrange');
   await expect(page.locator('.rp-arrange')).toHaveCSS('flex-direction', 'column');
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   await expect(page.locator('.rp-tree')).toHaveCSS('overflow-x', 'auto');
 });

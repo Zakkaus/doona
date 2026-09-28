@@ -7,6 +7,7 @@ import {type RoutePath} from '../routes';
 import {within} from '../route';
 import {dnsTabs} from '../../features/dns/nav';
 import {rulesTabs} from '../../features/rules/nav';
+import {flowsTabs} from '../../features/flows/nav';
 import {settingsCardList} from '../../features/settings/nav';
 import {configTabs, setupAvailable, sourceKinds} from '../../features/config/nav';
 
@@ -33,6 +34,7 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
   const main = config?.sources.find(source => source.kind === 'main');
   // Each page's own tab list, so search offers exactly the tabs the page shows.
   const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
+    ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...configTabs(setupAvailable(resources, main)).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),

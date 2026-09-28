@@ -8,14 +8,21 @@ export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || defaultRoute, query: i < 0 ? '' : h.slice(i + 1)};
-  if (route.route === 'flows') return legacyFlows(route.query);
-  return {route: isRoutePath(route.route) ? route.route : defaultRoute, query: route.query};
+  const moved = movedFlows(route.route, route.query);
+  return moved ?? {route: isRoutePath(route.route) ? route.route : defaultRoute, query: route.query};
 }
-// The flow map and records moved under rules; old links keep working.
-function legacyFlows(query: string): Route {
+// The flow map and records moved from the rules page to their own page; old links keep working. The map was the rules
+// page's default tab once, so its links from then carry a pinned path or grouping but no tab. The flows page before
+// that opened the records for a selected flow or connection.
+function movedFlows(route: string, query: string): Route | null {
   const params = new URLSearchParams(query);
-  params.set('tab', params.has('id') || params.has('connection_id') || params.has('path') ? 'flows' : 'map');
-  return {route: 'rules', query: params.toString()};
+  const tab = params.get('tab');
+  if (route === 'rules' && (tab === 'map' || tab === 'flows' || (tab === null && (params.has('path') || params.has('by'))))) {
+    params.set('tab', tab === 'flows' ? 'records' : 'map');
+  } else if (route === 'flows' && tab === null && (params.has('id') || params.has('connection_id'))) {
+    params.set('tab', 'records');
+  } else return null;
+  return {route: 'flows', query: params.toString()};
 }
 
 export function within(query: string, patch: Record<string, string | null>): string {

@@ -1,4 +1,4 @@
-import '../../../ui/styles/routing.css';
+import '../../ui/styles/routing.css';
 import {useMemo} from 'react';
 import Tree from './Tree';
 import {
@@ -17,19 +17,34 @@ import {
   RuleRef,
   Empty,
   Link,
+  Tabs,
   type TableColumn
-} from '../../../ui/ui';
-import {Coverage} from './Coverage';
-import type {PageProps} from '../../../shell/routes';
-import {useT} from '../../../i18n';
-import Close from '../../../ui/icons/Close';
+} from '../../ui/ui';
+import {Coverage} from '../shared/Coverage';
+import type {PageProps} from '../../shell/routes';
+import {useT} from '../../i18n';
+import Close from '../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
-import {ruleHref} from '../../shared/link';
+import {ruleHref} from '../shared/link';
+import {useFlowsPage} from './useFlowsPage';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 
-export function RoutingMap(props: PageProps) {
+export function Flows(props: PageProps) {
+  const t = useT();
+  const view = useFlowsPage(props);
+  const content = {map: <RoutingMap {...props} />, records: <FlowRecords {...props} />};
+  if (view.loading) return <Loading />;
+  if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
+  return (
+    <div className="rp-page">
+      <Tabs label={t('nav.flows')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
+    </div>
+  );
+}
+
+function RoutingMap(props: PageProps) {
   const t = useT();
   const view = useRoutingMap(props);
   return (
@@ -74,7 +89,7 @@ export function RoutingMap(props: PageProps) {
   );
 }
 
-export function FlowRecords(props: PageProps) {
+function FlowRecords(props: PageProps) {
   const t = useT();
   const view = useFlowRecords(props);
   const detail = view.detail;
@@ -143,7 +158,7 @@ export function FlowRecords(props: PageProps) {
       </div>
       <div className="rp-with-panel" data-open={view.panelOpen ? '' : undefined}>
         <DataTable
-          label={t('rule.flows')}
+          label={t('flow.records')}
           rowDetail
           loading={view.loading}
           rows={view.rows}

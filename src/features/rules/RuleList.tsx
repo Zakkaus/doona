@@ -23,7 +23,7 @@ import {
 import Close from '../../ui/icons/Close';
 import FileText from '../../ui/icons/FileText';
 import type {RuleConditionKind} from '../../dae/groups';
-import {Coverage} from './flows/Coverage';
+import {Coverage} from '../shared/Coverage';
 import type {PageProps} from '../../shell/routes';
 import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './useRuleList';
 

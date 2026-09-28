@@ -1,11 +1,11 @@
 import {useCallback, useLayoutEffect, useMemo, useRef} from 'react';
-import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../../store';
-import {useT} from '../../../i18n';
-import {within} from '../../../shell/route';
-import type {PageProps} from '../../../shell/routes';
+import {useCapabilities, useFlows, useGroups, useNodes, useRules} from '../../store';
+import {useT} from '../../i18n';
+import {within} from '../../shell/route';
+import type {PageProps} from '../../shell/routes';
 import {flowsThrough, routingTree, type TreeBy} from './map';
 import {routingMapView} from './view';
-import {offered} from '../../../api/capabilities';
+import {offered} from '../../api/capabilities';
 
 export function useRoutingMap({go, query}: PageProps) {
   const t = useT();
@@ -26,7 +26,7 @@ export function useRoutingMap({go, query}: PageProps) {
   useLayoutEffect(() => {
     latest.current = query;
   }, [query]);
-  const pin = useCallback((path: string | null) => go('rules', within(latest.current, {path})), [go]);
+  const pin = useCallback((path: string | null) => go('flows', within(latest.current, {path})), [go]);
   const count = useMemo(
     () => (pinned ? flowsThrough(resource.data?.flows ?? [], pinned, rules.data?.rules ?? []).length : 0),
     [resource.data, pinned, rules.data]
@@ -45,7 +45,7 @@ export function useRoutingMap({go, query}: PageProps) {
       rules.refetch();
     },
     pin,
-    changeBy: (next: string) => go('rules', within(query, {by: next === 'client' ? 'client' : null, path: null})),
-    viewPinned: () => go('rules', within(query, {tab: 'flows'}))
+    changeBy: (next: string) => go('flows', within(query, {by: next === 'client' ? 'client' : null, path: null})),
+    viewPinned: () => go('flows', within(query, {tab: 'records'}))
   };
 }

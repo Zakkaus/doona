@@ -5,7 +5,7 @@ test.use({viewport: {width: 1440, height: 900}});
 test.describe(() => {
   test.use({storage: faults});
   test('a flow opens its trace beside the list and links to its connection', async ({page}) => {
-    await page.goto('/#/rules?tab=flows');
+    await page.goto('/#/flows?tab=records');
     const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
     await expect(rows.first()).toBeVisible();
     const total = await rows.count();
@@ -13,7 +13,7 @@ test.describe(() => {
     await expect(page.locator('.rp-panel')).toHaveCount(0);
     await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
     await rows.filter({hasText: 'api.telegram.org'}).first().click();
-    await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
+    await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
     const panel = page.locator('.rp-panel');
     await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
     await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
@@ -23,15 +23,15 @@ test.describe(() => {
     await expect(page).toHaveURL(/#\/connections\?id=1$/);
     await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
     await page.locator('.rp-panel').getByRole('button', {name: 'View flow', exact: true}).click();
-    await expect(page).toHaveURL(/#\/rules\?tab=flows&id=flow-1$/);
+    await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
     await page.locator('.rp-panel').getByRole('button', {name: 'Close', exact: true}).click();
-    await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
+    await expect(page).toHaveURL(/#\/flows\?tab=records$/);
     await expect(page.locator('.rp-panel')).toHaveCount(0);
   });
 });
 
 test('a pinned tree item carries into the records', async ({page}) => {
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'});
   await rule.click();
@@ -42,7 +42,7 @@ test('a pinned tree item carries into the records', async ({page}) => {
   const matching = Number((await showFlows.innerText()).match(/\d+/)?.[0]);
   expect(matching).toBeGreaterThan(0);
   await showFlows.click();
-  await expect(page).toHaveURL(/tab=flows/);
+  await expect(page).toHaveURL(/tab=records/);
   const grid = page.getByRole('grid');
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   const count = async () => {
@@ -57,12 +57,28 @@ test('a pinned tree item carries into the records', async ({page}) => {
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(count).toBeGreaterThan(matching);
   await page.goto('/#/flows');
-  await expect(page).toHaveURL(/#\/rules\?tab=map$/);
+  await expect(page).toHaveURL(/#\/flows$/);
   await expect(topology).toBeVisible();
 });
 
-test('a flow offers a rule for its target, prefilled in the rule list', async ({page}) => {
+test('old rules and flows addresses open the flows page on the matching tab', async ({page}) => {
+  const tab = (name: string) => page.getByRole('tab', {name, exact: true});
+  await page.goto('/#/rules?tab=map&by=client');
+  await expect(page).toHaveURL(/#\/flows\?tab=map&by=client$/);
+  await expect(tab('Map')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.rp-nav[href="#/flows"]')).toHaveAttribute('aria-current', 'page');
   await page.goto('/#/rules?tab=flows&id=flow-1');
+  await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
+  await expect(page.locator('.rp-table [aria-selected="true"]')).toHaveAttribute('data-key', 'flow-1');
+  await page.goto('/#/rules?path=rule%3Ar2');
+  await expect(page).toHaveURL(/#\/flows\?path=rule%3Ar2&tab=map$/);
+  await page.goto('/#/flows?connection_id=1');
+  await expect(page).toHaveURL(/#\/flows\?connection_id=1&tab=records$/);
+  await expect(tab('Records')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('a flow offers a rule for its target, prefilled in the rule list', async ({page}) => {
+  await page.goto('/#/flows?tab=records&id=flow-1');
   const panel = page.locator('.rp-panel');
   await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
@@ -72,7 +88,7 @@ test('a flow offers a rule for its target, prefilled in the rule list', async ({
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/#\/rules\?tab=list$/);
   // A second seed after the first was dismissed still opens, with the list and config already cached.
-  await page.getByRole('tab', {name: 'Flow records', exact: true}).click();
+  await page.goto('/#/flows?tab=records');
   await page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').filter({hasText: 'cdn.bilibili.com'}).first().click();
   await panel.getByRole('link', {name: 'Add a rule for this target', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: cdn.bilibili.com)');
@@ -82,7 +98,7 @@ test('a flow offers a rule for its target, prefilled in the rule list', async ({
 });
 
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {
-  await page.goto('/#/rules?tab=flows');
+  await page.goto('/#/flows?tab=records');
   const grid = page.getByRole('grid');
   const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
@@ -92,11 +108,11 @@ test('filters narrow the list and the connection chip clears its filter', async 
   expect(Number(await grid.getAttribute('aria-rowcount')) - 1).toBeLessThan(total);
   await page.getByRole('radio', {name: 'All', exact: true}).click();
   await expect(grid).toHaveAttribute('aria-rowcount', String(total + 1));
-  await page.goto('/#/rules?tab=flows&connection_id=1');
+  await page.goto('/#/flows?tab=records&connection_id=1');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('api.telegram.org');
   await page.getByRole('button', {name: 'Clear connection filter: Connection: 1', exact: true}).click();
-  await expect(page).toHaveURL(/#\/rules\?tab=flows$/);
+  await expect(page).toHaveURL(/#\/flows\?tab=records$/);
   await expect(grid).toHaveAttribute('aria-rowcount', String(total + 1));
 });
 
@@ -106,13 +122,13 @@ test.describe('flows unavailable', () => {
   test('direct flow link renders without browser errors', async ({page}) => {
     await page.goto('/#/flows');
     await expect(page.locator('.rp-content')).toBeVisible();
-    await expect(page.locator('.rp-nav[href="#/rules"]')).toHaveAttribute('data-unavailable', '');
-    await expect(page).toHaveURL(/#\/rules\?tab=map$/);
+    await expect(page.locator('.rp-nav[href="#/flows"]')).toHaveAttribute('data-unavailable', '');
+    await expect(page).toHaveURL(/#\/flows$/);
   });
 });
 
 test('a flow record links its rule into the rule list', async ({page}) => {
-  await page.goto('/#/rules?tab=flows');
+  await page.goto('/#/flows?tab=records');
   const link = page.getByRole('link', {name: /^Open .* in the rule list$/}).first();
   await expect(link).toBeVisible();
   await link.click();
@@ -121,7 +137,7 @@ test('a flow record links its rule into the rule list', async ({page}) => {
 });
 
 test('the tree draws every configured rule, follows a hover along its branch and pins by keyboard and pointer', async ({page}) => {
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   for (const [stage, caption] of [
     ['rule', 'Rule'],
@@ -178,7 +194,7 @@ test('the tree waits for the nodes before it draws', async ({page}) => {
     await pending;
     return api.nodes({limit: 1000});
   };
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   await expect(topology).toBeVisible();
   // Other requests have landed by now; only the nodes are still out.
@@ -189,7 +205,7 @@ test('the tree waits for the nodes before it draws', async ({page}) => {
 });
 
 test('the tree can be seen by device, with the toggle in the address and pins carrying over', async ({page}) => {
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   await page.getByRole('radio', {name: 'By device', exact: true}).click();
   await expect(page).toHaveURL(/by=client/);
@@ -212,7 +228,7 @@ test.describe('narrow screens', () => {
   test.use({viewport: {width: 390, height: 844}});
 
   test('the map cues horizontal panning and gives tiles a 36 px target', async ({page}) => {
-    await page.goto('/#/rules?tab=map');
+    await page.goto('/#/flows?tab=map');
     for (const lang of ['zh-TW', 'en']) {
       for (const scheme of ['light', 'dark']) {
         await setAppearance(page, lang, scheme);
@@ -228,7 +244,7 @@ test.describe('narrow screens', () => {
   });
 
   test('the tree keeps its shape and pans inside its card instead of widening the page', async ({page}) => {
-    await page.goto('/#/rules?tab=map');
+    await page.goto('/#/flows?tab=map');
     const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
     await expect(topology.locator('[data-stage="node"]').first()).toBeVisible();
     const box = (await topology.locator('.rp-tree').evaluate(el => ({scroll: el.scrollWidth, client: el.clientWidth})))!;
@@ -246,7 +262,7 @@ test.describe('narrow screens', () => {
 });
 
 test('the connection topology card is titled like the other chart cards', async ({page}) => {
-  await page.goto('/#/rules?tab=map');
+  await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   await expect(topology.getByRole('heading', {level: 3, name: 'Connection topology', exact: true})).toHaveClass(/\brp-h3\b/);
 });

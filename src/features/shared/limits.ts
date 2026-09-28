@@ -6,7 +6,7 @@ import {docsHref, type DocsAnchor} from './docs';
 
 export const resourceLabels = {
   connections: 'nav.connections',
-  flows: 'rule.flows',
+  flows: 'flow.records',
   routing_trace: 'ov.r.routingTrace',
   dns_query: 'ov.r.dnsQuery',
   dns_cache: 'ov.r.dnsCache',

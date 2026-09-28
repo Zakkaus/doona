@@ -39,9 +39,21 @@ describe('hash routing', () => {
     ['#/rules?id=a&x=1', 'rules', 'id=a&x=1'],
     ['#rules?id=a', 'rules', 'id=a'],
     ['#/rules?next=/connections?src=192.168.1.2', 'rules', 'next=/connections?src=192.168.1.2'],
-    ['#/flows', 'rules', 'tab=map'],
-    ['#/flows?id=flow-1', 'rules', 'id=flow-1&tab=flows'],
-    ['#/flows?connection_id=1', 'rules', 'connection_id=1&tab=flows'],
+    ['#/flows', 'flows', ''],
+    ['#/flows?path=rule%3Aa', 'flows', 'path=rule%3Aa'],
+    ['#/flows?tab=records&id=flow-1', 'flows', 'tab=records&id=flow-1'],
+    // The flow map and records moved off the rules page; the older flows page opened a selected record.
+    ['#/flows?id=flow-1', 'flows', 'id=flow-1&tab=records'],
+    ['#/flows?connection_id=1', 'flows', 'connection_id=1&tab=records'],
+    ['#/rules?tab=map', 'flows', 'tab=map'],
+    ['#/rules?tab=map&by=client&path=client%3A10.0.0.12', 'flows', 'tab=map&by=client&path=client%3A10.0.0.12'],
+    ['#/rules?tab=flows', 'flows', 'tab=records'],
+    ['#/rules?tab=flows&id=flow-1', 'flows', 'tab=records&id=flow-1'],
+    ['#/rules?tab=flows&connection_id=1', 'flows', 'tab=records&connection_id=1'],
+    ['#/rules?tab=flows&path=outbound%3Adirect', 'flows', 'tab=records&path=outbound%3Adirect'],
+    ['#/rules?path=a', 'flows', 'path=a&tab=map'],
+    ['#/rules?by=client', 'flows', 'by=client&tab=map'],
+    ['#/rules?tab=list&rule=a', 'rules', 'tab=list&rule=a'],
     ['#/?id=a', 'activity', 'id=a']
   ])('parses %s', (hash, route, query) => {
     expect(parseHash(hash)).toEqual({route, query});

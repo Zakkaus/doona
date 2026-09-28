@@ -16,6 +16,7 @@ import History from '../ui/icons/History';
 import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
+import Shuffle from '../ui/icons/Shuffle';
 
 // A lazy page renders and preloads through the same loader.
 function lazyPage(load: () => Promise<{default: ComponentType<PageProps>}>) {
@@ -54,6 +55,12 @@ const definitions = {
     nav: {titleKey: 'nav.connections', hintKey: 'hint.connections', Icon: Link},
     ...lazyPage(() => import('../features/connections/Connections').then(m => ({default: m.Connections}))),
     requires: {resources: ['connections']}
+  },
+  flows: {
+    shortcut: 'f',
+    nav: {titleKey: 'nav.flows', hintKey: 'hint.flows', Icon: Shuffle},
+    ...lazyPage(() => import('../features/flows/Flows').then(m => ({default: m.Flows}))),
+    requires: {resources: ['flows']}
   },
   dns: {
     nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},

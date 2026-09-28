@@ -262,7 +262,7 @@ it('captures IDs without expanding the confirmed selection when live rows arrive
 it('prepares fallback flow links and exports only visible raw counters', () => {
   const row = {...connections.tcp[0], network: 'tcp', id: 'a/b', flow_id: null, download_bytes: '9007199254740993'};
   const model = connectionsView([row], {...connections, visibility: 'partial'}, undefined, 'all', 'en-US', t);
-  expect(connectionDetail(row, 'en-US', t, new Map(), false)?.flowQuery).toBe('tab=flows&connection_id=a%2Fb');
+  expect(connectionDetail(row, 'en-US', t, new Map(), false)?.flowQuery).toBe('tab=records&connection_id=a%2Fb');
   expect(connectionsExport([row], new Map())).toContain('9007199254740993');
   expect(model.visibility).toBe(t('conn.visibilityPartial'));
 });

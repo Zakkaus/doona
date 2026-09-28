@@ -21,11 +21,11 @@ import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth, simulatedAddress} from '../../api/selectors';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
-import {coverageView, type CoverageView} from './flows/view';
+import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
 import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
-import {pickTab, tabQuery, within} from '../../shell/route';
+import {pickTab, within} from '../../shell/route';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
 import {recorderEmpty} from '../shared/recorder';
@@ -358,24 +358,15 @@ type RulesView = {tabs: {id: RuleTab; label: string}[]; tab: string; fallback: s
 export function rulesView(resources: Capabilities['resources'] | undefined, query: string, t: Translator): RulesView {
   const tabs = rulesTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}));
   const first = tabs[0]?.id ?? 'list';
-  // The routing map was the default tab, so its links written then carry a pinned path or grouping but no tab.
-  const params = new URLSearchParams(query);
-  const legacyMap = !params.has('tab') && (params.has('path') || params.has('by'));
   return {
     tabs,
     tab: pickTab(
-      legacyMap ? within(query, {tab: 'map'}) : query,
+      query,
       tabs.map(tab => tab.id),
       first
     ),
     fallback: resources ? first : null
   };
-}
-// The address of another tab. The map's grouping, and the pinned path it shares with the flow records, go with them:
-// left behind a tab that stays out of the address, they would read as an old map link and reopen the map.
-export function rulesTabQuery(query: string, next: string, fallback: string | null): string {
-  const left = {...(next === 'map' ? {} : {by: null}), ...(next === 'map' || next === 'flows' ? {} : {path: null})};
-  return tabQuery(within(query, left), next, fallback);
 }
 
 const outcomes: Record<string, Key> = {

@@ -80,8 +80,8 @@ it('puts every page in exactly one hub and shows the hubs as the navigation sect
   const view = shellView(settings, 'dns', capabilitiesBase, null, version, null, t);
   expect(view.groups.map(group => [group.label, group.items.map(item => item.path)])).toEqual([
     ['Activity', ['activity', 'overview']],
-    ['Traffic', ['connections', 'dns', 'logs', 'events']],
+    ['Monitor', ['connections', 'flows', 'dns', 'logs', 'events']],
     ['Routing', ['policies', 'nodes', 'rules']],
-    ['Settings', ['settings', 'config']]
+    ['Settings', ['config', 'settings']]
   ]);
 });

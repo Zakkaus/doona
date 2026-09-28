@@ -255,7 +255,7 @@ export function useConnectionsPage({go, query}: PageProps) {
       if (cur?.rule_id) go('rules', within('', {tab: 'list', rule: cur.rule_id, edit: edit ? cur.rule_id : null}));
     },
     showFlow: () => {
-      if (model.detail && canViewFlow) go('rules', model.detail.flowQuery);
+      if (model.detail && canViewFlow) go('flows', model.detail.flowQuery);
     },
     onlyClient: () => {
       if (model.detail?.source) {
