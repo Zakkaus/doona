@@ -1,6 +1,10 @@
 import {formatBytes} from '../../i18n/format';
-import type {RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData} from '../../api/model';
-import {formatNumber, type Params, type Translator} from '../../i18n';
+import type {Capabilities, RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData, Version} from '../../api/model';
+import {engineOf} from '../../api/engines';
+import {formatList, formatNumber, type Lang, type Params, type Translator} from '../../i18n';
+import {href} from '../../shell/route';
+import {docsHref} from '../shared/docs';
+import {geodataConfigurable} from './nav';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
 
@@ -140,6 +144,31 @@ export function refreshAllReason({ready, busy, count}: {ready: boolean; busy: bo
 
 export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; loaded: boolean; failed: boolean}, t: Translator): string | null {
   return !busy && !loaded && failed ? t('settings.geodataUnread') : null;
+}
+
+// Where the sources cannot be edited here but an update can run, the engine may take the download URLs from the
+// configuration file; the note names its settings and says what editing them here needs. Null where the engine does
+// not say so.
+export function geodataFromConfig(
+  capabilities: Capabilities | undefined,
+  version: Pick<Version, 'api'> | undefined,
+  t: Translator,
+  lang: Lang
+): {text: string; docs: {href: string; text: string}; config?: {href: string; text: string}} | null {
+  const resources = capabilities?.resources;
+  if (!resources?.geodata.available || resources.geodata.can_update !== true || geodataConfigurable(resources)) return null;
+  const engine = engineOf(version);
+  const reason = engine.reason('geodata', capabilities!);
+  if (reason?.code !== 'no-download-urls') return null;
+  const keys = formatList(
+    lang,
+    reason.settings.map(setting => engine.settingName(setting.key))
+  );
+  return {
+    text: t('settings.geodataFromConfig', {keys}),
+    docs: {href: docsHref(lang, 'state-db'), text: t('ov.lim.docsStateDb')},
+    config: resources.config.available ? {href: href('config', {tab: 'source'}), text: t('nav.config')} : undefined
+  };
 }
 
 export function paletteLabel(sections: Array<{items: Array<{id: string; label: string}>}>, id: string) {

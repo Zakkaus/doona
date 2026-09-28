@@ -25,7 +25,7 @@ export type EngineReason =
   | {code: 'writes-off'; settings: EngineSetting[]}
   // The main file refuses node and subscription edits.
   | {code: 'main-file-read-only'}
-  // Geodata has no download URLs the engine can use until the configuration names them.
+  // Geodata has no built-in download URLs: the engine takes them from the configuration, from these settings.
   | {code: 'no-download-urls'; settings: EngineSetting[]}
   // The running build does not have the feature.
   | {code: 'build-lacks'};
@@ -40,6 +40,8 @@ export type Engine = {
   holdsCredentials(source: Pick<ConfigSource, 'content'>): boolean;
   // The settings as a snippet of the engine's configuration text.
   snippet(settings: EngineSetting[]): string;
+  // A setting's full name in the configuration text, by which it can be found there.
+  settingName(key: string): string;
   // The top-level sections whose text the engine redacts when it returns a source, each with the name the page shows.
   redactedSections(blocks: TextBlock[]): Array<{block: TextBlock; name: string}>;
 };

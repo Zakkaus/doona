@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Button, Card, ConfirmButton, DataTable, ErrorMessage, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Button, Card, ConfirmButton, DataTable, ErrorMessage, Link, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {useBackendActions} from './useBackendActions';
 import {settingsCard} from './nav';
 
@@ -34,6 +34,7 @@ export function BackendActionsCard() {
     canClose,
     canUpdate,
     hasGeodata,
+    fromConfig,
     rows,
     update,
     waiting
@@ -103,6 +104,23 @@ export function BackendActionsCard() {
             </ActionHelp>
           </div>
           <span className="rp-label">{t('settings.geodataNote')}</span>
+          {fromConfig && (
+            <span className="rp-label rp-geodata-from-config">
+              {fromConfig.text}{' '}
+              <Link appearance="link" external href={fromConfig.docs.href}>
+                {fromConfig.docs.text}
+                <span aria-hidden="true">↗</span>
+              </Link>
+              {fromConfig.config && (
+                <>
+                  {' '}
+                  <Link appearance="link" href={fromConfig.config.href}>
+                    {fromConfig.config.text}
+                  </Link>
+                </>
+              )}
+            </span>
+          )}
           <ErrorMessage error={geodataError} onRetry={retryGeodata} />
           <DataTable
             label={t('settings.geodata')}

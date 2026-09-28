@@ -317,4 +317,8 @@ test('without configurable sources the page keeps the plain geodata table in the
   await expect(actions.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
   await expect(actions.getByRole('button', {name: t('settings.geodataUpdate'), exact: true})).toBeVisible();
   await expect(actions).not.toContainText(t('settings.geodataVerifiedYes'));
+  // honk takes the URLs from its configuration file then; the note names both keys and links the state database docs.
+  await expect(actions).toContainText('experimental.native_api.geosite_download_url');
+  await expect(actions.getByRole('link', {name: t('ov.lim.docsStateDb')})).toBeVisible();
+  await expect(actions.getByRole('link', {name: t('nav.config'), exact: true})).toHaveAttribute('href', /config/);
 });

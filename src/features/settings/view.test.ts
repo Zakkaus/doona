@@ -1,8 +1,11 @@
 import {expect, it} from 'vitest';
 import {geodata, runtimeSettings} from '../../api/mock/fixtures';
-import type {RuntimeSettingsPatch} from '../../api/model';
+import {capabilities} from '../../api/mock/fixtures/capabilities';
+import {version} from '../../api/mock/fixtures/runtime';
+import type {Capabilities, RuntimeSettingsPatch, Version} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {
+  geodataFromConfig,
   geodataRows,
   geodataUpdateReason,
   numericAccess,
@@ -122,4 +125,22 @@ it('says a geodata update needs its status, and nothing while it loads', () => {
   expect(geodataUpdateReason({busy: false, loaded: false, failed: false}, t)).toBeNull();
   expect(geodataUpdateReason({busy: true, loaded: false, failed: true}, t)).toBeNull();
   expect(geodataUpdateReason({busy: false, loaded: true, failed: true}, t)).toBeNull();
+});
+
+it('notes URLs from the configuration file only where sources are fixed but an update can run', () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  const fixed = (geodata: Partial<Capabilities['resources']['geodata']>): Capabilities => ({
+    ...capabilities,
+    resources: {...capabilities.resources, geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], ...geodata}}
+  });
+  const note = geodataFromConfig(fixed({}), version, t, 'en');
+  expect(note?.text).toBe(t('settings.geodataFromConfig', {keys: 'experimental.native_api.geosite_download_url, experimental.native_api.geoip_download_url'}));
+  expect(note?.docs.text).toBe(t('ov.lim.docsStateDb'));
+  expect(note?.config?.href).toContain('config');
+  expect(geodataFromConfig(fixed({can_update: false}), version, t, 'en')).toBeNull();
+  expect(geodataFromConfig(fixed({configurable_sources: true}), version, t, 'en')).toBeNull();
+  expect(geodataFromConfig(capabilities, version, t, 'en')).toBeNull();
+  const other = {...version, api: {...version.api, name: 'other/backend'}} as unknown as Version;
+  expect(geodataFromConfig(fixed({}), other, t, 'en')).toBeNull();
+  expect(geodataFromConfig(fixed({}), undefined, t, 'en')).toBeNull();
 });

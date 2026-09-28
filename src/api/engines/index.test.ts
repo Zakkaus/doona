@@ -51,6 +51,8 @@ describe('honk', () => {
     const noDb = honk.reason('geodata', patched({geodata: {configurable_sources: undefined}}));
     expect(noDb?.code).toBe('no-download-urls');
     expect(noDb && 'settings' in noDb && noDb.settings.map(setting => setting.key)).toEqual(['geosite_download_url', 'geoip_download_url']);
+    expect(honk.settingName('geoip_download_url')).toBe('experimental.native_api.geoip_download_url');
+    expect(other.settingName('geoip_download_url')).toBe('geoip_download_url');
     for (const subject of ['events', 'rules', 'config_validate', 'close'] satisfies EngineSubject[])
       expect(honk.reason(subject, capabilities)).toEqual({code: 'build-lacks'});
   });

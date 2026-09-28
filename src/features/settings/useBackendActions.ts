@@ -1,16 +1,28 @@
-import {useCapabilities, useConnectionClose, useConnectionTotals, useDnsFlush, useGeodata, useProviderRefresh, useProviders, useRuntime} from '../../store';
+import {
+  useCapabilities,
+  useConnectionClose,
+  useConnectionTotals,
+  useDnsFlush,
+  useGeodata,
+  useProviderRefresh,
+  useProviders,
+  useRuntime,
+  useVersion
+} from '../../store';
 import {useLifecycle} from '../shared/useLifecycle';
 import {closedAllTone} from '../../api/selectors';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast} from '../../ui/ui';
-import {geodataRows, geodataUpdateReason, refreshAllReason} from './view';
+import {geodataFromConfig, geodataRows, geodataUpdateReason, refreshAllReason} from './view';
 import {geodataConfigurable} from './nav';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 export function useBackendActions() {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const capabilities = useCapabilities();
+  const version = useVersion();
   const resources = capabilities.data?.resources;
   const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
   const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
@@ -113,6 +125,7 @@ export function useBackendActions() {
     canClose: !!resources?.connections.can_close,
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: plainGeodata,
+    fromConfig: geodataFromConfig(capabilities.data, version.data, t, lang),
     rows: geodataRows(geodata.data?.assets ?? [], locale),
     update: () =>
       void geodata.update().then(
