@@ -1,10 +1,10 @@
 import {createContext, useContext, useMemo} from 'react';
 import type en from './locales/en.json';
 import {storageKeys} from '../api/storage';
-import {browserLang, DEFAULT_LANG, isLang, languages, type Lang} from './languages';
+import {browserLang, DEFAULT_LANG, isLang, languages, REFERENCE_LANG, type Lang} from './languages';
 // English is the reference: every catalogue's keys are among its keys.
 export type Key = keyof typeof en;
-export {browserLang, DEFAULT_LANG, languages, type Lang};
+export {browserLang, DEFAULT_LANG, languages, REFERENCE_LANG, type Lang};
 
 export type Message = string | {one: string; other: string};
 export type Params = Record<string, string | number>;
@@ -31,18 +31,23 @@ export type Catalogue = Record<Key, Message>;
 // Each language is its own chunk, loaded on first use; `translate` reads only what has loaded. Vite expands the
 // template import into one chunk per catalogue. A language with ideograph faces brings their stylesheet, so they are
 // declared before the page renders in it; a face stylesheet that fails to load leaves the text to the system font.
-function readCatalogue(lang: Lang): Promise<Catalogue> {
+function readCatalogue(lang: Lang): Promise<Partial<Catalogue>> {
   const {fonts} = languages.find(language => language.id === lang)!;
-  const catalogue = (import(`./locales/${lang}.json`) as Promise<{default: Catalogue}>).then(module => module.default);
+  const catalogue = (import(`./locales/${lang}.json`) as Promise<{default: Partial<Catalogue>}>).then(module => module.default);
   return fonts ? Promise.all([catalogue, import(`../fonts-${fonts}.css`).catch(() => undefined)]).then(([messages]) => messages) : catalogue;
 }
-const catalogues = new Map<Lang, Catalogue>();
+const catalogues = new Map<Lang, Partial<Catalogue>>();
 const loading = new Map<Lang, Promise<void>>();
 // Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
-export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Catalogue> = readCatalogue): Promise<void> {
+// A partial language loads the reference catalogue too and fills its gaps from it; a complete one loads only itself.
+export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Partial<Catalogue>> = readCatalogue): Promise<void> {
   let pending = loading.get(lang);
   if (!pending) {
-    pending = read(lang).then(
+    const {complete} = languages.find(language => language.id === lang)!;
+    const table = complete
+      ? read(lang)
+      : Promise.all([read(lang), loadLanguage(REFERENCE_LANG, read)]).then(([own]) => ({...catalogues.get(REFERENCE_LANG), ...own}));
+    pending = table.then(
       messages => void catalogues.set(lang, messages),
       (error: unknown) => {
         // A failed chunk (offline, a new deploy) can be asked for again.

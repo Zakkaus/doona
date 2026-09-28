@@ -57,7 +57,7 @@ function Startup() {
     };
   }, []);
   if (ready && lang) return <Shell lang={lang} />;
-  const [problem, retry] = unloaded[readLang()];
+  const [problem, retry] = unloaded(readLang());
   return (
     <LangContext.Provider value={lang ?? 'zh-TW'}>
       <div className="rp-shell">

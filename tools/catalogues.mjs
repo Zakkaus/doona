@@ -1,5 +1,6 @@
 // The rules every catalogue in src/i18n/locales follows, kept apart from the file reading so a test can feed it
-// made-up languages. English is the reference: another catalogue may hold only its keys, with the same placeholders.
+// made-up languages. English is the reference: another catalogue may hold only its keys, with the same placeholders,
+// and a complete language must hold all of them.
 const valid = message =>
   typeof message === 'string' ||
   (typeof message === 'object' &&
@@ -16,10 +17,12 @@ const placeholders = message =>
 /**
  * @param {Record<string, Record<string, unknown>>} catalogues each language's parsed catalogue, by id
  * @param {string} reference the id of the reference catalogue
- * @returns {string[]} what breaks a rule
+ * @param {ReadonlySet<string>} complete the ids of the languages that must hold every key
+ * @returns {{failures: string[], missing: Record<string, string[]>}} what breaks a rule, and each language's absent keys
  */
-export function checkCatalogues(catalogues, reference) {
+export function checkCatalogues(catalogues, reference, complete) {
   const failures = [];
+  const missing = {};
   const expected = catalogues[reference];
   for (const [lang, catalogue] of Object.entries(catalogues)) {
     const file = `src/i18n/locales/${lang}.json`;
@@ -32,7 +35,8 @@ export function checkCatalogues(catalogues, reference) {
       else if (valid(expected[key]) && placeholders(message) !== placeholders(expected[key]))
         failures.push(`${file}: ${key} placeholders {${placeholders(message)}} differ from ${reference}'s {${placeholders(expected[key])}}`);
     }
-    for (const key of Object.keys(expected)) if (!Object.hasOwn(catalogue, key)) failures.push(`${file}: ${key} is missing`);
+    missing[lang] = Object.keys(expected).filter(key => !Object.hasOwn(catalogue, key));
+    if (complete.has(lang)) for (const key of missing[lang]) failures.push(`${file}: ${key} is missing`);
   }
-  return failures;
+  return {failures, missing};
 }

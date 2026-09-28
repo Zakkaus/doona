@@ -8,18 +8,21 @@
 //   docs    the doona-docs language folder the docs links open; 'en' when the docs have no translation
 //   fonts   <name> of the src/fonts-<name>.css stylesheet that declares the language's ideograph faces, loaded with
 //           its catalogue, or null
+//   complete  whether check:i18n requires every key. A partial language loads English with its own catalogue and
+//           shows the English text for a key it lacks; maintainers mark it complete once it has them all.
 export const languages = [
-  {id: 'zh-TW', name: '繁體中文', locale: 'zh-TW', docs: 'zh-TW', fonts: 'tc'},
-  {id: 'zh-CN', name: '简体中文', locale: 'zh-CN', docs: 'zh-CN', fonts: 'sc'},
-  {id: 'en', name: 'English', locale: 'en-US', docs: 'en', fonts: null}
-] as const satisfies ReadonlyArray<{id: string; name: string; locale: string; docs: 'zh-TW' | 'zh-CN' | 'en'; fonts: string | null}>;
+  {id: 'zh-TW', name: '繁體中文', locale: 'zh-TW', docs: 'zh-TW', fonts: 'tc', complete: true},
+  {id: 'zh-CN', name: '简体中文', locale: 'zh-CN', docs: 'zh-CN', fonts: 'sc', complete: true},
+  {id: 'en', name: 'English', locale: 'en-US', docs: 'en', fonts: null, complete: true}
+] as const satisfies ReadonlyArray<{id: string; name: string; locale: string; docs: 'zh-TW' | 'zh-CN' | 'en'; fonts: string | null; complete: boolean}>;
 
 export type Lang = (typeof languages)[number]['id'];
+export type CompleteLang = Extract<(typeof languages)[number], {complete: true}>['id'];
 // The language before a reader picks one or the browser says.
 export const DEFAULT_LANG = 'zh-TW' satisfies Lang;
-// The reference catalogue: its keys define Key (src/i18n/index.ts imports en.json by name), and no other catalogue
-// may hold a key it lacks or a different placeholder.
-export const REFERENCE_LANG = 'en' satisfies Lang;
+// The reference and fallback catalogue, always complete: its keys define Key (src/i18n/index.ts imports en.json by
+// name), no other catalogue may hold a key it lacks or a different placeholder, and a partial language falls back to it.
+export const REFERENCE_LANG = 'en' satisfies CompleteLang;
 
 const ids: ReadonlySet<string> = new Set(languages.map(language => language.id));
 export function isLang(value: string | null): value is Lang {

@@ -9,6 +9,7 @@ const literal = node => {
   while (ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) node = node.expression;
   if (ts.isStringLiteral(node)) return node.text;
   if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+  if (node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword) return node.kind === ts.SyntaxKind.TrueKeyword;
   if (ts.isArrayLiteralExpression(node)) return node.elements.map(literal);
   if (ts.isObjectLiteralExpression(node)) return Object.fromEntries(node.properties.map(property => [property.name.text, literal(property.initializer)]));
   throw new Error(`${file}: ${node.getText(source)} is not a plain literal`);
@@ -19,7 +20,7 @@ for (const statement of source.statements)
     for (const declaration of statement.declarationList.declarations)
       if (ts.isIdentifier(declaration.name) && declaration.initializer) constants[declaration.name.text] = declaration.initializer;
 
-/** @type {Array<{id: string, name: string, locale: string, docs: string, fonts: string | null}>} */
+/** @type {Array<{id: string, name: string, locale: string, docs: string, fonts: string | null, complete: boolean}>} */
 export const languages = literal(constants.languages);
 export const REFERENCE_LANG = literal(constants.REFERENCE_LANG);
 export const langs = languages.map(language => language.id);
