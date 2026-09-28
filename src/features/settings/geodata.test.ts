@@ -145,6 +145,13 @@ describe('rows', () => {
       text: t('ui.valuePair', {label: 'Last error', value: t('ui.backend.geodataUpdateFailed')}),
       error: true
     });
+    const staged = status({last_error: {code: 'staging_failed', message: 'Geodata update did not complete successfully', details: null}});
+    expect(statusLine(staged, false, now, 'en-US', t).text).toBe(
+      t('ui.valuePair', {
+        label: 'Last error',
+        value: t('ui.aside', {text: t('ui.backendMessage', {message: 'Geodata update did not complete successfully'}), note: 'staging_failed'})
+      })
+    );
   });
   it('lists each asset with its size, host and route, and the full URL behind it', () => {
     const details = assetDetails(status(), [], 'en-US', t);
