@@ -1751,6 +1751,7 @@
   "ui.probeUnsupported": "This backend does not provide a TCP probe for this target",
   "ui.process": "Process name",
   "ui.protocol": "Protocol",
+  "ui.recordingSettings": "Recording settings",
   "ui.refreshFailed": "Could not refresh data",
   "ui.refreshed": "Data refreshed.",
   "ui.reloadPage": "Reload",

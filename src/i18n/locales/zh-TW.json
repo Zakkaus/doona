@@ -1553,6 +1553,7 @@
   "ui.probeUnsupported": "此後端不提供該目標的 TCP 探測",
   "ui.process": "行程名稱",
   "ui.protocol": "協定",
+  "ui.recordingSettings": "記錄設定",
   "ui.refreshFailed": "無法重新整理資料",
   "ui.refreshed": "資料已重新整理。",
   "ui.reloadPage": "重新載入",

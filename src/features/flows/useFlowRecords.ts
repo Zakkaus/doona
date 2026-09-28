@@ -8,6 +8,7 @@ import type {PageProps} from '../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 import {offered} from '../../api/capabilities';
+import {recordingSettingsHref} from '../shared/link';
 
 export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
@@ -63,6 +64,8 @@ export function useFlowRecords({go, query}: PageProps) {
       : null,
     clearPin: () => go('flows', within(query, {path: null})),
     connectionLabel: connectionId ? t('flow.connectionFilter', {id: connectionId}) : null,
-    clearConnection: () => go('flows', within(query, {connection_id: null}))
+    clearConnection: () => go('flows', within(query, {connection_id: null})),
+    // Whether flows are recorded and how many are kept is set in Settings.
+    recordingHref: resources?.runtime_settings.available ? recordingSettingsHref : null
   };
 }

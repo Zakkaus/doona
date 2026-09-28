@@ -421,8 +421,8 @@ test.describe('360px actions', () => {
 
   test('toolbar actions past the first move into a menu', async ({page}) => {
     for (const [route, visible, collapsed] of [
-      ['dns?tab=log', 'Export CSV', ['Refresh', 'DNS rules', 'Load older records']],
-      ['logs', 'Clear', ['Export']],
+      ['dns?tab=log', 'Export CSV', ['Refresh', 'DNS rules', 'Recording settings', 'Load older records']],
+      ['logs', 'Clear', ['Export', 'Recording settings']],
       ['overview', 'Export state JSON', ['Reload', 'Suspend']]
     ] as const) {
       await page.goto(`/#/${route}`);

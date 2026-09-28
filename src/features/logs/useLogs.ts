@@ -4,11 +4,12 @@ import type {LogLevel} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, useDebounced} from '../../ui/ui';
 import {logEmpty, logLevel, logStatus, logsExport, logView} from './view';
+import type {PageProps} from '../../shell/routes';
 
 // One array while no levels are advertised, so the heatmap's memo holds between renders.
 const noLevels: LogLevel[] = [];
 
-export function useLogs() {
+export function useLogs({go}: Pick<PageProps, 'go'>) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
@@ -43,6 +44,8 @@ export function useLogs() {
     error: capabilities.error ?? feed.error,
     loading: !capabilities.error && !feed.error && !feed.connected && !feed.records.length,
     clear: feed.clear,
+    // The level and recording the list is limited by are set in Settings.
+    openRecording: capabilities.data?.resources.runtime_settings.available ? () => go('settings', 'card=runtime') : null,
     // A failed capabilities read is what blocks the page; otherwise the stream itself is reopened.
     retry: capabilities.error ? capabilities.refetch : feed.retry,
     export: () => downloadFile(exportName(view.exportBase, 'txt'), logsExport(feed.records, feed.gaps, t), 'text/plain;charset=utf-8')

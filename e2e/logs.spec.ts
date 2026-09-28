@@ -148,3 +148,13 @@ test('an empty log list says when the configuration forbids recording', async ({
   await page.goto('/#/logs');
   await expect(page.getByText('Log recording is disabled in the configuration', {exact: true})).toBeVisible();
 });
+
+test('the log toolbar opens the recording settings', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/logs');
+  await page.getByRole('button', {name: 'Recording settings', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
+  await expect(page.getByRole('heading', {name: 'Backend options', exact: true})).toBeInViewport();
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/logs$/);
+});
