@@ -223,3 +223,21 @@ export function TextField({
     </RTextField>
   );
 }
+// A field with only one possible value shows it as text, as S2 does for a read-only field: a picker with a single
+// choice offers nothing to pick, and its choice's help would stay hidden in the closed popover.
+export function StaticField({label, value, description}: {label: string; value: string; description?: string}) {
+  const id = useId();
+  return (
+    <div className="rp-field" role="group" aria-labelledby={`${id}-label`} aria-describedby={description && `${id}-help`}>
+      <span className="lbl" id={`${id}-label`}>
+        {label}
+      </span>
+      <span>{value}</span>
+      {description && (
+        <span className="rp-label" id={`${id}-help`}>
+          {description}
+        </span>
+      )}
+    </div>
+  );
+}

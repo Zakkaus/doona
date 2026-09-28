@@ -9,6 +9,7 @@ import {
   HelpRow,
   DataTable,
   LabeledSelect,
+  StaticField,
   Light,
   ConfirmDialog,
   Segmented,
@@ -257,13 +258,17 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
               />
             )}
             {targetFields}
-            <LabeledSelect
-              isDisabled={view.busy}
-              label={t('rule.position')}
-              value={form.before}
-              onChange={before => setForm({...form, before})}
-              items={view.table.positions}
-            />
+            {view.table.positions.length === 1 ? (
+              <StaticField label={t('rule.position')} value={view.table.positions[0].label} description={view.table.positions[0].desc} />
+            ) : (
+              <LabeledSelect
+                isDisabled={view.busy}
+                label={t('rule.position')}
+                value={form.before}
+                onChange={before => setForm({...form, before})}
+                items={view.table.positions}
+              />
+            )}
           </div>
         )}
       </ConfirmDialog>

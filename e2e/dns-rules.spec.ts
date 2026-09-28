@@ -68,6 +68,18 @@ test('a DNS request rule is added through the source splice and removed again', 
   await expect(request).toHaveCount(5);
   expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).not.toContain('qtype(AAAA)');
 });
+test('with no response block the one insert position reads as text with its help, not as a picker', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const source = (await api.config()).sources.find(source => source.id === 'src-main')!;
+  const content = source.content!.replace(/\n {4}response \{[^}]*\}/, '');
+  await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
+  await page.goto('/#/rules?tab=dns');
+  await section(page, 'Response rules').getByRole('button', {name: 'Add rule', exact: true}).click();
+  const position = page.getByRole('dialog').getByRole('group', {name: 'Insert', exact: true});
+  await expect(position).toContainText('New response block, as its first rule');
+  await expect(position).toHaveAccessibleDescription('The dns section has no response block yet; saving this rule creates it.');
+  await expect(position.getByRole('button')).toHaveCount(0);
+});
 test('a resolution record opens the DNS request rule dialog with its domain prefilled', async ({page}) => {
   await mockBackend(page);
   await page.setViewportSize({width: 1440, height: 900});
