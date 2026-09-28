@@ -19,6 +19,7 @@ it('classifies dae syntax and preserves every character', () => {
   ] as const)
     expect(tokens).toContainEqual({text, type});
   expect(tokenizeDae('  dns {\n  # note\n  request {\n')).toContainEqual({text: 'request', type: 'keyword'});
+  expect(tokenizeDae('      upstream(cloudflare) -> accept')).toContainEqual({text: 'upstream', type: 'propertyName'});
 });
 
 it('keeps digits inside names out of the number class', () => {
