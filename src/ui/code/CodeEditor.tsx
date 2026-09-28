@@ -1,9 +1,11 @@
 import {useEffect, useLayoutEffect, useRef} from 'react';
+import {Menu, MenuItem} from 'react-aria-components';
 import {useT, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import {Annotation, EditorState, Compartment, StateEffect, StateField, RangeSetBuilder} from '@codemirror/state';
 import {
   EditorView,
+  type Command,
   keymap,
   lineNumbers,
   Decoration,
@@ -14,10 +16,10 @@ import {
   rectangularSelection,
   highlightSpecialChars
 } from '@codemirror/view';
-import {defaultKeymap, history, historyKeymap, indentWithTab, toggleComment} from '@codemirror/commands';
+import {defaultKeymap, history, historyKeymap, indentWithTab, redo, toggleComment, undo} from '@codemirror/commands';
 import {bracketMatching, syntaxHighlighting, HighlightStyle, indentUnit, indentOnInput, indentService} from '@codemirror/language';
 import {setDiagnostics} from '@codemirror/lint';
-import {highlightSelectionMatches, searchKeymap, gotoLine} from '@codemirror/search';
+import {highlightSelectionMatches, searchKeymap, gotoLine, openSearchPanel} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
 import {dae} from './dae';
 import {daeCompletion} from './daeComplete';
@@ -25,6 +27,8 @@ import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/
 import {toDiagnostics} from './diagnostics';
 import type {GroupEntry} from '../../dae/groups';
 import {readOnlyAttempts} from './readOnlyAttempt';
+import {Button} from '../Button';
+import {MenuButton} from '../Select';
 
 // CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
@@ -166,6 +170,13 @@ const lineMarks = StateField.define<DecorationSet>({
   },
   provide: field => EditorView.decorations.from(field)
 });
+
+// The keymap's secondary commands, listed in the toolbar's menu for a pointer or a touch screen.
+const editCommands: Array<{id: string; label: Key; run: Command}> = [
+  {id: 'undo', label: 'cm.undo', run: undo},
+  {id: 'redo', label: 'cm.redo', run: redo},
+  {id: 'comment', label: 'cm.toggleComment', run: toggleComment}
+];
 
 // A stable default, so an editor without marks does not reconfigure CodeMirror every render.
 const noMarks: EditorMark[] = [];
@@ -331,5 +342,35 @@ export function CodeEditor({
     instance.dispatch({selection: {anchor: line.from}, effects: [setFocusLine.of(focusLine), EditorView.scrollIntoView(line.from, {y: 'center'})]});
     instance.focus();
   }, [focusLine]);
-  return <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />;
+  // The toolbar runs the keymap's own commands. Find and Go to line only move and select, so they stay in a read-only
+  // source; the editing menu is disabled there, and a preview without onChange, which never becomes editable, has none.
+  const run = (command: Command) => {
+    if (view.current) command(view.current);
+  };
+  return (
+    <>
+      <div className="rp-toolbar">
+        <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
+        <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
+        {onChange && (
+          <MenuButton
+            label={t('cm.commands')}
+            isDisabled={readOnly}
+            content={
+              <Menu aria-label={t('cm.commands')} onAction={key => run(editCommands.find(command => command.id === key)!.run)}>
+                {editCommands.map(command => (
+                  <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
+                    {t(command.label)}
+                  </MenuItem>
+                ))}
+              </Menu>
+            }
+          >
+            {t('cm.commands')}
+          </MenuButton>
+        )}
+      </div>
+      <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />
+    </>
+  );
 }
