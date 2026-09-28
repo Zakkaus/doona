@@ -229,6 +229,36 @@ test('a backend without a download route shows no route control', async ({page})
   await expect(row(page, 'settings.geodataRoute')).toHaveCount(0);
 });
 
+test('checksum verification is on by default, and turning it off saves and survives a reload', async ({page}) => {
+  const {bodies} = await traffic(page);
+  await page.goto('/#/settings');
+  const verify = row(page, 'settings.geodataVerifyChecksum').getByRole('switch', {name: t('settings.geodataVerifyChecksum')});
+  await expect(verify).toBeChecked();
+  await expect(row(page, 'settings.geodataVerifyChecksum')).toContainText(t('settings.geodataVerifyChecksumHelp'));
+  await verify.click({force: true});
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataVerifyChecksumSaved')})).toBeVisible();
+  expect(bodies).toEqual([{geodata: {verify_checksum: false}}]);
+  await expect(verify).not.toBeChecked();
+  await page.reload();
+  await expect(verify).not.toBeChecked();
+  await verify.click({force: true});
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toEqual({geodata: {verify_checksum: true}});
+  await expect(verify).toBeChecked();
+});
+
+test('a backend without the checksum setting shows no verify switch', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET runtime/settings'] = async () => {
+    const settings = await api.runtimeSettings();
+    const {verify_checksum: _, ...geodata} = settings.geodata!;
+    return {...settings, geodata};
+  };
+  await page.goto('/#/settings');
+  await expect(row(page, 'settings.geodataAutoUpdate')).toBeVisible();
+  await expect(row(page, 'settings.geodataVerifyChecksum')).toHaveCount(0);
+});
+
 test('automatic updates save as they change, and the interval shows only while they are on', async ({page}) => {
   const {bodies} = await traffic(page);
   await page.goto('/#/settings');

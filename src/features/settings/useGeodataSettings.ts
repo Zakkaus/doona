@@ -71,7 +71,19 @@ export function useGeodataSettings() {
         if (result === undefined) return false;
         geodata.refetch();
         if (patch.geosite && canUpdate) void update();
-        else toast('positive', t(patch.geosite ? 'settings.geodataSaved' : patch.download ? 'settings.geodataRouteSaved' : 'settings.geodataAutoSaved'));
+        else
+          toast(
+            'positive',
+            t(
+              patch.geosite
+                ? 'settings.geodataSaved'
+                : patch.download
+                  ? 'settings.geodataRouteSaved'
+                  : patch.verify_checksum !== undefined
+                    ? 'settings.geodataVerifyChecksumSaved'
+                    : 'settings.geodataAutoSaved'
+            )
+          );
         return true;
       },
       (error: unknown) => {
@@ -94,6 +106,7 @@ export function useGeodataSettings() {
   const download = stored?.download && (pending?.download ?? stored.download);
   // Downloads follow the routing rules unless a route is stored.
   const route = routeChoice ?? download?.route ?? 'routing';
+  const verify = stored?.verify_checksum === undefined ? undefined : (pending?.verify_checksum ?? stored.verify_checksum);
   const note = (id: GeodataPresetId) =>
     presetNote(
       geodataPresets.find(item => item.id === id)!,
@@ -103,7 +116,7 @@ export function useGeodataSettings() {
     );
   const savePreset = (chosen: GeodataPreset) => void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
   const saveLabel = t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources');
-  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t);
+  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true);
 
   return {
     available,
@@ -212,6 +225,11 @@ export function useGeodataSettings() {
         if (id === (download?.route === 'group' ? download.group_id : null)) return;
         void save({download: {route: 'group', group_id: id}}).then(saved => saved && setRouteChoice(null));
       }
+    },
+    // A backend that predates the setting reports none and always verifies.
+    checksum: verify !== undefined && {
+      enabled: verify,
+      toggle: (enabled: boolean) => void save({verify_checksum: enabled})
     },
     auto: {
       enabled: !!auto.enabled,
