@@ -36,6 +36,9 @@
   display: inline-flex;
   gap: 4px;
   max-width: 100%;
+  /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
+     panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
+  min-height: max(34px, var(--rp-control));
 }
 .rp-tab {
   position: relative;
