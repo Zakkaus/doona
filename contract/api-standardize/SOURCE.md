@@ -1,5 +1,7 @@
 Pin: aa7103a
 
+SHA-256: 5e5d0d89e89828b31af51042d182cefff88d8ecaf201864b1d9b0f52aa006728
+
 openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch runtime-degradations, commit aa7103a (PR #33, stacked on #32 and #30, none merged yet).
 
 The merged changes include PR #4 client fixes, #5 config, #6 observability and management, #7 connection close, and #8 GroupOverrideCleared with the native outbound mode dropped.

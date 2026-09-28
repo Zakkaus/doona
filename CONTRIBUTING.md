@@ -263,4 +263,4 @@ For tag `v0.1.0-beta.8`, release assets keep the upstream version without `v`. S
 
 ## Update the contract
 
-Start with `contract/api-standardize/SOURCE.md`. Update the vendored contract, run `pnpm gen:api`, then run `tools/check-gen.sh`. Do not edit generated API types directly.
+Start with `contract/api-standardize/SOURCE.md`. Update the vendored contract and the SHA-256 that SOURCE.md pins for it, run `pnpm gen:api`, then run `tools/check-gen.sh`, which checks both. Do not edit generated API types directly.
