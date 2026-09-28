@@ -47,4 +47,6 @@ export type Engine = {
   // Whether the configuration text is dae's, which doona reads and writes; a page that infers settings from the text
   // or edits it by hand checks this first.
   daeText: boolean;
+  // The hooks the engine attaches but does not check afterwards, so it reports their state as `unknown`.
+  uncheckedHooks: string[];
 };

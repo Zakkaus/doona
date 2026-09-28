@@ -12,7 +12,8 @@ const unknown: Engine = {
   snippet: settings => settings.map(({key, value}) => `${key}: ${value}`).join('\n'),
   settingName: key => key,
   redactedSections: () => [],
-  daeText: false
+  daeText: false,
+  uncheckedHooks: []
 };
 
 // The engine behind the native API, by the API name its version reports; unknown until the version has loaded.

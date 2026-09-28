@@ -69,6 +69,8 @@ const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => l
 export const honk: Engine = {
   id: 'honk',
   reason,
+  // Reading these back takes a BPF_PROG_QUERY per hook, or a switch into the daens namespace for dae0peer.
+  uncheckedHooks: ['cgroup', 'sk_lookup', 'dae0peer'],
   holdsCredentials: source => source.content !== undefined && definesListener(scanConfig(source.content).blocks),
   // honk reads its API settings from `experimental { native_api { } }`, and only at startup.
   snippet: (settings: EngineSetting[]) =>

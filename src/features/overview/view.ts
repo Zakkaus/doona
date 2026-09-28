@@ -8,6 +8,7 @@ import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels, type LimitGroup} from '../shared/limits';
 import {engineStatus} from '../shared/engineStatus';
+import {engineOf} from '../../api/engines';
 const datapathValues: Record<string, Key> = {
   ebpf: 'ov.v.ebpf',
   userspace: 'ov.v.userspace',
@@ -44,7 +45,20 @@ function valueHelp(value: string, runtimeDegraded: boolean, label: LabelFn): Hel
   if (value === 'unknown') return {title: label('ov.v.unknown'), text: label('ov.unknownHelp')};
   return undefined;
 }
-export function datapathFields(datapath: Datapath, unknown: string, label: LabelFn, locale: string, runtimeDegraded = false): KvItem[] {
+// A hook state the engine reports as `unknown` because it does not check those hooks reads as not verified, with why.
+function hookHelp(value: string, unchecked: string[], label: LabelFn, locale: string): Help | undefined {
+  if (value !== 'unknown' || !unchecked.length) return undefined;
+  const hooks = new Intl.ListFormat(locale, {type: 'conjunction'}).format(unchecked);
+  return {title: label('ov.v.notVerified'), text: label('ov.notVerifiedHelp', {hooks})};
+}
+export function datapathFields(
+  datapath: Datapath,
+  unknown: string,
+  label: LabelFn,
+  locale: string,
+  runtimeDegraded = false,
+  unchecked: string[] = []
+): KvItem[] {
   const ebpf = datapath.ebpf;
   const occupancy = ebpf?.maps?.conn_state;
   const row = (key: Key, value: string): KvItem => {
@@ -52,6 +66,7 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
     return help ? {label: label(key), value: datapathValue(value, label), help} : [label(key), datapathValue(value, label)];
   };
   const maps = ebpf?.maps?.state ?? 'unknown';
+  const hooks = ebpf && hookHelp(ebpf.hooks, unchecked, label, locale);
   return [
     row('ov.f.kind', datapath.kind),
     row('ov.f.state', datapath.state),
@@ -61,7 +76,7 @@ export function datapathFields(datapath: Datapath, unknown: string, label: Label
       ? [
           row('ov.f.backend', ebpf.backend),
           row('ov.f.programs', ebpf.programs),
-          row('ov.f.hooks', ebpf.hooks),
+          hooks ? {label: label('ov.f.hooks'), value: label('ov.v.notVerified'), help: hooks} : row('ov.f.hooks', ebpf.hooks),
           row('ov.f.routing', ebpf.routing.state),
           row('ov.f.health', ebpf.health),
           // Maps that are partial only because the occupancy is not read show just the capacity.
@@ -121,6 +136,7 @@ export function overviewView(
   t: LabelFn
 ) {
   const {capabilities, runtime, version, memory, datapath, limits = []} = data;
+  const unchecked = engineOf(version).uncheckedHooks;
   const state = runtime?.lifecycle.state;
   const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
   const reload = runtime?.last_reload;
@@ -208,7 +224,7 @@ export function overviewView(
     },
     datapath: {
       state: section(!!datapath, loading.capabilities || loading.datapath),
-      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t, locale, state === 'degraded') : [],
+      fields: datapath ? datapathFields(datapath, t('ov.unknown'), t, locale, state === 'degraded', unchecked) : [],
       showAttachments: !!datapath?.ebpf,
       attachments: (datapath?.ebpf?.attachments ?? []).map((a, i) => ({
         id: String(i),
