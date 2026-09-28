@@ -26,7 +26,9 @@ import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
 import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, dnsUpstreamNames, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
 import {ruleDistribution} from './distribution';
-import {pickTab, within} from '../../shell/route';
+import {href, pickTab, within} from '../../shell/route';
+import {offered} from '../../api/capabilities';
+import {nodeHref} from '../shared/link';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
 import type {QuickRuleSeed} from '../shared/rule';
@@ -390,7 +392,8 @@ export type EvaluationView = {
   hint: string | null;
   label: string;
   probe: {id: string; label: string; pending: boolean; disabled: boolean} | null;
-  rows: {id: string; expression: string; outcome: string; tone: 'ok' | 'warn' | 'muted' | 'neutral'; missing: string}[];
+  // `href` opens the rule in the rule list when the list holds it.
+  rows: {id: string; expression: string; outcome: string; tone: 'ok' | 'warn' | 'muted' | 'neutral'; missing: string; href?: string}[];
 };
 export function evaluationView(
   evaluation: RoutingEvaluation,
@@ -439,6 +442,32 @@ export function evaluationView(
       missing: formatList(lang, rule.missing_inputs) || '—'
     }))
   };
+}
+export type ResultLink = {id: string; label: string; href: string};
+// The Policies page for each group the selected chain passes, when the backend lists groups, and the Nodes page for
+// its node once the provider list that decides the node's owner is known.
+export function chainLinks(
+  selected: {groups: GroupSummary[]; node: Node | null} | null,
+  groupsListed: boolean,
+  providers: ReadonlyArray<{id: string}> | undefined,
+  t: Translator
+): ResultLink[] {
+  if (!selected) return [];
+  const {groups, node} = selected;
+  return [
+    ...(groupsListed
+      ? groups.map(group => ({id: 'group:' + group.id, label: t('rule.viewGroup', {name: group.name}), href: href('policies', {group: group.id})}))
+      : []),
+    ...(node && providers ? [{id: 'node:' + node.id, label: t('rule.viewNode', {name: node.name}), href: nodeHref(node, providers)}] : [])
+  ];
+}
+// A resolved name in DNS Query, filled in, and in the DNS cache, filtered to it, as far as the backend offers them.
+export function nameLinks(name: string, resources: Capabilities['resources'] | undefined, t: Translator): ResultLink[] {
+  const domain = name.replace(/\.$/, '');
+  return [
+    ...(offered(resources, 'dns_query', {whileLoading: false}) ? [{id: 'query', label: t('rule.queryDns'), href: href('dns', {tab: 'query', domain})}] : []),
+    ...(offered(resources, 'dns_cache', {whileLoading: false}) ? [{id: 'cache', label: t('dns.viewCache'), href: href('dns', {tab: 'cache', domain})}] : [])
+  ];
 }
 // What the add-rule dialog starts from for one evaluation: the traced target as the evaluation saw it, and the rule it
 // matched when the evaluation was decided.

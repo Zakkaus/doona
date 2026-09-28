@@ -27,3 +27,51 @@ test('a connection opens the trace of its target and source', async ({page}) => 
   await page.goBack();
   await expect(page).toHaveURL(/#\/connections\?tab=list&id=1$/);
 });
+
+const runTrace = async (page: import('@playwright/test').Page, query: string) => {
+  await page.goto('/#/rules?tab=trace&' + query);
+  await page.getByRole('button', {name: 'Run trace', exact: true}).click();
+};
+const evaluation = (page: import('@playwright/test').Page) =>
+  page.locator('.rp-card').filter({has: page.getByRole('heading', {name: '149.154.167.220', exact: true})});
+
+test('a trace result opens its matched rule in the rule list', async ({page}) => {
+  await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
+  await evaluation(page).getByRole('link', {name: 'Open domain(geosite: telegram) -> proxy in the rule list', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
+  await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(geosite: telegram)');
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/rules\?tab=trace&/);
+});
+
+test('a trace result opens the group and the node it selects', async ({page}) => {
+  await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
+  await evaluation(page).getByRole('link', {name: 'View group proxy', exact: true}).click();
+  await expect(page).toHaveURL(/#\/policies\?group=/);
+  await expect(page.getByRole('region', {name: 'proxy'})).toBeInViewport();
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/rules\?tab=trace&/);
+  await page.getByRole('button', {name: 'Run trace', exact: true}).click();
+  const node = evaluation(page).getByRole('link', {name: /^View node /});
+  const name = (await node.textContent())!.replace(/^View node /, '');
+  await node.click();
+  await expect(page).toHaveURL(/#\/nodes\?provider=[^&]+&q=/);
+  expect(new URL(page.url().replace('#/', '')).searchParams.get('q')).toBe(name);
+  await expect(page.getByLabel('Search nodes')).toHaveValue(name);
+});
+
+test('a resolved name opens in DNS Query and the DNS cache', async ({page}) => {
+  await runTrace(page, 'domain=api.telegram.org&dst_port=443');
+  const dns = page
+    .locator('.rp-card')
+    .filter({has: page.getByRole('heading', {name: /api\.telegram\.org/})})
+    .filter({hasText: 'Query DNS'})
+    .first();
+  await dns.getByRole('link', {name: 'Query DNS', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=query&domain=api\.telegram\.org$/);
+  await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('api.telegram.org');
+  await page.goBack();
+  await page.getByRole('button', {name: 'Run trace', exact: true}).click();
+  await dns.getByRole('link', {name: 'View cache', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=cache&domain=api\.telegram\.org$/);
+});

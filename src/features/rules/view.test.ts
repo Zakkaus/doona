@@ -5,6 +5,8 @@ import {normalizeCapabilities} from '../../api/capabilities';
 import {translate, type Translator} from '../../i18n';
 import {
   addRuleReason,
+  chainLinks,
+  nameLinks,
   addRuleTip,
   traceReason,
   dictionaryView,
@@ -367,4 +369,24 @@ it('seeds the add-rule dialog from the evaluated target and only a decided match
   // The traced address stands in when the evaluation resolved none; an undecided match is not vouched for.
   const undecided = traceSeed({...input, dst_ip: '2001:db8::5'}, {...evaluation, dst_ip: null, decision: 'indeterminate', outbound: null});
   expect(undecided).toMatchObject({dip: '2001:db8::5', outbound: null, matched: null});
+});
+
+it('links a trace result to its groups, its node and its DNS name', async () => {
+  const api = createMockApi();
+  const {nodes} = await api.nodes({limit: 1000});
+  const [group] = await api.groups();
+  const node = {...nodes.find(node => node.provider_id)!};
+  const selected = {groups: [group], node};
+  expect(chainLinks(selected, true, [], t)).toEqual([
+    {id: 'group:' + group.id, label: t('rule.viewGroup', {name: group.name}), href: '#/policies?group=' + encodeURIComponent(group.id)},
+    {id: 'node:' + node.id, label: t('rule.viewNode', {name: node.name}), href: `#/nodes?${new URLSearchParams({provider: node.provider_id!, q: node.name})}`}
+  ]);
+  // Without a group list the Policies page cannot focus one.
+  expect(chainLinks(selected, false, [], t).map(link => link.id)).toEqual(['node:' + node.id]);
+  expect(chainLinks(null, true, [], t)).toEqual([]);
+  // Until the provider list arrives, the node's owner is unknown and its link waits.
+  expect(chainLinks(selected, true, undefined, t).map(link => link.id)).toEqual(selected.groups.map(group => 'group:' + group.id));
+  const {resources} = await api.capabilities();
+  expect(nameLinks('example.com.', resources, t).map(link => link.href)).toEqual(['#/dns?tab=query&domain=example.com', '#/dns?tab=cache&domain=example.com']);
+  expect(nameLinks('example.com', {...resources, dns_cache: {...resources.dns_cache, available: false}}, t).map(link => link.id)).toEqual(['query']);
 });

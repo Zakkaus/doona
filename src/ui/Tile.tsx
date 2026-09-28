@@ -16,13 +16,16 @@ export function CardLink({href, label, tile, children}: {href: string; label: st
     </RLink>
   );
 }
-// `href` is the rule's place in the rule list, built by the feature; without it the expression stands alone.
-export function RuleRef({expression, href}: {expression: string | null; href?: string}) {
+// `href` is the rule's place in the rule list, built by the feature; without it the expression stands alone. `tooltip`
+// replaces the expression in the tooltip, and `className` styles the expression.
+export function RuleRef({expression, href, tooltip, className}: {expression: string | null; href?: string; tooltip?: string; className?: string}) {
   const t = useT();
   if (!expression) return <>—</>;
   return (
     <>
-      <TextTooltip text={expression}>{expression}</TextTooltip>
+      <TextTooltip className={className} text={tooltip ?? expression}>
+        {expression}
+      </TextTooltip>
       {href && (
         <RLink href={href} className="rp-btn quiet icon rp-rule-link" aria-label={t('ui.openRule', {rule: expression})}>
           <ListBulleted />

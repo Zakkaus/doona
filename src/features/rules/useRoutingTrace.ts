@@ -6,18 +6,18 @@ import type {RoutingTraceRequest} from '../../api/model';
 import {useAction} from '../../store/action';
 import {useCapabilities} from '../../store/runtime';
 import {routingTrace, type RoutingTraceRun} from '../../store/flows';
-import {queryTypes, useGroups, useNodeProbe, useNodes, useRules} from '../../store';
+import {queryTypes, useGroups, useNodeProbe, useNodes, useProviders, useRules} from '../../store';
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
 import {toast, toastFailure, useLinked} from '../../ui/ui';
-import {dnsView, evaluationView, queryView, traceReason, traceSeed, traceStatusView} from './view';
+import {chainLinks, dnsView, evaluationView, nameLinks, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
-import {parseTraceLink} from '../shared/link';
+import {parseTraceLink, ruleHref} from '../shared/link';
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
@@ -61,6 +61,10 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
   const [accepted, setResult] = useState<{run: RoutingTraceRun; input: RoutingTraceRequest['input']} | null>(null);
+  // A result's node opens under the owner the Nodes page files it under, which the provider list decides.
+  const providersListed = offered(resources, 'providers', {whileLoading: false});
+  const providers = useProviders(!!accepted && providersListed);
+  const groupsListed = offered(resources, 'groups', {whileLoading: false});
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
   const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed'), {detail: errorText(error, t)}));
@@ -141,23 +145,26 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
           const outbound = evaluation.outbound ?? likely;
           const selected =
             outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
+          const view = evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
           return {
-            ...evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang),
+            ...view,
+            rows: view.rows.map(row => ({...row, href: ruleHref(row.id, rulesById.has(row.id))})),
+            links: chainLinks(selected, groupsListed, providersListed ? providers.data?.providers : [], t),
             seed: traceSeed(accepted.input, evaluation)
           };
         }) ?? [],
-    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, probe.canProbe, probe.busy, t, lang]
+    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providers.data, probe.canProbe, probe.busy, t, lang]
   );
   const result = useMemo(
     () =>
       accepted
         ? {
             status: traceStatusView(accepted.run.traces[0], accepted.run.query, t, lang),
-            query: accepted.run.query && queryView(accepted.run.query, t, lang),
-            dns: accepted.run.traces.flatMap(trace => trace.dns).map(dns => dnsView(dns, t, lang))
+            query: accepted.run.query && {...queryView(accepted.run.query, t, lang), links: nameLinks(accepted.run.query.domain, resources, t)},
+            dns: accepted.run.traces.flatMap(trace => trace.dns).map(dns => ({...dnsView(dns, t, lang), links: nameLinks(dns.name, resources, t)}))
           }
         : null,
-    [accepted, t, lang]
+    [accepted, resources, t, lang]
   );
   const probeNode = async (id: string) => {
     const node = nodesById.get(id);
