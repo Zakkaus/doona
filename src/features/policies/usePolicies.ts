@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useCapabilities, useGroups, useNodes} from '../../store';
+import {poll, useCapabilities, useGroups, useNodes} from '../../store';
 import {preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
@@ -13,7 +13,9 @@ import {useNearViewport} from '../../ui/ui';
 
 export function usePolicies({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
-  const groups = useGroups(offered(resources, 'groups', {whileLoading: true}));
+  // The list carries each group's selection, so a change made elsewhere shows within one live poll; the poll stops
+  // while the tab is hidden and when the page is left.
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: true}), poll.live);
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const focus = new URLSearchParams(query).get('group');
   const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
@@ -38,6 +40,7 @@ export function usePolicies({go, query}: PageProps) {
           domId: 'group-' + group.id,
           name: group.name,
           members: group.member_count,
+          selection: group.selection,
           declaration: {
             owner,
             complete: owner && owner !== 'ambiguous' ? isComplete(owner.origin) : undefined,
