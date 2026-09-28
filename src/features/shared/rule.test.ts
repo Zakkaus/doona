@@ -6,17 +6,17 @@ import {pinnedPosition, ruleDialogReason, rulePositions, ruleTargets, ruleWritab
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers a domain exactly or as a suffix, and otherwise the destination IP of either family', () => {
-  const text = (c: {domain?: string | null; dst?: string}) => ruleTargets(c).map(target => ruleLine(target.condition, 'proxy'));
-  expect(text({domain: 'api.telegram.org', dst: '149.154.167.220:443'})).toEqual([
+  const text = (c: {domain?: string | null; dip?: string | null}) =>
+    ruleTargets({domain: c.domain ?? null, dip: c.dip ?? null}).map(target => ruleLine(target.condition, 'proxy'));
+  expect(text({domain: 'api.telegram.org', dip: '149.154.167.220'})).toEqual([
     'domain(full: api.telegram.org) -> proxy',
     'domain(suffix: api.telegram.org) -> proxy'
   ]);
-  expect(ruleTargets({domain: 'api.telegram.org'}).map(target => target.kind)).toEqual(['domain', 'domainSuffix']);
-  expect(text({domain: null, dst: '1.1.1.1:53'})).toEqual(['dip(1.1.1.1) -> proxy']);
-  expect(text({dst: '[2001:db8::5]:443'})).toEqual(["dip('2001:db8::5') -> proxy"]);
-  expect(text({dst: '<redacted>'})).toEqual([]);
+  expect(ruleTargets({domain: 'api.telegram.org', dip: null}).map(target => target.kind)).toEqual(['domain', 'domainSuffix']);
+  expect(text({domain: null, dip: '1.1.1.1'})).toEqual(['dip(1.1.1.1) -> proxy']);
+  expect(text({dip: '2001:db8::5'})).toEqual(["dip('2001:db8::5') -> proxy"]);
   // A domain dae cannot hold falls back to the destination IP rather than offering nothing.
-  expect(text({domain: "it's.example", dst: '1.1.1.1:53'})).toEqual(['dip(1.1.1.1) -> proxy']);
+  expect(text({domain: "it's.example", dip: '1.1.1.1'})).toEqual(['dip(1.1.1.1) -> proxy']);
   expect(text({})).toEqual([]);
 });
 

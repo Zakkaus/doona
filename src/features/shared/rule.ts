@@ -1,25 +1,23 @@
-import type {ConfigSource, Connection, RoutingRule} from '../../api/model';
-import {sourceIp} from '../../api/selectors';
+import type {ConfigSource, RoutingRule} from '../../api/model';
 import {ruleCondition, type ConditionKind} from '../../dae/groups';
 import type {Translator} from '../../i18n';
 import {ruleAnchor} from '../../dae/ruleText';
 
 export type RuleTarget = {kind: ConditionKind; condition: string};
 // A domain is matched exactly or with its subdomains; without one that dae can hold, the rule matches the destination IP.
-export function ruleTargets(c: Pick<Connection, 'domain' | 'dst'>): RuleTarget[] {
+export function ruleTargets(seed: {domain: string | null; dip: string | null}): RuleTarget[] {
   const targets = (seeds: Array<[ConditionKind, string]>) =>
     seeds.flatMap(([kind, value]) => {
       const condition = ruleCondition(kind, value);
       return condition ? [{kind, condition}] : [];
     });
-  const domain = c.domain
+  const domain = seed.domain
     ? targets([
-        ['domain', c.domain],
-        ['domainSuffix', c.domain]
+        ['domain', seed.domain],
+        ['domainSuffix', seed.domain]
       ])
     : [];
-  const ip = sourceIp(c.dst);
-  return domain.length ? domain : ip ? targets([['dip', ip]]) : [];
+  return domain.length ? domain : seed.dip ? targets([['dip', seed.dip]]) : [];
 }
 
 // Before the rule the connection matched, so the new rule takes over its traffic, and at the earliest place doona
