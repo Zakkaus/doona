@@ -30,6 +30,9 @@
   /* Apple's increased-contrast system blue carries dark text above 4.5:1. */
   --rp-accent-fill: #409cff;
   --rp-on-accent-fill: #1c1c1e;
+  /* Apple's increased-contrast system red, with dark text as on the blue. */
+  --rp-negative-fill: #ff6961;
+  --rp-on-negative-fill: #1c1c1e;
   --rp-line: rgba(84, 84, 88, 0.6);
   --rp-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
   --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
@@ -85,6 +88,9 @@
   /* Apple's increased-contrast system blue: white on the plain one is 4.0:1. */
   --rp-accent-fill: #0040dd;
   --rp-on-accent-fill: #ffffff;
+  /* Apple's increased-contrast system red, with white text as on the blue. */
+  --rp-negative-fill: #d70015;
+  --rp-on-negative-fill: #ffffff;
   --rp-line: rgba(60, 60, 67, 0.29);
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
   --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.18);

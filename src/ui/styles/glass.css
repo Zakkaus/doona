@@ -209,6 +209,21 @@
 :root[data-family='glass'] .rp-btn.quiet[data-hovered] {
   background: var(--rp-fill);
 }
+:root[data-family='glass'] .rp-btn.quiet[data-pressed] {
+  background: var(--rp-hl-high);
+}
+/* Elsewhere a negative button is outlined. Glass draws no border and red text is faint over its gradient, so the
+   button is filled with the increased-contrast red, as the accent one is with the increased-contrast blue. */
+:root[data-family='glass'] .rp-btn.negative {
+  background: var(--rp-negative-fill);
+  color: var(--rp-on-negative-fill);
+}
+:root[data-family='glass'] .rp-btn.negative[data-hovered] {
+  background: color-mix(in srgb, var(--rp-negative-fill) 86%, var(--rp-ink-mix));
+}
+:root[data-family='glass'] .rp-btn.negative[data-pressed] {
+  background: color-mix(in srgb, var(--rp-negative-fill) 76%, var(--rp-ink-mix));
+}
 :root[data-family='glass'] .rp-btn.accent {
   background: var(--rp-accent-fill);
   color: var(--rp-on-accent-fill);
@@ -226,7 +241,7 @@
 :root[data-family='glass'] .rp-btn.quiet[data-disabled] {
   background: transparent;
 }
-:root[data-family='glass'] .rp-btn.accent[data-disabled] {
+:root[data-family='glass'] :is(.rp-btn.accent, .rp-btn.negative)[data-disabled] {
   background: var(--rp-hl-med);
   color: var(--rp-muted);
 }
