@@ -9,6 +9,7 @@ import optimizeLocales from '@react-aria/optimize-locales-plugin';
 import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
 import {rtlScripts} from './src/i18n/direction';
 import {DEFAULT_LANG, languages} from './src/i18n/languages';
+import {languageFiles} from './src/i18n/offline';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -21,8 +22,6 @@ const cssMinify = (() => {
   }
 })();
 
-// The stylesheets each language's loader in src/i18n imports with its catalogue.
-const languageStyles: Record<string, string> = Object.fromEntries(languages.flatMap(({id, fonts}) => (fonts ? [[`src/fonts-${fonts}.css`, id]] : [])));
 // The mock backend, loaded only by the demo and development profiles.
 const mockEntry = /\/src\/api\/mock\/index\.ts$/;
 
@@ -71,21 +70,21 @@ export default defineConfig({
           .sort();
         // A reader needs one language, so no catalogue or its stylesheet is installed up front. The worker caches the
         // language a page it controls reports, and any it loads later. Every file still counts towards the build hash.
-        const languageFiles: Record<string, string[]> = {};
-        for (const name of files) {
-          const entry = bundle[name];
-          const lang =
-            entry.type === 'chunk'
-              ? entry.facadeModuleId && /\/src\/i18n\/locales\//.test(entry.facadeModuleId) && entry.name
-              : entry.originalFileNames.map(file => languageStyles[file]).find(Boolean);
-          if (lang) (languageFiles[lang] ??= []).push(name);
-        }
+        const perLanguage = languageFiles(
+          files.map(name => {
+            const entry = bundle[name];
+            return entry.type === 'chunk'
+              ? {name, catalogue: entry.facadeModuleId && /\/src\/i18n\/locales\//.test(entry.facadeModuleId) ? entry.name : null, sources: []}
+              : {name, catalogue: null, sources: entry.originalFileNames};
+          })
+        );
+        const languageOnly = new Set(Object.values(perLanguage).flat());
         // The mock backend serves the demo and development only; the worker caches it once a page reports running on it.
         const mock = files.filter(name => {
           const entry = bundle[name];
           return entry.type === 'chunk' && entry.facadeModuleId !== null && mockEntry.test(entry.facadeModuleId);
         });
-        const precache = files.filter(name => !Object.values(languageFiles).flat().includes(name) && !mock.includes(name));
+        const precache = files.filter(name => !languageOnly.has(name) && !mock.includes(name));
         const template = readFileSync(new URL('public/sw.js', import.meta.url), 'utf8');
         const hash = createHash('sha256').update(template);
         for (const name of files) {
@@ -98,7 +97,7 @@ export default defineConfig({
           source: template
             .replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16))
             .replace("'__PRECACHE__'", JSON.stringify(precache))
-            .replace("'__LANGUAGES__'", JSON.stringify(languageFiles))
+            .replace("'__LANGUAGES__'", JSON.stringify(perLanguage))
             .replace("'__MOCK__'", JSON.stringify(mock))
         });
       }
