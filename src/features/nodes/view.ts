@@ -1,6 +1,6 @@
 import type {Capabilities, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
-import {compareLatency, healthMillis, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
+import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import {urlHost, type SubscriptionEntry} from './subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
@@ -107,6 +107,12 @@ export function ownedNodes(nodes: Node[], ownerId: string | null | undefined, ki
       ownerId === undefined ||
       (ownerId === null ? node.provider_id == null && (pseudoOwner(node) === 'builtin') === (kind === 'builtin') : node.provider_id === ownerId)
   );
+}
+
+// The name of the source row a node is listed under, for results that span every source.
+export function nodeSource(list: ProviderRow[], providers: Provider[]): (node: Node) => string {
+  const names = new Map(list.map(item => [item.id, item.displayName ?? item.name]));
+  return node => names.get(nodeOwner(node, providers)) ?? '—';
 }
 
 // `contains` is the locale-aware matcher the policy grid also uses, so both pages find the same names.

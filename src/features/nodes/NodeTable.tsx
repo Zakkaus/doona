@@ -19,7 +19,7 @@ function ProbeButton({row}: {row: NodeTableView['rows'][number]}) {
 }
 export function NodeTable({model: m}: {model: NodeTableView}) {
   const t = useT();
-  const {canManage, writable, sourceBusy, busy} = m;
+  const {canManage, writable, sourceBusy, busy, across} = m;
   const columns = useMemo<TableColumn<NodeTableView['rows'][number]>[]>(
     () => [
       {
@@ -35,6 +35,9 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           </span>
         )
       },
+      ...(across
+        ? [{id: 'source', label: t('nodes.provider'), minWidth: 140, render: (row: NodeTableView['rows'][number]) => <TextTooltip>{row.source}</TextTooltip>}]
+        : []),
       {id: 'protocol', label: t('nodes.protocol'), minWidth: 144, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
       {
         id: 'latency',
@@ -69,7 +72,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       }
     ],
-    [t, canManage, writable, sourceBusy, busy]
+    [t, across, canManage, writable, sourceBusy, busy]
   );
   return (
     <>
@@ -88,7 +91,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )}
       </div>
       <ProbeBusy.Provider value={m.probeBusy}>
-        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={t('nodes.empty')} sort={m.sort} onSort={m.setSort} cols={columns} />
+        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={m.empty} sort={m.sort} onSort={m.setSort} cols={columns} />
       </ProbeBusy.Provider>
     </>
   );

@@ -10,7 +10,7 @@ import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
-import {intervalItems, isNodeLink, nodeFormReason, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
+import {intervalItems, isNodeLink, nodeFormReason, nodeSource, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
@@ -72,6 +72,7 @@ export function useNodesPage({go, query}: PageProps) {
     const owner = list.find(item => item.id === selectedId);
     return ownedNodes(nodes.data ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
   }, [nodes.data, list, selectedId]);
+  const sourceOf = useMemo(() => nodeSource(list, providers.data?.providers ?? []), [list, providers.data]);
   const {apply} = source;
   // A written group and an added subscription each offer the next place to look.
   const viewGroup = useCallback((group: string) => ({label: t('policy.viewGroup'), onAction: () => openGroup(go, group), closeOnAction: true}), [go, t]);
@@ -207,11 +208,14 @@ export function useNodesPage({go, query}: PageProps) {
   });
   const nodeTable = useNodeTable({
     nodes: owned,
+    all: nodes.data ?? [],
+    sourceOf,
     providers: providers.data?.providers ?? [],
     names,
     loading: nodes.loading && !nodes.data,
     label: provider ? t('nodes.of', {name: provider.displayName ?? provider.name}) : t('nav.nodes'),
     scope: provider && list.length > 1 ? t('nodes.scope', {name: provider.displayName ?? provider.name}) : null,
+    multiple: list.length > 1,
     query: params.get('q'),
     source,
     canManage: !!resources?.nodes.can_manage,
