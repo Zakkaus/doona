@@ -134,7 +134,8 @@ function listedRows<R extends Listed>(
   fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string},
   t: Translator,
   lang: Lang,
-  end = false
+  // The end position of a list whose fallback is not written, when it has one.
+  end: {id: 'end'; label: string; desc?: string} | null = null
 ): Pick<DictionaryView, 'rows' | 'positions'> {
   const locale = LOCALE[lang];
   const byId = new Map(config.map(source => [source.id, source]));
@@ -166,7 +167,7 @@ function listedRows<R extends Listed>(
   return {
     rows,
     positions: [
-      ...((fallback?.source ? anchored(fallback) : end) ? [{id: 'end', label: t('rule.positionEnd')}] : []),
+      ...(fallback?.source ? (anchored(fallback) ? [{id: 'end', label: t('rule.positionEnd')}] : []) : end ? [end] : []),
       ...rules
         .filter((_, i) => rows[i].removable)
         .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
@@ -233,6 +234,7 @@ export function dnsDictionaryView(
   lang: Lang
 ): DictionaryView {
   const defined = config.flatMap(source => (source.content === undefined ? [] : dnsUpstreamNames(source.content)));
+  const end = dnsListEnd(config, list);
   const known = new Set(defined.map(name => name.toLowerCase()));
   const named = rules.flatMap(rule => (rule.upstream && !known.has(rule.upstream.toLowerCase()) ? [rule.upstream] : []));
   return {
@@ -243,7 +245,10 @@ export function dnsDictionaryView(
       rule => ({expression: dnsCondition(rule), outbound: unquote(dnsRuleTarget(rule)), must: false, hits: '—'}),
       t,
       lang,
-      dnsListEnd(config, list) !== null
+      end &&
+        (end.anchor.open
+          ? {id: 'end', label: t('rule.dns.positionNew', {name: list}), desc: t('rule.dns.positionNewHelp', {name: list})}
+          : {id: 'end', label: t('rule.positionEnd')})
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
     outbounds: dnsActions(list, [...new Set([...defined, ...named])], t)
