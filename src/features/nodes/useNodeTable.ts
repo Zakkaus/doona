@@ -15,13 +15,17 @@ import {policyLabel} from '../shared/policyText';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {
+  // The selected source's nodes; a search looks through `all` instead when there is more than one source.
   nodes: Node[];
+  all: Node[];
+  sourceOf: (node: Node) => string;
   providers: Provider[];
   names: OutboundNames;
   loading: boolean;
   label: string;
   // Which source the table shows and how to change it, where there is more than one.
   scope: string | null;
+  multiple: boolean;
   query: string | null;
   source: MainSourceEdit;
   canManage: boolean;
@@ -33,7 +37,7 @@ type NodeTableInput = {
   onRemove: (node: Node) => void;
 };
 export function useNodeTable(input: NodeTableInput) {
-  const {nodes, names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage} = input;
+  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf} = input;
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -43,6 +47,8 @@ export function useNodeTable(input: NodeTableInput) {
   const [group, setGroup] = useState('');
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
+  const across = input.multiple && search.trim() !== '';
+  const nodes = across ? input.all : input.nodes;
   const groups = useMemo(
     () =>
       [...new Set(nodes.flatMap(node => node.group_ids))]
@@ -78,6 +84,7 @@ export function useNodeTable(input: NodeTableInput) {
   const build = useCallback(
     (node: Node): NodeTableView['rows'][number] => ({
       ...nodeRowView(node, names, lang, t),
+      source: sourceOf(node),
       canProbe: canProbe && !isBuiltinOutbound(node.protocol),
       probe: () =>
         void runProbe(node.id).then(
@@ -98,7 +105,7 @@ export function useNodeTable(input: NodeTableInput) {
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
       remove: () => onRemove(node)
     }),
-    [names, lang, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
+    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -117,8 +124,10 @@ export function useNodeTable(input: NodeTableInput) {
     protocols: [{id: '', label: t('nodes.anyProtocol')}, ...protocols],
     shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
-    label: input.label,
-    scope: input.scope,
+    label: across ? t('nav.nodes') : input.label,
+    scope: across ? t('nodes.searchAll') : input.scope,
+    across,
+    empty: t(across ? 'nodes.noMatch' : 'nodes.empty'),
     canManage,
     busy: input.busy,
     writable: source.writable,
@@ -131,6 +140,7 @@ export type NodeTableView = {
   rows: Array<{
     id: string;
     name: string;
+    source: string;
     protocol: string;
     latency: string;
     latencyClass: string;
@@ -161,6 +171,9 @@ export type NodeTableView = {
   loading: boolean;
   label: string;
   scope: string | null;
+  // A search spanning every source, whose rows name their source.
+  across: boolean;
+  empty: string;
   canManage: boolean;
   busy: boolean;
   writable: boolean;

@@ -394,3 +394,22 @@ test('adding a node to a group offers the group on the policies page', async ({p
   await expect(page).toHaveURL(/#\/policies\?group=gaming$/);
   await expect(page.locator('#group-gaming')).toBeInViewport();
 });
+
+test('a node search looks through every source and names the source of each result', async ({page}) => {
+  await page.goto('/#/nodes?provider=sub-c');
+  const table = page.locator('.rp-table').nth(1);
+  const list = rows(table);
+  const source = table.getByRole('columnheader', {name: /^Source/});
+  await expect(source).toHaveCount(0);
+  await page.getByLabel('Search nodes').fill('hk-0');
+  await expect(list).toHaveCount(2);
+  await expect(list.first()).toContainText('hk-01');
+  await expect(list.first()).toContainText('config.dae');
+  await expect(source).toBeVisible();
+  await expect(page.getByText('Search covers all node sources.', {exact: true})).toBeVisible();
+  await page.getByLabel('Search nodes').fill('no-such-node');
+  await expect(table.getByText('No matching nodes', {exact: true})).toBeVisible();
+  await page.getByLabel('Search nodes').fill('');
+  await expect(source).toHaveCount(0);
+  await expect(list.first()).not.toContainText('config.dae');
+});

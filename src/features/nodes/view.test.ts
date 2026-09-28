@@ -4,6 +4,7 @@ import {readSubscriptions} from './subscriptions';
 import {
   nodeFormReason,
   nodeRows,
+  nodeSource,
   ownedNodes,
   providerRows,
   nodeRowView,
@@ -93,6 +94,15 @@ describe('providerRows', () => {
 });
 
 describe('node rows', () => {
+  it('names the source row each node is listed under', () => {
+    const remote = provider('remote');
+    const nodes = [node('local'), node('remote', {provider_id: 'remote'}), node('direct', {protocol: 'direct'})];
+    const {list} = providerRows([remote], nodes, [], t);
+    const sourceOf = nodeSource(list, [remote]);
+    expect(nodes.map(sourceOf)).toEqual([t('nodes.kind.unattributed'), 'opaque-remote', t('nodes.kind.builtin')]);
+    expect(sourceOf(node('gone', {provider_id: 'gone'}))).toBe('—');
+  });
+
   it('distinguishes no filter, unknown provenance, and backend provider ownership', () => {
     const nodes = [node('local'), node('owned', {provider_id: 'backend-inline'}), node('unknown', {provider_id: undefined})];
     expect(ownedNodes(nodes, undefined).map(item => item.id)).toEqual(['local', 'owned', 'unknown']);
