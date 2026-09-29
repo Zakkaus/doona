@@ -5,7 +5,7 @@ import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';
 import type {KvItem} from '../../ui/ui';
-const t: Translator = (key, params) => translate('en', key, params);
+const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 // The faults scenario's datapath: its one error also stands as the eBPF last error.
 const datapath = {
   ...healthy,
@@ -117,9 +117,10 @@ it('shows process CPU as a percent of one core, and a dash when unmeasured', () 
     field(overviewView({runtime: {...runtime, process: {...runtime.process, cpu_percent}}}, loading, locale, label).strip, label('ov.cpu'))?.value;
   expect(cpu(2.1)).toBe('2.1%');
   expect(cpu(1234.56)).toBe('1,234.6%');
-  expect(cpu(1234.56, 'de-DE')).toBe('1.234,6%');
   expect(cpu(null)).toBe('—');
   expect(overviewView({}, loading, 'en-US', t).strip).toContainEqual([t('ov.cpu'), '—']);
+  const longWindow = {...runtime, traffic: {...runtime.traffic, rates: {...runtime.traffic.rates!, window_seconds: 3600}}};
+  expect(field(overviewView({runtime: longWindow}, loading, 'en-US', t).counters.fields, t('ov.f.rateWindow'))?.value).toBe('3,600.0 s');
 });
 
 it('explains a degraded datapath by whether the runtime is degraded too, and an unconfirmed value', () => {

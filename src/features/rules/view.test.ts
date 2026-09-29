@@ -23,7 +23,7 @@ import {
   distributionEmpty
 } from './view';
 
-const t: Translator = (key, params) => translate('en', key, params);
+const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 it('labels the dictionary caption with the generation id it received, untranslated in every locale', async () => {
   const api = createMockApi();
