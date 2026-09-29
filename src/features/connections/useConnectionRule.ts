@@ -32,7 +32,7 @@ export function useConnectionRule(connection: Connection | undefined, go: PagePr
   return {
     canAdd: !!seed && quick.canAdd(seed),
     // Why the list toolbar's Add rule, which acts on the selected connection, cannot open.
-    addTip: !seed ? t('conn.ruleSelect') : !ruleTargets(seed).length ? t('conn.ruleNoTarget') : undefined,
+    addTip: !seed ? t('ui.selectRow') : !ruleTargets(seed).length ? t('conn.ruleNoTarget') : undefined,
     // Showing the matched rule only reads the rule list.
     canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
     canEdit:

@@ -177,7 +177,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
             </Button>
           )}
           <span className="rp-grow" />
-          <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} tip={vm.seed ? undefined : t('dns.selectEntry')} onPress={() => vm.seed && rule.open(vm.seed)}>
+          <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} tip={vm.seed ? undefined : t('ui.selectRow')} onPress={() => vm.seed && rule.open(vm.seed)}>
             {t('rule.add')}
           </Button>
           <ConfirmButton
@@ -283,7 +283,13 @@ function DnsLog({
             // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
             {id: 'refresh', label: t('refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
             {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
-            {id: 'rule', label: t('rule.add'), isDisabled: !seed || !rule.canAdd(seed), onAction: () => seed && rule.open(seed)},
+            {
+              id: 'rule',
+              label: t('rule.add'),
+              isDisabled: !seed || !rule.canAdd(seed),
+              reason: seed ? undefined : t('ui.selectRow'),
+              onAction: () => seed && rule.open(seed)
+            },
             ...links,
             ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
           ]}

@@ -13,14 +13,14 @@ export type Action = {
   onAction: () => void;
   isDisabled?: boolean;
   isPending?: boolean;
-  // Why a disabled action cannot run. In a menu it is the item's description, in view under its name.
+  // Why a disabled action cannot run: the button's tip in the toolbar, the item's description in a menu.
   reason?: string;
   // A destructive action, which the caller puts last.
   negative?: boolean;
 };
 
 const ActionButton = ({action}: {action: Action}) => (
-  <Button isDisabled={action.isDisabled} isPending={action.isPending} onPress={action.onAction}>
+  <Button isDisabled={action.isDisabled} isPending={action.isPending} tip={action.reason} onPress={action.onAction}>
     {action.icon}
     {action.label}
   </Button>

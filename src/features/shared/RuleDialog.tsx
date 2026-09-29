@@ -64,7 +64,10 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
               />
             )}
           </div>
+          {dialog.current && <span className="rp-label">{dialog.current}</span>}
+          {dialog.unchanged && <InlineAlert tone="informative">{t('rule.unchanged')}</InlineAlert>}
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}
+          {dialog.beforeMatched && !dialog.moved && <p className="rp-note">{t('rule.beforeMatchedNote')}</p>}
           {dialog.earlier && !dialog.moved && <p className="rp-note">{t('rule.earlierMayMatch')}</p>}
           {dialog.unplaceable &&
             (dialog.configHref ? (
