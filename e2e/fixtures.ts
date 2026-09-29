@@ -6,7 +6,8 @@ import {languages, loadLanguage, type Catalogue} from '../src/i18n';
 
 const expectedHttpErrors = new WeakMap<Page, Set<string>>();
 const expectedLoadFailures = new WeakMap<Page, RegExp>();
-// A spec that blocks a resource on purpose names it, so the refused load is not reported as a browser error.
+// A spec that blocks a resource on purpose names it, so the refused load, and the failed import it causes, are not
+// reported as browser errors.
 export function expectLoadFailures(page: Page, url: RegExp) {
   expectedLoadFailures.set(page, url);
 }
@@ -66,7 +67,9 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
       const failedLoad = /^Failed to load resource:/.test(message.text());
       const expectedHttp =
         failedLoad && (expectedHttpErrors.get(page)?.has(message.location().url) || expectedLoadFailures.get(page)?.test(message.location().url));
-      if (message.type() === 'error' && !discovery && !expectedHttp) errors.push(`console: ${message.text()}`);
+      // React logs the rejection of a blocked lazy chunk that a load boundary caught.
+      const rejectedImport = /dynamically imported module/.test(message.text()) && expectedLoadFailures.get(page)?.test(message.text());
+      if (message.type() === 'error' && !discovery && !expectedHttp && !rejectedImport) errors.push(`console: ${message.text()}`);
     });
     // A ResizeObserver whose callback changes layout defers the rest of its notifications to the next frame and the
     // browser reports that as an error; nothing is lost, and WebKit raises it at random under CI load.
