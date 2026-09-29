@@ -57,7 +57,8 @@ test('the shortcut help fits a 1280x720 window, and g d and g e open DNS and Eve
   await page.keyboard.press('?');
   const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
   await expect(help.getByRole('heading', {name: 'Keyboard shortcuts'})).toBeInViewport({ratio: 1});
-  for (const name of ['General', 'Tables and lists', 'Configuration editor', 'Go to page']) await expect(help.getByRole('heading', {name, exact: true})).toBeVisible();
+  for (const name of ['General', 'Tables and lists', 'Configuration editor', 'Go to page'])
+    await expect(help.getByRole('heading', {name, exact: true})).toBeVisible();
   const rows = help.locator('.rp-row');
   await expect(rows).toHaveCount(23);
   for (const row of await rows.all()) await expect(row).toBeInViewport({ratio: 1});
