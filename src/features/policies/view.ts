@@ -178,7 +178,9 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     overridable,
     pinned,
     interruptable,
-    interrupt: g.config.interrupt_connections,
+    interrupt: g.config.interrupt_connections === true,
+    // null: the group sets no value and the engine's default applies.
+    interruptUnset: g.config.interrupt_connections === null,
     showNetwork: selectable || overridable || tcp !== udp,
     networkLabel: t('policy.network', {name: g.name}),
     healthy: t('policy.healthy', {n: healthy}),

@@ -239,7 +239,7 @@ function observedValue(name, bodies) {
 function observedPath(path, snapshots) {
   let missing;
   const filled = path.replace(/\{([^}]+)\}/g, (placeholder, name, offset) => {
-    // The list that names the id is the nearest ancestor that was fetched: /groups for /groups/{groupId},
+    // The list that names the id is the nearest ancestor that was fetched: /groups for /groups/{group_id},
     // /config for /config/sources/{source_id}.
     let parent = path.slice(0, offset).replace(/\/$/, '');
     let item;

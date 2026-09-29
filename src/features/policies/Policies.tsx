@@ -180,9 +180,21 @@ function PolicyDetail(props: PolicyGroupInput) {
               </Light>
             )}
             {g.interruptable && (
-              <Switch isSelected={g.interrupt} isDisabled={m.busy} onChange={m.interrupt}>
-                {t('policy.interrupt')}
-              </Switch>
+              <div className="rp-field">
+                <Switch
+                  isSelected={g.interrupt}
+                  isDisabled={m.busy}
+                  onChange={m.interrupt}
+                  aria-describedby={g.interruptUnset ? `${g.id}-interrupt-unset` : undefined}
+                >
+                  {t('policy.interrupt')}
+                </Switch>
+                {g.interruptUnset && (
+                  <span id={`${g.id}-interrupt-unset`} className="rp-label">
+                    {t('policy.unsetDefault')}
+                  </span>
+                )}
+              </div>
             )}
           </div>
           <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />

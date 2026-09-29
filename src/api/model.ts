@@ -27,6 +27,7 @@ export type HealthObservation = Schema['HealthObservation'];
 // GroupConfig's x-<engine> members generate an index signature that every declared option fails; doona reads none of them.
 type GroupConfig = {[K in keyof Schema['GroupConfig'] as string extends K ? never : K]: Schema['GroupConfig'][K]};
 export type Group = Omit<Schema['Group'], 'config'> & {config: GroupConfig};
+export type GroupConfigDocument = Omit<Schema['GroupConfigDocument'], 'config'> & {config: GroupConfig};
 export type GroupSummary = Schema['GroupSummary'];
 export type GroupSelectionRequest = Schema['GroupSelectionRequest'];
 export type GroupSelectionResult = Schema['GroupSelectionResult'];

@@ -130,20 +130,20 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     typeof policy !== 'object' ||
     policy === null ||
     !('kind' in policy) ||
-    !['selector', 'urltest', 'loadbalance', 'fallback', 'random', 'score'].includes(String(policy.kind)) ||
+    !['fixed', 'selector', 'urltest', 'loadbalance', 'fallback', 'random', 'score'].includes(String(policy.kind)) ||
     !('native' in policy) ||
     typeof policy.native !== 'string'
   )
     throw new ApiError(422, 'unsupported_value', 'Invalid group policy');
   const config = Object.fromEntries(
-    Object.keys(group.config).map(key => [key, document['/config/' + key] ?? (key === 'interrupt_connections' ? false : null)])
+    Object.keys(group.config).map(key => [key, document['/config/' + key] ?? null])
   ) as Group['config'];
   for (const key of ['check_interval', 'tolerance', 'idle_timeout'] as const) {
     const value = config[key];
     if (value !== null && (!Number.isSafeInteger(value) || value < (key === 'check_interval' ? 1 : 0)))
       throw new ApiError(422, 'unsupported_value', 'Invalid group interval or tolerance');
   }
-  if (typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'unsupported_value', 'Invalid interruption setting');
+  if (config.interrupt_connections !== null && typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'unsupported_value', 'Invalid interruption setting');
   for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const)
     if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'unsupported_value', 'Invalid group configuration value');
   if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))

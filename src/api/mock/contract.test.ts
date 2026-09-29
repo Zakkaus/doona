@@ -56,6 +56,7 @@ const calls: Call[] = [
   ['traceRouting', 200, api => api.routingTrace({input: {network: 'tcp', dst_ip: '1.1.1.1', dst_port: 443}, resolve: 'none'})],
   ['selectGroupMember', 200, api => api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'})],
   ['clearGroupOverride', 200, api => api.clearGroupOverride('proxy', 'both')],
+  ['patchGroupConfig', 202, async api => api.patchGroup('proxy', [], `"${(await api.group('proxy')).config_revision}"`)],
   ['patchRuntimeSettings', 200, api => api.patchRuntimeSettings({log: {level: 'debug'}})],
   ['createProvider', 201, api => api.createProvider({name: 'contract', kind: 'subscription', url: 'https://example.net/sub'})],
   ['createNode', 201, api => api.createNode({name: 'contract', link: 'anytls://demo@edge.example.net:443'})],

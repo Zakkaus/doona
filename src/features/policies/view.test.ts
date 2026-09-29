@@ -47,6 +47,11 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   expect(policyCardView(g, members, 'both', t).fields.some(([key]) => key === t('policy.cfg.interruptConnections'))).toBe(false);
   expect(groupConfigFields(g)).toContainEqual(['policy.cfg.checkInterval', {key: 'policy.cfg.seconds', params: {n: 30}}]);
   expect(groupConfigFields(g)).toContainEqual(['policy.cfg.interruptConnections', {key: 'ui.no'}]);
+  // An unset option reads as off, flagged so the card can say the engine default applies.
+  const unset = {...g, config: {...g.config, interrupt_connections: null}};
+  expect(policyCardView(unset, members, 'both', t)).toMatchObject({interrupt: false, interruptUnset: true});
+  expect(policyCardView(g, members, 'both', t).interruptUnset).toBe(false);
+  expect(patchGroupConfig(g, [{op: 'replace', path: '/config/interrupt_connections', value: null}]).config.interrupt_connections).toBeNull();
 });
 it('counts worst probe outcome once per member and reports selection changes', () => {
   const sample = {

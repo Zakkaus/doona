@@ -141,7 +141,7 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   const patches = requests.filter(request => request.method() === 'PATCH');
   expect(patches.map(request => [new URL(request.url()).pathname, request.postDataJSON()])).toEqual([
     [
-      '/api/v1/groups/resilient',
+      '/api/v1/groups/resilient/config',
       [
         {op: 'test', path: '/config/check_url', value: null},
         {op: 'replace', path: '/config/check_url', value: url204}
@@ -193,7 +193,7 @@ test('a check save refused with 409 keeps the edit and shows what the group hold
   await expect.poll(async () => 'operation_id' in accepted && (await api.operation(accepted.operation_id)).status).toBe('succeeded');
   // The page still holds the revision it loaded; the backend refuses the save once, as it would a failed test op.
   let refused = false;
-  await page.route('**/api/v1/groups/resilient', route => {
+  await page.route('**/api/v1/groups/resilient/config', route => {
     if (route.request().method() !== 'PATCH' || refused) return route.fallback();
     refused = true;
     return route.fulfill({status: 409, json: {request_id: 'policies-test', error: {code: 'state_conflict', message: 'Patch test failed'}}});
