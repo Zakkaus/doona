@@ -36,34 +36,43 @@ describe('the traffic', () => {
   it('raises the link rate at every stage, without end', () => {
     for (const stage of stages.slice(1)) expect(rate(stage)).toBeGreaterThan(rate(stage - 1));
   });
+  // The unit messages are the same in every catalogue, so English and Chinese draw the same text. Past the top unit
+  // the number takes the locale's grouping.
   it('names the link rate in Mbps, Gbps, Tbps and Pbps', () => {
-    expect([0, 5, 6, 7, 8, 9, 10, 11, 21, 22].map(rateText)).toEqual([
-      '100 Mbps',
-      '650 Mbps',
-      '1 Gbps',
-      '1.5 Gbps',
-      '2.5 Gbps',
-      '4 Gbps',
-      '6 Gbps',
-      '10 Gbps',
-      '1 Tbps',
-      '1.5 Tbps'
-    ]);
-    expect(rateText(36)).toBe('1 Pbps');
-    expect(rateText(46)).toBe('100 Pbps');
-    expect(rateText(51)).toBe('1000 Pbps');
+    for (const locale of ['en-US', 'zh-TW']) {
+      expect([0, 5, 6, 7, 8, 9, 10, 11, 21, 22].map(stage => rateText(stage, locale))).toEqual([
+        '100 Mbps',
+        '650 Mbps',
+        '1 Gbps',
+        '1.5 Gbps',
+        '2.5 Gbps',
+        '4 Gbps',
+        '6 Gbps',
+        '10 Gbps',
+        '1 Tbps',
+        '1.5 Tbps'
+      ]);
+      expect(rateText(36, locale)).toBe('1 Pbps');
+      expect(rateText(46, locale)).toBe('100 Pbps');
+      expect(rateText(51, locale)).toBe('1,000 Pbps');
+    }
   });
   it('counts what was forwarded in MB, GB, TB and PB', () => {
-    expect([0, 12.34, 999.4, 1000, 1234.5, 2.5e6, 7.25e9, 3e12].map(amountText)).toEqual([
-      '0.0 MB',
-      '12.3 MB',
-      '999.4 MB',
-      '1.00 GB',
-      '1.23 GB',
-      '2.50 TB',
-      '7.25 PB',
-      '3000.00 PB'
-    ]);
+    for (const locale of ['en-US', 'zh-TW']) {
+      expect([0, 12.34, 999.4, 999.94, 1000, 1004.9, 1234.5, 999_994, 2.5e6, 7.25e9, 3e12].map(mb => amountText(mb, locale))).toEqual([
+        '0.0 MB',
+        '12.3 MB',
+        '999.4 MB',
+        '999.9 MB',
+        '1.00 GB',
+        '1.00 GB',
+        '1.23 GB',
+        '999.99 GB',
+        '2.50 TB',
+        '7.25 PB',
+        '3,000.00 PB'
+      ]);
+    }
   });
 });
 
