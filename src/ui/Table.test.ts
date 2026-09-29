@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {cachedRows} from './Table';
+import {cachedRows, fitColumns} from './Table';
 
 it('builds a row once per source object and keeps it across lists', () => {
   const built: string[] = [];
@@ -21,4 +21,20 @@ it('builds a row once per source object and keeps it across lists', () => {
   expect(next[1]).not.toBe(first[1]);
   expect(next[1]).toEqual(first[1]);
   expect(built).toEqual(['a', 'b', 'c', 'b']);
+});
+
+it('fits columns by the width alone, dropping one only below the sum of the minima', () => {
+  const cols = [
+    {id: 'target', minWidth: 200},
+    {id: 'device', minWidth: 128, drop: 2},
+    {id: 'rate', minWidth: 128, drop: 1}
+  ];
+  const ids = (width: number) => fitColumns(cols, width).map(column => column.id);
+  expect(ids(456)).toEqual(['target', 'device', 'rate']);
+  // The same width always gives the same columns, however often the table asks.
+  expect(fitColumns(cols, 456)).toBe(fitColumns(cols, 456));
+  expect(ids(455)).toEqual(['target', 'device']);
+  expect(ids(455)).toEqual(ids(455));
+  expect(ids(328)).toEqual(['target', 'device']);
+  expect(ids(327)).toEqual(['target']);
 });

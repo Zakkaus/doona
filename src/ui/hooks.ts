@@ -91,7 +91,10 @@ export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
   return over;
 }
 
-// Content dimensions shared by responsive SVG charts; activity charts round and throttle resize updates.
+// Content dimensions shared by responsive SVG charts and tables; activity charts round and throttle resize updates.
+// The first read and every resize read the same measure, the client box less its padding, so one layout always gives
+// one size. The first read once took clientWidth, which rounds a fractional box (under zoom), and resizes contentRect,
+// which the size floors: a table whose column minima summed to the boundary showed a column and then dropped it.
 export function useContentSize<E extends HTMLElement>(round = Math.floor, interval = 0) {
   const ref = useRef<E>(null);
   const [size, setSize] = useState<{width: number; height: number} | null>(null);
@@ -99,23 +102,22 @@ export function useContentSize<E extends HTMLElement>(round = Math.floor, interv
     const el = ref.current;
     if (!el) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let pending = {width: 0, height: 0};
-    const measure = (width: number, height: number) => {
-      const next = {width: round(width), height: round(height)};
-      setSize(previous => (previous?.width === next.width && previous.height === next.height ? previous : next));
-    };
-    const initial = el.getBoundingClientRect();
-    measure(round === Math.floor ? el.clientWidth : initial.width, initial.height);
-    const observer = new ResizeObserver(entries => {
-      // A hidden element (a kept-mounted tab panel) reports zero; keep its last size, which is the one it shows again.
+    const measure = () => {
+      // A hidden element (a kept-mounted tab panel) measures zero; keep its last size, which is the one it shows again.
       if (!el.getClientRects().length) return;
-      const {width, height} = entries[0].contentRect;
-      pending = {width, height};
-      if (!interval) measure(width, height);
+      const style = getComputedStyle(el);
+      const padding = (a: string, b: string) => parseFloat(a) + parseFloat(b);
+      const width = round(el.clientWidth - padding(style.paddingLeft, style.paddingRight));
+      const height = round(el.clientHeight - padding(style.paddingTop, style.paddingBottom));
+      setSize(previous => (previous?.width === width && previous.height === height ? previous : {width, height}));
+    };
+    measure();
+    const observer = new ResizeObserver(() => {
+      if (!interval) measure();
       else if (timer === undefined)
         timer = setTimeout(() => {
           timer = undefined;
-          measure(pending.width, pending.height);
+          measure();
         }, interval);
     });
     observer.observe(el);
