@@ -291,3 +291,15 @@ it('a rename finds the groups naming the tag in the declaring source and every o
   expect(renameReferences([main, unrelated], main, 'sub-c')).toEqual({here: ['here'], elsewhere: []});
   expect(renameReferences([main, other, unrelated], main, 'sub-c')).toEqual({here: ['here'], elsewhere: [other]});
 });
+
+it('a rename is blocked by a filter that names the tag inside an expression, in any source', () => {
+  const source = (id: string, content: string) => ({id, content}) as ConfigSource;
+  const sub = `subscription {\n  sub-c: 'https://a.example/sub'\n}\n`;
+  const compound = source('main', sub + `group {\n  hk { filter: subtag(sub-c) && name(keyword: HK)\n policy: min }\n}`);
+  const negated = source('main', sub + `group {\n  rest { filter: !subtag(sub-c)\n policy: min }\n}`);
+  const other = source('other', `group {\n  there { filter: subtag(sub-d) && !subtag('sub-c')\n policy: min }\n}`);
+  const loose = source('loose', `group {\n  near { filter: subtag(sub-cc) && name(keyword: sub)\n policy: min }\n}`);
+  expect(renameReferences([compound], compound, 'sub-c').elsewhere).toEqual([compound]);
+  expect(renameReferences([negated], negated, 'sub-c').elsewhere).toEqual([negated]);
+  expect(renameReferences([negated, other, loose], negated, 'sub-c').elsewhere).toEqual([negated, other]);
+});
