@@ -164,6 +164,71 @@ test('a rejected showcase import leaves its panel empty and the sign-in form wor
   }
 });
 
+test('a stale chunk whose reload is cancelled says doona was updated, and so does the next one', async ({browser}) => {
+  const context = await browser.newContext({serviceWorkers: 'block'});
+  const page = await context.newPage();
+  await page.addInitScript(session => {
+    localStorage.setItem('doona-api', 'mock');
+    localStorage.setItem('doona-lang', 'en');
+    sessionStorage.setItem('doona-session', session);
+    // A draft on the page asks before it is left.
+    addEventListener('beforeunload', event => event.preventDefault());
+  }, demoSession('legacy'));
+  const prompts: string[] = [];
+  page.on('dialog', dialog => {
+    prompts.push(dialog.type());
+    void dialog.dismiss();
+  });
+  await page.route('**/assets/{Policies,Nodes}-*.js', route => route.abort());
+  try {
+    await page.goto('/#/settings');
+    await expect(page.locator('#settings-backend')).toBeVisible();
+    await page.locator('.rp-nav[href="#/policies"]').click();
+    const alert = page.locator('.rp-content .rp-alert').first();
+    await expect(alert.getByRole('button', {name: 'Reload'})).toBeVisible();
+    expect(prompts).toEqual(['beforeunload']);
+    await page.locator('.rp-nav[href="#/nodes"]').click();
+    await expect(page.locator('.rp-nav[href="#/nodes"]')).toHaveAttribute('aria-current', 'page');
+    await expect(alert.getByRole('button', {name: 'Reload'})).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('a stale showcase chunk leaves the sign-in form as typed instead of reloading', async ({browser}) => {
+  const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1280, height: 800}});
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
+    localStorage.setItem('doona-profile', 'demo');
+    localStorage.setItem('doona-lang', 'en');
+  });
+  let loads = 0;
+  page.on('load', () => loads++);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  const rejected = page.waitForRequest(/\/LoginShowcase-[^/]+\.js$/);
+  await page.route('**/assets/LoginShowcase-*.js', async route => {
+    await gate;
+    await route.abort();
+  });
+  try {
+    await page.goto('/#/activity');
+    await rejected;
+    const login = page.locator('.rp-login-page');
+    await expect(login.getByRole('button', {name: 'Sign in', exact: true})).toBeVisible();
+    release();
+    await expect(login.locator('.rp-login-showcase[aria-hidden="true"]')).toBeVisible();
+    // A reload would have run by now; the page stays the one first loaded.
+    await page.waitForLoadState('networkidle');
+    expect(loads).toBe(1);
+    await expect(login.getByRole('button', {name: 'Sign in', exact: true})).toBeVisible();
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
 test('the idle warm-up loads the search dialog before any interaction', async ({page}) => {
   const requested = page.waitForRequest(/\/SearchDialog-[^/]+\.js$/);
   await page.goto('/#/activity');

@@ -10,14 +10,10 @@ export function isChunkLoadError(error: unknown) {
 
 const GUARD_KEY = 'doona-stale-reload';
 export const RELOAD_GUARD_MS = 30_000;
-// A reload that is already under way, so a second failure in the same page does not read as a blocked one.
-let reloading = false;
-
-// Reloads the page once for a stale chunk and reports whether one is under way. A reload within the last
+// Reloads the page once for a stale chunk and reports whether it asked for one. A reload within the last
 // RELOAD_GUARD_MS is not repeated, and neither is one whose time cannot be kept: a chunk that is truly missing
 // would otherwise reload forever.
 export function reloadForStaleChunk(reload: () => void = () => location.reload(), now = Date.now(), storage?: Pick<Storage, 'getItem' | 'setItem'>) {
-  if (reloading) return true;
   try {
     const store = storage ?? sessionStorage;
     const last = Number(store.getItem(GUARD_KEY));
@@ -26,7 +22,6 @@ export function reloadForStaleChunk(reload: () => void = () => location.reload()
   } catch {
     return false;
   }
-  reloading = true;
   reload();
   return true;
 }
