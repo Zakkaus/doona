@@ -1639,7 +1639,7 @@
   "shell.backend.signIn": "Sign-in required",
   "shell.backend.title": "Backend",
   "shell.backendBusy": "Backend busy: retrying in {n} s",
-  "shell.guide": "Setup guide",
+  "shell.guide": "Guide",
   "shell.langUnavailable": "Could not switch to {name}: the interface text did not load.",
   "shell.macShortcut": "⌘K",
   "shell.notOffered": "This backend does not provide this page",

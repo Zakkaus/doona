@@ -62,7 +62,7 @@ test('a released honk without the native API shows the requirement instead of a 
     'href',
     'https://zakkaus.github.io/doona-docs/en/troubleshooting.html#no-native-api'
   );
-  await expect(form.getByRole('link', {name: 'Setup guide'})).toHaveAttribute('href', 'https://zakkaus.github.io/doona-docs/en/');
+  await expect(form.getByRole('link', {name: 'Guide'})).toHaveAttribute('href', 'https://zakkaus.github.io/doona-docs/en/');
 });
 
 test('a first visit creates the administrator and continues with its session', async ({page}) => {
