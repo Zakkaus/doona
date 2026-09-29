@@ -85,7 +85,6 @@ export function latencyProbe(capabilities: Capabilities | undefined, target: Pro
   const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
     target,
     kind,
-    purpose: 'data',
     transport: ['tcp'],
     warmth: 'warm',
     ip_version: ipv4 && ipv6 ? 'any' : ipv6 ? 'ipv6' : 'ipv4'

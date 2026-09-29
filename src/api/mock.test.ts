@@ -435,7 +435,6 @@ it('completes probes with fixture failures and publishes fresh health', async ()
   const accepted = await api.startProbe({
     target: {type: 'group', group_id: 'proxy'},
     kind: 'http',
-    purpose: 'data',
     warmth: 'warm',
     transport: ['tcp'],
     ip_version: 'ipv4',
