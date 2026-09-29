@@ -31,6 +31,23 @@ async function expectSteadyOpening(page: Page) {
   expect(shift).toBeLessThan(0.02);
 }
 
+// Samples what reaches the screen: a message posted from an animation frame runs after that frame paints, before
+// the work a ResizeObserver schedules in it. Sampling inside the animation frame would read layouts never painted.
+function watchPainted() {
+  const seen: {frames: number[][]} = {frames: []};
+  (window as unknown as {painted: typeof seen}).painted = seen;
+  const channel = new MessageChannel();
+  channel.port1.onmessage = () => {
+    const box = document.querySelector('.rp-table')?.getBoundingClientRect();
+    if (box?.height && seen.frames.length < 20) seen.frames.push([box.y, box.height, box.width].map(Math.round));
+  };
+  const tick = () => {
+    channel.port2.postMessage(0);
+    if (seen.frames.length < 20) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 for (const viewport of [
   {width: 1440, height: 900},
   {width: 390, height: 844}
@@ -50,5 +67,19 @@ for (const viewport of [
       await page.evaluate(watchOpening);
       await page.evaluate(() => (location.hash = '#/connections?tab=list'));
       await expectSteadyOpening(page);
+    });
+
+    // While the other tab shows, the kept list is hidden and has no place to measure; a table that sized itself
+    // then came back a window's height tall and shrank a frame later (src/ui/hooks.ts).
+    test('the list shown again from the other tab keeps its size', async ({page}) => {
+      await page.goto('/#/connections?tab=list');
+      await expect(page.locator('.rp-table [role="row"][data-key]').first()).toBeVisible();
+      await page.getByRole('tab', {name: 'Traffic'}).click();
+      await expect(page.locator('.rp-table')).toBeHidden();
+      await page.evaluate(watchPainted);
+      await page.getByRole('tab', {name: 'Connections'}).click();
+      await expect.poll(() => page.evaluate(() => (window as unknown as {painted: {frames: unknown[]}}).painted.frames.length)).toBe(20);
+      const {frames} = await page.evaluate(() => (window as unknown as {painted: {frames: number[][]}}).painted);
+      expect(new Set(frames.map(frame => frame.join()))).toEqual(new Set([frames.at(-1)!.join()]));
     });
   });

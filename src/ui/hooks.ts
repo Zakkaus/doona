@@ -107,6 +107,8 @@ export function useContentSize<E extends HTMLElement>(round = Math.floor, interv
     const initial = el.getBoundingClientRect();
     measure(round === Math.floor ? el.clientWidth : initial.width, initial.height);
     const observer = new ResizeObserver(entries => {
+      // A hidden element (a kept-mounted tab panel) reports zero; keep its last size, which is the one it shows again.
+      if (!el.getClientRects().length) return;
       const {width, height} = entries[0].contentRect;
       pending = {width, height};
       if (!interval) measure(width, height);
@@ -140,6 +142,8 @@ export function useFillHeight<E extends HTMLElement>(min: number, gap = 24) {
     let frame = 0;
     const measure = () => {
       frame = 0;
+      // A hidden element has no top to measure from; the height it had is the one it shows again.
+      if (!el.getClientRects().length) return;
       const next = Math.max(min, Math.floor(window.innerHeight - el.getBoundingClientRect().top - gap));
       setHeight(previous => (previous === next ? previous : next));
     };
