@@ -387,7 +387,7 @@ it('tips why a module cannot be edited: another draft first, then a change still
   expect(moduleEditTip(false, false, t)).toBeUndefined();
 });
 
-it('says why Apply and reload is disabled, and nothing while it can run or another change is applied', () => {
+it('says why Apply is disabled, and nothing while it can run or another change is applied', () => {
   const idle = {busy: false, conflict: false};
   expect(saveReason(idle, t)).toBeNull();
   expect(saveReason({...idle, busy: true, invalid: 'bad'}, t)).toBeNull();

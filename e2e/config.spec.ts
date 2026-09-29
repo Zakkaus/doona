@@ -10,12 +10,12 @@ test('quick setup refuses an apostrophe without changing the subscription URL', 
   await page.goto('/#/config?tab=setup');
   const url = page.getByLabel('Subscription URL', {exact: true});
   await url.fill("https://example.org/o'brien");
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Cannot write this value losslessly');
   await expect(url).toHaveValue("https://example.org/o'brien");
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await url.fill('https://example.org/accepted');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await expect(page.locator('.cm-content')).toContainText('https://example.org/accepted');
 });
@@ -133,10 +133,10 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await page.keyboard.type('proxy');
   await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toBeVisible();
   await expect(page.locator('.rp-card')).toContainText('Reloading or closing the page loses the changes');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
   await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('8 lines,');
@@ -148,7 +148,7 @@ test('a writable source edits in place, and Cancel restores the loaded text with
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   const original = await editor.innerText();
   const unsaved = page.locator('.rp-badge', {hasText: 'Unsaved'});
-  const save = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const save = page.getByRole('button', {name: 'Apply', exact: true});
   const cancel = page.getByRole('button', {name: 'Cancel', exact: true});
   await expect(save).toHaveCount(0);
   await expect(cancel).toHaveCount(0);
@@ -293,14 +293,14 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
   expect(Math.abs(input!.y + input!.height / 2 - (remove!.y + remove!.height / 2))).toBeLessThanOrEqual(2);
   await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
   await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
-  await card.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await card.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
   // The saved form stays and offers the pages that use what it wrote, and the file.
   await expect(page).toHaveURL(/#\/config\?tab=setup$/);
   // The reload after the save loads the written file into the form rather than reading it as a change on disk.
   await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://example.org/sub?token=abc&type=v2ray');
   await expect(card.getByText(/changed on disk/)).toHaveCount(0);
-  await expect(card.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   for (const [name, url] of [
     ['Nodes', '#/nodes'],
     ['Policies', '#/policies'],
@@ -412,7 +412,7 @@ httpTest('validation refusal keeps the draft and never replaces the source', asy
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill(original + '\ndomain(example.org) -> nowhere\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await expect(editor).toContainText('domain(example.org) -> nowhere');
@@ -429,7 +429,7 @@ test('a source over the advertised body limit is refused before anything is sent
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# grown past the limit\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('larger than the backend accepts. Limit: 200 bytes');
   expect(writes).toEqual([]);
 });
@@ -446,7 +446,7 @@ test('a 413 on a config write names the tighter advertised limit', async ({page}
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# refused by the backend\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Limit: 65,536 bytes');
 });
 
@@ -460,7 +460,7 @@ test('source application works without the optional full validation endpoint', a
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# without dry run\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await expect(editor).toContainText('# without dry run');
   expect(validations).toBe(0);
@@ -482,7 +482,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await page.getByRole('tab', {name: 'Quick setup'}).click();
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await page.goto('/#/rules?tab=list');
   await page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false}).first().click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
@@ -514,7 +514,7 @@ test('leaving the editor aborts validation before any replacement', async ({page
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# cancelled draft\n');
   const validating = page.waitForRequest('**/config/validate');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;
   await page.locator('.rp-nav[href="#/settings"]').click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
@@ -536,7 +536,7 @@ httpTest('a file changed on disk under a draft blocks saving until the draft is 
   await expect.poll(async () => (await api.config()).sources.find(item => item.id === source.id)!.content).toContain('# concurrent edit');
   // The save carries the digest the draft began from and is refused; the refetch shows the change, and the draft
   // stays with saving held for the person.
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await apply.click();
   await rejected;
@@ -565,7 +565,7 @@ async function setupConflict(page: Page) {
   await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
   const content = async () => (await api.config()).sources.find(source => source.id === main.id)!.content!;
   await expect.poll(content).toContain('# concurrent edit');
-  const apply = card.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = card.getByRole('button', {name: 'Apply', exact: true});
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await apply.click();
   await rejected;
@@ -646,7 +646,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(modules.getByRole('region', {name: 'global', exact: true}).getByText(blocked, {exact: true})).toBeVisible();
   await expect(global).toHaveAccessibleDescription(blocked);
   await expect(routing.getByText(blocked, {exact: true})).toHaveCount(0);
-  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await routing.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await expect(routing).toContainText('6 rules, fallback: resilient');
   const expected = original.replace(section, edited);
@@ -750,7 +750,7 @@ test('cancelling a module discards its draft and navigation uses the draft guard
   await expect(editor).toHaveCount(0);
   await routing.getByRole('button', {name: 'Edit', exact: true}).click();
   await expect(editor).toHaveText(original, {useInnerText: true});
-  await expect(routing.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(routing.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
 });
 
 test('module validation maps whole-file errors onto section lines and refuses an invalid save', async ({page}) => {
@@ -762,7 +762,7 @@ test('module validation maps whole-file errors onto section lines and refuses an
   const editor = routing.locator('.cm-content');
   await editor.fill('routing {\n  domain(example.org) -> nowhere\n  fallback: resilient\n}');
   await expect(routing.locator('.cm-diag-line-error')).toContainText('domain(example.org) -> nowhere');
-  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await routing.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
@@ -867,7 +867,7 @@ test('quick setup preserves dotted tags and rejects duplicate subscription names
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   await page.getByLabel('Name', {exact: true}).last().fill('sub.eu');
   await page.getByLabel('Subscription URL', {exact: true}).last().fill('https://duplicate.example/sub');
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
 });
 
 test('opening untouched quick setup does not inject sections or guard navigation', async ({page}) => {
@@ -880,7 +880,7 @@ test('opening untouched quick setup does not inject sections or guard navigation
   await page.goto('/#/config?tab=setup');
   await expect(page.locator('.cm-content')).not.toContainText('subscription');
   await expect(page.locator('.cm-content')).not.toContainText('group');
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await page.getByRole('tab', {name: 'Sources', exact: true}).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page).toHaveURL(/tab=source$/);
@@ -925,7 +925,7 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# rejected\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   const diagnostics = page.getByRole('list', {name: 'Diagnostics'});
   await expect(diagnostics).toContainText('config.dae');
   await expect(diagnostics).toContainText('Error in main source');
@@ -994,7 +994,7 @@ test('first-run setup writes the chosen listener and DNS endpoints', async ({pag
   await page.getByLabel('Transparent proxy port', {exact: true}).fill('23456');
   await page.getByLabel('Default DNS upstream', {exact: true}).fill('udp://192.0.2.1:53');
   await page.getByLabel('Mainland-China domain DNS upstream', {exact: true}).fill('tls://resolver.example:853');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   const accepted = (await api.config()).sources.find(source => source.id === main.id)!.content;
   expect(accepted).toContain('tproxy_port: 23456');
@@ -1149,7 +1149,7 @@ httpTest('a module draft is carried over a change outside its section and saves 
   // The mock reloads a write about a second later; until then a refetch still reads the old digest, and a second refusal
   // with it is reported as a disk ahead of the running configuration.
   await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
-  const apply = routing.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = routing.getByRole('button', {name: 'Apply', exact: true});
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
   await apply.click();
   await rejected;
@@ -1180,11 +1180,11 @@ httpTest('a module draft whose section changed on disk waits until it is cancell
   );
   await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('concurrent.example');
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
-  await routing.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await routing.getByRole('button', {name: 'Apply', exact: true}).click();
   await rejected;
   const conflict = routing.getByRole('alert').filter({hasText: 'changed on disk while you were editing'});
   await expect(conflict).toBeVisible();
-  await expect(routing.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(routing.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await expect(editor).toContainText('domain(example.org) -> proxy');
   await routing.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(conflict).toHaveCount(0);
@@ -1224,11 +1224,11 @@ httpTest('a restart-only change is refused with the setting named, and the next 
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# restart draft\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('1 setting takes effect only after a restart; nothing written');
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('global.log_level');
   await expect(editor).toContainText('# restart draft');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
 });
 
@@ -1240,7 +1240,7 @@ httpTest('a file ahead of the running configuration is explained when the refusa
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# ahead draft\n');
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await apply.click();
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await apply.click();
@@ -1275,7 +1275,7 @@ httpTest('a reload refused after the write says the file was written but not app
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# rejected reload\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Written to the configuration file but not applied');
 });
 
@@ -1301,7 +1301,7 @@ test('a new file in the include directory is created empty and opens in the sour
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.click();
   await page.keyboard.type('domain(geosite: netflix) -> proxy');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
   await expect(editor).toContainText('domain(geosite: netflix) -> proxy');
   // The backend's refusal of an existing name stays in the dialog.

@@ -118,13 +118,13 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
   const url = dialog.getByRole('textbox', {name: 'Check URL'});
   await url.fill('http://user@cp.cloudflare.com/');
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(url).toHaveAttribute('aria-invalid', 'true');
   await expect(dialog.getByText('Enter an http or https URL with a host')).toBeVisible();
   const url204 = 'https://cp.cloudflare.com/generate_204';
   await url.fill(url204);
   await expect(dialog.getByText('Enter an http or https URL with a host')).toHaveCount(0);
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'Configuration for resilient written and reloaded'})).toBeVisible();
   await card.getByRole('button', {name: 'Configuration', exact: true}).click();
@@ -153,7 +153,7 @@ test('a check URL another client changed while the dialog was open is not overwr
   const accepted = await api.patchGroup('resilient', [{op: 'replace', path: '/config/check_url', value: remote}], '"40"');
   await expect.poll(async () => 'operation_id' in accepted && (await api.operation(accepted.operation_id)).status).toBe('succeeded');
   await dialog.getByRole('textbox', {name: 'Check URL'}).fill('https://cp.cloudflare.com/generate_204');
-  const save = dialog.getByRole('button', {name: 'Save', exact: true});
+  const save = dialog.getByRole('button', {name: 'Apply', exact: true});
   // The first save carries the revision the page loaded and is refused as stale, which fetches the group again.
   await save.click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Revision changed');
@@ -191,7 +191,7 @@ test('a check save refused with 409 keeps the edit and shows what the group hold
   });
   const mine = 'https://cp.cloudflare.com/generate_204';
   await url.fill(mine);
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
   await expect(dialog).toBeVisible();
   await expect(url).toHaveValue(mine);

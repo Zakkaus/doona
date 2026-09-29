@@ -30,7 +30,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT');
@@ -57,7 +57,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toContainText('Validation found 1 error; nothing written');
   await expect(dialog).toContainText('config.dae line 44: Backend message: no group gaming');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
@@ -153,7 +153,7 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule held; not written yet'})).toBeVisible();
   await hold(page, '2');
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
-  const apply = top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true});
+  const apply = top(page).getByRole('button', {name: 'Apply (2)', exact: true});
   await expect(apply.locator('.rp-held-count')).toHaveText('2');
   // Refresh stays a plain re-read beside it.
   await expect(top(page).getByRole('button', {name: 'Refresh', exact: true}).locator('.rp-held-count')).toHaveCount(0);
@@ -163,6 +163,7 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   await expect(held).toContainText('domain(full: api.telegram.org) -> proxy');
   await expect(held).toContainText('domain(full: cdn.bilibili.com) -> direct');
   await apply.click();
+  await expect(page.getByRole('dialog', {name: 'Reload honk?'})).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
@@ -184,7 +185,7 @@ test('a refused apply keeps the held rules and shows the diagnostics in the rule
   });
   await hold(page, '1');
   await page.goto('/#/rules?tab=list');
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: 'Validation found 1 error; nothing written'})).toBeVisible();
   const held = page.getByRole('region', {name: 'Pending: 1'});
   await expect(held).toContainText('config.dae line 44: Backend message: no group proxy');
@@ -222,12 +223,40 @@ test('refresh re-reads the data and writes nothing, even with rules held', async
   await expect(top(page).locator('.rp-held-count')).toHaveText('1');
 });
 
-test('with nothing held the reload button reloads the engine and reports the operation', async ({page}) => {
+test('reload asks for confirmation, then reloads the engine and reports the operation', async ({page}) => {
   const {requests} = await mockBackend(page);
   await page.goto('/#/connections');
   await top(page).getByRole('button', {name: 'Reload honk', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Reload honk?'});
+  await expect(dialog).toContainText('Held rules are not written.');
+  expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+  await dialog.getByRole('button', {name: 'Reload honk', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive', {hasText: 'Reload'})).toBeVisible();
   expect(requests.filter(request => request.method() !== 'GET').map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/reload$/)]);
+});
+
+test('cancelling the reload confirmation reloads nothing', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.goto('/#/connections');
+  await top(page).getByRole('button', {name: 'Reload honk', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Reload honk?'});
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+});
+
+test('reload with rules held reloads only and keeps them held', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await hold(page, '1');
+  await top(page).getByRole('button', {name: 'Reload honk', exact: true}).click();
+  await page.getByRole('dialog', {name: 'Reload honk?'}).getByRole('button', {name: 'Reload honk', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Reload'})).toBeVisible();
+  expect(requests.filter(request => request.method() !== 'GET').map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/reload$/)]);
+  await expect(top(page).getByRole('button', {name: 'Apply (1)', exact: true}).locator('.rp-held-count')).toHaveText('1');
+  await page.goto('/#/rules?tab=list');
+  await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('domain(full: api.telegram.org) -> proxy');
 });
 
 test('the reload arrows turn once a second, like an indeterminate progress circle, and stay still with reduced motion', async ({page}) => {
@@ -242,12 +271,15 @@ test('the reload arrows turn once a second, like an indeterminate progress circl
         .getAnimations()
         .map(animation => animation.effect!.getTiming().duration)
     );
+  const cancel = page.getByRole('dialog', {name: 'Reload honk?'}).getByRole('button', {name: 'Cancel', exact: true});
   await reload.click();
   expect(await timing()).toEqual([1000]);
+  await cancel.click();
   await expect.poll(timing).toEqual([]);
   await page.emulateMedia({reducedMotion: 'reduce'});
   await reload.click();
   expect(await timing()).toEqual([]);
+  await cancel.click();
 });
 
 test('the dialog starts from the outbound the connection uses', async ({page}) => {
@@ -308,7 +340,7 @@ test('an apply that fails in a later file keeps what it could not write and says
   await page.goto('/#/rules?tab=list');
   const held = page.getByRole('region', {name: 'Pending: 2'});
   await expect(held).toContainText('Writes 2 files');
-  await top(page).getByRole('button', {name: 'Apply and reload (2); writes 2 files', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2); writes 2 files', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: '1 rule written; 1 still held'})).toBeVisible();
   const pending = page.getByRole('region', {name: 'Pending: 1'});
   await expect(pending).toContainText('rules.dae line 7: Backend message: no group proxy');
@@ -355,7 +387,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   slow = true;
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect.poll(() => reading).toBe(true);
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
@@ -382,14 +414,14 @@ test('a rule written whose reload failed is not held again and not offered for a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   const notice = page.locator('.rp-toast.negative', {hasText: 'Written to the configuration file but not applied'});
   await expect(notice).toBeVisible();
   await expect(notice).not.toContainText('Could not write');
   await expect(dialog).toHaveCount(0);
   // From the top bar: the written rule leaves the held list.
   await hold(page, '2');
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect.poll(() => requests.filter(request => request.method() === 'PUT').length).toBe(2);
   await expect(notice).toBeVisible();
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
@@ -405,7 +437,7 @@ test('the dialog does not write while the top bar applies held rules', async ({p
     return api.replaceConfigSource('src-main', request.postDataJSON().content, request.headers()['if-match']);
   };
   await hold(page, '1');
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect.poll(() => writing).toBe(true);
   await page.goto('/#/connections?id=2');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
@@ -433,7 +465,7 @@ test('held rules cannot be discarded while they are applied', async ({page}) => 
   const held = page.getByRole('region', {name: 'Pending: 2'});
   const discard = held.getByRole('button', {name: 'Discard held rule', exact: true});
   await expect(discard).toHaveCount(2);
-  await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2)', exact: true}).click();
   await expect.poll(() => writing).toBe(true);
   for (const button of await discard.all()) await expect(button).toBeDisabled();
   write.open();
@@ -452,7 +484,7 @@ test('a rule written whose operation the backend forgot is not held again', asyn
     throw new ApiError(404, 'resource_not_found', 'Operation not found');
   };
   await hold(page, '1');
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect(page.locator('.rp-toast', {hasText: 'Could not confirm the result of the operation'})).toBeVisible();
   // The write was accepted, so the rule is in the file and is not offered for a second write.
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
@@ -474,7 +506,7 @@ test('a rule written whose operation poll kept failing is not held again', async
   expectLoadFailures(page, /\/operations\/op-unreachable$/);
   await page.clock.install();
   await hold(page, '1');
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect.poll(() => requests.filter(request => request.method() === 'PUT').length).toBe(1);
   // The poll gives up after its retries, which back off from one second.
   for (let attempt = 1; attempt <= 4; attempt++) {
@@ -517,7 +549,7 @@ test('an apply whose later file is written but not reloaded counts every rule wr
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await hold(page, '1');
   await hold(page, inInclude.id);
-  await top(page).getByRole('button', {name: 'Apply and reload (2); writes 2 files', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2); writes 2 files', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: '2 rules written; 0 still held'})).toBeVisible();
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
 });
@@ -581,7 +613,7 @@ test.describe('phone', () => {
   test('the apply button and its count stay in the top bar', async ({page}) => {
     await mockBackend(page);
     await hold(page, '1');
-    const apply = top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true});
+    const apply = top(page).getByRole('button', {name: 'Apply (1)', exact: true});
     await expect(apply).toBeVisible();
     const count = apply.locator('.rp-held-count');
     await expect(count).toHaveText('1');

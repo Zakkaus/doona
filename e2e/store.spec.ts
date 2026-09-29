@@ -57,7 +57,7 @@ test('a hidden main-source path does not block a validated conditional replaceme
   const editor = page.locator('.cm-content');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await editor.fill(main.content! + '\n# updated\n');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   expect(requests.filter(request => request.method() === 'PUT' && request.url().includes('/config/sources/'))).toHaveLength(1);
   expect((await api.config()).sources.find(source => source.kind === 'main')?.content).toContain('# updated');

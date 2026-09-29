@@ -8,7 +8,7 @@ test('a file saved on disk after the last reload refuses writes until honk reloa
   const editor = page.locator('.cm-content');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.fill((await editor.innerText()) + '\n# faults draft\n');
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await apply.click();
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
   await apply.click();

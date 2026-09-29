@@ -80,7 +80,7 @@ test('a group declared in an include is edited there while the main source is re
   await card.getByRole('button', {name: 'Edit', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('textbox', {name: 'Filter 1', exact: true}).fill('name(hk-01)');
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname);
   expect(writes).toEqual(['/api/v1/config/sources/src-rules']);
@@ -102,7 +102,7 @@ test('policy editing discards a cancelled draft and saves filters through the ma
   await edit.click();
   await expect(filter).toHaveValue(original);
   await filter.fill('name(hk-01)');
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await edit.click();
   await expect(filter).toHaveValue('name(hk-01)');

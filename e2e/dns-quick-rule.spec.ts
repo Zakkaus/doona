@@ -86,7 +86,7 @@ test('a query result adds a response rule for an answered address, then queries 
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
   await pick(page, /Action$/, /^alidns/);
   await expect(dialog.locator('.rp-code')).toHaveText('ip(192.0.2.14/32) -> alidns');
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
   await expect(toast).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
@@ -133,7 +133,7 @@ test('DNS and routing rules held together apply in one write, each listed with i
   await expect(held).toBeFocused();
   await expect(held).toContainText('qname(full: example.org) -> reject');
   await expect(held).toContainText('1 more held in another list; applying writes it too');
-  await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes.map(request => new URL(request.url()).pathname)).toEqual(['/api/v1/config/sources/src-main']);
@@ -151,7 +151,7 @@ test('a held DNS rule whose place changed stays held and is written nowhere', as
   const content = source.content!.replace('      fallback: cloudflare', '      fallback: alidns');
   await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
   const before = requests.filter(request => request.method() === 'PUT').length;
-  await top(page).getByRole('button', {name: 'Apply and reload (1)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: 'The rule list and configuration are out of sync'})).toBeVisible();
   await expect(top(page).locator('.rp-held-count')).toHaveText('1');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(before);
@@ -176,7 +176,7 @@ test('rules held for an absent response list are written in one new block', asyn
     .getByRole('button', {name: 'Review held rules', exact: true})
     .click();
   await expect(page.getByRole('region', {name: 'Pending: 2'})).toContainText('New response block, as its first rule');
-  await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const written: string = requests
     .filter(request => request.method() === 'PUT')
@@ -223,7 +223,7 @@ test('a DNS rule written whose reload failed closes the dialog without offering 
   const card = await query(page);
   await card.getByRole('button', {name: 'Add rule', exact: true}).click();
   await pick(page, /Action$/, /^reject/);
-  await dialogOf(page).getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: 'Written to the configuration file but not applied'})).toBeVisible();
   await expect(dialogOf(page)).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Query again', exact: true})).toHaveCount(0);
@@ -257,7 +257,7 @@ test('an apply that fails in a later file keeps the rule it could not write and 
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await holdRequest(page, /^asis/);
   await holdRouting(page, inInclude.id);
-  await top(page).getByRole('button', {name: 'Apply and reload (2); writes 2 files', exact: true}).click();
+  await top(page).getByRole('button', {name: 'Apply (2); writes 2 files', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: '1 rule written; 1 still held'})).toBeVisible();
   expect(requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname)).toEqual([
     '/api/v1/config/sources/src-main',

@@ -76,7 +76,7 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   page.on('request', request => {
     if (request.method() === 'PUT' && request.url().includes('/config/sources/')) writes.push(request.postDataJSON().content);
   });
-  await review.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await review.getByRole('button', {name: 'Apply', exact: true}).click();
   const applied = page.locator('.rp-toast.positive', {hasText: 'Applied 3 changes and reloaded.'});
   await expect(applied).toBeVisible();
   expect(writes).toHaveLength(1);
@@ -106,7 +106,7 @@ test('a new group needs a member before it can be applied, and undoing a change 
   await page.getByRole('button', {name: 'Review and apply'}).click();
   const review = page.getByRole('dialog', {name: 'Review changes'});
   await expect(review).toContainText('Group streaming has no members yet');
-  await expect(review.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(review.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await review.getByRole('button', {name: 'Undo: Create group streaming'}).click();
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toHaveCount(0);
 });
