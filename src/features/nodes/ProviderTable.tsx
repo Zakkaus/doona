@@ -1,7 +1,6 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Badge, Button, DataTable, Light, ChoiceMenu, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionHelp, Badge, Button, DataTable, Light, ChoiceMenu, MoreMenu, TextTooltip, TimeCell} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
-import Close from '../../ui/icons/Close';
 import type {ProviderTableView} from './useProviderTable';
 
 export function ProviderTable({model: m}: {model: ProviderTableView}) {
@@ -105,9 +104,12 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                   </Button>
                 )}
                 {row.removable && (
-                  <Button small quiet icon isDisabled={m.busy} label={row.removeLabel} onPress={row.remove}>
-                    <Close />
-                  </Button>
+                  <MoreMenu
+                    small
+                    quiet
+                    label={t('ui.moreActionsFor', {name: row.name})}
+                    actions={[{id: 'remove', label: row.removeLabel, negative: true, isDisabled: m.busy, onAction: row.remove}]}
+                  />
                 )}
               </span>
             )

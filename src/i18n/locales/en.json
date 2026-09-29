@@ -1772,6 +1772,7 @@
   "ui.loading": "Loading…",
   "ui.microseconds": "{n} μs",
   "ui.moreActions": "More actions",
+  "ui.moreActionsFor": "More actions for {name}",
   "ui.name": "Name",
   "ui.network": "Network protocol",
   "ui.newBuild": "A new version is ready; reload the page to use it.",
