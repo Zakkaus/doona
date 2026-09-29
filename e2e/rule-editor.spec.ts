@@ -48,8 +48,12 @@ test('a rule from an include file says why it cannot be changed here and opens i
     await expect(control).toBeDisabled();
     await expect(control).toHaveAccessibleDescription(reason);
   }
-  await row.getByRole('button', {name: 'Remove rule', exact: true}).hover({force: true});
-  await expect(page.getByRole('tooltip')).toHaveText(reason);
+  // Leave and re-enter: the table can settle under a pointer that never moved, which raises no new hover.
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await row.getByRole('button', {name: 'Remove rule', exact: true}).hover({force: true});
+    await expect(page.getByRole('tooltip')).toHaveText(reason, {timeout: 1500});
+  }).toPass();
   // The fallback has nothing to remove, so it shows no remove control.
   await expect(rows(page).last().getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await row.getByRole('button', {name: 'Open source', exact: true}).click();
