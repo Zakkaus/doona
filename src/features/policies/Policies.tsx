@@ -1,4 +1,17 @@
-import {memo, Suspense, type ComponentProps, type ReactNode} from 'react';
+import {
+  createContext,
+  memo,
+  useCallback,
+  Suspense,
+  use,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode
+} from 'react';
 import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
@@ -57,10 +70,53 @@ function PolicyWait({heading, members, label}: {heading: ReactNode; members: num
     </>
   );
 }
+// The cards that open on screen when the list first shows hold it back until their group's read arrives. A card's
+// heading, toolbar and tiles depend on the group's capabilities and its members' health, which the groups list does
+// not carry, so no placeholder can know the loaded card's height; the list is laid out hidden behind the loading state
+// instead, and shown once. Cards reached later by scrolling open off screen behind a placeholder.
+type FirstShowGate = {hold: (id: string) => void; release: (id: string) => void};
+const FirstShow = createContext<FirstShowGate>({hold() {}, release() {}});
+function PolicyList({loading, children}: {loading: boolean; children: ReactNode}) {
+  const waiting = useRef(new Set<string>());
+  const [shown, setShown] = useState(false);
+  const [, recheck] = useReducer((n: number) => n + 1, 0);
+  const gate = useMemo<FirstShowGate>(
+    () => ({
+      hold: id => void waiting.current.add(id),
+      release: id => {
+        if (waiting.current.delete(id) && !waiting.current.size) recheck();
+      }
+    }),
+    []
+  );
+  // A parent's layout effect runs after its cards' refs and layout effects in the same commit, so every card that
+  // opened on screen has already asked to be waited for.
+  useLayoutEffect(() => {
+    if (!shown && !loading && !waiting.current.size) setShown(true);
+  });
+  return (
+    <FirstShow value={gate}>
+      <div className="rp-policy-list" data-wait={shown ? undefined : ''}>
+        {!shown && <Loading />}
+        {children}
+      </div>
+    </FirstShow>
+  );
+}
 function PolicyDetail(props: PolicyGroupInput) {
   const t = useT();
   const m = usePolicyGroup(props);
   const g = m.card;
+  const gate = use(FirstShow);
+  const {id} = props;
+  useLayoutEffect(() => {
+    if (!m.loading) {
+      gate.release(id);
+      return;
+    }
+    gate.hold(id);
+    return () => gate.release(id);
+  }, [gate, id, m.loading]);
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
@@ -135,7 +191,13 @@ function PolicyDetail(props: PolicyGroupInput) {
   );
 }
 const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<PolicyGroupInput, 'paused'> & {focused: boolean; domId: string}) {
-  const {ref, active, visible, expand} = usePolicyVisibility(focused);
+  const gate = use(FirstShow);
+  const {id} = props;
+  // Opening on screen happens in the card's ref, before its details mount and hold the list themselves.
+  const hold = useCallback(() => gate.hold(id), [gate, id]);
+  // A card removed before its details mount does not hold the list.
+  useLayoutEffect(() => () => gate.release(id), [gate, id]);
+  const {ref, active, visible, expand} = usePolicyVisibility(focused, hold);
   return (
     <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1}>
       {active ? (
@@ -160,21 +222,22 @@ export function Policies(props: PageProps) {
     <>
       <p className="rp-note">{t('policy.note')}</p>
       <ErrorMessage error={m.error} onRetry={m.reload} />
-      {m.loading && <Loading />}
       {m.empty && <Empty>{t('policy.empty')}</Empty>}
-      <DisclosureGroup>
-        {m.cards.map(card => (
-          <PolicyCard
-            key={card.id}
-            {...card}
-            focused={m.focus === card.id}
-            health={m.health}
-            source={m.source}
-            refreshGroups={m.refreshGroups}
-            refreshNodes={m.refreshNodes}
-          />
-        ))}
-      </DisclosureGroup>
+      <PolicyList loading={m.loading}>
+        <DisclosureGroup>
+          {m.cards.map(card => (
+            <PolicyCard
+              key={card.id}
+              {...card}
+              focused={m.focus === card.id}
+              health={m.health}
+              source={m.source}
+              refreshGroups={m.refreshGroups}
+              refreshNodes={m.refreshNodes}
+            />
+          ))}
+        </DisclosureGroup>
+      </PolicyList>
     </>
   );
   const content = {

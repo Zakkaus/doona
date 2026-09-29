@@ -16,11 +16,13 @@ import {policiesTabs} from './nav';
 const policyTabIds = policiesTabs().map(tab => tab.id);
 
 export function usePolicies({go, query}: PageProps) {
-  const resources = useCapabilities().data?.resources;
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
   // The list carries each group's selection, so a change made elsewhere shows within one live poll; the poll stops
   // while the tab is hidden and when the page is left.
   const groups = useGroups(offered(resources, 'groups', {whileLoading: true}), poll.live);
-  const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
+  const nodesOffered = offered(resources, 'nodes', {whileLoading: false});
+  const nodes = useNodes(nodesOffered);
   const focus = new URLSearchParams(query).get('group');
   const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
   if (health.from !== nodes.data) {
@@ -94,7 +96,9 @@ export function usePolicies({go, query}: PageProps) {
     health: health.map,
     source,
     error: groups.error ?? nodes.error,
-    loading: groups.loading && !groups.data,
+    // A card's size depends on its members' health as well, so the cards wait for the node list too, and for the
+    // capabilities that say whether it is offered.
+    loading: (groups.loading && !groups.data) || (!resources && !capabilities.error) || (nodesOffered && !nodes.data && !nodes.error),
     empty: groups.data?.length === 0,
     reload,
     refreshGroups: groups.refetch,
@@ -103,15 +107,20 @@ export function usePolicies({go, query}: PageProps) {
   };
 }
 // A card mounts its details the first time it nears the viewport and keeps them; `visible` follows the viewport.
-export function usePolicyVisibility(focused: boolean) {
+// `onOpen` runs the first time the card opens, including in the ref of a card that mounts on screen.
+export function usePolicyVisibility(focused: boolean, onOpen?: () => void) {
   const [expanded, setExpanded] = useState(false);
   const card = useRef<HTMLElement | null>(null);
   // Expanding removes the focused placeholder button, so the card itself takes focus instead of the page body.
   const refocus = useRef(false);
+  const opened = useRef(false);
   const open = useCallback(() => {
     refocus.current = !!card.current?.contains(document.activeElement);
+    // The viewport reports a card near again after its details have mounted; a focused card's details mount at once.
+    if (!opened.current && !focused) onOpen?.();
+    opened.current = true;
     setExpanded(true);
-  }, []);
+  }, [focused, onOpen]);
   const [nearRef, visible] = useNearViewport(open);
   const ref = useCallback(
     (element: HTMLElement | null) => {
