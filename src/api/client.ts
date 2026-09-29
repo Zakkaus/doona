@@ -59,6 +59,11 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     clock.note((value as {observed_at?: unknown} | null)?.observed_at);
     return value;
   };
+  // A write that may run in the background answers with its result, or 202 with the operation that produces it.
+  const resultOrAccepted = <R extends object>(result: {data?: R | Omit<OperationAccepted, 'retryAfter'>; response: Response}): R | OperationAccepted => {
+    const value = read(result);
+    return 'operation_id' in value ? accepted({data: value, response: result.response}) : (value as R);
+  };
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
   const options = {
@@ -260,8 +265,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
         body,
         signal
       });
-      const value = read(result);
-      return 'operation_id' in value ? accepted({data: value, response: result.response}) : value;
+      return resultOrAccepted(result);
     },
     startProbe: async (body, signal) => accepted(await starts.POST('/api/v1/probes', {body, signal})),
     connections: async (query, signal) => read(await client.GET('/api/v1/connections', {params: {query}, signal})),
@@ -280,10 +284,12 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     runtimeSettings: async signal => read(await client.GET('/api/v1/runtime/settings', {signal})),
     providers: async (query, signal) => read(await client.GET('/api/v1/providers', {params: {query}, signal})),
     refreshProvider: async (id, signal) => accepted(await starts.POST('/api/v1/providers/{provider_id}/refresh', {params: {path: {provider_id: id}}, signal})),
-    createProvider: async (body, signal) => read(await client.POST('/api/v1/providers', {body, signal})),
-    deleteProvider: async (id, signal) => read(await client.DELETE('/api/v1/providers/{provider_id}', {params: {path: {provider_id: id}}, signal})),
-    createNode: async (body, signal) => read(await client.POST('/api/v1/nodes', {body, signal})),
-    deleteNode: async (id, signal) => read(await client.DELETE('/api/v1/nodes/{node_id}', {params: {path: {node_id: id}}, signal})),
+    // Node and provider writes may answer 202 with an operation, yet the contract keeps them out of Idempotency-Key
+    // replay, so they go through the plain client.
+    createProvider: async (body, signal) => resultOrAccepted(await client.POST('/api/v1/providers', {body, signal})),
+    deleteProvider: async (id, signal) => resultOrAccepted(await client.DELETE('/api/v1/providers/{provider_id}', {params: {path: {provider_id: id}}, signal})),
+    createNode: async (body, signal) => resultOrAccepted(await client.POST('/api/v1/nodes', {body, signal})),
+    deleteNode: async (id, signal) => resultOrAccepted(await client.DELETE('/api/v1/nodes/{node_id}', {params: {path: {node_id: id}}, signal})),
     geodata: async signal => read(await client.GET('/api/v1/geodata', {signal})),
     rules: async signal => read(await client.GET('/api/v1/rules', {signal})),
     dnsRules: async signal => read(await client.GET('/api/v1/dns/rules', {signal})),

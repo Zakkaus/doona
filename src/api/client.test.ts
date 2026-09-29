@@ -2,7 +2,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
 import {ApiError, send} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
-import type {ApiEvent} from './model';
+import type {ApiEvent, OperationAccepted} from './model';
 import {currentRefusal} from './refusal';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
@@ -67,7 +67,11 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(query).resolves.toMatchObject({domain: 'example.org'});
     const sent: Request = request.mock.calls[0][0];
-    expect([sent.method, new URL(sent.url).search, await sent.json()]).toEqual(['POST', '?detail=full', {domain: 'example.org', type: ['A'], cache_mode: 'normal'}]);
+    expect([sent.method, new URL(sent.url).search, await sent.json()]).toEqual([
+      'POST',
+      '?detail=full',
+      {domain: 'example.org', type: ['A'], cache_mode: 'normal'}
+    ]);
     request.mockResolvedValue(json({}, 503, {'Retry-After': '3'}));
     const controller = new AbortController();
     const result = api.startReload(controller.signal);
@@ -417,6 +421,46 @@ describe('native transport', () => {
     expect(request).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(1);
     await expect(result).resolves.toMatchObject({status: 'failed', error: {code: 'reload_failed'}});
+  });
+  const node = {id: 'node-1', name: 'edge', protocol: 'vless', subscription_tag: null, provider_id: 'inline', group_ids: [], health: []};
+  const provider = {id: 'sub-1', name: 'sub', kind: 'subscription', url_redacted: null, node_count: 0, updated_at: null, expires_at: null};
+  const writes = [
+    {kind: 'node_create', method: 'POST', path: '/api/v1/nodes', call: api => api.createNode({name: 'edge', link: 'vless://x@h:1'}), result: node},
+    {kind: 'node_delete', method: 'DELETE', path: '/api/v1/nodes/node-1', call: api => api.deleteNode('node-1'), result: {deleted: 1}},
+    {
+      kind: 'provider_create',
+      method: 'POST',
+      path: '/api/v1/providers',
+      call: api => api.createProvider({name: 'sub', kind: 'subscription', url: 'https://example.net/sub'}),
+      result: provider
+    },
+    {kind: 'provider_delete', method: 'DELETE', path: '/api/v1/providers/sub-1', call: api => api.deleteProvider('sub-1'), result: {deleted: 1}}
+  ] satisfies Array<{kind: string; method: string; path: string; call: (api: ReturnType<typeof createApi>) => Promise<unknown>; result: object}>;
+  it.each(writes)('follows a 202 $kind to its result after Retry-After, without an idempotency key', async ({kind, method, path, call, result}) => {
+    vi.useFakeTimers();
+    const href = '/api/v1/operations/op-7';
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(json({operation_id: 'op-7', kind, status: 'queued', href}, 202, {Location: href, 'Retry-After': '2'}))
+      .mockResolvedValueOnce(json({operation_id: 'op-7', kind, status: 'succeeded', result, error: null}));
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    const accepted = await call(api);
+    const sent = request.mock.calls[0][0] as Request;
+    expect([sent.method, new URL(sent.url).pathname, sent.headers.get('Idempotency-Key')]).toEqual([method, path, null]);
+    expect(accepted).toMatchObject({operation_id: 'op-7', kind, retryAfter: 2});
+    const operation = api.pollOperation(accepted as OperationAccepted);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(String(request.mock.calls[1][0])).toBe('https://honk.test' + href);
+    await expect(operation).resolves.toMatchObject({status: 'succeeded', result});
+  });
+  it.each(writes)('returns a synchronous $kind answer as it is', async ({method, call, result}) => {
+    const request = vi.fn().mockResolvedValueOnce(json(result, method === 'POST' ? 201 : 200));
+    vi.stubGlobal('fetch', request);
+    await expect(call(createApi('https://honk.test'))).resolves.toEqual(result);
+    expect((request.mock.calls[0][0] as Request).headers.get('Idempotency-Key')).toBeNull();
   });
   it('keeps a proxy prefix when following an operation href', async () => {
     vi.useFakeTimers();

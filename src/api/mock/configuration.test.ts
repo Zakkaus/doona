@@ -1,5 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
+import type {Node, OperationAccepted, Provider} from '../model';
 import {geodataPreset} from '../../dae/geodata';
 
 afterEach(() => vi.useRealTimers());
@@ -97,7 +98,7 @@ it('preserves group policies across an unchanged reload', async () => {
 it('admits AnyTLS share links and retains their protocol through reload', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
-  const created = await api.createNode({name: 'anytls-test', link: 'anytls://demo@edge.example.net:443'});
+  const created = (await api.createNode({name: 'anytls-test', link: 'anytls://demo@edge.example.net:443'})) as Node;
   expect(created.protocol).toBe('anytls');
   const operation = await api.startReload();
   await vi.advanceTimersByTimeAsync(1000);
@@ -122,7 +123,7 @@ it('writes subscription options as a block, checks them against create_options a
     await expect(api.createProvider({name: 'optioned', ...base, ...invalid})).rejects.toMatchObject({status: 422});
   }
   expect(await main()).toBe(before);
-  const created = await api.createProvider({name: 'optioned', ...base, update_interval: 3600, user_agent: 'clash.meta', cache: false});
+  const created = (await api.createProvider({name: 'optioned', ...base, update_interval: 3600, user_agent: 'clash.meta', cache: false})) as Provider;
   expect(created).toMatchObject({name: 'optioned', url_redacted: 'https://example.net/sub?[redacted]'});
   expect(await main()).toContain(
     "  optioned: {\n    url: 'https://example.net/sub?token=x'\n    ua: 'clash.meta'\n    interval: '3600s'\n    cache: false\n  }\n"
@@ -265,4 +266,13 @@ it('refuses a create past the advertised max_sources', async () => {
   await expect(api.createConfigSource('config.d/over.dae', '')).rejects.toMatchObject({status: 413, code: 'request_too_large'});
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.config()).sources).toHaveLength(max);
+});
+it('answers node and provider writes with an operation when asked to', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi({acceptWrites: true});
+  const accepted = await api.createNode({name: 'queued-node', link: 'anytls://demo@edge.example.net:443'});
+  expect(accepted).toMatchObject({kind: 'node_create', status: 'queued'});
+  await vi.advanceTimersByTimeAsync(1000);
+  const operation = await api.operation((accepted as OperationAccepted).operation_id);
+  expect(operation).toMatchObject({kind: 'node_create', status: 'succeeded', result: {name: 'queued-node', protocol: 'anytls'}});
 });

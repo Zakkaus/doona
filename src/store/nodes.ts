@@ -2,9 +2,9 @@ import {useCallback} from 'react';
 import {MAX_PAGE, poll} from './cadence';
 import {ApiError, LocalError} from '../api/error';
 import {getApi} from '../api/index';
-import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
+import type {Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
-import {finished, settle, latencyProbe, useAction} from './action';
+import {finished, settle, latencyProbe, useAction, type SucceededResult} from './action';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -80,6 +80,7 @@ export function useProviderRefresh(refetch: () => void) {
   );
   return {busy, refresh, refreshMany};
 }
+type WriteKind = 'node_create' | 'node_delete' | 'provider_create' | 'provider_delete';
 // Managed node/provider writes create a generation; refetch covers backends without generation events.
 export function useNodeManage(refetch: () => void) {
   const api = getApi();
@@ -101,15 +102,24 @@ export function useNodeManage(refetch: () => void) {
     },
     [refetch]
   );
+  // A 202 hands the write to an operation; the caller stays busy until it settles and gets the operation's result.
+  const write = useCallback(
+    async <K extends WriteKind>(kind: K, answer: Promise<SucceededResult<K> | OperationAccepted>, signal: AbortSignal): Promise<SucceededResult<K>> => {
+      const result = await answer.catch(conflict);
+      const value = 'operation_id' in result ? (finished(await settle(api, result, signal), kind) as SucceededResult<K>) : result;
+      return then(value);
+    },
+    [api, then, conflict]
+  );
   return {
     busy,
     addProvider: useCallback(
-      (request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then, conflict)),
-      [api, run, then, conflict]
+      (request: ProviderCreate) => run('provider', signal => write('provider_create', api.createProvider(request, signal), signal)),
+      [api, run, write]
     ),
-    removeProvider: useCallback((id: string) => run(id, signal => api.deleteProvider(id, signal).then(then, conflict)), [api, run, then, conflict]),
-    addNode: useCallback((request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then, conflict)), [api, run, then, conflict]),
-    removeNode: useCallback((id: string) => run(id, signal => api.deleteNode(id, signal).then(then, conflict)), [api, run, then, conflict])
+    removeProvider: useCallback((id: string) => run(id, signal => write('provider_delete', api.deleteProvider(id, signal), signal)), [api, run, write]),
+    addNode: useCallback((request: NodeCreate) => run('node', signal => write('node_create', api.createNode(request, signal), signal)), [api, run, write]),
+    removeNode: useCallback((id: string) => run(id, signal => write('node_delete', api.deleteNode(id, signal), signal)), [api, run, write])
   };
 }
 export function useNodeProbe(refetch: () => void) {

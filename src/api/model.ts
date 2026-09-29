@@ -69,7 +69,11 @@ export type Operation =
   | SucceededOperation<'provider_refresh', Schema['Provider']>
   | SucceededOperation<'geodata_update', Schema['GeoData']>
   | SucceededOperation<'suspend', NonNullable<Schema['SuspendSucceededOperation']['result']>>
-  | SucceededOperation<'resume', NonNullable<Schema['ResumeSucceededOperation']['result']>>;
+  | SucceededOperation<'resume', NonNullable<Schema['ResumeSucceededOperation']['result']>>
+  | SucceededOperation<'node_create', Schema['Node']>
+  | SucceededOperation<'node_delete', Schema['DeleteCount']>
+  | SucceededOperation<'provider_create', Schema['Provider']>
+  | SucceededOperation<'provider_delete', Schema['DeleteCount']>;
 export type OperationState = Operation & {retryAfter?: number};
 // The statuses an operation ends in; it never changes after reaching one.
 export const operationDone = (status: Operation['status']) => status === 'succeeded' || status === 'failed';
