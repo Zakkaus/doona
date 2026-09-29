@@ -192,7 +192,10 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
   const listed = routing
     ? (rules.data?.rules ?? []).map(rule => ({...rule, target: rule.outbound ?? ''}))
     : (listedDns ?? []).map(rule => ({...rule, target: dnsRuleTarget(rule)}));
+  // A rule without its target is not a rule to copy.
+  const copyReady = !!target && !!outbound;
   const copy = async () => {
+    if (!copyReady) return;
     const copied = await copyText(preview);
     toast(copied ? 'positive' : 'negative', t(copied ? 'rule.copied' : 'rule.copyFailed'));
   };
@@ -239,6 +242,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       writable: canWrite,
       // Copying stands in for writing when no file can take the rule.
       copyable: !canWrite || unplaceable,
+      copyReady,
       copy: () => void copy(),
       busy: pending.busy,
       loadError,
