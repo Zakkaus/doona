@@ -76,7 +76,10 @@ export function Activity() {
         <Card title={t('act.cpu')} tile={{icon: <Cpu />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{vm.cpu}</span>
+              {/* The value opens the overview, where the engine's process figures sit. */}
+              <Link appearance="link" href={href('overview')} label={t('ui.valuePair', {label: t('act.cpu'), value: vm.cpu})}>
+                <span className="rp-big">{vm.cpu}</span>
+              </Link>
             </span>
           </div>
         </Card>

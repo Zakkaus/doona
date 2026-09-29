@@ -662,3 +662,9 @@ test('the rankings, outbound usage and latency tile open the connections and nod
   await expect(page).toHaveURL(new RegExp(`#/nodes\\?provider=[^&]+&q=${escape(nodeName)}$`));
   await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(nodeName);
 });
+
+test('the CPU tile opens the overview', async ({page}) => {
+  await page.goto('/#/activity');
+  await page.locator('.rp-card', {hasText: 'CPU usage'}).locator('.rp-tile-val > .rp-link').click();
+  await expect(page).toHaveURL(/#\/overview$/);
+});
