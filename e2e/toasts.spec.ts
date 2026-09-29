@@ -1,4 +1,4 @@
-import {test, expect, mockBackend} from './fixtures';
+import {test, expect, mockBackend, moreAction} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 
@@ -97,7 +97,7 @@ for (const width of [1280, 390])
     await expect(success).toBeVisible();
     await expect(success.locator('[slot="description"]')).toHaveCount(0);
     await success.getByRole('button', {name: 'View nodes', exact: true}).click();
-    await page.getByRole('button', {name: 'Remove sub-w', exact: true}).click();
+    await moreAction(page.locator('body'), 'Remove sub-w', 'More actions for sub-w');
     await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-w', exact: true}).click();
     const removed = page.locator('.rp-toast.positive', {hasText: 'sub-w removed'});
     await expect(removed).toBeVisible();
