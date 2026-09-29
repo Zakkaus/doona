@@ -41,8 +41,9 @@ export function Activity() {
         </Card>
       </div>
 
+      {/* Each tile opens what it measures: the rates open the connections' traffic, the count opens their list. */}
       <div className="rp-strip">
-        <Card title={t('act.download')} tile={{icon: <Download />, tint: 1, kind: 'metric'}}>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.download}</span>
@@ -51,8 +52,8 @@ export function Activity() {
               <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
             </span>
           </div>
-        </Card>
-        <Card title={t('act.upload')} tile={{icon: <Upload />, tint: 4, kind: 'metric'}}>
+        </CardLink>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.upload}</span>
@@ -61,7 +62,7 @@ export function Activity() {
               <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
             </span>
           </div>
-        </Card>
+        </CardLink>
         <CardLink href={href('connections', {tab: 'list'})} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
