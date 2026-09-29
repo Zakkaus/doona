@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useRef, useState} from 'react';
+import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
 import type {Node, Provider} from '../../api/model';
@@ -90,11 +90,20 @@ export function useNodesPage({go, query}: PageProps) {
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
   const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
+  // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.
+  const shown = useRef<string | null>(query);
+  useLayoutEffect(() => {
+    shown.current = query;
+    return () => {
+      shown.current = null;
+    };
+  }, [query]);
   const submit = async (close: () => void) => {
     if (!dialog || submitting.current) return;
     submitting.current = dialog;
     setPendingDialog(dialog);
     const submitted = session.current;
+    const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
     const refuse = (text: string) => {
       if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
@@ -106,12 +115,15 @@ export function useNodesPage({go, query}: PageProps) {
         const created = await manage.addProvider(providerCreate(form, createOptions));
         if (!created) return;
         const name = form.name.trim();
+        if (session.current === submitted) {
+          guard.clear();
+          close();
+        }
+        // The new row is selected once it exists, whatever its first refresh does, unless the person has since
+        // chosen another row or page.
+        if (at !== null && shown.current === at) go('nodes', within(at, {provider: created.id}), {replace: true});
         // The contract creates the provider unfetched; a refresh is what turns it into nodes.
         if (resources?.providers.can_refresh) {
-          if (session.current === submitted) {
-            guard.clear();
-            close();
-          }
           // The person never pressed this refresh, so a failure offers it again from the toast.
           const fetchAdded = () =>
             void refreshing.refresh(created.id).then(
@@ -126,6 +138,7 @@ export function useNodesPage({go, query}: PageProps) {
           return;
         }
         toast('positive', t('nodes.added', {name}), {action: viewNodes(created.id)});
+        return;
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
