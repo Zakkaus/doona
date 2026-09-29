@@ -177,7 +177,6 @@ export function createInventory(
       if (
         !probes.targets?.includes(request.target.type) ||
         !probes.kinds?.includes(request.kind) ||
-        !probes.purposes?.includes(request.purpose) ||
         request.transport.some(transport => !probes.transports?.includes(transport)) ||
         versions.some(version => !probes.ip_versions?.includes(version))
       )
@@ -198,8 +197,7 @@ export function createInventory(
       if (
         !request.transport.length ||
         request.transport.some(t => group && !group.capabilities.probe_transports.includes(t)) ||
-        (request.kind !== 'dns' && (request.purpose !== 'data' || request.transport.some(t => t !== 'tcp'))) ||
-        (request.kind === 'dns' && request.purpose !== 'dns')
+        (request.kind !== 'dns' && request.transport.some(t => t !== 'tcp'))
       )
         throw new ApiError(422, 'unsupported_value', 'Unsupported probe dimensions');
       if (group && Array.isArray(request.members) && request.members.some(id => !group.members.some(m => m.id === id)))

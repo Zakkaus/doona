@@ -66,7 +66,6 @@ export const capabilities: Capabilities = {
       available: true,
       targets: ['node', 'group'],
       kinds: ['tcp_connect', 'http', 'dns'],
-      purposes: ['data', 'dns'],
       transports: ['tcp', 'udp'],
       ip_versions: ['ipv4', 'ipv6'],
       limits: {

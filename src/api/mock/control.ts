@@ -36,6 +36,8 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
   const group = target.type === 'group' ? groups.find(g => g.id === target.group_id) : undefined;
   const selection = {tcp: group?.runtime.selection.tcp?.member_id ?? null, udp: group?.runtime.selection.udp?.member_id ?? null};
   const ids = probeMembers(request, nodes, groups);
+  // The kind fixes the purpose; the request no longer carries it.
+  const purpose = request.kind === 'dns' ? 'dns' : 'data';
   const results: ProbeResult['results'] = [];
   for (const member_id of ids)
     for (const transport of request.transport) {
@@ -48,7 +50,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
         const error = state === 'unavailable' ? 'probe_failed' : null;
         const observation: HealthObservation = {
           transport,
-          purpose: request.purpose,
+          purpose,
           ip_version,
           warmth: request.warmth,
           measurement: request.kind === 'http' ? 'http_headers' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect',
@@ -64,7 +66,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           const index = node.health.findIndex(
             h =>
               h.transport === transport &&
-              h.purpose === request.purpose &&
+              h.purpose === purpose &&
               h.ip_version === ip_version &&
               h.warmth === request.warmth &&
               h.measurement === observation.measurement
@@ -78,7 +80,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
             h =>
               h.member_id === member_id &&
               h.transport === transport &&
-              h.purpose === request.purpose &&
+              h.purpose === purpose &&
               h.ip_version === ip_version &&
               h.warmth === request.warmth &&
               h.measurement === observation.measurement
@@ -90,7 +92,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           member_id,
           resolved_leaf_node_id: node?.id ?? null,
           kind: request.kind,
-          purpose: request.purpose,
+          purpose,
           transport,
           ip_version,
           warmth: request.warmth,
@@ -135,15 +137,14 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     typeof policy.native !== 'string'
   )
     throw new ApiError(422, 'unsupported_value', 'Invalid group policy');
-  const config = Object.fromEntries(
-    Object.keys(group.config).map(key => [key, document['/config/' + key] ?? null])
-  ) as Group['config'];
+  const config = Object.fromEntries(Object.keys(group.config).map(key => [key, document['/config/' + key] ?? null])) as Group['config'];
   for (const key of ['check_interval', 'tolerance', 'idle_timeout'] as const) {
     const value = config[key];
     if (value !== null && (!Number.isSafeInteger(value) || value < (key === 'check_interval' ? 1 : 0)))
       throw new ApiError(422, 'unsupported_value', 'Invalid group interval or tolerance');
   }
-  if (config.interrupt_connections !== null && typeof config.interrupt_connections !== 'boolean') throw new ApiError(422, 'unsupported_value', 'Invalid interruption setting');
+  if (config.interrupt_connections !== null && typeof config.interrupt_connections !== 'boolean')
+    throw new ApiError(422, 'unsupported_value', 'Invalid interruption setting');
   for (const key of ['default_member_id', 'final_outbound', 'check_url'] as const)
     if (config[key] !== null && typeof config[key] !== 'string') throw new ApiError(422, 'unsupported_value', 'Invalid group configuration value');
   if (config.default_member_id !== null && !group.members.some(m => m.id === config.default_member_id))
