@@ -69,6 +69,11 @@ it('keeps the backend message for the codes honk reuses for unrelated failures',
     summary: t('ui.backend.stateConflict'),
     detail: 'An inline node named hk-03 already exists.'
   });
+  // A management write names the code again as its stage; the backend's words still say which conflict it was.
+  expect(backendMessage('state_conflict', 'A resource with this name already exists', t, {stage: 'state_conflict'})).toEqual({
+    summary: t('ui.backend.stateConflict'),
+    detail: 'A resource with this name already exists'
+  });
   expect(backendMessage('capability_not_supported', 'Provider refresh is not supported', t)).toEqual({summary: t('ui.backend.capabilityNotSupported')});
 });
 

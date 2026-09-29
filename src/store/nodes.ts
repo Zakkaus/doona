@@ -92,20 +92,23 @@ export function useNodeManage(refetch: () => void) {
     },
     [refetch]
   );
-  // A 409 state_conflict is the configuration changing while the write was admitted: nothing was stored, so the list
-  // is read again and a retry starts from what is there.
+  // A 409 state_conflict stored nothing, so the list is read again and a retry starts from what is there. It is the
+  // configuration changing while the write was admitted, but also a create's name already in use or a node that groups
+  // still name as their final (`details.groups`); only a delete without groups is known to be the change, and the
+  // others keep the backend's own message.
   const conflict = useCallback(
-    (error: unknown): never => {
+    (error: unknown, deleting: boolean): never => {
       if (!(error instanceof ApiError && error.status === 409 && error.code === 'state_conflict')) throw activationError(error) ?? error;
       refetch();
-      throw new LocalError('config.changedMeanwhile');
+      if (deleting && !(error.details as {groups?: unknown} | null)?.groups) throw new LocalError('config.changedMeanwhile');
+      throw error;
     },
     [refetch]
   );
   // A 202 hands the write to an operation; the caller stays busy until it settles and gets the operation's result.
   const write = useCallback(
     async <K extends WriteKind>(kind: K, answer: Promise<SucceededResult<K> | OperationAccepted>, signal: AbortSignal): Promise<SucceededResult<K>> => {
-      const result = await answer.catch(conflict);
+      const result = await answer.catch(error => conflict(error, kind.endsWith('_delete')));
       const value = 'operation_id' in result ? (finished(await settle(api, result, signal), kind) as SucceededResult<K>) : result;
       return then(value);
     },
