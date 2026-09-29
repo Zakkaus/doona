@@ -418,3 +418,37 @@ test('the resolution log toolbar opens the recording settings, from the overflow
   await page.getByRole('menuitem', {name: 'Recording settings', exact: true}).click();
   await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
 });
+
+// The type and elapsed columns hold short values that must read whole; the domain column gives up the room.
+for (const [lang, type, elapsed] of [
+  ['en', 'Type', 'Elapsed'],
+  ['zh-CN', '类型', '耗时'],
+  ['zh-TW', '類型', '耗時']
+]) {
+  test.describe(lang, () => {
+    test.use({viewport: {width: 1280, height: 900}, storage: {'doona-lang': lang}});
+
+    for (const [tab, labels] of [
+      ['log', [type, elapsed]],
+      ['cache', [type]]
+    ] as const) {
+      test(`the DNS ${tab} keeps its short columns whole`, async ({page}) => {
+        await page.goto(`/#/dns?tab=${tab}`);
+        const panel = page.getByRole('tabpanel');
+        await expect(panel.locator('[role=row][data-key]').first()).toBeVisible();
+        const cut = await panel.evaluate((root, labels) => {
+          const heads = [...root.querySelectorAll('[role=columnheader]')].map(head => head.textContent);
+          return labels.flatMap(label => {
+            const index = heads.indexOf(label);
+            if (index < 0) return [`no ${label} column`];
+            return [...root.querySelectorAll('[role=row][data-key]')].flatMap(row => {
+              const cell = row.children[index].querySelector('.rp-truncate') ?? row.children[index];
+              return cell.scrollWidth > cell.clientWidth ? [`${label}: ${cell.textContent}`] : [];
+            });
+          });
+        }, labels);
+        expect(cut).toEqual([]);
+      });
+    }
+  });
+}
