@@ -1270,7 +1270,7 @@
   "search.groups": "组",
   "search.nodeCount": "{n} 个节点",
   "search.nodes": "节点",
-  "search.none": "没有匹配的项目。搜索范围：页面、节点、组和节点来源的名称，当前的连接，配置文件路径和规则表达式。",
+  "search.none": "没有匹配的项目。搜索范围：页面、标签页、节点、组和节点来源的名称，当前的连接，配置文件路径，路由规则和 DNS 规则的表达式。",
   "search.pages": "页面",
   "search.providers": "节点来源",
   "search.sources": "配置来源",

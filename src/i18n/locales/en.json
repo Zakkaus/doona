@@ -1468,7 +1468,7 @@
     "other": "{n} nodes"
   },
   "search.nodes": "Nodes",
-  "search.none": "No matches. Search covers the names of pages, nodes, groups and node sources, live connections, configuration file paths and rule expressions.",
+  "search.none": "No matches. Search covers the names of pages, tabs, nodes, groups and node sources, live connections, configuration file paths, and routing and DNS rule expressions.",
   "search.pages": "Pages",
   "search.providers": "Node sources",
   "search.sources": "Configuration sources",
