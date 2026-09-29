@@ -266,6 +266,16 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     g!.fill();
     g!.stroke();
   }
+  // A card of the background colour: cleared first so a wall behind it never shows through a translucent base.
+  function plate(fill: string, x: number, y: number, w: number, h: number) {
+    g!.save();
+    g!.beginPath();
+    g!.roundRect(x, y, w, h, 8);
+    g!.clip();
+    g!.clearRect(x, y, w, h);
+    g!.restore();
+    shape(fill, () => g!.roundRect(x, y, w, h, 8));
+  }
   // The duck, centred on (x, yc) and s tall, mirrored to face right unless left is set.
   function duck(x: number, yc: number, s: number, rot: number, left = false) {
     const k = s / DUCK_BOX.height;
@@ -383,25 +393,28 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
         [b, ground]
       ]) {
         shape(C.wall, () => g!.rect(x, from - 2, WALL, to - from + 2));
-        // Brick courses in the background colour, anchored to the gap edge so a drifting gap carries them along.
-        g!.fillStyle = C.base;
+        // Brick courses in translucent ink (the base colour can be see-through), anchored to the gap edge so a drifting gap carries them along.
+        g!.save();
+        g!.globalAlpha = 0.35;
+        g!.fillStyle = C.ink;
         const top = !from;
         for (let i = 1, yy = (top ? a : b) + (top ? -12 : 12); yy > 1 && yy < ground - 1; i++, yy = (top ? a : b) + (top ? -12 : 12) * i) {
           g!.fillRect(x + 1, yy, WALL - 2, 1);
           g!.fillRect(x + (i % 2 ? 16 : 32), top ? yy + 1 : yy - 11, 1, 11);
         }
+        g!.restore();
       }
     }
     g!.strokeStyle = C.sub;
     if (down) {
       // The result sits at the top on a plate of the background colour, away from the crash point.
-      shape(C.base, () => g!.roundRect(w / 2 - 150, 16, 300, 92, 8));
+      plate(C.base, w / 2 - 150, 16, 300, 92);
       say(text.result(amountText(mb)), w / 2, 46, C.text, 16);
       say(text.best(amountText(Math.max(best, mb))), w / 2, 70, C.sub);
       if (performance.now() - down > 900) say(text.restart, w / 2, 94, C.sub);
     } else {
       // The score keeps a small plate of its own so a wall passing behind it never cuts through the digits.
-      shape(C.base, () => g!.roundRect(w / 2 - 70, 18, 140, 52, 8));
+      plate(C.base, w / 2 - 70, 18, 140, 52);
       say(amountText(mb), w / 2, 40, C.text, 16);
       say(rateText(stage), w / 2, 60, now - flash < 1.2 && stage ? C.accent : C.sub);
     }
