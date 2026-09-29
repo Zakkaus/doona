@@ -105,8 +105,11 @@ export function useNodesPage({go, query}: PageProps) {
     const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
     if (place?.length !== 1) return null;
     const [{source: origin, entry}] = place;
+    // honk lets two subscriptions share a name, such as a tagged entry and an untagged one named after the same host;
+    // the entry found by that name may then declare the other one, so it only opens.
+    const unique = (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
     // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
-    if (daeText && source.writable && origin.writable && isComplete(origin) === true)
+    if (daeText && unique && source.writable && origin.writable && isComplete(origin) === true)
       return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry})};
     return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
   };
