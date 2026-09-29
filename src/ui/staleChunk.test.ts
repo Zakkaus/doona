@@ -1,16 +1,10 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
+import * as staleChunk from './staleChunk';
 
 const store = (initial?: string) => {
   const values = new Map<string, string>(initial === undefined ? [] : [['doona-stale-reload', initial]]);
   return {getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => void values.set(key, value)};
 };
-
-// The in-flight flag is module state, so each case starts from a fresh module.
-let staleChunk: typeof import('./staleChunk');
-beforeEach(async () => {
-  vi.resetModules();
-  staleChunk = await import('./staleChunk');
-});
 
 describe('isChunkLoadError', () => {
   it.each([
@@ -40,11 +34,11 @@ describe('reloadForStaleChunk', () => {
     expect(storage.getItem('doona-stale-reload')).toBe('1000000');
   });
 
-  it('reports a reload that is under way without repeating it', () => {
+  it('reports a second failure after a reload that did not happen, such as one the person cancelled', () => {
     const reload = vi.fn();
     const storage = store();
     staleChunk.reloadForStaleChunk(reload, 1_000_000, storage);
-    expect(staleChunk.reloadForStaleChunk(reload, 1_000_500, storage)).toBe(true);
+    expect(staleChunk.reloadForStaleChunk(reload, 1_000_500, storage)).toBe(false);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
