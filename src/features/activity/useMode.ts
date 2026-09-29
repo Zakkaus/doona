@@ -42,7 +42,7 @@ export function useMode() {
       return;
     }
     const problem = editProblem(result, t);
-    if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
+    if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
   };
   return {
     ...view,

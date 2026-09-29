@@ -3,7 +3,7 @@ import {readTag} from '../shared/taggedId';
 import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
-import {downloadFile, exportName, panelQuery, phoneQuery, toast, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, phoneQuery, toast, toastErrorDetail, useLinked, useMediaQuery} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {compareNames} from '../../i18n/format';
@@ -143,7 +143,7 @@ export function useConnectionsPage({go, query}: PageProps) {
       toast('positive', t('conn.closed', {name: model.detail.title}));
     } catch (error) {
       if (error instanceof ApiError && error.code === 'state_conflict') toast('negative', t('conn.notClosable'));
-      else toast('negative', t('conn.closeFailed'), {detail: errorText(error, t)});
+      else toast('negative', t('conn.closeFailed'), toastErrorDetail(error, t));
     }
   };
   const closeAll = async () => {

@@ -66,7 +66,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
         // A refusal after the dialog closed has nowhere inline to go.
         if (problem) {
           if (open) refuse(noticeText(problem, t));
-          else toast(problem.kind, problem.text, {detail: problem.detail});
+          else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
         }
       });
   };

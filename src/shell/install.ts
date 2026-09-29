@@ -1,6 +1,5 @@
 import {useSyncExternalStore} from 'react';
-import {toast} from '../ui/Feedback';
-import {errorText} from '../api/error';
+import {toast, toastErrorDetail} from '../ui/Feedback';
 import {useT} from '../i18n';
 
 // Keeps beforeinstallprompt for a later button. Only Chrome and Edge emit it; elsewhere the button stays hidden.
@@ -52,7 +51,7 @@ export function useInstallOffer(): (() => Promise<boolean>) | null {
       await offer.prompt();
       return (await offer.userChoice).outcome === 'accepted';
     } catch (error) {
-      toast('negative', t('settings.installFailed'), {detail: errorText(error, t)});
+      toast('negative', t('settings.installFailed'), toastErrorDetail(error, t));
       return false;
     }
   };

@@ -6,7 +6,7 @@ import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {downloadFile, exportName, panelQuery, toast, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, toast, toastErrorDetail, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {href, pickTab, within, tabQuery} from '../../shell/route';
@@ -124,7 +124,7 @@ export function useDnsCacheTab(domain: string) {
     (id: string) =>
       void removeEntry(id).then(
         result => result && toast('positive', t('dns.deleted', {n: result.deleted})),
-        error => toast('negative', t('dns.deleteFailed'), {detail: errorText(error, t)})
+        error => toast('negative', t('dns.deleteFailed'), toastErrorDetail(error, t))
       ),
     [removeEntry, t]
   );

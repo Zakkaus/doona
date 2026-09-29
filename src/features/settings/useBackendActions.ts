@@ -13,7 +13,7 @@ import {useLifecycle} from '../shared/useLifecycle';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {closedAllTone} from '../../api/selectors';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {toast, toastErrorDetail} from '../../ui/ui';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {geodataConfigurable} from './nav';
 import {errorText} from '../../api/error';
@@ -108,7 +108,7 @@ export function useBackendActions() {
         result => {
           if (result) toast('positive', t('settings.geodataUpdated'));
         },
-        error => toast('negative', t('settings.geodataFailed'), {detail: errorText(error, t)})
+        error => toast('negative', t('settings.geodataFailed'), toastErrorDetail(error, t))
       )
   };
 }

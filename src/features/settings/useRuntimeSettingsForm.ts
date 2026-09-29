@@ -3,7 +3,7 @@ import {enumLabel} from '../../i18n/enum';
 import {useCapabilities, useRuntimeSettings} from '../../store';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {toast, toastErrorDetail} from '../../ui/ui';
 import {
   numericFields,
   numericAccess,
@@ -21,7 +21,6 @@ import {
 } from './view';
 import {useDraftGuard} from '../../shell/draft';
 import {logLevelLabels} from '../../api/selectors';
-import {errorText} from '../../api/error';
 
 export function useRuntimeSettingsForm() {
   const t = useT();
@@ -91,7 +90,7 @@ export function useRuntimeSettingsForm() {
         setDraft(current => (current === submitted ? null : current));
         toast('positive', t('settings.runtimeSaved'));
       },
-      (error: unknown) => toast('negative', t('settings.runtimeFailed'), {detail: errorText(error, t)})
+      (error: unknown) => toast('negative', t('settings.runtimeFailed'), toastErrorDetail(error, t))
     );
   };
   return {

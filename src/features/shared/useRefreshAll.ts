@@ -1,7 +1,6 @@
 import type {useProviderRefresh, useProviders} from '../../store';
 import {useT} from '../../i18n';
-import {toast} from '../../ui/ui';
-import {errorText} from '../../api/error';
+import {toast, toastErrorDetail} from '../../ui/ui';
 import {refreshAllReason} from './refreshAll';
 
 // Refreshing every subscription in one batch, which Settings' backend actions and the Nodes subscription list both
@@ -26,11 +25,11 @@ export function useRefreshAll(providers: Pick<ReturnType<typeof useProviders>, '
           if (done === undefined) return;
           const counts = {n: done, total: subscriptions.length};
           const kind = done === subscriptions.length ? 'positive' : done ? 'info' : 'negative';
-          if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), {detail: errorText(failures[0], t)});
+          if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), toastErrorDetail(failures[0], t));
           else toast(kind, t('settings.refreshedAll', counts));
           if (degraded) toast('info', t('settings.refreshedDegraded'));
         },
-        error => toast('negative', t('settings.refreshAllFailed'), {detail: errorText(error, t)})
+        error => toast('negative', t('settings.refreshAllFailed'), toastErrorDetail(error, t))
       );
   };
   return {

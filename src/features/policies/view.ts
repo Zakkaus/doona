@@ -98,11 +98,11 @@ export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonP
 }
 
 // A partial probe says how far it got and why it stopped.
-export function actionErrorText(error: Error, t: Translator): string {
-  if (!('partialResult' in error)) return errorText(error, t);
+export function actionErrorText(error: Error, t: Translator, showRequestId = true): string {
+  if (!('partialResult' in error)) return errorText(error, t, showRequestId);
   const {completed, total, cause} = error as PartialProbeError;
-  const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t)});
-  return t('ui.valuePair', {label: errorText(error, t), value: progress});
+  const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t, showRequestId)});
+  return t('ui.valuePair', {label: errorText(error, t, showRequestId), value: progress});
 }
 // Count each member's worst address-family outcome, without letting an absent address hide a measured result.
 const probeRank = {unknown: 0, healthy: 1, unavailable: 2};

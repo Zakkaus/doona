@@ -31,6 +31,24 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   ]);
 });
 
+test('a cache deletion toast omits its request ID and logs it', async ({page}) => {
+  const warnings: string[] = [];
+  page.on('console', message => {
+    if (message.type() === 'warning') warnings.push(message.text());
+  });
+  const {api, handlers} = await mockBackend(page);
+  const entry = (await api.dnsCache()).entries[0];
+  handlers[`DELETE dns/cache/${encodeURIComponent(entry.entry_id)}`] = async () => {
+    throw new ApiError(502, 'upstream_unavailable', 'Cache backend unavailable', 'cache-delete-17');
+  };
+  await page.goto('/#/dns?tab=cache');
+  await page.getByRole('button', {name: `Delete the ${entry.type} cache entry for ${entry.domain}`, exact: true}).click();
+  const failure = page.locator('.rp-toast.negative');
+  await expect(failure).toContainText('Cache backend unavailable');
+  await expect(failure).not.toContainText('cache-delete-17');
+  expect(warnings.filter(text => text.includes('request_id: cache-delete-17'))).toHaveLength(1);
+});
+
 test('a failed cache flush preserves rows and reports failure', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   const entries = (await api.dnsCache()).entries;

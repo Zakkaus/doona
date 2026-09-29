@@ -176,8 +176,9 @@ const localDetail = (error: LocalError, t: Translator) =>
   error.detail ? (error.code ? oneLine(backendMessage(error.code, error.detail, t, error.details), t) : error.detail) : undefined;
 
 // The words for a failure: doona's own errors in the current language, the backend's message as it sent it. A code
-// honk reuses keeps the backend's words as the detail, which carries the request note when there is one.
-export function errorLines(error: unknown, t: Translator): BackendMessage {
+// honk reuses keeps the backend's words as the detail, which carries the request note when there is one and it is shown:
+// a toast leaves it out, the places that stay on screen keep it for a bug report.
+export function errorLines(error: unknown, t: Translator, showRequestId = true): BackendMessage {
   if (error instanceof LocalError) {
     const detail = localDetail(error, t);
     return {summary: detail ? t('ui.valuePair', {label: t(error.key), value: detail}) : t(error.key)};
@@ -185,23 +186,22 @@ export function errorLines(error: unknown, t: Translator): BackendMessage {
   if (error instanceof ApiError && error.text) return {summary: t(error.text.key, error.text.params)};
   if (!(error instanceof ApiError)) return {summary: error instanceof Error ? error.message : String(error)};
   const {summary, detail} = backendMessage(error.code, error.message, t, error.details);
-  const note = error.requestId ? t('ui.requestNote', {id: error.requestId}) : '';
+  const note = showRequestId && error.requestId ? t('ui.requestNote', {id: error.requestId}) : '';
   return detail ? {summary, detail: detail + note} : {summary: summary + note};
 }
 
 // The same words on one line.
-export const errorText = (error: unknown, t: Translator) => oneLine(errorLines(error, t), t);
+export const errorText = (error: unknown, t: Translator, showRequestId = true) => oneLine(errorLines(error, t, showRequestId), t);
 
-// The request note errorText appends, as every language words ui.requestNote: request_id in half- or full-width
-// brackets. A toast drops it; the places that stay on screen keep it for a bug report.
-const REQUEST_NOTE = /\s*[(（]request_id[:：][^)）]*[)）]/g;
-export const withoutRequestNote = (text: string) => text.replace(REQUEST_NOTE, '');
+// The backend's request id for a failure, or for the failure that stopped a partial one.
+export const requestIdOf = (error: unknown): string | undefined =>
+  error instanceof ApiError ? (error.requestId ?? undefined) : error instanceof Error && error.cause instanceof ApiError ? requestIdOf(error.cause) : undefined;
 
 // What to tell the person about a failed action: the action's summary, with the error as its detail. An operation
 // whose outcome is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is
 // reported under its own summary too, since the action's would say the write failed, and so is an activation that
 // left the change active or its outcome unknown.
-export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string};
+export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; requestId?: string};
 const ownSummary = new Set<Key>([
   'ui.writtenNotApplied',
   'ui.activationDegraded',
@@ -213,8 +213,9 @@ const ownSummary = new Set<Key>([
 export function failureNotice(error: unknown, t: Translator, summary: string): Notice {
   if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key)};
   if (error instanceof LocalError && ownSummary.has(error.key)) return {kind: 'negative', text: t(error.key), detail: localDetail(error, t)};
-  return {kind: 'negative', text: summary, detail: errorText(error, t)};
+  return {kind: 'negative', text: summary, detail: errorText(error, t, false), requestId: requestIdOf(error)};
 }
 
 // A notice as one line, for a place that shows it inline rather than as a toast.
-export const noticeText = ({text, detail}: Notice, t: Translator) => (detail ? t('ui.valuePair', {label: text, value: detail}) : text);
+export const noticeText = ({text, detail, requestId}: Notice, t: Translator, showRequestId = true) =>
+  detail ? t('ui.valuePair', {label: text, value: detail + (showRequestId && requestId ? t('ui.requestNote', {id: requestId}) : '')}) : text;

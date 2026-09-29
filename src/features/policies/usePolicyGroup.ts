@@ -8,7 +8,7 @@ import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeS
 import {usePolicyEdit, type PolicyDeclaration} from './usePolicyEdit';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
-import {ApiError} from '../../api/error';
+import {ApiError, requestIdOf} from '../../api/error';
 export type PolicyGroupInput = {
   id: string;
   name: string;
@@ -29,7 +29,9 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
   const report = useEffectEvent((error: Error) =>
-    toast('negative', t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t)}))
+    toast('negative', t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t, false)}), {
+      requestId: requestIdOf(error)
+    })
   );
   useEffect(() => {
     if (control.actionError) report(control.actionError);

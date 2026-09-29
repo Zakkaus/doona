@@ -4,9 +4,8 @@ import {useLifecycle} from '../features/shared/useLifecycle';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useLang, useT} from '../i18n';
-import {toast} from '../ui/ui';
+import {toast, toastErrorDetail} from '../ui/ui';
 import {accessError, duckView, shellView, topBarCommands, wordmark, type AboutView, type ShellView, type TopBarCommands} from './view';
-import {errorText} from '../api/error';
 import {docsHref} from '../features/shared/docs';
 
 export const AboutContext = createContext<AboutView | null>(null);
@@ -41,7 +40,7 @@ export function useShell(settings: Settings, route: string): ShellModel {
       const outcomes = await refetchAll();
       // A resource unsubscribed by navigating away mid-refresh did not fail.
       const failure = outcomes.flatMap(outcome => (outcome.ok || outcome.error.name === 'AbortError' ? [] : [outcome.error]))[0];
-      if (failure) toast('negative', t('ui.refreshFailed'), {detail: errorText(failure, t)});
+      if (failure) toast('negative', t('ui.refreshFailed'), toastErrorDetail(failure, t));
       else toast('positive', t('ui.refreshed'));
     } finally {
       refreshLock.current = false;

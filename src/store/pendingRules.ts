@@ -10,7 +10,7 @@ export type PendingPlace = {list: 'routing'; before: RoutingRule} | {list: 'requ
 // file it was placed in; an apply writes it there or not at all.
 export type HeldRule = PendingPlace & {condition: string; outbound: string; must: boolean; sourceId: string};
 export type PendingRule = HeldRule & {id: number};
-export type PendingFailure = {text: string; lines: string[]};
+export type PendingFailure = {text: string; lines: string[]; toastText?: string; requestId?: string};
 // `applying`: one apply at a time, whichever button started it.
 type State = {rules: PendingRule[]; failure: PendingFailure | null; applying: boolean};
 
