@@ -692,6 +692,7 @@
   "log.message": "消息",
   "log.pause": "暂停",
   "log.paused": "已暂停：{n} 条新记录",
+  "log.pausedOverflow": "已暂停：{n}+ 条新记录",
   "log.reconnecting": "重新连接中",
   "log.recorded": "引擎记录：{level}及以上",
   "log.target": "模块",

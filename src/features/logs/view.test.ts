@@ -30,14 +30,16 @@ it('keeps a record without a target and exports a dash for it', () => {
 });
 
 it('states a paused stream and caps the held count at what resuming can show', () => {
-  expect(logStatus(false, false, false, 0, 1000, 'en-US', t).tone).toBe('warn');
-  expect(logStatus(true, false, false, 0, 1000, 'en-US', t)).toEqual({tone: 'ok', text: 'Streaming'});
-  expect(logStatus(true, false, true, 1, 1000, 'en-US', t)).toEqual({tone: 'neutral', text: 'Paused: 1 new record'});
-  expect(logStatus(true, false, true, 1000, 1000, 'en-US', t).text).toBe('Paused: 1,000 new records');
-  expect(logStatus(true, false, true, 1001, 1000, 'en-US', t).text).toBe('Paused: 1,000+ new records');
+  expect(logStatus(false, false, false, 0, 1000, t).tone).toBe('warn');
+  expect(logStatus(true, false, false, 0, 1000, t)).toEqual({tone: 'ok', text: 'Streaming'});
+  expect(logStatus(true, false, true, 1, 1000, t)).toEqual({tone: 'neutral', text: 'Paused: 1 new record'});
+  expect(logStatus(true, false, true, 1000, 1000, t).text).toBe('Paused: 1,000 new records');
+  expect(logStatus(true, false, true, 1001, 1000, t).text).toBe('Paused: 1,000+ new records');
+  // More than one record is held back, so the capped count stays plural.
+  expect(logStatus(true, false, true, 2, 1, t).text).toBe('Paused: 1+ new records');
   // A reconnect keeps the paused count; only a failed stream outranks the pause.
-  expect(logStatus(false, false, true, 3, 1000, 'en-US', t).text).toBe('Paused: 3 new records');
-  expect(logStatus(true, true, true, 3, 1000, 'en-US', t)).toEqual({tone: 'err', text: t('log.disconnected')});
+  expect(logStatus(false, false, true, 3, 1000, t).text).toBe('Paused: 3 new records');
+  expect(logStatus(true, true, true, 3, 1000, t)).toEqual({tone: 'err', text: t('log.disconnected')});
 });
 
 it('resolves selected log levels against advertised choices', () => {

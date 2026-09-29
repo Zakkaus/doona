@@ -174,7 +174,9 @@ To correct a translation:
 
 A change that adds a string adds its key to `en.json` and to every complete language's catalogue in the same pull request.
 
-Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A count in English uses `{"one", "other"}` forms; Chinese needs only one form.
+Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A plural message is an object with the forms its language's `Intl.PluralRules` names (`zero`, `one`, `two`, `few`, `many`, `other`); `other` is required, and `check:i18n` rejects a form the language lacks. English uses `one` and `other`; Chinese uses a plain string. The form is chosen by the numeric `n` parameter, or by the parameter named in the translator's third argument, such as `t(key, {n, files}, 'files')`. Pass the count as a number, a `bigint` or a UInt64 decimal string, never as formatted text; the translator formats it for the language.
+
+Keep professional terms verbatim in every language: protocol names, dae and honk configuration keywords, ACL4SSR rule set and group names, and API field names. Generated configuration keeps the ACL4SSR vocabulary. The catalogues do not cover number and date formats, which come from the browser's `Intl`; React Aria's own announcements for grid selection and drag and drop, which fall back to `en-US` for a language React Aria lacks; or detail text the backend sends.
 
 To add a language:
 

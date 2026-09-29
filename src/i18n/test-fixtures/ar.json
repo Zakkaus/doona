@@ -1,0 +1,10 @@
+{
+  "dns.deleted": {
+    "zero": "zero {n}",
+    "one": "one {n}",
+    "two": "two {n}",
+    "few": "few {n}",
+    "many": "many {n}",
+    "other": "other {n}"
+  }
+}

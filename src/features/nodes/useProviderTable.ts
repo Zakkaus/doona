@@ -1,4 +1,4 @@
-import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
+import {useT, useLang, LOCALE} from '../../i18n';
 import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
@@ -43,7 +43,7 @@ export function useProviderTable(input: ProviderTableInput) {
         result => {
           if (!result) return;
           if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name: item.name}));
-          else toast('positive', t('nodes.refreshed', {name: item.name, n: formatNumber(result.node_count, locale)}));
+          else toast('positive', t('nodes.refreshed', {name: item.name, n: result.node_count}));
         },
         error => toastFailure(error, t, t('nodes.refreshFailed', {name: item.name}))
       ),

@@ -3,7 +3,7 @@ import {enumLabel} from '../../i18n/enum';
 import type {LogLevel, LogRecord, RecorderState} from '../../api/model';
 import {recorderEmpty} from '../shared/recorder';
 import {localTime} from '../../i18n/format';
-import {formatNumber, type Translator as LabelFn} from '../../i18n';
+import {type Translator as LabelFn} from '../../i18n';
 
 const severity: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error'];
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
@@ -76,12 +76,12 @@ export function logEmpty(recorder: RecorderState | undefined, filtered: boolean,
 }
 
 // Kept apart from `logView` because the count of held records changes while the list does not.
-export function logStatus(connected: boolean, failed: boolean, paused: boolean, pending: number, limit: number, locale: string, t: LabelFn) {
+export function logStatus(connected: boolean, failed: boolean, paused: boolean, pending: number, limit: number, t: LabelFn) {
   // A failed stream is not retried until asked, so it is not "connecting".
   if (failed) return {tone: 'err' as const, text: t('log.disconnected')};
   // A paused list is not live either way, so a brief reconnect does not replace what the pause is holding back.
   // The ring keeps only the newest `limit` records, so resuming never shows more than that.
-  if (paused) return {tone: 'neutral' as const, text: t('log.paused', {n: pending > limit ? `${formatNumber(limit, locale)}+` : pending})};
+  if (paused) return {tone: 'neutral' as const, text: t(pending > limit ? 'log.pausedOverflow' : 'log.paused', {n: Math.min(pending, limit)})};
   return {tone: connected ? ('ok' as const) : ('warn' as const), text: t(connected ? 'log.connected' : 'log.reconnecting')};
 }
 

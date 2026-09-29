@@ -1,5 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
+import {useT, useLang, LOCALE, formatList} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
@@ -186,7 +186,7 @@ export function useNodesPage({go, query}: PageProps) {
               result => {
                 if (!result) return;
                 if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}), {action: viewNodes(created.id)});
-                else toast('positive', t('nodes.addedRefreshed', {name, n: formatNumber(result.node_count, locale)}), {action: viewNodes(created.id)});
+                else toast('positive', t('nodes.addedRefreshed', {name, n: result.node_count}), {action: viewNodes(created.id)});
               },
               error => toastFailure(error, t, t('nodes.addedRefreshFailed', {name}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})
             );

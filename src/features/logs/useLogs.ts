@@ -33,7 +33,7 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
   return {
     ...view,
     empty: logEmpty(settings?.recording?.logs, !!targetFilter, t),
-    status: logStatus(feed.connected, !!feed.error, paused, feed.pending, LOG_FEED_LIMIT, locale, t),
+    status: logStatus(feed.connected, !!feed.error, paused, feed.pending, LOG_FEED_LIMIT, t),
     // The records the list shows, and the levels the backend offers, for the activity heatmap.
     records: feed.records,
     offered: resource?.levels ?? noLevels,
