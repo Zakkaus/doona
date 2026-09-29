@@ -119,7 +119,7 @@ test('logs state the level the engine records and mark the levels below it', asy
     fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
   );
   await page.goto('/#/logs');
-  const level = (await api.runtimeSettings()).log.level;
+  const level = (await api.runtimeSettings()).log!.level;
   expect(level).toBe('info');
   await expect(page.getByText('Engine records: Info and above', {exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Info Level', exact: true}).click();

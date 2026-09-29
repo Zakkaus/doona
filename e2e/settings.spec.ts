@@ -278,7 +278,7 @@ test('a recorder can be pinned on or off and the state light follows the backend
   expect((await saving).postDataJSON()).toEqual({record_flows: 'off'});
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.runtimeSaved')})).toBeVisible();
   await expect(recording.getByText(t('settings.recordingIdle'))).toHaveCount(1);
-  expect((await api.runtimeSettings()).recording?.flows.mode).toBe('off');
+  expect((await api.runtimeSettings()).recording?.flows?.mode).toBe('off');
 });
 
 test('a confirmation removed while its action is pending abandons the action', async ({page}) => {
