@@ -110,7 +110,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                     label={t('ui.moreActionsFor', {name: row.name})}
                     actions={[
                       ...(row.action?.kind === 'edit'
-                        ? [{id: 'edit', label: row.editLabel, isDisabled: m.busy || m.sourceBusy, onAction: row.action.run}]
+                        ? [{id: 'edit', label: row.editLabel, isDisabled: m.busy || m.editBusy, onAction: row.action.run}]
                         : row.action?.kind === 'open'
                           ? [{id: 'open', label: t('rule.openSource'), onAction: row.action.run}]
                           : []),

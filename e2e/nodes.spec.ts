@@ -2,6 +2,7 @@ import type {Locator} from '@playwright/test';
 import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
+import {sha256} from '../src/api/hash';
 import type {ProbeResult, Provider} from '../src/api/model';
 
 type ProbeResultItem = ProbeResult['results'][number];
@@ -671,4 +672,24 @@ test('two subscriptions sharing a name offer their source file instead of an edi
     await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
     await page.keyboard.press('Escape');
   }
+});
+
+test('a subscription in a writable include is edited while the main source is read-only', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    const entry = main.content!.match(/^\s*sub-c:.*$/m)![0];
+    main.content = main.content!.replace(entry + '\n', '');
+    main.content_sha256 = await sha256(main.content);
+    main.writable = false;
+    const content = 'subscription {\n' + entry + '\n}\n';
+    config.sources.push({...main, id: 'subs', kind: 'include', path: 'subs.dae', writable: true, content, content_sha256: await sha256(content)});
+    return config;
+  };
+  await page.goto('/#/nodes?tab=list');
+  const edit = await moreItem(page.locator('.rp-table').first(), 'Edit sub-c', 'More actions for sub-c');
+  await expect(edit).toBeEnabled();
+  await edit.click();
+  await expect(page.getByRole('dialog', {name: 'Edit subscription sub-c'})).toBeVisible();
 });
