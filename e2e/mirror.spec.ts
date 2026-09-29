@@ -78,7 +78,7 @@ test.describe('mirrored layout at 1280px', () => {
     test('labels with punctuation, times and parentheses keep their order', async ({page}) => {
       await page.goto('/#/overview');
       await expectMirrored(page);
-      // "dae/honk-native v1 (draft)" and a time such as "9/26/26, 12:14:27 PM" start with a letter or digit and end
+      // "daeuniverse/native v1 (draft)" and a time such as "9/26/26, 12:14:27 PM" start with a letter or digit and end
       // with punctuation or a Latin word, which a right-to-left line would move to the other end.
       const api = page.locator('.rp-kv .v').filter({hasText: /\(draft\)$/});
       await expect(api).toBeVisible();

@@ -14,7 +14,7 @@ export async function probeBackend(base: string, token: string, signal: AbortSig
     if (!discovery || !Number.isInteger(discovery.api_major) || discovery.api_major < 1) {
       throw new ApiError(200, 'invalid_discovery', 'Missing API version');
     }
-    return {version: String(discovery.api_major), password: discovery.auth?.mode === 'password'};
+    return {version: String(discovery.api_major), password: discovery.auth.mode === 'password'};
   } catch (error) {
     const failure = probeFailure(error, signal, base, origin, token);
     return failure && {failure, requestId: error instanceof ApiError ? error.requestId : null};

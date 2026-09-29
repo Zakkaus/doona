@@ -46,7 +46,7 @@ export function refuseWithoutSession<T extends Api>(api: T): T {
   const refuse = () => Promise.reject(new ApiError(401, 'authentication_required', 'Authentication required'));
   const discovery: Api['discovery'] = async signal => {
     signal?.throwIfAborted();
-    return {name: 'dae/honk-native', api_major: 1, links: {...authLinks}, auth: mockDiscovery()};
+    return {name: 'daeuniverse/native', api_major: 1, links: {...authLinks}, auth: mockDiscovery()};
   };
   return new Proxy(api, {
     get: (target, key, receiver) => (key === 'discovery' ? discovery : typeof Reflect.get(target, key, receiver) === 'function' ? refuse : undefined)

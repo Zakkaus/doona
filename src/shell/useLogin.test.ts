@@ -23,7 +23,7 @@ it('distinguishes a missing native API from discovery without auth reporting', a
 
 it('signs in from the public discovery view a backend gives a caller it does not admit yet', async () => {
   const view = (setup_required: boolean) => ({
-    name: 'dae/honk-native',
+    name: 'daeuniverse/native',
     api_major: 1,
     links: {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'},
     auth: {mode: 'password', setup_required}
@@ -49,6 +49,12 @@ it('reports a contract refusal from discovery instead of taking it for an older 
   // The Clash API of a honk before the native API answers 401 without a code.
   vi.stubGlobal('fetch', async () => new Response(JSON.stringify({message: 'Unauthorized'}), {status: 401}));
   expect(await resolveSignInKind('https://router.test')).toBe('token');
+});
+
+it('asks for an engine update when discovery still reports the old API name', async () => {
+  const body = {name: 'dae/honk-native', api_major: 1, links: {}, auth: {mode: 'password', setup_required: false}};
+  vi.stubGlobal('fetch', async () => new Response(JSON.stringify(body), {headers: {'Content-Type': 'application/json'}}));
+  await expect(resolveSignInKind('https://router.test')).rejects.toMatchObject({key: 'login.engineOutdated'});
 });
 
 it('rejects a removed or repointed profile without changing its credentials', () => {
@@ -88,7 +94,7 @@ it('maps refusals by code and follows a moved account state', () => {
   expect(signInRefusal(new ApiError(429, 'rate_limited', 'x', null, null, 7))).toEqual({key: 'login.rateLimited', params: {n: 7}, wait: 7});
   expect(signInRefusal(new ApiError(429, 'rate_limited', 'x'))?.wait).toBe(60);
   expect(signInRefusal(new ApiError(500, 'internal', 'x'))).toBeNull();
-  expect(signInKind(null)).toBe('token');
+  expect(signInKind({mode: 'token', setup_required: false})).toBe('token');
   expect(signInKind({mode: 'password', setup_required: true})).toBe('setup');
   expect(signInKind({mode: 'password', setup_required: false})).toBe('login');
 });

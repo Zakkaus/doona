@@ -46,7 +46,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
     discovery: async signal => {
       signal?.throwIfAborted();
       return {
-        name: 'dae/honk-native',
+        name: 'daeuniverse/native',
         status: 'draft',
         api_major: 1,
         base_path: '/api/v1',
@@ -63,8 +63,9 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
           providers: '/api/v1/providers',
           geodata: '/api/v1/geodata',
           rules: '/api/v1/rules',
-          operations: '/api/v1/operations/{id}'
-        }
+          operations: '/api/v1/operations/{operation_id}'
+        },
+        auth: {mode: 'token', setup_required: false, anonymous_loopback: false}
       };
     },
     version: async signal => {

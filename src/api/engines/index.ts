@@ -16,10 +16,10 @@ const unknown: Engine = {
   uncheckedHooks: []
 };
 
-// The engine behind the native API, by the API name its version reports; unknown until the version has loaded.
-export function engineOf(version: Pick<Version, 'api'> | undefined): Engine {
-  switch (version?.api.name) {
-    case 'dae/honk-native':
+// The engine behind the native API, by the engine name its version reports; unknown until the version has loaded.
+export function engineOf(version: Pick<Version, 'engine'> | undefined): Engine {
+  switch (version?.engine.name) {
+    case 'honk':
       return honk;
     default:
       return unknown;

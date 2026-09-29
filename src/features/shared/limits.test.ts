@@ -5,7 +5,7 @@ import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, type LimitCause, type LimitGroup} from './limits';
 import {docsHref} from './docs';
 const t: Translator = (key, params) => translate('en', key, params);
-const other = {...version, api: {...version.api, name: 'other/backend'}} as unknown as Version;
+const other = {...version, engine: {...version.engine, name: 'other'}};
 type Resources = Capabilities['resources'];
 const patched = (patch: {[K in keyof Resources]?: Partial<Resources[K]>}): Capabilities => ({
   ...capabilities,

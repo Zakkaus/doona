@@ -84,7 +84,7 @@ const reasonHelp: Partial<Record<EngineReason['code'], {text: Key; docs?: [DocsA
 // The backend features that are off or limited, grouped by why, so each cause is explained once. A feature appears
 // in at most one group, and a resource absent from every group is available. The contract says what is off; the
 // engine adapter adds why, where it knows.
-export function backendLimits(capabilities: Capabilities, version: Pick<Version, 'api'> | undefined, t: LabelFn, lang: Lang): LimitGroup[] {
+export function backendLimits(capabilities: Capabilities, version: Pick<Version, 'engine'> | undefined, t: LabelFn, lang: Lang): LimitGroup[] {
   const resources = capabilities.resources;
   const engine = engineOf(version);
   const reason = (id: LimitId) => engine.reason(id, capabilities);

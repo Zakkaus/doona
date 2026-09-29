@@ -694,6 +694,7 @@
   "login.connectedTo": "連線到 {backend}",
   "login.create": "建立並登入",
   "login.demoNote": "示範帳號：{username}　密碼：{password}",
+  "login.engineOutdated": "引擎提供的 API 版本低於此 doona 的要求，請更新引擎。",
   "login.failed": "無法登入：{error}",
   "login.gameBest": "最佳 {amount}",
   "login.gameLabel": "小遊戲：按下讓小鴨拍翅膀",

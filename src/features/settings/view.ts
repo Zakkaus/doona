@@ -146,7 +146,7 @@ export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; load
 // not say so.
 export function geodataFromConfig(
   capabilities: Capabilities | undefined,
-  version: Pick<Version, 'api'> | undefined,
+  version: Pick<Version, 'engine'> | undefined,
   t: Translator,
   lang: Lang
 ): {text: string; docs: {href: string; text: string}; config?: {href: string; text: string}} | null {

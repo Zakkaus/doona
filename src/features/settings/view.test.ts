@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import {geodata, runtimeSettings} from '../../api/mock/fixtures';
 import {capabilities} from '../../api/mock/fixtures/capabilities';
 import {version} from '../../api/mock/fixtures/runtime';
-import type {Capabilities, RuntimeSettingsPatch, Version} from '../../api/model';
+import type {Capabilities, RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {
   geodataFromConfig,
@@ -131,7 +131,7 @@ it('notes URLs from the configuration file only where sources are fixed but an u
   expect(geodataFromConfig(fixed({can_update: false}), version, t, 'en')).toBeNull();
   expect(geodataFromConfig(fixed({configurable_sources: true}), version, t, 'en')).toBeNull();
   expect(geodataFromConfig(capabilities, version, t, 'en')).toBeNull();
-  const other = {...version, api: {...version.api, name: 'other/backend'}} as unknown as Version;
+  const other = {...version, engine: {...version.engine, name: 'other'}};
   expect(geodataFromConfig(fixed({}), other, t, 'en')).toBeNull();
   expect(geodataFromConfig(fixed({}), undefined, t, 'en')).toBeNull();
 });
