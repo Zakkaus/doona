@@ -838,6 +838,7 @@
   "nodes.removeProviderHelp": "从主配置删除此来源及其节点，并重载。",
   "nodes.removeProviderTitle": "移除来源 {name}",
   "nodes.removed": "{name} 已移除",
+  "nodes.renameBlocked": "{files} 中也有按 {name} 筛选的组。请先在来源文件中修改这些组，再重命名。",
   "nodes.renameGroups": "同时更新 {groups} 中的订阅筛选条件",
   "nodes.renameGroupsHelp": "否则这些组将失去 {name} 的节点。",
   "nodes.scope": "当前显示 {name} 的节点。可在上方选择其他来源。",

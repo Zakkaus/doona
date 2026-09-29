@@ -1,16 +1,33 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders} from '../../store';
-import type {Node, Provider} from '../../api/model';
+import {useT, useLang, LOCALE, formatList, formatNumber} from '../../i18n';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
+import {useCompleteness, useConfig} from '../../store/config';
+import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {addNamesToGroup, applyChanges, readGroupEntries} from '../../dae/groups';
-import {isBareName} from '../../dae/text';
+import {addNamesToGroup, addSubtagsToGroup, applyChanges, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
+import {isBareName, isQuotable} from '../../dae/text';
+import {readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
 import {readSubscriptions} from './subscriptions';
-import {intervalItems, isNodeLink, nodeFormReason, nodeSource, ownedNodes, providerCreate, providerRows, selectedProvider, type ProviderForm} from './view';
+import {fileName} from '../../dae/sources';
+import {
+  citingGroups,
+  intervalItems,
+  isNodeLink,
+  nodeFormReason,
+  nodeSource,
+  ownedNodes,
+  providerCreate,
+  providerRows,
+  renameReferences,
+  selectedProvider,
+  type ProviderForm,
+  type ProviderRow
+} from './view';
 import {useProviderTable} from './useProviderTable';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
@@ -25,19 +42,26 @@ import {nodesTabs} from './nav';
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
 
 type NodeDialog =
-  {kind: 'provider'} | {kind: 'node'} | {kind: 'group'; item: Node} | {kind: 'removeProvider'; item: Provider} | {kind: 'removeNode'; item: Node};
+  | {kind: 'provider'}
+  | {kind: 'node'}
+  | {kind: 'group'; item: Node}
+  | {kind: 'removeProvider'; item: Provider}
+  | {kind: 'removeNode'; item: Node}
+  | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText};
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
   const [policy, setPolicy] = useState(newGroupPolicies[0].id);
+  const [updateGroups, setUpdateGroups] = useState(true);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
-  const guard = useDraftGuard(!!dialog && !!(form.name || form.value), () => {
+  const edited = dialog?.kind === 'editProvider' ? form.name !== dialog.entry.tag || form.value !== dialog.entry.url : !!(form.name || form.value);
+  const guard = useDraftGuard(!!dialog && edited, () => {
     session.current++;
     setDialog(null);
   });
@@ -45,10 +69,13 @@ export function useNodesPage({go, query}: PageProps) {
     session.current++;
     setForm(blank);
     setPolicy(newGroupPolicies[0].id);
+    setUpdateGroups(true);
     setProblem(null);
+    if (next.kind === 'editProvider') setForm({...blank, name: next.entry.tag, value: next.entry.url});
     setDialog(next);
   }, []);
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
@@ -63,6 +90,26 @@ export function useNodesPage({go, query}: PageProps) {
   const refreshing = useProviderRefresh(reload);
   const refreshAll = useRefreshAll(providers, refreshing);
   const source = useMainSourceEdit();
+  // A subscription is edited in whichever source declares it, and only in dae text this page knows how to write.
+  const daeText = engineOf(useVersion().data).daeText;
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
+  const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
+  const isComplete = useCompleteness(sources);
+  const declared = useMemo(() => {
+    const found = new Map<string, Array<{source: ConfigSource; entry: SubscriptionText}>>();
+    for (const item of sources)
+      for (const entry of readSubscriptionEntries(item.content)) found.set(entry.tag, [...(found.get(entry.tag) ?? []), {source: item, entry}]);
+    return found;
+  }, [sources]);
+  const editAction = (item: ProviderRow) => {
+    const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
+    if (place?.length !== 1) return null;
+    const [{source: origin, entry}] = place;
+    // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
+    if (daeText && source.writable && origin.writable && isComplete(origin) === true)
+      return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry})};
+    return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
+  };
   const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
   const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
@@ -157,6 +204,22 @@ export function useNodesPage({go, query}: PageProps) {
         if (problem) refuse(noticeText(problem, t));
         if (result.kind !== 'ok') return;
         toast('positive', t('nodes.joined', {name: node, group}), {action: viewGroup(group)});
+      } else if (dialog.kind === 'editProvider') {
+        const from = dialog.entry.tag;
+        const tag = form.name.trim();
+        const url = form.value.trim();
+        const follow = tag !== from && updateGroups;
+        // Filters are read from the text being written, so a group changed meanwhile is still found.
+        const result = await apply(text => {
+          const written = writeSubscriptionEntry(text, from, {tag, url});
+          if (!follow) return written;
+          return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
+        }, dialog.source);
+        const problem = editProblem(result, t);
+        if (problem) refuse(noticeText(problem, t));
+        if (result.kind !== 'ok') return;
+        refetchProviders();
+        toast('positive', t('nodes.edited', {name: tag}));
       } else if (dialog.kind === 'removeProvider') {
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
@@ -185,19 +248,40 @@ export function useNodesPage({go, query}: PageProps) {
           ? t('nodes.addNode')
           : dialog.kind === 'group'
             ? t('nodes.newGroup')
-            : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+            : dialog.kind === 'editProvider'
+              ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
+              : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
   const createOptions = resources?.providers.create_options;
   // The contract's User-Agent bound: up to 256 printable ASCII characters.
   const agentError = /^[\x20-\x7E]{0,256}$/.test(form.agent.trim()) ? null : t('nodes.agentInvalid');
+  // A kept name is valid as written; a new one is bare, as doona writes names, and free among the subscriptions.
+  const editName = form.name.trim();
+  const editNameError =
+    dialog?.kind !== 'editProvider' || editName === dialog.entry.tag || !editName
+      ? null
+      : !isBareName(editName)
+        ? t('nodes.nameInvalid')
+        : declared.has(editName)
+          ? t('nodes.tagTaken')
+          : null;
+  const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
+  const references =
+    dialog?.kind === 'editProvider' && editName !== dialog.entry.tag ? renameReferences(sources, dialog.source, dialog.entry.tag) : {here: [], elsewhere: []};
   const formValid =
-    dialog?.kind === 'provider'
-      ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
-      : dialog?.kind === 'node'
-        ? form.name.trim() !== '' && isNodeLink(form.value)
-        : dialog?.kind === 'group'
-          ? nameError === null
-          : true;
+    dialog?.kind === 'editProvider'
+      ? !!editName &&
+        editNameError === null &&
+        editUrlValid &&
+        !references.elsewhere.length &&
+        (editName !== dialog.entry.tag || form.value.trim() !== dialog.entry.url)
+      : dialog?.kind === 'provider'
+        ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
+        : dialog?.kind === 'node'
+          ? form.name.trim() !== '' && isNodeLink(form.value)
+          : dialog?.kind === 'group'
+            ? nameError === null
+            : true;
   const providerTable = useProviderTable({
     rows: list,
     loading: providers.loading && !providers.data,
@@ -218,7 +302,8 @@ export function useNodesPage({go, query}: PageProps) {
     refresh: refreshing,
     refreshAll,
     onAdd: () => open({kind: 'provider'}),
-    onRemove: item => open({kind: 'removeProvider', item})
+    onRemove: item => open({kind: 'removeProvider', item}),
+    editAction
   });
   const nodeTable = useNodeTable({
     nodes: owned,
@@ -267,12 +352,37 @@ export function useNodesPage({go, query}: PageProps) {
     removing,
     dialogTitle,
     formValid,
-    formReason: nodeFormReason(dialog?.kind, form.name, form.value, t),
+    formReason:
+      dialog?.kind === 'editProvider'
+        ? !editName
+          ? t('nodes.nameMissing')
+          : // A name error is shown on its field alone.
+            editUrlValid
+            ? null
+            : t('nodes.urlInvalid')
+        : nodeFormReason(dialog?.kind, form.name, form.value, t),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.
     submitting: pendingDialog !== null,
-    submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'group' ? t('nodes.join') : t('nodes.add'),
+    submitLabel: removing
+      ? t('nodes.remove', {name: dialog.item.name})
+      : dialog?.kind === 'group'
+        ? t('nodes.join')
+        : dialog?.kind === 'editProvider'
+          ? t('policy.save')
+          : t('nodes.add'),
+    editNameError: editName ? editNameError : null,
+    editOptions: dialog?.kind === 'editProvider' ? dialog.entry.options : [],
+    // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
+    // unless another source names it too: a write across sources is not atomic, so those files block the rename.
+    renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,
+    renameBlocked: references.elsewhere.length ? formatList(lang, references.elsewhere.map(fileName)) : null,
+    renameFrom: dialog?.kind === 'editProvider' ? dialog.entry.tag : '',
+    updateGroups,
+    setUpdateGroups: (next: boolean) => {
+      if (submitting.current !== dialog) setUpdateGroups(next);
+    },
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
     // Only a name already typed is judged; an empty field is simply not ready.
     groupNameError: form.name.trim() ? nameError : null,

@@ -94,7 +94,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
           {
             id: 'actions',
             label: t('ui.actions'),
-            minWidth: m.canManage ? 112 : 88,
+            minWidth: (m.canManage ? 112 : 88) + (m.editing ? 40 : 0),
             grow: 0,
             render: row => (
               <span className="rp-chain">
@@ -103,12 +103,19 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                     <Refresh className="rp-spin-on-press" />
                   </Button>
                 )}
-                {row.removable && (
+                {(row.action || row.removable) && (
                   <MoreMenu
                     small
                     quiet
                     label={t('ui.moreActionsFor', {name: row.name})}
-                    actions={[{id: 'remove', label: row.removeLabel, negative: true, isDisabled: m.busy, onAction: row.remove}]}
+                    actions={[
+                      ...(row.action?.kind === 'edit'
+                        ? [{id: 'edit', label: row.editLabel, isDisabled: m.busy || m.sourceBusy, onAction: row.action.run}]
+                        : row.action?.kind === 'open'
+                          ? [{id: 'open', label: t('rule.openSource'), onAction: row.action.run}]
+                          : []),
+                      ...(row.removable ? [{id: 'remove', label: row.removeLabel, negative: true, isDisabled: m.busy, onAction: row.remove}] : [])
+                    ]}
                   />
                 )}
               </span>
