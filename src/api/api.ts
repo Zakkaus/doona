@@ -86,10 +86,10 @@ export interface Api {
   runtimeSettings(signal?: AbortSignal): Promise<RuntimeSettings>;
   providers(query?: ProviderQuery, signal?: AbortSignal): Promise<ProviderList>;
   refreshProvider(providerId: string, signal?: AbortSignal): Promise<OperationAccepted>;
-  createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider>;
-  deleteProvider(providerId: string, signal?: AbortSignal): Promise<DeleteCount>;
-  createNode(request: NodeCreate, signal?: AbortSignal): Promise<Node>;
-  deleteNode(nodeId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  createProvider(request: ProviderCreate, signal?: AbortSignal): Promise<Provider | OperationAccepted>;
+  deleteProvider(providerId: string, signal?: AbortSignal): Promise<DeleteCount | OperationAccepted>;
+  createNode(request: NodeCreate, signal?: AbortSignal): Promise<Node | OperationAccepted>;
+  deleteNode(nodeId: string, signal?: AbortSignal): Promise<DeleteCount | OperationAccepted>;
   geodata(signal?: AbortSignal): Promise<GeoData>;
   /** The running generation's rule dictionary; ids match routing trace and flow evidence. */
   rules(signal?: AbortSignal): Promise<RuleList>;

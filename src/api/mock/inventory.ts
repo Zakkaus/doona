@@ -47,7 +47,8 @@ export function createInventory(
   editMain: (edit: (text: string) => string) => Promise<() => string>,
   interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean,
   geodata: MockGeodataState,
-  faults = false
+  faults = false,
+  acceptWrites = false
 ) {
   const nodePage = createPager('nodes');
   const providerPage = createPager('providers');
@@ -270,13 +271,16 @@ export function createInventory(
       );
       const activate = await editMain(text => text.replace(/^(subscription \{\n)/m, `$1${line}`));
       log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
-      activate();
-      return structuredClone(
-        found(
-          providers.find(provider => provider.name === request.name),
-          'Provider'
-        )
-      );
+      const finish = () => {
+        activate();
+        return structuredClone(
+          found(
+            providers.find(provider => provider.name === request.name),
+            'Provider'
+          )
+        );
+      };
+      return acceptWrites ? enqueue('provider_create', finish) : finish();
     },
     deleteProvider: async (providerId, signal) => {
       signal?.throwIfAborted();
@@ -288,8 +292,11 @@ export function createInventory(
       const name = escapeRegExp(provider.name);
       const activate = await editMain(text => text.replace(new RegExp(`^\\s*${name}:\\s*\\{\\n[\\s\\S]*?\\n\\s*\\}\\n|^\\s*${name}:.*\\n`, 'm'), ''));
       log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
-      activate();
-      return {deleted: 1};
+      const finish = () => {
+        activate();
+        return {deleted: 1};
+      };
+      return acceptWrites ? enqueue('provider_delete', finish) : finish();
     },
     createNode: async (request, signal) => {
       signal?.throwIfAborted();
@@ -300,13 +307,16 @@ export function createInventory(
       const line = configLine(() => `  ${quote(request.name)}: ${quote(request.link.trim())}\n`);
       const activate = await editMain(text => text.replace(/^(node \{\n)/m, `$1${line}`));
       log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
-      activate();
-      return structuredClone(
-        found(
-          nodes.find(node => node.name === request.name),
-          'Node'
-        )
-      );
+      const finish = () => {
+        activate();
+        return structuredClone(
+          found(
+            nodes.find(node => node.name === request.name),
+            'Node'
+          )
+        );
+      };
+      return acceptWrites ? enqueue('node_create', finish) : finish();
     },
     deleteNode: async (nodeId, signal) => {
       signal?.throwIfAborted();
@@ -317,8 +327,11 @@ export function createInventory(
         throw new ApiError(404, 'capability_not_supported', 'Only inline nodes can be deleted; refresh or delete the provider instead');
       const activate = await editMain(text => text.replace(new RegExp(`^\\s*'${escapeRegExp(node.name)}':.*\\n`, 'm'), ''));
       log('info', 'honk::config', 'Node removed.', {node: node.name});
-      activate();
-      return {deleted: 1};
+      const finish = () => {
+        activate();
+        return {deleted: 1};
+      };
+      return acceptWrites ? enqueue('node_delete', finish) : finish();
     },
     geodata: async signal => {
       signal?.throwIfAborted();

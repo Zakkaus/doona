@@ -57,7 +57,7 @@ export async function settle(api: Api, accepted: OperationAccepted, signal?: Abo
 }
 // If-Match carries the revision as a quoted entity tag.
 export const etag = (revision: string) => '"' + revision + '"';
-type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
+export type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
 // A provider publication that honk commits to a degraded runtime fails with `committed: true`: the nodes are applied.
 export type Degraded = {degraded: true};
 type Finished<K extends Operation['kind']> = K extends 'provider_refresh' ? SucceededResult<K> | Degraded : SucceededResult<K>;

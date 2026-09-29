@@ -13,8 +13,9 @@ export type MockApi = Api & OperationReader;
 
 // A saved demo profile signs in as a password backend does; with no profile at all (development, the test suites)
 // the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
-// specs' in-process backend.
-export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null};
+// specs' in-process backend. `acceptWrites` answers node and provider writes with 202 and an operation, as a honk
+// that runs them in the background does.
+export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null; acceptWrites?: boolean};
 
 export function createMockApi(options: MockOptions = {}): MockApi {
   let count = 120;
@@ -73,7 +74,17 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     faults
   );
   const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot, busy, faults);
-  const inventory = createInventory(capabilities, count, lifecycle, configuration.advance, configuration.editMain, network.interrupt, geodata, faults);
+  const inventory = createInventory(
+    capabilities,
+    count,
+    lifecycle,
+    configuration.advance,
+    configuration.editMain,
+    network.interrupt,
+    geodata,
+    faults,
+    options.acceptWrites
+  );
   const api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
   if (!options.signIn) return api;
   return mockSessionValid(options.session) ? withPasswordAuth(api) : refuseWithoutSession(api);
