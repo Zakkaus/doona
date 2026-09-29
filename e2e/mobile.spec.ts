@@ -76,16 +76,21 @@ test('language, theme, palette and wordmark are each two taps away in the overfl
   const top = page.locator('.rp-top');
   await expect(top.getByRole('button', {name: 'Search'})).toBeVisible();
   await expect(top.getByRole('button', {name: 'Refresh'})).toBeVisible();
-  await expect(top.getByRole('button', {name: 'Reload honk'})).toBeVisible();
+  // Reload lives in the overflow menu on a phone, beside the backend entry.
+  await expect(top.getByRole('button', {name: 'Reload honk'})).toBeHidden();
   for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
   const more = top.getByRole('button', {name: 'More options'});
   const box = (await more.boundingBox())!;
   expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
-  // The menu is four short rows, each naming its current value, and the Backend row; a row opens its choices in the
-  // same popover.
+  // The menu is four short rows, each naming its current value, then Reload honk and the Backend row; a row opens its
+  // choices in the same popover.
   await more.click();
-  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient', 'Backend']);
-  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient', 'Reload honk', 'Backend']);
+  // Reload from the menu still asks first.
+  await page.getByRole('menuitem', {name: 'Reload honk'}).click();
+  const confirm = page.getByRole('dialog', {name: 'Reload honk?'});
+  await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(confirm).toHaveCount(0);
   const pick = async (row: string, item: string) => {
     await more.click();
     await page.getByRole('menuitem', {name: row}).click();
@@ -489,9 +494,9 @@ test.describe('on a touch screen', () => {
   });
 });
 
-test('quick setup keeps Apply and reload disabled without a line saying so', async ({page}) => {
+test('quick setup keeps Apply disabled without a line saying so', async ({page}) => {
   await page.goto('/#/config?tab=setup&source=src-sub-c');
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
   await page.getByLabel('Subscription URL', {exact: true}).first().fill('https://example.org/changed');
@@ -529,7 +534,7 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
 
 test('the outbound mode keeps Apply disabled without a line until a mode is picked', async ({page}) => {
   await page.goto('/#/activity');
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();

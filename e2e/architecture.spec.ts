@@ -112,7 +112,7 @@ for (const tab of ['source', 'setup']) {
       await page.keyboard.press('ControlOrMeta+End');
       await page.keyboard.type('\n# retained edit\n');
     } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/saved');
-    await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+    await page.getByRole('button', {name: 'Apply', exact: true}).click();
     try {
       if (tab === 'source') await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
       else {
@@ -279,7 +279,7 @@ for (const tab of ['source', 'setup']) {
       await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
     } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/discarded');
     const validating = page.waitForRequest('**/config/validate');
-    await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+    await page.getByRole('button', {name: 'Apply', exact: true}).click();
     await validating;
     if (tab === 'source') {
       await page.getByRole('button', {name: / Source$/}).click();
@@ -318,7 +318,7 @@ test('global target cannot change during a pending mode apply', async ({page}) =
   await page.goto('/#/activity');
   await page.getByRole('radio', {name: 'Global', exact: true}).click();
   const validating = page.waitForRequest('**/config/validate');
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;
   try {
     await expect(page.getByRole('button', {name: 'Global target', exact: true})).toBeDisabled();
@@ -423,7 +423,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
   changed();
   await refreshed;
   await expect(filter).toHaveValue('name(hk-01)');
-  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog.getByRole('alert')).toContainText('changed');
   await expect(filter).toHaveValue('name(hk-01)');
 });

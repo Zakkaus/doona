@@ -62,7 +62,7 @@ test('a trace result adds a rule for the traced target', async ({page}) => {
 test('adding and reloading ends with View rule, which selects the new rule in the list', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await dialogOf(page).getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
   await toast.getByRole('button', {name: 'View rule', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
@@ -93,11 +93,11 @@ test('a rule already listed or held with the same condition and outbound is name
   await page.goto('/#/connections?tab=list&id=2');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
-  await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(dialog).toContainText(/Rule \d+ already has the same condition and outbound\./);
-  await expect(dialog.getByRole('button', {name: 'Apply now', exact: true})).toBeEnabled();
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
 });
 
 test('without a writable configuration the dialog still opens and copies the rule', async ({page, context}) => {
@@ -108,7 +108,7 @@ test('without a writable configuration the dialog still opens and copies the rul
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = dialogOf(page);
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
-  await expect(dialog.getByRole('button', {name: 'Apply now', exact: true})).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   await expect(dialog).toContainText('Configuration writes are unavailable here. Copy the rule instead.');
   await dialog.getByRole('button', {name: 'Copy rule', exact: true}).click();

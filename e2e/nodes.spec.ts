@@ -196,7 +196,7 @@ test('a subscription refresh interval is written into the configuration', async 
       "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '86400s'\n  }"
     )
   );
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');

@@ -71,7 +71,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
   await expect(apply).toBeEnabled();
@@ -134,7 +134,7 @@ test('read-only main configuration keeps the current mode and explains the write
     'href',
     'https://zakkaus.github.io/doona-docs/en/troubleshooting.html#read-only'
   );
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
 });
 
 test('the compact node menu selects by keyboard and returns focus to its trigger', async ({page}) => {
@@ -476,7 +476,7 @@ test('an engine whose configuration syntax doona does not write shows no mode an
     await expect(mode.getByRole('radio', {name, exact: true})).toBeDisabled();
     await expect(mode.getByRole('radio', {name, exact: true})).not.toBeChecked();
   }
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
   expect(requests.filter(request => request.method() !== 'GET')).toEqual([]);
 });
 
@@ -511,7 +511,7 @@ test('staged mode changes require discard before navigation', async ({page}) => 
   await expect(page).toHaveURL(/#\/overview$/);
   await page.locator('.rp-nav[href="#/activity"]').click();
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
 });
 
 test('local traffic renders without history and duplicate node names retain independent latency', async ({page}) => {
@@ -601,7 +601,7 @@ test('interleaved mandatory rules reject mode changes without writing configurat
   handlers['GET config'] = async () => config;
   await page.goto('/#/activity');
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.negative');
   await expect(toast).toContainText('Move the must rules to the top of the routing block');
   // The rule in the way is named on its own line.
@@ -613,7 +613,7 @@ test('the demo switches the outbound mode and back through its own configuration
   await page.goto('/#/activity');
   const modes = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await modes.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Direct');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   // The catch-all is a real rule of the new generation, right after the must rules.
@@ -624,7 +624,7 @@ test('the demo switches the outbound mode and back through its own configuration
   await page.goto('/#/activity');
   await expect(modes.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   await modes.getByRole('radio', {name: 'Rule', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply and reload', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'reloaded: Rule'})).toBeVisible();
   await expect(modes.getByRole('radio', {name: 'Rule', exact: true})).toBeChecked();
 });
