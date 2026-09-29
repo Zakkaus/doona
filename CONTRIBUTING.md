@@ -176,6 +176,8 @@ A change that adds a string adds its key to `en.json` and to every complete lang
 
 Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in `zh-CN`, each with its own region's computing terms (組態／配置, 連線／连接, 記憶體／内存). Write plain English in sentence case. Use the term the rest of the catalogue already uses for the same concept. Keep placeholders as written. A count in English uses `{"one", "other"}` forms; Chinese needs only one form.
 
+Terminology: Keep product and protocol names, configuration keywords and sections, API fields, commands, file names, and ACL4SSR preset, rule-set and group names verbatim. In `zh-TW`, use established Taiwan computing terms.
+
 To add a language:
 
 1. Open an issue first, naming the language and who will review its strings.
