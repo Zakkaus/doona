@@ -111,11 +111,11 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/dns/query?*', async route => {
-    const query = new URL(route.request().url()).searchParams;
-    const types = query.getAll('type');
+    const body = route.request().postDataJSON();
+    const types = body.type;
     requested.push(types);
     expect(types).toHaveLength(1);
-    await route.fulfill({json: await api.dnsQuery(query.get('domain')!, types)});
+    await route.fulfill({json: await api.dnsQuery(body.domain, types)});
   });
   await page.route('**/api/v1/routing/trace', async route => {
     await route.fulfill({json: await api.routingTrace(route.request().postDataJSON())});

@@ -250,7 +250,7 @@ for (const [served, note] of [
     backend.handlers['GET dns/log'] = async request => {
       const limit = new URL(request.url()).searchParams.get('limit') ?? '';
       limits.push(limit);
-      if (Number(limit) > 25) throw new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', null, null, 1);
+      if (Number(limit) > 25) throw new ApiError(503, 'snapshot_unavailable', 'DNS log response exceeds the projection budget', null, null, 1);
       return {...seed, records: seed.records.slice(0, served), next_cursor: 'older'};
     };
     await page.goto('/#/dns');

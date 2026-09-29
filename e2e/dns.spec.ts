@@ -41,11 +41,11 @@ test('all supported DNS types are queried in bounded batches and shown together'
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   const requested: string[][] = [];
   await page.route('**/api/v1/dns/query?*', async route => {
-    const params = new URL(route.request().url()).searchParams;
-    const types = params.getAll('type');
+    const body = route.request().postDataJSON();
+    const types = body.type;
     requested.push(types);
     expect(types).toHaveLength(1);
-    await route.fulfill({json: await api.dnsQuery(params.get('domain')!, types)});
+    await route.fulfill({json: await api.dnsQuery(body.domain, types)});
   });
   await page.goto('/#/dns?domain=example.com&type=all');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
@@ -311,7 +311,7 @@ test('an expired older-page cursor starts the log again from the newest page', a
 
 test('a failed query stays on the query tab', async ({page}) => {
   const {handlers} = await mockBackend(page);
-  handlers['GET dns/query'] = async () => {
+  handlers['POST dns/query'] = async () => {
     throw new ApiError(500, 'internal', 'Resolver offline');
   };
   await page.goto('/#/dns?tab=query&domain=example.com');
@@ -327,13 +327,13 @@ test('a failed query stays on the query tab', async ({page}) => {
 test('a rate-limited query says how long it waits before retrying', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   let refused = false;
-  handlers['GET dns/query'] = async request => {
+  handlers['POST dns/query'] = async request => {
     if (!refused) {
       refused = true;
       throw new ApiError(429, 'rate_limited', 'Too many requests', null, null, 5);
     }
-    const params = new URL(request.url()).searchParams;
-    return api.dnsQuery(params.get('domain')!, params.getAll('type') as never);
+    const body = request.postDataJSON();
+    return api.dnsQuery(body.domain, body.type);
   };
   await page.goto('/#/dns?tab=query&domain=example.com');
   await page.getByRole('button', {name: 'Query', exact: true}).click();

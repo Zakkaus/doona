@@ -188,6 +188,12 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
           const accepted = await withinLimits({content: writeMax, body}, content, {content}, () =>
             api.replaceConfigSource(source.id, content, etag(source.content_sha256), signal)
           ).catch(async error => {
+            // A 409 is a change the If-Match still matched, or another write still activating: nothing was stored and
+            // the validated candidate is stale, so the next attempt starts from a fresh read.
+            if (error instanceof ApiError && error.status === 409 && error.code === 'state_conflict') {
+              refetch();
+              throw new LocalError('config.changedMeanwhile');
+            }
             if (!(error instanceof ApiError) || error.status !== 412) throw error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
             const fresh = await readConfigFresh(api, signal).catch(() => null);
