@@ -17,7 +17,11 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
       footer={() => (
         <>
           <Button onPress={() => dialog?.close()}>{t('ui.cancel')}</Button>
-          {dialog?.copyable && <Button onPress={dialog.copy}>{t('rule.copy')}</Button>}
+          {dialog?.copyable && (
+            <Button isDisabled={!dialog.copyReady} onPress={dialog.copy}>
+              {t('rule.copy')}
+            </Button>
+          )}
           <Button isDisabled={dialog?.disabled} isPending={dialog?.busy} onPress={() => dialog?.applyNow()}>
             {t('rule.addApply')}
           </Button>

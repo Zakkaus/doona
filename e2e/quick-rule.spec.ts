@@ -127,6 +127,8 @@ test('without a writable configuration the dialog still opens and copies the rul
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = dialogOf(page);
+  // Without an outbound there is no rule to copy yet.
+  await expect(dialog.getByRole('button', {name: 'Copy rule', exact: true})).toBeDisabled();
   await pick(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
