@@ -50,8 +50,8 @@ export function useActivity() {
   const count = useCallback((value: number) => formatNumber(value, locale), [locale]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value ?? null, locale), [locale]);
   const view = useMemo(
-    () => activityView(runtime.data, memory.data, t, resources?.runtime.available, locale, datapath.data?.state),
-    [runtime.data, memory.data, t, resources?.runtime.available, locale, datapath.data?.state]
+    () => activityView(runtime.data, t, resources?.runtime.available, locale, datapath.data?.state),
+    [runtime.data, t, resources?.runtime.available, locale, datapath.data?.state]
   );
   const version = useVersion();
   // System status lists these with their reasons; here the status card only counts them.
@@ -85,7 +85,6 @@ export function useActivity() {
     discoveryFailed: !!capabilities.error,
     error: runtime.error,
     retry: runtime.refetch,
-    showMemory: !!resources?.runtime_memory.available,
     history: {
       error: history.error,
       retry: history.refetch,

@@ -73,3 +73,8 @@ const names = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivit
 export const compareNames = (a: string, b: string) => names.compare(a, b);
 // Unknown or unmeasured latency is a dash, like any other missing value.
 export const formatLatency = (value: number | null | undefined, t: Translator) => (value == null ? '—' : t('ui.latency', {n: millis(value)}));
+
+// Percent of one CPU core, so a busy engine on several cores can pass 100. Null until the backend has two samples.
+export function formatCpu(percent: number | null | undefined, locale: string, t: Translator): string {
+  return percent == null ? '—' : t('ui.percent', {n: formatNumber(percent, locale, 1)});
+}

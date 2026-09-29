@@ -1,6 +1,6 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n';
-import {formatDuration, localTime, formatBytes} from '../../i18n/format';
+import {formatDuration, localTime, formatBytes, formatCpu} from '../../i18n/format';
 import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
@@ -162,8 +162,6 @@ export function overviewView(
   const state = runtime?.lifecycle.state;
   const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
   const reload = runtime?.last_reload;
-  // Percent of one CPU, so a busy engine on several cores can pass 100.
-  const cpu = runtime?.process.cpu_percent;
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
@@ -172,7 +170,7 @@ export function overviewView(
     strip: [
       {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('ov.configHelp')}},
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
-      [t('ov.cpu'), cpu == null ? '—' : t('ui.percent', {n: formatNumber(cpu, locale, 1)})],
+      [t('ov.cpu'), formatCpu(runtime?.process.cpu_percent, locale, t)],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
     ] as KvItem[],
     reload: reload

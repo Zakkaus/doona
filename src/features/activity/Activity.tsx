@@ -3,7 +3,7 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Data from '../../ui/icons/Data';
 import {useT} from '../../i18n';
-import {Card, CardLink, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
+import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
 import {href} from '../../shell/route';
 import {AreaChart, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
@@ -74,20 +74,13 @@ export function Activity() {
           </div>
         </CardLink>
         <NodeCard />
-        {vm.showMemory && (
-          <Card title={t('act.memory')} tile={{icon: <Data />, tint: 2, kind: 'metric'}}>
-            <div className="rp-tile-body">
-              <span className="rp-tile-val">
-                <span className="rp-big">{vm.rss}</span>
-              </span>
-              {vm.memoryBadge && (
-                <Light small tone={vm.memoryBadge.tone}>
-                  {vm.memoryBadge.text}
-                </Light>
-              )}
-            </div>
-          </Card>
-        )}
+        <Card title={t('act.cpu')} tile={{icon: <Data />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
+          <div className="rp-tile-body">
+            <span className="rp-tile-val">
+              <span className="rp-big">{vm.cpu}</span>
+            </span>
+          </div>
+        </Card>
       </div>
 
       <div className="rp-g21">
