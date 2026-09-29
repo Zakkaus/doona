@@ -1,4 +1,4 @@
-import {detail, expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {detail, expect, expectLoadFailures, mockBackend, test, moreAction} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
@@ -68,7 +68,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
 test('show matched rule opens the rule list on that rule', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/connections?id=1');
-  await detail(page).getByRole('button', {name: 'Show matched rule', exact: true}).click();
+  await moreAction(detail(page), 'Show matched rule');
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
   const selected = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][aria-selected=true]');
   await expect(selected).toHaveCount(1);
@@ -83,7 +83,9 @@ test('a connection with no recorded rule adds before the fallback and says earli
   };
   await page.goto('/#/connections?id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-  await expect(detail(page).getByRole('button', {name: 'Show matched rule', exact: true})).toHaveCount(0);
+  await detail(page).getByRole('button', {name: 'More actions', exact: true}).click();
+  await expect(page.getByRole('menuitem', {name: 'Show matched rule', exact: true})).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
@@ -100,41 +102,35 @@ test('without a writable configuration showing the matched rule only reads', asy
   await page.goto('/#/connections?id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await expect(detail(page).getByRole('link', {name: /in the rule list$/})).toBeVisible();
-  await detail(page).getByRole('button', {name: 'Show matched rule', exact: true}).click();
+  await moreAction(detail(page), 'Show matched rule');
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
 });
 
 for (const width of [360, 768, 1440])
-  test(`the panel actions share one size, line up and keep even gaps at ${width}px`, async ({page}) => {
+  test(`the panel shows one primary action beside a More menu of the same size at ${width}px`, async ({page}) => {
     await mockBackend(page);
     await page.setViewportSize({width, height: 900});
     await page.goto('/#/connections?id=1');
-    const close = detail(page).getByRole('button', {name: 'Close connection', exact: true});
-    await expect(close).toBeVisible();
-    const boxes = await detail(page)
-      .getByRole('button', {
-        name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Trace this connection|Only this device|Close connection)$/
-      })
-      .evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().toJSON() as DOMRect));
-    expect(boxes).toHaveLength(7);
-    // One button style: a quiet button beside a filled one reads as a misaligned label.
-    const fills = await detail(page)
-      .getByRole('button', {name: /^(Add rule|Show matched rule|Edit matched rule's outbound settings|View flow|Trace this connection|Only this device)$/})
-      .evaluateAll(buttons => buttons.map(button => getComputedStyle(button).backgroundColor));
-    expect(new Set(fills).size).toBe(1);
-    expect(new Set(boxes.map(box => box.height)).size).toBe(1);
-    const lines: DOMRect[][] = [];
-    for (const box of boxes) {
-      const line = lines.find(line => Math.abs(line[0].top - box.top) <= 1);
-      if (line) line.push(box);
-      else lines.push([box]);
-    }
-    const gaps = lines.flatMap(line => line.slice(1).map((box, i) => box.left - line[i].right));
-    const leading = lines.slice(1).map((line, i) => line[0].top - lines[i][0].bottom);
-    for (const gap of [...gaps, ...leading]) expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(1);
-    expect(lines.every(line => Math.abs(line[0].left - boxes[0].left) <= 1)).toBe(true);
-    // The destructive action ends the group on a line of its own.
-    expect(lines.at(-1)).toEqual([boxes[6]]);
+    const add = detail(page).getByRole('button', {name: 'Add rule', exact: true});
+    const more = detail(page).getByRole('button', {name: 'More actions', exact: true});
+    await expect(add).toBeVisible();
+    await expect(more).toBeVisible();
+    await expect(
+      detail(page).getByRole('button', {name: /^(Show matched rule|View flow|Trace this connection|Only this device|Close connection)$/})
+    ).toHaveCount(0);
+    const [primary, trigger] = [(await add.boundingBox())!, (await more.boundingBox())!];
+    expect(trigger.height).toBe(primary.height);
+    expect(Math.abs(trigger.y - primary.y)).toBeLessThanOrEqual(1);
+    await more.click();
+    // The destructive action ends the menu.
+    await expect(page.getByRole('menu', {name: 'More actions'}).getByRole('menuitem')).toHaveText([
+      'Show matched rule',
+      "Edit matched rule's outbound settings",
+      'View flow',
+      'Trace this connection',
+      'Only this device',
+      'Close connection'
+    ]);
   });
 
 const top = (page: import('@playwright/test').Page) => page.locator('.rp-top');
@@ -628,7 +624,7 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   const {api, requests} = await mockBackend(page);
   const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content!;
   await page.goto('/#/connections?id=1');
-  await detail(page).getByRole('button', {name: "Edit matched rule's outbound settings", exact: true}).click();
+  await moreAction(detail(page), "Edit matched rule's outbound settings");
   await expect(page).toHaveURL(/#\/rules\?.*edit=/);
   const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});
   await expect(dialog.locator('.rp-code')).toContainText('domain(geosite: telegram)');

@@ -110,6 +110,17 @@ export async function scrollTableToEnd(grid: Locator) {
 }
 
 export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
+// A panel's secondary actions sit in its trailing More menu. Opens it and returns the item; the menu itself is
+// portalled out of the panel.
+export async function moreItem(scope: Locator, name: string | RegExp, menu = 'More actions') {
+  await scope.getByRole('button', {name: menu, exact: true}).click();
+  return scope
+    .page()
+    .getByRole('menu', {name: menu})
+    .getByRole('menuitem', {name, exact: typeof name === 'string'});
+}
+// Opens a panel's More menu and chooses an item.
+export const moreAction = async (scope: Locator, name: string | RegExp, menu?: string) => (await moreItem(scope, name, menu)).click();
 // The language and scheme the page takes from its next load.
 export const setAppearance = (page: Page, lang: string, scheme: string) =>
   page.evaluate(

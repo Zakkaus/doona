@@ -215,6 +215,13 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* Why a disabled action cannot run takes its own line under the name. */
+.rp-item-text > .desc.reason {
+  flex-basis: 100%;
+}
+.rp-item.negative {
+  color: var(--rp-negative-text);
+}
 .rp-item .desc {
   color: var(--rp-subtle);
   font-size: var(--rp-text-xs);

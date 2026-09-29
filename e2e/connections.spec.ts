@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
@@ -381,7 +381,7 @@ test.describe('default view', () => {
     await page.setViewportSize({width: 1440, height: 900});
     await grid.locator('[role=row][aria-level="2"]').first().click();
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
-    await page.locator('.rp-panel').getByRole('button', {name: 'Only this device', exact: true}).click();
+    await moreAction(page.locator('.rp-panel'), 'Only this device');
     await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
     await expect(groups).toHaveCount(1);
   });
@@ -391,7 +391,7 @@ test('closing a connection removes it from the list and clears the selection', a
   await page.goto('/#/connections?id=c-0001');
   const panel = page.locator('.rp-panel');
   await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
+  await moreAction(panel, 'Close connection');
   await expect(page.locator('.rp-toast.positive')).toContainText('Closed api.telegram.org');
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
   await expect(page.locator('.rp-table [data-key="c-0001"]')).toHaveCount(0);
@@ -399,10 +399,9 @@ test('closing a connection removes it from the list and clears the selection', a
   await page.goto('/#/connections?id=c-0002');
   const reason =
     'The backend has no userspace transfer to interrupt, so this connection cannot be closed. Connections the kernel forwards directly are of this kind.';
-  const close = panel.getByRole('button', {name: 'Close connection', exact: true});
+  const close = await moreItem(panel, 'Close connection');
   await expect(close).toBeDisabled();
-  await expect(close).toHaveAccessibleDescription(reason);
-  await expect(panel.getByText(reason)).toBeVisible();
+  await expect(close).toContainText(reason);
   await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
 });
 
@@ -419,7 +418,7 @@ test('a connection opened while another closes stays selected', async ({page}) =
   await page.goto(`/#/connections?id=${encodeURIComponent(closed.id)}`);
   const panel = page.locator('.rp-panel');
   await expect(panel.getByRole('heading')).toBeVisible();
-  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
+  await moreAction(panel, 'Close connection');
   await page.locator(`.rp-table [data-key="${opened.id}"]`).click();
   await expect(page).toHaveURL(new RegExp(`[?&]id=${encodeURIComponent(opened.id)}(&|$)`));
   release();
@@ -442,7 +441,25 @@ test('phone details retain routing diagnostics and omit unsupported flow actions
     'href',
     '#/rules?tab=list&rule=' + encodeURIComponent(row.rule_id!)
   );
-  await expect(drawer.getByRole('button', {name: 'View flow', exact: true})).toHaveCount(0);
+  await drawer.getByRole('button', {name: 'More actions', exact: true}).click();
+  const menu = page.getByRole('menu', {name: 'More actions'});
+  await expect(menu.getByRole('menuitem', {name: 'Trace this connection', exact: true})).toBeVisible();
+  await expect(menu.getByRole('menuitem', {name: 'View flow', exact: true})).toHaveCount(0);
+});
+
+test('the connection More menu opens with Enter and gives focus back on Escape', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/connections?id=c-0001');
+  const panel = page.locator('.rp-panel');
+  const more = panel.getByRole('button', {name: 'More actions', exact: true});
+  await more.focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu', {name: 'More actions'});
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem').first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(more).toBeFocused();
 });
 
 test('the connection list exports the filtered rows as CSV', async ({page}) => {

@@ -27,7 +27,7 @@ export {ContextualHelp, HelpRow, type Help} from './ContextualHelp';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
 export {Tag, Tags} from './Tag';
 export {ActionBar} from './ActionBar';
-export {ActionGroup, type Action} from './ActionGroup';
+export {ActionGroup, MoreMenu, type Action} from './ActionGroup';
 export {Card, cardClass} from './Card';
 export {Divider} from './Divider';
 export {VisuallyHidden} from 'react-aria';

@@ -1,5 +1,4 @@
 import {
-  ActionHelp,
   Badge,
   Button,
   ConfirmButton,
@@ -14,7 +13,8 @@ import {
   TextField,
   ErrorMessage,
   Tabs,
-  TextTooltip
+  TextTooltip,
+  MoreMenu
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {Traffic} from './Traffic';
@@ -111,23 +111,31 @@ export function Connections(props: PageProps) {
                   {cur.status}
                 </Light>
               </HelpRow>
-              {/* One button style for the actions; Close connection, the destructive one, always takes the last line. */}
+              {/* One primary action; the rest go into the trailing More menu, Close connection, the destructive one, last. */}
               <div className="rp-cluster">
-                <div className="rp-cluster">
-                  {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
-                  {vm.ruleAction.canShow && <Button onPress={() => vm.showRule()}>{t('conn.showRule')}</Button>}
-                  {vm.ruleAction.canEdit && <Button onPress={() => vm.showRule(true)}>{t('conn.editRule')}</Button>}
-                  {vm.canViewFlow && <Button onPress={vm.showFlow}>{t('conn.viewFlow')}</Button>}
-                  {vm.canTrace && <Button onPress={vm.traceConnection}>{t('conn.trace')}</Button>}
-                  {cur.source && <Button onPress={vm.onlyClient}>{t('conn.onlyThisClient')}</Button>}
-                </div>
-                {vm.canClose && cur.closable && (
-                  <ActionHelp reason={cur.closeReason}>
-                    <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled || !!cur.closeReason} onPress={vm.close.run}>
-                      {t('conn.close')}
-                    </Button>
-                  </ActionHelp>
-                )}
+                {vm.ruleAction.canAdd && <Button onPress={vm.ruleAction.openAdd}>{t('rule.add')}</Button>}
+                <MoreMenu
+                  actions={[
+                    ...(vm.ruleAction.canShow ? [{id: 'show-rule', label: t('conn.showRule'), onAction: () => vm.showRule()}] : []),
+                    ...(vm.ruleAction.canEdit ? [{id: 'edit-rule', label: t('conn.editRule'), onAction: () => vm.showRule(true)}] : []),
+                    ...(vm.canViewFlow ? [{id: 'view-flow', label: t('conn.viewFlow'), onAction: vm.showFlow}] : []),
+                    ...(vm.canTrace ? [{id: 'trace', label: t('conn.trace'), onAction: vm.traceConnection}] : []),
+                    ...(cur.source ? [{id: 'only-client', label: t('conn.onlyThisClient'), onAction: vm.onlyClient}] : []),
+                    ...(vm.canClose && cur.closable
+                      ? [
+                          {
+                            id: 'close',
+                            label: t('conn.close'),
+                            negative: true,
+                            isPending: vm.close.pending,
+                            isDisabled: vm.close.disabled || !!cur.closeReason,
+                            reason: cur.closeReason ?? undefined,
+                            onAction: vm.close.run
+                          }
+                        ]
+                      : [])
+                  ]}
+                />
               </div>
               <Kv items={cur.fields} />
               <Kv
