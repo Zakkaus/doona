@@ -74,6 +74,8 @@ it('selects duplicate node labels by ID and preserves independent health', () =>
   expect(menu.items.map(item => item.id)).toEqual([first.id, second.id]);
   expect(new Set(menu.items.map(item => item.label)).size).toBe(2);
   expect(nodeView([first, second], first.id, t).tone).toBe('ok');
+  // A healthy node shows no status light; its latency already says so.
+  expect(nodeView([first, second], first.id, t).status).toBeNull();
 });
 
 it('renders measured local traffic even without backend history', () => {

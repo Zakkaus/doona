@@ -156,6 +156,25 @@ test('the compact node menu selects by keyboard and returns focus to its trigger
   await expect(trigger).toBeFocused();
 });
 
+test('the latency tile of a healthy node has no status light', async ({page}) => {
+  await page.goto('/#/activity');
+  const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
+  await expect(tile.getByRole('link')).toHaveAccessibleName(/^\S+: \d/);
+  await expect(tile.locator('.rp-light')).toHaveCount(0);
+});
+
+test('the latency tile names a node that is unavailable and keeps its size', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-mock-scenario', 'faults'));
+  await page.goto('/#/activity');
+  const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
+  await expect(tile.locator('.rp-light')).toHaveCount(0);
+  const height = (await tile.boundingBox())!.height;
+  await page.getByRole('button', {name: 'Node', exact: true}).click();
+  await page.getByRole('menuitemradio').filter({hasText: 'jp-01'}).click();
+  await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
+  expect((await tile.boundingBox())!.height).toBe(height);
+});
+
 test('the latency node menu says it only changes the latency shown', async ({page}) => {
   await page.goto('/#/activity');
   await page.getByRole('button', {name: 'Node', exact: true}).click();
