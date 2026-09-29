@@ -86,7 +86,7 @@ test('a generated source names why it is read-only and offers no validation', as
   await page.goto('/#/config?tab=source&source=src-main');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeVisible();
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveCount(0);
-  await expect(page.locator('.rp-card')).toContainText('Click the text to edit it; Validate checks it before you save.');
+  await expect(page.locator('.rp-card')).toContainText('Click the text to edit it; Validate checks it before you apply.');
 });
 
 test('switching sources discards the draft after confirmation', async ({page}) => {

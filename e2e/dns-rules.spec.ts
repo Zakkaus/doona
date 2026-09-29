@@ -88,6 +88,6 @@ test('with no response block the one insert position reads as text with its help
   await section(page, 'Response rules').getByRole('button', {name: 'Add rule', exact: true}).click();
   const position = page.getByRole('dialog').getByRole('group', {name: 'Insert', exact: true});
   await expect(position).toContainText('New response block, as its first rule');
-  await expect(position).toHaveAccessibleDescription('The dns section has no response block yet; saving this rule creates it.');
+  await expect(position).toHaveAccessibleDescription('The dns section has no response block yet; applying this rule creates it.');
   await expect(position.getByRole('button')).toHaveCount(0);
 });
