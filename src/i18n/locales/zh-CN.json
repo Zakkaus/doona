@@ -1601,6 +1601,7 @@
   "ui.share": "{bytes}，{percent}%",
   "ui.source": "来源",
   "ui.sourceIp": "来源 IP",
+  "ui.staleBuild": "doona 已更新，刷新即可加载新版。",
   "ui.started": "开始",
   "ui.state": "状态",
   "ui.target": "目标",
