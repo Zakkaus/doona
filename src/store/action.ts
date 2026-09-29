@@ -68,8 +68,35 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
   const details = (operation.error?.details ?? null) as {written?: unknown; committed?: unknown} | null;
   if (operation.status === 'failed' && kind === 'provider_refresh' && operation.kind === kind && details?.committed === true)
     return {degraded: true} as Finished<K>;
-  const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written) && details?.committed !== true;
+  if (operation.status === 'failed') {
+    const outcome = activationError(operation.error, {written});
+    if (outcome) throw outcome;
+  }
+  const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written);
   throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null, details);
+}
+// An activation that failed after the new generation became active (`committed: true`) or without knowing whether it
+// did (`committed: null`). The outcome code is a failed operation's `error.code` or a synchronous error's
+// `details.stage`. The request still failed, so this is the error to throw; everything shown is re-read, as the
+// change is or may be active. Any other failure returns null and keeps its own error.
+export function activationError(failure: unknown, {written = false} = {}): LocalError | null {
+  const {code, message, details} = (failure ?? {}) as {code?: string; message?: string; details?: unknown};
+  const outcome = (details ?? null) as {written?: unknown; committed?: unknown; durability_confirmed?: unknown; stage?: unknown} | null;
+  if (!outcome || (outcome.committed !== true && outcome.committed !== null)) return null;
+  void refetchAll();
+  const stage = failure instanceof ApiError ? outcome.stage : code;
+  const stored = typeof outcome.written === 'boolean' ? outcome.written : written;
+  const key =
+    outcome.committed === null
+      ? 'ui.activationUnknown'
+      : stage === 'store_unavailable'
+        ? 'ui.activationNotSaved'
+        : outcome.durability_confirmed === false
+          ? 'ui.activationDegradedUnconfirmed'
+          : stored
+            ? 'ui.activationDegradedSaved'
+            : 'ui.activationDegraded';
+  return new LocalError(key, message ?? null, code ?? null, details);
 }
 // A warm latency probe through the node over every reachable IP version; a group target probes its direct members, a
 // node target must not name members. HTTP dials the configured check URL through the node, as honk's own health check

@@ -5,7 +5,7 @@ import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult}
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
-import {etag, finished, settle, latencyProbe, useAction} from './action';
+import {activationError, etag, finished, settle, latencyProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
@@ -46,7 +46,9 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
 // Applies patch ops at the group's current configuration revision and waits for the reload that applies them. A 200
 // answers with the config document only; the caller refetches the group.
 export async function patchConfig(api: Api, group: Group, ops: JsonPatch, signal?: AbortSignal): Promise<void> {
-  const result = await api.patchGroup(group.id, ops, etag(group.config_revision), signal);
+  const result = await api.patchGroup(group.id, ops, etag(group.config_revision), signal).catch(error => {
+    throw activationError(error) ?? error;
+  });
   if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
 }
 // honk offers selection and config writes for groups as a whole (resources.groups) and for each group (its capabilities);
@@ -153,9 +155,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     // Turning off a value the group never set clears it again rather than writing false.
     setInterrupt: useCallback(
       (value: boolean) =>
-        patch([
-          {op: 'replace', path: '/config/interrupt_connections', value: value || resource.data?.config.interrupt_connections !== null ? value : null}
-        ]),
+        patch([{op: 'replace', path: '/config/interrupt_connections', value: value || resource.data?.config.interrupt_connections !== null ? value : null}]),
       [patch, resource.data]
     )
   };

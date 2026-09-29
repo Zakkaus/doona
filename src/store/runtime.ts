@@ -4,7 +4,7 @@ import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
-import {finished, settle, useAction} from './action';
+import {activationError, finished, settle, useAction} from './action';
 export function useVersion() {
   const api = getApi();
   return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)});
@@ -104,7 +104,9 @@ export function useRuntimeOperations(runtime: Runtime | undefined, capabilities:
     (kind: RuntimeAction) => {
       if (!canRun(kind)) return Promise.resolve(undefined);
       return act(kind, async signal => {
-        const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal);
+        const accepted = await (kind === 'reload' ? api.startReload : kind === 'suspend' ? api.startSuspend : api.startResume)(signal).catch(error => {
+          throw activationError(error) ?? error;
+        });
         const terminal = await settle(api, accepted, signal);
         refetch();
         finished(terminal, kind);

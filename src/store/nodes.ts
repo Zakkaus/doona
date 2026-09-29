@@ -4,7 +4,7 @@ import {ApiError, LocalError} from '../api/error';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
-import {finished, settle, latencyProbe, useAction, type SucceededResult} from './action';
+import {activationError, finished, settle, latencyProbe, useAction, type SucceededResult} from './action';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -96,7 +96,7 @@ export function useNodeManage(refetch: () => void) {
   // is read again and a retry starts from what is there.
   const conflict = useCallback(
     (error: unknown): never => {
-      if (!(error instanceof ApiError && error.status === 409 && error.code === 'state_conflict')) throw error;
+      if (!(error instanceof ApiError && error.status === 409 && error.code === 'state_conflict')) throw activationError(error) ?? error;
       refetch();
       throw new LocalError('config.changedMeanwhile');
     },
