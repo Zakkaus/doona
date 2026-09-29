@@ -9,7 +9,7 @@ import {PolicyPicker} from '../shared/PolicyPicker';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {
-    measured,
+    tabs,
     tab,
     setTab,
     providerTable,
@@ -44,19 +44,11 @@ export function Nodes(props: PageProps) {
       <NodeTable model={nodeTable} />
     </>
   );
+  const content = {list, latency: <NodeLatency />};
   return (
     <div className="rp-page">
-      {measured ? (
-        <Tabs
-          keepMounted
-          label={t('nav.nodes')}
-          value={tab}
-          onChange={setTab}
-          items={[
-            {id: 'list', label: t('nodes.tab.list'), content: list},
-            {id: 'latency', label: t('nodes.tab.latency'), content: <NodeLatency />}
-          ]}
-        />
+      {tabs.length > 0 ? (
+        <Tabs keepMounted label={t('nav.nodes')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />
       ) : (
         list
       )}

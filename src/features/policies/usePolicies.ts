@@ -11,6 +11,9 @@ import {pickTab, tabQuery} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {openGroup} from '../shared/openGroup';
 import {useNearViewport} from '../../ui/ui';
+import {policiesTabs} from './nav';
+
+const policyTabIds = policiesTabs().map(tab => tab.id);
 
 export function usePolicies({go, query}: PageProps) {
   const resources = useCapabilities().data?.resources;
@@ -82,7 +85,7 @@ export function usePolicies({go, query}: PageProps) {
     refreshNodes();
   }, [refreshGroups, refreshNodes]);
   return {
-    tab: pickTab(query, ['groups', 'arrange'], 'groups'),
+    tab: pickTab(query, policyTabIds, 'groups'),
     // After an arrangement is written: the one group it changed, or the Groups tab when it changed several.
     viewGroup: (name: string | null) => (name === null ? go('policies') : openGroup(go, name)),
     setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),

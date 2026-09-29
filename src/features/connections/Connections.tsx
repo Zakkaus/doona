@@ -23,6 +23,7 @@ import {RuleDialog} from '../shared/RuleDialog';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
+import {connectionsTabs} from './nav';
 import type {ConnectionView} from './view';
 
 export function Connections(props: PageProps) {
@@ -147,6 +148,20 @@ export function Connections(props: PageProps) {
       <RuleDialog dialog={vm.ruleAction.dialog} />
     </>
   );
+  const content = {
+    list,
+    traffic: (
+      <Traffic
+        records={vm.rows}
+        outbounds={vm.outboundKeys}
+        latency={vm.latency}
+        latencyError={vm.latencyError}
+        retryLatency={vm.retryLatency}
+        truncated={vm.truncated}
+        onSelect={vm.openInList}
+      />
+    )
+  };
   return (
     <div className="rp-page">
       <Tabs
@@ -154,24 +169,7 @@ export function Connections(props: PageProps) {
         label={t('nav.connections')}
         value={vm.tab}
         onChange={vm.setTab}
-        items={[
-          {
-            id: 'traffic',
-            label: t('conn.tab.traffic'),
-            content: (
-              <Traffic
-                records={vm.rows}
-                outbounds={vm.outboundKeys}
-                latency={vm.latency}
-                latencyError={vm.latencyError}
-                retryLatency={vm.retryLatency}
-                truncated={vm.truncated}
-                onSelect={vm.openInList}
-              />
-            )
-          },
-          {id: 'list', label: t('conn.tab.list'), content: list}
-        ]}
+        items={connectionsTabs().map(tab => ({id: tab.id, label: t(tab.titleKey), content: content[tab.id]}))}
       />
     </div>
   );
