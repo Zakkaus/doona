@@ -477,7 +477,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   });
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Redacted']);
-  await expect(page.locator('.rp-card')).toContainText('Listener secrets are masked here; edit this file on the host.');
+  await expect(page.locator('.rp-card')).toContainText('This file contains redacted listener secrets and cannot be edited here. Edit it on the host.');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await page.getByRole('tab', {name: 'Quick setup'}).click();
