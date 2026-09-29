@@ -504,6 +504,19 @@ test('runtime drafts survive a changed poll and explicit discard loads the curre
   await expect(page).toHaveURL(/#\/connections$/);
 });
 
+test('sparse runtime settings hide the controls the engine omits', async ({page}) => {
+  const api = await backend(page);
+  const {log, dns_log} = await api.runtimeSettings();
+  // The log's record count and the whole flows section are left out; the members that remain keep their controls.
+  await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: {log: {level: log!.level}, dns_log}}));
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Backend options'});
+  await expect(card.getByRole('textbox', {name: 'DNS log records kept', exact: true})).toBeVisible();
+  await expect(card.getByText('Log level', {exact: true})).toBeVisible();
+  for (const name of ['Log records kept', 'Flows kept', 'Flow retention (seconds)'])
+    await expect(card.getByRole('textbox', {name, exact: true})).toHaveCount(0);
+});
+
 test('new group validation refusal retains the dialog and its name without a success toast', async ({page}) => {
   const api = await backend(page);
   let release!: () => void;
