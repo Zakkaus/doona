@@ -651,3 +651,24 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub');
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
 });
+
+test('two subscriptions sharing a name offer their source file instead of an edit', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  // An untagged entry honk names after its host, beside a tagged entry of that name pointing elsewhere.
+  const added = main.content!.replace('subscription {\n', "subscription {\n  'https://sub-c/sub'\n");
+  await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
+  handlers['GET providers'] = async () => {
+    const list = await api.providers();
+    const tagged = list.providers.find(provider => provider.id === 'sub-c')!;
+    return {...list, providers: [...list.providers, {...tagged, id: 'sub-c-untagged', url_redacted: 'https://sub-c/sub'}]};
+  };
+  await page.goto('/#/nodes?tab=list');
+  const named = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
+  await expect(named).toHaveCount(2);
+  for (const row of [named.first(), named.last()]) {
+    await expect(await moreItem(row, 'Open source', 'More actions for sub-c')).toBeVisible();
+    await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
+    await page.keyboard.press('Escape');
+  }
+});
