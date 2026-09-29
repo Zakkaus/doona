@@ -33,7 +33,7 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(response.nth(1)).toContainText('!qname(geosite: cn)');
   await expect(response.last()).toContainText('fallback: accept');
   await expect(section(page, 'Response rules')).toContainText('3 rules, generation 40');
-  await request.first().getByRole('button', {name: 'Open source', exact: true}).click();
+  await request.first().getByRole('button', {name: 'Open config source', exact: true}).click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=36$/);
 });
 

@@ -13,7 +13,7 @@ export function useLifecycle(runtime: Runtime | undefined, capabilities: Capabil
   const run = (kind: keyof typeof operationLabels) =>
     void operations.run(kind).then(
       result => {
-        if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), id: result.operation_id}));
+        if (result) toast('positive', t('ov.operationResult', {action: t(operationLabels[kind]), status: t('ov.succeeded'), operationId: result.operation_id}));
       },
       error => toastFailure(error, t, t('ov.operationError'))
     );

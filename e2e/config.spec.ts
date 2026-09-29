@@ -307,7 +307,7 @@ test('the quick setup rewrites subscriptions and keeps groups and rules', async 
     ['Routing rules', '#/rules?tab=list']
   ])
     await expect(card.getByRole('link', {name, exact: true})).toHaveAttribute('href', url);
-  await card.getByRole('link', {name: 'Open source', exact: true}).click();
+  await card.getByRole('link', {name: 'Open config source', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-main$/);
   const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
   await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
@@ -615,7 +615,7 @@ test('rule writes require a stable source ID even when the display path matches'
   const remove = page.getByRole('button', {name: 'Remove rule', exact: true});
   await expect(remove.first()).toHaveAccessibleDescription("Cannot locate this rule's line in its source file; it cannot be edited here");
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Open source', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Open config source', exact: true})).toHaveCount(0);
 });
 
 test('modules list top-level counts and edit only routing through reload', async ({page}) => {

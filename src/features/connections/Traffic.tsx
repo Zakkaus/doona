@@ -52,7 +52,7 @@ export const Traffic = memo(function Traffic({
         x: point.up,
         y: point.down,
         name: point.name,
-        detail: t('conn.chart.point', {down: bytes(point.down), up: bytes(point.up)})
+        detail: t('conn.chart.point', {download: bytes(point.down), upload: bytes(point.up)})
       }))
     }));
   }, [view, outbounds, p, t, bytes]);

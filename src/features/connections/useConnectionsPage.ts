@@ -228,7 +228,7 @@ export function useConnectionsPage({go, query}: PageProps) {
       confirmationText: confirmed?.query
         ? t(
             confirmed.query.type === 'all' ? 'conn.closeAllLive' : confirmed.query.type === 'tcp' ? 'conn.closeAllLiveTcp' : 'conn.closeAllLiveUdp',
-            src ? {n: confirmed.ids.length, src} : {n: confirmed.ids.length, src: t('conn.anySource')}
+            src ? {n: confirmed.ids.length, source: src} : {n: confirmed.ids.length, source: t('conn.anySource')}
           )
         : t('conn.closeAllHelp', {n: confirmed?.ids.length ?? 0}),
       open: !!confirmed,

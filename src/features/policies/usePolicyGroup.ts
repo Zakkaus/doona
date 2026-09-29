@@ -100,7 +100,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     error: control.error,
     retry: control.refetch,
     loading: !g && !control.error,
-    loadingText: t('policy.loading', {id}),
+    loadingText: t('policy.loading', {groupId: id}),
     busy: !!control.busy,
     probing: control.busy === 'probe',
     probeDisabled: !!control.busy || !control.canProbe,
