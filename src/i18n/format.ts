@@ -13,6 +13,8 @@ export function relativeStart(startedAt: string | null, locale: string, now = Da
   if (Math.abs(seconds) < 86400) return formatter.format(Math.trunc(seconds / 3600), 'hour');
   return formatter.format(Math.trunc(seconds / 86400), 'day');
 }
+// The catalogue language for an Intl locale, for formatters that take a locale.
+const langOf = (locale: string) => languages.find(language => language.locale === locale)?.id ?? REFERENCE_LANG;
 const durationUnits = new Map<string, Intl.NumberFormat>();
 /** Seconds (a UInt64 string) as days / hours / minutes; below a minute, seconds. */
 export function formatDuration(seconds: string | null, locale: string): string {
@@ -28,8 +30,8 @@ export function formatDuration(seconds: string | null, locale: string): string {
     if (!formatter) durationUnits.set(key, (formatter = new Intl.NumberFormat(locale, {style: 'unit', unit: name, unitDisplay: 'short'})));
     return formatter.format(value);
   };
-  if (d > 0n) return `${unit(d, 'day')} ${unit(h, 'hour')}`;
-  if (h > 0n) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
+  if (d > 0n) return translate(langOf(locale), 'ui.duration.dayHour', {days: unit(d, 'day'), hours: unit(h, 'hour')});
+  if (h > 0n) return translate(langOf(locale), 'ui.duration.hourMinute', {hours: unit(h, 'hour'), minutes: unit(m, 'minute')});
   if (m > 0n) return unit(m, 'minute');
   return unit(total, 'second');
 }
@@ -59,8 +61,7 @@ const byteRateUnits = [
 ] as const;
 // A number with `digits` decimals in a unit. Callers pass an Intl locale; the unit message is read in its language.
 export function formatUnit(value: number | bigint, locale: string, unit: UnitKey, digits = 0): string {
-  const lang = languages.find(language => language.locale === locale)?.id ?? REFERENCE_LANG;
-  return translate(lang, unit, {n: formatNumber(value, locale, digits)});
+  return translate(langOf(locale), unit, {n: formatNumber(value, locale, digits)});
 }
 // Decimal units, scaled in bigint so counters above 2^53 stay exact: one decimal below ten of a unit, whole numbers
 // above. A number (a chart value) is rounded to whole bytes. A value that rounds up to 1000 of a unit takes the next.

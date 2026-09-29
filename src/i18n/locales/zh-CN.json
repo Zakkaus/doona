@@ -1592,6 +1592,8 @@
   "ui.direct": "direct",
   "ui.domain": "域名",
   "ui.download": "下载",
+  "ui.duration.dayHour": "{days} {hours}",
+  "ui.duration.hourMinute": "{hours} {minutes}",
   "ui.elapsed": "耗时",
   "ui.empty": "暂无数据",
   "ui.errGenerationChanged": "模拟期间路由配置已变更。请重新查询。",

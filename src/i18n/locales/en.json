@@ -1793,6 +1793,8 @@
   "ui.direct": "direct",
   "ui.domain": "Domain",
   "ui.download": "Download",
+  "ui.duration.dayHour": "{days} {hours}",
+  "ui.duration.hourMinute": "{hours} {minutes}",
   "ui.elapsed": "Elapsed",
   "ui.empty": "No data",
   "ui.errGenerationChanged": "The routing changed during simulation. Run the query again.",
