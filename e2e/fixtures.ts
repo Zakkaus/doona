@@ -174,7 +174,7 @@ export async function fulfillAccepted(route: Route, accepted: OperationAccepted)
 
 type MockHandler = (request: Request) => Promise<unknown>;
 // Wire parameters are strings; the in-process mock takes the typed query the client would send.
-const query = (request: Request) => {
+export const query = (request: Request) => {
   const params = Object.fromEntries(new URL(request.url()).searchParams) as Record<string, string | number>;
   for (const key of ['limit', 'window_seconds', 'max_points']) if (typeof params[key] === 'string') params[key] = Number(params[key]);
   return params as never;

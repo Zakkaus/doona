@@ -1,7 +1,10 @@
 import type {Locator} from '@playwright/test';
-import {expect, mockBackend, test, moreAction} from './fixtures';
+import {expect, mockBackend, query, test, moreAction} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
+import type {ProbeResult} from '../src/api/model';
+
+type ProbeResultItem = ProbeResult['results'][number];
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
 
@@ -158,6 +161,80 @@ test('a node can be tested on its own', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText(/hk-01: \d+ ms/);
+});
+
+// A Hysteria2 node listens on UDP only: a connect to its server endpoint fails while the node carries traffic, so the
+// latency test must measure through the node over HTTP. `rows` rewrites the node's probe rows once the probe finishes.
+async function udpOnlyNode(page: Parameters<typeof mockBackend>[0], rows: (row: ProbeResultItem) => ProbeResultItem) {
+  const {api, handlers} = await mockBackend(page);
+  const kinds: string[] = [];
+  let measured: ProbeResultItem | undefined;
+  handlers['GET nodes'] = async request => {
+    const list = await api.nodes(query(request));
+    const nodes = list.nodes.map(node => {
+      if (node.id !== 'hk-01') return node;
+      // What an earlier connect probe left behind: the endpoint refused, recorded as a warm TCP connect.
+      const stale = {
+        ...node.health.find(h => h.transport === 'tcp')!,
+        warmth: 'warm' as const,
+        measurement: 'tcp_connect' as const,
+        state: 'unavailable' as const,
+        latency_ms: null,
+        error: 'probe_failed'
+      };
+      const health = measured
+        ? [stale, {...stale, measurement: 'http_headers' as const, state: measured.state, latency_ms: measured.latency_ms, error: measured.error}]
+        : [stale];
+      return {...node, protocol: 'hysteria2' as const, health};
+    });
+    return {...list, nodes};
+  };
+  handlers['POST probes'] = async request => {
+    const body = request.postDataJSON();
+    kinds.push(body.kind);
+    const accepted = await api.startProbe(body);
+    handlers[`GET operations/${accepted.operation_id}`] = async () => {
+      const operation = await api.operation(accepted.operation_id);
+      if (operation.status !== 'succeeded' || operation.kind !== 'probe') return operation;
+      const results = operation.result.results.map(rows);
+      measured = results.find(row => row.ip_version === 'ipv4');
+      return {...operation, result: {...operation.result, results}};
+    };
+    return accepted;
+  };
+  return kinds;
+}
+
+test('a UDP-only node is measured through the node, and the table shows its latency', async ({page}) => {
+  const kinds = await udpOnlyNode(page, row => ({...row, state: 'healthy', latency_ms: 42, error: null}));
+  await page.goto('/#/nodes?provider=inline');
+  const row = rows(page.locator('.rp-table').nth(1)).filter({hasText: 'hk-01'});
+  await expect(row).toContainText('Unavailable');
+  await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('hk-01: 42 ms');
+  await expect(row).toContainText('42');
+  await expect(row).not.toContainText('Unavailable');
+  expect(kinds).toEqual(['http']);
+});
+
+test('a probe toast names its reason in words, never as a backend code', async ({page}) => {
+  await udpOnlyNode(page, row =>
+    row.ip_version === 'ipv4'
+      ? {...row, state: 'unavailable', latency_ms: null, error: 'probe_failed'}
+      : {...row, state: 'unknown', latency_ms: null, error: 'address_unavailable'}
+  );
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
+  const toast = page.locator('.rp-toast.negative');
+  await expect(toast).toHaveText(/hk-01: unreachable/);
+  await expect(page.locator('.rp-toast')).not.toContainText(['probe_failed']);
+});
+
+test('an unknown probe result gives its reason in words', async ({page}) => {
+  await udpOnlyNode(page, row => ({...row, state: 'unknown', latency_ms: null, error: 'probe_deadline'}));
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
+  await expect(page.locator('.rp-toast.neutral')).toContainText('hk-01: result unknown (The probe timed out before measuring)');
 });
 
 test.describe('long lists', () => {

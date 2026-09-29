@@ -4,7 +4,7 @@ import {invalidations, shouldRefetch, type ResourceName} from '../api/invalidati
 import {createMockApi} from '../api/mock';
 import {capabilities} from '../api/mock/fixtures';
 import type {ApiEvent, Capabilities, EventKind} from '../api/model';
-import {tcpProbe} from './index';
+import {latencyProbe} from './index';
 import {deferred} from './testHelpers';
 
 it('normalizes query order and omitted undefined fields without merging different resources or values', () => {
@@ -189,9 +189,20 @@ it('refreshes every resource on reconnect, not on initial or replayed readiness'
 it('sends a group probe over its direct members and a node probe without a members field', () => {
   const probes = {available: true, kinds: ['tcp_connect'], transports: ['tcp'], targets: ['node', 'group'], ip_versions: ['ipv4']};
   const caps = {resources: {probes}} as unknown as Capabilities;
-  expect(tcpProbe(caps, {type: 'group', group_id: 'g'})).toMatchObject({members: 'direct', ip_version: 'ipv4'});
-  expect(tcpProbe(caps, {type: 'node', node_id: 'n'})).not.toHaveProperty('members');
-  expect(tcpProbe({resources: {probes: {...probes, targets: ['group']}}} as unknown as Capabilities, {type: 'node', node_id: 'n'})).toBeNull();
+  expect(latencyProbe(caps, {type: 'group', group_id: 'g'})).toMatchObject({members: 'direct', ip_version: 'ipv4'});
+  expect(latencyProbe(caps, {type: 'node', node_id: 'n'})).not.toHaveProperty('members');
+  expect(latencyProbe({resources: {probes: {...probes, targets: ['group']}}} as unknown as Capabilities, {type: 'node', node_id: 'n'})).toBeNull();
+});
+
+it.each([
+  {kinds: ['tcp_connect', 'http', 'dns'], expected: 'http'},
+  {kinds: ['tcp_connect', 'dns'], expected: 'tcp_connect'},
+  {kinds: ['dns'], expected: null}
+])('measures latency through the node over HTTP, falling back to a TCP connect: $kinds', ({kinds, expected}) => {
+  const caps = {resources: {probes: {available: true, kinds, transports: ['tcp'], targets: ['node'], ip_versions: ['ipv4', 'ipv6']}}} as Capabilities;
+  const request = latencyProbe(caps, {type: 'node', node_id: 'n'});
+  expect(request?.kind ?? null).toBe(expected);
+  if (request) expect(request).toMatchObject({purpose: 'data', transport: ['tcp'], warmth: 'warm', ip_version: 'any'});
 });
 
 it.each([
@@ -201,5 +212,5 @@ it.each([
   {versions: [], expected: null}
 ])('admits only advertised probe address families: $versions', ({versions, expected}) => {
   const caps = {resources: {probes: {available: true, kinds: ['tcp_connect'], transports: ['tcp'], targets: ['node'], ip_versions: versions}}} as Capabilities;
-  expect(tcpProbe(caps, {type: 'node', node_id: 'n'})?.ip_version ?? null).toBe(expected);
+  expect(latencyProbe(caps, {type: 'node', node_id: 'n'})?.ip_version ?? null).toBe(expected);
 });
