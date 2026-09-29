@@ -25,6 +25,17 @@ import {
 
 const t: Translator = (key, params) => translate('en', key, params);
 
+it('labels the dictionary caption with the generation id it received, untranslated in every locale', async () => {
+  const api = createMockApi();
+  const [rules, config] = await Promise.all([api.rules(), api.config()]);
+  const caption = dictionaryView(rules.rules, 'gen-77', undefined, config.sources, [], t, 'en').caption;
+  expect(caption).toContain('generation gen-77');
+  expect(caption).not.toContain(config.revision);
+  expect(translate('zh-TW', 'rule.dictionaryCaption', {n: 2, generation: 'gen-77'})).toMatch(/generation gen-77$/);
+  expect(translate('zh-CN', 'ui.generation')).toBe('generation');
+  expect(translate('zh-TW', 'ui.generation')).toBe('generation');
+});
+
 it('offers edits only at writable sources and preserves source locations when paths are redacted', async () => {
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);

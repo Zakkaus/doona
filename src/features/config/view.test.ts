@@ -4,6 +4,7 @@ import {createMockApi} from '../../api/mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
 import {
+  configMetadata,
   saveReason,
   saveView,
   validateReason,
@@ -406,4 +407,16 @@ it('says why Validate is disabled: the main file is not whole, or the file on sh
   expect(validateReason(null, [main, sub], () => true, t)).toBe(t('config.validateOther'));
   expect(validateReason(null, [main, sub], () => false, t)).toBe(t('config.validateNoMain'));
   expect(validateReason(null, [{...main, content: undefined}], () => true, t)).toBe(t('config.validateNoMain'));
+});
+
+it('shows one row, the config version, and never the generation id', () => {
+  const rows = configMetadata('rev-7', t);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({label: t('config.revision'), value: 'rev-7'});
+  expect(t('config.revision')).toBe('Config version');
+  for (const locale of ['zh-TW', 'zh-CN'] as const) {
+    expect(translate(locale, 'config.revision')).toBe(translate(locale, 'ov.config'));
+    expect(translate(locale, 'config.revision')).not.toBe(translate(locale, 'ui.generation'));
+  }
+  expect(translate('en', 'config.acceptedDiagnostics', {generation: 'gen-3'})).toContain('generation gen-3');
 });

@@ -132,7 +132,7 @@ export function useConfigPage({go, query}: PageProps) {
     reload: config.refetch,
     loading: config.loading && !config.data,
     ready: !!config.data,
-    metadata: config.data ? configMetadata(config.data.generation_id, config.data.revision, t) : [],
+    metadata: config.data ? configMetadata(config.data.revision, t) : [],
     redacted: !!config.data?.secrets_redacted,
     tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
     tab,
