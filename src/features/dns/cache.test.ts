@@ -37,6 +37,12 @@ it('claims no capacity when the backend does not report usage', () => {
   expect(cacheCard(undefined, 'en-US', t)).toBeNull();
 });
 
+it('shows the entry count without a percentage when usage reports no capacity', () => {
+  const card = cacheCard(list({entries: '4096', entry_capacity: null}), 'en-US', t)!;
+  expect(card.usage).toBeNull();
+  expect(card.note).toBe('Entries: 4,096');
+});
+
 it('says the listing is unavailable after a 503, even with a reading kept from an earlier poll', () => {
   const unavailable = new ApiError(503, 'unavailable', 'DNS cache unavailable');
   expect(cacheCardState(true, true, null)).toBe('ready');
