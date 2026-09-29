@@ -1,5 +1,5 @@
 import type {GeoAssetKind, GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
-import {geodataPresets, maxGeodataUrls, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
+import {geodataPresets, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
@@ -53,9 +53,9 @@ export function urlProblem(url: string, list: string[]): Key | null {
   return null;
 }
 
-// The custom URL fields: each stored URL, then one blank to add another while the list has room.
-export function customFields(urls: string[]): string[] {
-  return urls.length < maxGeodataUrls && urls.every(url => url.trim()) ? [...urls, ''] : urls;
+// The custom URL fields: each stored URL, then one blank to add another while the list is under the backend's max.
+export function customFields(urls: string[], max: number): string[] {
+  return urls.length < max && urls.every(url => url.trim()) ? [...urls, ''] : urls;
 }
 
 // A custom list can be stored when each asset has a URL and none is malformed or repeated.
@@ -83,10 +83,12 @@ export function presetNote(preset: GeodataPreset, required: GeoData['required_co
   };
 }
 
-// The automatic update intervals offered, with a stored value outside them kept so the select can show it.
+// The automatic update intervals offered: the presets within the backend's bounds and its default, with the stored
+// value kept so the select can show it.
 const intervals = [6, 12, 24, 72, 168];
-export function intervalChoices(current: number, locale: string) {
-  const hours = intervals.includes(current) ? intervals : [...intervals, current].sort((a, b) => a - b);
+export function intervalChoices(current: number, bounds: {min: number; max: number; default: number} | undefined, locale: string) {
+  const offered = bounds ? [...intervals.filter(value => value >= bounds.min && value <= bounds.max), bounds.default] : intervals;
+  const hours = [...new Set([...offered, current])].sort((a, b) => a - b);
   return hours.map(value => {
     const days = value % 24 === 0;
     const label = new Intl.NumberFormat(locale, {style: 'unit', unit: days ? 'day' : 'hour', unitDisplay: 'long'}).format(days ? value / 24 : value);
@@ -105,7 +107,16 @@ export function routeLabel(route: GeoDataDownload, groups: GroupSummary[] | unde
 // The status row: an update in progress, else the last error in error tone, else when the files last changed and
 // whether their checksums were verified.
 // canSkipChecksum: the backend verifies checksums and lets that be turned off, which a checksum failure then explains.
-export function statusLine(data: GeoData | undefined, updating: boolean, now: number, locale: string, t: Translator, canSkipChecksum = false) {
+// checksum: how the backend verifies downloads (resources.geodata.checksum), which the unverified help names.
+export function statusLine(
+  data: GeoData | undefined,
+  updating: boolean,
+  now: number,
+  locale: string,
+  t: Translator,
+  canSkipChecksum = false,
+  checksum: 'sha256sum' | 'pinned' | null = 'sha256sum'
+) {
   if (updating) return {text: t('settings.geodataUpdating'), error: false};
   // last_error's code is the failed stage and its message is always the same, so a stage without words of its own
   // shows its code beside the message.
@@ -133,7 +144,18 @@ export function statusLine(data: GeoData | undefined, updating: boolean, now: nu
     text: t('ui.valuePair', {label: t('settings.geodataLastUpdated'), value: verified ? when + t('ui.separator') + verified : when}),
     error: false,
     // An unverified file still loads, which the word alone does not say.
-    help: unverified ? {title: t('settings.geodataVerifiedNo'), text: t('settings.geodataUnverifiedHelp')} : undefined
+    help: unverified
+      ? {
+          title: t('settings.geodataVerifiedNo'),
+          text: t(
+            checksum === 'sha256sum'
+              ? 'settings.geodataUnverifiedHelp'
+              : checksum === 'pinned'
+                ? 'settings.geodataUnverifiedPinnedHelp'
+                : 'settings.geodataUnverifiedNoneHelp'
+          )
+        }
+      : undefined
   };
 }
 

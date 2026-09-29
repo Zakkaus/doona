@@ -101,10 +101,11 @@ describe('custom URLs', () => {
       geoip: ['https://m.example/ip.dat']
     });
   });
-  it('offers one blank field after the URLs until the list holds four', () => {
-    expect(customFields(['a'])).toEqual(['a', '']);
-    expect(customFields(['a', 'b', 'c', 'd'])).toEqual(['a', 'b', 'c', 'd']);
-    expect(customFields(['a', ''])).toEqual(['a', '']);
+  it('offers one blank field after the URLs until the list holds max_urls', () => {
+    expect(customFields(['a'], 4)).toEqual(['a', '']);
+    expect(customFields(['a', 'b', 'c', 'd'], 4)).toEqual(['a', 'b', 'c', 'd']);
+    expect(customFields(['a', ''], 4)).toEqual(['a', '']);
+    expect(customFields(['a', 'b'], 2)).toEqual(['a', 'b']);
   });
 });
 
@@ -119,9 +120,12 @@ describe('rows', () => {
       notice: true
     });
   });
-  it('offers five intervals and keeps a stored one outside them', () => {
-    expect(intervalChoices(24, 'en-US').map(item => item.label)).toEqual(['6 hours', '12 hours', '1 day', '3 days', '7 days']);
-    expect(intervalChoices(48, 'en-US').map(item => item.id)).toEqual(['6', '12', '24', '48', '72', '168']);
+  it('offers the intervals within the bounds with the default, and keeps a stored one outside them', () => {
+    const bounds = {min: 1, max: 168, default: 24};
+    expect(intervalChoices(24, bounds, 'en-US').map(item => item.label)).toEqual(['6 hours', '12 hours', '1 day', '3 days', '7 days']);
+    expect(intervalChoices(48, bounds, 'en-US').map(item => item.id)).toEqual(['6', '12', '24', '48', '72', '168']);
+    expect(intervalChoices(12, {min: 12, max: 48, default: 36}, 'en-US').map(item => item.id)).toEqual(['12', '24', '36']);
+    expect(intervalChoices(2, {min: 1, max: 4, default: 2}, 'en-US').map(item => item.id)).toEqual(['2']);
   });
   it('names a route by its group where it has one', () => {
     const groups = [{id: 'proxy', name: 'Proxy'}] as Parameters<typeof routeLabel>[1];
@@ -136,6 +140,9 @@ describe('rows', () => {
     const unverified = statusLine(status({assets: [asset('geosite'), asset('geoip', {verified: false})]}), false, now, 'en-US', t);
     expect(unverified.text).toMatch(/Not verified$/);
     expect(unverified.help).toEqual({title: t('settings.geodataVerifiedNo'), text: t('settings.geodataUnverifiedHelp')});
+    const unverifiedStatus = status({assets: [asset('geosite'), asset('geoip', {verified: false})]});
+    expect(statusLine(unverifiedStatus, false, now, 'en-US', t, false, 'pinned').help?.text).toBe(t('settings.geodataUnverifiedPinnedHelp'));
+    expect(statusLine(unverifiedStatus, false, now, 'en-US', t, false, null).help?.text).toBe(t('settings.geodataUnverifiedNoneHelp'));
     expect(statusLine(status(), false, now, 'en-US', t).help).toBeUndefined();
     expect(statusLine(status({last_updated_at: null}), false, now, 'en-US', t).text).toBe('Last updated: Never, Verified');
     expect(statusLine(undefined, false, now, 'en-US', t)).toEqual({text: 'Last updated: —', error: false});

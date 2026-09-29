@@ -78,7 +78,7 @@ export function GeodataSettingsCard() {
               <span className="rp-label">{t('settings.geodataVerifyChecksum')}</span>
               <div className="rp-cluster">
                 <Switch aria-label={t('settings.geodataVerifyChecksum')} isSelected={m.checksum.enabled} isDisabled={m.busy} onChange={m.checksum.toggle} />
-                <span className="rp-label">{t('settings.geodataVerifyChecksumHelp')}</span>
+                <span className="rp-label">{m.checksum.help}</span>
               </div>
             </div>
           )}
@@ -122,7 +122,7 @@ export function GeodataSettingsCard() {
               </div>
             </Disclosure>
           )}
-          {m.seededFromConfig && <span className="rp-label">{t('settings.geodataConfigSeeded')}</span>}
+          {m.lifecycleNote && <span className="rp-label">{m.lifecycleNote}</span>}
         </div>
       )}
       {m.lacking && (
