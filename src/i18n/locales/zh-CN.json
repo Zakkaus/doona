@@ -1605,6 +1605,7 @@
   "ui.group": "组",
   "ui.groupNotLoaded": "组尚未加载",
   "ui.helpFor": "关于{name}",
+  "ui.interfaceTextUnavailable": "无法加载界面文字。",
   "ui.invalidIp": "须为 IPv4 或 IPv6 地址。",
   "ui.labelSeparator": "：",
   "ui.latency": "{n} ms",

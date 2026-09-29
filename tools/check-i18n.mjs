@@ -2,6 +2,7 @@ import ts from 'typescript';
 import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import {checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
 import {languages, REFERENCE_LANG} from './languages.mjs';
+import {startupKeys} from './startup-text.mjs';
 
 // `--missing <id>` lists what a language still lacks, grouped by the key's first segment, as lines to paste into its
 // catalogue with the English text to translate. It works before the language's catalogue exists.
@@ -30,6 +31,7 @@ function visit(node, callback) {
 }
 const sources = files('src').filter(path => /\.(?:ts|tsx)$/.test(path));
 const references = new Set();
+for (const key of startupKeys) references.add(key);
 const literal = new Set(['doona', 'must']);
 let cjkCount = 0;
 const failures = [];

@@ -1,6 +1,8 @@
 import {defineConfig} from 'vitest/config';
+import {startupTextPlugin} from './tools/startup-text.mjs';
 
 export default defineConfig({
+  plugins: [startupTextPlugin()],
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'tools/*.test.mjs'],

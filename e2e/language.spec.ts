@@ -53,6 +53,7 @@ test.describe('language loading', () => {
     await page.route(localeChunk('en'), route => route.abort());
     await page.goto('/#/activity');
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
     await expect(page.locator('.rp-nav[href="#/activity"]')).toContainText(translate('zh-TW', 'nav.activity'));
   });
 
@@ -60,12 +61,26 @@ test.describe('language loading', () => {
     expectLoadFailures(page, localeChunk());
     await page.route(localeChunk(), route => route.abort());
     await page.goto('/#/activity');
-    await expect(page.getByRole('alert')).toContainText('The interface text could not be loaded.');
-    const retry = page.getByRole('button', {name: 'Retry', exact: true});
+    await expect(page.getByRole('alert')).toContainText(translate('en', 'ui.interfaceTextUnavailable'));
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+    const retry = page.getByRole('button', {name: translate('en', 'ui.retry'), exact: true});
     await expect(retry).toBeVisible();
     // Retry reloads the page, since nothing on it can load the language again.
     await Promise.all([page.waitForEvent('load'), retry.click()]);
-    await expect(page.getByRole('alert')).toContainText('The interface text could not be loaded.');
+    await expect(page.getByRole('alert')).toContainText(translate('en', 'ui.interfaceTextUnavailable'));
+  });
+
+  test.describe('when both Chinese catalogues fail', () => {
+    test.use({storage: {'doona-lang': 'zh-CN'}});
+    test('keeps the requested language on the failure screen', async ({page}) => {
+      expectLoadFailures(page, localeChunk());
+      await page.route(localeChunk(), route => route.abort());
+      await page.goto('/#/activity');
+      await expect(page.getByRole('alert')).toContainText(translate('zh-CN', 'ui.interfaceTextUnavailable'));
+      await expect(page.getByRole('button', {name: translate('zh-CN', 'ui.retry'), exact: true})).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+    });
   });
 
   test('keeps the current language when a new one does not load', async ({page}) => {

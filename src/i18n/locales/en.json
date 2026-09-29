@@ -1806,6 +1806,7 @@
   "ui.group": "Group",
   "ui.groupNotLoaded": "The group has not loaded",
   "ui.helpFor": "About {name}",
+  "ui.interfaceTextUnavailable": "The interface text could not be loaded.",
   "ui.invalidIp": "Enter an IPv4 or IPv6 address.",
   "ui.labelSeparator": ": ",
   "ui.latency": "{n} ms",
