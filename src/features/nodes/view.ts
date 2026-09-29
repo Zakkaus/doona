@@ -10,7 +10,7 @@ import {addU64} from '../../api/u64';
 import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
-import {isBareName} from '../../dae/text';
+import {isBareName, scanConfig, unquote} from '../../dae/text';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {classifyFilters, readGroupEntries} from '../../dae/groups';
 
@@ -48,11 +48,22 @@ export const citingGroups = (text: string, tag: string) =>
     .filter(group => classifyFilters(group).subtags.includes(tag))
     .map(group => group.name);
 
-// A rename rewrites only the declaring source, so groups elsewhere that name the tag are left for the person to edit.
+// Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) names the tag anywhere.
+const namedInExpression = (text: string, tag: string) =>
+  readGroupEntries(text).some(group =>
+    classifyFilters(group).rules.some(filter =>
+      scanConfig(filter).tokens.some(token => (token.kind === 'text' || token.kind === 'quoted') && unquote(filter.slice(token.from, token.to)) === tag)
+    )
+  );
+
+// A rename rewrites only exact subtag filters in the declaring source, so groups elsewhere that name the tag, and any
+// expression naming it, are left for the person to edit.
 export function renameReferences(sources: ConfigSource[], declaring: ConfigSource, tag: string) {
   return {
     here: citingGroups(declaring.content ?? '', tag),
-    elsewhere: sources.filter(item => item.id !== declaring.id && citingGroups(item.content ?? '', tag).length > 0)
+    elsewhere: sources.filter(
+      item => (item.id !== declaring.id && citingGroups(item.content ?? '', tag).length > 0) || namedInExpression(item.content ?? '', tag)
+    )
   };
 }
 
