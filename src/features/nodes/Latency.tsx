@@ -1,5 +1,5 @@
 import {formatLatency} from '../../i18n/format';
-import {formatList, useLang, useT} from '../../i18n';
+import {formatList, useLang, useT, type Lang, type Translator} from '../../i18n';
 import {Card, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
 import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
@@ -10,6 +10,14 @@ import {latencyAverages, latencyMax, type LatencyBy, type LatencyMissing} from '
 import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;
+
+export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator) {
+  const names = formatList(
+    lang,
+    rows.slice(0, named).map(row => row.name)
+  );
+  return rows.length > named ? t('nodes.latency.andMore', {names, n: rows.length - named}) : names;
+}
 
 // Every measured node on one axis, its latest latency beside the averages the backend reports, so a node that is slow
 // now or slow on average stands out; failed and unmeasured nodes are listed, not left out.
@@ -51,19 +59,12 @@ export function NodeLatency() {
       ]
     : [];
   // Nodes without a latency are listed by state in a sentence each, naming the first few.
-  const list = (rows: LatencyMissing[]) => {
-    const names = formatList(
-      lang,
-      rows.slice(0, named).map(row => row.name)
-    );
-    return rows.length > named ? `${names} ${t('nodes.latency.andMore', {n: rows.length - named})}` : names;
-  };
   const notes = (missing: LatencyMissing[]) => {
     const unavailable = missing.filter(row => row.state === 'unavailable');
     const unmeasured = missing.filter(row => row.state === 'unmeasured');
     return [
-      ...(unavailable.length ? [t('nodes.latency.unavailableList', {n: unavailable.length, names: list(unavailable)})] : []),
-      ...(unmeasured.length ? [t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: list(unmeasured)})] : [])
+      ...(unavailable.length ? [t('nodes.latency.unavailableList', {n: unavailable.length, names: missingNames(unavailable, lang, t)})] : []),
+      ...(unmeasured.length ? [t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: missingNames(unmeasured, lang, t)})] : [])
     ];
   };
   return (

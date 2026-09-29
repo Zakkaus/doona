@@ -154,7 +154,7 @@ export function AreaPlot({
       lines: series
         .filter(s => s.values[selected] != null)
         .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0))
-        .map(s => `${s.label}${t('ui.labelSeparator')}${fmt(s.values[selected]!)}`)
+        .map(s => t('ui.valuePair', {label: s.label, value: fmt(s.values[selected]!)}))
     });
   });
   const selection = useSelection(timestamps.length, select, clear);
