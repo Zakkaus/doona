@@ -1,7 +1,7 @@
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
-import Data from '../../ui/icons/Data';
+import Cpu from '../../ui/icons/Cpu';
 import {useT} from '../../i18n';
 import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
 import {href} from '../../shell/route';
@@ -73,7 +73,7 @@ export function Activity() {
           </div>
         </CardLink>
         <NodeCard />
-        <Card title={t('act.cpu')} tile={{icon: <Data />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
+        <Card title={t('act.cpu')} tile={{icon: <Cpu />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className="rp-big">{vm.cpu}</span>
