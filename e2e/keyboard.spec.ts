@@ -50,6 +50,30 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await expect(help).toBeHidden();
 });
 
+test('the shortcut help fits a 1280x720 window, and g d and g e open DNS and Events', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 720});
+  await page.goto('/#/activity');
+  await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
+  await expect(help.getByRole('heading', {name: 'Keyboard shortcuts'})).toBeInViewport({ratio: 1});
+  for (const name of ['General', 'Tables and lists', 'Configuration editor', 'Go to page']) await expect(help.getByRole('heading', {name, exact: true})).toBeVisible();
+  const rows = help.locator('.rp-row');
+  await expect(rows).toHaveCount(23);
+  for (const row of await rows.all()) await expect(row).toBeInViewport({ratio: 1});
+  await expect(help.getByRole('button', {name: 'Close', exact: true})).toBeInViewport({ratio: 1});
+  expect(await help.evaluate(dialog => dialog.scrollHeight <= dialog.clientHeight)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(help).toBeHidden();
+  await page.keyboard.press('g');
+  await page.keyboard.press('d');
+  await expect(page).toHaveURL(/#\/dns(\?|$)/);
+  await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+  await page.keyboard.press('g');
+  await page.keyboard.press('e');
+  await expect(page).toHaveURL(/#\/events(\?|$)/);
+});
+
 test('g r opens Rules instead of refreshing, while a lone r still refreshes', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.locator('.rp-strip')).toBeVisible();
