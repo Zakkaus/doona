@@ -20,6 +20,8 @@ const pluralCategories = locale => {
 const placeholders = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
 // A message's forms by name; a plain string is the general form, `other`.
 const forms = message => (typeof message === 'string' ? {other: message} : message);
+// A key names its area first, `area.name`, the way the other keys do; a bare key such as `close` has no area.
+export const areaPrefixFailures = keys => keys.filter(key => !/^\w+\.\w/.test(key)).map(key => `Message key has no area prefix: ${key}`);
 // Each form of a message against the reference's form of the same name, else its general form, so a plural form that
 // drops a placeholder is caught even when another form keeps it.
 function placeholderFailures(file, key, message, expected, reference) {

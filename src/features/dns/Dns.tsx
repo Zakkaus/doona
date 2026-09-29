@@ -281,7 +281,7 @@ function DnsLog({
         <ActionGroup
           actions={[
             // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
-            {id: 'refresh', label: t('refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+            {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
             {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
             {
               id: 'rule',

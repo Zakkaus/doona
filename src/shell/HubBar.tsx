@@ -29,7 +29,7 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
     }
   }, [last]);
   return (
-    <nav className="rp-hubbar" aria-label={t('hubs')}>
+    <nav className="rp-hubbar" aria-label={t('shell.hubs')}>
       {groups.map(group => {
         const Icon = group.items[0].Icon;
         return (

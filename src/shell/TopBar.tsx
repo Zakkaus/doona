@@ -84,17 +84,17 @@ export const TopBar = memo(function TopBar({
       <div className="rp-search-wrap" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
         <Button appearance="plain" className="rp-search" onPress={openSearch}>
           <Search />
-          <span className="grow">{t('search')}</span>
+          <span className="grow">{t('shell.search')}</span>
           <span className="rp-kbd">{mac ? t('shell.macShortcut') : t('shell.shortcut')}</span>
         </Button>
       </div>
       <div className="rp-actions">
         <span className="rp-search-compact" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
-          <Button quiet icon label={t('search')} onPress={openSearch}>
+          <Button quiet icon label={t('shell.search')} onPress={openSearch}>
             <Search />
           </Button>
         </span>
-        <Button quiet icon label={t('refresh')} isPending={spinning} onPress={refresh}>
+        <Button quiet icon label={t('ui.refresh')} isPending={spinning} onPress={refresh}>
           <DataRefresh />
         </Button>
         {commands.apply && (
@@ -127,16 +127,20 @@ export const TopBar = memo(function TopBar({
           <ChoiceMenu
             quiet
             chevron={false}
-            label={t('moreOptions')}
+            label={t('ui.moreOptions')}
             submenus={[
-              {label: t('lang'), icon: <Translate />, sections: [{title: t('lang'), items: languageItems, value: lang, onChange: k => pickLang(k as Lang)}]},
               {
-                label: t('theme'),
-                icon: <Contrast />,
-                sections: [{title: t('theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
+                label: t('ui.lang'),
+                icon: <Translate />,
+                sections: [{title: t('ui.lang'), items: languageItems, value: lang, onChange: k => pickLang(k as Lang)}]
               },
-              {label: t('palette'), icon: <Color />, sections: palettes},
-              {label: t('wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
+              {
+                label: t('ui.theme'),
+                icon: <Contrast />,
+                sections: [{title: t('ui.theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
+              },
+              {label: t('ui.palette'), icon: <Color />, sections: palettes},
+              {label: t('ui.wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
             ]}
             actions={[
               ...(commands.reload ? [{label: commands.reload.label, icon: <Refresh />, onAction: askReload}] : []),

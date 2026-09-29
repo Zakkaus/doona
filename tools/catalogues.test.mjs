@@ -1,10 +1,18 @@
 import {expect, it} from 'vitest';
-import {checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
+import {areaPrefixFailures, checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
 
 // A made-up partial language, xx, beside a two-key reference.
 const en = {'a.count': {one: '{n} item', other: '{n} items'}, 'b.title': 'Title {name}'};
 const locales = {en: 'en-US', xx: 'en-US', ar: 'ar'};
 const check = (xx, complete = new Set(['en'])) => checkCatalogues({en, xx}, 'en', complete, locales);
+
+it('rejects a key without an area prefix', () => {
+  expect(areaPrefixFailures(['ui.close', 'close', 'ui.', '.close'])).toEqual([
+    'Message key has no area prefix: close',
+    'Message key has no area prefix: ui.',
+    'Message key has no area prefix: .close'
+  ]);
+});
 
 it('lets a partial language leave keys out and reports them', () => {
   expect(check({'b.title': 'Xx {name}'})).toEqual({failures: [], missing: {en: [], xx: ['a.count']}});

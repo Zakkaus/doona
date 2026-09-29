@@ -26,7 +26,7 @@ export function LanguageMenu({lang, pickLang}: {lang: Lang; pickLang: (lang: Lan
   // The icon turns in when the language changes, like the scheme icon; not on first paint.
   const [first] = useState(lang);
   return (
-    <ChoiceMenu quiet chevron={false} label={t('lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
+    <ChoiceMenu quiet chevron={false} label={t('ui.lang')} value={lang} onChange={k => pickLang(k as Lang)} items={languageItems}>
       <Translate key={lang} className={lang !== first ? 'rp-icon-in' : undefined} />
     </ChoiceMenu>
   );
@@ -45,7 +45,7 @@ export function usePaletteChoices({ap, paletteSections, wordmarks}: PaletteMenuP
   const t = useT();
   return {
     palettes: paletteSections.map(section => ({...section, value: ap.palette, onChange: (k: string) => ap.pickPalette(k as PaletteId)})),
-    wordmarks: {title: t('wordmark'), items: wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)}
+    wordmarks: {title: t('ui.wordmark'), items: wordmarks, value: ap.wordmark, onChange: (k: string) => ap.pickWordmark(k as Wordmark)}
   };
 }
 
@@ -56,7 +56,7 @@ export function PaletteMenu(props: PaletteMenuProps) {
   // The icon turns in when the palette changes, like the scheme icon; not on first paint.
   const [first] = useState(palette);
   return (
-    <ChoiceMenu quiet chevron={false} label={t('palette')} sections={[...palettes, wordmarks]}>
+    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={[...palettes, wordmarks]}>
       <Color key={palette} className={palette !== first ? 'rp-icon-in' : undefined} />
     </ChoiceMenu>
   );

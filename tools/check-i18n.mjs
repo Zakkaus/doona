@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import {existsSync, readFileSync, readdirSync} from 'node:fs';
-import {checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
+import {areaPrefixFailures, checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs';
 import {languages, REFERENCE_LANG} from './languages.mjs';
 import {startupKeys} from './startup-text.mjs';
 
@@ -76,6 +76,7 @@ if (!catalogues[REFERENCE_LANG]) {
   process.exit(1);
 }
 const reference = catalogues[REFERENCE_LANG];
+failures.push(...areaPrefixFailures(Object.keys(reference)));
 const checked = checkCatalogues(
   catalogues,
   REFERENCE_LANG,
