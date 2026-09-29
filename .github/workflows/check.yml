@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 jobs:
+  # Static checks, unit tests and the bundle budget: a few minutes, independent of the browsers.
   check:
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +20,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # pnpm check's steps, with the unit tests run once, under coverage.
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm check:i18n
@@ -33,6 +33,22 @@ jobs:
           if-no-files-found: error
       - run: pnpm build
       - run: pnpm check:size
+
+  # The browser suite is most of the run's time, so it is split over parallel runners; each builds its own dist.
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Read Playwright version
         id: playwright
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
@@ -41,11 +57,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}
       - run: pnpm e2e:install --with-deps
-      - run: pnpm e2e
+      - run: pnpm e2e --shard=${{ matrix.shard }}/4
         env:
           DOONA_E2E_WEBKIT: '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: test-results/
