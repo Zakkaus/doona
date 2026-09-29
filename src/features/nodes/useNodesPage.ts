@@ -20,6 +20,7 @@ import {errorText, noticeText} from '../../api/error';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
+import {nodesTabs} from './nav';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
 
@@ -239,11 +240,14 @@ export function useNodesPage({go, query}: PageProps) {
     onNewGroup: newGroup,
     onRemove: removeNode
   });
-  // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone.
-  const measured = offered(resources, 'nodes', {whileLoading: true});
+  const tabs = nodesTabs(resources);
   return {
-    measured,
-    tab: pickTab(query, ['list', 'latency'], 'list'),
+    tabs: tabs.map(tab => ({id: tab.id, label: t(tab.titleKey)})),
+    tab: pickTab(
+      query,
+      tabs.map(tab => tab.id),
+      'list'
+    ),
     setTab: (next: string) => go('nodes', tabQuery(query, next, 'list')),
     providerTable,
     nodeTable,

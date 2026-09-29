@@ -29,8 +29,9 @@ import {
 import {offered} from '../../api/capabilities';
 import {pathLatency} from './latency';
 import {useConnectionRule} from './useConnectionRule';
+import {connectionsTabs} from './nav';
 
-const connectionTabs = ['traffic', 'list'] as const;
+const connectionTabs = connectionsTabs().map(tab => tab.id);
 // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
 const connectionsFallback = (query: string) =>
   ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(query).has(key)) ? 'list' : 'traffic';

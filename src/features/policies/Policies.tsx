@@ -25,6 +25,7 @@ import {PolicyEdit} from './PolicyEdit';
 import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
+import {policiesTabs} from './nav';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
 
 // The arrange tab and its drag and drop are a chunk of their own, fetched as soon as this page's module loads (in idle
@@ -178,6 +179,14 @@ export function Policies(props: PageProps) {
       </DisclosureGroup>
     </>
   );
+  const content = {
+    groups,
+    arrange: (
+      <Suspense fallback={<Loading />}>
+        <Arrange source={m.source} groups={m.groups} viewGroup={m.viewGroup} />
+      </Suspense>
+    )
+  };
   return (
     <div className="rp-page">
       <Tabs
@@ -185,18 +194,7 @@ export function Policies(props: PageProps) {
         label={t('nav.policies')}
         value={m.tab}
         onChange={m.setTab}
-        items={[
-          {id: 'groups', label: t('policy.tab.groups'), content: groups},
-          {
-            id: 'arrange',
-            label: t('policy.tab.arrange'),
-            content: (
-              <Suspense fallback={<Loading />}>
-                <Arrange source={m.source} groups={m.groups} viewGroup={m.viewGroup} />
-              </Suspense>
-            )
-          }
-        ]}
+        items={policiesTabs().map(tab => ({id: tab.id, label: t(tab.titleKey), content: content[tab.id]}))}
       />
     </div>
   );

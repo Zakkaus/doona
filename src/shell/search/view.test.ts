@@ -162,3 +162,22 @@ it('offers the config tabs the page shows, including Modules and Validate withou
   expect(ids.has('page:config?tab=validate')).toBe(true);
   expect(ids.has('page:config?tab=setup')).toBe(false);
 });
+
+it('offers the connections, nodes and policies tabs, and no node tabs where nodes are not listed', async () => {
+  const capabilities = await createMockApi().capabilities();
+  const sources: SearchSources = {
+    capabilities: {data: capabilities},
+    connections: {data: undefined},
+    nodes: {data: undefined},
+    groups: {data: undefined},
+    providers: {data: undefined},
+    config: {data: undefined},
+    rules: {data: undefined}
+  };
+  const t = translate.bind(null, 'en');
+  expect(searchView('traffic', sources, t).byId.get('page:connections?tab=traffic')?.description).toBe('Connections');
+  expect(searchView('latency', sources, t).byId.has('page:nodes?tab=latency')).toBe(true);
+  expect(searchView('membership', sources, t).byId.has('page:policies?tab=arrange')).toBe(true);
+  capabilities.resources.nodes.available = false;
+  expect(searchView('latency', sources, t).byId.has('page:nodes?tab=latency')).toBe(false);
+});
