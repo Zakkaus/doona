@@ -39,7 +39,7 @@ test('the editing commands menu undoes an edit', async ({page}) => {
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   const original = await editor.innerText();
-  const unsaved = page.locator('.rp-badge', {hasText: 'Unsaved'});
+  const unsaved = page.locator('.rp-badge', {hasText: 'Not applied'});
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText('# typed');

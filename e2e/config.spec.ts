@@ -102,14 +102,14 @@ test('switching sources discards the draft after confirmation', async ({page}) =
   const picker = page.getByRole('button', {name: /Source/});
   await picker.click();
   await page.getByRole('option', {name: /\/etc\/honk\/config\.dae/}).click();
-  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toBeVisible();
   await picker.click();
   await page.getByRole('option', {name: /\/etc\/honk\/rules\.dae/}).click();
   await expect(editor).toHaveText(original, {useInnerText: true});
-  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
+  await expect(page.locator('.rp-badge', {hasText: 'Not applied'})).toHaveCount(0);
 });
 
 test('editing validates, shows diagnostics on errors, and saves through a reload', async ({page}) => {
@@ -131,11 +131,11 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await page.keyboard.press('End');
   for (let i = 0; i < 'nowhere'.length; i++) await page.keyboard.press('Backspace');
   await page.keyboard.type('proxy');
-  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toBeVisible();
+  await expect(page.locator('.rp-badge', {hasText: 'Not applied'})).toBeVisible();
   await expect(page.locator('.rp-card')).toContainText('Reloading or closing the page loses the changes');
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
-  await expect(page.locator('.rp-badge', {hasText: 'Unsaved'})).toHaveCount(0);
+  await expect(page.locator('.rp-badge', {hasText: 'Not applied'})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toContainText('domain(geosite: netflix) -> proxy');
   await expect(page.locator('.rp-toolbar').first()).toContainText('41');
@@ -147,7 +147,7 @@ test('a writable source edits in place, and Cancel restores the loaded text with
   const editor = page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   const original = await editor.innerText();
-  const unsaved = page.locator('.rp-badge', {hasText: 'Unsaved'});
+  const unsaved = page.locator('.rp-badge', {hasText: 'Not applied'});
   const save = page.getByRole('button', {name: 'Apply', exact: true});
   const cancel = page.getByRole('button', {name: 'Cancel', exact: true});
   await expect(save).toHaveCount(0);
@@ -337,7 +337,7 @@ test('the quick setup guards unsaved changes like the editor', async ({page}) =>
   await card.getByRole('button', {name: /Rules$/}).click();
   await page.getByRole('option', {name: /^GFW list only/}).click();
   await page.getByRole('tab', {name: 'Sources'}).click();
-  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page).toHaveURL(/tab=setup$/);
@@ -642,7 +642,7 @@ test('modules list top-level counts and edit only routing through reload', async
   const global = modules.getByRole('region', {name: 'global', exact: true}).getByRole('button', {name: 'Edit', exact: true});
   await expect(global).toBeDisabled();
   // The reason is a line in view under the card's header, not a hover tip that touch never opens.
-  const blocked = 'Another section has unsaved changes; apply or cancel them first';
+  const blocked = 'Another section has changes not applied; apply or cancel them first';
   await expect(modules.getByRole('region', {name: 'global', exact: true}).getByText(blocked, {exact: true})).toBeVisible();
   await expect(global).toHaveAccessibleDescription(blocked);
   await expect(routing.getByText(blocked, {exact: true})).toHaveCount(0);
@@ -743,7 +743,7 @@ test('cancelling a module discards its draft and navigation uses the draft guard
   const original = await editor.innerText();
   await editor.fill(original.replace('fallback: resilient', 'fallback: direct'));
   await page.getByRole('tab', {name: 'Sources', exact: true}).click();
-  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await routing.getByRole('button', {name: 'Cancel', exact: true}).click();

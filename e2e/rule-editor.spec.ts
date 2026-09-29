@@ -118,7 +118,7 @@ test('a consumed rule seed keeps edits across generation misalignment and accept
   await page.evaluate(() => {
     location.hash = '/rules?tab=list&add=dip:2001:db8::1';
   });
-  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(values).toHaveValue('2001:db8::1');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list$/);

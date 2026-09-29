@@ -503,7 +503,7 @@ test('staged mode changes require discard before navigation', async ({page}) => 
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
   await page.locator('.rp-nav[href="#/overview"]').click();
-  const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(mode.getByRole('radio', {name: 'Direct', exact: true})).toHaveAttribute('aria-checked', 'true');
   await page.locator('.rp-nav[href="#/overview"]').click();
