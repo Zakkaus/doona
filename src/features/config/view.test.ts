@@ -26,6 +26,7 @@ import {
 import {scanConfig} from '../../dae/text';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
+import {diagnose} from '../../api/mock/config';
 const t: Translator = (key, params) => translate('en', key, params);
 const honk = engineOf(version);
 it('keeps hidden source paths out of source labels', async () => {
@@ -265,12 +266,54 @@ it('maps only diagnostics within the edited section using its current line count
     ],
     'main',
     block,
-    'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}'
+    'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}',
+    t
   );
   expect(marks.map(mark => [mark.line, mark.column])).toEqual([
     [1, 3],
     [4, 3]
   ]);
+});
+
+it('shows the same localized diagnostic in rows and both editor marks', () => {
+  const text = 'routing {\n  fallback: nowhere\n}\n';
+  const [item] = diagnose('main', text, new Set(), 'full');
+  const translateTW: Translator = (key, params) => translate('zh-TW', key, params);
+  const summary = translateTW('config.diagnostic.unknownOutbound', {name: 'nowhere'});
+  const described = translateTW('config.backendDetail', {text: summary, message: 'No group named "nowhere"'});
+  const rows = diagnosticRows([item], [source(text)], 'zh-TW', translateTW);
+  expect(rows[0].message).toBe(summary);
+  expect(rows[0].detail).toContain(described);
+  expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(described);
+  expect(sectionMarks([item], 'main', scanConfig(text).blocks[0], text, translateTW)[0].message).toBe(described);
+  // The page's own words already are the backend's in English.
+  expect(sourceMarks([item], 'main', t)[0].message).toBe('No group named "nowhere"');
+});
+
+it('keeps backend detail separate in rows and editor marks', () => {
+  const item = {...configNotes[0], code: 'duplicate-subscription-entry', message: 'Original backend detail'};
+  const translateTW: Translator = (key, params) => translate('zh-TW', key, params);
+  const row = diagnosticRows([item], [], 'zh-TW', translateTW)[0];
+  const mark = sourceMarks([item], item.source_id, translateTW)[0];
+  expect(row.message).toBe(translateTW('ui.backend.duplicateSubscriptionEntry'));
+  expect(row.detail).toContain('Original backend detail');
+  expect(mark.message).toContain(row.message);
+  expect(mark.message).toContain('Original backend detail');
+});
+
+it('shows a backend diagnostic that lacks the demo parameters in its own words', () => {
+  const item = {...configNotes[0], code: 'include_not_found', message: 'No include-resolution base'};
+  const summary = t('ui.backendMessage', {message: 'No include-resolution base'});
+  const row = diagnosticRows([item], [], 'en-US', t)[0];
+  expect(row.message).toBe(summary);
+  expect(row.detail).not.toContain('{path}');
+  expect(sourceMarks([item], item.source_id, t)[0].message).toBe(summary);
+});
+
+it('does not merge diagnostics with different parameters', () => {
+  const item = {...configNotes[0], code: 'unknown_outbound', message: '', params: {name: 'alpha'}};
+  const other = {...item, params: {name: 'beta'}};
+  expect(diagnosticRows([item, other], [], 'en-US', t).map(row => row.message)).toEqual(['No group named "alpha"', 'No group named "beta"']);
 });
 
 it('withholds editing for native_api sections', () => {
@@ -324,7 +367,7 @@ it('marks only the edited source while retaining cross-source diagnostic locatio
   const include = source('routing {}', 'include');
   const own = {...configNotes[0], source_id: 'main', line: 1};
   const other = {...own, source_id: 'include', line: 8};
-  expect(sourceMarks([other, own, {...own, line: null}], main.id).map(mark => mark.line)).toEqual([1]);
+  expect(sourceMarks([other, own, {...own, line: null}], main.id, t).map(mark => mark.line)).toEqual([1]);
   expect(diagnosticRows([other], [main, include], 'en-US', t)[0]).toMatchObject({sourceId: 'include', where: 'rules.dae:8'});
 });
 

@@ -61,12 +61,13 @@ export const includedFiles = <T extends {path: string}>(files: T[], base: string
 // Demo-only validation checks braces, sections, routing syntax, and outbound references.
 export function diagnose(sourceId: string, text: string, groups: Set<string>, mode: 'syntax' | 'full'): ConfigDiagnostic[] {
   const out: ConfigDiagnostic[] = [];
-  const at = (line: number, column: number, level: ConfigDiagnostic['level'], code: string, message: string) =>
-    out.push({level, source_id: sourceId, line, column, span: null, code, message});
+  const at = (line: number, column: number, level: ConfigDiagnostic['level'], code: string, message: string, params?: Record<string, string>) =>
+    out.push({level, source_id: sourceId, line, column, span: null, code, message, ...(params ? {params} : {})});
   const {blocks, tokens} = scanConfig(text);
   const checkBlock = (block: TextBlock) => {
-    if (block.depth === 0 && !sections.has(block.name)) at(block.line + 1, 1, 'error', 'unknown_section', `Unknown section "${block.name}"`);
-    if (block.close === text.length) at(block.line + 1, 1, 'error', 'section_not_closed', `Section "${block.name}" is never closed`);
+    if (block.depth === 0 && !sections.has(block.name))
+      at(block.line + 1, 1, 'error', 'unknown_section', `Unknown section "${block.name}"`, {name: block.name});
+    if (block.close === text.length) at(block.line + 1, 1, 'error', 'section_not_closed', `Section "${block.name}" is never closed`, {name: block.name});
     block.children.forEach(checkBlock);
   };
   blocks.forEach(checkBlock);
@@ -78,7 +79,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
     if (!code) continue;
     const pair = /^([\w.-]+)\s*:\s*(.*)$/.exec(code);
     if (!pair) at(line, 1, 'error', 'not_a_setting', 'Expected "<key>: <value>"');
-    else if (!globalKeys.has(pair[1])) at(line, 1, 'error', 'unknown_key', `Unknown global setting "${pair[1]}"`);
+    else if (!globalKeys.has(pair[1])) at(line, 1, 'error', 'unknown_key', `Unknown global setting "${pair[1]}"`, {name: pair[1]});
   }
   sectionLines(text, 'routing', true).forEach(({code, raw, line}) => {
     if (!code) return;
@@ -93,7 +94,7 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
     // `name(must)` and `name(mark: 0x800)` address the same outbound as `name`.
     const outbound = target.replace(/\(.*\)$/, '');
     if (mode === 'full' && !builtinOutbounds.has(target) && !builtinOutbounds.has(outbound) && !groups.has(outbound))
-      at(line, raw.lastIndexOf(target) + 1, 'error', 'unknown_outbound', `No group named "${outbound}"`);
+      at(line, raw.lastIndexOf(target) + 1, 'error', 'unknown_outbound', `No group named "${outbound}"`, {name: outbound});
     if (rule && !/\w\(/.test(rule[1])) at(line, 1, 'warning', 'bare_condition', 'Condition has no function call; it will never match');
   });
   return out;
@@ -141,7 +142,8 @@ export function validate(
             span: null,
             level: 'error',
             code: 'include_not_found',
-            message: `Include \"${path}\" cannot be resolved`
+            message: `Include \"${path}\" cannot be resolved`,
+            params: {path}
           });
         } else if (!visited.has(resolved)) {
           visited.add(resolved);

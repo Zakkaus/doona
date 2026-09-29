@@ -252,9 +252,15 @@ export function createConfiguration(
       const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(main.path, include.path), target)));
       if (!loaded) {
         const diagnostic = {level: 'error', source_id: main.id, line: null, column: null, span: null, code: 'source-not-included'} as const;
-        throw new ApiError(422, 'unsupported_value', 'No include pattern matches the path; nothing was written', null, {
-          diagnostics: [{...diagnostic, message: `No include pattern matches ${path}`}]
-        });
+        throw new ApiError(
+          422,
+          'unsupported_value',
+          'No include pattern matches the path; nothing was written',
+          null,
+          {diagnostics: [{...diagnostic, message: `No include pattern matches ${path}`, params: {path}}]},
+          null,
+          {key: 'config.diagnostic.sourceNotIncluded', params: {path}}
+        );
       }
       const next = await stored({id: `src-new-${++created}`, path: target, kind: 'include', writable: true, loaded_at: new Date().toISOString(), content});
       vacant();

@@ -57,9 +57,9 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   // Placed once per set of diagnostics and section, against the text they describe; CodeMirror carries them through
   // later typing. Another section of the same file keeps the same diagnostics, so the section is part of the key.
   const sectionId = draft?.section.id;
-  const placed = useMemo(() => ({own, sectionId}), [own, sectionId]);
+  const placed = useMemo(() => ({own, sectionId, t}), [own, sectionId, t]);
   const [marks, setMarks] = useState<EditorMark[]>([]);
-  useLinked(placed, next => setMarks(draft ? sectionMarks(next.own, draft.section.source.id, draft.section.block, draft.text) : []));
+  useLinked(placed, next => setMarks(draft ? sectionMarks(next.own, draft.section.source.id, draft.section.block, draft.text, next.t) : []));
   const outbounds = useMemo(
     () => allGroupNames(config.sources, sourceId && fullText !== null ? {id: sourceId, content: fullText} : undefined),
     [sourceId, fullText, config]

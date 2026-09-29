@@ -105,9 +105,10 @@ export type RoutingRule = Schema['RoutingRule'];
 export type RoutingEvaluation = Schema['RoutingEvaluation'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
 export type ConfigSource = Schema['ConfigSource'];
-export type ConfigDiagnostic = Schema['ConfigDiagnostic'];
+// The demo's own validation sends the values its words name as params; honk sends none.
+export type ConfigDiagnostic = Schema['ConfigDiagnostic'] & {params?: Record<string, string>};
 export type ConfigValidationRequest = Schema['ConfigValidationRequest'];
-export type ConfigValidationResult = Schema['ConfigValidationResult'];
+export type ConfigValidationResult = Omit<Schema['ConfigValidationResult'], 'diagnostics'> & {diagnostics: ConfigDiagnostic[]};
 export type RuntimeSettingsPatch = Schema['RuntimeSettingsPatch'];
 export type RuntimeSettingField = Schema['RuntimeSettingField'];
 export type RecorderMode = Schema['RecorderMode'];

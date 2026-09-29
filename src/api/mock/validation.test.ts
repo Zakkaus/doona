@@ -1,6 +1,29 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from './index';
 import {validationSources} from '../../dae/sources';
+import {diagnose, validate} from './config';
+
+it.each([
+  ['unknown_section', 'mystery {}\n', {name: 'mystery'}],
+  ['section_not_closed', 'global {\n', {name: 'global'}],
+  ['brace_without_section', '}\n', undefined],
+  ['not_a_setting', 'global {\n  unknown\n}\n', undefined],
+  ['unknown_key', 'global {\n  mystery: true\n}\n', {name: 'mystery'}],
+  ['not_a_rule', 'routing {\n  unknown\n}\n', undefined],
+  ['unknown_outbound', 'routing {\n  fallback: missing\n}\n', {name: 'missing'}],
+  ['bare_condition', 'routing {\n  bare -> direct\n}\n', undefined]
+] as const)('emits %s with structured parameters and an English message', (code, content, params) => {
+  expect(diagnose('main', content, new Set(), 'full')).toContainEqual(
+    expect.objectContaining({code, message: expect.stringMatching(/./), ...(params ? {params} : {})})
+  );
+});
+
+it('keeps an unresolved include path as a diagnostic parameter', () => {
+  const result = validate({sources: [{id: 'main', content: 'include { missing.dae }'}], mode: 'full'}, 'generation');
+  expect(result.diagnostics).toContainEqual(
+    expect.objectContaining({code: 'include_not_found', message: 'Include "missing.dae" cannot be resolved', params: {path: 'missing.dae'}})
+  );
+});
 
 it('validates an include only together with its main source', async () => {
   const api = createMockApi();
