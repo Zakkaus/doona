@@ -1,11 +1,23 @@
 import type {ReactNode} from 'react';
-import {Menu, MenuItem} from 'react-aria-components';
+import {Menu, MenuItem, Text} from 'react-aria-components';
 import MoreVertical from './icons/MoreVertical';
 import {useT} from '../i18n';
 import {Button} from './Button';
 import {MenuButton} from './Select';
+import {cx} from './cx';
 
-export type Action = {id: string; label: string; icon?: ReactNode; onAction: () => void; isDisabled?: boolean; isPending?: boolean};
+export type Action = {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  onAction: () => void;
+  isDisabled?: boolean;
+  isPending?: boolean;
+  // Why a disabled action cannot run. In a menu it is the item's description, in view under its name.
+  reason?: string;
+  // A destructive action, which the caller puts last.
+  negative?: boolean;
+};
 
 const ActionButton = ({action}: {action: Action}) => (
   <Button isDisabled={action.isDisabled} isPending={action.isPending} onPress={action.onAction}>
@@ -19,7 +31,6 @@ const ActionButton = ({action}: {action: Action}) => (
 // phone. At the breakpoint and above they are plain buttons in the parent's flow. With overflowMode="wrap" they stay
 // buttons at every width and the parent wraps them, for a card whose actions are its content.
 export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Action[]; overflowMode?: 'collapse' | 'wrap'}) {
-  const t = useT();
   if (overflowMode === 'wrap')
     return (
       <>
@@ -41,28 +52,48 @@ export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Acti
             ))}
           </span>
           <span className="rp-narrow-only">
-            <MenuButton
-              chevron={false}
-              label={t('ui.moreActions')}
-              content={
-                <Menu
-                  aria-label={t('ui.moreActions')}
-                  disabledKeys={rest.filter(action => action.isDisabled || action.isPending).map(action => action.id)}
-                  onAction={key => rest.find(action => action.id === key)?.onAction()}
-                >
-                  {rest.map(action => (
-                    <MenuItem key={action.id} id={action.id} className="rp-item plain" textValue={action.label}>
-                      {action.label}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              }
-            >
-              <MoreVertical />
-            </MenuButton>
+            <MoreMenu actions={rest} />
           </span>
         </>
       )}
     </>
+  );
+}
+
+// The menu a MoreMenu opens. A disabled item keeps its reason as its description, the way a disabled button names its
+// ActionHelp line.
+export function MoreActionsList({actions, label}: {actions: Action[]; label: string}) {
+  return (
+    <Menu
+      aria-label={label}
+      disabledKeys={actions.filter(action => action.isDisabled || action.isPending).map(action => action.id)}
+      onAction={key => actions.find(action => action.id === key)?.onAction()}
+    >
+      {actions.map(action => (
+        <MenuItem key={action.id} id={action.id} className={cx('rp-item plain', action.negative && 'negative')} textValue={action.label}>
+          <span className="rp-item-text">
+            <Text slot="label">{action.label}</Text>
+            {action.isDisabled && action.reason && (
+              <Text slot="description" className="desc reason">
+                {action.reason}
+              </Text>
+            )}
+          </span>
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+}
+
+// A panel's secondary actions, in a trailing menu after its one primary button, as S2's ActionMenu. The caller puts a
+// destructive action last. A row of a table passes a label naming the row.
+export function MoreMenu({actions, label}: {actions: Action[]; label?: string}) {
+  const t = useT();
+  const name = label ?? t('ui.moreActions');
+  if (actions.length === 0) return null;
+  return (
+    <MenuButton chevron={false} label={name} content={<MoreActionsList actions={actions} label={name} />}>
+      <MoreVertical />
+    </MenuButton>
   );
 }

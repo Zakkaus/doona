@@ -1,4 +1,4 @@
-import {detail, expect, test} from './fixtures';
+import {detail, expect, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -18,7 +18,7 @@ test('a trace link fills in the form without running it', async ({page}) => {
 
 test('a connection opens the trace of its target and source', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
-  await detail(page).getByRole('button', {name: 'Trace this connection', exact: true}).click();
+  await moreAction(detail(page), 'Trace this connection');
   await expect(page).toHaveURL(/#\/rules\?tab=trace&network=tcp&domain=api\.telegram\.org&dst_ip=149\.154\.167\.220&dst_port=443&src_ip=10\.0\.0\.12$/);
   await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('api.telegram.org');
   await expect(page.getByLabel('Destination IP', {exact: true})).toHaveValue('149.154.167.220');

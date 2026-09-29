@@ -2,7 +2,7 @@ import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
-import {expect, test} from './fixtures';
+import {expect, test, moreAction} from './fixtures';
 
 async function backend(page: Page) {
   const api = createMockApi();
@@ -152,7 +152,7 @@ for (const all of [false, true]) {
     if (all) {
       await page.getByRole('button', {name: 'Close all', exact: true}).click();
       await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
-    } else await page.getByRole('button', {name: 'Close connection', exact: true}).click();
+    } else await moreAction(page.locator('.rp-panel, .rp-drawer'), 'Close connection');
     await request;
     await expect(page).toHaveURL(/connections\?id=1$/);
     // A pending confirmation covers the page; its Cancel abandons the bulk close.

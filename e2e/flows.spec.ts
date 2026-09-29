@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, setAppearance, test} from './fixtures';
+import {expect, faults, mockBackend, setAppearance, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -22,7 +22,7 @@ test.describe(() => {
     await panel.getByRole('link', {name: 'View connection', exact: true}).click();
     await expect(page).toHaveURL(/#\/connections\?id=1$/);
     await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-    await page.locator('.rp-panel').getByRole('button', {name: 'View flow', exact: true}).click();
+    await moreAction(page.locator('.rp-panel'), 'View flow');
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
     await page.locator('.rp-panel').getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page).toHaveURL(/#\/flows\?tab=records$/);
