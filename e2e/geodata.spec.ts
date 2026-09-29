@@ -300,7 +300,7 @@ test('URLs written from the config file carry a note until the page stores its o
   handlers['GET runtime/settings'] = async () => (seeded ? configured(await api.runtimeSettings()) : api.runtimeSettings());
   handlers['PATCH runtime/settings'] = async request => {
     const result = await api.patchRuntimeSettings(request.postDataJSON());
-    seeded &&= result.geodata!.source !== 'db';
+    seeded &&= result.geodata!.source !== 'override';
     return seeded ? configured(result) : result;
   };
   await page.goto('/#/settings');

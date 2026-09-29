@@ -1,5 +1,6 @@
 import type {Page, Request} from '@playwright/test';
 import {ApiError} from '../src/api/error';
+import type {Node} from '../src/api/model';
 import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 // These calls carry no idempotency key, so doona never retries them: a failure is shown, the control stays, and the
@@ -131,7 +132,7 @@ for (const how of Object.keys(failures) as Failure[])
 
     test('removing an inline node reports the failure and can be confirmed again', async ({page}) => {
       const {api, handlers} = await mockBackend(page);
-      const node = await api.createNode({name: 'hk-09', link: 'anytls://demo@edge.example.net:443'});
+      const node = (await api.createNode({name: 'hk-09', link: 'anytls://demo@edge.example.net:443'})) as Node;
       const counted = await failOnce(page, handlers, 'DELETE', `nodes/${node.id}`, how, () => api.deleteNode(node.id));
       await page.goto('/#/nodes?provider=inline');
       await page.getByRole('button', {name: 'Remove hk-09', exact: true}).click();

@@ -1,6 +1,7 @@
 import {test, expect, mockBackend, moreAction} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
+import type {Provider} from '../src/api/model';
 
 // A new subscription whose first fetch fails; `failures` sets how many fetches fail before one succeeds.
 async function failingFirstFetch(page: Page, failures: number) {
@@ -10,7 +11,7 @@ async function failingFirstFetch(page: Page, failures: number) {
   backend.handlers['POST providers'] = async request => {
     // The toast names the subscription as typed, so a repeat can reuse the name under a fresh backend name.
     const body = request.postDataJSON();
-    const created = await backend.api.createProvider({...body, name: added++ ? `${body.name}-${added}` : body.name});
+    const created = (await backend.api.createProvider({...body, name: added++ ? `${body.name}-${added}` : body.name})) as Provider;
     backend.handlers[`POST providers/${created.id}/refresh`] = async () => {
       if (fetches++ < failures) throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
       return backend.api.refreshProvider(created.id);
