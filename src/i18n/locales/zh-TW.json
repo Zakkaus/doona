@@ -1228,7 +1228,7 @@
   "rule.partial": "已寫入 {n} 條規則，其餘 {held} 條仍暫存",
   "rule.pending": "待套用：{n}",
   "rule.pendingElsewhere": "另有 {n} 條規則暫存於其他清單；套用時一併寫入",
-  "rule.pendingFiles": "將寫入 {n} 個檔案",
+  "rule.pendingFiles": "將寫入 {files} 個檔案",
   "rule.pick": "選擇",
   "rule.position": "插入位置",
   "rule.positionBefore": "第 {n} 條之前",
