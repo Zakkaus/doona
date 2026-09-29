@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, mockBackend, query, test, moreAction} from './fixtures';
+import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import type {ProbeResult, Provider} from '../src/api/model';
@@ -558,4 +558,96 @@ test('a node write conflict names its cause, and only a delete without groups re
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(dialog.getByRole('alert')).toContainText('A resource with this name already exists');
   await expect(dialog.getByRole('alert')).not.toContainText('changed or another write');
+});
+
+test("a subscription's URL is edited where its entry is written", async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await expect(dialog.getByRole('textbox', {name: 'Name', exact: true})).toHaveValue('sub-c');
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub?token=new');
+  // The URL alone changed, so the groups citing the tag are not offered.
+  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('Saved sub-c');
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText("sub-c: 'https://updated.example.net/sub?token=new'");
+});
+
+test('renaming a subscription carries the groups whose subtag filter names it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://other.example.org/sub'\n");
+  await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  const name = dialog.getByRole('textbox', {name: 'Name', exact: true});
+  // A tag another subscription uses is refused.
+  await name.fill('sub-d');
+  // The clash is named once, on the field.
+  await expect(dialog.getByText('Another subscription already uses this name', {exact: true})).toHaveCount(1);
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+  await name.fill('skylink-sub');
+  await expect(dialog.getByRole('switch', {name: 'Also update the subscription filter in skylink', exact: true})).toBeChecked();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await expect(editor).toContainText("skylink-sub: 'https://sub.example.net/api/v1/client/subscribe?token=demo'");
+  await expect(editor).toContainText('filter: subtag(skylink-sub)');
+  await expect(editor).not.toContainText('subtag(sub-c)');
+});
+
+test('a subscription in a read-only source offers its source file instead of an edit', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    for (const source of config.sources) if (source.kind === 'main') source.writable = false;
+    return config;
+  };
+  await page.goto('/#/nodes?tab=list');
+  const sources = page.locator('.rp-table').first();
+  const open = await moreItem(sources, 'Open source', 'More actions for sub-c');
+  await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
+  await open.click();
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
+});
+
+test('a subscription not fetched yet is edited through its name', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://wrong.example.org/sub'\n");
+  await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-d', 'More actions for sub-d');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-d'});
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://right.example.org/sub');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText("sub-d: 'https://right.example.org/sub'");
+});
+
+test('a group in another source naming the tag blocks a rename but not a URL edit', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    const content = 'group {\n  roaming { filter: subtag(sub-c) policy: min_moving_avg }\n}\n';
+    config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
+    return config;
+  };
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('skylink-sub');
+  await expect(dialog.getByText('Groups in groups.dae also filter on sub-c. Edit them in their source file before renaming.', {exact: true})).toBeVisible();
+  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+  // Keeping the name leaves a URL edit free.
+  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('sub-c');
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub');
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
 });

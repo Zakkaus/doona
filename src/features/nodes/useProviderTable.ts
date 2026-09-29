@@ -23,6 +23,8 @@ type ProviderTableInput = {
   refreshAll: ReturnType<typeof useRefreshAll>;
   onAdd: () => void;
   onRemove: (item: Provider) => void;
+  // Edit where the declaring source takes the write, otherwise the source file to open; null when neither applies.
+  editAction: (item: ProviderRow) => {kind: 'edit' | 'open'; run: () => void} | null;
 };
 export function useProviderTable(input: ProviderTableInput) {
   const t = useT();
@@ -31,6 +33,8 @@ export function useProviderTable(input: ProviderTableInput) {
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const rows = input.rows.map(item => ({
     ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
+    action: input.editAction(item),
+    editLabel: t('nodes.edit', {name: item.displayName ?? item.name}),
     refreshable: item.kind === 'subscription' && input.canRefresh,
     refreshing: refresh.busy === item.id,
     refreshDisabled: !!refresh.busy,
@@ -67,6 +71,7 @@ export function useProviderTable(input: ProviderTableInput) {
     canManage: input.canManage,
     busy: input.busy,
     writable: input.source.writable,
+    editing: rows.some(row => row.action !== null),
     sourceBusy: input.source.busy || !input.source.main,
     sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
     // Refreshing every subscription, as Settings offers it, where the backend can refresh them.
@@ -95,6 +100,8 @@ export type ProviderTableView = {
     error?: string;
     refreshLabel: string;
     removeLabel: string;
+    action: {kind: 'edit' | 'open'; run: () => void} | null;
+    editLabel: string;
     refreshable: boolean;
     refreshing: boolean;
     refreshDisabled: boolean;
@@ -109,6 +116,7 @@ export type ProviderTableView = {
   canManage: boolean;
   busy: boolean;
   writable: boolean;
+  editing: boolean;
   sourceBusy: boolean;
   sourceTip?: string;
   refreshAll: ReturnType<typeof useRefreshAll> | null;

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import type {Node, Provider} from '../../api/model';
+import type {ConfigSource, Node, Provider} from '../../api/model';
 import {readSubscriptions} from './subscriptions';
 import {
   nodeFormReason,
@@ -12,6 +12,7 @@ import {
   intervalText,
   intervalItems,
   providerCreate,
+  renameReferences,
   selectedProvider
 } from './view';
 import {translate, type Translator} from '../../i18n';
@@ -275,4 +276,18 @@ it('says why the add dialog cannot submit, first applicable, and nothing while i
   expect(nodeFormReason('node', 'hk 03', 'vless://id@host:443', t)).toBeNull();
   // A group name's problem is shown at its field.
   expect(nodeFormReason('group', 'bad name', '', t)).toBeNull();
+});
+
+it('a subscription is matched to its entry by its name, before any node is fetched', () => {
+  const {list} = providerRows([provider('a', {name: 'primary'}), provider('file', {kind: 'file'})], [], entries, t);
+  expect(list.map(item => item.sourceTag)).toEqual(['primary', undefined]);
+});
+
+it('a rename finds the groups naming the tag in the declaring source and every other source', () => {
+  const source = (id: string, content: string) => ({id, content}) as ConfigSource;
+  const main = source('main', `subscription {\n  sub-c: 'https://a.example/sub'\n}\ngroup {\n  here { filter: subtag(sub-c)\n policy: min }\n}`);
+  const other = source('other', `group {\n  there { filter: subtag(sub-c)\n policy: min }\n}`);
+  const unrelated = source('unrelated', `group {\n  loose { filter: subtag(sub-d)\n policy: min }\n}`);
+  expect(renameReferences([main, unrelated], main, 'sub-c')).toEqual({here: ['here'], elsewhere: []});
+  expect(renameReferences([main, other, unrelated], main, 'sub-c')).toEqual({here: ['here'], elsewhere: [other]});
 });

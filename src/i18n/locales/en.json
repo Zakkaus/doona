@@ -1000,6 +1000,7 @@
   "nodes.removeProviderHelp": "Deletes this source and its nodes from the main configuration and reloads.",
   "nodes.removeProviderTitle": "Remove source {name}",
   "nodes.removed": "{name} removed",
+  "nodes.renameBlocked": "Groups in {files} also filter on {name}. Edit them in their source file before renaming.",
   "nodes.renameGroups": "Also update the subscription filter in {groups}",
   "nodes.renameGroupsHelp": "Otherwise these groups lose the nodes of {name}.",
   "nodes.scope": "Showing nodes from {name}. Choose another source above to view its nodes.",

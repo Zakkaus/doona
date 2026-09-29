@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -34,7 +34,14 @@ export function Nodes(props: PageProps) {
     agentError,
     options,
     policy,
-    setPolicy
+    setPolicy,
+    editNameError,
+    editOptions,
+    renameGroups,
+    renameFrom,
+    renameBlocked,
+    updateGroups,
+    setUpdateGroups
   } = useNodesPage(props);
   const list = (
     <>
@@ -112,6 +119,37 @@ export function Nodes(props: PageProps) {
                   {t('nodes.cache')}
                 </Switch>
                 <span className="rp-label">{t('nodes.cacheHelp')}</span>
+              </>
+            )}
+          </div>
+        )}
+        {dialog?.kind === 'editProvider' && (
+          <div className="rp-list">
+            <span className="rp-label">{t('nodes.editProviderHelp')}</span>
+            <TextField
+              isDisabled={pending}
+              label={t('nodes.name')}
+              value={form.name}
+              spellCheck={false}
+              error={editNameError ?? undefined}
+              onChange={name => setForm({...form, name})}
+            />
+            <TextField isDisabled={pending} label={t('nodes.url')} value={form.value} spellCheck={false} onChange={value => setForm({...form, value})} />
+            {renameGroups && (
+              <>
+                <Switch isSelected={updateGroups} isDisabled={pending} onChange={setUpdateGroups}>
+                  {t('nodes.renameGroups', {groups: renameGroups})}
+                </Switch>
+                {!updateGroups && <span className="rp-label">{t('nodes.renameGroupsHelp', {name: renameFrom})}</span>}
+              </>
+            )}
+            {renameBlocked && <span className="rp-label">{t('nodes.renameBlocked', {files: renameBlocked, name: renameFrom})}</span>}
+            {editOptions.length > 0 && (
+              <>
+                <span className="rp-label">{t('nodes.editOptions')}</span>
+                {editOptions.map(option => (
+                  <StaticField key={option.name} label={option.name} value={option.value} />
+                ))}
               </>
             )}
           </div>

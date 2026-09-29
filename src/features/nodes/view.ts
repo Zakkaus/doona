@@ -1,4 +1,4 @@
-import type {Capabilities, Node, Provider, ProviderCreate} from '../../api/model';
+import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
@@ -12,6 +12,7 @@ import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName} from '../../dae/text';
 import {isSubscriptionUrl} from '../../dae/setup';
+import {classifyFilters, readGroupEntries} from '../../dae/groups';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -34,8 +35,26 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
   };
 }
 
-export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {displayName?: string; configTag?: string};
+export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {
+  displayName?: string;
+  configTag?: string;
+  sourceTag?: string;
+};
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
+
+// The groups of a source whose exact subtag filter names a subscription tag.
+export const citingGroups = (text: string, tag: string) =>
+  readGroupEntries(text)
+    .filter(group => classifyFilters(group).subtags.includes(tag))
+    .map(group => group.name);
+
+// A rename rewrites only the declaring source, so groups elsewhere that name the tag are left for the person to edit.
+export function renameReferences(sources: ConfigSource[], declaring: ConfigSource, tag: string) {
+  return {
+    here: citingGroups(declaring.content ?? '', tag),
+    elsewhere: sources.filter(item => item.id !== declaring.id && citingGroups(item.content ?? '', tag).length > 0)
+  };
+}
 
 export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translator) {
   // Node metadata authorizes a tag; URL and unmatched-entry guesses are display-only.
@@ -70,7 +89,9 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
     return {
       ...item,
       displayName: named.get(item.id) ?? item.name,
-      configTag: item.kind === 'subscription' && tag && entries.filter(entry => entry.tag === tag).length === 1 ? tag : undefined
+      configTag: item.kind === 'subscription' && tag && entries.filter(entry => entry.tag === tag).length === 1 ? tag : undefined,
+      // A subscription provider is named by its tag, so an entry is found before any fetch has tagged a node.
+      sourceTag: item.kind === 'subscription' ? item.name : undefined
     };
   });
   const counts: Record<PseudoOwner, number> = {builtin: 0, unattributed: 0};

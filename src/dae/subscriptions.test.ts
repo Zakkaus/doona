@@ -73,7 +73,7 @@ describe('writeSubscriptionEntry', () => {
   it('renames, keeping the form, the options and quotes where the tag had them', () => {
     expect(edit('agent', {tag: 'agent2', url: 'https://example.net/sub'})).toBe(text.replace('  agent:', '  agent2:'));
     expect(edit('old', {tag: 'fresh', url: 'https://example.org/x'})).toBe(
-      text.replace('  old: {\n    url: \'https://example.org/old\'', "  fresh: {\n    url: 'https://example.org/x'")
+      text.replace("  old: {\n    url: 'https://example.org/old'", "  fresh: {\n    url: 'https://example.org/x'")
     );
     expect(edit('quoted tag', {tag: 'plain', url: 'https://example.org/new'})).toBe(text.replace("'quoted tag':", "'plain':"));
     expect(edit('short', {tag: 'two words', url: 'https://example.com/sub'})).toBe(text.replace('  short:', "  'two words':"));
