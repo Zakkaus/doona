@@ -88,7 +88,7 @@ export function pendingView(rules: PendingRule[], list: PendingRule['list'], fai
   return shown.length
     ? {
         title: t('rule.pending', {n: shown.length}),
-        files: files > 1 ? t('rule.pendingFiles', {n: files}) : null,
+        files: files > 1 ? t('rule.pendingFiles', {files}, 'files') : null,
         elsewhere: elsewhere ? t('rule.pendingElsewhere', {n: elsewhere}) : null,
         failure,
         rows: shown.map(rule => ({

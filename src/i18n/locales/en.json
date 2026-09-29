@@ -1305,7 +1305,10 @@
     "one": "{n} rule is in effect",
     "other": "{n} rules are in effect"
   },
-  "rule.applyFiles": "Apply ({n}); writes {files} files",
+  "rule.applyFiles": {
+    "one": "Apply ({n}); writes {files} file",
+    "other": "Apply ({n}); writes {files} files"
+  },
   "rule.applyHeld": "Apply held rules",
   "rule.applyPending": "Apply ({n})",
   "rule.beforeMatchedNote": "Placed before the rule that matches now.",
@@ -1423,7 +1426,10 @@
     "one": "{n} more held in another list; applying writes it too",
     "other": "{n} more held in other lists; applying writes them too"
   },
-  "rule.pendingFiles": "Writes {n} files",
+  "rule.pendingFiles": {
+    "one": "Writes {files} file",
+    "other": "Writes {files} files"
+  },
   "rule.pick": "Select",
   "rule.position": "Insert",
   "rule.positionBefore": "Before rule {n}",

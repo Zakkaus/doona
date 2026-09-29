@@ -5,7 +5,7 @@ import {translate, type Translator} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {PendingRule} from '../../store';
 import {byFile, insertRules, partialFailure, pendingView, ruleFailure} from './pending';
-const t: Translator = (key, params) => translate('en', key, params);
+const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 async function held() {
   const api = createMockApi();
@@ -96,6 +96,8 @@ it('groups held rules by file and says so only when there is more than one', asy
   const two = [...one, rule(3, 'r7', 'dip(3.3.3.3)')];
   expect(byFile(two).map(group => group.map(rule => rule.id))).toEqual([[1, 2], [3]]);
   expect(pendingView(two, 'routing', null, [], t)!.files).toBe('Writes 2 files');
+  expect(translate('en', 'rule.applyFiles', {n: 3, files: 1}, 'files')).toBe('Apply (3); writes 1 file');
+  expect(translate('en', 'rule.applyFiles', {n: 1, files: 2}, 'files')).toBe('Apply (1); writes 2 files');
   expect(pendingView([], 'routing', null, [], t)).toBeNull();
   // Each list shows its own rules and counts the others, which an apply writes too.
   const dns: PendingRule = {list: 'response', id: 4, condition: 'ip(1.2.3.4/32)', outbound: 'reject', must: false, before: null, sourceId: 'src-main'};
