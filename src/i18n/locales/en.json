@@ -1800,6 +1800,7 @@
   "ui.share": "{bytes}, {percent}%",
   "ui.source": "Source",
   "ui.sourceIp": "Source IP",
+  "ui.staleBuild": "doona has been updated. Reload to load the new version.",
   "ui.started": "Started",
   "ui.state": "State",
   "ui.target": "Target",
