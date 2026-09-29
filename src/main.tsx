@@ -1,5 +1,5 @@
 import {createRoot} from 'react-dom/client';
-import {StrictMode, useEffect, useState} from 'react';
+import {StrictMode, useEffect, useLayoutEffect, useState} from 'react';
 import './fonts.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
@@ -9,8 +9,8 @@ import {initializeApi, startedOnMock} from './api';
 import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {DEFAULT_LANG, LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
-import {unloaded} from './i18n/unloaded';
+import {DEFAULT_LANG, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
+import startupText from 'virtual:startup-text';
 
 stampAppearance();
 // The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
@@ -56,10 +56,18 @@ function Startup() {
       mounted = false;
     };
   }, []);
+  // The language on screen: the loaded catalogue's, which is the default when the saved one failed, or the saved one
+  // when none loaded and the failure screen shows its startup text.
+  const shown = lang ?? readLang();
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    html.lang = LOCALE[shown];
+    html.dir = pageDirection(LOCALE[shown], html.hasAttribute('data-mirror'));
+  }, [shown]);
   if (ready && lang) return <Shell lang={lang} />;
-  const [problem, retry] = unloaded(readLang());
+  const [problem, retry] = startupText[shown];
   return (
-    <LangContext.Provider value={lang ?? DEFAULT_LANG}>
+    <LangContext.Provider value={shown}>
       <div className="rp-shell">
         <header className="rp-top">
           <div className="rp-brand">

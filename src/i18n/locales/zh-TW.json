@@ -1605,6 +1605,7 @@
   "ui.group": "群組",
   "ui.groupNotLoaded": "群組尚未載入",
   "ui.helpFor": "關於{name}",
+  "ui.interfaceTextUnavailable": "無法載入介面文字。",
   "ui.invalidIp": "須為 IPv4 或 IPv6 位址。",
   "ui.labelSeparator": "：",
   "ui.latency": "{n} ms",

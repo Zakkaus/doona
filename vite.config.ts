@@ -10,6 +10,7 @@ import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
 import {rtlScripts} from './src/i18n/direction';
 import {languages, REFERENCE_LANG} from './src/i18n/languages';
 import {languageFiles} from './src/i18n/offline';
+import {startupTextPlugin} from './tools/startup-text.mjs';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -39,6 +40,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    startupTextPlugin(),
     {
       // The stored theme and language are stamped on <html> by an inline script before the stylesheet can paint,
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
