@@ -165,7 +165,7 @@ test('a check URL another client changed while the dialog was open is not overwr
   // The dialog keeps the edit and shows the URL the group holds, which a further save tests against.
   const url = dialog.getByRole('textbox', {name: 'Check URL'});
   await expect(url).toHaveValue('https://cp.cloudflare.com/generate_204');
-  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Saving again replaces it with the value here.`);
+  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Applying again replaces it with the value here.`);
   expect((await api.group('resilient')).config.check_url).toBe(remote);
 });
 
@@ -195,7 +195,7 @@ test('a check save refused with 409 keeps the edit and shows what the group hold
   await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
   await expect(dialog).toBeVisible();
   await expect(url).toHaveValue(mine);
-  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Saving again replaces it with the value here.`);
+  await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Applying again replaces it with the value here.`);
 });
 
 test('a disabled Test all does not blame TCP support when the probe limits rule it out', async ({page}) => {
