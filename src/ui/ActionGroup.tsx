@@ -86,13 +86,14 @@ export function MoreActionsList({actions, label}: {actions: Action[]; label: str
 }
 
 // A panel's secondary actions, in a trailing menu after its one primary button, as S2's ActionMenu. The caller puts a
-// destructive action last. A row of a table passes a label naming the row.
-export function MoreMenu({actions, label}: {actions: Action[]; label?: string}) {
+// destructive action last. A row of a table passes a label naming the row, and the small quiet look of its other
+// buttons.
+export function MoreMenu({actions, label, small, quiet}: {actions: Action[]; label?: string; small?: boolean; quiet?: boolean}) {
   const t = useT();
   const name = label ?? t('ui.moreActions');
   if (actions.length === 0) return null;
   return (
-    <MenuButton chevron={false} label={name} content={<MoreActionsList actions={actions} label={name} />}>
+    <MenuButton chevron={false} small={small} quiet={quiet} label={name} content={<MoreActionsList actions={actions} label={name} />}>
       <MoreVertical />
     </MenuButton>
   );

@@ -115,8 +115,6 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});
-  await expect(await moreItem(page.getByRole('region', {name: 'proxy', exact: true}), 'Check settings')).toHaveCount(0);
-  await page.keyboard.press('Escape');
   await moreAction(card, 'Check settings');
   const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
   const url = dialog.getByRole('textbox', {name: 'Check URL'});

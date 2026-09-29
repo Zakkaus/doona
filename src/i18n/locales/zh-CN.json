@@ -1571,6 +1571,7 @@
   "ui.loading": "加载中…",
   "ui.microseconds": "{n} μs",
   "ui.moreActions": "更多操作",
+  "ui.moreActionsFor": "{name} 的更多操作",
   "ui.name": "名称",
   "ui.network": "网络协议",
   "ui.newBuild": "新版本已就绪，重新加载页面后生效。",

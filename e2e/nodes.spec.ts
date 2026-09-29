@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, moreAction} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 
@@ -73,7 +73,7 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(page).toHaveURL(/#\/nodes\?provider=[^&]+$/);
   await expect(page.getByText(/Showing nodes from sub-d\./)).toBeVisible();
   await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
-  await page.getByRole('button', {name: 'Remove sub-c', exact: true}).click();
+  await moreAction(page.locator('body'), 'Remove sub-c', 'More actions for sub-c');
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-c', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-c removed'})).toBeVisible();
   await expect(sources).toHaveCount(2);
@@ -247,7 +247,7 @@ test('built-in and unattributed provenance stay separate without granting inline
   await sources.first().click();
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['block', 'direct']);
-  await expect(sources.first().getByRole('button', {name: /Refresh|Remove/})).toHaveCount(0);
+  await expect(sources.first().getByRole('button', {name: /Refresh|Remove|More actions/})).toHaveCount(0);
   await sources.filter({hasText: 'Unattributed'}).click();
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['Null owner', 'Omitted owner']);

@@ -102,6 +102,7 @@ type MenuButtonProps = {
   content: ReactNode;
   label: string;
   quiet?: boolean;
+  small?: boolean;
   chevron?: boolean;
   isDisabled?: boolean;
   appearance?: 'select';
@@ -110,7 +111,7 @@ type MenuButtonProps = {
   // it too, since the badge is hidden from assistive technology.
   count?: number;
 };
-export function MenuButton({children, content, label, quiet, chevron = true, isDisabled, appearance, placement = 'bottom end', count}: MenuButtonProps) {
+export function MenuButton({children, content, label, quiet, small, chevron = true, isDisabled, appearance, placement = 'bottom end', count}: MenuButtonProps) {
   const badge = count ? (
     <span className="rp-count" aria-hidden="true">
       {count}
@@ -125,7 +126,12 @@ export function MenuButton({children, content, label, quiet, chevron = true, isD
           {chevron && <ChevronDown />}
         </Button>
       ) : (
-        <RButton className={cx('rp-btn', quiet && 'quiet', !chevron && 'icon')} aria-label={label} aria-describedby={reasonId} isDisabled={isDisabled}>
+        <RButton
+          className={cx('rp-btn', quiet && 'quiet', small && 'sm', !chevron && 'icon')}
+          aria-label={label}
+          aria-describedby={reasonId}
+          isDisabled={isDisabled}
+        >
           {children}
           {badge}
           {chevron && <ChevronDown />}
