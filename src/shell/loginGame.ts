@@ -1,4 +1,5 @@
 import {DUCK_BOX, DUCK_PATHS} from './loginDuck';
+import {formatUnit, type UnitKey} from '../i18n/format';
 
 // The showcase beside the sign-in form: a loading bar stuck at 99% that a press turns into Flappy Duck, flying through
 // the gaps in firewall walls while the forwarded traffic adds up. Difficulty rises without end but only approaches
@@ -39,22 +40,27 @@ export const SPEED_MAX = (SPACE_MIN * GRAVITY) / (2 * FLAP);
 const HALF_W = (0.84 * DUCK_HEIGHT * DUCK_BOX.width) / DUCK_BOX.height / 2;
 const HALF_H = (0.84 * DUCK_HEIGHT) / 2;
 
-function unit(n: number, units: string[], digits: number) {
+// n in the largest of units (each 1000 of the one before) it reaches at least one of.
+function scaled(n: number, units: readonly UnitKey[]): [number, number] {
   let i = 0;
   for (; n >= 1000 && i < units.length - 1; i++) n /= 1000;
-  return (i ? n.toFixed(digits) : n.toFixed(digits > 1 ? 1 : 0)) + ' ' + units[i];
+  return [n, i];
 }
-// What the run forwarded, from its total in MB.
-export function amountText(mb: number) {
-  return unit(mb, ['MB', 'GB', 'TB', 'PB'], 2);
+// What the run forwarded, from its total in MB: one decimal in MB, two from GB up.
+export function amountText(mb: number, locale: string) {
+  const units = ['unit.megabyte', 'unit.gigabyte', 'unit.terabyte', 'unit.petabyte'] as const;
+  const [n, i] = scaled(mb, units);
+  return formatUnit(n, locale, units[i], i ? 2 : 1);
 }
 // The link rate in Mbps: named steps up to 650 Mbps, then 1, 1.5, 2.5, 4, 6 times each power of ten, without end.
 export function rate(stage: number) {
   return stage < 6 ? [100, 150, 200, 300, 450, 650][stage] : [1, 1.5, 2.5, 4, 6][(stage - 6) % 5] * Math.pow(10, 3 + Math.floor((stage - 6) / 5));
 }
-export function rateText(stage: number) {
-  const n = rate(stage);
-  return n < 1000 ? n + ' Mbps' : unit(n, ['Mbps', 'Gbps', 'Tbps', 'Pbps'], 1).replace('.0 ', ' ');
+// A whole rate drops the decimal: 1 Gbps, 1.5 Gbps.
+export function rateText(stage: number, locale: string) {
+  const units = ['unit.megabitPerSecond', 'unit.gigabitPerSecond', 'unit.terabitPerSecond', 'unit.petabitPerSecond'] as const;
+  const [n, i] = scaled(rate(stage), units);
+  return formatUnit(n, locale, units[i], Math.round(n * 10) % 10 ? 1 : 0);
 }
 // Each stage is harder than the last but only approaches the limits: speed SPEED_MAX, gap GAP_MIN, spacing SPACE_MIN.
 // From the Gbps stages on, gaps also swing high and low and start to drift.
@@ -121,6 +127,7 @@ export function idleLayout(w: number, h: number, fit: {board?: number; row?: num
 }
 
 export type GameText = {
+  locale: string;
   loading: string;
   progress: string;
   status: string;
@@ -222,7 +229,7 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
   function crash() {
     down = performance.now();
     best = Math.max(best, mb);
-    onCrash(amountText(mb), amountText(best));
+    onCrash(amountText(mb, text!.locale), amountText(best, text!.locale));
     window.clearTimeout(timer);
     timer = window.setTimeout(() => draw(), 950);
   }
@@ -409,14 +416,14 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
     if (down) {
       // The result sits at the top on a plate of the background colour, away from the crash point.
       plate(C.base, w / 2 - 150, 16, 300, 92);
-      say(text.result(amountText(mb)), w / 2, 46, C.text, 16);
-      say(text.best(amountText(Math.max(best, mb))), w / 2, 70, C.sub);
+      say(text.result(amountText(mb, text.locale)), w / 2, 46, C.text, 16);
+      say(text.best(amountText(Math.max(best, mb), text.locale)), w / 2, 70, C.sub);
       if (performance.now() - down > 900) say(text.restart, w / 2, 94, C.sub);
     } else {
       // The score keeps a small plate of its own so a wall passing behind it never cuts through the digits.
       plate(C.base, w / 2 - 70, 18, 140, 52);
-      say(amountText(mb), w / 2, 40, C.text, 16);
-      say(rateText(stage), w / 2, 60, now - flash < 1.2 && stage ? C.accent : C.sub);
+      say(amountText(mb, text.locale), w / 2, 40, C.text, 16);
+      say(rateText(stage, text.locale), w / 2, 60, now - flash < 1.2 && stage ? C.accent : C.sub);
     }
     g!.strokeStyle = C.ink;
     duck(duckX, py + (y - py) * al, DUCK_HEIGHT, Math.max(-0.35, Math.min(0.5, vy / 900)));
@@ -506,7 +513,16 @@ export function startLoginGame(button: HTMLButtonElement, canvas: HTMLCanvasElem
       restyle();
       // Canvas text doesn't fetch the web font's unicode-range subsets the page hasn't shown yet, so these strings would
       // draw in a fallback font; load the subsets they need and draw again.
-      const glyphs = [next.loading, '.', next.progress, next.status, next.start, next.restart, next.result(amountText(0)), next.best(amountText(0))].join('');
+      const glyphs = [
+        next.loading,
+        '.',
+        next.progress,
+        next.status,
+        next.start,
+        next.restart,
+        next.result(amountText(0, next.locale)),
+        next.best(amountText(0, next.locale))
+      ].join('');
       Promise.all([500, 600].map(weight => document.fonts.load(`${weight} 16px ${font}`, glyphs))).then(
         () => {
           if (text === next) draw();

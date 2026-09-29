@@ -49,6 +49,28 @@ test.describe('the demo', () => {
     await expect(controls.getByRole('button', {name: '主題：暗色', exact: true})).toBeVisible();
   });
 
+  test.describe('in Chinese', () => {
+    test.use({storage: {...demoProfile, 'doona-lang': 'zh-TW'}, reducedMotion: 'no-preference'});
+
+    test('draws the link rate from the catalogue', async ({page}) => {
+      await page.setViewportSize({width: 1440, height: 900});
+      await page.addInitScript(() => {
+        const drawn: string[] = [];
+        (window as unknown as {drawnGameText: string[]}).drawnGameText = drawn;
+        const fillText = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+          drawn.push(text);
+          return fillText.call(this, text, x, y, maxWidth);
+        };
+      });
+      await page.goto('/#/activity');
+      await page.locator('.rp-login-showcase button').click();
+      await expect
+        .poll(() => page.evaluate(() => ['0.0 MB', '100 Mbps'].every(text => (window as unknown as {drawnGameText: string[]}).drawnGameText.includes(text))))
+        .toBe(true);
+    });
+  });
+
   test('picks a palette from the sign-in page, and the page keeps it after a reload', async ({page}) => {
     await page.goto('/#/activity');
     const controls = page.locator('.rp-login-controls');

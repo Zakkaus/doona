@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {useT} from '../i18n';
+import {LOCALE, useLang, useT} from '../i18n';
 import {CanvasButton} from '../ui/CanvasButton';
 import {useMediaQuery} from '../ui/hooks';
 import {VisuallyHidden} from '../ui/ui';
@@ -12,6 +12,7 @@ import {startLoginGame, type GameText, type LoginGame} from './loginGame';
 // technology until motion is allowed again.
 export default function LoginShowcase() {
   const t = useT();
+  const lang = useLang();
   const still = useMediaQuery('(prefers-reduced-motion: reduce)');
   const button = useRef<HTMLButtonElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -19,6 +20,7 @@ export default function LoginShowcase() {
   const [result, setResult] = useState<{amount: string; best: string} | null>(null);
   const text = useMemo<GameText>(
     () => ({
+      locale: LOCALE[lang],
       loading: t('login.gameLoading'),
       progress: t('login.gameProgress'),
       status: t('login.gameStatus'),
@@ -27,7 +29,7 @@ export default function LoginShowcase() {
       result: amount => t('login.gameResult', {amount}),
       best: amount => t('login.gameBest', {amount})
     }),
-    [t]
+    [t, lang]
   );
   useEffect(() => {
     const started = startLoginGame(button.current!, canvas.current!, (amount, best) => setResult({amount, best}));
