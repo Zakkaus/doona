@@ -9,16 +9,14 @@ import {includeCheck, includeDirectory, includePatterns, namePatterns, newSource
 
 export type NewSourceProps = {
   sources: ConfigSource[];
-  // Include patterns are read from the main source's text, so they are known only when the backend offers content.
-  contentOffered: boolean;
   refetch: () => void;
   open: (sourceId: string) => void;
 };
 
-export function useNewSource({sources, contentOffered, refetch, open}: NewSourceProps) {
+export function useNewSource({sources, refetch, open}: NewSourceProps) {
   const t = useT();
   const main = sources.find(source => source.kind === 'main');
-  const patterns = useMemo(() => (contentOffered && main?.content !== undefined ? includePatterns(main.content) : null), [contentOffered, main]);
+  const patterns = useMemo(() => (main ? includePatterns(main.content) : null), [main]);
   // With a pattern to fill, the field holds only the name its `*` stands for; without one, the whole relative path.
   const choices = useMemo(() => namePatterns(patterns ?? []), [patterns]);
   const loads = useMemo(() => includeCheck(sources), [sources]);
