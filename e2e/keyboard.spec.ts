@@ -30,7 +30,8 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await page.keyboard.press('?');
   const help = page.getByRole('dialog', {name: 'Keyboard shortcuts'});
   await expect(help).toBeVisible();
-  await expect(help).toContainText('g c');
+  const goTo = help.locator('.rp-row', {hasText: 'Connections'});
+  await expect(goTo.locator('kbd')).toHaveText(['G', 'C']);
   await page.keyboard.press('Escape');
   await expect(help).toBeHidden();
   await page.keyboard.press('g');
@@ -50,7 +51,7 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await expect(help).toBeHidden();
 });
 
-test('the shortcut help fits a 1280x720 window, and g d and g e open DNS and Events', async ({page}) => {
+test('the shortcut help fits a 1280x720 window, and g d and g v open DNS and Events', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 720});
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();
@@ -71,7 +72,7 @@ test('the shortcut help fits a 1280x720 window, and g d and g e open DNS and Eve
   await expect(page).toHaveURL(/#\/dns(\?|$)/);
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();
   await page.keyboard.press('g');
-  await page.keyboard.press('e');
+  await page.keyboard.press('v');
   await expect(page).toHaveURL(/#\/events(\?|$)/);
 });
 

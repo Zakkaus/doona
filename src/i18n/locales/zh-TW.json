@@ -1466,7 +1466,7 @@
   "shell.shortcutMove": "移動",
   "shell.shortcutSearch": "搜尋",
   "shell.shortcutSelect": "選取",
-  "shell.shortcutSequence": "先按 g，再於 800 毫秒內按下頁面字母。輸入文字時不啟用快捷鍵。",
+  "shell.shortcutSequence": "先按 G，再於 800 毫秒內按下頁面字母。輸入文字時不啟用快捷鍵。",
   "shell.shortcutTables": "表格與清單",
   "shell.shortcuts": "鍵盤快捷鍵",
   "shell.theme": "主題：{theme}",

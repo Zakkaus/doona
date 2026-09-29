@@ -9,7 +9,7 @@ import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';
 
-export type ShortcutView = {id: string; path: string; key: string; sequence: string; label: string};
+export type ShortcutView = {id: string; path: string; key: string; keys: string[]; label: string};
 export type AboutView = {
   title: string;
   close: string;
@@ -117,7 +117,7 @@ export function shellView(
   const [tone, stateKey] = backendState(needsLogin, !capabilities && !capabilityError, capabilityError, versionError);
   const shortcuts = features.flatMap(item =>
     item.shortcut && item.nav && offered(item.path)
-      ? [{id: item.id, path: item.path, key: item.shortcut, sequence: `g ${item.shortcut}`, label: t(item.nav.titleKey)}]
+      ? [{id: item.id, path: item.path, key: item.shortcut, keys: ['G', item.shortcut.toUpperCase()], label: t(item.nav.titleKey)}]
       : []
   );
   return {

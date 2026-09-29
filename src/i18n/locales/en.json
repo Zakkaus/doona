@@ -1667,7 +1667,7 @@
   "shell.shortcutMove": "Move",
   "shell.shortcutSearch": "Search",
   "shell.shortcutSelect": "Select",
-  "shell.shortcutSequence": "Press g, then the page letter within 800 ms. Shortcuts are inactive while typing.",
+  "shell.shortcutSequence": "Press G, then the page letter within 800 ms. Shortcuts are inactive while typing.",
   "shell.shortcutTables": "Tables and lists",
   "shell.shortcuts": "Keyboard shortcuts",
   "shell.theme": "Theme: {theme}",
