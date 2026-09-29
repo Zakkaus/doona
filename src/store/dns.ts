@@ -35,21 +35,26 @@ export async function smallerOnRefusal<Q extends {limit?: number}, P>(
     return {page: await fetch({...query, limit: smaller}), limit: smaller};
   }
 }
-// The whole cache, summaries only; once a page is refused the rest of the walk keeps the smaller size.
-export function dnsCacheListing(api: Api, signal?: AbortSignal) {
-  let limit = MAX_PAGE;
-  return walk(
-    async cursor => {
-      const result = await smallerOnRefusal(query => api.dnsCache(query, signal), {cursor, limit, detail: 'summary' as const}, signal);
-      limit = result.limit!;
-      return result.page;
-    },
-    (acc: DnsCacheList | undefined, page) => {
-      if (!acc) return {...page, entries: [...page.entries]};
-      acc.entries.push(...page.entries);
-      return acc;
-    }
-  );
+// The whole cache, summaries only, at one page size: a cursor sent with a different limit is refused. The backend
+// holds a bounded number of listing snapshots, and one that cannot fit answers 503 snapshot_unavailable at the head;
+// after the wait it asks for, the walk starts over once without a cursor.
+export async function dnsCacheListing(api: Api, signal?: AbortSignal) {
+  const listing = () =>
+    walk(
+      cursor => api.dnsCache({cursor, limit: MAX_PAGE, detail: 'summary'}, signal),
+      (acc: DnsCacheList | undefined, page) => {
+        if (!acc) return {...page, entries: [...page.entries]};
+        acc.entries.push(...page.entries);
+        return acc;
+      }
+    );
+  try {
+    return await listing();
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 503 && error.code === 'snapshot_unavailable' && error.transient)) throw error;
+    await wait(error.retryAfter!, signal);
+    return listing();
+  }
 }
 export function useDnsFlush() {
   const api = getApi();
