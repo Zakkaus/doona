@@ -347,7 +347,8 @@ export function connectionDetail(
           ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
         ),
         flowQuery: within('', {tab: 'records', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
-        // The trace of this connection's target, from its source; null when it has neither a domain nor an address.
+        // The trace of this connection's target, from its source and process; null when it has neither a domain nor an
+        // address.
         traceQuery:
           current.domain || sourceIp(current.dst)
             ? traceQuery({
@@ -355,7 +356,9 @@ export function connectionDetail(
                 domain: current.domain ?? '',
                 dst_ip: sourceIp(current.dst),
                 dst_port: addressPort(current.dst),
-                src_ip: sourceIp(current.src)
+                src_ip: sourceIp(current.src),
+                src_port: addressPort(current.src),
+                pname: current.pname ?? ''
               })
             : null,
         source: current.src ? (sourceIp(current.src) ?? current.src) : null,

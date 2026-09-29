@@ -59,12 +59,20 @@ it('focuses a group by its backend id, and opens the page unfocused before the l
   expect(groupQuery(undefined, 'proxy')).toBe('');
 });
 
-it('carries a trace target and source through the address and back', () => {
-  const link = {network: 'udp', domain: 'example.com', dst_ip: '2001:db8::1', dst_port: '443', src_ip: '10.0.0.2'} as const;
+it('carries a trace target, source and process through the address and back', () => {
+  const link = {network: 'udp', domain: 'example.com', dst_ip: '2001:db8::1', dst_port: '443', src_ip: '10.0.0.2', src_port: '5353', pname: 'curl'} as const;
   expect(parseTraceLink(traceQuery(link))).toEqual(link);
   // Empty values stay out of the address; a missing network is TCP.
   expect(traceQuery({dst_ip: '1.1.1.1', domain: '', dst_port: '53'})).toBe('tab=trace&dst_ip=1.1.1.1&dst_port=53');
-  expect(parseTraceLink('tab=trace&dst_ip=1.1.1.1')).toEqual({network: 'tcp', domain: '', dst_ip: '1.1.1.1', dst_port: '', src_ip: ''});
+  expect(parseTraceLink('tab=trace&dst_ip=1.1.1.1')).toEqual({
+    network: 'tcp',
+    domain: '',
+    dst_ip: '1.1.1.1',
+    dst_port: '',
+    src_ip: '',
+    src_port: '',
+    pname: ''
+  });
   expect(parseTraceLink('tab=trace&src_ip=10.0.0.2')).toBeNull();
   expect(parseTraceLink('tab=trace')).toBeNull();
 });

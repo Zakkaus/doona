@@ -33,15 +33,15 @@ const blankForm = {
   resolve: null as TraceResolve | null
 };
 // Held by the rules page rather than the trace tab, so what was typed survives a tab switch. A link that names a
-// target fills the form in, opening the advanced fields when it names the source; it does not run the trace.
+// target fills the form in, opening the advanced fields when it names the source or process; it does not run the trace.
 export function useTraceForm(query: string) {
   const linked = useMemo(() => parseTraceLink(query), [query]);
   const [form, setForm] = useState(() => (linked ? {...blankForm, ...linked} : blankForm));
-  const [advanced, setAdvanced] = useState(!!linked?.src_ip);
+  const [advanced, setAdvanced] = useState(!!(linked?.src_ip || linked?.src_port || linked?.pname));
   useLinked(linked && JSON.stringify(linked), () => {
     if (!linked) return;
     setForm({...blankForm, ...linked});
-    setAdvanced(!!linked.src_ip);
+    setAdvanced(!!(linked.src_ip || linked.src_port || linked.pname));
   });
   return {form, setForm, advanced, setAdvanced};
 }
