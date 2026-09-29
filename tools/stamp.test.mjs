@@ -2,20 +2,26 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {expect, it} from 'vitest';
 import {DEFAULT_PALETTE, palettes} from '../src/shell/palettes';
-import {DEFAULT_LANG, LANGS, LOCALE} from '../src/i18n';
+import {LANGS, LOCALE} from '../src/i18n';
 import {pageDirection, rtlScripts, textDirection} from '../src/i18n/direction';
+import {negotiationCases} from '../src/i18n/negotiation.test-cases';
 
 // The same injection vite.config.ts makes at build.
 const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8')
   .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
   .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
   .replace("'__LOCALES__'", JSON.stringify(LOCALE))
-  .replace("'__DEFAULT_LOCALE__'", JSON.stringify(LOCALE[DEFAULT_LANG]))
+  .replace("'__REFERENCE_LOCALE__'", JSON.stringify(LOCALE.en))
   .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
 // `intl` stands in for the engine's Intl; the script's own context has the real one.
-const prepaint = (stored, dark, intl) => {
+const prepaint = (stored, dark, intl, tags = []) => {
   const document = {documentElement: {dataset: {}, lang: '', dir: ''}};
-  const context = {document, localStorage: {getItem: key => stored[key] ?? null}, matchMedia: () => ({matches: dark})};
+  const context = {
+    document,
+    navigator: {languages: tags, language: tags[0] ?? ''},
+    localStorage: {getItem: key => stored[key] ?? null},
+    matchMedia: () => ({matches: dark})
+  };
   runInNewContext(stamp, intl ? {...context, Intl: intl} : context);
   return document.documentElement;
 };
@@ -49,8 +55,10 @@ it('stamps the language and direction the app sets for every language', () => {
   for (const [lang] of LANGS) expect(prepaint({'doona-lang': lang}, false)).toMatchObject({lang: LOCALE[lang], dir: textDirection(LOCALE[lang])});
 });
 
-it('stamps the default language for a missing or unknown one', () => {
-  for (const lang of [null, 'ja', 'en-US', 'constructor', '__proto__']) expect(prepaint({'doona-lang': lang}, false).lang).toBe(LOCALE[DEFAULT_LANG]);
+it('stamps the browser language when no supported language was saved', () => {
+  for (const {tags, lang} of negotiationCases)
+    for (const saved of [null, 'unsupported', 'constructor', '__proto__'])
+      expect(prepaint({'doona-lang': saved}, false, undefined, tags).lang).toBe(LOCALE[lang]);
 });
 
 it('reads the direction from the text info, or else from the likely script', () => {
