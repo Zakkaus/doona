@@ -693,3 +693,43 @@ test('a subscription in a writable include is edited while the main source is re
   await edit.click();
   await expect(page.getByRole('dialog', {name: 'Edit subscription sub-c'})).toBeVisible();
 });
+
+test('an edit refused because the file changed saves over the file as it is now, keeping what was typed', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  const url = dialog.getByRole('textbox', {name: 'Subscription URL', exact: true});
+  await url.fill('https://updated.example.net/sub');
+  // Another editor changes the file while the dialog is open.
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const changed = '# edited elsewhere\n' + main.content!;
+  await api.pollOperation(await api.replaceConfigSource(main.id, changed, `"${main.content_sha256}"`));
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  await apply.click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await expect(url).toHaveValue('https://updated.example.net/sub');
+  await apply.click();
+  await expect(dialog).toHaveCount(0);
+  const writes = requests.filter(request => request.method() === 'PUT');
+  expect(writes).toHaveLength(2);
+  const saved = (await api.config()).sources.find(source => source.id === main.id)!.content!;
+  expect(saved.startsWith('# edited elsewhere\n')).toBe(true);
+  expect(saved).toContain("sub-c: 'https://updated.example.net/sub'");
+});
+
+test('an edit refused because the entry left its file says so on the next save', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const removed = main.content!.replace(/^\s*sub-c:.*\n/m, '');
+  await api.pollOperation(await api.replaceConfigSource(main.id, removed, `"${main.content_sha256}"`));
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  await apply.click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await apply.click();
+  await expect(dialog.getByRole('alert')).toContainText('This subscription is no longer in its source file');
+});

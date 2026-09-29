@@ -101,6 +101,10 @@ export function useNodesPage({go, query}: PageProps) {
       for (const entry of readSubscriptionEntries(item.content)) found.set(entry.tag, [...(found.get(entry.tag) ?? []), {source: item, entry}]);
     return found;
   }, [sources]);
+  // The source is read again after a refused save, so the next save writes the entry as it is written now; null once
+  // no source, or more than one, declares it.
+  const editing = dialog?.kind === 'editProvider' ? declared.get(dialog.entry.tag) : undefined;
+  const editSource = editing?.length === 1 ? editing[0].source : null;
   const editAction = (item: ProviderRow) => {
     const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
     if (place?.length !== 1) return null;
@@ -212,12 +216,16 @@ export function useNodesPage({go, query}: PageProps) {
         const tag = form.name.trim();
         const url = form.value.trim();
         const follow = tag !== from && updateGroups;
+        if (!editSource) {
+          refuse(t(declared.get(from)?.length ? 'nodes.tagTaken' : 'nodes.editMissing'));
+          return;
+        }
         // Filters are read from the text being written, so a group changed meanwhile is still found.
         const result = await apply(text => {
           const written = writeSubscriptionEntry(text, from, {tag, url});
           if (!follow) return written;
           return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
-        }, dialog.source);
+        }, editSource);
         const problem = editProblem(result, t);
         if (problem) refuse(noticeText(problem, t));
         if (result.kind !== 'ok') return;
@@ -270,7 +278,9 @@ export function useNodesPage({go, query}: PageProps) {
           : null;
   const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
   const references =
-    dialog?.kind === 'editProvider' && editName !== dialog.entry.tag ? renameReferences(sources, dialog.source, dialog.entry.tag) : {here: [], elsewhere: []};
+    dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
+      ? renameReferences(sources, editSource ?? dialog.source, dialog.entry.tag)
+      : {here: [], elsewhere: []};
   const formValid =
     dialog?.kind === 'editProvider'
       ? !!editName &&
