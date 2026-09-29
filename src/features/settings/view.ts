@@ -18,8 +18,8 @@ export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_lo
   record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
 };
 const recorderChoiceLabel: Record<RecorderChoice, Key> = {auto: 'settings.record.auto', on: 'settings.record.on', off: 'settings.record.off'};
-// The wire form: booleans pin a recorder, the string follows attachment.
-export const recorderPatchValue = (choice: RecorderChoice): RecorderMode => (choice === 'auto' ? 'auto' : choice === 'on');
+// The wire form is the choice itself.
+export const recorderPatchValue = (choice: RecorderChoice): RecorderMode => choice;
 export function recorderView(id: Recorder, choice: RecorderChoice, state: RecorderState | undefined, t: Translator) {
   const forbidden = state ? !state.allowed : false;
   return {
@@ -38,7 +38,9 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
 }
 export function recordingNote(recording: RuntimeSettings['recording'] | undefined, t: Translator) {
   if (!recording) return null;
-  if (recording.grace_remaining_seconds > 0) return t('settings.recordingGrace', {n: recording.grace_remaining_seconds});
+  const grace = recording.grace_remaining_seconds ?? 0;
+  if (grace > 0) return t('settings.recordingGrace', {n: grace});
+  if (!recording.events) return null;
   return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
 // Automatic flow recording follows pages that ask for flows, not every open panel. The backend keeps a client
@@ -49,52 +51,49 @@ export const flowRecordingNote = (choice: RecorderChoice, t: Translator) =>
 export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
   Numeric,
-  {read: (value: RuntimeSettings) => number; write: (patch: RuntimeSettingsPatch, value: number) => void; floor: number; label: Key}
+  // read is undefined when the engine omits the section or member.
+  {read: (value: RuntimeSettings) => number | undefined; write: (patch: RuntimeSettingsPatch, value: number) => void; label: Key}
 > = {
   'log.buffered_records': {
-    read: s => s.log.buffered_records,
+    read: s => s.log?.buffered_records,
     write: (p, v) => {
       (p.log ??= {}).buffered_records = v;
     },
-    floor: 64,
     label: 'settings.logBuffer'
   },
   'dns_log.max_records': {
-    read: s => s.dns_log.max_records,
+    read: s => s.dns_log?.max_records,
     write: (p, v) => {
       (p.dns_log ??= {}).max_records = v;
     },
-    floor: 64,
     label: 'settings.dnsLogSize'
   },
   'flows.max_flows': {
-    read: s => s.flows.max_flows,
+    read: s => s.flows?.max_flows,
     write: (p, v) => {
       (p.flows ??= {}).max_flows = v;
     },
-    floor: 64,
     label: 'settings.flowsMax'
   },
   'flows.retention_seconds': {
-    read: s => s.flows.retention_seconds,
+    read: s => s.flows?.retention_seconds,
     write: (p, v) => {
       (p.flows ??= {}).retention_seconds = v;
     },
-    floor: 1,
     label: 'settings.flowsRetention'
   }
 };
-export function numericFieldView(id: Numeric, value: string, ceiling: number | undefined, locale: string, t: Translator) {
+export function numericFieldView(id: Numeric, value: string, floor: number, ceiling: number | undefined, locale: string, t: Translator) {
   const access = numericAccess[id];
   return {
     id,
     value,
     label: t(access.label),
-    invalid: !/^\d+$/.test(value) || Number(value) < access.floor || (ceiling !== undefined && Number(value) > ceiling),
+    invalid: !/^\d+$/.test(value) || Number(value) < floor || (ceiling !== undefined && Number(value) > ceiling),
     description:
       ceiling === undefined
-        ? t('settings.rangeMin', {min: formatNumber(access.floor, locale)})
-        : t('settings.range', {min: formatNumber(access.floor, locale), max: formatNumber(ceiling, locale)})
+        ? t('settings.rangeMin', {min: formatNumber(floor, locale)})
+        : t('settings.range', {min: formatNumber(floor, locale), max: formatNumber(ceiling, locale)})
   };
 }
 export function geodataRows(assets: GeoData['assets'], locale: string) {

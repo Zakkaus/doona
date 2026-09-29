@@ -284,6 +284,13 @@ export function createConfiguration(
         'flows.max_flows': resources.flows.max_flows ?? 0,
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
+      // An absent minimum means 1.
+      const floors = {
+        'log.buffered_records': resources.logs.min_buffered_records ?? 1,
+        'dns_log.max_records': resources.dns_log.min_records ?? 1,
+        'flows.max_flows': resources.flows.min_flows ?? 1,
+        'flows.retention_seconds': 1
+      };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
       // A field or level the backend does not advertise is semantic, not malformed.
       const unsupported = (message: string) => new ApiError(422, 'unsupported_value', message);
@@ -300,8 +307,8 @@ export function createConfiguration(
       });
       for (const [field, store, value] of modes) {
         if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
-        if (value !== 'auto' && typeof value !== 'boolean') throw invalid(`${field} must be true, false or auto`);
-        if (value === true && !settings.recording?.[store].allowed) throw unsupported(`${field} is forbidden by the configuration`);
+        if (value !== 'auto' && value !== 'on' && value !== 'off') throw invalid(`${field} must be on, off or auto`);
+        if (value === 'on' && !settings.recording?.[store]?.allowed) throw unsupported(`${field} is forbidden by the configuration`);
       }
       const fields = Object.entries(patch)
         .filter(([section]) => !(section in recorders))
@@ -311,12 +318,12 @@ export function createConfiguration(
       for (const [field, value] of fields) {
         if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
         if (field === 'log.level') {
-          if (!(value as string in logLevelLabels)) throw invalid(`${value} is not a log level`);
+          if (!((value as string) in logLevelLabels)) throw invalid(`${value} is not a log level`);
           if (!(resources.logs.levels ?? []).includes(value as never)) throw unsupported(`${value} is not an advertised log level`);
           continue;
         }
         const ceiling = ceilings[field as keyof typeof ceilings];
-        const floor = field === 'flows.retention_seconds' ? 1 : 64;
+        const floor = floors[field as keyof typeof floors];
         if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
       }
       // Checks its own fields before storing any of them, so it runs last of the checks and first of the changes.
@@ -327,16 +334,16 @@ export function createConfiguration(
           return withGeodata();
         }
       }
-      const apply = (section: 'log' | 'dns_log' | 'flows') => Object.assign(settings[section], patch[section] ?? {});
-      apply('log');
-      apply('dns_log');
-      apply('flows');
+      if (patch.log) settings.log = {...settings.log, ...patch.log};
+      if (patch.dns_log) settings.dns_log = {...settings.dns_log, ...patch.dns_log} as typeof settings.dns_log;
+      if (patch.flows) settings.flows = {...settings.flows, ...patch.flows};
       for (const [, store, value] of modes) {
-        const state = settings.recording![store];
-        state.mode = value === 'auto' ? 'auto' : value ? 'on' : 'off';
+        const state = settings.recording?.[store];
+        if (!state) continue;
+        state.mode = value;
         state.active = state.allowed && state.mode !== 'off';
       }
-      if (settings.recording) settings.recording.events.active = true;
+      if (settings.recording?.events) settings.recording.events.active = true;
       // A smaller ring drops its oldest records at once, not when the next one arrives.
       trimLogs();
       settings.source = 'runtime';

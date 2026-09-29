@@ -44,8 +44,8 @@ export const capabilities: Capabilities = {
     // create is true because the demo's main source includes config.d/*.dae.
     config: {available: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
-    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], filters: ['level', 'target'], retention_seconds: 86400, max_buffered_records: 4096},
-    dns_log: {available: true, max_records: 2048, max_page_size: 500},
+    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], filters: ['level', 'target'], retention_seconds: 86400, min_buffered_records: 64, max_buffered_records: 4096},
+    dns_log: {available: true, min_records: 64, max_records: 2048, max_page_size: 500},
     dns_rules: {available: true, max_rules: 1024},
     runtime_settings: {
       available: true,
@@ -84,6 +84,7 @@ export const capabilities: Capabilities = {
       available: true,
       recording: 'on',
       scopes: ['userspace_tcp', 'userspace_udp', 'kernel_direct', 'kernel_block', 'dns_intercept', 'kernel_bypass'],
+      min_flows: 64,
       max_flows: 4096,
       max_steps_per_flow: 64,
       retention_seconds: 300,

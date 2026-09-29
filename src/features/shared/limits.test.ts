@@ -51,6 +51,7 @@ describe('backendLimits', () => {
       link: {href: '#/settings?card=runtime', text: t('settings.runtime')},
       items: [{id: 'flows', label: t('flow.records')}]
     });
+    expect(group(limits(patched({flows: {recording: 'auto'}})), 'flowsIdle')).toEqual(idle);
     expect(group(limits(patched({flows: {recording: 'off'}}), other), 'flowsIdle')?.headline).toBe(t('ov.lim.h.flowsOff'));
     // honk offers flows.max_flows only while record_flows allows recording, so its absence means the key is false.
     const disallowed = limits(patched({flows: {recording: 'off'}, runtime_settings: {fields: ['record_flows', 'log.level']}}));
