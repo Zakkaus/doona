@@ -18,6 +18,19 @@ const pluralCategories = locale => {
 };
 // The placeholders one string fills.
 const placeholders = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
+// The arguments a CodeMirror phrase (a cm.* key) fills, read as EditorState.phrase reads them: `$` is `$1`, `$$` is a
+// literal `$`, and `$0` fills nothing.
+const substitutions = text =>
+  [
+    ...new Set(
+      [...text.matchAll(/\$(\$|\d*)/g)]
+        .map(match => (match[1] === '$' ? 0 : +(match[1] || 1)))
+        .filter(Boolean)
+        .map(n => `$${n}`)
+    )
+  ]
+    .sort()
+    .join(',');
 // A message's forms by name; a plain string is the general form, `other`.
 const forms = message => (typeof message === 'string' ? {other: message} : message);
 // A key names its area first, `area.name`, the way the other keys do; a bare key such as `close` has no area.
@@ -26,12 +39,15 @@ export const areaPrefixFailures = keys => keys.filter(key => !/^\w+\.\w/.test(ke
 // drops a placeholder is caught even when another form keeps it.
 function placeholderFailures(file, key, message, expected, reference) {
   const wanted = forms(expected);
-  return Object.entries(forms(message)).flatMap(([form, text]) => {
-    const have = placeholders(text),
-      want = placeholders(wanted[form] ?? wanted.other);
-    const name = typeof message === 'string' ? key : `${key} (${form})`;
-    return have === want ? [] : [`${file}: ${name} placeholders {${have}} differ from ${reference}'s {${want}}`];
-  });
+  const kinds = key.startsWith('cm.') ? {placeholders, 'CodeMirror arguments': substitutions} : {placeholders};
+  return Object.entries(forms(message)).flatMap(([form, text]) =>
+    Object.entries(kinds).flatMap(([kind, read]) => {
+      const have = read(text),
+        want = read(wanted[form] ?? wanted.other);
+      const name = typeof message === 'string' ? key : `${key} (${form})`;
+      return have === want ? [] : [`${file}: ${name} ${kind} {${have}} differ from ${reference}'s {${want}}`];
+    })
+  );
 }
 // The keys an object in JSON text repeats, which JSON.parse would silently resolve to the last value.
 function duplicateKeys(source) {
