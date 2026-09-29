@@ -13,13 +13,6 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
       onOpenChange={open => {
         if (!open) m.close();
       }}
-      trigger={
-        m.available ? (
-          <Button quiet isDisabled={m.disabled} tip={m.tip} onPress={m.show}>
-            {t('policy.edit')}
-          </Button>
-        ) : undefined
-      }
       footer={close => (
         <>
           <Button onPress={close}>{t('ui.cancel')}</Button>

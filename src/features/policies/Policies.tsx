@@ -2,7 +2,6 @@ import {memo, Suspense, type ComponentProps, type ReactNode} from 'react';
 import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
-import Refresh from '../../ui/icons/Refresh';
 import {
   ActionHelp,
   Badge,
@@ -18,7 +17,8 @@ import {
   Segmented,
   Switch,
   Empty,
-  Tabs
+  Tabs,
+  MoreMenu
 } from '../../ui/ui';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
@@ -87,14 +87,17 @@ function PolicyDetail(props: PolicyGroupInput) {
                   </HelpRow>
                 )}
               </span>
-              <span className="rp-cluster">
-                <PolicyEdit model={m.edit} />
-                <CheckEdit model={m.check} />
-                <Button isPending={m.probing} isDisabled={m.probeDisabled} tip={m.probeTip} onPress={m.probe}>
-                  <Refresh className="rp-spin-on-press" />
-                  {m.probeText}
-                </Button>
-              </span>
+              {/* Choosing a member is the card's primary action; every command goes into its More menu. */}
+              <PolicyEdit model={m.edit} />
+              <CheckEdit model={m.check} />
+              <MoreMenu
+                actions={[
+                  ...(m.edit.available ? [{id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, reason: m.edit.tip, onAction: m.edit.show}] : []),
+                  ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
+                  {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
+                  ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
+                ]}
+              />
             </div>
           </ActionHelp>
           <Disclosure id={g.id} title={t('ui.config')}>
@@ -117,11 +120,6 @@ function PolicyDetail(props: PolicyGroupInput) {
               <Light small tone={g.overrideTone}>
                 {g.overrideText}
               </Light>
-            )}
-            {g.pinned && (
-              <Button isPending={m.releasing} isDisabled={m.busy} onPress={m.release}>
-                {t('policy.releaseOverride')}
-              </Button>
             )}
             {g.interruptable && (
               <Switch isSelected={g.interrupt} isDisabled={m.busy} onChange={m.interrupt}>

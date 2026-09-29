@@ -1042,7 +1042,7 @@
   "policy.checkUrlHelp": "后端经由各成员请求的 http 或 https 网址。留空则使用全局检测网址。",
   "policy.checkUrlInvalid": "请输入含主机名的 http 或 https 网址，长度不超过 2048 字节，且不含用户名、空白或逗号。",
   "policy.down": "{n} 个不可用",
-  "policy.edit": "编辑",
+  "policy.edit": "编辑群组",
   "policy.editAmbiguous": "此组在配置中有多处定义，无法在此编辑",
   "policy.editHelp": "在此组所在文件的 group 区段中改写其策略与筛选条件，保留其他字段；校验通过后写入并重载。",
   "policy.editNoConfig": "配置尚未准备好，无法编辑",

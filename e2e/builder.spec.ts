@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, test, moreAction} from './fixtures';
 
 test('a node joins an existing group or a new one through the name filter', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
@@ -22,7 +22,7 @@ test('a node joins an existing group or a new one through the name filter', asyn
 test('a group card edits its policy and filters in the main source', async ({page}) => {
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'gaming'});
-  await card.getByRole('button', {name: 'Edit', exact: true}).click();
+  await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveValue('name(jp-01, hk-02)');
   const policy = dialog.getByRole('button', {name: /Selection policy/});
@@ -41,7 +41,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
 
 test('editing only filters preserves the native policy spelling', async ({page}) => {
   await page.goto('/#/policies');
-  await page.getByRole('region', {name: 'resilient'}).getByRole('button', {name: 'Edit', exact: true}).click();
+  await moreAction(page.getByRole('region', {name: 'resilient'}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('min_avg10');
   await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');

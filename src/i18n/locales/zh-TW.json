@@ -1042,7 +1042,7 @@
   "policy.checkUrlHelp": "後端經由各成員請求的 http 或 https 網址。留空則使用全域檢測網址。",
   "policy.checkUrlInvalid": "請輸入含主機名稱的 http 或 https 網址，長度不超過 2048 位元組，且不含使用者名稱、空白或逗號。",
   "policy.down": "{n} 個無法使用",
-  "policy.edit": "編輯",
+  "policy.edit": "編輯群組",
   "policy.editAmbiguous": "此群組在組態中有多處定義，無法在此編輯",
   "policy.editHelp": "在此群組所在檔案的 group 區段中改寫其策略與篩選條件，保留其他欄位；驗證通過後寫入並重載。",
   "policy.editNoConfig": "組態尚未就緒，無法編輯",

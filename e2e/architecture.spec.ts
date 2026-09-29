@@ -414,7 +414,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
     }
   });
   await page.goto('/#/policies');
-  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit', exact: true}).click();
+  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   const filter = dialog.getByRole('textbox', {name: 'Filter 1', exact: true});
   await filter.fill('name(hk-01)');

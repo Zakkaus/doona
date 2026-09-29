@@ -1213,7 +1213,7 @@
   "policy.checkUrlHelp": "An http or https URL the backend requests through each member. Leave empty to use the global check URL.",
   "policy.checkUrlInvalid": "Enter an http or https URL with a host, up to 2048 bytes, without a user name, whitespace or commas.",
   "policy.down": "{n} unavailable",
-  "policy.edit": "Edit",
+  "policy.edit": "Edit group",
   "policy.editAmbiguous": "This group is defined more than once in the configuration, so it cannot be edited here",
   "policy.editHelp": "Rewrites this group's policy and filters in the group section of the file that defines it, keeping its other fields. Writes and reloads after validation passes.",
   "policy.editNoConfig": "The configuration is not ready for editing yet",
