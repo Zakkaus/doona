@@ -1,10 +1,11 @@
-import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
+import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
 import {chainLabel, connectionRows, nodeOwner} from '../../api/selectors';
 import {features, navAvailable} from '../registry';
 import {type RoutePath} from '../routes';
 import {within} from '../route';
+import {dnsRuleTarget} from '../../dae/ruleText';
 import {dnsTabs} from '../../features/dns/nav';
 import {rulesTabs} from '../../features/rules/nav';
 import {flowsTabs} from '../../features/flows/nav';
@@ -108,8 +109,29 @@ export function ruleEntries(rules: RuleList | undefined, lang: Lang): SearchEntr
       )
     );
 }
+// The DNS tab takes no rule to select, so a hit opens the tab; the list and position tell the rule apart there.
+export function dnsRuleEntries(rules: DnsRuleList | undefined, lang: Lang, t: Translator): SearchEntry[] {
+  const lists = [
+    {list: rules?.request ?? [], title: t('rule.dns.request')},
+    {list: rules?.response ?? [], title: t('rule.dns.response')}
+  ];
+  return lists.flatMap(({list, title}) =>
+    list
+      .filter(rule => rule.kind === 'rule')
+      .map(rule =>
+        entry(
+          [rule.expression, dnsRuleTarget(rule)],
+          `dns-rule:${rule.rule_id}`,
+          rule.expression,
+          `${title} #${formatNumber(rule.index + 1, LOCALE[lang])} → ${dnsRuleTarget(rule)}`,
+          'rules',
+          within('', {tab: 'dns'})
+        )
+      )
+  );
+}
 export function searchSections(
-  entries: Record<'pages' | 'conns' | 'nodes' | 'groups' | 'providers' | 'sources' | 'rules', SearchEntry[]>,
+  entries: Record<'pages' | 'conns' | 'nodes' | 'groups' | 'providers' | 'sources' | 'rules' | 'dnsRules', SearchEntry[]>,
   connections: ConnectionList | undefined,
   t: Translator
 ): SearchIndex {
@@ -121,7 +143,8 @@ export function searchSections(
       {id: 'groups', title: t('search.groups'), entries: entries.groups},
       {id: 'providers', title: t('search.providers'), entries: entries.providers},
       {id: 'sources', title: t('search.sources'), entries: entries.sources},
-      {id: 'rules', title: t('nav.rules'), entries: entries.rules}
+      {id: 'rules', title: t('nav.rules'), entries: entries.rules},
+      {id: 'dnsRules', title: t('rule.dnsTitle'), entries: entries.dnsRules}
     ],
     partial: connections?.truncated ? t('conn.truncated') : null
   };

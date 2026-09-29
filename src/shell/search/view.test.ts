@@ -1,9 +1,10 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import {translate} from '../../i18n';
-import type {Capabilities, ConnectionList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
+import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {
   connectionEntries,
+  dnsRuleEntries,
   groupEntries,
   nodeEntries,
   pageEntries,
@@ -25,6 +26,7 @@ type SearchSources = {
   providers: {data: ProviderList | undefined};
   config: {data: EffectiveConfig | undefined};
   rules: {data: RuleList | undefined};
+  dnsRules?: {data: DnsRuleList | undefined};
 };
 // Every dataset projected at once, as useSearch does one memo at a time.
 function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
@@ -36,7 +38,8 @@ function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchI
       groups: groupEntries(sources.groups.data),
       providers: providerEntries(sources.providers.data, t),
       sources: sourceEntries(sources.config.data, t),
-      rules: ruleEntries(sources.rules.data, lang)
+      rules: ruleEntries(sources.rules.data, lang),
+      dnsRules: dnsRuleEntries(sources.dnsRules?.data, lang, t)
     },
     sources.connections.data,
     t
@@ -180,4 +183,28 @@ it('offers the connections, nodes and policies tabs, and no node tabs where node
   expect(searchView('membership', sources, t).byId.has('page:policies?tab=arrange')).toBe(true);
   capabilities.resources.nodes.available = false;
   expect(searchView('latency', sources, t).byId.has('page:nodes?tab=latency')).toBe(false);
+});
+
+it('finds DNS rules by expression and target, with their list and position, and opens the DNS rules tab', async () => {
+  const api = createMockApi();
+  const dnsRules = await api.dnsRules();
+  const rule = dnsRules.request.find(item => item.kind === 'rule' && item.upstream)!;
+  const fallback = dnsRules.request.find(item => item.kind === 'fallback')!;
+  const sources: SearchSources = {
+    capabilities: {data: await api.capabilities()},
+    connections: {data: undefined},
+    nodes: {data: undefined},
+    groups: {data: undefined},
+    providers: {data: undefined},
+    config: {data: undefined},
+    rules: {data: undefined},
+    dnsRules: {data: {...dnsRules, request: [{...rule, index: 1233}, fallback], response: []}}
+  };
+  const t = translate.bind(null, 'en');
+  const hit = searchView(rule.expression, sources, t).byId.get(`dns-rule:${rule.rule_id}`)!;
+  expect(hit.route).toBe('rules');
+  expect(hit.query).toBe('tab=dns');
+  expect(hit.description).toBe(`Request rules #1,234 → ${rule.upstream}`);
+  expect(searchView(rule.upstream!, sources, t).byId.has(hit.id)).toBe(true);
+  expect(project('', searchIndex(sources, 'en', t)).byId.has(`dns-rule:${fallback.rule_id}`)).toBe(false);
 });
