@@ -22,9 +22,11 @@ export const resourceByOperation = {
   listNodes: 'nodes',
   listProviders: 'providers',
   getProvider: 'providers',
+  getNode: 'nodes',
   getGeoData: 'geodata',
   listGroups: 'groups',
   getGroup: 'groups',
+  getGroupConfig: 'groups',
   listConnections: 'connections',
   listFlows: 'flows',
   getFlow: 'flows',
@@ -32,7 +34,8 @@ export const resourceByOperation = {
   streamEvents: 'events',
   streamLogs: 'logs',
   listDnsLog: 'dns_log',
-  listDnsCache: 'dns_cache'
+  listDnsCache: 'dns_cache',
+  listDnsRules: 'dns_rules'
 };
 const ajv = new Ajv2020({allErrors: true, strict: false, validateFormats: true});
 addFormats(ajv, {mode: 'full'});
@@ -348,7 +351,8 @@ export async function walk({baseUrl, fetch = globalThis.fetch, token, timeout, o
     else if (unreachable) reason = 'server unreachable';
     else if (!mandatory) {
       const resource = operation['x-capability'] ?? resourceByOperation[operation.operationId];
-      if (capabilities?.resources?.[resource]?.available === false) reason = 'capability unavailable';
+      // An absent resource key means unavailable, exactly as available false does.
+      if (resource && capabilities && capabilities.resources?.[resource]?.available !== true) reason = 'capability unavailable';
       else if (operation.method !== 'get' || operation['x-permission'] !== 'observe')
         reason = `SKIP by design: ${operation.method.toUpperCase()} ${operation['x-permission'] ?? 'unclassified'}`;
       else if (settings.skip.has(operation.operationId) || (settings.only.size && !settings.only.has(operation.operationId))) reason = 'filtered';

@@ -129,10 +129,10 @@ describe('native API conformance', () => {
       .filter(([, item]) => item.get?.['x-permission'] === 'observe')
       .map(([path]) =>
         path
-          .replace('{groupId}', 'group-proxy')
+          .replace('{group_id}', 'group-proxy')
           .replace('{flow_id}', 'flow-23')
-          .replace('/nodes/{id}', '/nodes/node-hk-01')
-          .replace('{id}', 'provider-a')
+          .replace('{node_id}', 'node-hk-01')
+          .replace('{provider_id}', 'provider-a')
           .replace('{source_id}', 'source-main')
       );
     expect(new Set(server.requests.map(request => request.path))).toEqual(new Set(['/api', '/api/v1/version', '/api/v1/capabilities', ...observedPaths]));
@@ -202,7 +202,7 @@ describe('native API conformance', () => {
       status: 'FAIL',
       detail: 'selected but not run: capability unavailable'
     });
-    expect(result.checks).toContainEqual({id: 'getGroup.request', operation: 'getGroup', status: 'SKIP', detail: 'no observed id for groupId'});
+    expect(result.checks).toContainEqual({id: 'getGroup.request', operation: 'getGroup', status: 'SKIP', detail: 'no observed id for group_id'});
     expect(server.requests.filter(request => request.path.startsWith('/api/v1/flows')).map(request => request.path + request.query)).toEqual([
       '/api/v1/flows',
       '/api/v1/flows?cursor=next',
