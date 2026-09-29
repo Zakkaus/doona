@@ -360,6 +360,8 @@ export function connectionDetail(
             : null,
         source: current.src ? (sourceIp(current.src) ?? current.src) : null,
         closable: current.state === 'active' || current.state === 'dialing' || current.state === 'routing',
+        // An ebpf-only observation is kernel-forwarded: the backend has no userspace transport to cancel.
+        closeReason: current.observed_by === 'ebpf' ? t('conn.notClosable') : null,
         stateHelp: connectionStateHelp(current.state, t)
       }
     : null;

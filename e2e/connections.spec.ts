@@ -395,10 +395,14 @@ test('closing a connection removes it from the list and clears the selection', a
   await expect(page.locator('.rp-toast.positive')).toContainText('Closed api.telegram.org');
   await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.locator('.rp-table [data-key="c-0001"]')).toHaveCount(0);
-  // A kernel-observed connection is refused by the backend, and the row stays.
+  // A kernel-forwarded connection has no userspace transport to cancel, so Close says why before it is pressed.
   await page.goto('/#/connections?id=c-0002');
-  await panel.getByRole('button', {name: 'Close connection', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('cannot be closed');
+  const reason =
+    'The backend has no userspace transfer to interrupt, so this connection cannot be closed. Connections the kernel forwards directly are of this kind.';
+  const close = panel.getByRole('button', {name: 'Close connection', exact: true});
+  await expect(close).toBeDisabled();
+  await expect(close).toHaveAccessibleDescription(reason);
+  await expect(panel.getByText(reason)).toBeVisible();
   await expect(page.locator('.rp-table [data-key="c-0002"]')).toHaveCount(1);
 });
 

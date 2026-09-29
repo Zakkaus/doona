@@ -1,4 +1,5 @@
 import {
+  ActionHelp,
   Badge,
   Button,
   ConfirmButton,
@@ -120,9 +121,11 @@ export function Connections(props: PageProps) {
                   {cur.source && <Button onPress={vm.onlyClient}>{t('conn.onlyThisClient')}</Button>}
                 </div>
                 {vm.canClose && cur.closable && (
-                  <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled} onPress={vm.close.run}>
-                    {t('conn.close')}
-                  </Button>
+                  <ActionHelp reason={cur.closeReason}>
+                    <Button negative quiet isPending={vm.close.pending} isDisabled={vm.close.disabled || !!cur.closeReason} onPress={vm.close.run}>
+                      {t('conn.close')}
+                    </Button>
+                  </ActionHelp>
                 )}
               </div>
               <Kv items={cur.fields} />
