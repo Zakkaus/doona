@@ -18,12 +18,14 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
   const setLevel = useCallback((value: string) => setRequestedLevel(value as LogLevel), []);
   const [target, setTarget] = useState('');
   const [paused, setPaused] = useState(false);
-  const targetFilter = useDebounced(target.trim());
   const resource = capabilities.data?.resources.logs;
+  // The backend lists `target` among its filters only when it applies one, and refuses a filter it does not list.
+  const filtersTarget = resource?.filters?.includes('target') ?? false;
+  const targetFilter = useDebounced(filtersTarget ? target.trim() : '');
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});
   const settings = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false).data;
-  const recorded = settings?.log.level;
+  const recorded = settings?.log?.level;
   const view = useMemo(
     () => logView(feed.records, resource?.levels ?? [], version.data?.engine.name, locale, t, feed.gaps, recorded),
     [feed.records, feed.gaps, resource, version.data, locale, t, recorded]
@@ -37,6 +39,7 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
     offered: resource?.levels ?? noLevels,
     level: level ?? '',
     setLevel,
+    filtersTarget,
     target,
     setTarget,
     paused,

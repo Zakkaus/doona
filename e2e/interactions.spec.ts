@@ -31,7 +31,7 @@ test('connection test stays pending and suppresses repeated activation until dis
   await page.route('**/pending-backend/api', async route => {
     requests++;
     await hold;
-    await route.fulfill({json: {name: 'dae/honk-native', api_major: 1, base_path: '/api/v1', links: {}}});
+    await route.fulfill({json: {name: 'daeuniverse/native', api_major: 1, base_path: '/api/v1', links: {}}});
   });
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill(new URL(page.url()).origin + '/pending-backend');

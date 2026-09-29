@@ -829,6 +829,7 @@
   "login.connectedTo": "Connecting to {backend}",
   "login.create": "Create and sign in",
   "login.demoNote": "Demo account: {username}  Password: {password}",
+  "login.engineOutdated": "The engine's API is older than this doona; update the engine.",
   "login.failed": "Could not sign in: {error}",
   "login.gameBest": "Best {amount}",
   "login.gameLabel": "Mini game: press to make the duck flap",

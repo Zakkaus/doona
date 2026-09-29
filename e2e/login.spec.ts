@@ -158,7 +158,7 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
 test('changing the backend URL while signed out probes the new backend', async ({page}) => {
   expectLoadFailures(page, /\/(one|two)\/api/);
   const discovery = (setupRequired: boolean) => ({
-    name: 'dae/honk-native',
+    name: 'daeuniverse/native',
     api_major: 1,
     links: {auth_setup: '/api/v1/auth/setup', auth_login: '/api/v1/auth/login'},
     auth: {mode: 'password', setup_required: setupRequired}

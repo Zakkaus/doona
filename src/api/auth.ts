@@ -1,5 +1,5 @@
 import type {components} from './types';
-import {responseError, send} from './error';
+import {LocalError, responseError, send} from './error';
 import {isDemoApi} from './profiles';
 
 // Sign-in reads only what the public discovery view carries; the admitted view's auth adds anonymous_loopback.
@@ -16,13 +16,15 @@ const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + p
 const demoAuth = () => import('./mock/auth');
 export const DEMO_ACCOUNT = {username: 'demo', password: 'demo'} as const;
 
-// Discovery is public, so it is read without a token; a backend that predates password login has no `auth`.
-export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery | null> {
+// Discovery is public, so it is read without a token. An engine that still reports the old API name serves an API
+// older than this doona, which it cannot sign in to.
+export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery> {
   if (isDemoApi(base)) return (await demoAuth()).mockDiscovery();
   const response = await send(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
   if (!response.ok) throw await responseError(response);
-  const body: {auth?: AuthDiscovery} = await response.json();
-  return body.auth ?? null;
+  const body: {name?: string; auth: AuthDiscovery} = await response.json();
+  if (body.name === 'dae/honk-native') throw new LocalError('login.engineOutdated');
+  return body.auth;
 }
 
 // A backend without discovery may still serve the native API; only a 404 from its capabilities says it does not.
@@ -31,8 +33,8 @@ export async function servesNativeApi(base: string, signal?: AbortSignal): Promi
   return response.status !== 404;
 }
 
-export function signInKind(auth: AuthDiscovery | null): SignIn {
-  if (auth?.mode !== 'password') return 'token';
+export function signInKind(auth: AuthDiscovery): SignIn {
+  if (auth.mode !== 'password') return 'token';
   return auth.setup_required ? 'setup' : 'login';
 }
 

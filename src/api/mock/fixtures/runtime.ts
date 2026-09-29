@@ -67,7 +67,7 @@ export const runtimeOutbounds: RuntimeOutbounds = {
 };
 // honk's latest upstream release as its /version reports it: the tag name and the tagged commit.
 export const version: Version = {
-  api: {name: 'dae/honk-native', major: 1, status: 'draft'},
+  api: {name: 'daeuniverse/native', major: 1, status: 'draft'},
   engine: {name: 'honk', version: 'v0.0.1.beta.81'},
   build: {revision: '697ac9ea5e82bc120ed942943fe0cafbdd7bf423', target: null, built_at: null}
 };
@@ -124,7 +124,13 @@ export const datapath: Datapath = {
   ebpf: {
     ...runtime.datapath.ebpf!,
     attachments: ['lan0', 'wan0'].flatMap(iface =>
-      (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, kind: 'interface' as const, interface: iface, direction, state: 'attached' as const}))
+      (['ingress', 'egress'] as const).map(direction => ({
+        name: 'honk_' + direction,
+        kind: 'interface' as const,
+        interface: iface,
+        direction,
+        state: 'attached' as const
+      }))
     ),
     maps: {state: 'ready', conn_state: {occupancy: live.length, capacity: 65536, occupancy_known: true}}
   },

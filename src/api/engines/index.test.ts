@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {normalizeCapabilities} from '../capabilities';
 import {capabilities, version} from '../mock/fixtures';
-import type {Capabilities, ReportedCapabilities, Version} from '../model';
+import type {Capabilities, ReportedCapabilities} from '../model';
 import {scanConfig} from '../../dae/text';
 import {engineOf, type EngineSubject} from '.';
 
@@ -13,11 +13,11 @@ const patched = (patch: {[K in keyof Resources]?: Partial<Resources[K]>}): Capab
   ) as Resources
 });
 const honk = engineOf(version);
-const other = engineOf({...version, api: {...version.api, name: 'other/backend'}} as unknown as Version);
+const other = engineOf({...version, engine: {...version.engine, name: 'other'}});
 const listener = "experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}";
 
 describe('engineOf', () => {
-  it('knows honk by its API name and nothing else', () => {
+  it('knows honk by its engine name and nothing else', () => {
     expect(honk.id).toBe('honk');
     expect(other.id).toBe('unknown');
     expect(engineOf(undefined).id).toBe('unknown');

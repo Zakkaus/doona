@@ -20,12 +20,12 @@ afterEach(() => vi.unstubAllGlobals());
 it('reads the API version and sign-in mode a backend reports', async () => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => json({name: 'dae/honk-native', api_major: 1, auth: {mode: 'password', setup_required: false}}))
+    vi.fn(async () => json({name: 'daeuniverse/native', api_major: 1, auth: {mode: 'password', setup_required: false}}))
   );
   expect(await probeBackend(base, '', new AbortController().signal, origin)).toEqual({version: '1', password: true});
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => json({name: 'dae/honk-native', api_major: 2}))
+    vi.fn(async () => json({name: 'daeuniverse/native', api_major: 2, auth: {mode: 'token', setup_required: false}}))
   );
   expect(await probeBackend(base, 'secret', new AbortController().signal, origin)).toEqual({version: '2', password: false});
 });

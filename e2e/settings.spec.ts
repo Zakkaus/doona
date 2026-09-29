@@ -102,7 +102,7 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
 test('connection testing uses the unsaved prefix and token for native discovery', async ({page}) => {
   await page.route('**/settings-backend/api', async route => {
     if (route.request().headers().authorization !== 'Bearer test-token') return route.fulfill({status: 401});
-    await route.fulfill({json: {name: 'dae/honk-native', status: 'draft', api_major: 1, base_path: '/api/v1', links: {version: '/api/v1/version'}}});
+    await route.fulfill({json: {name: 'daeuniverse/native', status: 'draft', api_major: 1, base_path: '/api/v1', links: {version: '/api/v1/version'}}});
   });
   await page.goto('/#/settings');
   const origin = new URL(page.url()).origin;
