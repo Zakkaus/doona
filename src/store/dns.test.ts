@@ -66,9 +66,8 @@ it('passes on anything but a timed refusal, a second refusal and a page of one',
   expect(single).toHaveBeenCalledTimes(1);
 });
 
-it('walks the cache at the smaller page for the rest of the listing once a page is refused', async () => {
+it('walks the cache at one page size and starts over without a cursor once a snapshot does not fit', async () => {
   vi.useFakeTimers();
-  const pages: Record<string, DnsCacheList> = {};
   const entry = (id: string) => ({entry_id: id}) as DnsCacheList['entries'][number];
   const page = (ids: string[], next_cursor: string | null) =>
     ({
@@ -78,20 +77,27 @@ it('walks the cache at the smaller page for the rest of the listing once a page 
       next_cursor,
       entries: ids.map(entry)
     }) as DnsCacheList;
-  pages['start'] = page(['a'], 'p2');
-  pages['p2'] = page(['b', 'c'], null);
+  const pages: Record<string, DnsCacheList> = {start: page(['a'], 'p2'), p2: page(['b', 'c'], null)};
+  let refusals = 1;
   const dnsCache = vi.fn(async (query?: DnsCacheQuery) => {
-    if ((query?.limit ?? 0) > 250) throw budget();
+    if (!query?.cursor && refusals-- > 0) throw new ApiError(503, 'snapshot_unavailable', 'A coherent snapshot is unavailable', 'r1', null, 2);
     return pages[query?.cursor ?? 'start'];
   });
   const listing = dnsCacheListing({dnsCache} as unknown as Api);
   await vi.advanceTimersByTimeAsync(1000);
+  expect(dnsCache).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1000);
   expect((await listing).entries.map(item => item.entry_id)).toEqual(['a', 'b', 'c']);
   expect(dnsCache.mock.calls.map(([query]) => [query?.cursor, query?.limit])).toEqual([
     [undefined, 1000],
-    [undefined, 250],
-    ['p2', 250]
+    [undefined, 1000],
+    ['p2', 1000]
   ]);
+  // A second refusal in a row is the caller's to show.
+  refusals = 2;
+  const twice = expect(dnsCacheListing({dnsCache} as unknown as Api)).rejects.toMatchObject({code: 'snapshot_unavailable'});
+  await vi.advanceTimersByTimeAsync(2000);
+  await twice;
 });
 
 it('reads cache usage from a listing walked within the last minute instead of asking again', async () => {
