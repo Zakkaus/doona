@@ -111,6 +111,8 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
       localStorage.setItem('doona-api', 'mock');
       localStorage.setItem('doona-lang', 'en');
       sessionStorage.setItem('doona-session', session);
+      // A reload just happened, so the failed chunk shows its message instead of reloading the page by itself.
+      sessionStorage.setItem('doona-stale-reload', String(Date.now()));
     }, demoSession('legacy'));
     let reject = true;
     await page.route(`**/assets/${chunk}-*.js`, route => (reject ? route.abort() : route.continue()));
@@ -118,13 +120,13 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
       await page.goto(chunk === 'Policies' ? '/#/policies' : '/#/activity');
       const alert = page.locator('.rp-content .rp-alert').first();
       await expect(alert).toBeVisible();
-      await expect(alert.getByRole('button', {name: 'Retry'})).toBeVisible();
+      await expect(alert.getByRole('button', {name: 'Reload'})).toBeVisible();
       await page.locator('.rp-nav[href="#/settings"]').click();
       await expect(page.locator('#settings-backend')).toBeVisible();
       await page.locator(`.rp-nav[href="#/${chunk === 'Policies' ? 'policies' : 'activity'}"]`).click();
       await expect(alert).toBeVisible();
       reject = false;
-      await alert.getByRole('button', {name: 'Retry'}).click();
+      await alert.getByRole('button', {name: 'Reload'}).click();
       await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : '.rp-strip')).toBeVisible();
       await expect(page.locator('.rp-content .rp-alert')).toHaveCount(0);
       if (chunk !== 'Policies') await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
@@ -144,6 +146,7 @@ test('a rejected showcase import leaves its panel empty and the sign-in form wor
     localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
     localStorage.setItem('doona-profile', 'demo');
     localStorage.setItem('doona-lang', 'en');
+    sessionStorage.setItem('doona-stale-reload', String(Date.now()));
   });
   const rejected = page.waitForRequest(/\/LoginShowcase-[^/]+\.js$/);
   await page.route('**/assets/LoginShowcase-*.js', route => route.abort());
@@ -195,6 +198,7 @@ test('a search dialog that fails to load leaves nothing open and says so', async
   expectLoadFailures(page, /\/SearchDialog-[^/]+\.js$/);
   await page.addInitScript(() => {
     window.requestIdleCallback = () => 0;
+    sessionStorage.setItem('doona-stale-reload', String(Date.now()));
   });
   await page.route('**/assets/SearchDialog-*.js', route => route.abort());
   await page.goto('/#/activity');
