@@ -225,7 +225,8 @@ it.each([
   const caps = {resources: {probes: {available: true, kinds, transports: ['tcp'], targets: ['node'], ip_versions: ['ipv4', 'ipv6']}}} as Capabilities;
   const request = latencyProbe(caps, {type: 'node', node_id: 'n'});
   expect(request?.kind ?? null).toBe(expected);
-  if (request) expect(request).toMatchObject({purpose: 'data', transport: ['tcp'], warmth: 'warm', ip_version: 'any'});
+  if (request) expect(request).toMatchObject({transport: ['tcp'], warmth: 'warm', ip_version: 'any'});
+  expect(request ?? {}).not.toHaveProperty('purpose');
 });
 
 it.each([
