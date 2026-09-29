@@ -7,7 +7,7 @@ import {routingTree, treeIndex, treeReach} from './map';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('distinguishes map readiness and supplies the pinned flow count', () => {
-  const empty = routingTree([], [], [], []);
+  const empty = routingTree([], [], [], undefined);
   expect(routingMapView(empty, false, false, null, 0, t).state).toBe('loading');
   expect(routingMapView(empty, false, true, null, 0, t).state).toBe('error');
   expect(routingMapView(empty, true, false, null, 0, t).state).toBe('empty');
@@ -20,8 +20,15 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   const detail = await api.flow(list.flows[0].id);
   detail.input = {...detail.input, domain: null, dst: '[2001:db8::5]:443'};
   detail.trace.steps.reverse();
-  const view = {...flowRecordsView([{...list.flows[0], input: undefined}], list, new Map(), t, 'en'), detail: flowDetailView(detail, t, 'en')};
+  const view = {...flowRecordsView([{...list.flows[0], input: undefined}], list, undefined, new Map(), t, 'en'), detail: flowDetailView(detail, t, 'en')};
   expect(view.rows[0].target).toBe(list.flows[0].id);
+  // Only a flow routed by the listed generation links to the listed rule; the others keep the recorded text alone.
+  const routed = list.flows.find(flow => flow.rule_id && flow.rule_expression)!;
+  const links = (rule_generation_id: string | null) =>
+    flowRecordsView([{...routed, rule_generation_id}], list, routed.rule_generation_id!, new Map(), t, 'en').rows[0];
+  expect(links(routed.rule_generation_id)).toMatchObject({ruleId: routed.rule_id, expression: routed.rule_expression});
+  expect(links('older')).toMatchObject({ruleId: null, expression: routed.rule_expression});
+  expect(links(null)).toMatchObject({ruleId: null, expression: routed.rule_expression});
   expect(view.detail!.seed).toMatchObject({
     domain: null,
     dip: '2001:db8::5',
@@ -43,7 +50,7 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
 it('prepares tile labels with configured destinations, nested policies and unknown nodes', async () => {
   const api = createMockApi();
   const [rules, groups, nodes] = await Promise.all([api.rules(), api.groups(), api.nodes({limit: 1000})]);
-  const tree = routingTree([], groups, nodes.nodes, rules.rules);
+  const tree = routingTree([], groups, nodes.nodes, rules);
   const tiles = tileViews(tree, t, 'en');
   const rule = rules.rules.find(rule => rule.outbound === 'block')!;
   const tile = tiles.find(tile => tile.id === 'rule:' + rule.rule_id)!;
@@ -77,7 +84,7 @@ it('names a policy by what it does, whatever the native spelling', async () => {
   const api = createMockApi();
   const groups = await api.groups();
   const group = {...groups[0], policy: {...groups[0].policy, kind: 'urltest' as const, native: 'min_avg10'}};
-  const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], []), t, 'en')[0].notes;
+  const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], undefined), t, 'en')[0].notes;
   expect(notes('min_avg10')).toContainEqual({text: t('policy.kind.urltest')});
   expect(notes('min_last_delay')).toContainEqual({text: t('policy.kind.urltest')});
   expect(notes('min_moving_avg')).toContainEqual({text: t('arrange.policy.fastest')});
@@ -85,13 +92,8 @@ it('names a policy by what it does, whatever the native spelling', async () => {
 });
 
 it('bounds each tree reveal while keeping layout, connector endpoints and branch reachability', async () => {
-  const rule = (await createMockApi().rules()).rules[0];
-  const tree = routingTree(
-    [],
-    [],
-    [],
-    Array.from({length: 4096}, (_, i) => ({...rule, rule_id: String(i), outbound: 'direct'}))
-  );
+  const rules = await createMockApi().rules();
+  const tree = routingTree([], [], [], {...rules, rules: Array.from({length: 4096}, (_, i) => ({...rules.rules[0], rule_id: String(i), outbound: 'direct'}))});
   const shown = treeWindow(tree, 30);
   const view = treeGeometry(shown, 720, t, 'en');
   expect(view.placed.filter(tile => tile.view.stage === 'rule')).toHaveLength(30);
@@ -112,7 +114,7 @@ it('bounds each tree reveal while keeping layout, connector endpoints and branch
 it('names the groups leading to a node tile and leaves an unmeasured step without a unit', async () => {
   const api = createMockApi();
   const [rules, groups, nodes, list] = await Promise.all([api.rules(), api.groups(), api.nodes({limit: 1000}), api.flows()]);
-  const tree = routingTree(list.flows, groups, nodes.nodes, rules.rules);
+  const tree = routingTree(list.flows, groups, nodes.nodes, rules);
   const tiles = tileViews(tree, t, 'en');
   const link = tree.links.find(link => link.target.startsWith('node:'))!;
   const source = tiles.find(tile => tile.id === link.source)!;

@@ -1,4 +1,4 @@
-import type {FlowSummary, GroupSummary, Node, RoutingRule} from '../../api/model';
+import type {FlowSummary, GroupSummary, Node, RoutingRule, RuleList} from '../../api/model';
 import {readTag, tagId} from '../shared/taggedId';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../../api/selectors';
@@ -19,26 +19,21 @@ type Stage = (typeof stages)[number];
 
 type NodeNames = ReadonlyMap<string, string>;
 export const nodeNames = (nodes: Node[]): NodeNames => new Map(nodes.map(n => [n.id, n.name]));
-// Retained flows whose rule ID now has another expression keep a separate historical entry.
+// A flow joins the listed rule only when the listed generation routed it; flows from another or an unknown
+// generation keep a separate historical entry under their recorded expression.
 const HISTORICAL = '\u0000';
-function ruleKey(flow: FlowSummary, rules: ReadonlyMap<string, RoutingRule>): string | undefined {
+function ruleKey(flow: FlowSummary, generation: string | undefined): string | undefined {
   if (!flow.rule_id) return undefined;
-  const current = rules.get(flow.rule_id);
-  return current?.expression === flow.rule_expression ? flow.rule_id : flow.rule_id + HISTORICAL + flow.rule_expression;
+  return flow.rule_generation_id !== null && flow.rule_generation_id === generation ? flow.rule_id : flow.rule_id + HISTORICAL + flow.rule_expression;
 }
-function stagePart(
-  flow: FlowSummary,
-  stage: Stage,
-  names: NodeNames,
-  rules: ReadonlyMap<string, RoutingRule>
-): {label: string; unknown: boolean; key?: string} | null {
+function stagePart(flow: FlowSummary, stage: Stage, names: NodeNames, generation: string | undefined): {label: string; unknown: boolean; key?: string} | null {
   switch (stage) {
     case 'client': {
       const client = sourceIp(flow.input?.src ?? undefined);
       return {label: client ?? 'unknown', unknown: !client};
     }
     case 'rule':
-      return flow.rule_expression ? {label: flow.rule_expression, unknown: false, key: ruleKey(flow, rules)} : {label: 'unknown', unknown: true};
+      return flow.rule_expression ? {label: flow.rule_expression, unknown: false, key: ruleKey(flow, generation)} : {label: 'unknown', unknown: true};
     case 'outbound':
       return flow.outbound ? {label: flow.outbound, unknown: false} : {label: 'unknown', unknown: true};
     case 'node': {
@@ -55,12 +50,11 @@ export const stageOf = (id: string): Stage | undefined => readTag(id, stages)?.k
 
 // Identities are keyed by node ID, not name, so matching needs no name catalogue.
 const noNames: NodeNames = new Map();
-export function flowsThrough(flows: FlowSummary[], id: string, rules: RoutingRule[]): FlowSummary[] {
+export function flowsThrough(flows: FlowSummary[], id: string, rules: RuleList | undefined): FlowSummary[] {
   const stage = stageOf(id);
   if (!stage) return [];
-  const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
   return flows.filter(flow => {
-    const part = stagePart(flow, stage, noNames, rulesById);
+    const part = stagePart(flow, stage, noNames, rules?.generation_id);
     return part !== null && stageId(stage, part) === id;
   });
 }
@@ -76,12 +70,11 @@ export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, 
   return label(key);
 }
 
-export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RoutingRule[], by: TreeBy = 'rule'): RoutingTree {
+export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes: Node[], rules: RuleList | undefined, by: TreeBy = 'rule'): RoutingTree {
   const names = nodeNames(nodes);
   const byId = new Map(groups.map(group => [group.id, group]));
   const groupsByName = new Map(groups.map(group => [group.name, group]));
   const nodesById = new Map(nodes.map(node => [node.id, node]));
-  const rulesById = new Map(rules.map(rule => [rule.rule_id, rule]));
   const leafItems = new Map<string, TreeLeaf>();
   const outboundItems = new Map<string, TreeOutbound>();
   const nodeItems = new Map<string, TreeNode>();
@@ -130,7 +123,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   };
   // Config first, in evaluation order: every rule, its outbound and the selected node exist before a flow used them.
   if (by === 'rule')
-    for (const rule of rules) {
+    for (const rule of rules?.rules ?? []) {
       const entry = leafItem(stageId('rule', {key: rule.rule_id, label: rule.expression}), rule.expression);
       entry.must = rule.must;
       entry.fallback = rule.kind === 'fallback';
@@ -143,7 +136,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   for (const flow of flows) {
     let previous: TreeItem | undefined;
     for (const stage of path) {
-      const part = stagePart(flow, stage, names, rulesById);
+      const part = stagePart(flow, stage, names, rules?.generation_id);
       if (!part) break;
       const current =
         stage === 'outbound'
