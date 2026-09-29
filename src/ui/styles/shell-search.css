@@ -276,7 +276,7 @@
 }
 /* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. With it,
    the bar needs 333px: the 24px gutter, two 8px gaps, the 137px brand with the long name a honk leaves, and the 156px
-   of search, refresh, reload and the overflow menu. */
+   of search, refresh, apply and the overflow menu; below 1024px reload is in the overflow menu. */
 @media (max-width: 332px) {
   .rp-brand-text {
     position: absolute;
@@ -518,7 +518,7 @@
   line-height: 36px;
   color: var(--rp-text);
 }
-/* Held rules: a count on the refresh button, which then applies them. Positioned over the icon, so no width changes. */
+/* Held rules: a count on the apply button. Positioned over the icon, so no width changes. */
 .rp-held {
   position: relative;
 }
