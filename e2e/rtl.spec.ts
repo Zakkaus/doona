@@ -163,8 +163,8 @@ test.describe('right to left at 390px', () => {
 
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     const rows = page.locator('.rp-subitem');
-    // Four submenu rows and the Backend row, which opens a popover and has no chevron.
-    await expect(rows).toHaveCount(5);
+    // Four submenu rows, then Reload honk and Backend, which open a dialog and a popover and have no chevron.
+    await expect(rows).toHaveCount(6);
     for (const row of await rows.all()) {
       const {x, width} = await box(row);
       expect(x).toBeGreaterThanOrEqual(0);
@@ -184,7 +184,7 @@ test.describe('right to left at 390px', () => {
     expect(await turn(back)).toBe(-1);
     await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(6);
     await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
   });
 });
