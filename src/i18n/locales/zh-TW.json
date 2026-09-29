@@ -1438,7 +1438,7 @@
   "shell.backend.signIn": "需要登入",
   "shell.backend.title": "後端",
   "shell.backendBusy": "後端忙碌：{n} 秒後重試",
-  "shell.guide": "安裝指南",
+  "shell.guide": "指南",
   "shell.langUnavailable": "無法切換至{name}：介面文字載入失敗。",
   "shell.macShortcut": "⌘K",
   "shell.notOffered": "此後端不提供該頁面",
