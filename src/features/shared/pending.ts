@@ -59,7 +59,14 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   const found =
     diagnostics ??
     (error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? null) : null);
-  if (!found) return {text: noticeText(failureNotice(error, t, t('ui.writeFailed')), t), lines: []};
+  if (!found) {
+    const notice = failureNotice(error, t, t('ui.writeFailed'));
+    return {
+      text: noticeText(notice, t),
+      lines: [],
+      ...(notice.requestId ? {toastText: noticeText(notice, t, false), requestId: notice.requestId} : {})
+    };
+  }
   const errors = found.filter(item => item.level === 'error').length;
   const restart = restartRequired(found);
   return {
@@ -102,5 +109,7 @@ function heldPlace(rule: PendingRule, sources: ConfigSource[], t: Translator): s
 
 // A failure after earlier files were written: those rules are in place and reloaded, so it leads with them.
 export function partialFailure(failure: PendingFailure, written: number, held: number, t: Translator): PendingFailure {
-  return written ? {text: t('rule.partial', {n: written, held}), lines: [failure.text, ...failure.lines]} : failure;
+  return written
+    ? {text: t('rule.partial', {n: written, held}), lines: [failure.text, ...failure.lines], ...(failure.requestId ? {requestId: failure.requestId} : {})}
+    : failure;
 }

@@ -33,7 +33,7 @@ import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
-import {errorText, noticeText} from '../../api/error';
+import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
@@ -137,7 +137,7 @@ export function useNodesPage({go, query}: PageProps) {
       void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
         if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}), {action: viewGroup(group)});
         const problem = editProblem(result, t);
-        if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
+        if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
       });
     },
     [apply, t, viewGroup]
@@ -160,10 +160,11 @@ export function useNodesPage({go, query}: PageProps) {
     const submitted = session.current;
     const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
-    const refuse = (text: string) => {
+    const refuse = (text: string, toastText = text, requestId?: string) => {
       if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
-      else toast('negative', text);
+      else toast('negative', toastText, {requestId});
     };
+    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.requestId);
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
@@ -208,7 +209,7 @@ export function useNodesPage({go, query}: PageProps) {
           ])
         );
         const problem = editProblem(result, t);
-        if (problem) refuse(noticeText(problem, t));
+        if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         toast('positive', t('nodes.joined', {name: node, group}), {action: viewGroup(group)});
       } else if (dialog.kind === 'editProvider') {
@@ -227,7 +228,7 @@ export function useNodesPage({go, query}: PageProps) {
           return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
         }, editSource);
         const problem = editProblem(result, t);
-        if (problem) refuse(noticeText(problem, t));
+        if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         refetchProviders();
         toast('positive', t('nodes.edited', {name: tag}));
@@ -243,7 +244,7 @@ export function useNodesPage({go, query}: PageProps) {
         close();
       }
     } catch (error) {
-      refuse(errorText(error, t));
+      refuse(errorText(error, t), errorText(error, t, false), requestIdOf(error));
     } finally {
       submitting.current = null;
       setPendingDialog(null);

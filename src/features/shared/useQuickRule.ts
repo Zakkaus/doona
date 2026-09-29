@@ -155,7 +155,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
     // A rule in its file closes the dialog even when the reload failed, so it is not inserted twice.
     setDraft(null);
     if (outcome.failure) {
-      toast('negative', outcome.failure.text);
+      toast('negative', outcome.failure.toastText ?? outcome.failure.text, {requestId: outcome.failure.requestId});
       return;
     }
     if (rule.list !== 'routing') {

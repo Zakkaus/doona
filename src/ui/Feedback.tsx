@@ -17,7 +17,7 @@ import AlertTriangle from './icons/AlertTriangle';
 import InfoCircle from './icons/InfoCircle';
 import ChevronDown from './icons/ChevronDown';
 import {useT, type Translator} from '../i18n';
-import {errorLines, failureNotice, withoutRequestNote} from '../api/error';
+import {errorLines, errorText, failureNotice, requestIdOf} from '../api/error';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 import {escapeLayers} from './hooks';
@@ -127,16 +127,14 @@ type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
 // the person needs time to reach the button (WCAG 2.2.1).
 type ToastAction = {label: string; onAction: () => void; closeOnAction?: boolean};
 // The detail is a second, smaller line under the message: what went wrong, in the backend's words.
-type ToastOptions = {detail?: string; action?: ToastAction};
+type ToastOptions = {detail?: string; action?: ToastAction; requestId?: string};
 type ToastMessage = {kind: ToastKind; text: string; detail?: string; action?: ToastAction};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
 // A repeated message replaces its earlier copy at the front instead of stacking behind it.
 const queued = new Map<string, string>();
 // A toast leaves the request id out of its words and logs the failure with it instead, where a bug report can find it.
-export const toast = (kind: ToastKind, fullText: string, {detail: fullDetail, action}: ToastOptions = {}) => {
-  const text = withoutRequestNote(fullText);
-  const detail = fullDetail && withoutRequestNote(fullDetail);
-  if (text !== fullText || detail !== fullDetail) console.warn(fullDetail ? `${fullText}\n${fullDetail}` : fullText);
+export const toast = (kind: ToastKind, text: string, {detail, action, requestId}: ToastOptions = {}) => {
+  if (requestId) console.warn(`${text}${detail ? `\n${detail}` : ''} (request_id: ${requestId})`);
   const id = [kind, text, detail ?? ''].join('\n');
   const earlier = queued.get(id);
   if (earlier) toasts.close(earlier);
@@ -155,8 +153,13 @@ export const toast = (kind: ToastKind, fullText: string, {detail: fullDetail, ac
 // neutrally.
 export const toastFailure = (error: unknown, t: Translator, summary: string, action?: ToastAction) => {
   const notice = failureNotice(error, t, summary);
-  toast(notice.kind, notice.text, {detail: notice.detail, action});
+  toast(notice.kind, notice.text, {detail: notice.detail, requestId: notice.requestId, action});
 };
+// An error as a toast's detail, with its request id passed on for the log.
+export const toastErrorDetail = (error: unknown, t: Translator) => ({
+  detail: errorText(error, t, false),
+  requestId: requestIdOf(error)
+});
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
 export type ToastPlacement = 'top' | 'top end' | 'bottom' | 'bottom end';

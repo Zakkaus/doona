@@ -3,8 +3,7 @@ import type {GeoDataSettingsPatch} from '../../api/model';
 import {useCapabilities, useGeodata, useGroups, useRuntimeSettings} from '../../store';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
-import {toast, toastFailure} from '../../ui/ui';
-import {errorText} from '../../api/error';
+import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
 import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
 import {geodataUpdateReason} from './view';
@@ -93,7 +92,7 @@ export function useGeodataSettings() {
       (error: unknown) => {
         inflight.current = false;
         setPending(null);
-        toast('negative', t('settings.geodataSaveFailed'), {detail: errorText(error, t)});
+        toast('negative', t('settings.geodataSaveFailed'), toastErrorDetail(error, t));
         return false;
       }
     );

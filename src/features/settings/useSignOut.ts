@@ -3,8 +3,7 @@ import {useT} from '../../i18n';
 import {closeSession} from '../../api/auth';
 import {clearSession, sessionToken} from '../../api/session';
 import {readProfiles} from '../../api/profiles';
-import {toast} from '../../ui/ui';
-import {errorText} from '../../api/error';
+import {toast, toastErrorDetail} from '../../ui/ui';
 import {buildHash} from '../../shell/route';
 import {defaultRoute} from '../../shell/routes';
 
@@ -25,7 +24,7 @@ export function useSignOut() {
       } catch (error) {
         // The session stays usable on the backend, so it is kept here too rather than silently orphaned.
         setBusy(false);
-        toast('negative', t('settings.signOutFailed'), {detail: errorText(error, t)});
+        toast('negative', t('settings.signOutFailed'), toastErrorDetail(error, t));
         return;
       }
       clearSession();

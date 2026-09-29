@@ -10,10 +10,9 @@ import {queryTypes, useGroups, useNodeProbe, useNodes, useProviders, useRules} f
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {isPort} from '../../dae/setup';
 import {useLang, useT} from '../../i18n';
-import {toast, toastFailure, useLinked} from '../../ui/ui';
+import {toast, toastErrorDetail, toastFailure, useLinked} from '../../ui/ui';
 import {chainLinks, dnsView, evaluationView, nameLinks, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
-import {errorText} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
@@ -67,7 +66,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const groupsListed = offered(resources, 'groups', {whileLoading: false});
   const {busy, error, run} = useAction<'trace'>();
   const problem = error ?? capabilities.error;
-  const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed'), {detail: errorText(error, t)}));
+  const report = useEffectEvent((error: Error) => toast('negative', t('rule.traceFailed'), toastErrorDetail(error, t)));
   useEffect(() => {
     if (problem) report(problem);
   }, [problem]);

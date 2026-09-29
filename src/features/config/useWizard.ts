@@ -1,11 +1,10 @@
-import {errorText} from '../../api/error';
 import {useEffect, useMemo, useState} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import type {ConfigEditor} from './useConfigPage';
 import {useSourceComplete} from '../../store/config';
-import {toast, useLinked} from '../../ui/ui';
+import {toast, toastErrorDetail, useLinked} from '../../ui/ui';
 import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
 import {isQuotable} from '../../dae/text';
 import {type RuleTemplate} from '../../dae/templates';
@@ -78,7 +77,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   const apply = async () => {
     if (busy || !valid || conflict) return;
     if (preview.error) {
-      toast('negative', t('config.previewFailed'), {detail: errorText(preview.error, t)});
+      toast('negative', t('config.previewFailed'), toastErrorDetail(preview.error, t));
       return;
     }
     const result = await editor.apply(origin, text);

@@ -59,7 +59,7 @@ export function useProviderTable(input: ProviderTableInput) {
         .then(result => {
           if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
           const problem = editProblem(result, t);
-          if (problem) toast(problem.kind, problem.text, {detail: problem.detail});
+          if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
         });
     }
   }));

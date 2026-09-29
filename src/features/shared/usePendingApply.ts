@@ -98,7 +98,7 @@ export function useApplyHeld() {
       if (!outcome) return;
       pendingRules.fail(outcome.failure);
       if (outcome.failure) {
-        toast('negative', outcome.failure.text);
+        toast('negative', outcome.failure.toastText ?? outcome.failure.text, {requestId: outcome.failure.requestId});
         return;
       }
       const notice = ruleWritten('rule.applied', t, rules.length);

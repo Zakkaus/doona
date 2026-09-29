@@ -125,6 +125,11 @@ it('explains a refused write with its diagnostics, restart-only settings or the 
   });
   expect(ruleFailure(restart, null, sources, t).text).toContain('1 setting takes effect only after a restart');
   expect(ruleFailure(new Error('offline'), null, sources, t)).toEqual({text: 'Could not write the configuration: offline', lines: []});
+  const refused = ruleFailure(new ApiError(503, 'backend_unavailable', 'Try later', 'rule-17'), null, sources, t);
+  expect(refused.text).toContain('request_id: rule-17');
+  expect(refused.toastText).not.toContain('request_id');
+  expect(refused.requestId).toBe('rule-17');
+  expect(partialFailure(refused, 1, 2, t).requestId).toBe('rule-17');
 });
 
 it('does not count errors a refusal did not report', async () => {
