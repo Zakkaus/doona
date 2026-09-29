@@ -65,3 +65,21 @@ for (const viewport of [
       await expectSteadyCards(page);
     });
   });
+
+// A card that opened on screen and was scrolled away before its group arrived stops waiting for it, so the list shows.
+test('scrolling away from a loading card shows the list', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const [first] = await api.groups();
+  await page.route(new RegExp(`/api/v1/groups/${first.id}(\\?.*)?$`), async route => {
+    if (route.request().method() === 'GET') await new Promise(resolve => setTimeout(resolve, 15_000));
+    await route.fallback();
+  });
+  await page.setViewportSize({width: 1440, height: 500});
+  await page.goto('/#/policies');
+  const list = page.locator('.rp-tabpanel[data-shown] .rp-policy-list');
+  await expect(list).toHaveAttribute('data-wait', '');
+  await page.mouse.move(720, 300);
+  for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 1000);
+  await expect(page.getByRole('region', {name: first.name, exact: true})).not.toBeInViewport({ratio: 0});
+  await expect(list).not.toHaveAttribute('data-wait', {timeout: 5_000});
+});

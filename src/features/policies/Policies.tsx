@@ -108,15 +108,16 @@ function PolicyDetail(props: PolicyGroupInput) {
   const m = usePolicyGroup(props);
   const g = m.card;
   const gate = use(FirstShow);
-  const {id} = props;
+  const {id, paused} = props;
+  // A card scrolled away stops reading its group, so it no longer holds the list.
   useLayoutEffect(() => {
-    if (!m.loading) {
+    if (!m.loading || paused) {
       gate.release(id);
       return;
     }
     gate.hold(id);
     return () => gate.release(id);
-  }, [gate, id, m.loading]);
+  }, [gate, id, m.loading, paused]);
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
