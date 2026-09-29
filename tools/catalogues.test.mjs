@@ -42,6 +42,13 @@ it('checks the placeholders of each plural form, and a single form against the g
   ]);
 });
 
+it('checks the $ arguments of CodeMirror phrases as CodeMirror reads them', () => {
+  const reference = {'cm.found': 'Found $ of $2', 'x.price': 'Costs $5'};
+  const read = xx => checkCatalogues({en: reference, xx}, 'en', new Set(['en']), locales).failures;
+  expect(read({'cm.found': '$2 中的 $1，共 $$', 'x.price': '五元'})).toEqual([]);
+  expect(read({'cm.found': '找到 $2', 'x.price': '五元'})).toEqual(["src/i18n/locales/xx.json: cm.found CodeMirror arguments {$2} differ from en's {$1,$2}"]);
+});
+
 it('fails a blank message, in a string or a plural form', () => {
   expect(check({'a.count': {one: '', other: 'x {n}'}, 'b.title': ' '}).failures).toEqual([
     'src/i18n/locales/xx.json: a.count must be a non-empty string or a plural object with "other" and only one, other forms',
