@@ -1724,7 +1724,7 @@
   "ui.backend.setupRequired": "Initial setup required",
   "ui.backend.snapshotExpired": "Snapshot expired",
   "ui.backend.snapshotUnavailable": "Snapshot unavailable",
-  "ui.backend.staleRevision": "Changed since it was loaded",
+  "ui.backend.staleRevision": "Content changed since it was loaded",
   "ui.backend.stateCacheUnavailable": "The state cache is unavailable, so selected nodes and latency history are lost on restart",
   "ui.backend.stateConflict": "Operation conflicts with the current state",
   "ui.backend.supervisorStopped": "The backend stopped before the refresh finished",
