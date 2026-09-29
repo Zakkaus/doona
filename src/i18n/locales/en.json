@@ -1784,6 +1784,7 @@
   "ui.cache": "Cache",
   "ui.cancel": "Cancel",
   "ui.changeApplying": "Another change is being applied",
+  "ui.chartPart": "{label} {value}",
   "ui.clearFilters": "Clear filters",
   "ui.config": "Configuration",
   "ui.current": "Current",

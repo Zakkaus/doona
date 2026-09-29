@@ -7,4 +7,4 @@ export const ChartDescription = createContext<string | undefined>(undefined);
 export const useChartDescription = () => useContext(ChartDescription);
 
 export const shareDescription = (label: string, shares: Array<{label: string; text: string}>, t: Translator) =>
-  t('ui.valuePair', {label, value: shares.map(share => t('ui.valuePair', {label: share.label, value: share.text})).join(t('ui.separator'))});
+  t('ui.valuePair', {label, value: shares.map(share => t('ui.chartPart', {label: share.label, value: share.text})).join(t('ui.separator'))});
