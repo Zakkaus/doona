@@ -1592,6 +1592,8 @@
   "ui.direct": "direct",
   "ui.domain": "網域",
   "ui.download": "下載",
+  "ui.duration.dayHour": "{days} {hours}",
+  "ui.duration.hourMinute": "{hours} {minutes}",
   "ui.elapsed": "耗時",
   "ui.empty": "沒有資料",
   "ui.errGenerationChanged": "模擬期間路由組態已變更。請重新查詢。",

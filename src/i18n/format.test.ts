@@ -1,5 +1,18 @@
 import {expect, it} from 'vitest';
-import {compareNames, formatBytes, formatRate} from './format';
+import {compareNames, formatBytes, formatDuration, formatRate} from './format';
+
+it('keeps duration units, truncation and compound spacing in every language', () => {
+  const cases = {
+    en: ['0 sec', '59 sec', '1 min', '1 hr 0 min', '1 hr 1 min', '1 day 0 hr', '1 day 1 hr'],
+    'zh-CN': ['0秒', '59秒', '1分钟', '1小时 0分钟', '1小时 1分钟', '1天 0小时', '1天 1小时'],
+    'zh-TW': ['0 秒', '59 秒', '1 分鐘', '1 小時 0 分鐘', '1 小時 1 分鐘', '1 天 0 小時', '1 天 1 小時']
+  };
+  for (const [locale, expected] of Object.entries(cases))
+    expect(['0', '59', '60', '3600', '3661', '86400', '90061'].map(seconds => formatDuration(seconds, locale))).toEqual(expected);
+  expect(formatDuration(null, 'en')).toBe('—');
+  expect(formatDuration('invalid', 'en')).toBe('—');
+  expect(formatDuration('18446744073709551615', 'en')).toBe('213,503,982,334,601 days 7 hr');
+});
 
 it('keeps low traffic ticks distinct and preserves the rate unit', () => {
   expect([600, 1200].map(value => formatRate(value, 'en'))).toEqual(['600 B/s', '1.2 KB/s']);
