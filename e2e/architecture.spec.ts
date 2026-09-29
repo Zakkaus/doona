@@ -751,7 +751,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   } finally {
     release();
   }
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
   const rows = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][data-key]');
   await expect(rows).toHaveCount(10);

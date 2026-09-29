@@ -49,7 +49,7 @@ test('a rule is added before the fallback and removed again through validate, sa
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   await expect(list).toHaveCount(10);
   await expect(list.nth(8)).toContainText('domain(geosite:netflix)');
   await expect(list.nth(8)).toContainText('gaming');

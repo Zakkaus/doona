@@ -63,7 +63,7 @@ test('adding and reloading ends with View rule, which selects the new rule in th
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   await dialogOf(page).getByRole('button', {name: 'Apply now', exact: true}).click();
-  const toast = page.locator('.rp-toast.positive', {hasText: 'Rule written'});
+  const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
   await toast.getByRole('button', {name: 'View rule', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
   await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(full: api.telegram.org)');

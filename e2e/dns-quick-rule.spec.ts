@@ -87,7 +87,7 @@ test('a query result adds a response rule for an answered address, then queries 
   await pick(page, /Action$/, /^alidns/);
   await expect(dialog.locator('.rp-code')).toHaveText('ip(192.0.2.14/32) -> alidns');
   await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
-  const toast = page.locator('.rp-toast.positive', {hasText: 'Rule written'});
+  const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
   await expect(toast).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
@@ -134,7 +134,7 @@ test('DNS and routing rules held together apply in one write, each listed with i
   await expect(held).toContainText('qname(full: example.org) -> reject');
   await expect(held).toContainText('1 more held in another list; applying writes it too');
   await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes.map(request => new URL(request.url()).pathname)).toEqual(['/api/v1/config/sources/src-main']);
   const content: string = writes[0].postDataJSON().content;
@@ -177,7 +177,7 @@ test('rules held for an absent response list are written in one new block', asyn
     .click();
   await expect(page.getByRole('region', {name: 'Pending: 2'})).toContainText('New response block, as its first rule');
   await top(page).getByRole('button', {name: 'Apply and reload (2)', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const written: string = requests
     .filter(request => request.method() === 'PUT')
     .at(-1)!

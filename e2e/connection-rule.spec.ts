@@ -31,7 +31,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
   await dialog.getByRole('button', {name: 'Apply now', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule written'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
@@ -163,7 +163,7 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   await expect(held).toContainText('domain(full: api.telegram.org) -> proxy');
   await expect(held).toContainText('domain(full: cdn.bilibili.com) -> direct');
   await apply.click();
-  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
   const content = writes[0].postDataJSON().content as string;
@@ -203,7 +203,7 @@ test('the held toast opens the held rules, which apply from their own section', 
   const held = page.getByRole('region', {name: 'Pending: 1'});
   await expect(held).toBeFocused();
   await held.getByRole('button', {name: 'Apply held rules', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: '1 rule written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '1 rule is in effect'})).toBeVisible();
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
   await expect(held).toHaveCount(0);
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
@@ -413,7 +413,7 @@ test('the dialog does not write while the top bar applies held rules', async ({p
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   write.open();
-  await expect(page.locator('.rp-toast.positive', {hasText: '1 rule written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '1 rule is in effect'})).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
@@ -437,7 +437,7 @@ test('held rules cannot be discarded while they are applied', async ({page}) => 
   await expect.poll(() => writing).toBe(true);
   for (const button of await discard.all()) await expect(button).toBeDisabled();
   write.open();
-  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules written; reloading'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: '2 rules are in effect'})).toBeVisible();
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
 
@@ -603,7 +603,7 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule updated'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   await expect(page).not.toHaveURL(/edit=/);
   const writes = requests.filter(request => request.method() === 'PUT');
@@ -624,7 +624,7 @@ test('a routing rule edits its outbound from its own row, and a read-only file d
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule updated'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
   expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite: telegram) -> proxy', 'domain(geosite: telegram) -> gaming')});
