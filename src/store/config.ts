@@ -6,7 +6,7 @@ import {LocalError} from '../api/error';
 import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
-import {etag, finished, settle, useAction} from './action';
+import {activationError, etag, finished, settle, useAction} from './action';
 import {refetchAll} from './resourceCore';
 import type {Api} from '../api/api';
 import {sourceAt} from '../dae/newSource';
@@ -114,7 +114,10 @@ function settleWrite(api: Api, accepted: OperationAccepted, signal: AbortSignal)
 // lists none there. A failed reload removes the new file, which the operation reports as not written. Once the reload
 // succeeded the file exists, so a failed read-back only leaves the id unknown: the create still succeeded.
 export async function createSource(api: Api, path: string, signal: AbortSignal): Promise<string | null> {
-  const operation = await settleWrite(api, await api.createConfigSource(path, '', signal), signal);
+  const accepted = await api.createConfigSource(path, '', signal).catch(error => {
+    throw activationError(error) ?? error;
+  });
+  const operation = await settleWrite(api, accepted, signal);
   finished(operation, 'reload');
   signal.throwIfAborted();
   const config = await readConfigFresh(api, signal).catch(() => {
@@ -194,7 +197,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
               refetch();
               throw new LocalError('config.changedMeanwhile');
             }
-            if (!(error instanceof ApiError) || error.status !== 412) throw error;
+            if (!(error instanceof ApiError) || error.status !== 412) throw activationError(error) ?? error;
             // The file changed on disk: fetch it, so the next attempt starts from what is there rather than 412 again.
             const fresh = await readConfigFresh(api, signal).catch(() => null);
             refetch();

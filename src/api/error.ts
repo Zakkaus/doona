@@ -199,11 +199,20 @@ export const withoutRequestNote = (text: string) => text.replace(REQUEST_NOTE, '
 
 // What to tell the person about a failed action: the action's summary, with the error as its detail. An operation
 // whose outcome is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is
-// reported under its own summary too, since the action's would say the write failed.
+// reported under its own summary too, since the action's would say the write failed, and so is an activation that
+// left the change active or its outcome unknown.
 export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string};
+const ownSummary = new Set<Key>([
+  'ui.writtenNotApplied',
+  'ui.activationDegraded',
+  'ui.activationDegradedSaved',
+  'ui.activationDegradedUnconfirmed',
+  'ui.activationNotSaved',
+  'ui.activationUnknown'
+]);
 export function failureNotice(error: unknown, t: Translator, summary: string): Notice {
   if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key)};
-  if (error instanceof LocalError && error.key === 'ui.writtenNotApplied') return {kind: 'negative', text: t(error.key), detail: localDetail(error, t)};
+  if (error instanceof LocalError && ownSummary.has(error.key)) return {kind: 'negative', text: t(error.key), detail: localDetail(error, t)};
   return {kind: 'negative', text: summary, detail: errorText(error, t)};
 }
 

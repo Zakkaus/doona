@@ -24,9 +24,13 @@ const known: Record<string, Key> = {
   setup_required: 'ui.backend.setupRequired',
   setup_already_completed: 'ui.backend.setupAlreadyCompleted',
   invalid_credentials: 'ui.backend.invalidCredentials',
-  // Codes honk sets on operation.error, provider.last_error and health.error; the contract leaves these to the adapter.
+  // Codes honk sets on operation.error, provider.last_error and health.error; the contract names the activation
+  // outcomes (reload_* to store_unavailable) and leaves the rest to the adapter.
   reload_rejected: 'ui.backend.reloadRejected',
   reload_degraded: 'ui.backend.reloadDegraded',
+  supervisor_reconciliation_failed: 'ui.backend.supervisorReconciliationFailed',
+  activation_unconfirmed: 'ui.backend.activationUnconfirmed',
+  store_unavailable: 'ui.backend.storeUnavailable',
   engine_unavailable: 'ui.backend.engineUnavailable',
   request_exhausted: 'ui.backend.requestExhausted',
   // honk builds before suspend and resume were removed report a failed one with this code; doona still offers both.
