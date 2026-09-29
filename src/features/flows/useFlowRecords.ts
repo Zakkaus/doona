@@ -73,7 +73,7 @@ export function useFlowRecords({go, query}: PageProps) {
         })
       : null,
     clearPin: () => go('flows', within(query, {path: null})),
-    connectionLabel: connectionId ? t('flow.connectionFilter', {id: connectionId}) : null,
+    connectionLabel: connectionId ? t('flow.connectionFilter', {connectionId}) : null,
     clearConnection: () => go('flows', within(query, {connection_id: null})),
     // Whether flows are recorded and how many are kept is set in Settings.
     recordingHref: resources?.runtime_settings.available ? recordingSettingsHref : null

@@ -146,7 +146,7 @@ export function activityView(runtime: Runtime | undefined, t: LabelFn, runtimeAv
 export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, locale: string, colors: {cat: string[]; love: string}, t: LabelFn) {
   const usage = outboundUsage(outbounds);
   return {
-    since: outbounds ? t('act.since', {t: localTime(outbounds.counter_since, locale)}) : '',
+    since: outbounds ? t('act.since', {time: localTime(outbounds.counter_since, locale)}) : '',
     total: formatBytes(usage.total, locale),
     rows: usage.rows.map((row, i) => ({
       name: outboundLabel(row.name, t),

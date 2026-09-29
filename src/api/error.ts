@@ -186,7 +186,7 @@ export function errorLines(error: unknown, t: Translator, showRequestId = true):
   if (error instanceof ApiError && error.text) return {summary: t(error.text.key, error.text.params)};
   if (!(error instanceof ApiError)) return {summary: error instanceof Error ? error.message : String(error)};
   const {summary, detail} = backendMessage(error.code, error.message, t, error.details);
-  const note = showRequestId && error.requestId ? t('ui.requestNote', {id: error.requestId}) : '';
+  const note = showRequestId && error.requestId ? t('ui.requestNote', {requestId: error.requestId}) : '';
   return detail ? {summary, detail: detail + note} : {summary: summary + note};
 }
 
@@ -218,4 +218,4 @@ export function failureNotice(error: unknown, t: Translator, summary: string): N
 
 // A notice as one line, for a place that shows it inline rather than as a toast.
 export const noticeText = ({text, detail, requestId}: Notice, t: Translator, showRequestId = true) =>
-  detail ? t('ui.valuePair', {label: text, value: detail + (showRequestId && requestId ? t('ui.requestNote', {id: requestId}) : '')}) : text;
+  detail ? t('ui.valuePair', {label: text, value: detail + (showRequestId && requestId ? t('ui.requestNote', {requestId}) : '')}) : text;

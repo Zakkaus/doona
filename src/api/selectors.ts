@@ -200,11 +200,11 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
     case 'runtime.updated':
       return {key: 'event.resource', params: {resource: event.data.href}};
     case 'flow.updated':
-      return {key: 'event.flow', params: {id: event.data.resource_id, revision: String(event.data.revision)}};
+      return {key: 'event.flow', params: {resourceId: event.data.resource_id, revision: String(event.data.revision)}};
     case 'operation.updated': {
       const status = event.data.status;
       const label = status === 'running' || status === 'succeeded' || status === 'failed' ? (`ov.${status}` as Key) : null;
-      return {key: 'event.operation', params: {id: event.data.resource_id, status: t && label ? t(label) : status}};
+      return {key: 'event.operation', params: {resourceId: event.data.resource_id, status: t && label ? t(label) : status}};
     }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
@@ -215,9 +215,9 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
       const reason = t && gapReasons[event.data.reason] ? t(gapReasons[event.data.reason]) : event.data.reason;
       const id = event.data.resource_id;
       if (parseU64(event.data.dropped_records) === 0n)
-        return id === null ? {key: 'event.gapUnscopedNoCount', params: {reason}} : {key: 'event.gapNoCount', params: {reason, id}};
+        return id === null ? {key: 'event.gapUnscopedNoCount', params: {reason}} : {key: 'event.gapNoCount', params: {reason, resourceId: id}};
       const params = {reason, n: droppedCount(event.data.dropped_records)};
-      return id === null ? {key: 'event.gapUnscoped', params} : {key: 'event.gap', params: {...params, id}};
+      return id === null ? {key: 'event.gapUnscoped', params} : {key: 'event.gap', params: {...params, resourceId: id}};
     }
     // An event kind from a newer backend: the resource it names, when it names one.
     default: {

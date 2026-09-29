@@ -213,7 +213,7 @@ export function overviewView(
         : [],
       since: runtime
         ? t('ov.countersSince', {
-            t: localTime(runtime.traffic.counter_since, locale),
+            time: localTime(runtime.traffic.counter_since, locale),
             scope: t(runtime.traffic.scope === 'visible' ? 'ov.scopeVisible' : 'ov.scopeAll')
           })
         : ''

@@ -610,7 +610,7 @@ test('a subscription in a read-only source offers its source file instead of an 
   };
   await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first();
-  const open = await moreItem(sources, 'Open source', 'More actions for sub-c');
+  const open = await moreItem(sources, 'Open config source', 'More actions for sub-c');
   await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
   await open.click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
@@ -668,7 +668,7 @@ test('two subscriptions sharing a name offer their source file instead of an edi
   const named = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
   await expect(named).toHaveCount(2);
   for (const row of [named.first(), named.last()]) {
-    await expect(await moreItem(row, 'Open source', 'More actions for sub-c')).toBeVisible();
+    await expect(await moreItem(row, 'Open config source', 'More actions for sub-c')).toBeVisible();
     await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
     await page.keyboard.press('Escape');
   }
