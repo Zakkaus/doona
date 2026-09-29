@@ -101,7 +101,7 @@ export function Shortcuts({
       removeEventListener('focusin', reset);
     };
   }, [go, openSearch, refresh, paths]);
-  const mod = mac ? '⌘' : 'Ctrl ';
+  const mod = mac ? '⌘' : `${t('shell.keyCtrl')} `;
   return (
     <ModalDialog title={t('shell.shortcuts')} isOpen={open} onOpenChange={setOpen} footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}>
       <div className="rp-shortcuts">
@@ -116,8 +116,8 @@ export function Shortcuts({
           <section>
             <h3>{t('shell.shortcutTables')}</h3>
             <Row label={t('shell.shortcutMove')} keys={['↑', '↓']} />
-            <Row label={t('shell.shortcutSelect')} keys={['Enter', t('shell.keySpace')]} />
-            <Row label={t('shell.shortcutClose')} keys={['Esc']} />
+            <Row label={t('shell.shortcutSelect')} keys={[t('shell.keyEnter'), t('shell.keySpace')]} />
+            <Row label={t('shell.shortcutClose')} keys={[t('shell.keyEsc')]} />
           </section>
           <section>
             <h3>{t('shell.shortcutEditor')}</h3>
