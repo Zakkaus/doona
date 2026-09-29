@@ -274,7 +274,7 @@ function ToastItem({
           )}
         </div>
       </ToastContent>
-      <RButton slot="close" className="rp-btn quiet icon close" aria-label={t('close')}>
+      <RButton slot="close" className="rp-btn quiet icon close" aria-label={t('ui.close')}>
         <Close />
       </RButton>
       {(more || action) && (

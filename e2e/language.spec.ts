@@ -30,7 +30,7 @@ test.describe('translated configuration text', () => {
     await expect(routing.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(traditional);
     await routing.locator('.cm-lintRange-error').hover();
     await expect(page.locator('.cm-tooltip-lint')).toContainText(traditional);
-    await page.getByRole('button', {name: translate('zh-TW', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('zh-TW', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: 'English'}).click();
     const english = translate('en', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
     await expect(routing.getByRole('list', {name: translate('en', 'config.diagnostics')})).toContainText(english);
@@ -135,7 +135,7 @@ test.describe('language loading', () => {
     await page.route(localeChunk('zh-CN'), route => route.abort());
     await page.goto('/#/activity');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
-    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '简体中文'}).click();
     await expect(page.getByText(translate('en', 'shell.langUnavailable', {name: '简体中文'}))).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
@@ -156,7 +156,7 @@ test.describe('language loading', () => {
         observer.disconnect();
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
     });
-    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
     expect(Number(await page.locator('html').getAttribute('data-sc-faces'))).toBeGreaterThan(0);
@@ -179,7 +179,7 @@ test.describe('language loading', () => {
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
       return count();
     });
-    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     expect(Number(await page.locator('html').getAttribute('data-tc-faces'))).toBeGreaterThan(latin + 50);
@@ -188,10 +188,10 @@ test.describe('language loading', () => {
   test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {
     const family = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
     await page.goto('/#/activity');
-    await page.getByRole('button', {name: translate('en', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    await page.getByRole('button', {name: translate('zh-CN', 'lang'), exact: true}).click();
+    await page.getByRole('button', {name: translate('zh-CN', 'ui.lang'), exact: true}).click();
     await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     const switched = await family();

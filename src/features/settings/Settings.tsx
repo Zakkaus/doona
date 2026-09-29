@@ -151,11 +151,11 @@ export function Settings({query}: PageProps) {
     appearance: (
       <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
         <div className="rp-toolbar">
-          <LabeledSelect label={t('lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
+          <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           <div className="rp-field">
-            <span className="lbl">{t('palette')}</span>
+            <span className="lbl">{t('ui.palette')}</span>
             <ChoiceMenu
-              label={t('palette')}
+              label={t('ui.palette')}
               sections={paletteSections.map(section => ({...section, value: ap.palette, onChange: (value: string) => ap.pickPalette(value as PaletteId)}))}
             >
               {palette}
@@ -172,7 +172,7 @@ export function Settings({query}: PageProps) {
             ]}
           />
           <LabeledSelect
-            label={t('wordmark')}
+            label={t('ui.wordmark')}
             value={ap.wordmark}
             onChange={value => ap.pickWordmark(value as Wordmark)}
             items={[

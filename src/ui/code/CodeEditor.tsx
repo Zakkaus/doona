@@ -43,7 +43,7 @@ const cmPhrases: Array<[string, Key]> = [
   ['by word', 'cm.byWord'],
   ['replace', 'cm.replaceOne'],
   ['replace all', 'cm.replaceAll'],
-  ['close', 'close'],
+  ['close', 'ui.close'],
   ['Go to line', 'cm.gotoLine'],
   ['go', 'cm.go'],
   ['current match', 'cm.currentMatch'],

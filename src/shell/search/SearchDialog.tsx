@@ -10,7 +10,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
   const {q, setQ, sections, partial, openConnections, empty, error, retry, loading, select} = useSearch(go, onClose);
   return (
     <ModalDialog
-      title={t('search')}
+      title={t('shell.search')}
       hideTitle
       isOpen
       onOpenChange={open => {
@@ -21,8 +21,8 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       <Autocomplete inputValue={q} onInputChange={setQ}>
         <div className="rp-toolbar">
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-          <TextField search large label={t('search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
-          <Button quiet icon onPress={onClose} label={t('close')}>
+          <TextField search large label={t('shell.search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
+          <Button quiet icon onPress={onClose} label={t('ui.close')}>
             <Close />
           </Button>
         </div>
@@ -36,7 +36,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
           </div>
         )}
         {empty && (loading ? <Loading /> : <Empty>{t('search.none')}</Empty>)}
-        <ListBox aria-label={t('search')} className="rp-results" onAction={select}>
+        <ListBox aria-label={t('shell.search')} className="rp-results" onAction={select}>
           {sections.map(section => (
             <ListBoxSection key={section.id} id={section.id}>
               <Header className="rp-sec-h">{section.title}</Header>

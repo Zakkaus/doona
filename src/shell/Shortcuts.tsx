@@ -103,7 +103,12 @@ export function Shortcuts({
   }, [go, openSearch, refresh, paths]);
   const mod = mac ? '⌘' : `${t('shell.keyCtrl')} `;
   return (
-    <ModalDialog title={t('shell.shortcuts')} isOpen={open} onOpenChange={setOpen} footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}>
+    <ModalDialog
+      title={t('shell.shortcuts')}
+      isOpen={open}
+      onOpenChange={setOpen}
+      footer={() => <Button onPress={() => setOpen(false)}>{t('ui.close')}</Button>}
+    >
       <div className="rp-shortcuts">
         <div>
           <section>
@@ -111,7 +116,7 @@ export function Shortcuts({
             <Row label={t('shell.shortcutSearch')} keys={[t(mac ? 'shell.macShortcut' : 'shell.shortcut')]} />
             <Row label={t('shell.shortcutHelp')} keys={['?']} />
             <Row label={t('shell.shortcutFilter')} keys={['/']} />
-            <Row label={t('refresh')} keys={['R']} />
+            <Row label={t('ui.refresh')} keys={['R']} />
           </section>
           <section>
             <h3>{t('shell.shortcutTables')}</h3>

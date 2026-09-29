@@ -158,7 +158,7 @@ export function TextField({
         <span className={cx('rp-input', large && 'lg')}>
           <Search />
           <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
-          <RButton className="clear" aria-label={t('clear')}>
+          <RButton className="clear" aria-label={t('ui.clear')}>
             <Close />
           </RButton>
         </span>

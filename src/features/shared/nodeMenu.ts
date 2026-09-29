@@ -20,5 +20,5 @@ export function menuViews(nodes: Array<{id?: string; name: string; label?: strin
     if (group) group.push(node);
     else groups.set(node.region, [node]);
   }
-  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: t('policy.sectionCount', {n: items.length})}))};
+  return {items, sections: [...groups].map(([title, items]) => ({title, items, count: t('ui.sectionCount', {n: items.length})}))};
 }
