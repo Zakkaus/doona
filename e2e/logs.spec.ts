@@ -127,6 +127,22 @@ test('logs state the level the engine records and mark the levels below it', asy
   await expect(page.getByRole('option', {name: 'Warning', exact: true})).toBeVisible();
 });
 
+test('the module filter is hidden when the backend does not filter logs by target', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.logs.filters = ['level'];
+  const runtime = await api.runtime();
+  const streams: URLSearchParams[] = [];
+  await page.route('**/api/v1/logs?*', route => {
+    streams.push(new URL(route.request().url()).searchParams);
+    return fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}]);
+  });
+  await page.goto('/#/logs');
+  await expect(page.getByRole('button', {name: 'Info Level', exact: true})).toBeVisible();
+  await expect(page.getByRole('searchbox', {name: 'Module', exact: true})).toHaveCount(0);
+  await expect.poll(() => streams.length).toBeGreaterThan(0);
+  expect(streams.every(params => !params.has('target'))).toBe(true);
+});
+
 test('an empty log list says when the configuration forbids recording', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const runtime = await api.runtime();
