@@ -211,3 +211,23 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   await expect(page.getByRole('region', {name: 'resilient', exact: true}).getByText(reason, {exact: true})).toBeVisible();
   await expect(probe).toHaveAccessibleDescription(reason);
 });
+
+test('a group is switched to the score policy in its edit dialog', async ({page}) => {
+  await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
+  let dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: /Selection policy/}).click();
+  await expect(page.getByRole('option', {name: /^Score/})).toContainText('Picks a node by its observed reliability and recent connection quality');
+  await page.getByRole('option', {name: /^Score/}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for gaming written and reloaded');
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText('gaming {\n    filter: name(jp-01, hk-02)\n    policy: score\n  }');
+  // Reopened, the group shows the policy as chosen rather than as a raw name.
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
+  dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
+});
