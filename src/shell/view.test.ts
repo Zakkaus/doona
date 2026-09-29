@@ -3,7 +3,7 @@ import {ApiError} from '../api/error';
 import {capabilitiesBase, version} from '../api/mock/fixtures';
 import {readSettings} from './preferences';
 import {translate} from '../i18n';
-import {accessError, shellView} from './view';
+import {accessError, shellView, topBarCommands} from './view';
 import {hubs, routePaths} from './routes';
 
 const settings = readSettings({getItem: () => null, setItem: () => {}, removeItem: () => {}});
@@ -84,4 +84,18 @@ it('puts every page in exactly one hub and shows the hubs as the navigation sect
     ['Routing', ['policies', 'nodes', 'rules']],
     ['Settings', ['config', 'settings']]
   ]);
+});
+it('splits the top bar into apply for held rules and reload for honk', () => {
+  const none = {count: 0, label: '', busy: false};
+  const two = {count: 2, label: t('rule.applyPending', {n: 2}), busy: false};
+  expect(topBarCommands(none, true, false, t)).toEqual({apply: null, reload: {label: 'Reload honk', busy: false, blocked: false}});
+  expect(topBarCommands(two, true, false, t)).toEqual({
+    apply: {label: 'Apply (2)', count: 2, busy: false, blocked: false},
+    reload: {label: 'Reload honk', busy: false, blocked: false}
+  });
+  expect(topBarCommands(two, false, false, t)).toEqual({apply: {label: 'Apply (2)', count: 2, busy: false, blocked: false}, reload: null});
+  expect(topBarCommands(none, false, false, t)).toEqual({apply: null, reload: null});
+  // Each waits while the other runs.
+  expect(topBarCommands({...two, busy: true}, true, false, t).reload).toMatchObject({blocked: true, busy: false});
+  expect(topBarCommands(two, true, true, t)).toMatchObject({apply: {blocked: true}, reload: {busy: true}});
 });

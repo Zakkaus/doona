@@ -195,6 +195,18 @@ export function backendState(
   if (versionError) return ['warn', 'shell.backend.degraded'];
   return ['ok', 'shell.backend.connected'];
 }
+// The top bar's two commit commands. Apply writes the held rules and does nothing else; reload reloads honk and leaves
+// the held rules held. Each is null when it has nothing to do, and each waits while the other is running.
+export type TopBarCommands = {
+  apply: {label: string; count: number; busy: boolean; blocked: boolean} | null;
+  reload: {label: string; busy: boolean; blocked: boolean} | null;
+};
+export function topBarCommands(held: {count: number; label: string; busy: boolean}, canReload: boolean, reloading: boolean, t: Translator): TopBarCommands {
+  return {
+    apply: held.count ? {label: held.label, count: held.count, busy: held.busy, blocked: reloading} : null,
+    reload: canReload ? {label: t('shell.reloadEngine'), busy: reloading, blocked: held.busy} : null
+  };
+}
 export function wordmark(honked: boolean) {
   return honked ? 'doooooona' : 'doona';
 }

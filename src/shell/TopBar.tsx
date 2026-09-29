@@ -1,6 +1,7 @@
 import {memo, useRef, useState} from 'react';
 import {About} from './About';
 import {BackendMenuPopover} from './Backend';
+import Checkmark from '../ui/icons/Checkmark';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
 import MoreVertical from '../ui/icons/MoreVertical';
@@ -11,10 +12,10 @@ import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu, Divider} from '../ui/ui';
+import {Button, ChoiceMenu, ConfirmDialog, Divider} from '../ui/ui';
 import type {SettingsContext} from './preferences';
 import type {Scheme} from './preferences';
-import type {AppearanceMenu, BackendView, PaletteSection} from './view';
+import type {AppearanceMenu, BackendView, PaletteSection, TopBarCommands} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
 import {LanguageMenu, PaletteMenu, SchemeToggle, usePaletteChoices} from './AppearanceControls';
@@ -29,11 +30,9 @@ type TopBarProps = {
   openSearch: () => void;
   refresh: () => void;
   spinning: boolean;
-  // Null when the backend offers no reload and no rules are held.
-  reload: (() => void) | null;
-  reloading: boolean;
-  held: number;
-  reloadLabel: string;
+  commands: TopBarCommands;
+  apply: () => void;
+  reload: () => void;
   honk: () => void;
   backend: BackendView;
   wordmark: string;
@@ -52,10 +51,9 @@ export const TopBar = memo(function TopBar({
   openSearch,
   refresh,
   spinning,
+  commands,
+  apply,
   reload,
-  reloading,
-  held,
-  reloadLabel,
   honk,
   backend,
   wordmark,
@@ -67,6 +65,8 @@ export const TopBar = memo(function TopBar({
   const {palettes, wordmarks} = usePaletteChoices({ap, paletteSections, wordmarks: menu.wordmarks});
   const narrowMenu = useRef<HTMLSpanElement>(null);
   const [backendOpen, setBackendOpen] = useState(false);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const askReload = () => setConfirmReload(true);
   return (
     <header className="rp-top">
       <About
@@ -97,14 +97,27 @@ export const TopBar = memo(function TopBar({
         <Button quiet icon label={t('refresh')} isPending={spinning} onPress={refresh}>
           <DataRefresh />
         </Button>
-        {reload && (
-          <Button quiet icon className="rp-held" label={reloadLabel} isPending={reloading} onPress={reload}>
-            <Refresh className="rp-refresh rp-spin-on-press" />
-            {!!held && <span className="rp-held-count">{held}</span>}
+        {commands.apply && (
+          <Button
+            quiet
+            icon
+            className="rp-held"
+            label={commands.apply.label}
+            isPending={commands.apply.busy}
+            isDisabled={commands.apply.blocked}
+            onPress={apply}
+          >
+            <Checkmark />
+            <span className="rp-held-count">{commands.apply.count}</span>
           </Button>
         )}
-        {/* Below the side navigation's breakpoint, language and appearance share one overflow menu, a submenu each. */}
+        {/* Below the side navigation's breakpoint, reload, language and appearance share one overflow menu. */}
         <span className="rp-wide-only">
+          {commands.reload && (
+            <Button quiet icon label={commands.reload.label} isPending={commands.reload.busy} isDisabled={commands.reload.blocked} onPress={askReload}>
+              <Refresh className="rp-refresh rp-spin-on-press" />
+            </Button>
+          )}
           <Divider />
           <LanguageMenu lang={lang} pickLang={pickLang} />
           <PaletteMenu ap={ap} paletteSections={paletteSections} wordmarks={menu.wordmarks} />
@@ -125,13 +138,31 @@ export const TopBar = memo(function TopBar({
               {label: t('palette'), icon: <Color />, sections: palettes},
               {label: t('wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
             ]}
-            actions={[{label: backend.title, icon: <Data />, onAction: () => setBackendOpen(true)}]}
+            actions={[
+              ...(commands.reload ? [{label: commands.reload.label, icon: <Refresh />, onAction: askReload}] : []),
+              {label: backend.title, icon: <Data />, onAction: () => setBackendOpen(true)}
+            ]}
           >
             <MoreVertical />
           </ChoiceMenu>
           <BackendMenuPopover backend={backend} honk={honk} anchor={narrowMenu} isOpen={backendOpen} onOpenChange={setBackendOpen} />
         </span>
       </div>
+      <ConfirmDialog
+        title={t('shell.reloadTitle')}
+        tone="accent"
+        isOpen={confirmReload && !!commands.reload}
+        onCancel={() => setConfirmReload(false)}
+        confirmLabel={t('shell.reloadEngine')}
+        isPending={commands.reload?.busy}
+        isDisabled={commands.reload?.blocked}
+        onConfirm={() => {
+          setConfirmReload(false);
+          reload();
+        }}
+      >
+        <p className="rp-label">{t('shell.reloadHelp')}</p>
+      </ConfirmDialog>
     </header>
   );
 });

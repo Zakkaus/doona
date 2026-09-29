@@ -126,10 +126,9 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         openSearch={openSearch}
         refresh={view.refresh}
         spinning={view.spinning}
-        reload={view.reload.shown ? view.reload.run : null}
-        reloading={view.reload.busy}
-        held={view.reload.held}
-        reloadLabel={view.reload.label}
+        commands={view.commands}
+        apply={view.apply}
+        reload={view.reload}
         honk={view.honk}
         backend={view.backend}
         wordmark={view.wordmark}
