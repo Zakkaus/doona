@@ -1,12 +1,15 @@
 import {expect, it} from 'vitest';
 import {LANGS, LOCALE} from './index';
-import {pageDirection, textDirection} from './direction';
+import {pageDirection, rtlScripts, textDirection} from './direction';
 
 const rtl = ['ar', 'ar-EG', 'he-IL', 'fa', 'ur-PK', 'ckb', 'az-Arab'];
 const ltr = ['zh-TW', 'zh-CN', 'en-US', 'ja', 'ar-Latn'];
 
-it('reads every shipped language left to right', () => {
-  for (const [lang] of LANGS) expect(textDirection(LOCALE[lang])).toBe('ltr');
+it('reads each registered language according to its locale script', () => {
+  for (const [lang] of LANGS) {
+    const script = new Intl.Locale(LOCALE[lang]).maximize().script ?? '';
+    expect(textDirection(LOCALE[lang])).toBe(rtlScripts.includes(script) ? 'rtl' : 'ltr');
+  }
 });
 
 it('follows the locale text info', () => {

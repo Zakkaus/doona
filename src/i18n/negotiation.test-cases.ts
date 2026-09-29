@@ -12,7 +12,7 @@ export const negotiationCases = [
   {tags: ['en-GB', 'zh-CN'], lang: 'en'},
   {tags: ['xx-XX', 'zh-TW'], lang: 'zh-TW'},
   {tags: ['xx-XX', 'zh-Hans-HK'], lang: 'zh-CN'},
-  {tags: ['fr', 'en-AU', 'zh-TW'], lang: 'en'},
+  {tags: ['xx', 'en-AU', 'zh-TW'], lang: 'en'},
   {tags: ['xx-XX'], lang: 'en'},
   {tags: [], lang: 'en'}
 ] as const;

@@ -17,7 +17,7 @@ it('keeps a chosen language over the browser', () => {
   expect(readLang(stored('zh-CN'), ['en-US'])).toBe('zh-CN');
   expect(readLang(stored('zh-TW'), ['en-US'])).toBe('zh-TW');
   expect(readLang(stored(null), ['zh-TW'])).toBe('zh-TW');
-  expect(readLang(stored('fr'), ['ja'])).toBe('en');
+  expect(readLang(stored('xx-YY'), ['xx'])).toBe('en');
   expect(
     readLang(
       {
