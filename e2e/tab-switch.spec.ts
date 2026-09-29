@@ -82,3 +82,12 @@ for (const path of ['dns?tab=cache', 'dns?tab=log', 'nodes?tab=list', 'flows?tab
   test(`${path}: a table comes back from another tab at its final column widths`, async ({page}) => {
     await switchBack(page, path);
   });
+
+// The bar is as wide as its tabs, not the row the panels share.
+test('a tab bar keeps the width of its tabs', async ({page}) => {
+  await page.goto('/#/dns?tab=stats');
+  const bar = page.locator('.rp-tabbar').first();
+  await expect(bar).toBeVisible();
+  const [barWidth, rowWidth] = await bar.evaluate(el => [el.getBoundingClientRect().width, el.parentElement!.getBoundingClientRect().width]);
+  expect(barWidth).toBeLessThan(rowWidth / 2);
+});
