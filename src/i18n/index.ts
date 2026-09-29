@@ -6,9 +6,11 @@ import {browserLang, DEFAULT_LANG, isLang, languages, REFERENCE_LANG, type Lang}
 export type Key = keyof typeof en;
 export {browserLang, DEFAULT_LANG, languages, REFERENCE_LANG, type Lang};
 
-export type Message = string | {one: string; other: string};
-export type Params = Record<string, string | number>;
-export type Translator = (key: Key, params?: Params) => string;
+type PluralCategory = Intl.LDMLPluralRule;
+export type Message = string | ({other: string} & Partial<Record<Exclude<PluralCategory, 'other'>, string>>);
+export type Params = Record<string, string | number | bigint>;
+// A plural message selects on `n` unless the caller names another numeric parameter.
+export type Translator = (key: Key, params?: Params, pluralParam?: string) => string;
 export const LANGS: Array<[Lang, string]> = languages.map(language => [language.id, language.name]);
 export const LOCALE = Object.fromEntries(languages.map(language => [language.id, language.locale])) as Record<Lang, string>;
 export {pageDirection, textDirection, type Dir} from './direction';
@@ -39,14 +41,12 @@ function readCatalogue(lang: Lang): Promise<Partial<Catalogue>> {
 const catalogues = new Map<Lang, Partial<Catalogue>>();
 const loading = new Map<Lang, Promise<void>>();
 // Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
-// A partial language loads the reference catalogue too and fills its gaps from it; a complete one loads only itself.
+// A partial language loads the reference catalogue too; translation resolves its missing keys from English.
 export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Partial<Catalogue>> = readCatalogue): Promise<void> {
   let pending = loading.get(lang);
   if (!pending) {
     const {complete} = languages.find(language => language.id === lang)!;
-    const table = complete
-      ? read(lang)
-      : Promise.all([read(lang), loadLanguage(REFERENCE_LANG, read)]).then(([own]) => ({...catalogues.get(REFERENCE_LANG), ...own}));
+    const table = complete ? read(lang) : Promise.all([read(lang), loadLanguage(REFERENCE_LANG, read)]).then(([own]) => own);
     pending = table.then(
       messages => void catalogues.set(lang, messages),
       (error: unknown) => {
@@ -66,20 +66,38 @@ export function isLoaded(lang: Lang) {
 // language this page never loaded.
 export const loadedLang = (preferred: Lang): Lang => [preferred, ...LANGS.map(([lang]) => lang)].find(isLoaded) ?? preferred;
 const plurals = new Map<Lang, Intl.PluralRules>();
-// An integer parameter is written with the language's grouping, so a count reads as 1,000 rather than 1000;
-// a measurement with decimals is already formatted by its caller.
-const param = (lang: Lang, value: unknown) => (typeof value === 'number' && Number.isInteger(value) ? formatNumber(value, LOCALE[lang]) : String(value));
-export function translate(lang: Lang, key: Key, params?: Params): string {
-  const message = catalogues.get(lang)?.[key];
+const unsigned = /^(0|[1-9][0-9]*)$/;
+// An integer parameter is written with the language's grouping, so a count reads as 1,000 rather than 1000; a UInt64
+// count, a bigint or the API's decimal string, is written exactly. A measurement with decimals is formatted by its caller.
+const param = (lang: Lang, value: unknown, count: boolean) =>
+  typeof value === 'bigint' || (count && typeof value === 'string' && unsigned.test(value))
+    ? formatNumber(BigInt(value), LOCALE[lang])
+    : typeof value === 'number' && Number.isInteger(value)
+      ? formatNumber(value, LOCALE[lang])
+      : String(value);
+// Above Number.MAX_SAFE_INTEGER a count selects with its low six digits plus a million, which keeps every CLDR integer
+// rule (they test at most the last six digits) and never reads a large count as zero or one. Formatted text selects `other`.
+const pluralNumber = (value: string | number | bigint): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && !unsigned.test(value)) return NaN;
+  const integer = BigInt(value);
+  return integer <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(integer) : Number(integer % 1_000_000n) + 1_000_000;
+};
+export function translate(lang: Lang, key: Key, params?: Params, pluralParam = 'n'): string {
+  const own = catalogues.get(lang)?.[key];
+  const message = own ?? catalogues.get(REFERENCE_LANG)?.[key];
+  const origin = own === undefined ? REFERENCE_LANG : lang;
   let text: string;
   if (message === undefined) text = key;
   else if (typeof message === 'string') text = message;
   else {
-    let rules = plurals.get(lang);
-    if (!rules) plurals.set(lang, (rules = new Intl.PluralRules(LOCALE[lang])));
-    text = message[rules.select(Number(params?.n)) === 'one' ? 'one' : 'other'];
+    let rules = plurals.get(origin);
+    if (!rules) plurals.set(origin, (rules = new Intl.PluralRules(LOCALE[origin])));
+    const operand = params?.[pluralParam];
+    const category = rules.select(operand === undefined ? NaN : pluralNumber(operand));
+    text = message[category] ?? message.other;
   }
-  return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => param(lang, params[name])) : text;
+  return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => param(lang, params[name], name === pluralParam)) : text;
 }
 // Keys to read in place of others, such as the palette's own words for a few statuses (src/shell/palettes.ts).
 export type Rewording = Readonly<Partial<Record<Key, Key>>>;
@@ -88,7 +106,7 @@ export const RewordingContext = createContext<Rewording | undefined>(undefined);
 export function useT(): Translator {
   const lang = useLang();
   const rewording = useContext(RewordingContext);
-  return useMemo(() => (key: Key, params?: Params) => translate(lang, rewording?.[key] ?? key, params), [lang, rewording]);
+  return useMemo(() => (key: Key, params?: Params, pluralParam?: string) => translate(lang, rewording?.[key] ?? key, params, pluralParam), [lang, rewording]);
 }
 
 // A plain enumeration for cells and captions, without a conjunction.

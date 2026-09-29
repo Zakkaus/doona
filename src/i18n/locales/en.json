@@ -827,6 +827,7 @@
     "one": "Paused: {n} new record",
     "other": "Paused: {n} new records"
   },
+  "log.pausedOverflow": "Paused: {n}+ new records",
   "log.reconnecting": "Reconnecting",
   "log.recorded": "Engine records: {level} and above",
   "log.target": "Module",

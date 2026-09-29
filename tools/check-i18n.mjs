@@ -76,7 +76,12 @@ if (!catalogues[REFERENCE_LANG]) {
   process.exit(1);
 }
 const reference = catalogues[REFERENCE_LANG];
-const checked = checkCatalogues(catalogues, REFERENCE_LANG, new Set(languages.filter(language => language.complete).map(language => language.id)));
+const checked = checkCatalogues(
+  catalogues,
+  REFERENCE_LANG,
+  new Set(languages.filter(language => language.complete).map(language => language.id)),
+  Object.fromEntries(languages.map(language => [language.id, language.locale]))
+);
 failures.push(...checked.failures);
 const unused = Object.keys(reference).filter(key => !references.has(key));
 for (const key of unused) failures.push(`Unused message key: ${key}`);

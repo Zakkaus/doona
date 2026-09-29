@@ -1,6 +1,6 @@
 import type {FlowList} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
-import {formatList, formatNumber, LOCALE, type Key, type Lang, type Translator} from '../../i18n';
+import {formatList, type Key, type Lang, type Translator} from '../../i18n';
 import {parseU64} from '../../api/u64';
 
 // How much of the traffic the flow records see, shown beside every listing that counts them.
@@ -17,7 +17,7 @@ export type CoverageView = {summary: string | null; detail: string; dropped: str
 export function coverageView(data: Pick<FlowList, 'coverage' | 'dropped_records'>, t: Translator, lang: Lang): CoverageView | null {
   const partial = Object.entries(data.coverage).filter(([, value]) => value !== 'full');
   const count = parseU64(data.dropped_records);
-  const dropped = count ? t('flow.dropped', {n: formatNumber(count, LOCALE[lang])}) : null;
+  const dropped = count ? t('flow.dropped', {n: count}) : null;
   if (!partial.length && !dropped) return null;
   return {
     summary: partial.length ? t('flow.coverageSummary', {n: partial.length}) : null,

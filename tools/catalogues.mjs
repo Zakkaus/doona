@@ -3,9 +3,19 @@
 // and a complete language must hold all of them.
 // A blank message would show nothing where the reader expects text, so every string must hold some.
 const text = value => typeof value === 'string' && value.trim() !== '';
-const valid = message =>
+const valid = (message, categories) =>
   text(message) ||
-  (typeof message === 'object' && message !== null && Object.keys(message).sort().join() === 'one,other' && text(message.one) && text(message.other));
+  (typeof message === 'object' &&
+    message !== null &&
+    !Array.isArray(message) &&
+    Object.hasOwn(message, 'other') &&
+    Object.keys(message).every(category => categories.includes(category) && text(message[category])));
+// A locale's plural forms in CLDR order; the order Intl reports differs between ICU versions.
+const cldrOrder = ['zero', 'one', 'two', 'few', 'many', 'other'];
+const pluralCategories = locale => {
+  const reported = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
+  return cldrOrder.filter(category => reported.includes(category));
+};
 // The placeholders one string fills.
 const placeholders = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
 // A message's forms by name; a plain string is the general form, `other`.
@@ -48,21 +58,25 @@ function duplicateKeys(source) {
  * @param {Record<string, Record<string, unknown>>} catalogues each language's parsed catalogue, by id
  * @param {string} reference the id of the reference catalogue
  * @param {ReadonlySet<string>} complete the ids of the languages that must hold every key
+ * @param {Record<string, string>} locales each language's Intl locale, by id
  * @returns {{failures: string[], missing: Record<string, string[]>}} what breaks a rule, and each language's absent keys
  */
-export function checkCatalogues(catalogues, reference, complete) {
+export function checkCatalogues(catalogues, reference, complete, locales) {
   const failures = [];
   const missing = {};
   const expected = catalogues[reference];
+  const referenceCategories = pluralCategories(locales[reference]);
   for (const [lang, catalogue] of Object.entries(catalogues)) {
     const file = `src/i18n/locales/${lang}.json`;
+    const categories = pluralCategories(locales[lang]);
     const keys = Object.keys(catalogue);
     if (keys.join('\n') !== [...keys].sort().join('\n')) failures.push(`${file}: keys are not sorted`);
     for (const key of keys) {
       const message = catalogue[key];
-      if (!valid(message)) failures.push(`${file}: ${key} must be a non-empty string or {"one", "other"} non-empty strings`);
+      if (!valid(message, categories))
+        failures.push(`${file}: ${key} must be a non-empty string or a plural object with "other" and only ${categories.join(', ')} forms`);
       else if (!Object.hasOwn(expected, key)) failures.push(`${file}: ${key} is not in ${reference}.json`);
-      else if (valid(expected[key])) failures.push(...placeholderFailures(file, key, message, expected[key], reference));
+      else if (valid(expected[key], referenceCategories)) failures.push(...placeholderFailures(file, key, message, expected[key], reference));
     }
     missing[lang] = Object.keys(expected).filter(key => !Object.hasOwn(catalogue, key));
     if (complete.has(lang)) for (const key of missing[lang]) failures.push(`${file}: ${key} is missing`);

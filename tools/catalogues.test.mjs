@@ -3,7 +3,8 @@ import {checkCatalogues, missingLanguage, readCatalogues} from './catalogues.mjs
 
 // A made-up partial language, xx, beside a two-key reference.
 const en = {'a.count': {one: '{n} item', other: '{n} items'}, 'b.title': 'Title {name}'};
-const check = (xx, complete = new Set(['en'])) => checkCatalogues({en, xx}, 'en', complete);
+const locales = {en: 'en-US', xx: 'en-US', ar: 'ar'};
+const check = (xx, complete = new Set(['en'])) => checkCatalogues({en, xx}, 'en', complete, locales);
 
 it('lets a partial language leave keys out and reports them', () => {
   expect(check({'b.title': 'Xx {name}'})).toEqual({failures: [], missing: {en: [], xx: ['a.count']}});
@@ -15,7 +16,7 @@ it('fails a complete language that leaves a key out', () => {
 
 it('fails a partial language on an unknown key, a placeholder, a plural shape or the order', () => {
   expect(check({'a.count': {one: 'x', many: 'y'}, 'b.title': 'Xx {title}', 'c.extra': 'x'}).failures).toEqual([
-    'src/i18n/locales/xx.json: a.count must be a non-empty string or {"one", "other"} non-empty strings',
+    'src/i18n/locales/xx.json: a.count must be a non-empty string or a plural object with "other" and only one, other forms',
     "src/i18n/locales/xx.json: b.title placeholders {title} differ from en's {name}",
     'src/i18n/locales/xx.json: c.extra is not in en.json'
   ]);
@@ -35,8 +36,21 @@ it('checks the placeholders of each plural form, and a single form against the g
 
 it('fails a blank message, in a string or a plural form', () => {
   expect(check({'a.count': {one: '', other: 'x {n}'}, 'b.title': ' '}).failures).toEqual([
-    'src/i18n/locales/xx.json: a.count must be a non-empty string or {"one", "other"} non-empty strings',
-    'src/i18n/locales/xx.json: b.title must be a non-empty string or {"one", "other"} non-empty strings'
+    'src/i18n/locales/xx.json: a.count must be a non-empty string or a plural object with "other" and only one, other forms',
+    'src/i18n/locales/xx.json: b.title must be a non-empty string or a plural object with "other" and only one, other forms'
+  ]);
+});
+
+it('accepts Arabic plural categories but rejects categories outside its locale', () => {
+  const ar = {
+    'a.count': {zero: '{n} zero', one: '{n} one', two: '{n} two', few: '{n} few', many: '{n} many', other: '{n} other'}
+  };
+  expect(checkCatalogues({en, ar}, 'en', new Set(['en']), locales).failures).toEqual([]);
+  expect(checkCatalogues({en, ar: {'a.count': {...ar['a.count'], bogus: '{n} bogus'}}}, 'en', new Set(['en']), locales).failures).toEqual([
+    'src/i18n/locales/ar.json: a.count must be a non-empty string or a plural object with "other" and only zero, one, two, few, many, other forms'
+  ]);
+  expect(check({'a.count': {one: '{n} one', other: '{n} other', few: '{n} few'}}).failures).toEqual([
+    'src/i18n/locales/xx.json: a.count must be a non-empty string or a plural object with "other" and only one, other forms'
   ]);
 });
 
@@ -58,7 +72,10 @@ it('names an absent catalogue, but lets --missing ask about a partial language b
   expect(readCatalogues(registry, file => files[file], 'xx').failures).toEqual([
     'src/i18n/locales/yy.json does not exist, and yy is marked complete in src/i18n/languages.ts'
   ]);
-  expect(checkCatalogues(readCatalogues(registry, file => files[file], 'xx').catalogues, 'en', new Set(['en'])).missing.xx).toEqual(['a.count', 'b.title']);
+  expect(checkCatalogues(readCatalogues(registry, file => files[file], 'xx').catalogues, 'en', new Set(['en']), locales).missing.xx).toEqual([
+    'a.count',
+    'b.title'
+  ]);
 });
 
 it('reads --missing <id> only for a language in the registry', () => {
