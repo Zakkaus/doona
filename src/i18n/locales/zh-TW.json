@@ -1269,7 +1269,7 @@
   "search.groups": "群組",
   "search.nodeCount": "{n} 個節點",
   "search.nodes": "節點",
-  "search.none": "沒有符合的項目。搜尋範圍：頁面、節點、群組與節點來源的名稱，目前的連線，組態檔案路徑與規則運算式。",
+  "search.none": "沒有符合的項目。搜尋範圍：頁面、分頁、節點、群組與節點來源的名稱，目前的連線，組態檔案路徑，路由規則與 DNS 規則的運算式。",
   "search.pages": "頁面",
   "search.providers": "節點來源",
   "search.sources": "組態來源",

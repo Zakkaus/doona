@@ -195,6 +195,6 @@ test('an empty search says what it looked through, so a domain with no live conn
   const dialog = await open(page, 'pixiv.net');
   await expect(dialog.getByRole('option')).toHaveCount(0);
   await expect(dialog.locator('.rp-empty')).toHaveText(
-    'No matches. Search covers the names of pages, nodes, groups and node sources, live connections, configuration file paths and rule expressions.'
+    'No matches. Search covers the names of pages, tabs, nodes, groups and node sources, live connections, configuration file paths, and routing and DNS rule expressions.'
   );
 });
