@@ -19,10 +19,10 @@ export function groupQuery(groups: ReadonlyArray<{id: string; name: string}> | u
   return id ? within('', {group: id}) : '';
 }
 
-// The routing trace with its form filled in from a link: the target, and the source when the link knows it. The person
-// runs the trace.
-export type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string};
-const traceKeys = ['network', 'domain', 'dst_ip', 'dst_port', 'src_ip'] as const;
+// The routing trace with its form filled in from a link: the target, and the source and process when the link knows
+// them. The person runs the trace.
+export type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string; src_port: string; pname: string};
+const traceKeys = ['network', 'domain', 'dst_ip', 'dst_port', 'src_ip', 'src_port', 'pname'] as const;
 export const traceQuery = (link: Partial<TraceLink>) => within('', {tab: 'trace', ...Object.fromEntries(traceKeys.map(key => [key, link[key] || null]))});
 // Null when the link names no target, so a plain visit to the tab keeps what was typed.
 export function parseTraceLink(query: string): TraceLink | null {
@@ -34,7 +34,9 @@ export function parseTraceLink(query: string): TraceLink | null {
     domain: value('domain'),
     dst_ip: value('dst_ip'),
     dst_port: value('dst_port'),
-    src_ip: value('src_ip')
+    src_ip: value('src_ip'),
+    src_port: value('src_port'),
+    pname: value('pname')
   };
 }
 

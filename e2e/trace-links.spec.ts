@@ -28,6 +28,24 @@ test('a connection opens the trace of its target and source', async ({page}) => 
   await expect(page).toHaveURL(/#\/connections\?tab=list&id=1$/);
 });
 
+test('a connection traces with its source port and process, so process rules are decided', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['GET connections'] = async () => {
+    const list = await api.connections({detail: 'full', limit: 1000});
+    return {...list, tcp: list.tcp.map(row => (row.id === '1' ? {...row, src: '10.0.0.12:51234', pname: 'Telegram'} : row))};
+  };
+  handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
+  await page.goto('/#/connections?tab=list&id=1');
+  await moreAction(detail(page), 'Trace this connection');
+  await expect(page).toHaveURL(/&src_ip=10\.0\.0\.12&src_port=51234&pname=Telegram$/);
+  await expect(page.getByLabel('Source port', {exact: true})).toHaveValue('51234');
+  await expect(page.getByLabel('Process name', {exact: true})).toHaveValue('Telegram');
+  await page.getByRole('button', {name: 'Run trace', exact: true}).click();
+  await expect.poll(() => requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace')).length).toBe(1);
+  const traced = requests.find(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))!;
+  expect(traced.postDataJSON().input).toMatchObject({src_ip: '10.0.0.12', src_port: 51234, pname: 'Telegram'});
+});
+
 const runTrace = async (page: import('@playwright/test').Page, query: string) => {
   await page.goto('/#/rules?tab=trace&' + query);
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
