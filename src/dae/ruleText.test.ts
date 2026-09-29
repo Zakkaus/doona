@@ -14,10 +14,10 @@ const rule: RoutingRule = {
 const text = 'routing {\n  l4proto(tcp, udp) -> mix # keep\n  fallback: direct\n}\n';
 const source = {id: 'source', content: text} as ConfigSource;
 
-it('anchors redacted display rules and bare fallbacks by source identity and location', () => {
+it('anchors redacted display rules and fallbacks by kind, source identity and location', () => {
   const anchor = ruleAnchor(source, rule)!;
   expect(removeRule(text, anchor)).toBe('routing {\n  fallback: direct\n}\n');
-  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback', outbound: 'direct', source: {...rule.source!, line: 3}})!;
+  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback: direct', outbound: 'direct', source: {...rule.source!, line: 3}})!;
   expect(addRule(text, fallback, 'dip(2001:db8::1)', 'direct', false)).toBe(
     'routing {\n  l4proto(tcp, udp) -> mix # keep\n  dip(2001:db8::1) -> direct\n  fallback: direct\n}\n'
   );
@@ -33,7 +33,7 @@ it('refuses changed source anchors, unavailable identities, withheld text and no
   expect(ruleAnchor({...source, content: text.replace('routing {', 'dns {')}, rule)).toBeNull();
   expect(ruleAnchor({...source, content: 'l4proto(tcp, udp) -> mix\n'}, {...rule, source: {...rule.source!, line: 1}})).toBeNull();
   expect(ruleAnchor(source, {...rule, source: {...rule.source!, line: 4}})).toBeNull();
-  expect(ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback'})).toBeNull();
+  expect(ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback: direct'})).toBeNull();
   expect(ruleAnchor(source, {...rule, source: {...rule.source!, line: 3}})).toBeNull();
 });
 
@@ -47,7 +47,7 @@ it('anchors a rule whose display expression ends with its outbound', () => {
 
 it('replaces only the target of a rule, keeping its condition, continuation lines and comment', () => {
   expect(replaceRuleTarget(text, ruleAnchor(source, rule)!, 'proxy', true)).toBe(text.replace('-> mix #', '-> proxy(must) #'));
-  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback', outbound: 'direct', source: {...rule.source!, line: 3}})!;
+  const fallback = ruleAnchor(source, {...rule, kind: 'fallback', expression: 'fallback: direct', outbound: 'direct', source: {...rule.source!, line: 3}})!;
   expect(replaceRuleTarget(text, fallback, 'block', false)).toBe(text.replace('fallback: direct', 'fallback: block'));
   const multi = 'routing {\n  domain(suffix: a.com,\n    suffix: b.com) ->proxy(must)\n}\n';
   const anchor = ruleAnchor({id: 'source', content: multi} as ConfigSource, {...rule, outbound: 'proxy', must: true})!;

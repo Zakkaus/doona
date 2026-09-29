@@ -716,7 +716,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   const api = await backend(page);
   await page.route('**/api/v1/rules', async route => {
     const rules = await api.rules();
-    rules.rules = rules.rules.map(rule => ({...rule, expression: rule.kind === 'fallback' ? 'fallback' : 'domain(<redacted>)'}));
+    rules.rules = rules.rules.map(rule => ({...rule, expression: rule.kind === 'fallback' ? rule.expression : 'domain(<redacted>)'}));
     await route.fulfill({json: rules});
   });
   let release!: () => void;
