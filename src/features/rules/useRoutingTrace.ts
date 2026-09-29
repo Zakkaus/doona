@@ -135,20 +135,19 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const evaluations = useMemo(
     () =>
       accepted?.run.traces
-        .flatMap(trace => trace.evaluations)
-        .map((evaluation, index) => {
+        // Rule ids name rules within one generation, so only a trace from the listed generation joins the rule list.
+        .flatMap(trace => trace.evaluations.map(evaluation => ({evaluation, current: generation === trace.generation_id})))
+        .map(({evaluation, current}, index) => {
           const matched = evaluation.rules.find(rule => rule.result === 'matched');
           const likely =
-            evaluation.decision !== 'determinate' && !evaluation.outbound && generation === accepted.run.traces[0].generation_id
-              ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null)
-              : null;
+            evaluation.decision !== 'determinate' && !evaluation.outbound && current ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null) : null;
           const outbound = evaluation.outbound ?? likely;
           const selected =
             outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
           const view = evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
           return {
             ...view,
-            rows: view.rows.map(row => ({...row, href: ruleHref(row.id, rulesById.has(row.id))})),
+            rows: view.rows.map(row => ({...row, href: ruleHref(row.id, current && rulesById.has(row.id))})),
             links: chainLinks(selected, groupsListed, providersListed ? providers.data?.providers : [], t),
             seed: traceSeed(accepted.input, evaluation)
           };
