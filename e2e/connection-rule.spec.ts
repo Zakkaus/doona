@@ -3,6 +3,12 @@ import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 
+// The dialog starts with no outbound, so a rule is written only after one is chosen.
+async function pick(dialog: import('@playwright/test').Locator, name: string) {
+  await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await dialog.page().getByRole('option', {name, exact: true}).click();
+}
+
 test.use({viewport: {width: 1440, height: 900}});
 // A reload the engine refused after the files were written.
 const rejectedReload = () => ({
@@ -23,6 +29,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await pick(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await dialog.getByRole('button', {name: /Match by$/}).click();
@@ -57,6 +64,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await pick(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toContainText('Validation found 1 error; nothing written');
   await expect(dialog).toContainText('config.dae line 44: Backend message: no group gaming');
@@ -139,6 +147,8 @@ async function hold(page: import('@playwright/test').Page, id: string) {
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  // The outbound each connection takes now: proxy for connection 1, direct for connection 2.
+  await pick(dialog, id === '2' ? 'direct' : 'proxy');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -278,11 +288,47 @@ test('the reload arrows turn once a second, like an indeterminate progress circl
   await cancel.click();
 });
 
-test('the dialog starts from the outbound the connection uses', async ({page}) => {
+test('the dialog shows the outbound the connection uses without choosing it', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/connections?id=2');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.getByRole('dialog', {name: 'Add rule'}).locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com)');
+  await expect(dialog).toContainText('Current: direct');
+  await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
+  // A rule to the outbound the traffic already takes is allowed, and the dialog says it changes nothing.
+  const unchanged = dialog.getByText('This rule does not change where this traffic goes now.');
+  await pick(dialog, 'direct');
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
+  await expect(unchanged).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
+  await pick(dialog, 'proxy');
+  await expect(unchanged).toHaveCount(0);
+});
+
+test('the dialog says the rule goes before the matched rule when it does', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/connections?id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  const note = dialog.getByText('Placed before the rule that matches now.');
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await expect(note).toBeVisible();
+});
+
+test('the dialog says nothing about the matched rule when it cannot go before it', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  // Without the matched rule in the list, the rule goes before the fallback and nothing is said about the match.
+  handlers['GET rules'] = async () => {
+    const list = await api.rules();
+    return {...list, rules: list.rules.filter(rule => rule.rule_id !== 'r5')};
+  };
+  await page.goto('/#/connections?id=1');
+  await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await expect(dialog.getByRole('button', {name: /Insert$/})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: /Insert$/})).not.toContainText('Before the matched rule');
+  await expect(dialog.getByText('Placed before the rule that matches now.')).toHaveCount(0);
 });
 
 test('a matched rule gone after a reload is not retargeted until the dialog says so', async ({page}) => {
@@ -296,6 +342,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await pick(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toContainText('The matched rule changed; the rule will be inserted at the position shown below.');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
@@ -363,6 +410,7 @@ test('rules the backend displays with their outbound are still placed', async ({
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await pick(dialog, 'proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
 
@@ -383,6 +431,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   slow = true;
+  await pick(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect.poll(() => reading).toBe(true);
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
@@ -410,6 +459,7 @@ test('a rule written whose reload failed is not held again and not offered for a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await pick(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   const notice = page.locator('.rp-toast.negative', {hasText: 'Written to the configuration file but not applied'});
   await expect(notice).toBeVisible();
@@ -442,6 +492,7 @@ test('the dialog does not write while the top bar applies held rules', async ({p
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   write.open();
   await expect(page.locator('.rp-toast.positive', {hasText: '1 rule is in effect'})).toBeVisible();
+  await pick(dialog, 'proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
@@ -563,6 +614,7 @@ test('the dialog waits for the groups before it writes', async ({page}) => {
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   groups.open();
+  await pick(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
@@ -582,6 +634,8 @@ test('the dialog preselects no outbound the groups may contradict before they ar
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org)');
   await expect(dialog.getByRole('button', {name: /Outbound$/})).not.toContainText('direct');
   groups.open();
+  await expect(dialog).toContainText('Current: proxy');
+  await pick(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Outbound$/})).toContainText('proxy');
 });
@@ -600,6 +654,7 @@ test('a failed groups read shows in the dialog and is retried there', async ({pa
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   fail = false;
   await dialog.getByRole('button', {name: 'Retry', exact: true}).click();
+  await pick(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });

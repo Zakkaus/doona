@@ -39,6 +39,7 @@ async function holdRouting(page: Page, id: string) {
   await page.goto(`/#/connections?id=${id}`);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(dialogOf(page).getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
+  await pick(page, /Outbound$/, 'proxy');
   await dialogOf(page).getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialogOf(page)).toHaveCount(0);
 }
@@ -49,13 +50,24 @@ test('the DNS log adds a rule for the selected record from its toolbar and its d
   const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
   const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
+  // Once the records are listed, the disabled button gives its reason in a tooltip on the wrapper that stays hoverable.
+  await expect(first).toBeVisible();
+  // The toolbar may lay its actions out again as later records arrive, so the hover is retried until the tip shows.
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await add.locator('..').hover();
+    await expect(page.getByRole('tooltip')).toHaveText('Select a row first', {timeout: 1500});
+  }).toPass();
   const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
   await first.click();
   await add.click();
   const dialog = dialogOf(page);
   await expect(dialog.getByRole('button', {name: /Rule list$/})).toContainText('DNS request rules');
   // The newest record was answered by udp://223.5.5.5, which the configuration names alidns with its port.
-  await expect(dialog.getByRole('button', {name: /Action$/})).toContainText('alidns');
+  await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name})`);
+  await expect(dialog).toContainText('Current: alidns');
+  await expect(dialog).not.toContainText('does not change');
+  await pick(page, /Action$/, 'alidns');
   await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name}) -> alidns`);
   // The record type narrows the rule only when asked.
   // The input is hidden under its track, so a click goes to the switch as drawn.
@@ -68,8 +80,10 @@ test('the DNS log adds a rule for the selected record from its toolbar and its d
   await expect(dialog.locator('.rp-code')).toHaveText(`domain(full: ${name})`);
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
+  // The detail opens the same dialog, again with no action chosen.
   await page.locator('.rp-panel').getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name}) -> alidns`);
+  await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name})`);
+  await expect(dialog).toContainText('Current: alidns');
 });
 
 test('a query result adds a response rule for an answered address, then queries again', async ({page}) => {
