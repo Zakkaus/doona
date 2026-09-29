@@ -101,12 +101,21 @@ export const faults = {'doona-mock-scenario': 'faults'};
 
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
 // A phone keeps every column and scrolls the table sideways, the container around a native table and the grid itself
-// once virtualised; this brings the trailing columns into view.
+// once virtualised; this brings the trailing columns into view. A virtualised grid turns pointer events off on its
+// content until 300ms after its last scroll event, so this returns once that has passed: a click sooner finds the
+// content unclickable, and Playwright scrolls again to retry and lets the click land among further scroll events,
+// which close any popover it opens.
 export async function scrollTableToEnd(grid: Locator) {
-  await grid.evaluate(el => {
+  await grid.evaluate(async el => {
     const scroller = el.tagName === 'TABLE' ? el.parentElement! : el;
+    const before = scroller.scrollLeft;
+    const scrolled = new Promise<void>(resolve => scroller.addEventListener('scroll', () => resolve(), {once: true}));
     scroller.scrollLeft = scroller.scrollWidth;
+    if (scroller.scrollLeft !== before) await scrolled;
   });
+  await expect
+    .poll(() => grid.evaluate(el => getComputedStyle((el.tagName === 'TABLE' ? el.parentElement! : el).firstElementChild!).pointerEvents))
+    .not.toBe('none');
 }
 
 export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
