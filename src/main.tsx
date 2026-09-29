@@ -9,7 +9,7 @@ import {initializeApi, startedOnMock} from './api';
 import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
-import {DEFAULT_LANG, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
+import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
 import startupText from 'virtual:startup-text';
 
 stampAppearance();
@@ -62,6 +62,7 @@ function Startup() {
   useLayoutEffect(() => {
     const html = document.documentElement;
     html.lang = LOCALE[shown];
+    html.style.setProperty('--rp-font-family', FONT[shown]);
     html.dir = pageDirection(LOCALE[shown], html.hasAttribute('data-mirror'));
   }, [shown]);
   if (ready && lang) return <Shell lang={lang} />;

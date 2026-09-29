@@ -75,20 +75,11 @@ body {
     overflow-y: scroll;
   }
 }
-/* Integer line heights everywhere so 1px rules land on whole pixels. */
+/* Integer line heights everywhere so 1px rules land on whole pixels. The language's font stack (FONT in src/i18n) is set
+   on the root with its lang; the fallback is the default language's stack. */
 body {
-  font:
-    14px/20px 'Noto Sans TC',
-    system-ui,
-    sans-serif;
+  font: 14px/20px var(--rp-font-family, 'Noto Sans TC', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
-}
-/* Simplified Chinese prefers the SC glyph forms; anything SC lacks falls to the TC faces declared so far, then the
-   system font. The other languages leave SC out, so after zh-CN they render as they do after a reload, when the SC
-   faces are not declared. */
-:lang(zh-CN) body,
-body:lang(zh-CN) {
-  font-family: 'Noto Sans SC', 'Noto Sans TC', system-ui, sans-serif;
 }
 * {
   box-sizing: border-box;

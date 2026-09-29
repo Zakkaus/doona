@@ -8,13 +8,23 @@
 //   docs    the doona-docs language folder the docs links open; 'en' when the docs have no translation
 //   fonts   <name> of the src/fonts-<name>.css stylesheet that declares the language's ideograph faces, loaded with
 //           its catalogue, or null
+//   faces   the font families the body prefers, in order, before the system font; the first is warmed for menu glyphs.
+//           The TC faces in src/fonts.css cover Latin for every language.
 //   complete  whether check:i18n requires every key. A partial language loads English with its own catalogue and
 //           shows the English text for a key it lacks; maintainers mark it complete once it has them all.
 export const languages = [
-  {id: 'zh-TW', name: '繁體中文', locale: 'zh-TW', docs: 'zh-TW', fonts: 'tc', complete: true},
-  {id: 'zh-CN', name: '简体中文', locale: 'zh-CN', docs: 'zh-CN', fonts: 'sc', complete: true},
-  {id: 'en', name: 'English', locale: 'en-US', docs: 'en', fonts: null, complete: true}
-] as const satisfies ReadonlyArray<{id: string; name: string; locale: string; docs: 'zh-TW' | 'zh-CN' | 'en'; fonts: string | null; complete: boolean}>;
+  {id: 'zh-TW', name: '繁體中文', locale: 'zh-TW', docs: 'zh-TW', fonts: 'tc', faces: ['Noto Sans TC'], complete: true},
+  {id: 'zh-CN', name: '简体中文', locale: 'zh-CN', docs: 'zh-CN', fonts: 'sc', faces: ['Noto Sans SC', 'Noto Sans TC'], complete: true},
+  {id: 'en', name: 'English', locale: 'en-US', docs: 'en', fonts: null, faces: ['Noto Sans TC'], complete: true}
+] as const satisfies ReadonlyArray<{
+  id: string;
+  name: string;
+  locale: string;
+  docs: 'zh-TW' | 'zh-CN' | 'en';
+  fonts: string | null;
+  faces: readonly string[];
+  complete: boolean;
+}>;
 
 export type Lang = (typeof languages)[number]['id'];
 export type CompleteLang = Extract<(typeof languages)[number], {complete: true}>['id'];
