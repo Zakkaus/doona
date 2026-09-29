@@ -1220,7 +1220,7 @@
   "policy.editAmbiguous": "This group is defined more than once in the configuration, so it cannot be edited here",
   "policy.editHelp": "Rewrites this group's policy and filters in the group section of the file that defines it, keeping its other fields. Saves and reloads after validation passes.",
   "policy.editNoConfig": "The configuration is not ready for editing yet",
-  "policy.editNoEntry": "This group was not found in the loaded group sections",
+  "policy.editNoEntry": "No loaded configuration file defines this group",
   "policy.editReadOnly": "This group is defined in {file}, which is read-only",
   "policy.editTitle": "Edit group {name}",
   "policy.editUnsafe": "Filters and the policy must stay on one line with balanced parentheses and no comment or brace.",
