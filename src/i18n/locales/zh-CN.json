@@ -1049,7 +1049,7 @@
   "policy.editAmbiguous": "此组在配置中有多处定义，无法在此编辑",
   "policy.editHelp": "在此组所在文件的 group 区段中改写其策略与筛选条件，保留其他字段；校验通过后保存并重载。",
   "policy.editNoConfig": "配置尚未准备好，无法编辑",
-  "policy.editNoEntry": "已取得的 group 区段中未找到此组，无法编辑",
+  "policy.editNoEntry": "已读取的配置文件中没有此组的定义，无法编辑",
   "policy.editReadOnly": "此组定义于 {file}，该文件只读，无法编辑",
   "policy.editTitle": "编辑组 {name}",
   "policy.editUnsafe": "筛选或策略必须写在同一行，括号成对，且不含注释或大括号。",

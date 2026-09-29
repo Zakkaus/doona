@@ -1049,7 +1049,7 @@
   "policy.editAmbiguous": "此群組在組態中有多處定義，無法在此編輯",
   "policy.editHelp": "在此群組所在檔案的 group 區段中改寫其策略與篩選條件，保留其他欄位；驗證通過後儲存並重載。",
   "policy.editNoConfig": "組態尚未就緒，無法編輯",
-  "policy.editNoEntry": "已取得的 group 區段中找不到此群組，無法編輯",
+  "policy.editNoEntry": "已讀取的組態檔案中沒有此群組的定義，無法編輯",
   "policy.editReadOnly": "此群組定義於 {file}，該檔案唯讀，無法編輯",
   "policy.editTitle": "編輯群組 {name}",
   "policy.editUnsafe": "篩選或策略必須寫在同一行，括號成對，且不含註解或大括號。",
