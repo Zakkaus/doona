@@ -227,3 +227,23 @@ test('a segmented marker inside a hidden tab panel keeps its place', async ({pag
   await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
   expect(await slider.evaluate(el => (el as HTMLElement).style.left)).toBe(left);
 });
+
+test('a tile whose value links to its source answers hover as a linked card', async ({page}) => {
+  await page.goto('/#/activity');
+  const link = page.locator('.rp-tile-val > .rp-link').first();
+  await expect(link).toBeVisible();
+  const card = page.locator('.rp-card', {has: link});
+  const box = (await card.boundingBox())!;
+  // The empty lower corner of the card, away from the value, still hovers the link.
+  await page.mouse.move(box.x + box.width - 12, box.y + box.height - 8);
+  await expect(link).toHaveAttribute('data-hovered', 'true');
+  const style = await link.evaluate(el => {
+    const s = getComputedStyle(el);
+    return {background: s.backgroundColor, line: s.textDecorationLine};
+  });
+  expect(style.background).toBe('rgba(0, 0, 0, 0)');
+  expect(style.line).toBe('none');
+  // The node menu in the same tile stays a control of its own above the cover.
+  await card.getByRole('button').first().click();
+  await expect(page).toHaveURL(/#\/activity/);
+});

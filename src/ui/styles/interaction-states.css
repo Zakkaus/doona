@@ -232,6 +232,39 @@
 .rp-card > .rp-link {
   margin-inline-start: -8px;
 }
+/* A tile whose value opens what it measures behaves like a linked card: the value's link covers the card, so the whole
+   tile is the target and it answers hover and press the way the connections tile does, without boxing the glyphs.
+   Controls in the tile (a node menu, a help button, a status light) sit above the cover. */
+.rp-card:has(.rp-tile-val > .rp-link) {
+  position: relative;
+  transition: border-color var(--rp-duration) var(--rp-ease);
+}
+.rp-tile-val > .rp-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.rp-tile-val > .rp-link:is([data-hovered], [data-pressed]) {
+  background-color: transparent;
+}
+.rp-tile-val > .rp-link[data-focus-visible] {
+  outline: none;
+}
+.rp-card:has(.rp-tile-val > .rp-link) :is(button, [role='button'], .rp-light, .rp-tipwrap) {
+  position: relative;
+  z-index: 1;
+}
+.rp-card:has(.rp-tile-val > .rp-link[data-hovered]) {
+  border-color: var(--rp-accent);
+}
+.rp-card:has(.rp-tile-val > .rp-link[data-pressed]) {
+  background: var(--rp-overlay);
+}
+.rp-card:has(.rp-tile-val > .rp-link[data-focus-visible]) {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
 @media (max-width: 600px) {
   .rp-brand-version {
     display: none;
