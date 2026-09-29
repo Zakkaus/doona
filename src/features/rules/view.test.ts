@@ -61,18 +61,6 @@ it('offers edits only at writable sources and preserves source locations when pa
   expect(locked.positions).toEqual([]);
   expect(locked.rows.some(row => row.removable)).toBe(false);
   expect(locked.rows[0].editReason).toBe(t('config.readOnlyAttempt'));
-  const withheld = dictionaryView(
-    rules.rules,
-    rules.generation_id,
-    flows,
-    config.sources.map(source => ({...source, content: undefined})),
-    groups,
-    t,
-    'en'
-  );
-  expect(withheld.positions).toEqual([]);
-  expect(withheld.rows.some(row => row.removable)).toBe(false);
-  expect(withheld.rows[0].editReason).toBe(t('config.incomplete'));
   const redacted = {...first, source: {file: '<redacted>', source_id: 'src-main', line: 40, column: null}};
   expect(dictionaryView([redacted], undefined, undefined, [], [], t, 'en').rows[0].position).toBe(t('rule.lineOnly', {n: '40'}));
   expect(removalView(redacted, [], t).help).toBe(t('rule.removeHelp', {file: '', line: '40'}));
@@ -279,8 +267,8 @@ it('puts the rule lists first, routing then DNS, and offers DNS only when the ba
 
 it('opens the rules page without a DNS tab on a backend that does not report DNS rules', async () => {
   const raw = await createMockApi().capabilities();
-  const older = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key !== 'dns_rules')) as ReportedCapabilities['resources'];
-  const {resources} = normalizeCapabilities({...raw, resources: older});
+  const {dns_rules: _dnsRules, ...older} = raw.resources;
+  const {resources} = normalizeCapabilities({...raw, resources: older as ReportedCapabilities['resources']});
   expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
 });
 
@@ -307,9 +295,6 @@ it('lists DNS request and response rules with their actions, locations and inser
   expect(response.rows.map(row => row.outbound)).toEqual(['accept', 'cloudflare', 'accept']);
   expect(response.outbounds.map(choice => choice.id)).toEqual(['accept', 'reject', 'cloudflare', 'alidns']);
   expect(response.outbounds.find(choice => choice.id === 'alidns')?.desc).toBe(t('rule.dns.action.requery'));
-  // Without the source text nothing can be located, so nothing is offered for removal or as an insertion point.
-  const withheld = config.sources.map(source => ({...source, content: undefined}));
-  expect(dnsDictionaryView('request', dns.request, dns.generation_id, withheld, t, 'en')).toMatchObject({positions: []});
 });
 
 it('explains an invalid DNS condition and a missing action in DNS terms', () => {

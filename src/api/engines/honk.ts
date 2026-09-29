@@ -71,7 +71,7 @@ export const honk: Engine = {
   reason,
   // Reading these back takes a BPF_PROG_QUERY per hook, or a switch into the daens namespace for dae0peer.
   uncheckedHooks: ['cgroup', 'sk_lookup', 'dae0peer'],
-  holdsCredentials: source => source.content !== undefined && definesListener(scanConfig(source.content).blocks),
+  holdsCredentials: source => definesListener(scanConfig(source.content).blocks),
   // honk reads its API settings from `experimental { native_api { } }`, and only at startup.
   snippet: (settings: EngineSetting[]) =>
     ['experimental {', '  native_api {', ...settings.map(({key, value}) => `    ${key}: ${value}`), '  }', '}'].join('\n'),

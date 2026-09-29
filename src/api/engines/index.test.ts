@@ -79,7 +79,6 @@ describe('honk', () => {
     expect(honk.holdsCredentials({content: listener})).toBe(true);
     expect(honk.holdsCredentials({content: "clash_api { secret: '<redacted>' }"})).toBe(true);
     expect(honk.holdsCredentials({content: '# native_api is off\nglobal { log_level: info }'})).toBe(false);
-    expect(honk.holdsCredentials({content: undefined})).toBe(false);
   });
 
   it('nests the settings in the native_api section', () => {

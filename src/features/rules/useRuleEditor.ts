@@ -28,7 +28,6 @@ export type RuleEditorModel = {
   addTip: string | undefined;
   // Why Add rule is disabled, shown under it; another change being applied is left to the tip.
   addReason: string | null;
-  editHelp: string | null;
   dialog: {kind: 'add'} | {kind: 'remove'; expression: string; help: string} | {kind: 'edit'; expression: string} | null;
   dialogTitle: string;
   submitLabel: string;
@@ -209,7 +208,6 @@ export function useRuleEditor<R extends EditedRule>({
     addDisabled: !positions.length || !!editor.busy,
     addTip: addRuleTip(noPosition, !!editor.busy, t),
     addReason: addRuleTip(noPosition, false, t) ?? null,
-    editHelp: canWrite && sources.some(source => source.writable && source.content === undefined) ? t('config.incomplete') : null,
     dialog: dialogView,
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
     submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),

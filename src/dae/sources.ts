@@ -17,13 +17,13 @@ export const fileName = (source: {id: string; kind: string; path: string}) =>
 // IDs identify diagnostics only; paths provide include-resolution identities.
 export function validationSources(sources: ConfigSource[], replacement?: {id: string; content: string}): ConfigValidationRequest['sources'] | null {
   const main = sources.find(source => source.kind === 'main');
-  if (main?.content === undefined) return null;
-  const authored = [main, ...sources.filter(source => source.kind === 'include' && source.content !== undefined && !redacted(source))];
+  if (!main) return null;
+  const authored = [main, ...sources.filter(source => source.kind === 'include' && !redacted(source))];
   if (replacement && !authored.some(source => source.id === replacement.id)) return null;
   return authored.map(source => ({
     id: source.id,
     ...(redacted(source) ? {} : {path: source.path}),
-    content: source.id === replacement?.id ? replacement.content : source.content!
+    content: source.id === replacement?.id ? replacement.content : source.content
   }));
 }
 

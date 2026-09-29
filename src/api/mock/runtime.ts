@@ -45,6 +45,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
   const api: RuntimeApi = {
     discovery: async signal => {
       signal?.throwIfAborted();
+      // The generated links type intersects an x-<engine> index signature that no literal of shared links satisfies.
       return {
         name: 'daeuniverse/native',
         status: 'draft',
@@ -66,7 +67,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
           operations: '/api/v1/operations/{operation_id}'
         },
         auth: {mode: 'token', setup_required: false, anonymous_loopback: false}
-      };
+      } as Awaited<ReturnType<Api['discovery']>>;
     },
     version: async signal => {
       signal?.throwIfAborted();

@@ -1,9 +1,9 @@
 import type {Capabilities, ConfigSource} from '../../api/model';
 import type {Key} from '../../i18n';
 
-// Quick setup needs a writable main source with its text; a redacted text is shown but cannot be written back.
+// Quick setup needs a writable main source.
 export function setupAvailable(resources: Capabilities['resources'] | undefined, main: ConfigSource | null | undefined): boolean {
-  return !!main && resources?.config.writable === true && main.writable && main.content !== undefined;
+  return !!main && resources?.config.writable === true && main.writable;
 }
 export function configTabs(setup: boolean): Array<{id: 'modules' | 'setup' | 'source' | 'validate'; titleKey: Key}> {
   return [
