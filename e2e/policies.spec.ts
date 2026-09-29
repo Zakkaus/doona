@@ -156,7 +156,7 @@ test('a check URL another client changed while the dialog was open is not overwr
   const save = dialog.getByRole('button', {name: 'Apply', exact: true});
   // The first save carries the revision the page loaded and is refused as stale, which fetches the group again.
   await save.click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Revision changed');
+  await expect(page.locator('.rp-toast.negative')).toContainText('Changed since it was loaded');
   await expect.poll(() => requests.filter(request => request.method() === 'GET' && request.url().endsWith('/groups/resilient')).length).toBeGreaterThan(1);
   // The retry carries the current revision, but the URL it opened with no longer holds, so the backend refuses it.
   await save.click();

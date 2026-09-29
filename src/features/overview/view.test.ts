@@ -182,3 +182,11 @@ it('shows only the capacity of maps whose occupancy is not read and leaves out p
   expect(field(fields, t('ov.f.visibility'))).toBeUndefined();
   expect(field(datapathFields({...datapath, visibility: 'partial', ebpf: null}, 'unknown', t, 'en-US'), t('ov.f.visibility'))?.value).toBe(t('ov.v.partial'));
 });
+
+it('shows the config version, not the generation, and a dash when the backend reports none', () => {
+  const strip = (config_revision: string | null) =>
+    overviewView({runtime: {...runtime, generation: {...runtime.generation, active_id: 'gen-3', config_revision}}}, loading, 'en-US', t).strip;
+  expect(strip('rev-9')[0]).toMatchObject({label: t('ov.config'), value: 'rev-9', full: 'rev-9'});
+  expect(strip(null)[0]).toMatchObject({label: t('ov.config'), value: '—', full: '—'});
+  expect(t('ov.config')).toBe('Config version');
+});

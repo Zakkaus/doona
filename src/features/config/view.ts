@@ -408,11 +408,7 @@ export function validateReason(
   return t(main?.content !== undefined && isComplete(main) ? 'config.validateOther' : 'config.validateNoMain');
 }
 
-// The generation and the revision of the active configuration; the generation is explained, since a reload can
-// change the revision and keep it.
-export function configMetadata(generation: string, revision: string, t: Translator): KvItem[] {
-  return [
-    {label: t('config.generation'), value: generation, help: {title: t('config.generation'), text: t('config.generationHelp')}},
-    [t('config.revision'), revision]
-  ];
+// The version of the active configuration. The generation id is a technical field and is not shown here.
+export function configMetadata(revision: string, t: Translator): KvItem[] {
+  return [{label: t('config.revision'), value: revision, help: {title: t('config.revision'), text: t('config.revisionHelp')}}];
 }

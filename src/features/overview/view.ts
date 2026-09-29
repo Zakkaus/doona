@@ -160,7 +160,7 @@ export function overviewView(
   const {capabilities, runtime, version, memory, datapath, limits = []} = data;
   const unchecked = engineOf(version).uncheckedHooks;
   const state = runtime?.lifecycle.state;
-  const revision = runtime?.generation.config_revision ?? runtime?.generation.active_id ?? '—';
+  const revision = runtime?.generation.config_revision ?? '—';
   const reload = runtime?.last_reload;
   const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
