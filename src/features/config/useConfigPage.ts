@@ -281,7 +281,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     reason: dirty
       ? !writable && readOnly
         ? readOnly.note
-        : saveReason({busy: !!editor.busy, conflict: !!conflict, changed: true}, t)
+        : saveReason({busy: !!editor.busy, conflict: !!conflict}, t)
       : canValidate && !editor.busy
         ? validateReason(candidates, sources, isComplete, t)
         : null

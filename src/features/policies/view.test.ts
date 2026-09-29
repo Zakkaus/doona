@@ -16,7 +16,6 @@ import {
   groupConfigFields,
   groupActionsReason,
   memberViews,
-  noChangesReason,
   nodeGridView,
   policyCardView,
   probeSummary,
@@ -315,10 +314,4 @@ it('says why a group cannot be edited in the source that declares it', () => {
   expect(editBlocked({...owner, origin: {...origin, writable: false}}, state, t)).toBe('This group is defined in /etc/honk/extra.dae, which is read-only');
   expect(editBlocked(owner, {...state, complete: undefined}, t)).toBe(t('policy.editNoConfig'));
   expect(editBlocked(owner, {...state, complete: false}, t)).toBe(t('config.incomplete'));
-});
-
-it('says Save has nothing to save until a value changes, and nothing while a save is in flight', () => {
-  expect(noChangesReason(false, false, t)).toBe('No changes to save');
-  expect(noChangesReason(true, false, t)).toBeNull();
-  expect(noChangesReason(false, true, t)).toBeNull();
 });

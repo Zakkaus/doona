@@ -384,19 +384,13 @@ export function saveView(
 // pending button shows that) or while the text is still being checked. A change on disk has its own banner above, so
 // the line names what to do about it.
 export function saveReason(
-  {
-    busy,
-    complete = true,
-    conflict,
-    invalid = null,
-    changed
-  }: {busy: boolean; complete?: boolean | null; conflict: boolean; invalid?: string | null; changed: boolean},
+  {busy, complete = true, conflict, invalid = null}: {busy: boolean; complete?: boolean | null; conflict: boolean; invalid?: string | null},
   t: Translator
 ): string | null {
   if (busy || complete === null) return null;
   if (!complete) return t('config.incomplete');
   if (conflict) return t('config.saveConflict');
-  return invalid ?? (changed ? null : t('config.noChanges'));
+  return invalid;
 }
 
 // Why Validate is disabled: `candidates` is null when the sources cannot make a request. Null while their text is still

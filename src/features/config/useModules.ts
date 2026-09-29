@@ -127,7 +127,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
     diagnostics: diagnosticRows(own, config.sources, locale, t),
     outbounds: () => outbounds,
     dirty,
-    saveReason: saveReason({busy: !!editor.busy, conflict: !!conflict, changed: dirty}, t),
+    saveReason: saveReason({busy: !!editor.busy, conflict: !!conflict}, t),
     conflict: conflict ? t('config.changedOnDisk') : null,
     // Keeping the draft carries it over to the section as it is now, so the next save replaces that section.
     keep: conflict && under?.next ? () => setDraft(under.next) : null,
