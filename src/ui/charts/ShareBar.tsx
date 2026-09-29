@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {useChartDescription} from './description';
+import {shareDescription, useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
 
 export type ShareSegment = {id: string; label: string; count: number; color: string; text: string};
@@ -12,12 +12,7 @@ export function ShareBar({label, segments}: {label: string; segments: ShareSegme
   const total = segments.reduce((sum, segment) => sum + segment.count, 0);
   return (
     <div className="rp-sharebar rp-chart-hover" ref={tipRef} onPointerLeave={hideTip}>
-      <div
-        className="bar"
-        role="img"
-        aria-label={t('ui.valuePair', {label, value: segments.map(segment => `${segment.label} ${segment.text}`).join(t('ui.separator'))})}
-        aria-describedby={describedBy}
-      >
+      <div className="bar" role="img" aria-label={shareDescription(label, segments, t)} aria-describedby={describedBy}>
         {/* An empty share has no part of the bar; the legend still lists it with its zero. */}
         {segments
           .filter(segment => segment.count > 0 || !total)

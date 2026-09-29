@@ -38,7 +38,7 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
       y: Math.round((height / 2 + ty) * 10000) / 10000,
       width,
       bounds: {x: 0, y: 0, width, height},
-      lines: [`${row.name}${t('ui.labelSeparator')}${t('ui.share', {bytes: row.text, percent: String(row.value)})}`]
+      lines: [t('ui.valuePair', {label: row.name, value: t('ui.share', {bytes: row.text, percent: String(row.value)})})]
     });
   });
   const selection = useSelection(data.length, select, clear);

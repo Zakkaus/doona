@@ -1,0 +1,13 @@
+import {expect, it} from 'vitest';
+import {translate, type Translator} from '../../i18n';
+import {missingNames} from './Latency';
+
+const rows = Array.from({length: 8}, (_, i) => ({id: String(i), name: `node-${i}`, state: 'unavailable' as const}));
+
+it('shortens a long list of names in one message the language can reorder', () => {
+  const en: Translator = (key, params) => translate('en', key, params);
+  expect(missingNames(rows.slice(0, 2), 'en', en)).toBe('node-0, node-1');
+  expect(missingNames(rows, 'en', en)).toBe('node-0, node-1, node-2, node-3, node-4, node-5 and 2 more');
+  const countFirst: Translator = (key, params) => (key === 'nodes.latency.andMore' ? `${params?.n} more: ${params?.names}` : en(key, params));
+  expect(missingNames(rows, 'en', countFirst)).toBe('2 more: node-0, node-1, node-2, node-3, node-4, node-5');
+});

@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {useChartDescription} from './description';
+import {shareDescription, useChartDescription} from './description';
 import {useMemo} from 'react';
 import {waffleCells} from './layout';
 import {ChartTip, useChartTip} from './tip';
@@ -17,12 +17,7 @@ export function Waffle({label, shares}: {label: string; shares: WaffleShare[]}) 
   }, [shares]);
   return (
     <div className="rp-waffle rp-chart-hover" ref={tipRef} onPointerLeave={hideTip}>
-      <div
-        className="grid"
-        role="img"
-        aria-describedby={describedBy}
-        aria-label={t('ui.valuePair', {label, value: shares.map(share => `${share.label} ${share.text}`).join(t('ui.separator'))})}
-      >
+      <div className="grid" role="img" aria-describedby={describedBy} aria-label={shareDescription(label, shares, t)}>
         {cells.map((share, i) => (
           <span key={i} style={{background: share.color}} onPointerMove={event => showTip(event, [share.label, share.text])} />
         ))}

@@ -22,7 +22,7 @@ import {cx} from './cx';
 import {Button, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
-import {useT} from '../i18n';
+import {useT, type Translator} from '../i18n';
 
 type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
 const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
@@ -194,10 +194,10 @@ function SectionMenu({
 }
 
 // The chosen item, named with its section when the submenu has several and the item alone would not say which.
-function chosen(sections: ChoiceSection[]) {
+export function chosen(sections: ChoiceSection[], t: Translator) {
   for (const section of sections) {
     const item = section.items.find(i => i.id === section.value);
-    if (item) return sections.length > 1 && item.label !== section.title ? `${section.title} ${item.label}` : item.label;
+    if (item) return sections.length > 1 && item.label !== section.title ? t('ui.sectionChoice', {section: section.title, item: item.label}) : item.label;
   }
   return '';
 }
@@ -210,16 +210,19 @@ const ActionItem = ({id, label, icon, onAction}: ChoiceAction & {id: string}) =>
 );
 const actionKey = (index: number) => `action-${index}`;
 
-const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string}) => (
-  <MenuItem id={id} className="rp-item rp-subitem" textValue={label}>
-    <span className="ic">{icon}</span>
-    <TextTooltip>{label}</TextTooltip>
-    <span className="desc">
-      {chosen(sections)}
-      <ChevronDown className="rp-chev-end" />
-    </span>
-  </MenuItem>
-);
+const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string}) => {
+  const t = useT();
+  return (
+    <MenuItem id={id} className="rp-item rp-subitem" textValue={label}>
+      <span className="ic">{icon}</span>
+      <TextTooltip>{label}</TextTooltip>
+      <span className="desc">
+        {chosen(sections, t)}
+        <ChevronDown className="rp-chev-end" />
+      </span>
+    </MenuItem>
+  );
+};
 
 // On a phone a submenu beside its row would leave the screen, so the submenu replaces the menu in the same popover,
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
