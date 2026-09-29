@@ -49,6 +49,10 @@ export function useGeodataSettings() {
   const [lacking, setLacking] = useState<{preset: GeodataPreset; codes: string} | null>(null);
   const busy = settings.busy || geodata.busy;
   const canUpdate = !!caps.data?.resources.geodata.can_update;
+  // How the backend verifies downloads, when file values replace the ones set here, and the patch bounds.
+  const geodataCaps = caps.data?.resources.geodata;
+  const checksum = geodataCaps?.checksum ?? null;
+  const lifecycle = geodataCaps?.lifecycle;
 
   const update = () =>
     geodata.update().then(
@@ -116,7 +120,7 @@ export function useGeodataSettings() {
     );
   const savePreset = (chosen: GeodataPreset) => void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
   const saveLabel = t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources');
-  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true);
+  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true, checksum);
 
   return {
     available,
@@ -125,7 +129,13 @@ export function useGeodataSettings() {
     retry: settings.refetch,
     ready: !!stored,
     busy,
-    seededFromConfig: stored?.source === 'config',
+    // URLs the configuration file names return with its values; overrides that do not persist end at a restart.
+    lifecycleNote:
+      stored?.source === 'config'
+        ? t(lifecycle?.file_values === 'activation' ? 'settings.geodataConfigSeededActivation' : 'settings.geodataConfigSeeded')
+        : lifecycle?.overrides_persist === false
+          ? t('settings.geodataOverridesUntilRestart')
+          : null,
     note: t(canUpdate ? 'settings.geodataSourcesNote' : 'settings.geodataSourcesNoteStored'),
     source: {
       value: urls ? (preset?.id ?? 'custom') : '',
@@ -161,7 +171,7 @@ export function useGeodataSettings() {
       ? {
           lists: geodataKinds.map(kind => ({
             kind,
-            fields: customFields(custom[kind]).map((value, index, list) => {
+            fields: customFields(custom[kind], geodataCaps?.max_urls ?? 0).map((value, index, list) => {
               const problem = urlProblem(value, list);
               // The order is the fallback order, so a stored URL can trade places with its neighbour.
               const swap = (to: number) =>
@@ -229,13 +239,20 @@ export function useGeodataSettings() {
     // A backend that predates the setting reports none and always verifies.
     checksum: verify !== undefined && {
       enabled: verify,
+      help: t(
+        checksum === 'sha256sum'
+          ? 'settings.geodataVerifyChecksumHelp'
+          : checksum === 'pinned'
+            ? 'settings.geodataVerifyChecksumPinnedHelp'
+            : 'settings.geodataVerifyChecksumNoneHelp'
+      ),
       toggle: (enabled: boolean) => void save({verify_checksum: enabled})
     },
     auto: {
       enabled: !!auto.enabled,
       toggle: (enabled: boolean) => void save({auto_update: {enabled}}),
       interval: String(auto.interval_hours ?? ''),
-      intervals: auto.interval_hours ? intervalChoices(auto.interval_hours, locale) : [],
+      intervals: auto.interval_hours ? intervalChoices(auto.interval_hours, geodataCaps?.interval_hours, locale) : [],
       pick: (hours: string) => {
         if (Number(hours) !== stored?.auto_update.interval_hours) void save({auto_update: {interval_hours: Number(hours)}});
       }

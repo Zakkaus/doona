@@ -1,7 +1,7 @@
 import type {Capabilities, GeoAssetKind, GeoData, GeoDataDownload, GeoDataSettings, GeoDataSettingsPatch} from '../model';
 import {ApiError} from '../error';
 import {redactUrl} from './common';
-import {defaultGeodataPreset, geodataIntervalRange, geodataPresets, maxGeodataUrls, validGeodataUrl} from '../../dae/geodata';
+import {defaultGeodataPreset, geodataPresets, validGeodataUrl} from '../../dae/geodata';
 import {scanConfig} from '../../dae/text';
 import * as fixtures from './fixtures/inventory';
 import {faultRules, rules} from './rules';
@@ -25,8 +25,11 @@ const presetAt = (kind: GeoAssetKind, url: string) => geodataPresets.find(preset
 // The stored geodata settings and update status: the backend keeps them across reloads, unlike the other runtime settings.
 export function createGeodataState(capabilities: Capabilities, groupIds: () => Set<string>, faults = false) {
   const configurable = capabilities.resources.geodata.configurable_sources === true;
+  // The patch bounds the capabilities advertise.
+  const maxUrls = capabilities.resources.geodata.max_urls ?? 0;
+  const intervals = capabilities.resources.geodata.interval_hours ?? {min: 1, max: 168, default: 24};
   let stored: Record<GeoAssetKind, string[]> | null = null;
-  const auto = {enabled: true, interval_hours: 24};
+  const auto = {enabled: true, interval_hours: intervals.default};
   let download: GeoDataDownload = {route: 'routing', group_id: null};
   let verifyChecksum = true;
   const data = structuredClone(fixtures.geodata);
@@ -67,19 +70,19 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
     patch(patch: GeoDataSettingsPatch) {
       if (patch === null) {
         stored = null;
-        Object.assign(auto, {enabled: true, interval_hours: 24});
+        Object.assign(auto, {enabled: true, interval_hours: intervals.default});
         download = {route: 'routing', group_id: null};
         verifyChecksum = true;
       } else {
         for (const kind of kinds) {
           const list = patch[kind]?.urls;
           if (!list) continue;
-          if (!list.length || list.length > maxGeodataUrls) throw invalid(`geodata.${kind}.urls must hold 1 to ${maxGeodataUrls} URLs`);
+          if (!list.length || list.length > maxUrls) throw invalid(`geodata.${kind}.urls must hold 1 to ${maxUrls} URLs`);
           if (new Set(list).size !== list.length) throw invalid(`geodata.${kind}.urls must not repeat a URL`);
           if (!list.every(validGeodataUrl)) throw invalid(`geodata.${kind}.urls holds an invalid URL`);
         }
         const interval = patch.auto_update?.interval_hours;
-        const {min, max} = geodataIntervalRange;
+        const {min, max} = intervals;
         if (interval !== undefined && (!Number.isInteger(interval) || interval < min || interval > max))
           throw invalid(`geodata.auto_update.interval_hours must lie in [${min}, ${max}]`);
         const route = patch.download;

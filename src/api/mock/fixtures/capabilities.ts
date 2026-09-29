@@ -37,7 +37,7 @@ export const capabilities: Capabilities = {
       configurable_sources: true,
       checksum: 'sha256sum',
       max_urls: 4,
-      interval_hours: {min: 6, max: 168, default: 24},
+      interval_hours: {min: 1, max: 168, default: 24},
       lifecycle: {file_values: 'start', overrides_persist: true}
     },
     rules: {available: true, max_rules: 4096},

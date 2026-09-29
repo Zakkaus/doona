@@ -80,9 +80,6 @@ export const geodataPreset = (id: GeodataPresetId): GeodataPreset => geodataPres
 // The backend's built-in sources when nothing is stored.
 export const defaultGeodataPreset = geodataPreset('metacubex');
 
-// Contract bounds: GeoDataSources.urls and GeoDataAutoUpdate.interval_hours.
-export const maxGeodataUrls = 4;
-export const geodataIntervalRange = {min: 6, max: 168};
 // The contract's GeoDataUrl: absolute HTTP(S), no userinfo or fragment, at most 4096 characters (JSON Schema's
 // maxLength counts code points, not bytes or UTF-16 units).
 export function validGeodataUrl(url: string): boolean {
