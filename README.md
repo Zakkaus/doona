@@ -23,7 +23,7 @@ doona is a static web UI for the native API the daeuniverse engines share: honk 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Twelve palettes support light and dark modes: Rosé Pine (two flavours), Catppuccin (three), Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China (Clock-in / All-nighter). In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar or on the sign-in page.
+Twelve palettes support light and dark modes: Rosé Pine (two flavours), Catppuccin (three), Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China (Day shift / Night shift). In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar or on the sign-in page.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -39,7 +39,7 @@ The activity page in five palettes. Select a palette and mode from the top bar.
 | Catppuccin    | ![Catppuccin Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
 | Nord          | ![Nord Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
 | Glass         | ![Glass Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)           | ![Glass Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)           |
-| China         | ![China Clock-in](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)     | ![China All-nighter](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp) |
+| China         | ![China Day shift](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)    | ![China Night shift](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp) |
 
 ## Status
 
@@ -49,7 +49,7 @@ doona targets the native API implemented by honk's `feat/native-api` branch; tha
 
 doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Release archives (`doona-<version>.tar.gz`, the optional `doona-fonts-<version>.tar.gz` with Noto Sans TC and SC, and `SHA256SUMS`) are attached to tags on the [releases page](https://github.com/Zakkaus/doona/releases). Extract `doona-<version>.tar.gz` into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`.
 
-From v0.1.0-beta.8 on, until honk publishes a release with the native API, each doona release also attaches prebuilt `honk-core-debug-<target>[-stock].tar.gz` archives, so no one needs to compile honk. The beta.9 archives contain honk `debug.2026.9.28.native-api.4` (commit `3ff52762`), which supplies DNS rules, runtime degradations and the geodata checksum switch. `HONK-SOURCE.txt` names the honk commit they were built from, `honk-source-<commit>.tar.gz` holds that commit's source, and `SHA256SUMS` covers every release asset except itself. [Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which archive fits a gateway.
+From v0.1.0-beta.8 on, until honk publishes a release with the native API, each doona release also attaches prebuilt `honk-core-debug-<target>[-stock].tar.gz` archives, so no one needs to compile honk. The beta.10 archives contain honk `debug.2026.9.30.native-api.1` (commit `20f8f9ea`), which implements the final native API contract. `HONK-SOURCE.txt` names the honk commit they were built from, `honk-source-<commit>.tar.gz` holds that commit's source, and `SHA256SUMS` covers every release asset except itself. [Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which archive fits a gateway.
 
 The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 

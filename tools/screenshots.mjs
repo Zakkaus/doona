@@ -46,8 +46,8 @@ const looks = [
   ['Semi Design Dark', 'semi/semi', 'dark'],
   ['Glass Light', 'glass/glass', 'light'],
   ['Glass Dark', 'glass/glass', 'dark'],
-  ['China Clock-in', 'qiangguo/qiangguo', 'light'],
-  ['China All-nighter', 'qiangguo/qiangguo', 'dark']
+  ['China Day shift', 'qiangguo/qiangguo', 'light'],
+  ['China Night shift', 'qiangguo/qiangguo', 'dark']
 ];
 const gallery = new Map([
   ['Rosé Pine Dawn', 'rose-pine-light'],
@@ -69,8 +69,8 @@ const gallery = new Map([
   ['Semi Design Dark', 'semi-dark'],
   ['Glass Light', 'glass-light'],
   ['Glass Dark', 'glass-dark'],
-  ['China Clock-in', 'qiangguo-light'],
-  ['China All-nighter', 'qiangguo-dark']
+  ['China Day shift', 'qiangguo-light'],
+  ['China Night shift', 'qiangguo-dark']
 ]);
 // The page tour: the content panel without the side navigation, from its top down to the bottom of `until`.
 const tour = [

@@ -2,6 +2,59 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.10] - 2026-09-30
+
+### Added
+
+- A connection, flow record or trace result opens the shared add-rule dialog with its domain, destination or source address. The dialog offers exact domains before subdomains, names a duplicate rule without blocking it, and offers Copy rule after a target is chosen when no writable configuration can take it. After a rule takes effect, View rule opens it in the list. (#172, #210)
+- The DNS resolution log, query results and cache can start a DNS request or response rule. The dialog offers the relevant name, answer address, client and record type, and can create a missing request or response rule block. Held DNS rules can be reviewed and applied from their lists. After a DNS rule is written from Query, Query again repeats the query for its original name when the backend offers DNS queries. (#165, #175, #209)
+- The Nodes table searches every source while a search is entered and shows a Source column for the matches. Clearing the search returns to the selected source. (#176)
+- Search includes the Connections, Nodes and Policies tabs, DNS rules by condition and target, and page tabs in its empty-result guidance. (#195)
+- When a subscription has one identifiable declaration, its More actions menu offers an edit action if that source is writable, including an include file under a read-only main source; otherwise it offers Open source. Editing changes its name or URL while keeping the other options and comments. A duplicate subscription name opens the source instead. A name clash, a `subtag(...)` reference in another file, or a filter expression naming the old tag blocks a rename; exact `subtag(...)` filters in the same file can be updated with it. After a conflicting save, the next attempt uses the current source revision. (#179)
+- A connection detail can start a routing trace with its source port and process. Trace results link to the rules, groups, nodes and names they show; a rule link opens the list only when the result and list belong to the same routing generation. (#174, #210)
+- The editor toolbar offers Find, Go to line and an Editing commands menu for undo, redo and comment toggling. Find and Go to line also work in a read-only source. (#169)
+- Policies offers the Score policy when choosing a group's selection policy. (#201)
+- Activity shows process CPU usage in place of the memory stat card; its value opens System status. Rate tiles open Connections on the traffic tab, and the active-connections tile opens the list. (#173, #186, #194)
+- Activity rankings, outbound usage and node latency link to filtered Connections or the corresponding node. DNS statistics, resolution records and rule lists link to the related DNS view or configuration section. Events, logs and flow records link to the flow, configuration or recording settings they name. (#171, #173)
+- Settings > About opens the keyboard shortcut dialog and the guide. Routing rule rows can open their outbound settings, Nodes can refresh all subscriptions, and the DNS resolution log offers Load older records below its list on a phone. The Nodes table names the selected source, and Activity's latency menu explains that choosing a node changes only the displayed latency, not routing. (#170)
+- A saved quick setup offers links to Nodes, Policies, Routing rules and the file it wrote. A group change offers View group, and a new subscription offers View nodes with that subscription selected. (#173, #187)
+
+### Changed
+
+- The release attaches honk-core builds of honk 20f8f9ea (`debug.2026.9.30.native-api.1`), which implement the final native API contract. (#178)
+- Monitor contains Activity, System status and the new Routing log page for the routing map and flow records. Rules keeps routing rules, DNS rules and trace simulation; Configuration opens first in its hub. Old links to the map and flow records lead to their new page. Connections opens on Traffic. On phones, the hub strip keeps the current page visible, and Back returns through visited pages. (#166, #176, #180)
+- The top bar shows Apply only while rules are held; it writes those rules. Reload honk is a separate confirmed action and leaves held rules in place. Rule writes and configuration edits use Apply, and success messages say when a rule is in effect. Held rules remain when an activation reports that nothing was written. (#178, #187, #189)
+- The add-rule dialog shows the current outbound or DNS upstream beneath an initially empty target field instead of choosing that target for the new rule. It warns when a routing rule would keep the current outbound and explains where the rule will be inserted. (#199)
+- Connection detail actions, subscription removal and policy group commands move into More actions menus, leaving one primary action on each panel. (#198)
+- A tile with a linked value can be opened from anywhere on the card. (#192)
+- The China palette's light and dark modes are named Day shift and Night shift. The keyboard shortcut dialog groups commands into sections and shows page shortcuts as G followed by a letter in separate keycaps. (#202, #203, #207)
+- The interface calls the configuration revision Config version, the global mode's target Global mode outbound, and the documentation link Guide. `generation` remains a technical field. (#190)
+- Overview is named System status, the Policies page's Arrange tab is named Group membership, and configuration module shortcuts say Open source file. (#176)
+- A trace run in query mode shows the DNS query answer separately from the simulations for its returned addresses, with query time and simulation time shown apart. (#165)
+- The final API contract governs sign-in, paging, group edits, DNS queries, operation results and errors; an older honk build shows an update message at sign-in. An expired page restarts at the contracted limit. Node and subscription writes wait for asynchronous operations to finish, and a node write conflict keeps the backend's own message when it identifies the cause. Activation notices distinguish a failed, degraded or unconfirmed outcome. (#178)
+- Policies waits for initially visible group cards to load their details and nodes before showing them; a card scrolled out of view does not hold the page open. An unset tolerance is labelled as the engine default in the check settings dialog. (#205, #210)
+- System status marks hooks that honk attaches without reading back as Not verified and explains why. When the final contract reports them, it also shows cgroup and other eBPF attachments. (#165, #178)
+- A disabled Apply or Save button no longer has a "No changes" line beside it, and a healthy Activity latency tile no longer shows a Good light. (#193)
+
+### Fixed
+
+- Node latency tests probe through the node over HTTP to honk's configured check URL. A bare TCP connection to the node's server is used only when the backend does not offer HTTP probes, so Hysteria2 and TUIC no longer fail solely because their server does not accept TCP. IPv4 and IPv6 results are combined, and known probe failures show a translated reason instead of a raw code. (#208)
+- Node and policy latency values use the normal text colour below 600 ms, yellow at 600 ms or above, and red only when unavailable. The Activity latency tile uses the same colour threshold for measured values and a red status light when unavailable. (#208)
+- Policies edits a group in the source file that declares it, including an include file. A read-only file is named as the reason editing is unavailable, and a group declared more than once is refused. If no loaded configuration file defines the group, the disabled edit action says so. The page refreshes group selection while visible. (#163, #177)
+- An expired DNS resolution-log cursor starts again at the newest page instead of retrying the expired cursor. A DNS cache listing whose snapshot becomes unavailable restarts its walk once after the backend's requested wait. A discovery request refused with a contract error reports that refusal instead of offering an obsolete token sign-in. (#163, #209)
+- On an engine whose configuration syntax doona does not know, the global outbound mode is shown as not provided instead of being read or written as a dae rule. (#163)
+- Rules remains available when the backend offers DNS rules but no routing rules. (#209)
+- A connection forwarded by the kernel cannot be closed from its detail, and the disabled action explains why. Rules in an include file and other blocked edits name the reason instead of leaving an unexplained action. (#184)
+- A missing application chunk after an update reloads the page once when its loading boundary catches the failure. A failed language catalogue or search dialog load keeps its own error handling. (#196)
+- Narrow menu items keep their titles visible when their descriptions wrap. Hidden tab panels keep their width when reopened; DNS log type and duration columns fit their values. A table at fractional zoom no longer drops a column after its first layout. (#181, #183, #185)
+- A refused synchronous write, including closing connections or changing runtime settings, is reported without retrying the write. (#168)
+- The China palette's pinned top bar no longer carries a torn strip of its hero image over scrolled content. The Glass palette keeps the sign-in game's mortar and score card readable. (#167, #204)
+
+### For contributors
+
+- The bundled API contract moves to api-standardize `honk` at `1fb08ad`. The conformance tool follows the final contract, including its status codes, paging, operation starts and event invalidation. (#178)
+- The browser suite runs over four parallel CI runners. (#200)
+
 ## [0.1.0-beta.9] - 2026-09-28
 
 ### Added
