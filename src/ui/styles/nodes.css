@@ -87,3 +87,15 @@ button.rp-node {
 .rp-wait-line {
   height: var(--rp-control);
 }
+/* The policy cards are laid out hidden until the reads their sizes depend on arrive (Policies.tsx); the loading state
+   stands over them meanwhile, so showing them moves nothing. */
+.rp-policy-list {
+  position: relative;
+}
+.rp-policy-list[data-wait] > :not(.rp-empty) {
+  visibility: hidden;
+}
+.rp-policy-list > .rp-empty {
+  position: absolute;
+  inset: 0 0 auto;
+}
