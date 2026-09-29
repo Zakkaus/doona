@@ -14,6 +14,7 @@ async function backend(page: Page) {
     version: () => api.version(),
     config: () => api.config(),
     rules: () => api.rules(),
+    'dns/rules': () => api.dnsRules(),
     groups: () => api.groups(),
     nodes: () => api.nodes({limit: 1000}),
     providers: () => api.providers({limit: 1000}),
