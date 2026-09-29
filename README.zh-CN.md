@@ -49,7 +49,7 @@ doona 对接 honk `feat/native-api` 分支实现的原生 API；这套 API 尚�
 
 doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。发行文件（`doona-<version>.tar.gz`、可选的 `doona-fonts-<version>.tar.gz`（Noto Sans TC 与 SC）、`SHA256SUMS`）附在[发布页](https://github.com/Zakkaus/doona/releases)的标签上。将 `doona-<version>.tar.gz` 解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
 
-自 v0.1.0-beta.8 起，在 honk 发行含原生 API 的正式版本之前，每个 doona 发行版也附带预先构建的 `honk-core-debug-<target>[-stock].tar.gz`，用户无需自行编译 honk。beta.10 的归档文件包含 honk `debug.2026.9.30.native-api.1`（提交 `20f8f9ea`），实现最终的原生 API 契约。`HONK-SOURCE.txt` 注明构建所用的 honk 提交，`honk-source-<commit>.tar.gz` 为该提交的源码，`SHA256SUMS` 涵盖除自身以外的全部发布附件。[安装 honk](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install) 说明如何按网关选择归档文件。
+自 v0.1.0-beta.8 起，在 honk 发行含原生 API 的正式版本之前，每个 doona 发行版也附带预先构建的 `honk-core-debug-<target>[-stock].tar.gz`，用户无需自行编译 honk。beta.10 的归档文件包含 honk `debug.2026.9.30.native-api.3`（提交 `e2dc7c0b`），实现最终的原生 API 契约。`HONK-SOURCE.txt` 注明构建所用的 honk 提交，`honk-source-<commit>.tar.gz` 为该提交的源码，`SHA256SUMS` 涵盖除自身以外的全部发布附件。[安装 honk](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install) 说明如何按网关选择归档文件。
 
 [文档](https://zakkaus.github.io/doona-docs/zh-CN/)包含系统要求、honk 与 doona 的安装、示例配置、首次登录、逐项检查功能与故障排查。
 

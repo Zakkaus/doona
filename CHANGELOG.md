@@ -21,7 +21,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
-- The release attaches honk-core builds of honk 20f8f9ea (`debug.2026.9.30.native-api.1`), which implement the final native API contract. (#178)
+- The release attaches honk-core builds of honk e2dc7c0b (`debug.2026.9.30.native-api.3`), which implement the final native API contract and include honk's fix for a `domain()` condition that mixes `geosite:` with ordinary entries ([honk#303](https://github.com/daeuniverse/honk/pull/303)). (#178)
 - Monitor contains Activity, System status and the new Routing log page for the routing map and flow records. Rules keeps routing rules, DNS rules and trace simulation; Configuration opens first in its hub. Old links to the map and flow records lead to their new page. Connections opens on Traffic. On phones, the hub strip keeps the current page visible, and Back returns through visited pages. (#166, #176, #180)
 - The top bar shows Apply only while rules are held; it writes those rules. Reload honk is a separate confirmed action and leaves held rules in place. Rule writes and configuration edits use Apply, and success messages say when a rule is in effect. Held rules remain when an activation reports that nothing was written. (#178, #187, #189)
 - The add-rule dialog shows the current outbound or DNS upstream beneath an initially empty target field instead of choosing that target for the new rule. It warns when a routing rule would keep the current outbound and explains where the rule will be inserted. (#199)
@@ -35,6 +35,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Policies waits for initially visible group cards to load their details and nodes before showing them; a card scrolled out of view does not hold the page open. An unset tolerance is labelled as the engine default in the check settings dialog. (#205, #210)
 - System status marks hooks that honk attaches without reading back as Not verified and explains why. When the final contract reports them, it also shows cgroup and other eBPF attachments. (#165, #178)
 - A disabled Apply or Save button no longer has a "No changes" line beside it, and a healthy Activity latency tile no longer shows a Good light. (#193)
+- A first visit tries the browser's preferred languages in order. (#213)
+- Plain lists use each catalogue's separator. (#213)
+- Byte, rate and login-game units and shortcut key names come from the catalogues. (#214)
+- The login game's numbers use the selected language's thousands separators. (#214)
+- Latency summaries, submenu choices and chart label-value pairs are translated as whole messages. (#215)
+- Chinese copy keeps `routing`, DNS `request`/`response`, `ACL4SSR Mini`, `ACL4SSR Online` and `ACL4SSR Full` verbatim; zh-TW uses 檢視 for view. (#218)
+- Decimals and durations follow the selected language, and file counts pick their plural form independently of the rule count. (#221)
 
 ### Fixed
 
@@ -50,11 +57,20 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - A refused synchronous write, including closing connections or changing runtime settings, is reported without retrying the write. (#168)
 - The China palette's pinned top bar no longer carries a torn strip of its hero image over scrolled content. The Glass palette keeps the sign-in game's mortar and score card readable. (#167, #204)
 - When a new version took over an open page before its language had loaded, the update notice showed message keys such as `ui.newBuild` instead of its text. It now waits for the language to load. (#212)
+- The startup failure screen reads its text and Retry label from the catalogues, including when the saved language cannot load. (#213)
+- Request IDs travel as error metadata, so notices no longer extract them from translated text. (#215)
+- The demo's configuration validation diagnostics are translated by code in both rows and editor marks. (#216)
 
 ### For contributors
 
 - The bundled API contract moves to api-standardize `honk` at `1fb08ad`. The conformance tool follows the final contract, including its status codes, paging, operation starts and event invalidation. (#178)
 - The browser suite runs over four parallel CI runners. (#200)
+- Plurals use each language's CLDR categories and a named plural selector; English fallbacks use English rules. (#217)
+- Language-neutral tests use French and Arabic fixtures without bundling them as languages. (#217)
+- CONTRIBUTING requires configuration keywords and preset names to stay verbatim in translations. (#218)
+- Catalogue keys have area prefixes, and duplicate messages are merged. (#219)
+- `check:i18n` scans visible literals with an AST and checks CodeMirror phrase arguments. (#220)
+- Font faces come from the language registry. (#220)
 
 ## [0.1.0-beta.9] - 2026-09-28
 
