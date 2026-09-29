@@ -6,6 +6,7 @@ const known: Record<string, Key> = {
   authentication_required: 'ui.backend.authenticationRequired',
   permission_denied: 'ui.backend.permissionDenied',
   resource_not_found: 'ui.backend.resourceNotFound',
+  method_not_allowed: 'ui.backend.methodNotAllowed',
   capability_not_supported: 'ui.backend.capabilityNotSupported',
   state_conflict: 'ui.backend.stateConflict',
   idempotency_conflict: 'ui.backend.idempotencyConflict',

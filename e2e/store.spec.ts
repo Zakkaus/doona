@@ -71,9 +71,9 @@ test('query simulation traces the first IPv4 and IPv6 answer and lists every ans
   capabilities.resources.routing_trace.resolve_modes = ['none'];
   capabilities.resources.routing_trace.max_addresses = 1;
   const answers: Record<string, string[]> = {A: ['192.0.2.10', '192.0.2.11', '192.0.2.12'], AAAA: ['2001:db8::10', '2001:db8::11']};
-  handlers['GET dns/query'] = async request => {
-    const params = new URL(request.url()).searchParams;
-    const response = await api.dnsQuery(params.get('domain')!, params.getAll('type'));
+  handlers['POST dns/query'] = async request => {
+    const body = request.postDataJSON();
+    const response = await api.dnsQuery(body.domain, body.type);
     return {
       ...response,
       results: response.results.map(result => ({

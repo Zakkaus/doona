@@ -1,5 +1,6 @@
 import {useCallback} from 'react';
 import {MAX_PAGE, poll} from './cadence';
+import {ApiError, LocalError} from '../api/error';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
@@ -90,12 +91,25 @@ export function useNodeManage(refetch: () => void) {
     },
     [refetch]
   );
+  // A 409 state_conflict is the configuration changing while the write was admitted: nothing was stored, so the list
+  // is read again and a retry starts from what is there.
+  const conflict = useCallback(
+    (error: unknown): never => {
+      if (!(error instanceof ApiError && error.status === 409 && error.code === 'state_conflict')) throw error;
+      refetch();
+      throw new LocalError('config.changedMeanwhile');
+    },
+    [refetch]
+  );
   return {
     busy,
-    addProvider: useCallback((request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then)), [api, run, then]),
-    removeProvider: useCallback((id: string) => run(id, signal => api.deleteProvider(id, signal).then(then)), [api, run, then]),
-    addNode: useCallback((request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then)), [api, run, then]),
-    removeNode: useCallback((id: string) => run(id, signal => api.deleteNode(id, signal).then(then)), [api, run, then])
+    addProvider: useCallback(
+      (request: ProviderCreate) => run('provider', signal => api.createProvider(request, signal).then(then, conflict)),
+      [api, run, then, conflict]
+    ),
+    removeProvider: useCallback((id: string) => run(id, signal => api.deleteProvider(id, signal).then(then, conflict)), [api, run, then, conflict]),
+    addNode: useCallback((request: NodeCreate) => run('node', signal => api.createNode(request, signal).then(then, conflict)), [api, run, then, conflict]),
+    removeNode: useCallback((id: string) => run(id, signal => api.deleteNode(id, signal).then(then, conflict)), [api, run, then, conflict])
   };
 }
 export function useNodeProbe(refetch: () => void) {

@@ -249,7 +249,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     nodes: async (query, signal) => read(await client.GET('/api/v1/nodes', {params: {query}, signal})),
     groups: async signal => read(await client.GET('/api/v1/groups', {signal})),
     group: async (id, signal) => read(await client.GET('/api/v1/groups/{group_id}', {params: {path: {group_id: id}}, signal})),
-    selectGroup: async (groupId, body, signal) => read(await client.PUT('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}}, body, signal})),
+    selectGroup: async (groupId, body, signal) =>
+      read(await client.PUT('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}}, body, signal})),
     clearGroupOverride: async (groupId, network, signal) =>
       read(await client.DELETE('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}, query: {network}}, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
@@ -269,7 +270,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     flow: async (id, signal) => read(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => read(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
     dnsLog: async (query, signal) => read(await client.GET('/api/v1/dns/log', {params: {query}, signal})),
-    dnsQuery: async (domain, types, signal) => read(await client.GET('/api/v1/dns/query', {params: {query: {domain, type: types, detail: 'full'}}, signal})),
+    dnsQuery: async (domain, types, signal) =>
+      read(await client.POST('/api/v1/dns/query', {params: {query: {detail: 'full'}}, body: {domain, type: types, cache_mode: 'normal'}, signal})),
     // 204 carries no body; the response middleware has already turned any error status into an ApiError.
     closeConnection: async (connection_id, signal) => {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});

@@ -28,7 +28,7 @@ export async function smallerOnRefusal<Q extends {limit?: number}, P>(
     return {page: await fetch(query), limit: query.limit};
   } catch (error) {
     const {limit} = query;
-    const refused = error instanceof ApiError && error.status === 503 && error.code === 'temporarily_unavailable' && error.retryAfter !== null;
+    const refused = error instanceof ApiError && error.status === 503 && error.code === 'snapshot_unavailable' && error.retryAfter !== null;
     if (!refused || limit === undefined || limit < 2) throw error;
     await wait(error.retryAfter!, signal);
     const smaller = Math.ceil(limit / 4);

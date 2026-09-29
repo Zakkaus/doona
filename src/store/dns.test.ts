@@ -8,7 +8,7 @@ import {deleteCacheEntry, dnsCacheListing, dnsLogLimit, flushCache, readCacheUsa
 
 afterEach(() => void vi.useRealTimers());
 const budget = (retryAfter: number | null = 1) =>
-  new ApiError(503, 'temporarily_unavailable', 'DNS log response exceeds the projection budget', 'r1', null, retryAfter);
+  new ApiError(503, 'snapshot_unavailable', 'DNS log response exceeds the projection budget', 'r1', null, retryAfter);
 
 it('asks for the backend default page, not the advertised maximum', () => {
   const withPage = (max_page_size: number) => ({
@@ -43,7 +43,7 @@ it('passes on anything but a timed refusal, a second refusal and a page of one',
     new ApiError(500, 'internal', 'boom'),
     budget(null),
     new ApiError(429, 'rate_limited', 'slow down', null, null, 1),
-    new ApiError(503, 'snapshot_expired', 'other', null, null, 1)
+    new ApiError(503, 'temporarily_unavailable', 'other', null, null, 1)
   ]) {
     const fetch = vi.fn(async () => {
       throw error;

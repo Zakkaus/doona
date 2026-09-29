@@ -235,9 +235,13 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
           signal
         ));
       } catch (error) {
-        // A 400 invalid_request is the backend no longer holding the cursor's snapshot; asking again would fail the
-        // same way, so the log starts over from the newest page.
-        if (!(error instanceof ApiError) || error.status !== 400 || error.code !== 'invalid_request' || signal.aborted) throw error;
+        // A 410 snapshot_expired is the backend no longer holding the cursor's snapshot, and a 400 invalid_request is
+        // the cursor refused for filters that changed since; asking again would fail the same way, so the log starts
+        // over from the newest page.
+        const expired =
+          error instanceof ApiError &&
+          ((error.status === 410 && error.code === 'snapshot_expired') || (error.status === 400 && error.code === 'invalid_request'));
+        if (!expired || signal.aborted) throw error;
         setHeld(null);
         void log.refetch();
         toast('info', t('dns.olderExpired'));

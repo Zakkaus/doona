@@ -40,7 +40,7 @@ export function Logs({go}: PageProps) {
             </Light>
           )
       },
-      {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target}</span>},
+      {id: 'target', label: t('log.target'), minWidth: 160, grow: 0, drop: 1, render: record => <span className="rp-code">{record.target ?? '—'}</span>},
       {
         id: 'message',
         label: t('log.message'),
@@ -63,7 +63,7 @@ export function Logs({go}: PageProps) {
             : [
                 [t('ui.time'), record.timestamp],
                 [t('log.level'), record.levelText],
-                [t('log.target'), record.target],
+                [t('log.target'), record.target ?? '—'],
                 [t('log.message'), record.message]
               ]
         }

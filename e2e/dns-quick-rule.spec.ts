@@ -14,9 +14,9 @@ const pick = async (page: Page, field: RegExp, option: string | RegExp) => {
 // The mock backend, answering the DNS queries the query tab sends as the demo does.
 async function backend(page: Page) {
   const mocked = await mockBackend(page);
-  mocked.handlers['GET dns/query'] = async request => {
-    const params = new URL(request.url()).searchParams;
-    return mocked.api.dnsQuery(params.get('domain')!, params.getAll('type') as never);
+  mocked.handlers['POST dns/query'] = async request => {
+    const body = request.postDataJSON();
+    return mocked.api.dnsQuery(body.domain, body.type);
   };
   return mocked;
 }

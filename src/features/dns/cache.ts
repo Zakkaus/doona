@@ -12,16 +12,18 @@ export function cacheCard(list: DnsCacheList | undefined, locale: string, t: Tra
     const n = parseU64(value);
     return n === null ? '—' : formatNumber(n, locale);
   };
-  const pct = usage ? pctU64(usage.entries, usage.entry_capacity) : null;
+  // A null capacity is a cache without an entry limit: its entries are shown without a percentage.
+  const capacity = usage?.entry_capacity ?? null;
+  const pct = usage && capacity !== null ? pctU64(usage.entries, capacity) : null;
   return {
-    note: usage ? undefined : t('dns.chart.cacheNote', {n: list.total}),
+    note: !usage ? t('dns.chart.cacheNote', {n: list.total}) : capacity === null ? t('dns.chart.usageFacts', {entries: count(usage.entries)}) : undefined,
     usage:
-      usage && pct !== null
+      usage && capacity !== null && pct !== null
         ? {
             pct,
             // A cache in use never reads as 0%.
             value: pct > 0 && pct < 0.5 ? '<' + t('ui.percent', {n: 1}) : t('ui.percent', {n: Math.round(pct)}),
-            facts: t('dns.chart.usageFacts', {entries: t('ui.fraction', {part: count(usage.entries), whole: count(usage.entry_capacity)})})
+            facts: t('dns.chart.usageFacts', {entries: t('ui.fraction', {part: count(usage.entries), whole: count(capacity)})})
           }
         : null,
     coverage: t('dns.chart.coverage', {

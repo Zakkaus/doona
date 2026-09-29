@@ -66,6 +66,8 @@ describe('native transport', () => {
     expect(request).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
     await expect(query).resolves.toMatchObject({domain: 'example.org'});
+    const sent: Request = request.mock.calls[0][0];
+    expect([sent.method, new URL(sent.url).search, await sent.json()]).toEqual(['POST', '?detail=full', {domain: 'example.org', type: ['A'], cache_mode: 'normal'}]);
     request.mockResolvedValue(json({}, 503, {'Retry-After': '3'}));
     const controller = new AbortController();
     const result = api.startReload(controller.signal);
