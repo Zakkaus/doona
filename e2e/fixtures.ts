@@ -234,7 +234,7 @@ export async function mockBackend(page: Page, options: {faults?: boolean} = {}) 
       else if (method === 'PUT' && parts[0] === 'groups' && parts[2] === 'selection') result = await api.selectGroup(parts[1], request.postDataJSON());
       else if (method === 'DELETE' && parts[0] === 'groups' && parts[2] === 'selection')
         result = await api.clearGroupOverride(parts[1], url.searchParams.get('network') as 'tcp' | 'udp' | 'both');
-      else if (method === 'PATCH' && parts[0] === 'groups' && parts.length === 2)
+      else if (method === 'PATCH' && parts[0] === 'groups' && parts[2] === 'config' && parts.length === 3)
         result = await api.patchGroup(parts[1], request.postDataJSON(), request.headers()['if-match']);
       else if (method === 'POST' && path === 'probes') result = await api.startProbe(request.postDataJSON());
       else if (method === 'POST' && path === 'providers') result = await api.createProvider(request.postDataJSON());

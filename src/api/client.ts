@@ -254,8 +254,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     clearGroupOverride: async (groupId, network, signal) =>
       read(await client.DELETE('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}, query: {network}}, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
-      const result = await starts.PATCH('/api/v1/groups/{groupId}', {
-        params: {path: {groupId}, header: {'If-Match': ifMatch}},
+      const result = await starts.PATCH('/api/v1/groups/{group_id}/config', {
+        params: {path: {group_id: groupId}, header: {'If-Match': ifMatch}},
         headers: {'Content-Type': 'application/json-patch+json'},
         body,
         signal

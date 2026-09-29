@@ -377,14 +377,14 @@ describe('native transport', () => {
       'fetch',
       vi.fn(async (request: Request) => {
         expect(request.method).toBe('PATCH');
-        expect(request.url).toBe('https://honk.test/api/v1/groups/proxy');
+        expect(request.url).toBe('https://honk.test/api/v1/groups/proxy/config');
         expect(request.headers.get('If-Match')).toBe('\"40\"');
         expect(request.headers.get('Content-Type')).toBe('application/json-patch+json');
         keys.push(request.headers.get('Idempotency-Key') ?? '');
         expect(await request.json()).toEqual(body);
         return calls++ === 0
           ? json({...acceptedBody, kind: 'group_update'}, 202, {Location: acceptedBody.href, 'Retry-After': '2'})
-          : json({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
+          : json({policy: {kind: 'urltest', native: 'min_moving_avg'}, config: {tolerance: 100}}, 200, {ETag: '"41"'});
       })
     );
     const api = createApi('https://honk.test');
@@ -393,7 +393,7 @@ describe('native transport', () => {
       kind: 'group_update',
       retryAfter: 2
     });
-    await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({id: 'proxy', config_revision: '41', config: {tolerance: 100}});
+    await expect(api.patchGroup('proxy', [...body], '\"40\"')).resolves.toMatchObject({policy: {kind: 'urltest'}, config: {tolerance: 100}});
     // Each attempt carries its own idempotency key, so a retry cannot replay as a new operation.
     expect(keys.every(key => /^[0-9a-f-]{36}$/.test(key))).toBe(true);
     expect(new Set(keys).size).toBe(2);

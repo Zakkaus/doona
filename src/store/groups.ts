@@ -43,7 +43,8 @@ export async function probeGroup(api: Api, capabilities: Capabilities, group: Gr
   }
   return result!;
 }
-// Applies patch ops at the group's current configuration revision and waits for the reload that applies them.
+// Applies patch ops at the group's current configuration revision and waits for the reload that applies them. A 200
+// answers with the config document only; the caller refetches the group.
 export async function patchConfig(api: Api, group: Group, ops: JsonPatch, signal?: AbortSignal): Promise<void> {
   const result = await api.patchGroup(group.id, ops, etag(group.config_revision), signal);
   if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
@@ -149,6 +150,13 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
       [api, capabilities, resource.data, canProbe, run, refetch, refetchGroups, refetchNodes]
     ),
     patchConfig: patch,
-    setInterrupt: useCallback((value: boolean) => patch([{op: 'replace', path: '/config/interrupt_connections', value}]), [patch])
+    // Turning off a value the group never set clears it again rather than writing false.
+    setInterrupt: useCallback(
+      (value: boolean) =>
+        patch([
+          {op: 'replace', path: '/config/interrupt_connections', value: value || resource.data?.config.interrupt_connections !== null ? value : null}
+        ]),
+      [patch, resource.data]
+    )
   };
 }

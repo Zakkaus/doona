@@ -254,6 +254,7 @@ export function resolveSelectedLeaf(
 
 // Labels that more than one page shows.
 export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
+  fixed: 'policy.kind.fixed',
   selector: 'policy.kind.selector',
   urltest: 'policy.kind.urltest',
   loadbalance: 'policy.kind.loadbalance',
