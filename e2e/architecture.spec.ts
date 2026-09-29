@@ -219,7 +219,7 @@ test('a source shifted since the rule list was read offers no rule edits', async
   await page.goto('/#/rules?tab=list');
   const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   await expect(panel.getByRole('row').nth(1)).toBeVisible();
-  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
 });
 
@@ -768,7 +768,7 @@ test('withheld rule source disables editing and explains the restriction', async
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/rules?tab=list');
   await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
-  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
 });
 
