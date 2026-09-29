@@ -115,7 +115,7 @@ export function useRuntimeSettingsForm() {
     },
     dirty,
     blocked: !Object.keys(patch).length || numeric.some(field => field.invalid),
-    reason: runtimeApplyReason({busy: settings.busy, invalid: numeric.find(field => field.invalid)?.label ?? null, changed: Object.keys(patch).length > 0}, t),
+    reason: runtimeApplyReason({busy: settings.busy, invalid: numeric.find(field => field.invalid)?.label ?? null}, t),
     apply
   };
 }

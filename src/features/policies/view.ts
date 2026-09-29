@@ -271,9 +271,3 @@ export function groupActionsReason(
   if (edit.shown && !edit.busy && edit.blocked) return edit.blocked;
   return probe.busy || probe.canProbe ? null : t('policy.noProbe');
 }
-
-// Why a dialog's Save is disabled: nothing differs from what it opened with. Null while it can save or while a save is
-// in flight (the pending button shows that).
-export function noChangesReason(changed: boolean, busy: boolean, t: Translator): string | null {
-  return changed || busy ? null : t('policy.noChanges');
-}

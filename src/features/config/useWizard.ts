@@ -123,8 +123,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
         busy,
         complete,
         conflict,
-        invalid: !subscriptionsValid ? t('config.wizardSubsInvalid') : !networkValid ? t('config.wizardNetworkError') : null,
-        changed: pending
+        invalid: !subscriptionsValid ? t('config.wizardSubsInvalid') : !networkValid ? t('config.wizardNetworkError') : null
       },
       t
     ),

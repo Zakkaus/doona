@@ -489,18 +489,13 @@ test.describe('on a touch screen', () => {
   });
 });
 
-test('quick setup says in view why Apply and reload is disabled', async ({page}) => {
+test('quick setup keeps Apply and reload disabled without a line saying so', async ({page}) => {
   await page.goto('/#/config?tab=setup&source=src-sub-c');
   const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
   await expect(apply).toBeDisabled();
-  const reason = page.getByText('No changes to apply', {exact: true});
-  await expect(reason).toBeVisible();
-  await expect(apply).toHaveAccessibleDescription('No changes to apply');
-  const box = (await reason.boundingBox())!;
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
   await page.getByLabel('Subscription URL', {exact: true}).first().fill('https://example.org/changed');
   await expect(apply).toBeEnabled();
-  await expect(reason).toHaveCount(0);
 });
 
 // Each case gives the reason under the disabled action, in view on a phone and named as the button's description.
@@ -532,13 +527,13 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
   await expectReason(page, grid.getByRole('button', {name: /^Delete the /}).first(), 'This backend does not support deleting cache entries');
 });
 
-test('the outbound mode says there is nothing to apply until a mode is picked', async ({page}) => {
+test('the outbound mode keeps Apply disabled without a line until a mode is picked', async ({page}) => {
   await page.goto('/#/activity');
   const apply = page.getByRole('button', {name: 'Apply and reload', exact: true});
-  const line = await expectReason(page, apply, 'No changes to apply');
+  await expect(apply).toBeDisabled();
+  await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
   await expect(apply).toBeEnabled();
-  await expect(line).toHaveCount(0);
 });
 
 test('the profile actions say a profile is created by saving the backend', async ({page}) => {

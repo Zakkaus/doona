@@ -37,17 +37,18 @@ export function modeView(
     targets: groups.map(group => ({id: group.name, label: group.name}))
   };
 }
-// Why the mode card's Apply and the global target are disabled, each under its own card. A read-only backend's status
+// Why the mode card's Apply and the global target are disabled, each under its own card; an Apply with nothing to apply
+// needs no line, the disabled button says so. A read-only backend's status
 // already sits beside the mode switch, so only the global target repeats it. Null while they can be used or a change is
 // being applied.
 export function modeReasons(
-  {writable, dirty, incomplete, status}: Pick<ReturnType<typeof modeView>, 'writable' | 'dirty' | 'incomplete' | 'status'>,
+  {writable, incomplete, status}: Pick<ReturnType<typeof modeView>, 'writable' | 'incomplete' | 'status'>,
   busy: boolean,
   t: LabelFn
 ): {mode: string | null; global: string | null} {
   if (busy) return {mode: null, global: null};
   if (!writable) return {mode: null, global: status};
-  return {mode: incomplete ? t('act.globalMissing') : dirty ? null : t('config.noChanges'), global: null};
+  return {mode: incomplete ? t('act.globalMissing') : null, global: null};
 }
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 

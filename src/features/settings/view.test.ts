@@ -104,12 +104,11 @@ it('says the profile actions wait for a saved profile', () => {
   expect(profileReason(true, t)).toBeNull();
 });
 
-it('says why Apply for backend options is disabled: a value out of range first, then no change', () => {
-  const idle = {busy: false, invalid: null, changed: true};
+it('says why Apply for backend options is disabled only for a value out of range, not for having nothing to apply', () => {
+  const idle = {busy: false, invalid: null};
   expect(runtimeApplyReason(idle, t)).toBeNull();
-  expect(runtimeApplyReason({...idle, changed: false}, t)).toBe('No changes to apply');
-  expect(runtimeApplyReason({...idle, changed: false, invalid: 'Flow table size'}, t)).toBe('Flow table size must be a whole number within the range shown');
-  expect(runtimeApplyReason({busy: true, invalid: 'x', changed: false}, t)).toBeNull();
+  expect(runtimeApplyReason({...idle, invalid: 'Flow table size'}, t)).toBe('Flow table size must be a whole number within the range shown');
+  expect(runtimeApplyReason({busy: true, invalid: 'x'}, t)).toBeNull();
 });
 
 it('says a geodata update needs its status, and nothing while it loads', () => {

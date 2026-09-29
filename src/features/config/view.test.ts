@@ -388,15 +388,14 @@ it('tips why a module cannot be edited: another draft first, then a change still
 });
 
 it('says why Apply and reload is disabled, and nothing while it can run or another change is applied', () => {
-  const idle = {busy: false, conflict: false, changed: true};
+  const idle = {busy: false, conflict: false};
   expect(saveReason(idle, t)).toBeNull();
-  expect(saveReason({...idle, changed: false}, t)).toBe('No changes to apply');
-  expect(saveReason({...idle, changed: false, busy: true}, t)).toBeNull();
+  expect(saveReason({...idle, busy: true, invalid: 'bad'}, t)).toBeNull();
   // The text is still being checked: no reason yet, rather than a wrong one.
   expect(saveReason({...idle, complete: null}, t)).toBeNull();
   expect(saveReason({...idle, complete: false, conflict: true}, t)).toBe(t('config.incomplete'));
   expect(saveReason({...idle, conflict: true, invalid: 'bad'}, t)).toBe('Keep or discard your changes first');
-  expect(saveReason({...idle, invalid: 'bad', changed: false}, t)).toBe('bad');
+  expect(saveReason({...idle, invalid: 'bad'}, t)).toBe('bad');
 });
 
 it('says why Validate is disabled: the main file is not whole, or the file on show is not validated', () => {

@@ -286,7 +286,6 @@
   "config.newSourceSegments": "Path segments cannot be empty, . or ..",
   "config.newSourceTitle": "New configuration file",
   "config.newSourceUnmatched": "No include pattern of the loaded files matches this path, so the backend will refuse it.",
-  "config.noChanges": "No changes to apply",
   "config.noDiagnostics": "No items at this level",
   "config.openSource": "Open source",
   "config.openSourceAt": "Open source: {where}",
@@ -1248,7 +1247,6 @@
     "other": "{n} members, {down} unavailable"
   },
   "policy.network": "Select network for {name}",
-  "policy.noChanges": "No changes to save",
   "policy.noProbe": "Test all is not available for this group",
   "policy.none": "No matching nodes",
   "policy.noneSelected": "no member selected yet",

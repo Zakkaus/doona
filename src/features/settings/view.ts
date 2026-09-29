@@ -133,10 +133,8 @@ export function profileReason(hasActive: boolean, t: Translator): string | null 
   return hasActive ? null : t('settings.noProfile');
 }
 
-export function runtimeApplyReason({busy, invalid, changed}: {busy: boolean; invalid: string | null; changed: boolean}, t: Translator): string | null {
-  if (busy) return null;
-  if (invalid) return t('settings.runtimeInvalid', {field: invalid});
-  return changed ? null : t('config.noChanges');
+export function runtimeApplyReason({busy, invalid}: {busy: boolean; invalid: string | null}, t: Translator): string | null {
+  return !busy && invalid ? t('settings.runtimeInvalid', {field: invalid}) : null;
 }
 
 export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; loaded: boolean; failed: boolean}, t: Translator): string | null {

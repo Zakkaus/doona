@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast, useLinked} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, noChangesReason, type CheckEditDraft, type CheckField} from './view';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, type CheckEditDraft, type CheckField} from './view';
 export type CheckEditView = {
   title: string;
   open: boolean;
@@ -11,7 +11,6 @@ export type CheckEditView = {
   busy: boolean;
   changed: boolean;
   // Why Save is disabled, shown under it.
-  reason: string | null;
   fields: Array<{id: CheckField; label: string; value: string; description: string; error?: string; change: (value: string) => void}>;
   show: () => void;
   close: () => void;
@@ -82,7 +81,6 @@ export function useCheckEdit(
     available: !!draft || fields.length > 0,
     busy,
     changed: ops.length > 0,
-    reason: noChangesReason(ops.length > 0, busy, t),
     fields: draft
       ? fields.map(id => {
           const theirs = draft.theirs[id];
