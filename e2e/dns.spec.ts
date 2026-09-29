@@ -309,6 +309,34 @@ test('an expired older-page cursor starts the log again from the newest page', a
   expect(heads).toBe(2);
 });
 
+test('an older page the backend cannot hold a snapshot for starts the log again after the wait', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 2;
+  const seed = await api.dnsLog();
+  const record = seed.records[0];
+  let heads = 0;
+  const older: string[] = [];
+  handlers['GET dns/log'] = async request => {
+    const params = new URL(request.url()).searchParams;
+    if (params.has('cursor')) {
+      older.push(params.get('limit') ?? '');
+      throw new ApiError(503, 'snapshot_unavailable', 'A coherent snapshot is unavailable', null, null, 1);
+    }
+    const ids = ++heads === 1 ? ['d4', 'd3'] : ['d6', 'd5'];
+    return {...seed, records: ids.map(id => ({...record, id, question: {...record.question, name: id + '.test'}})), next_cursor: 'older'};
+  };
+  await page.goto('/#/dns?tab=log');
+  const rows = page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader');
+  await expect(rows).toHaveText(['d4.test', 'd3.test']);
+  await page.getByRole('button', {name: 'Load older records'}).click();
+  await expect(page.getByText('Could not load older records; reloading from the newest page.', {exact: true})).toBeVisible();
+  await expect(rows).toHaveText(['d6.test', 'd5.test']);
+  await expect(page.getByRole('alert').filter({hasText: 'snapshot'})).toHaveCount(0);
+  // The cursor is asked for once, at the limit it was issued with, never again at a smaller one.
+  expect(older).toEqual(['2']);
+  expect(heads).toBe(2);
+});
+
 test('a failed query stays on the query tab', async ({page}) => {
   const {handlers} = await mockBackend(page);
   handlers['POST dns/query'] = async () => {

@@ -10,13 +10,14 @@ export function pageLimit(limit = 100): number {
 }
 
 // A page ends early once its rows pass `budget` bytes of JSON, as a backend's response budget ends it; it still
-// carries at least one row, however large, and the cursor goes on from there.
+// carries at least one row, however large, and the cursor goes on from there. A cursor is bound to the filters and the
+// page size it was issued with; either changed, it is refused.
 export function createPager(resource: ResourceName, budget = Infinity) {
   const snapshots = new Map<string, {items: unknown[]; key: string; expires: number}>();
   return <T>(items: T[], query: {cursor?: string; limit?: number} = {}) => {
     const {cursor, limit: asked, ...filters} = query;
     const limit = pageLimit(asked);
-    const key = normalizeResourceKey([resource, filters]);
+    const key = normalizeResourceKey([resource, {...filters, limit}]);
     for (const [id, snapshot] of snapshots) if (snapshot.expires <= Date.now()) snapshots.delete(id);
     const [id, offset, extra] = cursor?.split(':') ?? [uuid(), '0'];
     const start = Number(offset);

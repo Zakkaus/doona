@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {getApi} from '../../api';
-import {queryTypes, smallerOnRefusal, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
+import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsLogList, DnsQueryResponse} from '../../api/model';
@@ -11,6 +11,7 @@ import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
+import {wait} from '../../api/wait';
 import {cacheCard, cacheCardState} from './cache';
 import {sectionSourceHref} from '../shared/link';
 import {useQuickRule} from '../shared/useQuickRule';
@@ -223,8 +224,9 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
       setHeld(data);
       let page;
       try {
-        ({page} = await smallerOnRefusal(
-          query => api.dnsLog(query, signal),
+        // A cursor is bound to the filters and the page size it was issued with, so an older page is always asked for at
+        // the head page's limit; only the head page falls back to a smaller one.
+        page = await api.dnsLog(
           {
             name: filter.name.trim() || undefined,
             type: type === 'all' ? undefined : type,
@@ -233,15 +235,16 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
             limit: log.limit
           },
           signal
-        ));
+        );
       } catch (error) {
         // A 410 snapshot_expired is the backend no longer holding the cursor's snapshot, and a 400 invalid_request is
         // the cursor refused for filters that changed since; asking again would fail the same way, so the log starts
-        // over from the newest page.
-        const expired =
-          error instanceof ApiError &&
-          ((error.status === 410 && error.code === 'snapshot_expired') || (error.status === 400 && error.code === 'invalid_request'));
-        if (!expired || signal.aborted) throw error;
+        // over from the newest page. A 503 snapshot_unavailable does the same once the wait it asks for has passed.
+        if (!(error instanceof ApiError) || signal.aborted) throw error;
+        const unavailable = error.status === 503 && error.code === 'snapshot_unavailable' && error.retryAfter !== null;
+        const expired = (error.status === 410 && error.code === 'snapshot_expired') || (error.status === 400 && error.code === 'invalid_request');
+        if (!expired && !unavailable) throw error;
+        if (unavailable) await wait(error.retryAfter!, signal);
         setHeld(null);
         void log.refetch();
         toast('info', t('dns.olderExpired'));

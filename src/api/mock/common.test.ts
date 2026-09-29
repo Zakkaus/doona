@@ -7,15 +7,21 @@ it('continues the retained DNS snapshot after deleting its first entry', async (
   const original = await api.dnsCache();
   const first = await api.dnsCache({limit: 1});
   await api.deleteDnsEntry(first.entries[0].entry_id);
-  const rest = await api.dnsCache({cursor: first.next_cursor!, limit: 1000});
-  expect([first.entries[0], ...rest.entries]).toEqual(original.entries);
-  expect(rest.total).toBe(original.total);
+  const rest = [];
+  for (let cursor = first.next_cursor; cursor;) {
+    const page = await api.dnsCache({cursor, limit: 1});
+    expect(page.total).toBe(original.total);
+    rest.push(...page.entries);
+    cursor = page.next_cursor;
+  }
+  expect([first.entries[0], ...rest]).toEqual(original.entries);
   expect((await api.dnsCache()).entries.some(entry => entry.entry_id === first.entries[0].entry_id)).toBe(false);
 });
-it('rejects a cursor used with different filters, resources, or adapter instances', async () => {
+it('rejects a cursor used with different filters, page size, resources, or adapter instances', async () => {
   const api = createMockApi();
   const first = await api.nodes({limit: 1});
   const cursor = first.next_cursor!;
+  await expect(api.nodes({cursor, limit: 2})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.nodes({cursor, group_id: 'proxy'})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(api.providers({cursor})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
   await expect(createMockApi().nodes({cursor})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
