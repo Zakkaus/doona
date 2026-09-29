@@ -13,6 +13,7 @@ import {
   dnsUpstreamChoices,
   duplicateOf,
   pinnedPosition,
+  quickRuleContext,
   ruleDialogReason,
   ruleLists,
   rulePositions,
@@ -324,4 +325,43 @@ it('says a settled rule write is in effect, keeps the count and notes that open 
   for (const lang of ['zh-TW', 'zh-CN', 'en'] as const)
     for (const key of ['rule.added', 'rule.edited', 'rule.removed', 'rule.applied'] as const)
       expect(translate(lang, key, {n: 2})).not.toMatch(/重載|重载|reload/i);
+});
+
+it('says what happens now without presetting it, and when a routing rule changes nothing', () => {
+  const seed: QuickRuleSeed = {domain: 'example.com', dip: null, sip: null, outbound: 'proxy', matched: null};
+  const none = quickRuleContext({list: 'routing', seed, upstreams: [], outbound: '', position: undefined});
+  expect(none).toEqual({current: 'proxy', unchanged: false, beforeMatched: false});
+  expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: 'proxy', position: undefined}).unchanged).toBe(true);
+  expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: 'direct', position: undefined}).unchanged).toBe(false);
+  expect(quickRuleContext({list: 'routing', seed: {...seed, outbound: null}, upstreams: [], outbound: 'direct', position: undefined})).toEqual({
+    current: null,
+    unchanged: false,
+    beforeMatched: false
+  });
+});
+
+it('notes the matched position only when the default is the verified writable match', async () => {
+  const api = createMockApi();
+  const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
+  const hit = rules.find(rule => rule.kind === 'rule' && ruleWritable(rule, sources))!;
+  const seed: QuickRuleSeed = {domain: 'example.com', dip: null, sip: null, outbound: 'proxy', matched: {id: hit.rule_id, expression: hit.expression}};
+  const matched = rulePositions(rules, sources, seed.matched, t);
+  expect(matched[0].matched).toBe(true);
+  expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: '', position: matched[0]}).beforeMatched).toBe(true);
+  // A match whose rule no longer reads the same is not vouched for, so the default is the fallback and nothing is said.
+  const stale = rulePositions(rules, sources, {id: hit.rule_id, expression: 'domain(elsewhere.test)'}, t);
+  expect(stale[0].matched).toBe(false);
+  expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: '', position: stale[0]}).beforeMatched).toBe(false);
+});
+
+it('shows the answering upstream of a DNS request as context only', () => {
+  const upstreams = [{name: 'alidns', address: 'udp://223.5.5.5:53'}];
+  const dns = {type: 'A', answers: [], upstream: 'udp://223.5.5.5:53', query: null};
+  const seed: QuickRuleSeed = {domain: 'example.com', dip: null, sip: null, outbound: null, matched: null, dns};
+  const request = (value: QuickRuleSeed, outbound = 'alidns') =>
+    quickRuleContext({list: 'request', seed: value, upstreams, outbound, position: {matched: false}});
+  expect(request(seed)).toEqual({current: 'alidns', unchanged: false, beforeMatched: false});
+  // A cache hit names no upstream, so there is no current line.
+  expect(request({...seed, dns: {...dns, upstream: null}}).current).toBeNull();
+  expect(quickRuleContext({list: 'response', seed, upstreams, outbound: 'accept', position: undefined}).current).toBeNull();
 });
