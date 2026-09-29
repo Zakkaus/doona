@@ -39,11 +39,11 @@ export function resolveIncludePath(base: string | undefined, path: string) {
 // Whether a loaded file includes `path`, given relative to the main source's directory as a new source's path is.
 // honk resolves every file's patterns from the main source's directory, not from the file holding them. Resolving
 // against the main path serves a backend that reports absolute paths as well.
-// Null while a file's text is unknown, since its patterns are too.
+// Null without a main source.
 export function includeCheck(sources: Pick<ConfigSource, 'kind' | 'path' | 'content'>[]): ((path: string) => boolean) | null {
   const main = sources.find(source => source.kind === 'main');
-  if (!main || sources.some(source => source.content === undefined)) return null;
-  const patterns = sources.flatMap(source => includePatterns(source.content!).map(pattern => resolveIncludePath(main.path, pattern)));
+  if (!main) return null;
+  const patterns = sources.flatMap(source => includePatterns(source.content).map(pattern => resolveIncludePath(main.path, pattern)));
   return path => includedBy(patterns, resolveIncludePath(main.path, path));
 }
 

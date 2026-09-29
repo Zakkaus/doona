@@ -39,7 +39,7 @@ it('matches globs within one path segment and everything else literally', () => 
 });
 
 it('checks a new path against the include patterns of every loaded file, all from the main directory', () => {
-  const file = (kind: ConfigSource['kind'], path: string, content: string | undefined) => ({kind, path, content});
+  const file = (kind: ConfigSource['kind'], path: string, content: string) => ({kind, path, content});
   const sources = [
     file('main', 'config.dae', 'include { config.d/*.dae }'),
     file('include', 'config.d/lab.dae', "include { 'lab/*.dae' }"),
@@ -57,8 +57,8 @@ it('checks a new path against the include patterns of every loaded file, all fro
   const absolute = includeCheck(sources.map(source => ({...source, path: '/etc/honk/' + source.path})))!;
   expect(absolute('lab/a.dae')).toBe(true);
   expect(absolute('config.d/lab/a.dae')).toBe(false);
-  // A file whose text is unknown may hold the pattern, so nothing is known.
-  expect(includeCheck([...sources, file('include', 'config.d/x.dae', undefined)])).toBeNull();
+  // Without a main source there is no directory to resolve from.
+  expect(includeCheck(sources.filter(source => source.kind !== 'main'))).toBeNull();
 });
 
 it('offers the directory of the first pattern that globs names in a fixed directory', () => {

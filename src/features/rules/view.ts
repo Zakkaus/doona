@@ -137,7 +137,6 @@ function listedRows<R extends Listed>(
     const source = rule.source && byId.get(rule.source.source_id);
     if (!source) return t('rule.notLocated');
     if (!source.writable) return t('config.readOnlyAttempt');
-    if (source.content === undefined) return t('config.incomplete');
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
     if (anchor(source, rule, scans.get(source.id)!) !== null) return null;
     // An include file spliced into a routing section holds bare rules, outside any routing section of its own.

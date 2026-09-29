@@ -13,7 +13,7 @@ type LogRow = {
   iso: string;
   levelText: string;
   tone: (typeof tones)[LogLevel];
-  target: string;
+  target: string | null;
   message: string;
   // Marks the records the stream lost between the rows around it.
   gap: boolean;
@@ -95,7 +95,7 @@ export function logsExport(records: LogRecord[], gaps: ReadonlySet<LogRecord>, t
     [...records]
       .reverse()
       .flatMap(r => {
-        const line = `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`;
+        const line = `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target ?? '—'} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`;
         return gaps.has(r) ? [line, t('log.gap')] : [line];
       })
       .join('\n') + '\n'

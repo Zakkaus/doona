@@ -21,7 +21,7 @@ function placeOf(sources: ConfigSource[], source: ConfigSource, rule: PendingRul
 // keep the order they were held in, and rules for a list block the text lacks share one new block. Null when a place
 // is gone.
 export function insertRules(sources: ConfigSource[], source: ConfigSource, rules: PendingRule[]): string | null {
-  const text = source.content ?? '';
+  const text = source.content;
   const scan = scanConfig(text);
   const inserts = rules.map(rule => ({rule, anchor: placeOf(sources, source, rule, scan)}));
   if (inserts.some(insert => !insert.anchor)) return null;

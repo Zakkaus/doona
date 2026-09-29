@@ -240,7 +240,6 @@ export type GroupOwner = {entry: GroupEntry; origin: ConfigSource} | 'ambiguous'
 export function groupOwners(sources: ConfigSource[]): Map<string, GroupOwner> {
   const owners = new Map<string, GroupOwner>();
   for (const origin of sources) {
-    if (origin.content === undefined) continue;
     for (const entry of readGroupEntries(origin.content)) owners.set(entry.name, owners.has(entry.name) ? 'ambiguous' : {entry, origin});
   }
   return owners;

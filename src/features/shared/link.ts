@@ -54,7 +54,7 @@ export function parseRuleSeed(value: string | null, kinds: readonly RuleConditio
 export function sectionSourceHref(sources: readonly ConfigSource[], name: string): string {
   const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
   for (const source of authored) {
-    const block = source.content === undefined ? undefined : scanConfig(source.content).blocks.find(block => block.name === name);
+    const block = scanConfig(source.content).blocks.find(block => block.name === name);
     if (block) return href('config', {tab: 'source', source: source.id, line: String(block.line + 1)});
   }
   return href('config', {tab: 'source', source: authored.find(source => source.kind === 'main')?.id ?? null});

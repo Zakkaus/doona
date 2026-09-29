@@ -173,7 +173,6 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
           )}
         </div>
       </ActionHelp>
-      {view.editHelp && <p className="rp-note">{view.editHelp}</p>}
       {view.held && (
         <Card className="rp-list" aria-label={view.held.title} ref={heldRef} tabIndex={-1}>
           <div className="rp-cluster">

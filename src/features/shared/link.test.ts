@@ -21,15 +21,15 @@ it('reads a DNS request seed only with the DNS condition kinds', () => {
   expect(parseRuleSeed('qnameSuffix:example.com')).toBeNull();
 });
 
-const source = (id: string, kind: ConfigSource['kind'], content: string | undefined): ConfigSource => ({
+const source = (id: string, kind: ConfigSource['kind'], content: string): ConfigSource => ({
   id,
   kind,
   path: `/etc/honk/${id}.dae`,
   content,
   writable: true,
   content_sha256: '',
-  bytes: content?.length ?? 0,
-  line_count: content?.split('\n').length ?? 0,
+  bytes: content.length,
+  line_count: content.split('\n').length,
   loaded_at: ''
 });
 
@@ -39,10 +39,9 @@ it('opens the first line of a section wherever an authored file holds it, else t
   const include = source('dns', 'include', '# upstreams\n\ndns {\n  upstream {}\n}\n');
   expect(query(sectionSourceHref([main, include], 'dns'))).toEqual({tab: 'source', source: 'dns', line: '3'});
   expect(query(sectionSourceHref([main, include], 'routing'))).toEqual({tab: 'source', source: 'main', line: '2'});
-  // A nested block of the same name is not the section; a generated source and withheld text are not searched.
+  // A nested block of the same name is not the section; a generated source is not searched.
   const generated = source('gen', 'generated', 'dns {}\n');
-  const withheld = source('secret', 'include', undefined);
-  expect(query(sectionSourceHref([generated, withheld, main], 'dns'))).toEqual({tab: 'source', source: 'main'});
+  expect(query(sectionSourceHref([generated, main], 'dns'))).toEqual({tab: 'source', source: 'main'});
   expect(query(sectionSourceHref([], 'dns'))).toEqual({tab: 'source'});
 });
 

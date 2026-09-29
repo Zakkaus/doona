@@ -23,6 +23,12 @@ it('keeps structured fields readable in rows and lossless in chronological expor
   expect(view.levels.map(level => level.id)).toEqual(['error']);
 });
 
+it('keeps a record without a target and exports a dash for it', () => {
+  const records = [{id: 'r', ts: '2026-01-01T00:00:00Z', level: 'info' as const, target: null, message: 'started', fields: null}];
+  expect(logView(records, ['info'], undefined, 'en-US', t).rows[0].target).toBeNull();
+  expect(logsExport(records, new Set(), t)).toContain('INFO  — started');
+});
+
 it('states a paused stream and caps the held count at what resuming can show', () => {
   expect(logStatus(false, false, false, 0, 1000, 'en-US', t).tone).toBe('warn');
   expect(logStatus(true, false, false, 0, 1000, 'en-US', t)).toEqual({tone: 'ok', text: 'Streaming'});

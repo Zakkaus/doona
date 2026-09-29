@@ -387,7 +387,7 @@ export function validateReason(
   const authored = sources.filter(source => source.kind === 'main' || source.kind === 'include');
   if (authored.some(source => isComplete(source) === undefined)) return null;
   const main = authored.find(source => source.kind === 'main');
-  return t(main?.content !== undefined && isComplete(main) ? 'config.validateOther' : 'config.validateNoMain');
+  return t(main && isComplete(main) ? 'config.validateOther' : 'config.validateNoMain');
 }
 
 // The version of the active configuration. The generation id is a technical field and is not shown here.

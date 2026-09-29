@@ -25,7 +25,7 @@ type LifecycleApi = Pick<Api, 'pollOperation' | 'subscribeEvents' | 'subscribeLo
 export interface MockLifecycle {
   api: LifecycleApi;
   enqueue<K extends OperationAccepted['kind']>(kind: K, finish: () => Extract<Operation, {kind: K; status: 'succeeded'}>['result']): OperationAccepted;
-  log(level: LogRecord['level'], target: string, message: string, fields?: LogRecord['fields']): void;
+  log(level: LogRecord['level'], target: string | null, message: string, fields?: LogRecord['fields']): void;
   publish(event: ApiEvent): void;
   eventData(): {instance_id: string; observed_at: string};
   trimLogs(): void;
@@ -139,11 +139,12 @@ export function createLifecycle(
   const logListeners = new Set<(record: LogRecord & {id: string}) => void>();
   let logSequence = 0;
   function trimLogs() {
-    const limit = logSettings().buffered_records;
+    // An engine that reports no capacity keeps every record.
+    const limit = logSettings()?.buffered_records ?? Infinity;
     if (logRing.length > limit) logRing.splice(0, logRing.length - limit);
     pruneCursors();
   }
-  const log = (level: LogRecord['level'], target: string, message: string, fields: LogRecord['fields'] = null, at = Date.now()) => {
+  const log = (level: LogRecord['level'], target: string | null, message: string, fields: LogRecord['fields'] = null, at = Date.now()) => {
     const record = {id: `${instanceId}:logs:${++logSequence}`, ts: new Date(at).toISOString(), level, target, message, fields};
     logRing.push(record);
     trimLogs();
@@ -206,7 +207,7 @@ export function createLifecycle(
     const floor = level ? levels.indexOf(level) : 0;
     const filter = JSON.stringify([level ?? null, target ?? null]);
     const emit = (record: LogRecord & {id: string}) => {
-      if (levels.indexOf(record.level) >= floor && (!target || record.target.startsWith(target)))
+      if (levels.indexOf(record.level) >= floor && (!target || record.target?.startsWith(target)))
         onRecord({...structuredClone(record), id: issueCursor('logs', filter, Number(record.id.split(':')[2]))});
     };
     const cursor = resume(lastEventId, 'logs', filter, 0);

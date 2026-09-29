@@ -23,7 +23,7 @@ type Placement = {
 };
 
 function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
-  if (!rule.source || rule.source.source_id !== source.id || source.content === undefined) return null;
+  if (!rule.source || rule.source.source_id !== source.id) return null;
   const text = source.content;
   let line = rule.source.line - 1;
   const {blocks, tokens} = scan ?? scanConfig(text);
@@ -98,7 +98,7 @@ export function dnsRuleAnchor(source: ConfigSource, rule: DnsRoutingRule, list: 
 // `dns { routing { … } }` block under the same conditions; honk reads an absent list as empty.
 export function dnsListEnd(sources: ConfigSource[], list: DnsRuleListId): {source: ConfigSource; anchor: RuleAnchor} | null {
   const blocks = (within: (blocks: TextBlock[]) => TextBlock[]) =>
-    sources.flatMap(source => (source.content === undefined ? [] : within(scanConfig(source.content).blocks).map(block => ({source, block}))));
+    sources.flatMap(source => within(scanConfig(source.content).blocks).map(block => ({source, block})));
   const lists = blocks(scanned => dnsListBlocks(scanned, list));
   if (lists.length) {
     const end = lists.length === 1 ? blockEnd(lists[0].source, lists[0].block) : null;

@@ -115,9 +115,7 @@ export function useConfigPage({go, query}: PageProps) {
         }
       : null;
   const newSourceProps: NewSourceProps | null =
-    resources?.config.create === true && resources.config.writable === true
-      ? {sources, refetch: config.refetch, open: id => openSource(id, null)}
-      : null;
+    resources?.config.create === true && resources.config.writable === true ? {sources, refetch: config.refetch, open: id => openSource(id, null)} : null;
   const validateProps: ValidateTabProps | null = config.data
     ? {
         config: config.data,
@@ -157,7 +155,7 @@ export function useConfigPage({go, query}: PageProps) {
       return {id: view.id, label: view.label, desc: view.kind};
     }),
     exportSource: () => {
-      if (source?.content !== undefined) downloadFile(fileName(source), source.content, 'text/plain;charset=utf-8');
+      if (source) downloadFile(fileName(source), source.content, 'text/plain;charset=utf-8');
     },
     summaryTone: counts.error ? ('err' as const) : counts.warning ? ('warn' as const) : ('ok' as const),
     summaryText: counts.error ? t('config.errors', {n: counts.error}) : counts.warning ? t('config.warnings', {n: counts.warning}) : t('config.clean')

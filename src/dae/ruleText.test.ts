@@ -23,13 +23,12 @@ it('anchors redacted display rules and fallbacks by kind, source identity and lo
   );
 });
 
-it('refuses changed source anchors, unavailable identities, withheld text and non-routing locations', () => {
+it('refuses changed source anchors, unavailable identities and non-routing locations', () => {
   const anchor = ruleAnchor(source, rule)!;
   const changed = text.replace('mix', 'block');
   expect(addRule(changed, anchor, 'dip(a)', 'direct', true)).toBeNull();
   expect(removeRule(changed, anchor)).toBeNull();
   expect(ruleAnchor({...source, id: 'other'}, rule)).toBeNull();
-  expect(ruleAnchor({...source, content: undefined}, rule)).toBeNull();
   expect(ruleAnchor({...source, content: text.replace('routing {', 'dns {')}, rule)).toBeNull();
   expect(ruleAnchor({...source, content: 'l4proto(tcp, udp) -> mix\n'}, {...rule, source: {...rule.source!, line: 1}})).toBeNull();
   expect(ruleAnchor(source, {...rule, source: {...rule.source!, line: 4}})).toBeNull();
@@ -191,7 +190,6 @@ it('appends to a DNS list that writes no fallback, before the line closing its b
   expect(dnsListEnd([{...source, content: 'dns {\n  routing {\n    request {}\n  }\n}\n'}], 'request')).toBeNull();
   expect(dnsListEnd([{...source, writable: false}], 'request')).toBeNull();
   expect(dnsListEnd([source, {...source, id: 'other'}], 'request')).toBeNull();
-  expect(dnsListEnd([{...source, content: undefined}], 'request')).toBeNull();
 });
 
 it('creates an absent DNS list block at the end of the dns routing block', () => {

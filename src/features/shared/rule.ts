@@ -217,7 +217,7 @@ export function dnsRulePositions(list: DnsRuleListId, rules: DnsRoutingRule[], s
 // The upstreams a new DNS rule can name: those the configuration defines, with their addresses, and any the list
 // already names that the text doona holds does not show.
 export function dnsUpstreamChoices(rules: DnsRoutingRule[], sources: ConfigSource[]): Array<{name: string; address: string | null}> {
-  const defined = sources.flatMap(source => (source.content === undefined ? [] : dnsUpstreams(source.content)));
+  const defined = sources.flatMap(source => dnsUpstreams(source.content));
   const known = new Set(defined.map(upstream => upstream.name.toLowerCase()));
   const named = [...new Set(rules.flatMap(rule => (rule.upstream && !known.has(rule.upstream.toLowerCase()) ? [rule.upstream] : [])))];
   return [...defined, ...named.map(name => ({name, address: null}))];

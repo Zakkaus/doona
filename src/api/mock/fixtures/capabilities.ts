@@ -44,7 +44,14 @@ export const capabilities: Capabilities = {
     // create is true because the demo's main source includes config.d/*.dae.
     config: {available: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
-    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], filters: ['level', 'target'], retention_seconds: 86400, min_buffered_records: 64, max_buffered_records: 4096},
+    logs: {
+      available: true,
+      levels: ['trace', 'debug', 'info', 'warn', 'error'],
+      filters: ['level', 'target'],
+      retention_seconds: 86400,
+      min_buffered_records: 64,
+      max_buffered_records: 4096
+    },
     dns_log: {available: true, min_records: 64, max_records: 2048, max_page_size: 500},
     dns_rules: {available: true, max_rules: 1024},
     runtime_settings: {
@@ -159,6 +166,6 @@ export const capabilitiesM1: Capabilities = {
     ...Object.fromEntries(Object.keys(capabilities.resources).map(key => [key, {available: false}])),
     runtime: {available: true},
     connections: {available: true, can_close: false, max_bulk_close: 1000},
-    config: {available: false, content: false, create: false}
+    config: {available: false, create: false}
   } as Capabilities['resources']
 };

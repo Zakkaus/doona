@@ -297,11 +297,11 @@ it("says why a group's Edit or Test all is disabled, Edit first, and nothing whi
 });
 
 it('finds the one source that declares each group, and none when two entries do', () => {
-  const source = (id: string, content: string | undefined, writable = true) =>
+  const source = (id: string, content: string, writable = true) =>
     ({id, path: id + '.dae', kind: 'include', content, content_sha256: '', writable, loaded_at: ''}) as ConfigSource;
   const main = source('main', 'group {\n  proxy { policy: fixed(0) }\n  twice { policy: fixed(0) }\n}\n');
   const extra = source('extra', 'group {\n  media { filter: name(hk-01) policy: min }\n  twice { policy: min }\n}\n');
-  const owners = groupOwners([main, extra, source('withheld', undefined)]);
+  const owners = groupOwners([main, extra]);
   expect(owners.get('proxy')).toMatchObject({origin: {id: 'main'}, entry: {name: 'proxy', policy: 'fixed(0)'}});
   expect(owners.get('media')).toMatchObject({origin: {id: 'extra'}, entry: {filters: ['name(hk-01)']}});
   expect(owners.get('twice')).toBe('ambiguous');

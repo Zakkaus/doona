@@ -109,7 +109,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
         note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
         muted: !section.block,
         // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.
-        manual: section.source && section.source.content !== undefined ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
+        manual: section.source ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
         edit: () => {
           if (dirty || editor.busy || !canWrite || !section.source?.writable || !section.block || isComplete(section.source) !== true) return;
           setFound(null);
