@@ -5,7 +5,7 @@ import {consumeProfileReadError} from '../api/profiles';
 import {storageKeys} from '../api/storage';
 import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
-import {LANGS, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
+import {FONT, LANGS, languages, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';
 import {warmAllPages} from './registry';
@@ -25,6 +25,7 @@ export function useShellController(initial: Lang) {
   useLayoutEffect(() => {
     const d = document.documentElement;
     d.lang = LOCALE[lang];
+    d.style.setProperty('--rp-font-family', FONT[lang]);
     d.dir = pageDirection(LOCALE[lang], mirrored);
     d.toggleAttribute('data-mirror', mirrored);
   }, [lang, mirrored]);
@@ -92,7 +93,8 @@ export function useShellController(initial: Lang) {
   // Warm accented menu glyphs to avoid a font swap when opening a menu.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
-    document.fonts?.load(`14px '${lang === 'zh-CN' ? 'Noto Sans SC' : 'Noto Sans TC'}'`, sample).catch(() => {});
+    const [face] = languages.find(language => language.id === lang)!.faces;
+    if (face) document.fonts?.load(`14px '${face}'`, sample).catch(() => {});
   }, [lang]);
   useEffect(warmAllPages, []);
   // react-aria tracks elements with a running CSS transition until transitionend or transitioncancel, which a removed

@@ -38,6 +38,13 @@ test.describe('translated configuration text', () => {
     await expect(page.locator('.cm-tooltip-lint')).toContainText(english);
   });
 });
+
+// The body's font stack and the face warmed for menu glyphs, per language.
+const fonts: Record<string, [string, string]> = {
+  'zh-TW': ['"Noto Sans TC", system-ui, sans-serif', "14px 'Noto Sans TC'"],
+  'zh-CN': ['"Noto Sans SC", "Noto Sans TC", system-ui, sans-serif', "14px 'Noto Sans SC'"],
+  en: ['"Noto Sans TC", system-ui, sans-serif', "14px 'Noto Sans TC'"]
+};
 for (const [lang] of LANGS) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
@@ -50,6 +57,18 @@ for (const [lang] of LANGS) {
       }
       await expect(page.locator('.rp-nav').first()).toBeVisible();
       await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    });
+    test('uses and warms its font faces', async ({page}) => {
+      await page.addInitScript(() => {
+        const load = document.fonts.load.bind(document.fonts);
+        const warmed: string[] = ((window as unknown as {warmed: string[]}).warmed = []);
+        document.fonts.load = (font, text) => (warmed.push(font), load(font, text));
+      });
+      await page.goto('/#/activity');
+      await expect(page.locator('.rp-nav').first()).toBeVisible();
+      const [family, warm] = fonts[lang];
+      expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toBe(family);
+      await expect.poll(() => page.evaluate(() => (window as unknown as {warmed: string[]}).warmed)).toContain(warm);
     });
     test('shows shortcut key names from the selected catalogue', async ({page}) => {
       await page.goto('/#/activity');

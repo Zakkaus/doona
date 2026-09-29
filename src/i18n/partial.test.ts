@@ -16,8 +16,8 @@ beforeAll(async () => {
       ...actual,
       languages: [
         ...actual.languages,
-        {id: 'fr', name: 'Français', locale: 'fr-FR', docs: 'en', fonts: null, complete: false},
-        {id: 'ar', name: 'العربية', locale: 'ar', docs: 'en', fonts: null, complete: false}
+        {id: 'fr', name: 'Français', locale: 'fr-FR', docs: 'en', fonts: null, faces: ['Noto Sans TC'], complete: false},
+        {id: 'ar', name: 'العربية', locale: 'ar', docs: 'en', fonts: null, faces: ['Noto Sans TC'], complete: false}
       ]
     };
   });

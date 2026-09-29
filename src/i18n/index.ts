@@ -13,6 +13,10 @@ export type Params = Record<string, string | number | bigint>;
 export type Translator = (key: Key, params?: Params, pluralParam?: string) => string;
 export const LANGS: Array<[Lang, string]> = languages.map(language => [language.id, language.name]);
 export const LOCALE = Object.fromEntries(languages.map(language => [language.id, language.locale])) as Record<Lang, string>;
+// The body's font stack: the language's faces, then the system font.
+export const FONT = Object.fromEntries(
+  languages.map(language => [language.id, [...language.faces.map(face => `'${face}'`), 'system-ui', 'sans-serif'].join(', ')])
+) as Record<Lang, string>;
 export {pageDirection, textDirection, type Dir} from './direction';
 
 export const LangContext = createContext<Lang>(DEFAULT_LANG);
