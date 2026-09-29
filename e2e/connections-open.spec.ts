@@ -38,7 +38,8 @@ function watchPainted() {
   (window as unknown as {painted: typeof seen}).painted = seen;
   const channel = new MessageChannel();
   channel.port1.onmessage = () => {
-    const box = document.querySelector('.rp-table')?.getBoundingClientRect();
+    // A kept tab panel hides its table laid out at its width, so only the shown panel's table counts.
+    const box = document.querySelector('.rp-tabpanel[data-shown] .rp-table')?.getBoundingClientRect();
     if (box?.height && seen.frames.length < 20) seen.frames.push([box.y, box.height, box.width].map(Math.round));
   };
   const tick = () => {
@@ -69,8 +70,8 @@ for (const viewport of [
       await expectSteadyOpening(page);
     });
 
-    // While the other tab shows, the kept list is hidden and has no place to measure; a table that sized itself
-    // then came back a window's height tall and shrank a frame later (src/ui/hooks.ts).
+    // While the other tab shows, the kept list is hidden; a table that sized itself then came back a window's height
+    // tall and shrank a frame later (src/ui/hooks.ts).
     test('the list shown again from the other tab keeps its size', async ({page}) => {
       await page.goto('/#/connections?tab=list');
       await expect(page.locator('.rp-table [role="row"][data-key]').first()).toBeVisible();
