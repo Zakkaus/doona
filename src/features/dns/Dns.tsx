@@ -140,10 +140,12 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           </TextTooltip>
         )
       },
-      {id: 't', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: entry => entry.type},
+      // Wide enough for a six-letter type, DNSKEY (about 52px), with the cell's padding.
+      {id: 't', label: t('ui.type'), minWidth: 88, grow: 0, drop: 3, render: entry => entry.type},
       {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
-      {id: 'e', label: t('dns.expires'), minWidth: 96, drop: 2, render: entry => <TimeCell at={entry.expiresAt} />},
-      {id: 'st', label: t('dns.staleUntil'), minWidth: 104, drop: 1, render: entry => <TimeCell at={entry.staleUntil} />},
+      // Wide enough for the longest relative time ahead, English "in 59 minutes" (about 90px), with the cell's padding.
+      {id: 'e', label: t('dns.expires'), minWidth: 128, drop: 2, render: entry => <TimeCell at={entry.expiresAt} />},
+      {id: 'st', label: t('dns.staleUntil'), minWidth: 128, drop: 1, render: entry => <TimeCell at={entry.staleUntil} />},
       {
         id: 'a',
         label: t('ui.delete'),
@@ -227,7 +229,8 @@ function DnsLog({
       // Wide enough for the longest relative time, English "59 seconds ago" (about 101px), with the cell's padding.
       {id: 't', label: t('ui.time'), minWidth: 140, grow: 0, render: record => <TimeCell at={record.observedAt} />},
       {id: 'q', label: t('ui.domain'), minWidth: 200, grow: 2, isRowHeader: true, render: record => <TextTooltip>{record.name}</TextTooltip>},
-      {id: 'ty', label: t('ui.type'), minWidth: 64, grow: 0, drop: 3, render: record => record.type},
+      // Wide enough for a six-letter type, DNSKEY (about 52px), with the cell's padding.
+      {id: 'ty', label: t('ui.type'), minWidth: 88, grow: 0, drop: 3, render: record => record.type},
       {id: 's', label: t('ui.device'), minWidth: 128, drop: 2, render: record => <TextTooltip className="rp-code">{record.source}</TextTooltip>},
       {
         id: 'r',
@@ -257,7 +260,8 @@ function DnsLog({
             <TextTooltip>{record.upstream}</TextTooltip>
           )
       },
-      {id: 'e', label: t('ui.elapsed'), minWidth: 72, grow: 0, align: 'end', drop: 4, render: record => record.elapsed}
+      // Wide enough for four digits and the unit, "9999 ms" (about 55px), with the cell's padding.
+      {id: 'e', label: t('ui.elapsed'), minWidth: 88, grow: 0, align: 'end', drop: 4, render: record => record.elapsed}
     ],
     [t]
   );
