@@ -63,6 +63,7 @@ const definitions = {
     requires: {resources: ['flows']}
   },
   dns: {
+    shortcut: 'd',
     nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
     ...lazyPage(() => import('../features/dns/Dns').then(m => ({default: m.Dns}))),
     requires: {resources: ['dns_query', 'dns_log', 'dns_cache']}
@@ -94,6 +95,7 @@ const definitions = {
     requires: {resources: ['config']}
   },
   events: {
+    shortcut: 'e',
     nav: {titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
     ...lazyPage(() => import('../features/events/Events').then(m => ({default: m.Events}))),
     requires: {resources: ['events']}

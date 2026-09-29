@@ -193,6 +193,48 @@
 .rp-modal.narrow {
   width: min(480px, 90vw);
 }
+/* Keyboard shortcuts: titled sections of rows, a label and its key caps. Two columns fit it in the viewport above phone
+   width; the rows are tighter than a control row, since nothing in them is pressed. */
+.rp-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 32px;
+  align-items: start;
+}
+.rp-shortcuts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.rp-shortcuts section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rp-shortcuts h3 {
+  margin: 0 0 4px;
+  font-size: var(--rp-text-md);
+  line-height: 20px;
+  font-weight: 700;
+}
+.rp-shortcuts section > .rp-label {
+  margin: 0 0 4px;
+}
+.rp-shortcuts .rp-row {
+  min-height: 28px;
+  flex-wrap: nowrap;
+}
+.rp-shortcuts .keys {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+@media (max-width: 599px) {
+  .rp-shortcuts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .rp-form {
   display: flex;
   flex-direction: column;

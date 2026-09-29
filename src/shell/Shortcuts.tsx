@@ -101,41 +101,61 @@ export function Shortcuts({
       removeEventListener('focusin', reset);
     };
   }, [go, openSearch, refresh, paths]);
+  const mod = mac ? '⌘' : 'Ctrl ';
   return (
     <ModalDialog
       title={t('shell.shortcuts')}
       isOpen={open}
       onOpenChange={setOpen}
-      narrow
       footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}
     >
-      <p className="rp-label">{t('shell.shortcutSequence')}</p>
-      <div className="rp-col">
-        <div className="rp-row">
-          <span>{t('search')}</span>
-          <kbd className="rp-kbd">{t(mac ? 'shell.macShortcut' : 'shell.shortcut')}</kbd>
+      <div className="rp-shortcuts">
+        <div>
+          <section>
+            <h3>{t('shell.shortcutGeneral')}</h3>
+            <Row label={t('shell.shortcutSearch')} keys={[t(mac ? 'shell.macShortcut' : 'shell.shortcut')]} />
+            <Row label={t('shell.shortcutHelp')} keys={['?']} />
+            <Row label={t('shell.shortcutFilter')} keys={['/']} />
+            <Row label={t('refresh')} keys={['r']} />
+          </section>
+          <section>
+            <h3>{t('shell.shortcutTables')}</h3>
+            <Row label={t('shell.shortcutMove')} keys={['↑', '↓']} />
+            <Row label={t('shell.shortcutSelect')} keys={['Enter', t('shell.keySpace')]} />
+            <Row label={t('shell.shortcutClose')} keys={['Esc']} />
+          </section>
+          <section>
+            <h3>{t('shell.shortcutEditor')}</h3>
+            <Row label={t('shell.shortcutApply')} keys={[`${mod}S`]} />
+            <Row label={t('shell.shortcutSearch')} keys={[`${mod}F`]} />
+            <Row label={t('shell.shortcutLine')} keys={[`${mod}G`]} />
+            <Row label={t('shell.shortcutComment')} keys={[`${mod}/`]} />
+          </section>
         </div>
-        <div className="rp-row">
-          <span>{t('shell.shortcutHelp')}</span>
-          <kbd className="rp-kbd">?</kbd>
-        </div>
-        <div className="rp-row">
-          <span>{t('shell.shortcutFilter')}</span>
-          <kbd className="rp-kbd">/</kbd>
-        </div>
-        <div className="rp-row">
-          <span>{t('refresh')}</span>
-          <kbd className="rp-kbd">r</kbd>
-        </div>
-        {entries.map(entry => (
-          <div className="rp-row" key={entry.id}>
-            <span>{entry.label}</span>
-            <kbd className="rp-kbd">{entry.sequence}</kbd>
-          </div>
-        ))}
+        <section>
+          <h3>{t('shell.shortcutGoTo')}</h3>
+          <p className="rp-label">{t('shell.shortcutSequence')}</p>
+          {entries.map(entry => (
+            <Row key={entry.id} label={entry.label} keys={[entry.sequence]} />
+          ))}
+        </section>
       </div>
-      <p className="rp-label">{t('shell.shortcutTables')}</p>
-      <p className="rp-label">{t(mac ? 'shell.shortcutEditorMac' : 'shell.shortcutEditor')}</p>
     </ModalDialog>
+  );
+}
+
+// A label and its keys, one key cap each.
+function Row({label, keys}: {label: string; keys: string[]}) {
+  return (
+    <div className="rp-row">
+      <span>{label}</span>
+      <span className="keys">
+        {keys.map(key => (
+          <kbd className="rp-kbd" key={key}>
+            {key}
+          </kbd>
+        ))}
+      </span>
+    </div>
   );
 }
