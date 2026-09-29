@@ -1,6 +1,6 @@
 import type {Page, Request} from '@playwright/test';
 import {ApiError} from '../src/api/error';
-import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 // These calls carry no idempotency key, so doona never retries them: a failure is shown, the control stays, and the
 // person presses it again (selectGroup, clearGroupOverride, flushDnsCache, deleteDnsEntry, deleteProvider, deleteNode).
@@ -72,12 +72,11 @@ for (const how of Object.keys(failures) as Failure[])
       await page.goto('/#/policies');
       const group = page.getByRole('region', {name: 'resilient', exact: true});
       await group.getByRole('radio', {name: 'TCP', exact: true}).click();
-      const release = group.getByRole('button', {name: 'Back to automatic', exact: true});
-      await release.click();
+      await moreAction(group, 'Back to automatic');
       await expect(shown(page)).toBeVisible();
       expect(counted).toHaveLength(1);
-      await expect(release).toBeEnabled();
-      await release.click();
+      await expect(await moreItem(group, 'Back to automatic')).toBeEnabled();
+      await page.getByRole('menuitem', {name: 'Back to automatic', exact: true}).click();
       await expect(group.getByText('Automatic', {exact: true})).toBeVisible();
       expect(counted).toHaveLength(2);
     });

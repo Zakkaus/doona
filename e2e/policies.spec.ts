@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
   const {requests} = await mockBackend(page);
@@ -16,13 +16,15 @@ test('policies select a member, pin one network, release and test the group', as
   await expect(pinned).toHaveAttribute('aria-pressed', 'true');
   await expect(automatic.getByText('Pinned', {exact: true})).toBeVisible();
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'resilient pinned us-01'})).toBeVisible();
-  await automatic.getByRole('button', {name: 'Back to automatic', exact: true}).click();
+  await moreAction(automatic, 'Back to automatic');
   await expect(automatic.getByText('Automatic', {exact: true})).toBeVisible();
-  await expect(automatic.getByRole('button', {name: 'Back to automatic', exact: true})).toHaveCount(0);
+  await expect(await moreItem(automatic, 'Back to automatic')).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await expect(automatic.getByRole('button', {name: /^sg-01\b/})).toHaveAttribute('aria-pressed', 'true');
-  await automatic.getByRole('button', {name: 'Test all', exact: true}).click();
+  await moreAction(automatic, 'Test all');
   await expect(page.locator('.rp-toast.positive').filter({hasText: /resilient.*Available.*selection: (changed|unchanged)/})).toBeVisible();
-  await expect(automatic.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
+  await expect(await moreItem(automatic, 'Test all')).toBeEnabled();
+  await page.keyboard.press('Escape');
   const controls = requests.filter(request => request.method() !== 'GET');
   expect(controls.map(request => [request.method(), new URL(request.url()).pathname + new URL(request.url()).search])).toEqual([
     ['PUT', '/api/v1/groups/proxy/selection'],
@@ -113,8 +115,9 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});
-  await expect(page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: 'Check settings', exact: true})).toHaveCount(0);
-  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  await expect(await moreItem(page.getByRole('region', {name: 'proxy', exact: true}), 'Check settings')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await moreAction(card, 'Check settings');
   const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
   const url = dialog.getByRole('textbox', {name: 'Check URL'});
   await url.fill('http://user@cp.cloudflare.com/');
@@ -147,7 +150,7 @@ test('a check URL another client changed while the dialog was open is not overwr
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});
-  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  await moreAction(card, 'Check settings');
   const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
   const remote = 'http://remote.example/';
   const accepted = await api.patchGroup('resilient', [{op: 'replace', path: '/config/check_url', value: remote}], '"40"');
@@ -175,7 +178,7 @@ test('a check save refused with 409 keeps the edit and shows what the group hold
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});
-  await card.getByRole('button', {name: 'Check settings', exact: true}).click();
+  await moreAction(card, 'Check settings');
   const dialog = page.getByRole('dialog', {name: 'Check settings for resilient'});
   const url = dialog.getByRole('textbox', {name: 'Check URL'});
   await expect(url).toHaveValue('');
@@ -203,9 +206,9 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   // The group takes TCP probes; the backend's job limit is what rules Test all out.
   capabilities.resources.probes.limits!.max_members_per_job = 0;
   await page.goto('/#/policies');
-  const probe = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: 'Test all', exact: true});
+  const probe = await moreItem(page.getByRole('region', {name: 'resilient', exact: true}), 'Test all');
   await expect(probe).toBeDisabled();
-  // The reason is a line under the card's header, in view on every width, and the button's description.
+  // The reason is a line under the card's header, in view on every width, and the menu item's description.
   const reason = 'Test all is not available for this group';
   await expect(page.getByRole('region', {name: 'resilient', exact: true}).getByText(reason, {exact: true})).toBeVisible();
   await expect(probe).toHaveAccessibleDescription(reason);

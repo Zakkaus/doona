@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 test('close all closes what the backend owns and skips the rest', async ({page}) => {
   await page.goto('/#/connections?tab=list');
@@ -73,11 +73,14 @@ test('a group declared in an include is edited there while the main source is re
   await page.goto('/#/policies');
   // A group the read-only main source declares says why it cannot be edited.
   const proxy = page.getByRole('region', {name: 'proxy', exact: true});
-  await expect(proxy.getByRole('button', {name: 'Edit', exact: true})).toBeDisabled();
+  const locked = await moreItem(proxy, 'Edit group');
+  await expect(locked).toBeDisabled();
+  await expect(locked).toHaveAccessibleDescription('This group is defined in /etc/honk/config.dae, which is read-only');
+  await page.keyboard.press('Escape');
   await expect(proxy.getByText('This group is defined in /etc/honk/config.dae, which is read-only', {exact: true})).toBeVisible();
   const card = page.getByRole('region', {name: 'gaming', exact: true});
   await card.scrollIntoViewIfNeeded();
-  await card.getByRole('button', {name: 'Edit', exact: true}).click();
+  await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('textbox', {name: 'Filter 1', exact: true}).fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
@@ -92,18 +95,18 @@ test('a group declared in an include is edited there while the main source is re
 test('policy editing discards a cancelled draft and saves filters through the main source', async ({page}) => {
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'gaming', exact: true});
-  const edit = card.getByRole('button', {name: 'Edit', exact: true});
-  await edit.click();
+  const edit = () => moreAction(card, 'Edit group');
+  await edit();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   const filter = dialog.getByRole('textbox', {name: 'Filter 1', exact: true});
   const original = await filter.inputValue();
   await filter.fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await edit.click();
+  await edit();
   await expect(filter).toHaveValue(original);
   await filter.fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await edit.click();
+  await edit();
   await expect(filter).toHaveValue('name(hk-01)');
 });

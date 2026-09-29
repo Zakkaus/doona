@@ -11,13 +11,6 @@ export function CheckEdit({model: m}: {model: CheckEditView}) {
       onOpenChange={open => {
         if (!open) m.close();
       }}
-      trigger={
-        m.available ? (
-          <Button quiet isDisabled={m.busy} onPress={m.show}>
-            {t('policy.checkEdit')}
-          </Button>
-        ) : undefined
-      }
       footer={close => (
         <>
           <Button onPress={close}>{t('ui.cancel')}</Button>
