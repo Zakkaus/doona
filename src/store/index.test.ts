@@ -146,15 +146,38 @@ it('refreshes generation-dependent resources but leaves DNS cache to its poll', 
     expect(shouldRefetch(resource, event('generation.changed'))).toBe(true);
   }
   for (const resource of ['dnsLog', 'version'] as const) expect(shouldRefetch(resource, event('generation.changed'))).toBe(false);
-  expect(shouldRefetch('runtimeSettings', event('runtime.updated'))).toBe(false);
-  expect(shouldRefetch('runtimeSettings', event('operation.updated'))).toBe(true);
   expect(shouldRefetch('dnsCache', event('generation.changed'))).toBe(false);
 });
 
-it('limits flow notifications to flows and connection milestones, never capabilities', () => {
+it('refreshes the runtime row of the contract on runtime updates', () => {
+  for (const resource of [
+    'runtime',
+    'runtimeOutbounds',
+    'trafficHistory',
+    'memoryHistory',
+    'runtimeMemory',
+    'runtimeSettings',
+    'capabilities',
+    'groups',
+    'group',
+    'nodes',
+    'connections'
+  ] as const) {
+    expect(shouldRefetch(resource, event('runtime.updated'))).toBe(true);
+  }
+  for (const resource of ['config', 'flows', 'datapath', 'dnsCache'] as const) expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
+});
+
+it('refreshes nothing on operation updates, since what an operation changes sends its own event', () => {
+  for (const resource of ['runtime', 'runtimeSettings', 'capabilities', 'config'] as const) {
+    expect(shouldRefetch(resource, event('operation.updated'))).toBe(false);
+  }
+});
+
+it('limits flow notifications to the flow and the flow list', () => {
   expect(shouldRefetch('flows', event('flow.updated'))).toBe(true);
   expect(shouldRefetch('flow', event('flow.updated'))).toBe(true);
-  expect(shouldRefetch('connections', event('flow.updated'))).toBe(true);
+  expect(shouldRefetch('connections', event('flow.updated'))).toBe(false);
   expect(shouldRefetch('capabilities', event('flow.updated'))).toBe(false);
   expect(shouldRefetch('flows', event('flow.gap'))).toBe(true);
   expect(shouldRefetch('flow', event('flow.gap'))).toBe(true);

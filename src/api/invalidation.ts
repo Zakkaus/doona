@@ -24,16 +24,28 @@ export type ResourceName =
   | 'rules'
   | 'dnsRules';
 
-// Event schemas do not define cross-resource invalidation, so the UI owns this policy.
+// The contract's Invalidates column (events.md). An operation's own changes arrive as the `runtime.updated` or
+// `generation.changed` they produce, and its waiter refetches the operation, so `operation.updated` refreshes nothing here.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   'stream.ready': {now: 'all'},
   'runtime.updated': {
-    now: ['runtime', 'runtimeOutbounds']
+    now: [
+      'runtime',
+      'runtimeOutbounds',
+      'trafficHistory',
+      'memoryHistory',
+      'runtimeMemory',
+      'runtimeSettings',
+      'capabilities',
+      'groups',
+      'group',
+      'nodes',
+      'connections'
+    ]
   },
-  'flow.updated': {now: ['flows', 'flow', 'connections']},
+  'flow.updated': {now: ['flows', 'flow']},
   'flow.gap': {now: ['flows', 'flow']},
-  // Every activation restores runtime settings, and a no-op one advances no generation.
-  'operation.updated': {now: ['runtime', 'runtimeSettings']},
+  'operation.updated': {now: []},
   'generation.changed': {
     now: [
       'capabilities',
