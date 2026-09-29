@@ -178,6 +178,8 @@ Write formal Traditional Chinese in `zh-TW` and idiomatic Simplified Chinese in 
 
 Keep professional terms verbatim in every language: protocol names, dae and honk configuration keywords, ACL4SSR rule set and group names, and API field names. Generated configuration keeps the ACL4SSR vocabulary. The catalogues do not cover number and date formats, which come from the browser's `Intl`; React Aria's own announcements for grid selection and drag and drop, which fall back to `en-US` for a language React Aria lacks; or detail text the backend sends.
 
+Terminology: Keep product and protocol names, configuration keywords and sections, API fields, commands, file names, and ACL4SSR preset, rule-set and group names verbatim. In `zh-TW`, use established Taiwan computing terms.
+
 To add a language:
 
 1. Open an issue first, naming the language and who will review its strings.
