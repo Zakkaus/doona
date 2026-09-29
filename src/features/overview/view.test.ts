@@ -190,3 +190,15 @@ it('shows the config version, not the generation, and a dash when the backend re
   expect(strip(null)[0]).toMatchObject({label: t('ov.config'), value: '—', full: '—'});
   expect(t('ov.config')).toBe('Config version');
 });
+
+it('puts the cgroup path or hook of a non-interface attachment in the interface cell', () => {
+  const attachments = [
+    {name: 'honk_sock', kind: 'cgroup' as const, cgroup: '/system.slice', state: 'attached' as const},
+    {name: 'honk_verdict', kind: 'other' as const, hook: 'sockmap', state: 'attached' as const}
+  ];
+  const rows = overviewView({capabilities, datapath: {...healthy, ebpf: {...healthy.ebpf!, attachments}}}, loading, 'en-US', t).datapath.attachments;
+  expect(rows.map(row => [row.interface, row.direction])).toEqual([
+    ['cgroup: /system.slice', '—'],
+    ['Other: sockmap', '—']
+  ]);
+});

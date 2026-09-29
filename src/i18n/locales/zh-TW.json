@@ -895,6 +895,8 @@
   "ov.f.visibility": "可見度",
   "ov.failed": "失敗",
   "ov.interface": "介面",
+  "ov.kind.cgroup": "cgroup",
+  "ov.kind.other": "其他",
   "ov.lastReload": "上次重載",
   "ov.lim.close": "關閉連線",
   "ov.lim.configMissing": "honk 仍在啟動，或組態檔案超過 32 個，或總大小超過 8 MiB。",

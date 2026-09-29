@@ -249,8 +249,12 @@ export function overviewView(
       attachments: (datapath?.ebpf?.attachments ?? []).map((a, i) => ({
         id: String(i),
         name: a.name,
-        interface: a.interface,
-        direction: datapathValue(a.direction, t),
+        // A cgroup or other attachment has no interface or direction; its cgroup path or hook takes the interface cell.
+        interface:
+          a.kind === 'interface'
+            ? (a.interface ?? '—')
+            : t('ui.valuePair', {label: t(a.kind === 'cgroup' ? 'ov.kind.cgroup' : 'ov.kind.other'), value: (a.kind === 'cgroup' ? a.cgroup : a.hook) ?? '—'}),
+        direction: a.direction ? datapathValue(a.direction, t) : '—',
         state: datapathValue(a.state, t)
       })),
       errors: datapath?.errors.map(error => ({tooltip: error.code, text: oneLine(backendMessage(error.code, error.message, t), t)})) ?? [],
