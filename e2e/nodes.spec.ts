@@ -2,7 +2,7 @@ import type {Locator} from '@playwright/test';
 import {expect, mockBackend, query, test, moreAction} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import type {ProbeResult} from '../src/api/model';
+import type {ProbeResult, Provider} from '../src/api/model';
 
 type ProbeResultItem = ProbeResult['results'][number];
 
@@ -86,7 +86,7 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
 test('a new subscription is selected even when its first refresh fails', async ({page}) => {
   const backend = await mockBackend(page);
   backend.handlers['POST providers'] = async request => {
-    const created = await backend.api.createProvider(request.postDataJSON());
+    const created = (await backend.api.createProvider(request.postDataJSON())) as Provider;
     backend.handlers[`POST providers/${created.id}/refresh`] = async () => {
       throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
     };
