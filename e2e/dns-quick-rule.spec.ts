@@ -317,3 +317,28 @@ test('an apply that fails in a later file keeps the rule it could not write and 
   await page.goto('/#/rules?tab=dns');
   await expect(page.getByRole('region', {name: /^Pending/})).toHaveCount(0);
 });
+
+test('a held rule whose activation is unconfirmed and not written stays held', async ({page}) => {
+  const {api, handlers} = await backend(page);
+  const main = (await api.config()).sources.find(source => source.id === 'src-main')!;
+  // The db store writes nothing before activation, so an engine that stops first leaves the file as it was.
+  handlers['PUT config/sources/src-main'] = async request => ({
+    ...(await api.replaceConfigSource('src-main', main.content!, request.headers()['if-match'])),
+    operation_id: 'op-unconfirmed',
+    href: '/api/v1/operations/op-unconfirmed'
+  });
+  handlers['GET operations/op-unconfirmed'] = async () => ({
+    operation_id: 'op-unconfirmed',
+    kind: 'reload',
+    status: 'failed',
+    created_at: new Date().toISOString(),
+    started_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
+    result: null,
+    error: {code: 'activation_unconfirmed', message: 'Activation unconfirmed', details: {committed: null, written: false}}
+  });
+  await holdRequest(page, /^reject/);
+  await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'Could not confirm whether the change took effect'})).toBeVisible();
+  await expect(top(page).locator('.rp-held-count')).toHaveText('1');
+});
