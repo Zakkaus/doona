@@ -15,3 +15,8 @@ it('offers new groups only policies the engine accepts', () => {
     expect(policyKind(id)).toBeDefined();
   }
 });
+
+it('offers score, which the engine knows as its own kind', () => {
+  expect(newGroupPolicies.map(item => item.id)).toContain('score');
+  expect(policyKind('score')).toBe('score');
+});

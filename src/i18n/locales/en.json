@@ -120,6 +120,8 @@
   "arrange.policy.fastestHint": "Uses the node with the lowest recent average latency (recommended)",
   "arrange.policy.manual": "Manual",
   "arrange.policy.manualHint": "The node is selected by hand on the Groups tab",
+  "arrange.policy.score": "Score",
+  "arrange.policy.scoreHint": "Picks a node by its observed reliability and recent connection quality",
   "arrange.policy.spread": "Round robin",
   "arrange.policy.spreadHint": "Spreads connections across all nodes in turn",
   "arrange.readOnly": "This backend does not provide configuration writes, so this view is read-only.",

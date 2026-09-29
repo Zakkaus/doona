@@ -63,6 +63,7 @@ export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score',
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
   {id: 'min_moving_avg', label: 'arrange.policy.fastest', description: 'arrange.policy.fastestHint'},
+  {id: 'score', label: 'arrange.policy.score', description: 'arrange.policy.scoreHint'},
   {id: 'fallback', label: 'arrange.policy.fallback', description: 'arrange.policy.fallbackHint'},
   {id: 'roundrobin', label: 'arrange.policy.spread', description: 'arrange.policy.spreadHint'},
   {id: 'select', label: 'arrange.policy.manual', description: 'arrange.policy.manualHint'}

@@ -105,6 +105,8 @@
   "arrange.policy.fastestHint": "自動使用近期平均延遲最低的節點（建議）",
   "arrange.policy.manual": "手動選擇",
   "arrange.policy.manualHint": "在「群組」分頁中自行選定節點",
+  "arrange.policy.score": "綜合評分",
+  "arrange.policy.scoreHint": "依節點的可靠度與近期連線品質自動選擇",
   "arrange.policy.spread": "輪流分散",
   "arrange.policy.spreadHint": "將連線輪流分配到所有節點",
   "arrange.readOnly": "此後端不提供組態寫入，僅供檢視。",

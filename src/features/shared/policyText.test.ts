@@ -13,7 +13,7 @@ it('offers a policy the picker does not list as its own choice', () => {
   const kept = policyChoices('min_avg10', t);
   expect(kept.selected).toBe('min_avg10');
   expect(kept.items[0]).toEqual({id: 'min_avg10', label: 'min_avg10'});
-  expect(policyChoices('fallback', t).items.map(item => item.id)).toEqual(['min_moving_avg', 'fallback', 'roundrobin', 'select']);
+  expect(policyChoices('fallback', t).items.map(item => item.id)).toEqual(['min_moving_avg', 'score', 'fallback', 'roundrobin', 'select']);
   expect(policyChoices(null, t).selected).toBe('select');
 });
 
@@ -33,4 +33,13 @@ it('accepts an unchanged multi-line filter and checks only edited values', () =>
 // honk keeps the current node until it fails; a node earlier in the order that recovers does not take over again.
 it('describes fallback as staying on the current node until it fails', () => {
   expect(translate('en', 'arrange.policy.fallbackHint')).toBe('Uses the current node until it fails, then the next in order');
+});
+
+it('offers score as its own choice, selected and named in words', () => {
+  const choices = policyChoices('score', t);
+  expect(choices.selected).toBe('score');
+  expect(choices.items.find(item => item.id === 'score')).toEqual({id: 'score', label: 'Score', desc: t('arrange.policy.scoreHint')});
+  expect(policyLabel('score', t)).toBe('Score');
+  expect(groupPolicyText({kind: 'score', native: 'score'}, t)).toEqual({label: 'Score', id: 'score'});
+  expect(groupEditSafe(['name(a)'], 'score', {filters: ['name(a)'], policy: 'select'})).toBe(true);
 });

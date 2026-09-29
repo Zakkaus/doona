@@ -54,6 +54,7 @@ describe('group entries', () => {
       "    hk {\n        filter: subtag('airport')\n        policy: score\n        check_url: 'https://www.gstatic.com/generate_204' # keep\n        final: direct\n    }"
     );
     expect(readGroupEntries(next)[1]).toMatchObject({name: 'proxy', policy: 'select'});
+    expect(readGroupEntries(next)[0]).toMatchObject({name: 'hk', policy: 'score'});
   });
 
   it('appends a new group and creates the section when there is none', () => {
