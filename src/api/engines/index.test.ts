@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {normalizeCapabilities} from '../capabilities';
 import {capabilities, version} from '../mock/fixtures';
-import type {Capabilities, Version} from '../model';
+import type {Capabilities, ReportedCapabilities, Version} from '../model';
 import {scanConfig} from '../../dae/text';
 import {engineOf, type EngineSubject} from '.';
 
@@ -66,7 +66,7 @@ describe('honk', () => {
         config: {available: true, content: true, create: false},
         flows: {...kept.flows, recording: 'off'},
         runtime_settings: {available: true}
-      } as unknown as Resources
+      } as unknown as ReportedCapabilities['resources']
     });
     for (const subject of ['logs', 'probes', 'geodata'] satisfies EngineSubject[]) expect(honk.reason(subject, older)).toEqual({code: 'build-lacks'});
     // A build that does not report the write switch is not told to turn it on.

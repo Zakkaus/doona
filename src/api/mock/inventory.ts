@@ -100,11 +100,8 @@ export function createInventory(
       );
       // A selector takes the choice; an automatic policy takes it as a pin that stands until cleared.
       const override = !group.capabilities.can_select && group.capabilities.can_override;
-      if (!group.capabilities.can_select && !override) throw new ApiError(404, 'capability_not_supported', 'Group does not support manual selection');
-      found(
-        group.members.find(m => m.id === request.member_id),
-        'Group member'
-      );
+      if (!group.capabilities.can_select && !override) throw new ApiError(422, 'unsupported_value', 'Group does not support manual selection');
+      if (!group.members.some(m => m.id === request.member_id)) throw new ApiError(422, 'unsupported_value', 'Member is not in this group');
       const networks: Array<'tcp' | 'udp'> = request.network === 'both' ? ['tcp', 'udp'] : [request.network];
       let interrupted = false;
       for (const network of networks) {

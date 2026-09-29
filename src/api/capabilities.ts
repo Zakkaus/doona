@@ -1,6 +1,6 @@
-import type {Capabilities} from './model';
+import type {Capabilities, ReportedCapabilities} from './model';
 
-// Backends omit resources added after their contract pin; fill them as unavailable so callers need no guards.
+// The contract reads an absent resource as unavailable; fill it in as such so callers need no guards.
 const resourceKeys = [
   'config',
   'config_validate',
@@ -32,7 +32,7 @@ const resourceKeys = [
   'resume'
 ] as const satisfies ReadonlyArray<keyof Capabilities['resources']>;
 
-export function normalizeCapabilities(raw: Capabilities): Capabilities {
+export function normalizeCapabilities(raw: ReportedCapabilities): Capabilities {
   const resources = {...raw.resources} as Record<string, unknown>;
   const unreported = resourceKeys.filter(key => !resources[key] || typeof resources[key] !== 'object');
   for (const key of unreported) resources[key] = {available: false};

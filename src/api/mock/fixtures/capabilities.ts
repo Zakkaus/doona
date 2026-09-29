@@ -30,12 +30,21 @@ export const capabilities: Capabilities = {
       create_options: {update_interval: 86400, user_agent: 'honk/0.0.1-alpha', cache: true},
       max_page_size: 1000
     },
-    geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], configurable_sources: true},
+    geodata: {
+      available: true,
+      can_update: true,
+      assets: ['geosite', 'geoip'],
+      configurable_sources: true,
+      checksum: 'sha256sum',
+      max_urls: 4,
+      interval_hours: {min: 6, max: 168, default: 24},
+      lifecycle: {file_values: 'start', overrides_persist: true}
+    },
     rules: {available: true, max_rules: 4096},
     // create is true because the demo's main source includes config.d/*.dae.
     config: {available: true, content: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
-    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], retention_seconds: 86400, max_buffered_records: 4096},
+    logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], filters: ['level', 'target'], retention_seconds: 86400, max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
     dns_rules: {available: true, max_rules: 1024},
     runtime_settings: {

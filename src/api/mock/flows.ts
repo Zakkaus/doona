@@ -194,7 +194,6 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
           routing_source: 'evaluation',
           routed_outbound: connection.outbound,
           effective_outbound: connection.outbound,
-          mode_override: 'none',
           selection_path: [
             {
               group_id: connection.outbound!,
@@ -265,6 +264,8 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
     connection_id: blocked ? null : connection.id,
     outbound: connection.outbound,
     ...flowFields(input, timed),
+    // Every fixture flow was routed by the demo's first rules generation.
+    rule_generation_id: timed.some(step => step.stage === 'route') ? generationId : null,
     observed_by: connection.observed_by,
     started_at: connection.started_at,
     ended_at: blocked || connection.state === 'closed' ? timed[timed.length - 1].observed_at : null,

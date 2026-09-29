@@ -4,7 +4,14 @@ type Schema = components['schemas'];
 export type Version = Schema['Version'];
 // `unreported` lists the resources the backend left out, which the client fills in as unavailable; a resource the
 // backend reports as unavailable is off for a reason of its own, while an unreported one it does not know at all.
-export type Capabilities = Schema['Capabilities'] & {unreported?: ReadonlyArray<keyof Schema['Capabilities']['resources']>};
+// The contract makes every resource but runtime optional; normalizeCapabilities fills the absent ones, so the rest of
+// the app reads each key as present.
+export type ReportedCapabilities = Schema['Capabilities'];
+// The declared resources only: the contract's index signature is for x-<engine> members, which doona does not read.
+type Resources = {
+  [K in keyof ReportedCapabilities['resources'] as string extends K ? never : K]-?: NonNullable<ReportedCapabilities['resources'][K]>;
+};
+export type Capabilities = Omit<ReportedCapabilities, 'resources'> & {resources: Resources; unreported?: ReadonlyArray<keyof Resources>};
 export type Runtime = Schema['Runtime'];
 export type RuntimeOutbounds = Schema['RuntimeOutbounds'];
 export type TrafficHistory = Schema['TrafficHistory'];
@@ -17,7 +24,9 @@ export type RuntimeMemory = Schema['RuntimeMemory'];
 export type Node = Schema['Node'];
 export type NodeList = Schema['NodeList'];
 export type HealthObservation = Schema['HealthObservation'];
-export type Group = Schema['Group'];
+// GroupConfig's x-<engine> members generate an index signature that every declared option fails; doona reads none of them.
+type GroupConfig = {[K in keyof Schema['GroupConfig'] as string extends K ? never : K]: Schema['GroupConfig'][K]};
+export type Group = Omit<Schema['Group'], 'config'> & {config: GroupConfig};
 export type GroupSummary = Schema['GroupSummary'];
 export type GroupSelectionRequest = Schema['GroupSelectionRequest'];
 export type GroupSelectionResult = Schema['GroupSelectionResult'];

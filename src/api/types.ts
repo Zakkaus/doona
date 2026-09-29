@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * Read native and engine version identity
-         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         * @description Requires bearer authentication when the listener has a deployment secret or runs in password mode. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
          */
         get: operations["getVersion"];
         put?: never;
@@ -53,7 +53,7 @@ export interface paths {
         };
         /**
          * Negotiate resources, visibility, and limits
-         * @description Requires bearer authentication when the listener has a deployment secret. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
+         * @description Requires bearer authentication when the listener has a deployment secret or runs in password mode. Anonymous access is permitted only on an explicitly secretless loopback listener. No resource permission is required.
          */
         get: operations["getCapabilities"];
         put?: never;
@@ -75,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * Create the administrator account and open a session
-         * @description Available only while discovery reports `auth.mode: password` with `setup_required: true`. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. Authorization must be absent: a request that carries it is authenticated first, and before setup no session exists, so it gets 401 `authentication_required`.
+         * @description Available only while discovery reports `auth.mode: password` with `setup_required: true`. Checks run in this order: the Authorization header, the peer, the account state, the body. A header that does not carry a live session gets 401 `authentication_required`; before setup no session exists. The peer must be loopback, RFC 1918, RFC 4193 or link-local; any other peer is refused with `permission_denied` before the account state is read. After setup, the answer is 409 `setup_already_completed`, with or without a live session.
          */
         post: operations["setupAdministrator"];
         delete?: never;
@@ -95,7 +95,7 @@ export interface paths {
         put?: never;
         /**
          * Exchange the administrator credentials for a session
-         * @description Available only in password mode after setup. A wrong username or password is `invalid_credentials`; before setup the answer is `setup_required`. Authorization must be absent.
+         * @description Available only in password mode after setup. Checks run in this order: the Authorization header, the account state, the body. A header that does not carry a live session gets 401 `authentication_required`; a live session does not replace the body, which is still validated. Before setup the answer is `setup_required`; a wrong username or password is `invalid_credentials`. The engine may end a session before `expires_at`, for example to stay within its session limit.
          */
         post: operations["login"];
         delete?: never;
@@ -137,8 +137,8 @@ export interface paths {
          *     accepted sources and retained diagnostics for generation_id and revision,
          *     not a fresh read of files that may have changed since loading. The source
          *     set is complete and bounded by resources.config.max_sources; never truncate it.
-         *     Omit source content unless resources.config.content is true. Apply visibility
-         *     filters to paths, content and diagnostics; observe never grants raw secrets.
+         *     Every source carries its content. Paths, content and diagnostics follow
+         *     the visibility table in api-config: only listener-secret values are masked.
          */
         get: operations["getConfig"];
         put?: never;
@@ -163,7 +163,7 @@ export interface paths {
          * @description Requires resources.config_validate.available and control because the body
          *     may contain secrets. Syntax mode parses only submitted text. Full mode also
          *     checks semantics and resolves includes/subscriptions from submitted sources
-         *     or adapter-authorized local files and cached data, never from the network.
+         *     or engine-authorized local files and cached data, never from the network.
          *     Missing or inaccessible required local dependencies produce error diagnostics.
          *     An unfetched subscription produces a subscription-not-fetched warning and
          *     does not by itself invalidate the candidate; validation does not fetch it.
@@ -176,7 +176,7 @@ export interface paths {
          *     including locally resolved source text in full mode; exceeding either returns
          *     413. Geodata assets do not count toward the byte limit.
          *     The shared max_json_body_bytes limit applies independently to the HTTP body.
-         *     Never echo candidate text, secrets, or private paths in diagnostics or errors.
+         *     Never echo candidate text or listener secrets in diagnostics or errors.
          */
         post: operations["validateConfig"];
         delete?: never;
@@ -216,21 +216,29 @@ export interface paths {
          *     by an include pattern of that source set; if no pattern matches, return
          *     422 unsupported_value with a source-not-included error diagnostic.
          *     Content that sets or changes API listener settings or secrets returns
-         *     403 permission_denied. If any diagnostic has level error, return 422
-         *     unsupported_value with error.details.diagnostics; never create a file or
-         *     start a reload. Diagnostics about the new file use the source ID it has
+         *     403 permission_denied. A requested change that cannot take effect through
+         *     reload, compared with the active configuration, is a restart-required
+         *     error diagnostic. If any diagnostic has
+         *     level error, return 422 unsupported_value with error.details.diagnostics;
+         *     never store the source or start a reload. Diagnostics about the new file use the source ID it has
          *     in the validated set; source-not-included names the main source with a
          *     null location.
-         *     Otherwise create the file without replacing anything that appeared at
-         *     path meanwhile, using a temporary file in the target directory and a
-         *     rename that fails if path exists, with the main source's file mode.
-         *     Serialize validation and creation against concurrent API writes.
-         *     After the write, start a reload operation and return 202 OperationAccepted
-         *     with kind reload, Location, and Retry-After. This is not reload completion.
-         *     If reload fails, the previous generation remains active and the adapter
-         *     removes the file it created, unless the file at path is no longer the one
-         *     it wrote. The failed operation's error.details.written is false when the
-         *     file was removed or never written and true when it remains.
+         *     Otherwise commit the source to the configuration store without replacing
+         *     anything that appeared at path meanwhile; a file store uses a temporary
+         *     file in the target directory and a rename that fails if path exists,
+         *     with the main source's file mode. Storing, activation and serialization
+         *     follow PUT /config/sources/{source_id}. Start a reload operation and
+         *     return 202 OperationAccepted with kind reload, Location, and
+         *     Retry-After. This is not reload completion. A failure before the source
+         *     is stored creates nothing. A failed operation reports
+         *     error.details.written and error.details.committed as defined under
+         *     activation outcomes in the error contract. With committed false, remove
+         *     the created source only if the store still holds the source this
+         *     operation created, with the same identity and content (a file store
+         *     compares file identity and file content), and report written false; if
+         *     it was replaced or modified, or the removal fails, keep it and report
+         *     the cleanup conflict as written true with committed false. With
+         *     committed true or null, keep the source.
          *     After successful reload, GET /config lists the new source with path as
          *     given. Idempotency-Key follows the same rules as for PUT.
          */
@@ -256,9 +264,11 @@ export interface paths {
         };
         /**
          * Read one accepted configuration source
-         * @description Requires resources.config.available. Returns the same ConfigSource as
-         *     GET /config, not a fresh read of disk. Include optional content only when
-         *     resources.config.content is true; apply the same path and secret redaction.
+         * @description Requires resources.config.available. Returns the source's identity and
+         *     content from the same snapshot as GET /config, not a fresh read of the
+         *     store; mask listener secrets as in GET /config. The body carries no field
+         *     that can change while the source bytes stay the same: writable and
+         *     loaded_at are only in the GET /config source list.
          *     Unknown source IDs return 404 resource_not_found. Redacted text must never
          *     be saved as a replacement; compare its UTF-8 SHA-256 with content_sha256
          *     before using returned content as an editing representation.
@@ -267,40 +277,12 @@ export interface paths {
         /**
          * Replace one configuration source and reload
          * @description Requires control, resources.config.available, resources.config.writable,
-         *     and writable: true on the accepted source. A disabled write switch or a
-         *     read-only source returns 403 permission_denied. Generated and subscription
-         *     sources are never writable. Unknown IDs return 404 resource_not_found.
-         *     The body replaces the complete source with UTF-8 dae text; no partial
-         *     patches, caller-supplied file paths, or multi-source writes are accepted.
-         *     Enforce resources.config.max_bytes on replacement UTF-8 bytes and the
-         *     shared limits.max_json_body_bytes independently; excess returns 413.
-         *     Require If-Match before validating or writing: missing returns 428
-         *     precondition_required; a hash different from the current on-disk bytes
-         *     returns 412 stale_revision, even if it matches the accepted snapshot.
-         *     Validate the resulting source set with the same full-mode checks as
-         *     POST /config/validate, substituting the replacement for this source.
-         *     Resolve dependencies only from submitted text, authorized local files,
-         *     and cached data; never use the network or refresh caches during validation.
-         *     Missing or inaccessible required local dependencies produce error diagnostics.
-         *     An unfetched subscription produces a subscription-not-fetched warning and
-         *     does not by itself invalidate the candidate; validation does not fetch it.
-         *     If any diagnostic has level error, return 422 unsupported_value with
-         *     error.details.diagnostics using ConfigDiagnostic; never write any file
-         *     or start a reload. Warnings and info alone do not prevent a write.
-         *     Otherwise atomically replace the file using a temporary file in the same
-         *     directory and rename, preserving its mode. Serialize the hash check,
-         *     validation, and replacement against concurrent API writes; recheck the
-         *     on-disk hash before replacement and return 412 if it changed.
-         *     After the write, start a reload operation and return 202 OperationAccepted
-         *     with kind reload, Location, and Retry-After. This is not reload completion.
-         *     If reload publishes a new generation and events are available, emit
-         *     generation.changed. After successful reload, GET /config reports the accepted
-         *     content_sha256. If reload fails, the previous generation remains active and
-         *     the file write is not rolled back.
-         *     Idempotency-Key follows the operation retention rules: scope it to caller,
-         *     method, and path in this instance. A retained same-body replay returns the
-         *     original operation without another write or hash check; a different body
-         *     returns 409 idempotency_conflict.
+         *     and writable: true on the source. Checks If-Match against the stored
+         *     source hash, validates the complete engine-native replacement in full
+         *     mode, and returns 202 with a reload operation that commits the validated
+         *     replacement atomically, before activation or after the new generation
+         *     becomes active.
+         *     The normative rules are in [Configuration: Editing](/v0.1.0/en/docs/configuration.html#Editing).
          */
         put: operations["replaceConfigSource"];
         post?: never;
@@ -353,9 +335,10 @@ export interface paths {
         };
         /**
          * Read per-outbound cumulative counters
-         * @description Mirrors honk's Clash-surface /stats counters for visible traffic, not
-         *     a sum of live connections. All rows share counter_since; restart or
-         *     counter reset starts a new interval. Requires resources.runtime_outbounds.available.
+         * @description The engine keeps cumulative per-outbound counters for visible traffic,
+         *     including closed connections; they are not sums of live connections.
+         *     All rows share counter_since; a restart or counter reset starts a new
+         *     interval. Requires resources.runtime_outbounds.available.
          */
         get: operations["getRuntimeOutbounds"];
         put?: never;
@@ -444,13 +427,19 @@ export interface paths {
         /**
          * Add an inline node from a share link
          * @description Requires resources.nodes.can_manage; otherwise returns 404
-         *     capability_not_supported. The backend parses the link with the engine's own
+         *     capability_not_supported. The engine parses the link with its own
          *     share-link support, writes it into the node section of its managed main
          *     source under the given name, advances the configuration revision and emits
-         *     generation.changed. The link is stored, never returned. A link the engine
+         *     generation.changed. The response does not echo the link; the source text
+         *     returns it as written (see Visibility in API Configuration). A link the engine
          *     cannot parse returns 422 unsupported_value with a sanitized reason in
-         *     error.message. A name already in use returns 409 state_conflict. The node belongs to the
+         *     error.message. A name already in use, or a configuration change while the
+         *     create is being admitted, returns 409 state_conflict. The node belongs to the
          *     inline provider and to every group whose filter matches it after reload.
+         *     Returns 201 with the node once the change is active, or 202 with a
+         *     node_create operation whose result is the created node. A failed
+         *     activation reports its outcome as defined under activation outcomes in
+         *     the error contract.
          */
         post: operations["createNode"];
         delete?: never;
@@ -467,12 +456,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List provider metadata without credentials
+         * List provider metadata
          * @description Read current subscription, file and inline provider metadata; never fetch a
          *     subscription while serving a GET. Use the shared snapshot cursor semantics.
          *     The effective default limit is min(100, resources.providers.max_page_size).
-         *     A limit above the advertised maximum returns 400 invalid_request, as does an
-         *     unknown, expired or invalidated cursor. Restart the page walk without it.
+         *     A limit above the advertised maximum returns 400 invalid_request. The
+         *     Cursor parameter defines how an unusable cursor is answered.
          */
         get: operations["listProviders"];
         put?: never;
@@ -480,17 +469,24 @@ export interface paths {
          * Add a subscription provider to the managed configuration
          * @description Requires resources.providers.can_manage; otherwise returns 404
          *     capability_not_supported. Only kind subscription can be created here: file and
-         *     inline providers are authored in the configuration sources. The backend writes
+         *     inline providers are authored in the configuration sources. The engine writes
          *     the provider into the subscription section of its managed main source,
          *     advances the configuration revision, and emits generation.changed. A later
          *     replacement of that main source using its previous content_sha256 returns
-         *     412 stale_revision. The provider is created unfetched: node_count 0, updated_at null and
-         *     status stale; call POST /providers/{id}/refresh to load it. The URL is stored,
-         *     never returned; the response carries url_redacted. A name already in use
-         *     returns 409 state_conflict. A URL that is not HTTP(S) returns 422 unsupported_value.
+         *     412 stale_revision. When resources.providers.create_unfetched is true, the provider is
+         *     created unfetched: node_count 0, updated_at null and status stale; call
+         *     POST /providers/{provider_id}/refresh to load it. Otherwise the engine may fetch the
+         *     provider during activation and returns its actual state. The response carries the
+         *     URL in url_redacted, as written apart from listener secrets. A name already in use
+         *     returns 409 state_conflict, as does a configuration change while the create is
+         *     being admitted. A URL that is not HTTP(S) returns 422 unsupported_value.
          *     update_interval, user_agent and cache are accepted only when named in
          *     resources.providers.create_options; an omitted one takes the default listed there,
-         *     and one the backend does not list returns 422 unsupported_value.
+         *     and one the engine does not list returns 422 unsupported_value.
+         *     Returns 201 with the provider once the change is active, or 202 with a
+         *     provider_create operation whose result is the created provider. A
+         *     failed activation reports its outcome as defined under activation
+         *     outcomes in the error contract.
          */
         post: operations["createProvider"];
         delete?: never;
@@ -499,13 +495,13 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/providers/{id}": {
+    "/api/v1/providers/{provider_id}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @example provider-a */
-                id: components["parameters"]["ProviderId"];
+                provider_id: components["parameters"]["ProviderId"];
             };
             cookie?: never;
         };
@@ -521,7 +517,10 @@ export interface paths {
          *     its nodes from the running groups, advances the configuration revision and
          *     emits generation.changed. Idempotent: an unknown id returns deleted 0. A
          *     provider that is the only member source of a group is still removed; the
-         *     group is then empty.
+         *     group is then empty. Returns 200 once the change is active, or 202 with
+         *     a provider_delete operation whose result is the same deletion count. A
+         *     failed activation reports its outcome as defined under activation
+         *     outcomes in the error contract.
          */
         delete: operations["deleteProvider"];
         options?: never;
@@ -529,13 +528,13 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/providers/{id}/refresh": {
+    "/api/v1/providers/{provider_id}/refresh": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @example provider-a */
-                id: components["parameters"]["ProviderId"];
+                provider_id: components["parameters"]["ProviderId"];
             };
             cookie?: never;
         };
@@ -564,13 +563,13 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nodes/{id}": {
+    "/api/v1/nodes/{node_id}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @example node-hk-03 */
-                id: components["parameters"]["NodeId"];
+                node_id: components["parameters"]["NodeId"];
             };
             cookie?: never;
         };
@@ -590,6 +589,10 @@ export interface paths {
          *     Removes the node's line from the node section of the managed main source and
          *     the node from the running groups, advances the configuration revision and
          *     emits generation.changed. Idempotent: an unknown id returns deleted 0.
+         *     Returns 200 once the change is active, or 202 with a node_delete
+         *     operation whose result is the same deletion count. A failed
+         *     activation reports its outcome as defined under activation outcomes in
+         *     the error contract.
          */
         delete: operations["deleteNode"];
         options?: never;
@@ -610,7 +613,8 @@ export interface paths {
          *     capability_not_supported. One entry per asset kind in
          *     resources.geodata.assets, describing the file the running datapath was
          *     built from: its digest, size and modification time, and the download source
-         *     POST /geodata/update tries first, redacted like a provider URL. When
+         *     POST /geodata/update tries first, in the display form described in
+         *     Geodata. When
          *     resources.geodata.configurable_sources is true, the response also reports
          *     where each loaded file was downloaded from and through which route, whether
          *     its checksum was verified, the update schedule and outcome, and
@@ -638,20 +642,22 @@ export interface paths {
          * Queue a download of the geosite and geoip assets
          * @description Requires resources.geodata.can_update; otherwise returns 404
          *     capability_not_supported. Takes no request body and never changes the
-         *     configured sources. The backend downloads every asset from its source into a
+         *     configured sources. The engine downloads every asset from its source into a
          *     temporary file, verifies it parses, replaces the loaded file and reloads the
          *     datapath once, emitting generation.changed; an asset that fails to download
          *     or parse leaves the loaded file in place and fails the operation. With
-         *     several URLs for an asset, the backend tries them in order and moves to the
+         *     several URLs for an asset, the engine tries them in order and moves to the
          *     next only when one fails: a connection error, a status other than 200
-         *     (redirects are not followed), the per-URL deadline, or a sha256 mismatch
-         *     against a checksum published at the URL with .sha256sum appended. The
-         *     checksum goes through the same route as its file. With
-         *     GeoDataSettings.verify_checksum false, no checksum is requested and the
-         *     file is accepted unverified. Every request leaves
+         *     (redirects are not followed), the per-URL deadline, or a failed checksum
+         *     by the resources.geodata.checksum method. With sha256sum, a 404 for the
+         *     checksum URL means none is published and the file is accepted unverified;
+         *     a mismatch, another status or a connection error fails the URL. A
+         *     fetched checksum goes through the same route as its file. With
+         *     GeoDataSettings.verify_checksum false, or a null checksum method, no
+         *     checksum is checked and the file is accepted unverified. Every request leaves
          *     through the route in GeoDataSettings.download; a URL the route cannot reach,
          *     because a group has no usable member or the routing rules block it, fails like
-         *     a connection error and the next URL is tried. The backend never falls back to
+         *     a connection error and the next URL is tried. The engine never falls back to
          *     direct. The update fails when the new file lacks a category the active
          *     configuration uses.
          *     Identical bytes leave the loaded file and generation unchanged. An automatic
@@ -687,34 +693,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/groups/{groupId}": {
+    "/api/v1/groups/{group_id}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
-        /** Read a complete group resource */
+        /**
+         * Read a complete group resource
+         * @description Returns the group with its configuration, runtime selection and health.
+         *     The response has no ETag: selection and health change without a
+         *     configuration change. Conditional writes use GET /groups/{group_id}/config.
+         */
         get: operations["getGroup"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Patch mutable group configuration */
-        patch: operations["patchGroup"];
+        patch?: never;
         trace?: never;
     };
-    "/api/v1/groups/{groupId}/selection": {
+    "/api/v1/groups/{group_id}/config": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the group's policy and configured options
+         * @description Returns the group's policy and config, the same values GET
+         *     /groups/{group_id} embeds, as the target document of PATCH. The ETag is
+         *     the configuration-wide revision in double quotes; it changes only with
+         *     an accepted configuration change.
+         */
+        get: operations["getGroupConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch mutable group configuration
+         * @description RFC 6902 JSON Patch whose target document is GroupConfigDocument, the
+         *     body GET /groups/{group_id}/config returns. Operations apply in order to
+         *     that document; see groups, Patch semantics, for remove, null, copy, move and test.
+         *     Only fields in capabilities.mutable_config may change, judged by the
+         *     effective write against the policy after the patch: one patch may set
+         *     policy to urltest and add tolerance. When the resulting policy is not
+         *     URLTest, a tolerance left non-null and changed returns 422 unsupported_value.
+         *     A change to a field absent from mutable_config, such as
+         *     interrupt_connections on an engine without that option, returns 422
+         *     unsupported_value. Requires resources.groups.config_patch. If-Match carries the
+         *     configuration-wide revision from the ETag of GET; see
+         *     [Groups](/v0.1.0/en/docs/groups.html) for 412 and 409.
+         */
+        patch: operations["patchGroupConfig"];
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example group-proxy */
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
@@ -782,8 +833,9 @@ export interface paths {
          *     ownership. Kernel-direct and kernel-bypassed flows, including ebpf-only
          *     observations, are not closable.
          *
-         *     Idempotency-Key is accepted, but every call evaluates current live state;
-         *     repeated keys do not replay results or return an operation.
+         *     The call has no replay semantics and takes no Idempotency-Key: every call
+         *     evaluates current live state, so retrying after an uncertain result can
+         *     close connections that opened in the meantime.
          *
          *     For recorded flows, closing advances terminal state and emits flow.updated
          *     when advertised. Fetch the event's href and refresh /connections. Changed
@@ -820,9 +872,8 @@ export interface paths {
          *     returns 409 state_conflict.
          *
          *     Return 204 with no body only after cancellation or retirement. Unknown or
-         *     already-gone IDs return 404 resource_not_found. Idempotency-Key is accepted,
-         *     but each call evaluates current live state; a repeated close returns 404
-         *     rather than replaying 204 or returning an operation.
+         *     already-gone IDs return 404 resource_not_found. The call has no replay
+         *     semantics and takes no Idempotency-Key; a repeated close returns 404.
          *
          *     For recorded flows, closing advances terminal state and emits flow.updated
          *     when advertised. Fetch the event's href and refresh /connections. Changed
@@ -901,16 +952,14 @@ export interface paths {
          *     it neither evaluates traffic nor reads back raw configuration. rule_id is identical
          *     to the ID used by POST /api/v1/routing/trace and FlowSummary.rule_id for the same
          *     generation. Join rules by generation_id and rule_id, never by expression or
-         *     index alone. FlowSummary does not carry the rule's generation; obtain it from
-         *     the corresponding traffic-route step in the retained flow detail. If that
-         *     context is unavailable, do not join the summary to the current rule dictionary.
+         *     index alone. FlowSummary.rule_generation_id names the rule's generation; join
+         *     a summary only when it equals generation_id, never when it is null.
          *     generation_id identifies the dictionary's routing generation. Refetch after
          *     generation.changed; do not join old flow evidence to a new generation.
          *     There is no paginated snapshot and no 410 snapshot_expired response. If a coherent
-         *     generation cannot be pinned, return 503 snapshot_unavailable. If the complete
-         *     dictionary exceeds resources.rules.max_rules, return 503 temporarily_unavailable
-         *     rather than silently truncate it. Redact local paths and secret-bearing expression
-         *     values without changing rule identities or order; never expose raw configuration.
+         *     generation cannot be pinned, return 503 snapshot_unavailable. resources.rules.max_rules
+         *     is never below the running dictionary's size, so the complete dictionary is always
+         *     returned and never truncated. expression follows the display rule in rules.
          */
         get: operations["listRules"];
         put?: never;
@@ -930,10 +979,8 @@ export interface paths {
         };
         /**
          * Follow bounded resumable invalidation events
-         * @description Send stream.ready first on every connection, including a valid resume.
-         *     Its cursor must not skip pending replay; retain the supplied Last-Event-ID
-         *     until replay advances it. Filtered-out IDs may leave gaps, so clients must
-         *     not infer loss by subtracting IDs.
+         * @description Every connection begins with stream.ready; a resumed connection then replays
+         *     retained events after Last-Event-ID; see [Replay and recovery](/v0.1.0/en/docs/events.html#Replay-and-recovery).
          */
         get: operations["streamEvents"];
         put?: never;
@@ -991,13 +1038,16 @@ export interface paths {
         /**
          * Read the runtime-adjustable settings
          * @description Requires resources.runtime_settings.available. Returns the current
-         *     runtime-adjustable settings. Numeric values cannot exceed their corresponding
-         *     capability ceilings. source is config when values come from the activated
+         *     runtime-adjustable settings. Only observed_at and source are always present:
+         *     a value appears when resources.runtime_settings.fields lists it, and
+         *     recording.flows, recording.logs and recording.dns_log appear when
+         *     record_flows, record_logs and record_dns_log are listed. An engine may
+         *     report other values it cannot change. Numeric values stay inside their
+         *     capability bounds. source is config when values come from the activated
          *     configuration and runtime after a runtime override. geodata appears when
          *     resources.geodata.configurable_sources is true and carries its own source.
-         *     GET needs only observe, so geodata URLs are returned as written only to an
-         *     authenticated caller with control, which may edit them, and redacted like
-         *     GeoAsset.source_redacted for everyone else.
+         *     Its URLs are returned as written, with only listener-secret values masked,
+         *     to every admitted caller; see the visibility table in api-config.
          */
         get: operations["getRuntimeSettings"];
         put?: never;
@@ -1007,31 +1057,33 @@ export interface paths {
         head?: never;
         /**
          * Change runtime-adjustable settings without a reload
-         * @description Requires control and resources.runtime_settings.available; only the fields
-         *     listed in resources.runtime_settings.fields may appear, others return 400
-         *     invalid_request. The body is a merge: an absent field keeps its value. Every
-         *     value is checked against its ceiling before anything changes; an unadvertised
-         *     log level, a ring below 64 records, or a value above the ceiling returns 400
-         *     and changes nothing. Shrinking a ring drops its oldest records and expires
+         * @description Requires control and resources.runtime_settings.available. The body is a
+         *     merge: an absent field keeps its value. Every value is checked before
+         *     anything changes, and a rejected patch changes nothing. A field the schema
+         *     does not define, or a value outside its schema range or advertised bounds,
+         *     returns 400 invalid_request. A field not listed in
+         *     resources.runtime_settings.fields, a log level not in
+         *     resources.logs.levels, or pinning a recorder whose allowed is false returns
+         *     422 unsupported_value; see Errors. Shrinking a ring drops its oldest records and expires
          *     cursors older than the new floor. The change applies immediately and lasts
          *     until the process restarts or the next configuration activation resets it; it
          *     is not written to the configuration file.
          *
-         *     geodata is the exception. It requires resources.geodata.configurable_sources
-         *     and an authenticated caller; the anonymous loopback principal gets 403
-         *     permission_denied. The backend stores it and does not change the top-level
-         *     source. A geodata patch merges into the stored settings. Patching geosite or
-         *     geoip stores both URL lists (geodata.source becomes db); auto_update,
-         *     download and verify_checksum are each stored on their own; null deletes
-         *     everything stored. It never downloads; POST
-         *     /geodata/update does. The stored settings are the only ones in force. At
-         *     startup, the backend writes each geodata download URL the configuration file
-         *     names into the stored settings, replacing a list a patch stored, and deletes
-         *     a stored list that an earlier file wrote but the file no longer names.
-         *     Activations never change them, so patched URLs last until the next startup.
-         *     download follows the same startup rule as the URLs, and a download with
-         *     route group whose group_id is not a current group returns 422
-         *     unsupported_value and changes nothing.
+         *     geodata is the exception. It requires resources.geodata.configurable_sources,
+         *     control and a credential; an anonymous loopback caller gets 403
+         *     permission_denied. The engine keeps a geodata patch as an override for as
+         *     long as resources.geodata.lifecycle advertises and does not change the
+         *     top-level source. Patching geosite or geoip overrides only that URL list
+         *     (geodata.source becomes override); auto_update, download and verify_checksum
+         *     are each overridden on their own; null removes every override and every
+         *     value taken from the configuration file, so the built-in sources and
+         *     defaults apply until the engine next takes file values. When it takes file
+         *     values, a URL list or download route the configuration file names replaces
+         *     the override for that field. Geodata URLs are fetched under the
+         *     outbound-request policy in api-config. More URLs than resources.geodata.max_urls or an interval outside
+         *     resources.geodata.interval_hours returns 400. A patch never downloads; POST
+         *     /geodata/update does. A download with route group whose group_id is not a
+         *     current group returns 409 state_conflict and changes nothing.
          */
         patch: operations["patchRuntimeSettings"];
         trace?: never;
@@ -1043,10 +1095,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Execute a routed diagnostic DNS query */
-        get: operations["queryDns"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Execute a routed diagnostic DNS query
+         * @description POST because the query has side effects: it sends live DNS traffic and, with cache_mode normal, writes the runtime cache. The name, types and upstream travel in the JSON body, not in the URL. Requires resources.dns_query.available; without it the request returns 404 capability_not_supported.
+         */
+        post: operations["queryDns"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1067,6 +1122,9 @@ export interface paths {
          *     Results are newest first. The ring holds at most
          *     resources.dns_log.max_records and is cleared on restart.
          *     A limit above resources.dns_log.max_page_size returns 400 invalid_request.
+         *     A cursor whose record has left the ring returns 410 snapshot_expired, as
+         *     the Cursor parameter defines; restart from the newest page without a
+         *     cursor.
          *     A page may hold fewer than limit records while next_cursor is
          *     non-null, for example when the server's response size limit ends it
          *     early. Only a null next_cursor ends the walk. A record whose answers
@@ -1155,18 +1213,18 @@ export interface paths {
          *     request rules pick how a query is resolved, and response rules decide whether
          *     an answer is accepted, rejected or re-queried. Each list is in evaluation order
          *     and ends with exactly one fallback entry. A fallback the configuration does not
-         *     write still appears, with the backend's default action and a null source.
+         *     write still appears, with the engine's default action and a null source.
          *     A rule the configuration parser omitted with a diagnostic is not listed.
          *     This resource is read-only. Rules are edited by replacing the source that holds
          *     them with PUT /api/v1/config/sources/{source_id}, the same as traffic rules;
          *     there is no rule-level write endpoint. rule_id is stable within a generation
-         *     and addresses the rule; it is unique across both lists. expression is the
-         *     source text as written; upstream is the name as the engine resolved it and may
+         *     and addresses the rule; it is unique across both lists. expression follows
+         *     the display rule in rules; upstream is the name as the engine resolved it and may
          *     differ in case from the source text. generation_id identifies the rules'
          *     routing generation; refetch after generation.changed. There is no paginated snapshot. If a coherent
-         *     generation cannot be pinned, return 503 snapshot_unavailable. If either list
-         *     exceeds resources.dns_rules.max_rules, return 503 temporarily_unavailable
-         *     rather than silently truncate it.
+         *     generation cannot be pinned, return 503 snapshot_unavailable.
+         *     resources.dns_rules.max_rules is never below either running list's size, so
+         *     both lists are always returned complete and never truncated.
          */
         get: operations["listDnsRules"];
         put?: never;
@@ -1228,7 +1286,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}": {
+    "/api/v1/operations/{operation_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1260,10 +1318,10 @@ export interface components {
         /** Format: date-time */
         NullableTimestamp: string | null;
         /**
-         * @description Closed catalogue of HTTP error codes. Adding a code changes the contract. Embedded errors such as operation.error, datapath.errors, last_reload.error, and provider.last_error use SafeError with adapter-defined codes.
+         * @description Closed catalogue of HTTP error codes. Adding a code changes the contract. Embedded errors such as operation.error, datapath.errors, last_reload.error, and provider.last_error use SafeError with engine-defined codes, except the shared activation outcome codes an engine uses for a failed configuration change when the case applies: reload_rejected, reload_degraded, supervisor_reconciliation_failed, activation_unconfirmed and store_unavailable.
          * @enum {string}
          */
-        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable" | "setup_required" | "setup_already_completed" | "invalid_credentials";
+        ErrorCode: "invalid_request" | "authentication_required" | "permission_denied" | "resource_not_found" | "capability_not_supported" | "method_not_allowed" | "state_conflict" | "idempotency_conflict" | "event_cursor_expired" | "snapshot_unavailable" | "snapshot_expired" | "flow_expired" | "stale_revision" | "request_too_large" | "unsupported_media_type" | "unsupported_value" | "precondition_required" | "rate_limited" | "temporarily_unavailable" | "setup_required" | "setup_already_completed" | "invalid_credentials";
         /** @description Safe structured error; never raw engine output. */
         SafeError: {
             code: string;
@@ -1282,13 +1340,14 @@ export interface components {
         Discovery: components["schemas"]["AdmittedDiscovery"] | components["schemas"]["PublicDiscovery"];
         AdmittedDiscovery: {
             /** @constant */
-            name: "dae/honk-native";
+            name: "daeuniverse/native";
             /** @constant */
             status: "draft";
             /** @constant */
             api_major: 1;
             /** @constant */
             base_path: "/api/v1";
+            /** @description Shared links, plus an x-<engine> member for the engine's extension links (see capabilities, Engine extensions). Other members are not allowed. */
             links: {
                 /** @constant */
                 version: "/api/v1/version";
@@ -1315,7 +1374,7 @@ export interface components {
                 /** @constant */
                 geodata: "/api/v1/geodata";
                 /** @constant */
-                operations: "/api/v1/operations/{id}";
+                operations: "/api/v1/operations/{operation_id}";
                 /**
                  * @description Present in password mode, null otherwise.
                  * @enum {string|null}
@@ -1331,14 +1390,17 @@ export interface components {
                  * @enum {string|null}
                  */
                 auth_logout?: "/api/v1/auth/logout" | null;
+            } & {
+                [key: string]: {
+                    [key: string]: string;
+                };
             };
-            /** @description Absent from servers that predate password login; clients then assume a configured bearer. */
-            auth?: components["schemas"]["AuthDiscovery"];
+            auth: components["schemas"]["AuthDiscovery"];
         };
         /** @description What a client needs before it signs in. Status, base path, resource links, `auth_logout` and `auth.anonymous_loopback` are withheld. */
         PublicDiscovery: {
             /** @constant */
-            name: "dae/honk-native";
+            name: "daeuniverse/native";
             /** @constant */
             api_major: 1;
             links: {
@@ -1378,13 +1440,14 @@ export interface components {
         Version: {
             api: {
                 /** @constant */
-                name: "dae/honk-native";
+                name: "daeuniverse/native";
                 /** @constant */
                 major: 1;
                 /** @constant */
                 status: "draft";
             };
             engine: {
+                /** @description Lowercase engine name, such as dae or honk. It names the engine's x-<engine> extension members and routes. */
                 name: string;
                 version: string;
             };
@@ -1405,20 +1468,17 @@ export interface components {
                 max_header_bytes: number;
                 max_json_body_bytes: number;
             };
+            /** @description Only runtime is required. An absent resource key means the resource is unavailable, exactly as available false does, so a server that predates a resource still validates. Engine-only resources go in an x-<engine> member; other unlisted keys are not allowed. */
             resources: {
-                config: {
+                config?: {
+                    /** @description Accepted-source readback is implemented. Every returned source carries its content. */
                     available: boolean;
-                    /**
-                     * @description Visibility flag permitting optional source text; not permission to disclose secrets. False by default.
-                     * @default false
-                     */
-                    content: boolean;
                     /**
                      * @description Server-wide switch for replacing accepted sources under control;
                      *     individual sources may still be read-only. True requires full
                      *     validation and reload operations, including resources.reload.available
-                     *     and resources.operations.available. Independent of content visibility
-                     *     and the optional dry-run endpoint.
+                     *     and resources.operations.available. Independent of the optional
+                     *     dry-run endpoint.
                      */
                     writable?: boolean;
                     /**
@@ -1428,12 +1488,12 @@ export interface components {
                      * @default false
                      */
                     create: boolean;
-                    /** @description Maximum UTF-8 bytes in replacement or new source content; the shared JSON body ceiling applies independently. */
+                    /** @description Maximum UTF-8 bytes in replacement or new source content. At most limits.max_json_body_bytes minus the request envelope, which is the largest compact UTF-8 JSON encoding of the request body without its content, taking for POST the permitted path whose encoding is longest (each quotation mark or backslash in the path encodes to two bytes, so this exceeds the path's 1024-byte limit). Content that JSON escaping expands can still exceed limits.max_json_body_bytes, and that limit then applies. */
                     max_bytes?: components["schemas"]["SafeUInt"];
-                    /** @description Maximum complete effective source set the adapter can expose; never silently truncate it. */
+                    /** @description Maximum complete effective source set the engine can expose; never silently truncate it. */
                     max_sources?: components["schemas"]["SafeUInt"];
                 };
-                config_validate: {
+                config_validate?: {
                     available: boolean;
                     modes?: components["schemas"]["ConfigValidationMode"][];
                     /** @description Maximum total UTF-8 configuration source bytes, including locally resolved source text in full mode. Geodata assets do not count toward this limit. The shared JSON body limit applies separately. */
@@ -1442,42 +1502,44 @@ export interface components {
                     max_sources?: components["schemas"]["SafeUInt"];
                 };
                 runtime: components["schemas"]["AvailableResource"];
-                runtime_memory: {
+                runtime_memory?: {
                     available: boolean;
                     metrics?: ("process.rss_bytes" | "cgroup.current_bytes" | "cgroup.limit_bytes" | "cgroup.events.high" | "cgroup.events.oom" | "cgroup.events.oom_kill" | "kernel.ebpf_bytes")[];
                 };
-                runtime_outbounds: components["schemas"]["AvailableResource"];
-                traffic_history: {
+                runtime_outbounds?: components["schemas"]["AvailableResource"];
+                traffic_history?: {
                     available: boolean;
                     /** @description Maximum look-back window in seconds; not a guarantee against bounded-ring eviction. */
                     max_window_seconds?: components["schemas"]["SafeUInt"];
                     /** @description Maximum returned samples per history request. */
                     max_points?: components["schemas"]["SafeUInt"];
                 };
-                memory_history: {
+                memory_history?: {
                     available: boolean;
                     /** @description Maximum look-back window in seconds; not a guarantee against bounded-ring eviction. */
                     max_window_seconds?: components["schemas"]["SafeUInt"];
                     /** @description Maximum returned samples per history request. */
                     max_points?: components["schemas"]["SafeUInt"];
                 };
-                datapath: {
+                datapath?: {
                     available: boolean;
                     kinds?: components["schemas"]["DatapathKind"][];
                     details?: ("attachments" | "maps")[];
                 };
-                nodes: {
+                nodes?: {
                     available: boolean;
-                    /** @description POST /nodes and DELETE /nodes/{id} are implemented for inline nodes; the backend owns a writable main source. */
+                    /** @description POST /nodes and DELETE /nodes/{node_id} are implemented for inline nodes; the engine owns a writable main source. */
                     can_manage?: boolean;
                 };
-                providers: {
+                providers?: {
                     available: boolean;
                     /** @description Refresh is implemented; individual provider kinds may still be unsupported. Requires operations.available. */
                     can_refresh?: boolean;
                     /** @description Supports creating subscription providers and deleting subscription or file providers from a writable managed main source. */
                     can_manage?: boolean;
-                    /** @description Optional ProviderCreate fields the backend accepts, each with the value it applies when the field is omitted. A field not listed is unsupported. Absent means none are supported. */
+                    /** @description A created provider is not fetched until POST /providers/{provider_id}/refresh; it starts with node_count 0, updated_at null and status stale. False or absent means the engine may fetch it during activation and reports its actual state. */
+                    create_unfetched?: boolean;
+                    /** @description Optional ProviderCreate fields the engine accepts, each with the value it applies when the field is omitted. A field not listed is unsupported. Absent means none are supported. */
                     create_options?: {
                         update_interval?: number;
                         user_agent?: string;
@@ -1485,40 +1547,47 @@ export interface components {
                     };
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
-                groups: {
+                groups?: {
                     available: boolean;
+                    /** @description PATCH /groups/{group_id}/config is implemented. A group patch is a configuration write, so true requires resources.config.writable. */
                     config_patch?: boolean;
                     selection?: boolean;
                     max_patch_operations?: number;
                 };
-                probes: {
+                probes?: {
                     available: boolean;
                     targets?: ("node" | "group")[];
                     kinds?: components["schemas"]["ProbeKind"][];
-                    purposes?: ("data" | "dns")[];
                     transports?: components["schemas"]["Transport"][];
                     ip_versions?: components["schemas"]["IpVersion"][];
                     limits?: components["schemas"]["ProbeLimits"];
                 };
-                connections: {
+                connections?: {
                     available: boolean;
                     /** @description Whether userspace-owned connections can be closed; false makes both connection DELETE endpoints return 404 capability_not_supported. */
                     can_close?: boolean;
                     /** @description Maximum matching live entries, including non-closable entries, per bulk close; used only when can_close is true. Excess returns 413 request_too_large before any connection is closed. */
                     max_bulk_close?: components["schemas"]["SafeUInt"];
                 };
-                flows: {
+                flows?: {
                     available: boolean;
-                    /** @enum {string} */
-                    recording?: "off" | "on" | "sampled";
+                    /**
+                     * @description The engine's flow recording policy, not whether the recorder is capturing now. off records none, because the configuration does not permit the flow recorder or its mode is off; on records every flow in scopes (mode on); auto enables recording on client demand; sampled records a subset. recording.flows.active in GET /runtime/settings reports whether capture is active now.
+                     * @enum {string}
+                     */
+                    recording?: "off" | "on" | "auto" | "sampled";
                     scopes?: components["schemas"]["FlowScope"][];
+                    /** @description Smallest flows.max_flows a runtime-settings PATCH may set. Absent means 1. */
+                    min_flows?: components["schemas"]["SafeUInt"];
+                    /** @description The largest flow capacity the engine supports, which is the most a runtime-settings PATCH may set, not the current value. The current value is flows.max_flows in GET /runtime/settings. */
                     max_flows?: number;
                     max_steps_per_flow?: number;
+                    /** @description The longest terminal-flow retention the engine supports, which is the most a runtime-settings PATCH may set, not the current value. The smallest a PATCH may set is always 1. The current value is flows.retention_seconds in GET /runtime/settings. */
                     retention_seconds?: number;
                     snapshot_ttl_seconds?: number;
                     max_page_size?: number;
                 };
-                routing_trace: {
+                routing_trace?: {
                     available: boolean;
                     resolve_modes?: ("none" | "live")[];
                     max_addresses?: number;
@@ -1527,12 +1596,12 @@ export interface components {
                     per_principal_requests_per_minute?: number;
                     global_requests_per_minute?: number;
                 };
-                rules: {
+                rules?: {
                     available: boolean;
-                    /** @description Maximum complete rule dictionary size, including the fallback entry; never a truncation limit. */
+                    /** @description Maximum complete rule dictionary size, including the fallback entry; never below the running generation's size and never a truncation limit. */
                     max_rules?: components["schemas"]["SafeUInt"];
                 };
-                events: {
+                events?: {
                     available: boolean;
                     kinds?: components["schemas"]["EventKind"][];
                     retention_seconds?: number;
@@ -1540,20 +1609,24 @@ export interface components {
                     max_clients?: number;
                     heartbeat_seconds?: number;
                 };
-                logs: {
+                logs?: {
                     available: boolean;
                     levels?: components["schemas"]["LogLevel"][];
+                    /** @description The GET /logs query filters this engine applies. level is always listed; a filter not listed returns 422 unsupported_value. */
+                    filters?: ("level" | "target")[];
                     /** @description Maximum age of a replayable record, in seconds. A resume cursor older than this returns 409 event_cursor_expired even when the ring has room. */
                     retention_seconds?: number;
+                    /** @description Smallest log.buffered_records a runtime-settings PATCH may set. Absent means 1. */
+                    min_buffered_records?: components["schemas"]["SafeUInt"];
                     /** @description Maximum permitted log replay-ring capacity. The current capacity is runtime settings log.buffered_records. Neither value guarantees retention duration. */
                     max_buffered_records?: components["schemas"]["SafeUInt"];
                 };
-                dns_query: {
+                dns_query?: {
                     available: boolean;
                     record_types?: components["schemas"]["DnsRecordType"][];
                     limits?: components["schemas"]["DnsQueryLimits"];
                 };
-                dns_cache: {
+                dns_cache?: {
                     available: boolean;
                     read?: boolean;
                     delete_entry?: boolean;
@@ -1561,38 +1634,69 @@ export interface components {
                     flush?: boolean;
                     entry_kinds?: ("positive" | "negative")[];
                 };
-                dns_log: {
+                dns_log?: {
                     available: boolean;
+                    /** @description Smallest dns_log.max_records a runtime-settings PATCH may set. Absent means 1. */
+                    min_records?: components["schemas"]["SafeUInt"];
                     /** @description Maximum permitted DNS log-ring capacity. The current capacity is dns_log.max_records in GET /runtime/settings. Neither value guarantees retention duration. */
                     max_records?: components["schemas"]["SafeUInt"];
                     max_page_size?: components["schemas"]["SafeUInt"];
                 };
-                dns_rules: {
+                dns_rules?: {
                     available: boolean;
-                    /** @description Maximum size of each DNS rule list, including its fallback entry; never a truncation limit. */
+                    /** @description Maximum size of each DNS rule list, including its fallback entry; never below either running list's size and never a truncation limit. */
                     max_rules?: components["schemas"]["SafeUInt"];
                 };
-                runtime_settings: {
+                runtime_settings?: {
                     available: boolean;
-                    /** @description The settings PATCH /runtime/settings accepts on this backend; others return 400. */
+                    /** @description The settings PATCH /runtime/settings accepts on this engine; another field the schema defines returns 422. */
                     fields?: components["schemas"]["RuntimeSettingField"][];
                 };
-                geodata: {
+                geodata?: {
                     available: boolean;
                     /** @description POST /geodata/update is implemented. Requires operations.available and configured asset sources. */
                     can_update?: boolean;
-                    /** @description The asset kinds GET /geodata reports on this backend. */
+                    /** @description The asset kinds GET /geodata reports on this engine. */
                     assets?: components["schemas"]["GeoAssetKind"][];
                     /** @description Download URLs and automatic updates are managed through geodata in GET and PATCH /runtime/settings, and GET /geodata reports update status and required_codes. Requires runtime_settings.available with geodata in its fields. Absent means false. */
                     configurable_sources?: boolean;
-                };
-                operations: {
+                    /** @description Most download URLs per asset a geodata patch may set. Required when configurable_sources is true. */
+                    max_urls?: number;
+                    /** @description Bounds and default of geodata auto_update.interval_hours. Required when configurable_sources is true. min <= default <= max is required; JSON Schema cannot express this ordering, so validators check it separately. */
+                    interval_hours?: {
+                        min: number;
+                        max: number;
+                        default: number;
+                    };
+                    /**
+                     * @description How the engine verifies a download when verify_checksum is true. sha256sum appends .sha256sum to the URL path, keeping any query, and compares the SHA-256 the response names; a 404 means none is published. pinned compares with a SHA-256 the engine holds for the URL. Null means downloads are unverified. Required when can_update or configurable_sources is true.
+                     * @enum {string|null}
+                     */
+                    checksum?: "sha256sum" | "pinned" | null;
+                    /** @description When geodata settings take configuration-file values and how long overrides last; see Geodata. Required when configurable_sources is true. */
+                    lifecycle?: {
+                        /**
+                         * @description start takes file values at process start only; activation also takes them at each configuration activation.
+                         * @enum {string}
+                         */
+                        file_values: "start" | "activation";
+                        /** @description True when a PATCH override lasts across restarts; false when it lasts until the process exits. */
+                        overrides_persist: boolean;
+                    };
+                } & (unknown & unknown & unknown);
+                operations?: {
                     available: boolean;
                     retention_seconds?: number;
+                    /** @description Finished Idempotency-Key records the server keeps before the retention window ends. Beyond this count it may evict the oldest-finished first. Absent means none are evicted before the window ends. Keys of unfinished operations are never evicted. */
+                    max_replay_keys?: number;
                 };
-                reload: components["schemas"]["AvailableResource"];
-                suspend: components["schemas"]["AvailableResource"];
-                resume: components["schemas"]["AvailableResource"];
+                reload?: components["schemas"]["AvailableResource"];
+                suspend?: components["schemas"]["AvailableResource"];
+                resume?: components["schemas"]["AvailableResource"];
+            } & {
+                [key: string]: {
+                    [key: string]: components["schemas"]["AvailableResource"];
+                };
             };
         };
         EffectiveConfig: {
@@ -1602,10 +1706,11 @@ export interface components {
             revision: string;
             sources: components["schemas"]["ConfigSource"][];
             diagnostics: components["schemas"]["ConfigDiagnostic"][];
-            /** @description True when a listener-secret value (native_api.secret, clash_api.secret) was masked somewhere in this response. Content, paths and diagnostics are otherwise returned in the clear to an admitted request. */
+            /** @description True when a listener-secret value (the deployment secret of an API listener) was masked somewhere in this response. Content, paths and diagnostics are otherwise returned in the clear to an admitted request. */
             secrets_redacted: boolean;
         };
-        ConfigSource: {
+        /** @description One accepted source's identity and content, the representation GET /config/sources/{source_id} returns. Every field stays the same while the source bytes do, so content_sha256 can serve as its entity tag. */
+        ConfigSourceContent: {
             /** @description Unique opaque source ID within this configuration snapshot; never a credential-bearing path or URL. */
             id: string;
             /** @description The path relative to the entry directory, as the configuration references it; not a file-access capability. */
@@ -1618,23 +1723,28 @@ export interface components {
             content_sha256: string;
             /** @description Accepted source size in bytes before redaction. */
             bytes: components["schemas"]["SafeUInt"];
+            /** @description Accepted engine-native text with listener-secret values masked. Use for editing only if its UTF-8 SHA-256 matches content_sha256. */
+            content: string;
+            /** @description Lines in the accepted source before redaction; empty text has zero lines, and a final newline does not add an empty line. */
+            line_count: components["schemas"]["SafeUInt"];
+        };
+        /** @description A source entry of GET /config, ConfigSourceContent plus the fields that can change without the bytes changing. */
+        ConfigSource: components["schemas"]["ConfigSourceContent"] & {
             /**
              * @description True only when server-wide editing is enabled and this source permits
              *     replacement by a control caller. False for engine-written includes,
-             *     generated sources, and subscriptions; observe alone never grants writes.
+             *     generated sources, and subscriptions, for a source that holds API
+             *     listener settings or secrets, and while the configuration store
+             *     cannot accept writes; observe alone never grants writes.
              */
             writable: boolean;
             /** @description Time these source bytes were accepted, not the current file modification time. */
             loaded_at: components["schemas"]["Timestamp"];
-            /** @description Optional dae text, only when resources.config.content is true; still subject to secret redaction. Use for editing only if its UTF-8 SHA-256 matches content_sha256. */
-            content?: string;
-            /** @description Lines in the accepted source before redaction; empty text has zero lines, and a final newline does not add an empty line. */
-            line_count: components["schemas"]["SafeUInt"];
         };
         ConfigSourceCreate: {
             /** @description New file path relative to the main source's directory, as ConfigSource.path reports it. Normal segments only, ending in .dae, at most 1024 UTF-8 bytes, no control characters. An include pattern of the resulting source set must match it. */
             path: string;
-            /** @description Complete UTF-8 dae source text; empty text is validated, not rejected as malformed. */
+            /** @description Complete UTF-8 engine-native text; empty text is validated, not rejected as malformed. */
             content: string;
         };
         /**
@@ -1652,9 +1762,9 @@ export interface components {
             /** @description One-based UTF-8 byte column, or null if unknown; not a character or UTF-16 offset. */
             column: components["schemas"]["NullableSafeUInt"];
             span: null | components["schemas"]["ConfigDiagnosticSpan"];
-            /** @description Adapter-defined diagnostic code, independent of the HTTP ErrorCode catalogue. */
+            /** @description Engine-defined diagnostic code, independent of the HTTP ErrorCode catalogue. */
             code: string;
-            /** @description Safe operator-facing description; never source excerpts, credentials, private paths, or raw engine errors. */
+            /** @description Safe operator-facing description; never source excerpts, listener secrets or raw engine errors. See the visibility table in api-config. */
             message: string;
         };
         /**
@@ -1683,7 +1793,7 @@ export interface components {
         ConfigValidationSource: {
             /** @description Request-local diagnostic ID of 1 to 128 ASCII letters, digits, `.`, `_` or `-`. If omitted, use source-N where N is the one-based array index; all effective IDs must be unique. Never put secrets in IDs. */
             id?: string;
-            /** @description Optional engine-native source name and include-resolution base within the adapter's authorized local roots; never grants arbitrary file access. */
+            /** @description Optional engine-native source name and include-resolution base within the engine's authorized local roots; never grants arbitrary file access. */
             path?: string;
             /** @description Candidate engine-native source text; empty text is a candidate, not a malformed request. */
             content: string;
@@ -1696,7 +1806,7 @@ export interface components {
         ConfigValidationResult: {
             /** @description True when validation completes without error diagnostics. Successful validation does not guarantee a later apply will succeed. */
             valid: boolean;
-            /** @description Source IDs identify submitted sources. Attribute a dependency failure to the referring submitted source and its include/subscription location, not an undisclosed local path. */
+            /** @description Source IDs identify submitted sources. Attribute a dependency failure to the referring submitted source and its include/subscription location. */
             diagnostics: components["schemas"]["ConfigDiagnostic"][];
             /** @description Running generation captured when validation starts, for context only; not a new candidate generation or an apply precondition. */
             generation_id: string;
@@ -1740,13 +1850,13 @@ export interface components {
             traffic: components["schemas"]["TrafficSummary"];
             process: {
                 pid?: number | null;
-                /** @description CPU time the engine process used over the adapter's latest sampling interval, as a percentage of one CPU. 100 means one core fully busy; the value may exceed 100 on multi-core hosts. Null until two samples exist or when unmeasurable. */
+                /** @description CPU time the engine process used over the server's latest sampling interval, as a percentage of one CPU. 100 means one core fully busy; the value may exceed 100 on multi-core hosts. Null until two samples exist or when unmeasurable. */
                 cpu_percent: number | null;
             };
             last_reload: null | components["schemas"]["LastReload"];
-            /** @description Features running reduced after a failure the backend recovered from. An absent or empty list means none are known. Codes are adapter-defined like other SafeError codes. A change to the list is announced by runtime.updated. */
+            /** @description Features running reduced after a failure the engine recovered from. An absent or empty list means none are known. Codes are engine-defined like other SafeError codes. A change to the list is announced by runtime.updated. */
             degradations?: (components["schemas"]["SafeError"] & {
-                /** @description Adapter-defined feature identifier, such as persistence or pname_routing. Stable across releases of one adapter; each component appears at most once. */
+                /** @description Engine-defined feature identifier, such as persistence or pname_routing. Stable across releases of one engine; each component appears at most once. */
                 component: string;
                 /** @description When the feature started running reduced. A failure that repeats while the entry is listed keeps the original time. */
                 since: components["schemas"]["Timestamp"];
@@ -1921,17 +2031,26 @@ export interface components {
             errors: components["schemas"]["SafeError"][];
         };
         EbpfDetail: components["schemas"]["EbpfSummary"] & {
+            /** @description The attachments the engine checks. The list may be partial; an engine need not report every program it attached. */
             attachments?: components["schemas"]["EbpfAttachment"][];
             maps?: components["schemas"]["EbpfMaps"];
         };
+        /** @description One program attachment. An interface attachment names the interface and direction, a cgroup attachment names the cgroup, and any other attachment, such as a sockmap verdict or a tracing program, describes its hook in `hook`. */
         EbpfAttachment: {
+            /** @description Program or hook name. */
             name: string;
-            interface: string;
             /** @enum {string} */
-            direction: "ingress" | "egress";
+            kind: "interface" | "cgroup" | "other";
+            interface?: string;
+            /** @enum {string} */
+            direction?: "ingress" | "egress";
+            /** @description cgroup v2 path relative to the cgroup2 mount; / is the root cgroup. */
+            cgroup?: string;
+            /** @description Where an `other` attachment is attached, in the engine's words, such as the sockmap a verdict program serves or the kernel function a tracing program hooks. */
+            hook?: string;
             /** @enum {string} */
             state: "attached" | "detached" | "error" | "unknown";
-        };
+        } & (unknown & unknown & unknown);
         EbpfMaps: {
             /** @enum {string} */
             state: "ready" | "partial" | "error" | "unknown";
@@ -1981,14 +2100,14 @@ export interface components {
             nodes: components["schemas"]["Node"][];
             next_cursor: string | null;
         };
-        /** @description Safe metadata only. Names, URLs and last_error must not contain secrets, raw configuration or unredacted local paths. */
+        /** @description Provider metadata, visible as the visibility table in api-config describes. url_redacted is the configured URL with only listener-secret values masked; last_error is safe text without raw configuration. */
         Provider: {
             /** @description Opaque provider identity, shared with Node.provider_id; not a URL or display name. */
             id: string;
             name: string;
             /** @enum {string} */
             kind: "subscription" | "file" | "inline";
-            /** @description The configured source URL as written, with only listener-secret values (native_api.secret, clash_api.secret) masked. Null for file/inline sources. The wire name is kept for compatibility. */
+            /** @description The configured source URL as written, with only listener-secret values masked; subscription credentials in it are returned. Null for file/inline sources. The wire name is kept for compatibility. */
             url_redacted: string | null;
             node_count: components["schemas"]["SafeUInt"];
             /** @description Last successful load or refresh, or null if unknown or never loaded. */
@@ -2003,7 +2122,7 @@ export interface components {
             status: "ok" | "stale" | "error";
             /** @description The last failure, or null. A subscription fetch whose download route has no usable node yet reports code route_unavailable; other fetch failures report fetch_failed. */
             last_error: null | components["schemas"]["SafeError"];
-            /** @description The route a subscription's fetches take, with the values of the geodata download route. routing follows the routing rules like user traffic, group always goes through the group in group_id, and direct connects straight to the host. group_id is null for routing and direct and for a group that no longer exists. Null for file and inline providers. Backends that fetch subscriptions only directly omit it. */
+            /** @description The route a subscription's fetches take, with the values of the geodata download route. routing follows the routing rules like user traffic, group always goes through the group in group_id, and direct connects straight to the host. group_id is null for routing and direct and for a group that no longer exists. Null for file and inline providers. Engines that fetch subscriptions only directly omit it. */
             download?: null | components["schemas"]["GeoDataDownload"];
         };
         /** @description Provider-reported usage, not runtime counters. Each unavailable quantity is null; traffic itself may be null when no usage metadata exists. */
@@ -2030,12 +2149,48 @@ export interface components {
             result?: components["schemas"]["Provider"];
             error?: null;
         };
+        ProviderCreateSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "provider_create";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["Provider"];
+            error?: null;
+        };
+        ProviderDeleteSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "provider_delete";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["DeleteCount"];
+            error?: null;
+        };
+        NodeCreateSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "node_create";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["Node"];
+            error?: null;
+        };
+        NodeDeleteSucceededOperation: components["schemas"]["OperationCommon"] & {
+            /** @constant */
+            kind?: "node_delete";
+            /** @constant */
+            status?: "succeeded";
+            finished_at?: components["schemas"]["Timestamp"];
+            result?: components["schemas"]["DeleteCount"];
+            error?: null;
+        };
         ProviderCreate: {
             /** @description The subscription tag as written in the configuration; unique among providers. */
             name: string;
             /** @constant */
             kind: "subscription";
-            /** @description Fetched by the engine on refresh; stored in the managed main source and never returned. */
+            /** @description Fetched by the engine on refresh and stored in the managed main source; returned in url_redacted as written, apart from listener secrets. */
             url: string;
             /** @description Seconds between automatic refreshes; 0 refreshes only on request. */
             update_interval?: number;
@@ -2047,7 +2202,7 @@ export interface components {
         NodeCreate: {
             /** @description The node name as written in the configuration; unique among inline nodes. */
             name: string;
-            /** @description A share link in a scheme the engine parses (for example vless, vmess, trojan, ss); stored in the managed main source and never returned. */
+            /** @description A share link in a scheme the engine parses (for example vless, vmess, trojan, ss); stored in the managed main source, whose text returns it as written. */
             link: string;
         };
         /** @enum {string} */
@@ -2059,13 +2214,13 @@ export interface components {
             size_bytes: components["schemas"]["UInt64"];
             /** @description Modification time of the loaded file, or null when the filesystem does not report one. */
             modified_at: components["schemas"]["NullableTimestamp"];
-            /** @description Display-only download source with userinfo, query, fragment, and secret-bearing path segments removed or redacted. With several configured URLs, the first. Null when no source is configured or safe display is impossible. */
+            /** @description Display-only download source, in the display form described in Geodata; query removed and credential-shaped path segments replaced with [redacted]. With several configured URLs, the first. Null when no source is configured or the URL does not parse, including a URL with userinfo or a fragment. */
             source_redacted: string | null;
-            /** @description Display-only URL the loaded file was downloaded from, redacted like source_redacted. Null when the backend did not download the loaded file, for example a file installed by a package. Reported when resources.geodata.configurable_sources is true. */
+            /** @description Display-only URL the loaded file was downloaded from, in the same display form as source_redacted and null under the same conditions. Null when the engine did not download the loaded file, for example a file installed by a package. Reported when resources.geodata.configurable_sources is true. */
             fetched_url_redacted?: string | null;
-            /** @description The loaded file was downloaded and matched the sha256 published at the download URL with .sha256sum appended. False when no checksum was published, verification was off, or the backend did not download the file. Reported when resources.geodata.configurable_sources is true. */
+            /** @description The loaded file was downloaded and matched the checksum found by the resources.geodata.checksum method for its download URL. False when no checksum was found, the method is null, verification was off, or the engine did not download the file. Reported when resources.geodata.configurable_sources is true. */
             verified?: boolean;
-            /** @description The route the loaded file was downloaded through. route is the GeoDataSettings.download route in force for that download. group_id is the group the request went through, the one the routing rules chose for route routing, and null for direct, for routing rules that chose direct or a single node, and for a group that no longer exists. Null when the backend did not download the loaded file. Reported when resources.geodata.configurable_sources is true. */
+            /** @description The route the loaded file was downloaded through. route is the GeoDataSettings.download route in force for that download. group_id is the group the request went through, the one the routing rules chose for route routing, and null for direct, for routing rules that chose direct or a single node, and for a group that no longer exists. Null when the engine did not download the loaded file. Reported when resources.geodata.configurable_sources is true. */
             download_route?: null | components["schemas"]["GeoDataDownload"];
         };
         /** @description The update status fields and required_codes are reported together, when resources.geodata.configurable_sources is true. */
@@ -2078,7 +2233,7 @@ export interface components {
             last_updated_at?: components["schemas"]["NullableTimestamp"];
             /** @description When the next automatic update is due, including its random delay and any failure backoff. Null while automatic updates are off. */
             next_check_at?: components["schemas"]["NullableTimestamp"];
-            /** @description Why the last attempt failed after every URL was tried, with an adapter-defined code. Null after a successful or unchanged attempt, and before the first. */
+            /** @description Why the last attempt failed after every URL was tried, with an engine-defined code. Null after a successful or unchanged attempt, and before the first. */
             last_error?: null | components["schemas"]["SafeError"];
             /** @description For each kind in resources.geodata.assets, the lowercase category names the active configuration references, sorted and without attribute suffixes. A replacement file must contain all of them. */
             required_codes?: {
@@ -2099,17 +2254,17 @@ export interface components {
             error?: null;
         };
         /**
-         * @description Where the stored URL lists came from. config when the backend wrote every stored list from the configuration file at startup. db when a PATCH stored any of them. default when no list is stored and the backend's built-in URLs apply. An asset without a stored list uses its built-in URLs under any source. A PATCH may set URLs under any source.
+         * @description Where the effective URL lists came from. config when every list that is not built in comes from the configuration file. override when a PATCH set at least one list that is still in force, even to the URLs the file names. default when both assets use the engine's built-in URLs. An asset with neither a file value nor an override uses its built-in URLs under any source. A PATCH may set URLs under any source.
          * @enum {string}
          */
-        GeoDataSettingsSource: "config" | "db" | "default";
+        GeoDataSettingsSource: "config" | "override" | "default";
         /**
          * Format: uri
-         * @description Absolute HTTP(S) URL without userinfo or fragment; server also enforces administrator SSRF policy. The backend does not follow redirects.
+         * @description Absolute HTTP(S) URL without userinfo or fragment, fetched under the outbound-request policy in api-config. The engine does not follow redirects.
          */
         GeoDataUrl: string;
         GeoDataSources: {
-            /** @description Download URLs in fallback order. As written, with only listener-secret values masked, for an authenticated caller with control; for any other caller, redacted like GeoAsset.source_redacted. */
+            /** @description Download URLs in fallback order, at most resources.geodata.max_urls. Returned as written, with only listener-secret values masked, to every admitted caller; see the visibility table in api-config. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
         GeoDataAutoUpdate: {
@@ -2118,10 +2273,7 @@ export interface components {
              * @default true
              */
             enabled: boolean;
-            /**
-             * @description Hours between automatic updates, before a random delay of up to 60 minutes.
-             * @default 24
-             */
+            /** @description Hours between automatic updates, within resources.geodata.interval_hours, whose default applies when nothing is set. The engine may add a random delay; next_check_at reports the result. */
             interval_hours: number;
         };
         /**
@@ -2146,21 +2298,21 @@ export interface components {
             geoip: components["schemas"]["GeoDataSources"];
             auto_update: components["schemas"]["GeoDataAutoUpdate"];
             /**
-             * @description The route every geodata request takes. routing when nothing is stored, as for every download the backend makes itself. At startup, a route the configuration file names replaces a stored one, and a route an earlier file wrote is deleted when the file names none, as for the URLs; it does not affect source. A group that has no usable member when an update runs, for example just after startup before its health checks finish, fails that URL like a connection error; the backend tries the next URL and reports last_error, and never falls back to direct.
+             * @description The route every geodata request takes. routing when nothing is stored, as for every download the engine makes itself. When the engine takes file values (resources.geodata.lifecycle.file_values), a route the configuration file names replaces a stored one, and a route an earlier file set returns to routing when the file names none; a patched route is kept. It does not affect source. A group that has no usable member when an update runs, for example just after startup before its health checks finish, fails that URL like a connection error; the engine tries the next URL and reports last_error, and never falls back to direct.
              * @default {
              *       "route": "routing",
              *       "group_id": null
              *     }
              */
             download: components["schemas"]["GeoDataDownload"];
-            /** @description Whether an update fetches each URL with .sha256sum appended and rejects a file that does not match it. true when nothing is stored, and a backend that omits the field behaves as true. false sends no checksum request and accepts the file unverified, with verified false, for a mirror that answers the checksum URL with an error page or a status other than 404. The configuration file never sets it. */
+            /** @description Whether an update verifies each file by the resources.geodata.checksum method and rejects a file that does not match. true when nothing is set, and an engine that omits the field behaves as true. false sends no checksum request and accepts the file unverified, with verified false, for a mirror that answers the checksum URL with an error page or a status other than 404. */
             verify_checksum?: boolean;
         };
         GeoDataSourcesPatch: {
-            /** @description Replaces the whole list; order is fallback order. */
+            /** @description Replaces the whole list; order is fallback order. At most resources.geodata.max_urls; a longer list returns 400. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
-        /** @description Merged into the stored settings. A patch with geosite or geoip stores both URL lists, so source becomes db, under any source. auto_update, download and verify_checksum are each stored on their own. null deletes everything stored. */
+        /** @description Merged into the current settings as overrides. A patch with geosite or geoip overrides only that list, so source becomes override, under any source; the other list is unchanged. auto_update, download and verify_checksum are each overridden on their own. null removes every override and every value taken from the configuration file until the engine next takes file values. */
         GeoDataSettingsPatch: null | {
             geosite?: components["schemas"]["GeoDataSourcesPatch"];
             geoip?: components["schemas"]["GeoDataSourcesPatch"];
@@ -2168,17 +2320,18 @@ export interface components {
             verify_checksum?: boolean;
             auto_update?: {
                 enabled?: boolean;
+                /** @description Within resources.geodata.interval_hours; a value outside it returns 400. */
                 interval_hours?: number;
             };
         };
         GroupPolicy: {
             /** @enum {string} */
-            kind: "selector" | "urltest" | "loadbalance" | "fallback" | "random" | "score";
+            kind: "selector" | "urltest" | "loadbalance" | "fallback" | "random" | "score" | "fixed";
             native: string;
         };
         GroupPolicyRequest: {
             /** @enum {string} */
-            kind: "selector" | "urltest" | "loadbalance" | "fallback" | "random" | "score";
+            kind: "selector" | "urltest" | "loadbalance" | "fallback" | "random" | "score" | "fixed";
             native: string;
         };
         GroupMember: {
@@ -2187,21 +2340,31 @@ export interface components {
             /** @enum {string} */
             kind: "node" | "group";
         };
+        /** @description The group's policy and configured options, the target document of PATCH /groups/{group_id}/config. */
+        GroupConfigDocument: {
+            policy: components["schemas"]["GroupPolicy"];
+            config: components["schemas"]["GroupConfig"];
+        };
+        /** @description The group's own configured options, patched through PATCH /groups/{group_id}/config. For an option the engine supports, null means the group sets no value of its own and the engine's inheritance and defaults apply. Engine-only options go in a nested x-<engine> member, for example config["x-dae"].check_addresses; GET reports these members and they are not patch targets. Other unlisted keys are not allowed. */
         GroupConfig: {
             default_member_id: string | null;
             final_outbound: string | null;
+            /** @description The one health-check URL. Engines probe this URL only; there is no list of URLs. */
             check_url: null | components["schemas"]["SafeHttpUrl"];
-            /** @description Configured health-check interval in seconds. A backend that runs checks on one global interval may keep this value without applying it; see its mapping notes. */
+            /** @description Configured health-check interval in seconds. An engine that runs checks on one global interval may keep this value without applying it. */
             check_interval: number | null;
             /** @description Minimum latency improvement in milliseconds before a URLTest group switches members. */
             tolerance: number | null;
             /** @description Inactivity in seconds after which a URLTest group counts as idle. */
             idle_timeout: number | null;
-            interrupt_connections: boolean;
+            /** @description Whether changing the selection closes connections through the previous member. Null means the group sets no value of its own, or the engine has no such option. */
+            interrupt_connections: boolean | null;
+        } & {
+            [key: string]: Record<string, never>;
         };
         /**
          * Format: uri
-         * @description Absolute HTTP(S) URL without userinfo; server also enforces administrator SSRF policy.
+         * @description Absolute HTTP(S) URL without userinfo, checked under the outbound-request policy in api-config.
          */
         SafeHttpUrl: string;
         GroupSelection: {
@@ -2266,7 +2429,7 @@ export interface components {
             };
         };
         GroupList: components["schemas"]["GroupSummary"][];
-        /** @description Bounded by resources.groups.max_patch_operations. */
+        /** @description RFC 6902 operations over the group's policy and config, applied in order. Bounded by resources.groups.max_patch_operations. Members an operation object does not define are ignored (RFC 6902 §4). */
         JsonPatch: (components["schemas"]["PolicyPatch"] | components["schemas"]["MemberIdPatch"] | components["schemas"]["OutboundPatch"] | components["schemas"]["CheckUrlPatch"] | components["schemas"]["PositiveIntegerPatch"] | components["schemas"]["TolerancePatch"] | components["schemas"]["IdleTimeoutPatch"] | components["schemas"]["InterruptPatch"] | components["schemas"]["RemovePatch"] | components["schemas"]["CopyMovePatch"])[];
         PolicyPatch: {
             /** @enum {string} */
@@ -2322,7 +2485,7 @@ export interface components {
             op: "add" | "replace" | "test";
             /** @constant */
             path: "/config/interrupt_connections";
-            value: boolean;
+            value: boolean | null;
         };
         /** @enum {string} */
         MutableGroupPath: "/policy" | "/config/default_member_id" | "/config/final_outbound" | "/config/check_url" | "/config/check_interval" | "/config/tolerance" | "/config/idle_timeout" | "/config/interrupt_connections";
@@ -2386,11 +2549,10 @@ export interface components {
         };
         ProbeTargetResponse: components["schemas"]["NodeProbeTarget"] | components["schemas"]["GroupProbeTarget"];
         ProbeMembers: ("direct" | "leaves") | string[];
+        /** @description The schema does not restrict kind and transport combinations. tcp_connect and http run over tcp; dns runs over tcp, udp or both. Any other combination parses and returns 422 unsupported_value. The kind fixes the health purpose that results report: tcp_connect and http test data, dns tests dns. */
         ProbeRequest: {
             target: components["schemas"]["ProbeTarget"];
             kind: components["schemas"]["ProbeKind"];
-            /** @enum {string} */
-            purpose: "data" | "dns";
             transport: components["schemas"]["Transport"][];
             /** @enum {string} */
             ip_version: "ipv4" | "ipv6" | "any";
@@ -2398,24 +2560,7 @@ export interface components {
             members: components["schemas"]["ProbeMembers"];
             /** @enum {string} */
             warmth: "cold" | "warm";
-        } & (unknown & ({
-            /** @constant */
-            kind?: "tcp_connect";
-            /** @constant */
-            purpose?: "data";
-            transport?: "tcp"[];
-        } | {
-            /** @constant */
-            kind?: "http";
-            /** @constant */
-            purpose?: "data";
-            transport?: "tcp"[];
-        } | {
-            /** @constant */
-            kind?: "dns";
-            /** @constant */
-            purpose?: "dns";
-        }));
+        } & unknown;
         ProbeResultItem: {
             member_id: string;
             resolved_leaf_node_id: string | null;
@@ -2468,13 +2613,13 @@ export interface components {
             chain_source: "evaluation" | "reconstructed" | "unknown";
             /** @description Generation-scoped traffic rule ID, or null when unavailable. */
             rule_id: string | null;
-            /** @description Sanitized display expression for that rule, or null when unavailable. */
+            /** @description Display expression for that rule, or null when unavailable. */
             rule_expression: string | null;
             /**
-             * @description Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+             * @description kernel, the rule the kernel datapath decided with; userspace, the rule a userspace router decided with; recomputed, a userspace re-evaluation after the kernel decided, which need not be the deciding rule; unknown, provenance unavailable.
              * @enum {string}
              */
-            rule_source: "kernel" | "recomputed" | "unknown";
+            rule_source: "kernel" | "userspace" | "recomputed" | "unknown";
             /** @enum {string|null} */
             ingress: "lan" | "wan" | null;
             domain_source: null | components["schemas"]["DomainSource"];
@@ -2482,9 +2627,9 @@ export interface components {
             observed_by: components["schemas"]["ObservedBy"];
             upload_bytes: components["schemas"]["NullableUInt64"];
             download_bytes: components["schemas"]["NullableUInt64"];
-            /** @description Visible upload rate, or null when the adapter does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
+            /** @description Visible upload rate, or null when the engine does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
             upload_bytes_per_second: components["schemas"]["NullableUInt64"];
-            /** @description Visible download rate, or null when the adapter does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
+            /** @description Visible download rate, or null when the engine does not sample per connection. See connections.md for deriving a rate from two list snapshots. */
             download_bytes_per_second: components["schemas"]["NullableUInt64"];
         };
         ConnectionList: {
@@ -2572,13 +2717,15 @@ export interface components {
             chain_source: "evaluation" | "reconstructed" | "unknown";
             /** @description Generation-scoped traffic rule ID, or null when unavailable. */
             rule_id: string | null;
-            /** @description Sanitized display expression for that rule, or null when unavailable. */
+            /** @description Generation containing rule_id. Join to GET /rules only when this matches its generation_id; null when rule_id or its generation is unavailable. */
+            rule_generation_id: string | null;
+            /** @description Display expression for that rule, or null when unavailable. */
             rule_expression: string | null;
             /**
-             * @description Deciding kernel rule, recomputed userspace evidence, or unavailable provenance; see honk-mapping's matched_rule row.
+             * @description kernel, the rule the kernel datapath decided with; userspace, the rule a userspace router decided with; recomputed, a userspace re-evaluation after the kernel decided, which need not be the deciding rule; unknown, provenance unavailable.
              * @enum {string}
              */
-            rule_source: "kernel" | "recomputed" | "unknown";
+            rule_source: "kernel" | "userspace" | "recomputed" | "unknown";
             /** @enum {string|null} */
             ingress: "lan" | "wan" | null;
             domain_source: null | components["schemas"]["DomainSource"];
@@ -2610,21 +2757,21 @@ export interface components {
             trace: components["schemas"]["FlowTrace"];
         } & ({
             /** @constant */
-            trace_status?: "complete";
+            trace_status: "complete";
             trace?: {
                 /** @constant */
                 status?: "complete";
             };
         } | {
             /** @constant */
-            trace_status?: "partial";
+            trace_status: "partial";
             trace?: {
                 /** @constant */
                 status?: "partial";
             };
         } | {
             /** @constant */
-            trace_status?: "disabled";
+            trace_status: "disabled";
             trace?: {
                 /** @constant */
                 status?: "disabled";
@@ -2685,12 +2832,12 @@ export interface components {
             dns_action: "upstream" | "asis" | "accept" | "reject" | "requery" | null;
         } & (({
             /** @enum {unknown} */
-            chain?: "traffic" | "dns_upstream";
+            chain: "traffic" | "dns_upstream";
             input?: null | components["schemas"]["TrafficRoutingInput"];
             dns_action?: null;
         } | {
             /** @constant */
-            chain?: "dns_request";
+            chain: "dns_request";
             input?: null | components["schemas"]["DnsRequestRoutingInput"];
             /** @enum {unknown} */
             dns_action?: "upstream" | "asis" | "reject" | null;
@@ -2698,7 +2845,7 @@ export interface components {
             mark?: null;
         } | {
             /** @constant */
-            chain?: "dns_response";
+            chain: "dns_response";
             input?: null | components["schemas"]["DnsResponseRoutingInput"];
             /** @enum {unknown} */
             dns_action?: "accept" | "reject" | "requery" | null;
@@ -2719,8 +2866,8 @@ export interface components {
         DatapathStepData: {
             /** @enum {string} */
             plane: "kernel" | "userspace";
-            /** @enum {string} */
-            action: "pass" | "redirect" | "hold" | "arm_direct" | "activate_direct" | "activate_proxy" | "drop";
+            /** @description pass lets the packet continue without the proxy, redirect hands it to the userspace proxy, hold keeps it until a pending decision completes, and drop discards it. Any other value is an engine-defined step documented with that engine; clients show an unknown value as it is. */
+            action: string;
             reason: string;
             error: string | null;
         };
@@ -2818,11 +2965,6 @@ export interface components {
             routing_source: "evaluation" | "forced" | "builtin" | "unknown";
             routed_outbound: string | null;
             effective_outbound: string | null;
-            /**
-             * @description Clash-mode override observed for this outbound attempt, separate from the configured dial mode. This field does not expose a native runtime-mode setting. none means no override was applied; unknown means the recorder could not determine it.
-             * @enum {string}
-             */
-            mode_override: "none" | "direct" | "global" | "unknown";
             selection_path: components["schemas"]["SelectionPathItem"][];
             leaf_node_id: string | null;
             /** @description Sanitized leaf name captured at decision time, or null when unavailable; leaf_node_id remains authoritative. */
@@ -2901,6 +3043,9 @@ export interface components {
             missing_inputs: string[];
             conditions: components["schemas"]["RuleCondition"][];
         };
+        /** @description `*` or a comma-separated list of entity tags, strong or weak (W/ prefix), as RFC 9110 §8.8.3 and §13.1.1 define. An entity tag contains no space, tab or inner double quote. Empty list elements are ignored, as §5.6.1.2 requires of recipients. */
+        EntityTagList: string;
+        /** @description An IPv4 or IPv6 address. Validators must enforce the ipv4 and ipv6 formats; without format assertion, either branch accepts any string. */
         IpAddress: string;
         RoutingTraceInput: {
             network: components["schemas"]["Transport"];
@@ -2951,9 +3096,9 @@ export interface components {
             evaluations: components["schemas"]["RoutingEvaluation"][];
             dns: components["schemas"]["SimulationDnsData"][];
         };
-        /** @description Source location, or null when unavailable or unsafe to disclose. Coordinates refer to the original source before redaction. */
+        /** @description Source location, or null when unavailable. Coordinates refer to the original source before listener secrets are masked. */
         RuleSource: null | {
-            /** @description Redacted source label; never an absolute local path or credential-bearing URL. */
+            /** @description Source path or URL as written, apart from listener secrets. */
             file: string;
             /**
              * @description Source ID from GET /config. Open the source by ID under the configuration
@@ -2969,7 +3114,7 @@ export interface components {
             rule_id: string;
             /** @description Zero-based evaluation order within this generation, not a cross-generation identity. */
             index: components["schemas"]["SafeUInt"];
-            /** @description Safe display expression, not raw configuration or an editable source representation. */
+            /** @description Display text for the rule; see rules, Rule expressions. Not an editable source representation. */
             expression: string;
             /** @description Rule outbound, not a resolved leaf node or a claim of a successful dial. */
             outbound: string;
@@ -3017,6 +3162,24 @@ export interface components {
             question: components["schemas"]["DnsQuestion"];
             answers?: components["schemas"]["DnsAnswer"][];
         };
+        DnsQueryRequest: {
+            /** @description DNS name within the 255-wire-octet and 63-octet-label limits. */
+            domain: string;
+            /**
+             * @description Unique record types.
+             * @default [
+             *       "A"
+             *     ]
+             */
+            type: components["schemas"]["DnsRecordType"][];
+            /** @description Force this upstream from dns.upstream instead of dns.routing. */
+            upstream?: string;
+            /**
+             * @default normal
+             * @enum {string}
+             */
+            cache_mode: "normal" | "bypass";
+        };
         DnsQueryResponse: {
             domain: string;
             /** @enum {string} */
@@ -3051,8 +3214,8 @@ export interface components {
         /** @description Whole runtime cache at snapshot time, independent of the listing filters. Every page of one snapshot repeats the same values. The entry count is the cache's only limit; the size of an entry is not bounded. */
         DnsCacheUsage: {
             entries: components["schemas"]["UInt64"];
-            /** @description Effective entry limit after the engine applies its bounds, at most 100,000. */
-            entry_capacity: components["schemas"]["UInt64"];
+            /** @description Effective entry limit after the engine applies its bounds, or null when the cache has no entry limit or the engine cannot report it. */
+            entry_capacity: components["schemas"]["UInt64"] | null;
         };
         DnsLogRecord: {
             /** @description Opaque, unique within the running instance; the cursor is derived from it. */
@@ -3082,7 +3245,7 @@ export interface components {
             rule_id: string;
             /** @description Zero-based evaluation order within its list and generation, not a cross-generation identity. */
             index: components["schemas"]["SafeUInt"];
-            /** @description The rule's source text as written, for display; not an editable source representation. */
+            /** @description Display text for the rule; see rules, Rule expressions. Not an editable source representation. */
             expression: string;
             /**
              * @description Request rules: upstream sends the query to the named upstream, asis sends it
@@ -3119,7 +3282,8 @@ export interface components {
             deleted: number;
         };
         /** @enum {string} */
-        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update" | "provider_refresh" | "geodata_update";
+        OperationKind: "probe" | "reload" | "suspend" | "resume" | "group_update" | "provider_refresh" | "geodata_update" | "node_create" | "node_delete" | "provider_create" | "provider_delete";
+        /** @description A replayed Idempotency-Key returns this original body unchanged, including status queued, whatever the operation's current status. */
         OperationAccepted: {
             operation_id: string;
             kind: components["schemas"]["OperationKind"];
@@ -3127,7 +3291,7 @@ export interface components {
             status: "queued";
             href: string;
         };
-        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"] | components["schemas"]["ProviderRefreshSucceededOperation"] | components["schemas"]["GeoDataUpdateSucceededOperation"];
+        Operation: components["schemas"]["QueuedOperation"] | components["schemas"]["RunningOperation"] | components["schemas"]["FailedOperation"] | components["schemas"]["ProbeSucceededOperation"] | components["schemas"]["ReloadSucceededOperation"] | components["schemas"]["SuspendSucceededOperation"] | components["schemas"]["ResumeSucceededOperation"] | components["schemas"]["GroupUpdateSucceededOperation"] | components["schemas"]["ProviderRefreshSucceededOperation"] | components["schemas"]["GeoDataUpdateSucceededOperation"] | components["schemas"]["NodeCreateSucceededOperation"] | components["schemas"]["NodeDeleteSucceededOperation"] | components["schemas"]["ProviderCreateSucceededOperation"] | components["schemas"]["ProviderDeleteSucceededOperation"];
         QueuedOperation: components["schemas"]["OperationCommon"] & {
             /** @constant */
             status?: "queued";
@@ -3216,8 +3380,8 @@ export interface components {
         LogRecord: {
             ts: components["schemas"]["Timestamp"];
             level: components["schemas"]["LogLevel"];
-            /** @description Engine module name, not a network destination. */
-            target: string;
+            /** @description The engine component that emitted the record, such as a module name; not a network destination. null when the engine does not report one. */
+            target: string | null;
             /** @description Sanitized operator message; no secrets or raw configuration. */
             message: string;
             /** @description Sanitized structured fields, or null when unavailable; the message safety rules apply recursively. */
@@ -3227,6 +3391,7 @@ export interface components {
         };
         /** @enum {string} */
         RuntimeSettingField: "log.level" | "log.buffered_records" | "dns_log.max_records" | "flows.max_flows" | "flows.retention_seconds" | "record_flows" | "record_logs" | "record_dns_log" | "geodata";
+        /** @description Every section is optional. A value appears when resources.runtime_settings.fields lists it; an engine may also report a value it cannot change. */
         RuntimeSettings: {
             observed_at: components["schemas"]["Timestamp"];
             /**
@@ -3234,47 +3399,40 @@ export interface components {
              * @enum {string}
              */
             source: "config" | "runtime";
-            log: {
+            log?: {
                 /** @description Minimum severity the engine emits. A lower stream level cannot recover records the engine did not emit. */
-                level: components["schemas"]["LogLevel"];
-                /** @description Log replay ring capacity, at most logs.max_buffered_records. */
-                buffered_records: components["schemas"]["SafeUInt"];
+                level?: components["schemas"]["LogLevel"];
+                /** @description Log replay ring capacity, within logs.min_buffered_records and logs.max_buffered_records. Independent of level. */
+                buffered_records?: components["schemas"]["SafeUInt"];
             };
-            dns_log: {
-                /** @description DNS log ring capacity, at most dns_log.max_records. */
+            dns_log?: {
+                /** @description DNS log ring capacity, within dns_log.min_records and dns_log.max_records. */
                 max_records: components["schemas"]["SafeUInt"];
             };
-            flows: {
-                /** @description Retained flows, at most flows.max_flows. */
-                max_flows: components["schemas"]["SafeUInt"];
+            flows?: {
+                /** @description Retained flows, within flows.min_flows and flows.max_flows. */
+                max_flows?: components["schemas"]["SafeUInt"];
                 /** @description Maximum age of a retained terminal flow, in seconds, bounded by resources.flows.retention_seconds. Capacity pressure may evict it earlier. */
-                retention_seconds: components["schemas"]["SafeUInt"];
+                retention_seconds?: components["schemas"]["SafeUInt"];
             };
             /**
-             * @description Read-only recorder state. A client is attached while an admitted GET SSE stream on
-             *     /events or /logs is open, or for 60 seconds after the last stream closed or a successful
-             *     GET on /flows, /flows/{id} or /dns/log; other requests, including settings reads, do not
-             *     renew attachment. Automatic log and DNS-log recorders follow attachment. The automatic
-             *     flow recorder follows flow demand instead, so that an open panel does not record full
-             *     flow traces for every connection: an admitted GET /events stream whose kinds include
-             *     flow.updated or flow.gap, or that sets a nonblank flow_id with a flow kind in its
-             *     effective kinds, holds demand while open and for 60 seconds after the last one closed,
-             *     and a successful GET on /flows or /flows/{id} renews it for 60 seconds. Event streams
-             *     without kinds, /logs streams and /dns/log reads do not create flow demand. Recording
-             *     starts on attachment or demand, so the first history a client reads may be empty.
+             * @description Read-only recorder state. Each recorder appears when its record_* field is listed in
+             *     resources.runtime_settings.fields. In auto mode a recorder captures on demand, so the
+             *     first history a client reads may be empty. Engine-specific demand rules are
+             *     documented with the engine; see the honk notes.
              */
             recording?: {
-                flows: components["schemas"]["RecorderState"];
-                logs: components["schemas"]["RecorderState"];
-                dns_log: components["schemas"]["RecorderState"];
-                events: {
-                    /** @description Event capture runs while a client is attached or any permitted recorder is pinned on. */
+                flows?: components["schemas"]["RecorderState"];
+                logs?: components["schemas"]["RecorderState"];
+                dns_log?: components["schemas"]["RecorderState"];
+                events?: {
+                    /** @description Event capture is running. */
                     active: boolean;
                 };
-                /** @description Seconds left before the automatic log and DNS-log recorders stop, 0 while a stream is open or nothing is attached. The flow-demand grace is not reported. */
-                grace_remaining_seconds: components["schemas"]["SafeUInt"];
+                /** @description Seconds left in the engine's attachment grace after the last client left, 0 while a client is attached or once the grace has run out. Which recorders follow this grace is engine-defined, and a recorder may keep its own demand timer that this value does not count. Absent when the engine keeps no attachment grace. */
+                grace_remaining_seconds?: components["schemas"]["SafeUInt"];
             };
-            /** @description Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written only to an authenticated caller with control and redacted for everyone else. */
+            /** @description Geodata download sources and automatic updates. Present when resources.geodata.configurable_sources is true. URLs are returned as written, with only listener-secret values masked, to every admitted caller. */
             geodata?: components["schemas"]["GeoDataSettings"];
         };
         RuntimeSettingsPatch: {
@@ -3294,13 +3452,16 @@ export interface components {
             };
             geodata?: components["schemas"]["GeoDataSettingsPatch"];
         };
-        /** @description true pins a permitted recorder on, false forces it off, auto (the startup default) follows flow demand for record_flows and client attachment for the other recorders. */
-        RecorderMode: boolean | "auto";
+        /**
+         * @description A recorder's mode. "on" keeps a permitted recorder on without clients, "off" forces it off, and auto (the startup default) lets the engine record on demand. What counts as demand, and how long it lasts, is engine-defined. PATCH sets it, GET reports it in RecorderState.mode, and resources.flows.recording reports the effective flow policy, which can be off when recording is disallowed or sampled when the engine samples.
+         * @enum {string}
+         */
+        RecorderMode: "on" | "off" | "auto";
         RecorderState: {
             /** @description The configuration permits this recorder; false means never, whatever the mode. */
             allowed: boolean;
-            /** @enum {string} */
-            mode: "auto" | "on" | "off";
+            /** @description The mode last set by PATCH, or auto when none was set. */
+            mode: components["schemas"]["RecorderMode"];
             /** @description The recorder is capturing right now. */
             active: boolean;
         };
@@ -3407,6 +3568,8 @@ export interface components {
         /** @description Credentials are missing or invalid */
         Unauthorized: {
             headers: {
+                /** @description The authentication challenge (RFC 9110 §15.5.2); the native API uses the Bearer scheme. */
+                "WWW-Authenticate": string;
                 "Cache-Control": components["headers"]["NoStore"];
                 "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
@@ -3440,30 +3603,42 @@ export interface components {
         /** @description State, idempotency, or cursor conflict */
         Conflict: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
-        /** @description Flow or paginated snapshot retention expired */
+        /** @description Flow retention expired (flow_expired) */
         Gone: {
             headers: {
                 [name: string]: unknown;
             };
             content?: never;
         };
-        /** @description If-Match does not equal the current configuration revision or on-disk source content hash */
-        PreconditionFailed: {
+        /** @description The page cursor no longer names a retained snapshot or record; restart the walk without a cursor */
+        SnapshotExpired: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description Request size or advertised fan-out limit exceeded */
         TooLarge: {
             headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                "X-Content-Type-Options": components["headers"]["NoSniff"];
                 [name: string]: unknown;
             };
-            content?: never;
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
         };
         /** @description Unsupported request Content-Type */
         UnsupportedMediaType: {
@@ -3560,12 +3735,10 @@ export interface components {
         /** @example 100 */
         Limit1000: number;
         /**
-         * @description Opaque cursor bound to the resource, running adapter instance, filters,
-         *     and retained snapshot. Restart, changed filters, or snapshot expiry or
-         *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-         *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
-         *     for a cursor that is unknown or no longer valid. Discard it and restart
-         *     the page walk without a cursor; never silently continue against a new snapshot.
+         * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+         *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+         *     cursor returns 410 snapshot_expired; see
+         *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
          */
         Cursor: string;
         /** @example group-proxy */
@@ -3578,8 +3751,22 @@ export interface components {
         DnsEntryId: string;
         /** @example op-01HZX4K8W7 */
         OperationId: string;
-        /** @example "17" */
-        IfMatch: string;
+        /**
+         * @description Evaluated as RFC 9110 §13.1.1 defines; see Conditional requests in the error contract.
+         * @example "d1f62f00c6da9ec33956e66b8cc3b4670f164556fc12453193904af23451dec1"
+         */
+        IfMatch: components["schemas"]["EntityTagList"];
+        /**
+         * @description Evaluated as RFC 9110 §13.1.1 defines; see Conditional requests in the error contract. For when a retained idempotent replay may omit it, see [Choosing the status](/v0.1.0/en/docs/errors.html#Choosing-the-status).
+         * @example "17"
+         */
+        IfMatchOptional: components["schemas"]["EntityTagList"];
+        /**
+         * @description Replay key for this operation, scoped to the running instance, caller,
+         *     method and path. A byte-identical body returns the original response; a
+         *     different body returns 409 idempotency_conflict. Only operations that list
+         *     this header replay.
+         */
         IdempotencyKey: string;
         /** @example instance-7:123 */
         LastEventId: string;
@@ -3594,7 +3781,7 @@ export interface components {
         NoStore: "no-store";
         /** @description Prevent MIME-type sniffing. */
         NoSniff: "nosniff";
-        /** @description Quoted group configuration revision. */
+        /** @description Strong entity tag of the representation, the value a later If-Match compares. */
         ETag: string;
     };
     pathItems: never;
@@ -3624,6 +3811,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
         };
     };
     getVersion: {
@@ -3646,8 +3834,10 @@ export interface operations {
                     "application/json": components["schemas"]["Version"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
         };
     };
     getCapabilities: {
@@ -3659,7 +3849,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Adapter capabilities */
+            /** @description Engine capabilities */
             200: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -3670,8 +3860,10 @@ export interface operations {
                     "application/json": components["schemas"]["Capabilities"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
         };
     };
     setupAdministrator: {
@@ -3735,6 +3927,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             413: components["responses"]["TooLarge"];
@@ -3761,8 +3954,11 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
         };
@@ -3787,17 +3983,8 @@ export interface operations {
                     "application/json": components["schemas"]["EffectiveConfig"];
                 };
             };
-            /** @description Credentials are missing or invalid */
-            401: {
-                headers: {
-                    "Cache-Control": components["headers"]["NoStore"];
-                    "X-Content-Type-Options": components["headers"]["NoSniff"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             /** @description Authenticated caller lacks observe permission */
             403: {
                 headers: {
@@ -3820,6 +4007,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            413: components["responses"]["TooLarge"];
             /** @description Advertised request rate exceeded */
             429: {
                 headers: {
@@ -3870,17 +4058,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Credentials are missing or invalid */
-            401: {
-                headers: {
-                    "Cache-Control": components["headers"]["NoStore"];
-                    "X-Content-Type-Options": components["headers"]["NoSniff"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
+            401: components["responses"]["Unauthorized"];
             /** @description Authenticated caller lacks control permission */
             403: {
                 headers: {
@@ -3949,12 +4127,20 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description The validation worker is unavailable or its queue is full (temporarily_unavailable); nothing was validated. Retry after Retry-After. */
+            503: components["responses"]["Unavailable"];
         };
     };
     createConfigSource: {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -3966,7 +4152,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Source file created and reload accepted */
+            /** @description Creation accepted and reload queued; the operation reports whether the source was stored and activated */
             202: {
                 headers: {
                     /** @description Operation status URL; equal to body href. */
@@ -3996,7 +4182,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Control permission is absent, editing is disabled, or the content touches API listener settings */
+            /** @description Control permission is absent, editing is disabled, or the content sets or changes API listener settings or secrets */
             403: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4031,7 +4217,7 @@ export interface operations {
             };
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
-            /** @description Full validation found error diagnostics or no include pattern loads the path; no file is written and no reload starts */
+            /** @description Full validation found error diagnostics, including source-not-included and restart-required; nothing is stored and no reload starts */
             422: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4064,14 +4250,17 @@ export interface operations {
             /** @description Accepted source; content remains subject to visibility policy */
             200: {
                 headers: {
+                    /** @description The source's content_sha256 in double quotes, the value PUT compares in If-Match. Sent only when content is complete, that is, when no listener-secret value was masked; a masked body has no ETag. */
+                    ETag?: string;
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConfigSource"];
+                    "application/json": components["schemas"]["ConfigSourceContent"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description Unknown source ID or unavailable configuration readback */
@@ -4085,6 +4274,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4093,13 +4283,16 @@ export interface operations {
             query?: never;
             header: {
                 /**
-                 * @description One strong entity tag containing the source's content_sha256 from
-                 *     GET /config, enclosed in double quotes. Compare the digest with the
-                 *     current on-disk content, not the snapshot revision. Wildcards, weak
-                 *     tags, and tag lists are not accepted.
+                 * @description Evaluated as RFC 9110 §13.1.1 defines; see Conditional requests in the error contract.
                  * @example "d1f62f00c6da9ec33956e66b8cc3b4670f164556fc12453193904af23451dec1"
                  */
-                "If-Match": string;
+                "If-Match": components["parameters"]["IfMatch"];
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -4114,13 +4307,13 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Complete UTF-8 dae source text; empty text is validated, not rejected as malformed. */
+                    /** @description Complete UTF-8 engine-native text; empty text is validated, not rejected as malformed. */
                     content: string;
                 };
             };
         };
         responses: {
-            /** @description Source written atomically and reload accepted */
+            /** @description Replacement accepted and reload queued; the operation reports whether it was stored and activated */
             202: {
                 headers: {
                     /** @description Operation status URL; equal to body href. */
@@ -4140,7 +4333,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            /** @description Control permission is absent, editing is disabled, or the source is read-only */
+            /** @description Control permission is absent, editing is disabled, the source is read-only, or the replacement sets or changes API listener settings or secrets */
             403: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4153,7 +4346,7 @@ export interface operations {
             };
             404: components["responses"]["404"];
             409: components["responses"]["Conflict"];
-            /** @description If-Match does not match the current on-disk content hash; nothing is written */
+            /** @description If-Match does not match the stored content hash, on arrival or at commit; the replacement is not stored */
             412: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4166,7 +4359,7 @@ export interface operations {
             };
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
-            /** @description Full validation found error diagnostics; no file is written and no reload starts */
+            /** @description Full validation found error diagnostics, including restart-required; nothing is stored and no reload starts */
             422: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4215,8 +4408,10 @@ export interface operations {
                     "application/json": components["schemas"]["Runtime"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4240,9 +4435,11 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeMemory"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4266,9 +4463,11 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeOutbounds"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4317,6 +4516,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4365,6 +4565,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
@@ -4391,9 +4592,11 @@ export interface operations {
                     "application/json": components["schemas"]["Datapath"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     listNodes: {
@@ -4404,12 +4607,10 @@ export interface operations {
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
                 /**
-                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
-                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
-                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
-                 *     for a cursor that is unknown or no longer valid. Discard it and restart
-                 *     the page walk without a cursor; never silently continue against a new snapshot.
+                 * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+                 *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+                 *     cursor returns 410 snapshot_expired; see
+                 *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
                  */
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -4434,6 +4635,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["SnapshotExpired"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["SnapshotUnavailable"];
         };
     };
@@ -4450,7 +4653,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Node written to the managed configuration */
+            /** @description Node written to the managed configuration and active */
             201: {
                 headers: {
                     /** @description The new node, readable with GET. */
@@ -4463,11 +4666,26 @@ export interface operations {
                     "application/json": components["schemas"]["Node"];
                 };
             };
+            /** @description Node creation accepted as a node_create operation */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"];
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description A node with this name exists */
+            /** @description A node with this name exists, or the configuration changed while the create was being admitted (state_conflict) */
             409: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4520,12 +4738,10 @@ export interface operations {
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
                 /**
-                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
-                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
-                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
-                 *     for a cursor that is unknown or no longer valid. Discard it and restart
-                 *     the page walk without a cursor; never silently continue against a new snapshot.
+                 * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+                 *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+                 *     cursor returns 410 snapshot_expired; see
+                 *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
                  */
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -4550,6 +4766,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["SnapshotExpired"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["SnapshotUnavailable"];
         };
     };
@@ -4566,7 +4784,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Provider written to the managed configuration */
+            /** @description Provider written to the managed configuration and active */
             201: {
                 headers: {
                     /** @description The new provider's URL. */
@@ -4579,11 +4797,26 @@ export interface operations {
                     "application/json": components["schemas"]["Provider"];
                 };
             };
+            /** @description Provider creation accepted as a provider_create operation */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"];
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description A provider with this name exists */
+            /** @description A provider with this name exists, or the configuration changed while the create was being admitted (state_conflict) */
             409: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4636,7 +4869,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example provider-a */
-                id: components["parameters"]["ProviderId"];
+                provider_id: components["parameters"]["ProviderId"];
             };
             cookie?: never;
         };
@@ -4657,6 +4890,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     deleteProvider: {
@@ -4665,7 +4899,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example provider-a */
-                id: components["parameters"]["ProviderId"];
+                provider_id: components["parameters"]["ProviderId"];
             };
             cookie?: never;
         };
@@ -4682,9 +4916,28 @@ export interface operations {
                     "application/json": components["schemas"]["DeleteCount"];
                 };
             };
+            /** @description Provider deletion accepted as a provider_delete operation */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The configuration still names the provider in a reference the delete would break, or the configuration changed while the delete was being admitted (state_conflict); nothing is removed. Filter-matched membership is not a reference. After a concurrent change, read the provider back and retry. */
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["Unavailable"];
         };
     };
@@ -4692,11 +4945,17 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path: {
                 /** @example provider-a */
-                id: components["parameters"]["ProviderId"];
+                provider_id: components["parameters"]["ProviderId"];
             };
             cookie?: never;
         };
@@ -4732,6 +4991,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
             /** @description Provider refresh queue is full */
             503: {
@@ -4754,7 +5014,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example node-hk-03 */
-                id: components["parameters"]["NodeId"];
+                node_id: components["parameters"]["NodeId"];
             };
             cookie?: never;
         };
@@ -4771,9 +5031,11 @@ export interface operations {
                     "application/json": components["schemas"]["Node"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     deleteNode: {
@@ -4782,7 +5044,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example node-hk-03 */
-                id: components["parameters"]["NodeId"];
+                node_id: components["parameters"]["NodeId"];
             };
             cookie?: never;
         };
@@ -4799,9 +5061,28 @@ export interface operations {
                     "application/json": components["schemas"]["DeleteCount"];
                 };
             };
+            /** @description Node deletion accepted as a node_delete operation */
+            202: {
+                headers: {
+                    /** @description Operation status URL; equal to body href. */
+                    Location: string;
+                    /** @description Positive polling floor in seconds. */
+                    "Retry-After": number;
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description A group or the routing final outbound still names the node, or the configuration changed while the delete was being admitted (state_conflict); nothing is removed. Filter-matched membership is not a reference. After a concurrent change, read the node back and retry. */
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["Unavailable"];
         };
     };
@@ -4825,15 +5106,23 @@ export interface operations {
                     "application/json": components["schemas"]["GeoData"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     updateGeoData: {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -4856,6 +5145,7 @@ export interface operations {
                     "application/json": components["schemas"]["GeoDataUpdateAccepted"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -4870,6 +5160,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
         };
@@ -4894,9 +5185,11 @@ export interface operations {
                     "application/json": components["schemas"]["GroupList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     getGroup: {
@@ -4905,7 +5198,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
@@ -4914,7 +5207,6 @@ export interface operations {
             /** @description Current group */
             200: {
                 headers: {
-                    ETag: components["headers"]["ETag"];
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
                     [name: string]: unknown;
@@ -4923,22 +5215,65 @@ export interface operations {
                     "application/json": components["schemas"]["Group"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
-    patchGroup: {
+    getGroupConfig: {
         parameters: {
             query?: never;
-            header: {
-                /** @example "17" */
-                "If-Match": components["parameters"]["IfMatch"];
+            header?: never;
+            path: {
+                /** @example group-proxy */
+                group_id: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current group configuration */
+            200: {
+                headers: {
+                    /** @description The configuration-wide revision in double quotes, the value PATCH compares in If-Match. */
+                    ETag: components["headers"]["ETag"];
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupConfigDocument"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
+        };
+    };
+    patchGroupConfig: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Evaluated as RFC 9110 §13.1.1 defines; see Conditional requests in the error contract. For when a retained idempotent replay may omit it, see [Choosing the status](/v0.1.0/en/docs/errors.html#Choosing-the-status).
+                 * @example "17"
+                 */
+                "If-Match"?: components["parameters"]["IfMatchOptional"];
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
@@ -4948,16 +5283,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Updated group */
+            /** @description Updated group configuration */
             200: {
                 headers: {
+                    /** @description The new configuration revision in double quotes. */
                     ETag: components["headers"]["ETag"];
                     "Cache-Control": components["headers"]["NoStore"];
                     "X-Content-Type-Options": components["headers"]["NoSniff"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Group"];
+                    "application/json": components["schemas"]["GroupConfigDocument"];
                 };
             };
             /** @description Operation accepted */
@@ -4980,7 +5316,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
-            /** @description If-Match does not equal the current configuration revision */
+            /** @description If-Match does not match the current configuration revision, on arrival or at commit */
             412: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -4995,6 +5331,8 @@ export interface operations {
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
             428: components["responses"]["PreconditionRequired"];
+            /** @description The change could not be queued (temporarily_unavailable); nothing is written. Retry after Retry-After. */
+            503: components["responses"]["Unavailable"];
         };
     };
     selectGroupMember: {
@@ -5003,7 +5341,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
@@ -5029,8 +5367,11 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
+            /** @description The runtime control owner is unavailable or did not confirm the transition (temporarily_unavailable). The selection may have changed; read the group back before retrying after Retry-After. */
+            503: components["responses"]["Unavailable"];
         };
     };
     clearGroupOverride: {
@@ -5041,7 +5382,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example group-proxy */
-                groupId: components["parameters"]["GroupId"];
+                group_id: components["parameters"]["GroupId"];
             };
             cookie?: never;
         };
@@ -5067,12 +5408,21 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
+            /** @description The runtime control owner is unavailable or did not confirm the transition (temporarily_unavailable). The override may have been cleared; read the group back before retrying after Retry-After. */
+            503: components["responses"]["Unavailable"];
         };
     };
     createProbe: {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -5158,6 +5508,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     closeConnections: {
@@ -5172,9 +5523,7 @@ export interface operations {
                 /** @description Explicitly permit an unfiltered close; does not override type or src. */
                 all?: boolean;
             };
-            header?: {
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5219,8 +5568,10 @@ export interface operations {
             413: components["responses"]["TooLarge"];
             /**
              * @description Closing at least one selected connection could not be confirmed
-             *     (temporarily_unavailable). error.details counts the connections already
-             *     closed or skipped; they stay closed, so a retry must not assume nothing changed.
+             *     (temporarily_unavailable), sent after every selected close has finished.
+             *     error.details carries closed and skipped over the whole selected set;
+             *     a connection whose close could not be confirmed counts in neither.
+             *     Closed connections stay closed; a retry selects again from current live state.
              */
             503: {
                 headers: {
@@ -5243,9 +5594,7 @@ export interface operations {
     closeConnection: {
         parameters: {
             query?: never;
-            header?: {
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path: {
                 /** @example tcp-01HZX4K8W5 */
                 connection_id: components["parameters"]["ConnectionId"];
@@ -5288,6 +5637,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            413: components["responses"]["TooLarge"];
             /** @description Cancellation or retirement could not be confirmed (temporarily_unavailable); the connection may already be closed. */
             503: components["responses"]["Unavailable"];
         };
@@ -5298,19 +5648,17 @@ export interface operations {
                 network?: "tcp" | "udp" | "all";
                 state?: components["schemas"]["ConnectionState"] | "all";
                 /**
-                 * @description Exact opaque connection ID within the current adapter instance; never inferred from a tuple. Matches active and retained terminal flows.
+                 * @description Exact opaque connection ID within the current engine instance; never inferred from a tuple. Matches active and retained terminal flows.
                  * @example tcp-01HZX4K8W5
                  */
                 connection_id?: string;
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
                 /**
-                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
-                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
-                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
-                 *     for a cursor that is unknown or no longer valid. Discard it and restart
-                 *     the page walk without a cursor; never silently continue against a new snapshot.
+                 * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+                 *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+                 *     cursor returns 410 snapshot_expired; see
+                 *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
                  */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */
@@ -5337,8 +5685,9 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            410: components["responses"]["Gone"];
-            /** @description Bounded recorder memory cannot admit a snapshot */
+            410: components["responses"]["SnapshotExpired"];
+            413: components["responses"]["TooLarge"];
+            /** @description Bounded recorder memory cannot admit a snapshot (snapshot_unavailable) */
             503: {
                 headers: {
                     /** @description Retry delay in seconds when retryable. */
@@ -5376,10 +5725,12 @@ export interface operations {
                     "application/json": components["schemas"]["FlowDetail"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             410: components["responses"]["Gone"];
+            413: components["responses"]["TooLarge"];
         };
     };
     traceRouting: {
@@ -5449,10 +5800,12 @@ export interface operations {
                     "application/json": components["schemas"]["RuleList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The dictionary exceeds max_rules (temporarily_unavailable), or a coherent generation could not be pinned (snapshot_unavailable) */
+            413: components["responses"]["TooLarge"];
+            /** @description A coherent generation could not be pinned (snapshot_unavailable) */
             503: {
                 headers: {
                     /** @description Retry delay in seconds. */
@@ -5471,7 +5824,7 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Comma-separated advertised event kinds.
+                 * @description Comma-separated advertised event kinds. A kind outside EventKind or a repeated kind returns 400; an EventKind member the capabilities do not advertise returns 422.
                  * @example flow.updated,flow.gap
                  */
                 kinds?: string;
@@ -5502,7 +5855,10 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["EventCursorExpired"];
+            413: components["responses"]["TooLarge"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["RateLimited"];
+            /** @description max_clients streams are already open, or the event stream is unavailable (temporarily_unavailable) */
             503: components["responses"]["Unavailable"];
         };
     };
@@ -5510,12 +5866,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Minimum severity, ordered trace < debug < info < warn < error. Omit for all advertised levels; an unadvertised level returns 400 invalid_request.
+                 * @description Minimum severity, ordered trace < debug < info < warn < error. Omit for all advertised levels. A value outside LogLevel returns 400 invalid_request; a LogLevel member not in resources.logs.levels returns 422 unsupported_value.
                  * @example info
                  */
                 level?: components["schemas"]["LogLevel"];
                 /**
-                 * @description Case-sensitive literal module prefix; omit for all targets.
+                 * @description Case-sensitive literal prefix of LogRecord.target; omit for all targets. Requires target in resources.logs.filters, otherwise 422 unsupported_value. Records whose target is null never match.
                  * @example honk::routing
                  */
                 target?: string;
@@ -5545,6 +5901,18 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["EventCursorExpired"];
+            413: components["responses"]["TooLarge"];
+            /** @description level is a LogLevel member not in resources.logs.levels, or target is set while resources.logs.filters omits target (unsupported_value). */
+            422: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
         };
@@ -5569,17 +5937,17 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeSettings"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
         };
     };
     patchRuntimeSettings: {
         parameters: {
             query?: never;
-            header?: {
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5600,7 +5968,7 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeSettings"];
                 };
             };
-            /** @description A field outside resources.runtime_settings.fields, an unadvertised level, or a value outside its range */
+            /** @description A field the schema does not define, or a value outside its schema range or advertised bounds */
             400: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -5614,9 +5982,20 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description geodata.download names a group_id that is not a current group */
+            409: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Content-Type-Options": components["headers"]["NoSniff"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
-            /** @description geodata.download names a group_id that is not a current group */
+            /** @description A field not in resources.runtime_settings.fields, a level not in resources.logs.levels, or pinning a recorder that is not allowed */
             422: {
                 headers: {
                     "Cache-Control": components["headers"]["NoStore"];
@@ -5627,26 +6006,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description A setting could not be stored (temporarily_unavailable). Read the settings back before retrying after Retry-After. */
+            503: components["responses"]["Unavailable"];
         };
     };
     queryDns: {
         parameters: {
-            query: {
-                /**
-                 * @description DNS name within the 255-wire-octet and 63-octet-label limits.
-                 * @example example.com
-                 */
-                domain: string;
-                /**
-                 * @description Unique record types; repeated query parameter.
-                 * @example [
-                 *       "A",
-                 *       "AAAA"
-                 *     ]
-                 */
-                type?: components["schemas"]["DnsRecordType"][];
-                upstream?: string;
-                cache_mode?: "normal" | "bypass";
+            query?: {
                 /** @example full */
                 detail?: components["parameters"]["Detail"];
             };
@@ -5654,7 +6020,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DnsQueryRequest"];
+            };
+        };
         responses: {
             /** @description Per-record-type DNS results, including DNS failures */
             200: {
@@ -5672,6 +6042,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             413: components["responses"]["TooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
@@ -5694,8 +6065,13 @@ export interface operations {
                 src?: string;
                 /** @example 200 */
                 limit?: components["schemas"]["SafeUInt"];
-                /** @description Opaque cursor from a previous page; older records follow it. */
-                cursor?: string;
+                /**
+                 * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+                 *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+                 *     cursor returns 410 snapshot_expired; see
+                 *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -5718,7 +6094,9 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            503: components["responses"]["Unavailable"];
+            410: components["responses"]["SnapshotExpired"];
+            413: components["responses"]["TooLarge"];
+            503: components["responses"]["SnapshotUnavailable"];
         };
     };
     listDnsCache: {
@@ -5731,12 +6109,10 @@ export interface operations {
                 /** @example 100 */
                 limit?: components["parameters"]["Limit1000"];
                 /**
-                 * @description Opaque cursor bound to the resource, running adapter instance, filters,
-                 *     and retained snapshot. Restart, changed filters, or snapshot expiry or
-                 *     eviction invalidates it. GET /flows returns 410 snapshot_expired;
-                 *     GET /nodes, GET /providers and GET /dns/cache return 400 invalid_request
-                 *     for a cursor that is unknown or no longer valid. Discard it and restart
-                 *     the page walk without a cursor; never silently continue against a new snapshot.
+                 * @description Opaque cursor from the previous page's next_cursor, bound to the walk that
+                 *     issued it (its snapshot or retained records, filters and limit). An unrecognised
+                 *     cursor returns 410 snapshot_expired; see
+                 *     [Page cursors](/v0.1.0/en/docs/errors.html#Page-cursors).
                  */
                 cursor?: components["parameters"]["Cursor"];
                 /** @example full */
@@ -5763,7 +6139,9 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            503: components["responses"]["Unavailable"];
+            410: components["responses"]["SnapshotExpired"];
+            413: components["responses"]["TooLarge"];
+            503: components["responses"]["SnapshotUnavailable"];
         };
     };
     deleteDnsCacheByName: {
@@ -5803,6 +6181,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["Unavailable"];
         };
     };
@@ -5829,9 +6208,11 @@ export interface operations {
                     "application/json": components["schemas"]["DeleteCount"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             503: components["responses"]["Unavailable"];
         };
     };
@@ -5863,6 +6244,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             503: components["responses"]["Unavailable"];
         };
@@ -5887,10 +6269,12 @@ export interface operations {
                     "application/json": components["schemas"]["DnsRuleList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description A list exceeds max_rules (temporarily_unavailable), or a coherent generation could not be pinned (snapshot_unavailable) */
+            413: components["responses"]["TooLarge"];
+            /** @description A coherent generation could not be pinned (snapshot_unavailable) */
             503: {
                 headers: {
                     /** @description Retry delay in seconds. */
@@ -5909,6 +6293,12 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -5940,6 +6330,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
@@ -5949,6 +6340,12 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -5980,6 +6377,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
@@ -5989,6 +6387,12 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Replay key for this operation, scoped to the running instance, caller,
+                 *     method and path. A byte-identical body returns the original response; a
+                 *     different body returns 409 idempotency_conflict. Only operations that list
+                 *     this header replay.
+                 */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -6006,6 +6410,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["TooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
             503: components["responses"]["Unavailable"];
@@ -6017,7 +6422,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @example op-01HZX4K8W7 */
-                id: components["parameters"]["OperationId"];
+                operation_id: components["parameters"]["OperationId"];
             };
             cookie?: never;
         };
@@ -6036,9 +6441,11 @@ export interface operations {
                     "application/json": components["schemas"]["Operation"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            413: components["responses"]["TooLarge"];
             429: components["responses"]["RateLimited"];
         };
     };
