@@ -18,7 +18,7 @@ export const languages = [
 
 export type Lang = (typeof languages)[number]['id'];
 export type CompleteLang = Extract<(typeof languages)[number], {complete: true}>['id'];
-// The language before a reader picks one or the browser says.
+// The language startup falls back to when the negotiated one's catalogue does not load.
 export const DEFAULT_LANG = 'zh-TW' satisfies Lang;
 // The reference and fallback catalogue, always complete: its keys define Key (src/i18n/index.ts imports en.json by
 // name), no other catalogue may hold a key it lacks or a different placeholder, and a partial language falls back to it.
@@ -29,12 +29,18 @@ export function isLang(value: string | null): value is Lang {
   return value !== null && ids.has(value);
 }
 
-// The browser's first preference decides. Chinese needs a rule rather than data: a Hant script or a TW, HK or MO
-// region reads Traditional, any other Chinese Simplified. Any other language is picked by its primary subtag, and a
-// language doona does not have reads English.
+// The first browser preference doona has, by its exact tag, else by its primary subtag; English when none matches.
+// Chinese needs a rule rather than data: a Hant script or a TW, HK or MO region reads Traditional, any other Chinese
+// Simplified. tools/stamp.js repeats this for the first paint.
 export function browserLang(tags: readonly string[]): Lang {
-  const tag = tags[0]?.toLowerCase() ?? '';
-  const primary = tag.split('-')[0];
-  if (primary === 'zh') return /-hans\b/.test(tag) ? 'zh-CN' : /-(hant|tw|hk|mo)\b/.test(tag) ? 'zh-TW' : 'zh-CN';
-  return languages.find(language => language.id.toLowerCase().split('-')[0] === primary)?.id ?? 'en';
+  for (const preference of tags) {
+    const tag = preference.toLowerCase();
+    const primary = tag.split('-')[0];
+    const exact = languages.find(language => language.id.toLowerCase() === tag || language.locale.toLowerCase() === tag);
+    if (exact) return exact.id;
+    if (primary === 'zh') return /-hans\b/.test(tag) ? 'zh-CN' : /-(hant|tw|hk|mo)\b/.test(tag) ? 'zh-TW' : 'zh-CN';
+    const match = languages.find(language => language.id.toLowerCase().split('-')[0] === primary);
+    if (match) return match.id;
+  }
+  return REFERENCE_LANG;
 }

@@ -1,5 +1,5 @@
 // Normalize appearance before first paint. The build fills the palette list and default from src/shell/palettes.ts, the
-// language locales and default from src/i18n/languages.ts, and the right-to-left scripts from src/i18n/direction.ts.
+// language locales and reference locale from src/i18n/languages.ts, and the right-to-left scripts from src/i18n/direction.ts.
 (function () {
   var read = function (key) {
     try {
@@ -20,7 +20,22 @@
   d.dataset.flavour = parts[1];
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
   var locales = '__LOCALES__';
-  d.lang = Object.hasOwn(locales, lang) ? locales[lang] : '__DEFAULT_LOCALE__';
+  // No saved language doona has: the browser's preferences, picked as browserLang in src/i18n/languages.ts picks them.
+  // tools/stamp.test.mjs runs both on the same cases.
+  if (!Object.hasOwn(locales, lang)) {
+    var ids = Object.keys(locales);
+    var wanted = navigator.languages?.length ? navigator.languages : [navigator.language];
+    lang = null;
+    for (var preference of wanted) {
+      var want = preference.toLowerCase();
+      var primary = want.split('-')[0];
+      lang = ids.find(id => id.toLowerCase() === want || locales[id].toLowerCase() === want);
+      if (!lang && primary === 'zh') lang = /-hans\b/.test(want) ? 'zh-CN' : /-(hant|tw|hk|mo)\b/.test(want) ? 'zh-TW' : 'zh-CN';
+      if (!lang) lang = ids.find(id => id.toLowerCase().split('-')[0] === primary);
+      if (lang) break;
+    }
+  }
+  d.lang = locales[lang] ?? '__REFERENCE_LOCALE__';
   // The direction as pageDirection in src/i18n/direction.ts decides it: right to left in the mirrored layout, else the
   // locale's text info, else its likely script.
   var mirrored = read('doona-mirror') === 'on';

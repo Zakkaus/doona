@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
 import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
 import {rtlScripts} from './src/i18n/direction';
-import {DEFAULT_LANG, languages} from './src/i18n/languages';
+import {languages, REFERENCE_LANG} from './src/i18n/languages';
 import {languageFiles} from './src/i18n/offline';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
@@ -48,7 +48,7 @@ export default defineConfig({
           .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
           .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
           .replace("'__LOCALES__'", JSON.stringify(Object.fromEntries(languages.map(language => [language.id, language.locale]))))
-          .replace("'__DEFAULT_LOCALE__'", JSON.stringify(languages.find(language => language.id === DEFAULT_LANG)!.locale))
+          .replace("'__REFERENCE_LOCALE__'", JSON.stringify(languages.find(language => language.id === REFERENCE_LANG)!.locale))
           .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
         const digest = createHash('sha256').update(stamp).digest('base64');
         return html
