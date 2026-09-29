@@ -16,6 +16,18 @@ for (const [lang] of LANGS) {
       await expect(page.locator('.rp-nav').first()).toBeVisible();
       await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
     });
+    test('shows shortcut key names from the selected catalogue', async ({page}) => {
+      await page.goto('/#/activity');
+      await expect(page.locator('.rp-nav').first()).toBeVisible();
+      await page.keyboard.press('?');
+      const keys = await page
+        .getByRole('dialog', {name: translate(lang, 'shell.shortcuts')})
+        .locator('kbd')
+        .allTextContents();
+      expect(keys).toContain(translate(lang, 'shell.keyEnter'));
+      expect(keys).toContain(translate(lang, 'shell.keyEsc'));
+      expect(keys).toContain(`${translate(lang, 'shell.keyCtrl')} S`);
+    });
     test('editor completion suggestions have a localized accessible name', async ({page}) => {
       await page.goto('/#/config?tab=source');
       const editor = page.locator('.cm-content[contenteditable="true"]');
