@@ -102,7 +102,16 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
 test('connection testing uses the unsaved prefix and token for native discovery', async ({page}) => {
   await page.route('**/settings-backend/api', async route => {
     if (route.request().headers().authorization !== 'Bearer test-token') return route.fulfill({status: 401});
-    await route.fulfill({json: {name: 'daeuniverse/native', status: 'draft', api_major: 1, base_path: '/api/v1', links: {version: '/api/v1/version'}}});
+    await route.fulfill({
+      json: {
+        name: 'daeuniverse/native',
+        status: 'draft',
+        api_major: 1,
+        base_path: '/api/v1',
+        links: {version: '/api/v1/version'},
+        auth: {mode: 'token', setup_required: false, anonymous_loopback: false}
+      }
+    });
   });
   await page.goto('/#/settings');
   const origin = new URL(page.url()).origin;
@@ -125,7 +134,7 @@ test('navigation cancels a connection probe without a timeout toast', async ({pa
   });
   await page.route('**/slow-backend/api', async route => {
     await promise;
-    await route.fulfill({json: {api_major: 1}});
+    await route.fulfill({json: {api_major: 1, auth: {mode: 'token', setup_required: false}}});
   });
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill(new URL(page.url()).origin + '/slow-backend');
@@ -146,9 +155,9 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   });
   await page.route('**/old-backend/api', async route => {
     await promise;
-    await route.fulfill({json: {api_major: 1}});
+    await route.fulfill({json: {api_major: 1, auth: {mode: 'token', setup_required: false}}});
   });
-  await page.route('**/new-backend/api', route => route.fulfill({json: {api_major: 2}}));
+  await page.route('**/new-backend/api', route => route.fulfill({json: {api_major: 2, auth: {mode: 'token', setup_required: false}}}));
   await page.goto('/#/settings');
   const origin = new URL(page.url()).origin;
   await page.locator('[name=api]').fill(origin + '/old-backend');
