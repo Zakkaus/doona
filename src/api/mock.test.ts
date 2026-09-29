@@ -360,10 +360,17 @@ it('ranks the latency column by warmth, measurement and IPv4 before IPv6', async
   expect(preferredHealth({...node, health: others})).toBeUndefined();
   // honk's periodic probe: HTTP headers over a session of unknown warmth is still a TCP data measurement.
   expect(preferredHealth({...node, health: [...others, headers]})).toBe(headers);
-  expect(preferredHealth({...node, health: [cold, roundTrip, headers, exact]})).toBe(exact);
+  expect(preferredHealth({...node, health: [cold, headers, exact]})).toBe(exact);
   expect(preferredHealth({...node, health: [cold, headers, roundTrip]})).toBe(roundTrip);
+  // A warm measurement through the node outranks a bare connect to the server endpoint, which a UDP-only node refuses.
+  const warmHeaders = {...headers, warmth: 'warm' as const};
+  expect(preferredHealth({...node, health: [exact, roundTrip, warmHeaders]})).toBe(warmHeaders);
   expect(preferredHealth({...node, health: [...others, v6]})).toBe(v6);
   expect(preferredHealth({...node, health: [v6, exact]})).toBe(exact);
+  // The families fold: one that answered makes the node available, and one that failed outweighs one that never finished.
+  const down = {...exact, state: 'unavailable' as const, latency_ms: null};
+  expect(preferredHealth({...node, health: [down, v6]})).toBe(v6);
+  expect(preferredHealth({...node, health: [{...v6, state: 'unknown' as const, latency_ms: null}, down]})).toBe(down);
 });
 it('pages the airport override without losing members', async () => {
   vi.stubGlobal('localStorage', {getItem: () => '12'});
@@ -427,7 +434,7 @@ it('completes probes with fixture failures and publishes fresh health', async ()
   vi.setSystemTime(Date.parse(before.observed_at) + 1000);
   const accepted = await api.startProbe({
     target: {type: 'group', group_id: 'proxy'},
-    kind: 'tcp_connect',
+    kind: 'http',
     purpose: 'data',
     warmth: 'warm',
     transport: ['tcp'],

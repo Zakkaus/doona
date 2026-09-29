@@ -28,20 +28,35 @@ export function safeHttpUrl(value: string): boolean {
   }
 }
 
-// Backends offer different TCP data probes: rank by warmth, measurement cost, then IPv4; unknown values sort last.
+// Backends offer different TCP data probes: rank by warmth, then by measurement, preferring one that went through the
+// node over a bare connect to its server endpoint, which says nothing about a UDP-only protocol; unknown values sort
+// last. The IPv4 and IPv6 rows of the best kind fold into one state.
 const warmthRank: Record<string, number> = {warm: 0, unknown: 1, mixed: 2, cold: 3};
 const measurementRank: Record<string, number> = {
-  tcp_connect: 0,
-  http_headers: 1,
-  http_round_trip: 2,
-  quic_handshake: 3,
+  http_headers: 0,
+  http_round_trip: 1,
+  quic_handshake: 2,
+  tcp_connect: 3,
   mixed: 4,
   unknown: 5,
   dns_round_trip: 6
 };
 export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
-  const rank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 100 + (measurementRank[h.measurement] ?? 5) * 10 + (h.ip_version === 'ipv4' ? 0 : 1);
-  return health.filter(h => h.transport === 'tcp' && h.purpose === 'data').sort((a, b) => rank(a) - rank(b))[0];
+  const rank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 10 + (measurementRank[h.measurement] ?? 5);
+  const data = health.filter(h => h.transport === 'tcp' && h.purpose === 'data');
+  const best = Math.min(...data.map(rank));
+  return foldFamilies(data.filter(h => rank(h) === best));
+}
+// One state for the IPv4 and IPv6 rows of one measurement: available when any family answered, unavailable when every
+// family that finished failed, unknown only when none finished. The row returned carries that state, IPv4 first.
+export function foldFamilies<T extends Pick<HealthObservation, 'state' | 'latency_ms' | 'ip_version'>>(rows: T[]): T | undefined {
+  const ordered = [...rows].sort((a, b) => (a.ip_version === 'ipv4' ? 0 : 1) - (b.ip_version === 'ipv4' ? 0 : 1));
+  return (
+    ordered.find(row => row.state === 'healthy' && row.latency_ms != null) ??
+    ordered.find(row => row.state === 'healthy') ??
+    ordered.find(row => row.state === 'unavailable') ??
+    ordered[0]
+  );
 }
 export const preferredHealth = (node: Node) => preferredObservation(node.health);
 export const healthMillis = (health: Pick<HealthObservation, 'state' | 'latency_ms'> | undefined) =>

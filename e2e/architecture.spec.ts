@@ -39,7 +39,7 @@ async function backend(page: Page) {
 
 test.use({viewport: {width: 1440, height: 1000}});
 
-test('a node probe with an unknown result says so and why, instead of unreachable', async ({page}) => {
+test('a node probe with an unknown result says so and why in words, instead of unreachable', async ({page}) => {
   const api = await backend(page);
   await page.route('**/api/v1/probes', async route => {
     await route.fulfill({json: await api.startProbe(route.request().postDataJSON())});
@@ -50,14 +50,14 @@ test('a node probe with an unknown result says so and why, instead of unreachabl
       for (const result of operation.result.results) {
         result.state = 'unknown';
         result.latency_ms = null;
-        result.error = 'probe timed out';
+        result.error = 'probe_deadline';
       }
     }
     await route.fulfill({json: operation});
   });
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
-  await expect(page.locator('.rp-toast')).toContainText('hk-01: result unknown (probe timed out)');
+  await expect(page.locator('.rp-toast')).toContainText('hk-01: result unknown (The probe timed out before measuring)');
   await expect(page.locator('.rp-toast')).not.toContainText('unreachable');
 });
 

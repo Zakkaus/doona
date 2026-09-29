@@ -1,5 +1,5 @@
 export {refetchAll, useCredentialRefusal} from './resourceCore';
-export {tcpProbe} from './action';
+export {latencyProbe} from './action';
 export {
   useVersion,
   useRuntime,

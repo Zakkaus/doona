@@ -1,7 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
-import {tcpProbe} from './action';
+import {latencyProbe} from './action';
 import {groupActions, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
@@ -29,7 +29,7 @@ it.each([256, 6])('probes every direct member within member and result budgets (
 it('rejects oversized direct jobs in mock admission', async () => {
   const api = createMockApi();
   const caps = await api.capabilities();
-  const request = tcpProbe(caps, {type: 'group', group_id: 'skylink'})!;
+  const request = latencyProbe(caps, {type: 'group', group_id: 'skylink'})!;
   await expect(api.startProbe(request)).rejects.toMatchObject({status: 413, code: 'request_too_large'});
 });
 

@@ -71,18 +71,20 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
   const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written) && details?.committed !== true;
   throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null, details);
 }
-// A warm TCP data probe over every reachable IP version; a group target probes its direct members, a node target
-// must not name members.
-export function tcpProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
+// A warm latency probe through the node over every reachable IP version; a group target probes its direct members, a
+// node target must not name members. HTTP dials the configured check URL through the node, as honk's own health check
+// does; `tcp_connect` only reaches the node's server endpoint, which a UDP-only protocol such as Hysteria2 or TUIC
+// never accepts, so it is the fallback for a backend that offers no HTTP probe.
+export function latencyProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
   const probes = capabilities?.resources.probes;
-  if (!probes?.available || !probes.kinds?.includes('tcp_connect') || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type))
-    return null;
+  const kind = probes?.kinds?.includes('http') ? 'http' : probes?.kinds?.includes('tcp_connect') ? 'tcp_connect' : null;
+  if (!probes?.available || !kind || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type)) return null;
   const ipv4 = probes.ip_versions?.includes('ipv4');
   const ipv6 = probes.ip_versions?.includes('ipv6');
   if (!ipv4 && !ipv6) return null;
   const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
     target,
-    kind: 'tcp_connect',
+    kind,
     purpose: 'data',
     transport: ['tcp'],
     warmth: 'warm',

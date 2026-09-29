@@ -51,7 +51,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           purpose: request.purpose,
           ip_version,
           warmth: request.warmth,
-          measurement: request.kind === 'http' ? 'http_round_trip' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect',
+          measurement: request.kind === 'http' ? 'http_headers' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect',
           sample_source: 'probe',
           state,
           latency_ms,

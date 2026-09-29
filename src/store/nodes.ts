@@ -3,7 +3,7 @@ import {MAX_PAGE, poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Node, NodeCreate, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
-import {finished, settle, tcpProbe, useAction} from './action';
+import {finished, settle, latencyProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -102,10 +102,10 @@ export function useNodeProbe(refetch: () => void) {
   const api = getApi();
   const capabilities = useCapabilities();
   const {busy, run} = useAction<string>({rethrow: true});
-  const canProbe = tcpProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
+  const canProbe = latencyProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
   const probe = useCallback(
     (nodeId: string) => {
-      const request = tcpProbe(capabilities.data, {type: 'node', node_id: nodeId});
+      const request = latencyProbe(capabilities.data, {type: 'node', node_id: nodeId});
       if (!request) return Promise.resolve(undefined);
       return run(nodeId, async signal => {
         const accepted = await api.startProbe(request, signal);

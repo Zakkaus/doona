@@ -5,12 +5,12 @@ import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult}
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
-import {etag, finished, settle, tcpProbe, useAction} from './action';
+import {etag, finished, settle, latencyProbe, useAction} from './action';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
 export async function probeGroup(api: Api, capabilities: Capabilities, group: Group, signal: AbortSignal): Promise<ProbeResult> {
-  const request = tcpProbe(capabilities, {type: 'group', group_id: group.id});
+  const request = latencyProbe(capabilities, {type: 'group', group_id: group.id});
   const limits = capabilities.resources.probes.limits;
   if (!request || !limits || !group.capabilities.probe_transports.includes('tcp')) throw new LocalError('ui.probeUnsupported');
   const dimensions = request.transport.length * (request.ip_version === 'any' ? 2 : 1);
@@ -95,7 +95,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     [act, refetch, refetchGroups, refetchNodes]
   );
   // A TCP probe needs the backend to offer it and the group to accept it.
-  const request = tcpProbe(capabilities, {type: 'group', group_id: id});
+  const request = latencyProbe(capabilities, {type: 'group', group_id: id});
   const limits = capabilities?.resources.probes.limits;
   const canProbe =
     request !== null &&
