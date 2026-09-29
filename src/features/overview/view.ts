@@ -168,7 +168,7 @@ export function overviewView(
   return {
     status: engineStatus(state, datapath?.state, t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown'), t),
     strip: [
-      {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('ov.configHelp')}},
+      {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('config.revisionHelp')}},
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
       [t('ov.cpu'), formatCpu(runtime?.process.cpu_percent, locale, t)],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']

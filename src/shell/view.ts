@@ -159,7 +159,7 @@ export function shellView(
     shortcutPaths: Object.fromEntries(shortcuts.map(item => [item.key, item.path])),
     about: {
       title: t('about.title'),
-      close: t('about.close'),
+      close: t('ui.close'),
       duck: t('about.duck'),
       quack: t('about.quack'),
       tagline: t('about.tagline', {engine: org.split('/').pop()!}),

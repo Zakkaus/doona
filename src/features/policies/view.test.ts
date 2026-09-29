@@ -80,7 +80,7 @@ it('counts worst probe outcome once per member and reports selection changes', (
 it('names the policy as the picker does and keeps the engine spelling for the tooltip', () => {
   const group = nodeFixtures(0).groups[0];
   const card = (native: string) => policyCardView({...group, policy: {kind: 'urltest', native}}, [], 'both', t).policy;
-  expect(card('min_moving_avg')).toEqual({label: t('arrange.policy.fastest'), id: 'min_moving_avg'});
+  expect(card('min_moving_avg')).toEqual({label: t('policy.kind.urltest'), id: 'min_moving_avg'});
   expect(card('min_avg10')).toEqual({label: t('policy.kind.urltest'), id: 'min_avg10'});
   expect(card('')).toEqual({label: t('policy.kind.urltest'), id: 'urltest'});
 });
