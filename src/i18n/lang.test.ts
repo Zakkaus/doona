@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {browserLang, readLang} from './index';
+import {browserLang, formatList, readLang} from './index';
 
 const stored = (value: string | null) => ({getItem: () => value});
 
@@ -13,6 +13,11 @@ it('follows the browser when no language was chosen', () => {
   expect(browserLang(['en-US', 'zh-TW'])).toBe('en');
   expect(browserLang(['ja-JP'])).toBe('en');
   expect(browserLang([])).toBe('en');
+});
+
+it('joins plain enumerations with the catalogue separator', () => {
+  expect(formatList('en', ['A', 'B', 'C'])).toBe('A, B, C');
+  expect(formatList('zh-TW', ['甲', '乙'])).toBe('甲、乙');
 });
 
 it('keeps a chosen language over the browser', () => {
