@@ -19,10 +19,10 @@ export function NodeCard() {
               {/* The value opens the node on the nodes page, as the connections tile opens the list it counts. */}
               {vm.href ? (
                 <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>
-                  <span className="rp-big">{vm.latency}</span>
+                  <span className={vm.latencyClass}>{vm.latency}</span>
                 </Link>
               ) : (
-                <span className="rp-big">{vm.latency}</span>
+                <span className={vm.latencyClass}>{vm.latency}</span>
               )}
             </span>
             {vm.status && (

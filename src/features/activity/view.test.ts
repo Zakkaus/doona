@@ -35,6 +35,15 @@ it('chooses measured nodes and preserves an explicitly selected unavailable node
   expect(nodeView([], '', t).tone).toBe('muted');
 });
 
+it('tones the latency tile like the nodes table, only when the value is slow', () => {
+  const {nodes} = nodeFixtures(0, true);
+  const hk = nodes.find(node => node.id === 'hk-01')!;
+  const at = (latency_ms: number) => nodeView([{...hk, health: hk.health.map(h => (h.transport === 'tcp' ? {...h, latency_ms} : h))}], 'hk-01', t).latencyClass;
+  expect(at(599)).toBe('rp-big');
+  expect(at(600)).toBe('rp-big ms warn');
+  expect(nodeView(nodes, 'jp-01', t).latencyClass).toBe('rp-big');
+});
+
 it('stages global targets without changing the current mode and detects an unchanged selection', () => {
   const {groups} = nodeFixtures(0);
   const staged = modeView({mode: 'rule'}, {mode: 'global', target: 'resilient'}, groups, true, true, t);
