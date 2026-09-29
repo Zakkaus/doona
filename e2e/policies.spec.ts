@@ -74,6 +74,14 @@ test('the page note does not promise pinning, which honk groups refuse', async (
 for (const palette of ['rose-pine/dawn', 'rose-pine/moon'])
   test(`member latencies carry a tone dot in ${palette}`, async ({page}) => {
     await page.addInitScript(value => localStorage.setItem('doona-palette', value), palette);
+    // Only a slow latency takes a tone, so every measured member is made slow.
+    const {api, handlers} = await mockBackend(page);
+    for (const {id} of await api.groups())
+      handlers[`GET groups/${id}`] = async () => {
+        const group = await api.group(id);
+        const health = group.runtime.health.map(h => (h.latency_ms == null ? h : {...h, latency_ms: h.latency_ms + 600}));
+        return {...group, runtime: {...group.runtime, health}};
+      };
     await page.goto('/#/policies');
     const tones = await page
       .locator('.rp-node .ms')

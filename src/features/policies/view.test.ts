@@ -32,7 +32,8 @@ it('projects nested, failed and unmeasured members without inventing latency', (
     description: ' ',
     status: {text: t('ui.group'), badge: true}
   });
-  expect(members.find(member => member.id === 'hk-01')?.status).toEqual({text: '84 ms', tone: 'ok'});
+  // A measured value keeps body text until it is slow.
+  expect(members.find(member => member.id === 'hk-01')?.status).toEqual({text: '84 ms', tone: undefined});
 });
 it('keeps split network selection unset for both and omits mutable interrupt configuration from readonly fields', () => {
   const g = nodeFixtures(0).groups[0];

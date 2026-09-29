@@ -12,7 +12,7 @@ export function menuViews(nodes: Array<{id?: string; name: string; label?: strin
     tcp: node.tcp,
     region: regionOf(node.name) ?? '—',
     description: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : formatLatency(node.tcp, t),
-    className: node.alive === false ? 'desc err' : node.tcp === undefined ? 'desc' : `desc ${latencyTone(node.tcp)}`
+    className: node.alive === false ? 'desc err' : node.tcp === undefined ? 'desc' : `desc ${latencyTone(node.tcp) ?? ''}`.trimEnd()
   }));
   const groups = new Map<string, typeof items>();
   for (const node of [...items].sort((a, b) => compareLatency(a.tcp, b.tcp))) {

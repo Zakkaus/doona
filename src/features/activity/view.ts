@@ -1,4 +1,5 @@
 import type {ApiEvent, ConnectionList, Datapath, Group, Node, Runtime, RuntimeOutbounds} from '../../api/model';
+import {latencyTone} from '../../ui/ui';
 import {enumLabel} from '../../i18n/enum';
 import {backendCode} from '../../i18n/backend';
 import {isBuiltinOutbound} from '../../dae/vocab';
@@ -121,6 +122,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     id: node?.id ?? '',
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
+    // A slow value takes the tone the nodes table gives it; one that is fine keeps body text.
+    latencyClass: node?.alive && node.tcp !== undefined && latencyTone(node.tcp) ? 'rp-big ms warn' : 'rp-big',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
     // A healthy node's latency says so; the light names only what the value cannot, an unavailable or unknown node.
     status: node?.alive ? null : t(node?.unavailable ? 'act.unavailable' : 'act.unknown'),
