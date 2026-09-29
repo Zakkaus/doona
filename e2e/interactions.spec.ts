@@ -230,9 +230,10 @@ test('a segmented marker inside a hidden tab panel keeps its place', async ({pag
 
 test('a tile whose value links to its source answers hover as a linked card', async ({page}) => {
   await page.goto('/#/activity');
-  const link = page.locator('.rp-tile-val > .rp-link').first();
+  // The latency tile: it also holds a node menu, which must stay a control of its own.
+  const card = page.locator('.rp-card', {has: page.getByRole('button', {name: 'Node', exact: true})});
+  const link = card.locator('.rp-tile-val > .rp-link');
   await expect(link).toBeVisible();
-  const card = page.locator('.rp-card', {has: link});
   const box = (await card.boundingBox())!;
   // The empty lower corner of the card, away from the value, still hovers the link.
   await page.mouse.move(box.x + box.width - 12, box.y + box.height - 8);
