@@ -12,12 +12,12 @@ import {copyText} from './copy';
 import {sectionSourceHref} from './link';
 import {
   acceptedRule,
-  answeredUpstream,
   dnsActions,
   dnsRulePositions,
   dnsUpstreamChoices,
   duplicateOf,
   pinnedPosition,
+  quickRuleContext,
   ruleDialogReason,
   ruleKindLabels,
   ruleListLabels,
@@ -76,15 +76,9 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
   // Until the groups, or for a DNS rule the upstreams, are read, the target the traffic took may not be listed yet,
   // so nothing is written.
   const ready = routing ? !hasGroups || !!groups.data : !canWrite || !!config.data;
-  // The outbound the traffic took, or the upstream that answered a query, when the configuration names exactly that
-  // one, so the rule starts from what happens now. Otherwise the person chooses: guessing would route the traffic
-  // somewhere it never went. A DNS response starts with no action.
-  const preset = routing
-    ? choices.find(item => item.id === draft.seed.outbound)?.id
-    : dnsList === 'request'
-      ? answeredUpstream(upstreams, draft?.seed.dns?.upstream)
-      : null;
-  const outbound = draft?.outbound || preset || '';
+  // The target starts empty: starting from the outbound the traffic took would write a rule that changes nothing, and
+  // guessing would route the traffic somewhere it never went. What happens now is shown beside the choice instead.
+  const outbound = draft?.outbound ?? '';
   const pinOf = (id: string | undefined): PositionPin | null => {
     const position = positions.find(position => position.id === id);
     return position && generation ? {generation, id: position.id, desc: position.desc} : null;
@@ -192,6 +186,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
   const waiting = !target || !before || !ready;
   const disabled = !canWrite || waiting || !outbound;
   const position = positions.find(position => position.id === before);
+  const context = draft ? quickRuleContext({list: draft.list, seed: draft.seed, upstreams, outbound, position}) : null;
   const preview = target ? (outbound ? ruleLine(condition, outbound) : condition) : '';
   const held = usePendingRules().rules;
   const listed = routing
@@ -233,6 +228,8 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       outbounds: choices,
       outbound,
       setOutbound: (value: string) => edit({outbound: value}),
+      current: context?.current ? t('rule.current', {value: context.current}) : null,
+      unchanged: !!context?.unchanged,
       positions,
       before: before ?? '',
       setBefore: (value: string) => edit({pin: pinOf(value)}),
@@ -249,6 +246,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       moved,
       // Rules before the chosen place may take the traffic first unless it is the rule the traffic matched.
       earlier: !!position && !position.matched && !position.first,
+      beforeMatched: !!context?.beforeMatched,
       unplaceable,
       // A DNS list with no place has no single dns routing section to add it to; the section is written in the
       // configuration, which opens beside the dialog so the rule stays here.

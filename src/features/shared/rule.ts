@@ -241,6 +241,28 @@ export function answeredUpstream(upstreams: Array<{name: string; address: string
   );
   return found.length === 1 ? found[0].name : null;
 }
+// What the add-rule dialog says beside its choices. `current` is what happens to the item now: the outbound the traffic
+// took, or the upstream that answered a DNS request when the configuration names exactly that one; a cache hit or a
+// response names none. A routing rule to the current outbound changes nothing, so the dialog says so; for DNS the
+// upstream is only context, since the rule may still change which queries reach it. `beforeMatched` holds when the rule
+// goes before the rule the traffic matched, which only a verified, writable match offers.
+export function quickRuleContext({
+  list,
+  seed,
+  upstreams,
+  outbound,
+  position
+}: {
+  list: RuleList;
+  seed: QuickRuleSeed;
+  upstreams: Array<{name: string; address: string | null}>;
+  outbound: string;
+  position: {matched: boolean} | undefined;
+}): {current: string | null; unchanged: boolean; beforeMatched: boolean} {
+  const routing = list === 'routing';
+  const current = routing ? seed.outbound || null : list === 'request' ? answeredUpstream(upstreams, seed.dns?.upstream) : null;
+  return {current, unchanged: routing && !!current && outbound === current, beforeMatched: routing && !!position?.matched};
+}
 const endpoint = (address: string) => (/^[a-z][\w+.-]*:\/\/(?:\[[^\]]*\]|[^/:?#]*)/i.exec(address)?.[0] ?? address).toLowerCase();
 
 // Why the add-rule dialog cannot write: the configuration cannot be written at all, the rules, sources or groups it
