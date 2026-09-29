@@ -2,7 +2,7 @@ import {beforeAll, expect, it, vi} from 'vitest';
 import en from './locales/en.json';
 import fr from './test-fixtures/fr.json';
 import ar from './test-fixtures/ar.json';
-import type {Catalogue, Lang} from './index';
+import type {Catalogue, Lang, Translator} from './index';
 import {pageDirection, textDirection} from './direction';
 
 const fixture = (lang: Lang) => Promise.resolve(({en, fr, ar} as Record<string, Partial<Catalogue>>)[lang]);
@@ -53,6 +53,14 @@ it('uses a named numeric operand and preserves large UInt64 interpolation', () =
   expect(translate('en', 'dns.deleted', {n: '18446744073709551615'})).toBe('Deleted 18,446,744,073,709,551,615 cache entries');
   expect(translate('en', 'dns.deleted', {n: 1.5})).toBe('Deleted 1.5 cache entries');
   expect(translate('ar' as Lang, 'dns.deleted', {n: 10_000_000_000_000_003n}).startsWith('few ')).toBe(true);
+});
+
+it('writes decimals in the selected language, at the caller precision or else up to three decimals', async () => {
+  const {formatLatency} = await import('./format');
+  const t: Translator = (key, params, pluralParam, precision) => translate('fr' as Lang, key, params, pluralParam, precision);
+  expect(t('ui.percent', {n: 1.25}, 'n', {n: 1})).toBe('1,3%');
+  expect(translate('en', 'ui.percent', {n: 0}, 'n', {n: 1})).toBe('0.0%');
+  expect(formatLatency(1.5, t)).toBe('1,5 ms');
 });
 
 it('uses the Arabic fixture direction for page text and layout', () => {

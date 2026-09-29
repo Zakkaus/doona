@@ -283,7 +283,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         expressionClass: row.expression ? 'rp-code' : undefined,
         source: enumLabel(sources, row.source, t),
         hits: formatNumber(row.count, locale),
-        share: t('ui.percent', {n: formatNumber(row.share * 100, locale, 1)})
+        share: t('ui.percent', {n: row.share * 100}, 'n', {n: 1})
       })),
     choices: [['all', t('ui.all')], ...Object.entries(sources).map(([id, key]): [string, string] => [id, t(key)])],
     caption: list ? t('rule.distributionCaption', {n: list.flows.length}) : null,

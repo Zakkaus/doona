@@ -93,6 +93,6 @@ export const compareNames = (a: string, b: string) => names.compare(a, b);
 export const formatLatency = (value: number | null | undefined, t: Translator) => (value == null ? '—' : t('ui.latency', {n: millis(value)}));
 
 // Percent of one CPU core, so a busy engine on several cores can pass 100. Null until the backend has two samples.
-export function formatCpu(percent: number | null | undefined, locale: string, t: Translator): string {
-  return percent == null ? '—' : t('ui.percent', {n: formatNumber(percent, locale, 1)});
+export function formatCpu(percent: number | null | undefined, t: Translator): string {
+  return percent == null ? '—' : t('ui.percent', {n: percent}, 'n', {n: 1});
 }

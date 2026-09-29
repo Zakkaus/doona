@@ -170,7 +170,7 @@ export function overviewView(
     strip: [
       {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('config.revisionHelp')}},
       [t('ov.uptime'), formatDuration(runtime?.lifecycle.uptime_seconds ?? null, locale)],
-      [t('ov.cpu'), formatCpu(runtime?.process.cpu_percent, locale, t)],
+      [t('ov.cpu'), formatCpu(runtime?.process.cpu_percent, t)],
       [t('ov.lastReload'), reload ? localTime(reload.finished_at, locale) : '—']
     ] as KvItem[],
     reload: reload
@@ -206,7 +206,7 @@ export function overviewView(
             [t('ui.download'), formatBytes(runtime.traffic.bytes.download, locale)],
             {
               label: t('ov.f.rateWindow'),
-              value: runtime.traffic.rates ? t('ui.seconds', {n: formatNumber(runtime.traffic.rates.window_seconds, locale, 1)}) : '—',
+              value: runtime.traffic.rates ? t('ui.seconds', {n: runtime.traffic.rates.window_seconds}, 'n', {n: 1}) : '—',
               help: {title: t('ov.f.rateWindow'), text: t('ov.rateWindowHelp')}
             }
           ] as KvItem[])

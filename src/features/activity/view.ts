@@ -138,7 +138,7 @@ export function activityView(runtime: Runtime | undefined, t: LabelFn, runtimeAv
     download: formatRate(runtime?.traffic.rates?.download_bytes_per_second ?? null, locale),
     upload: formatRate(runtime?.traffic.rates?.upload_bytes_per_second ?? null, locale),
     connections: runtime?.traffic.connections.total == null ? '—' : formatNumber(runtime.traffic.connections.total, locale),
-    cpu: formatCpu(runtime?.process.cpu_percent, locale, t),
+    cpu: formatCpu(runtime?.process.cpu_percent, t),
     cpuHelp: {title: t('act.cpu'), text: t('act.cpuHelp')}
   };
 }

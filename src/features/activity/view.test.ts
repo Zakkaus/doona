@@ -3,7 +3,7 @@ import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../api/mo
 import {translate, type Translator} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
 import {activityOutbounds, activityRanking, activityView, interestingNotice, modeReasons, modeView, nodeView, noticeRows, trafficState} from './view';
-const t: Translator = (key, params) => translate('en', key, params);
+const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
 it('distinguishes missing metrics from zero and keeps block traffic separate from named groups', () => {
@@ -18,6 +18,8 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
   expect(ranking[0].href).toBe(`#/connections?src=${ranking[0].name}`);
   const domains = activityRanking(connections, 'host', colors, 'en', t);
   expect(domains[0].href).toBe(`#/connections?q=${encodeURIComponent(domains[0].name)}`);
+  const only = activityRanking({...connections, tcp: connections.tcp.slice(0, 1), udp: []}, 'host', colors, 'en', t);
+  expect(only[0].value).toMatch(/, 100%$/);
   const usage = activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows;
   expect(usage.find(row => row.name === t('ui.block'))?.href).toBe('#/connections?out=block');
 });
