@@ -1,5 +1,6 @@
-import {expect, test} from './fixtures';
+import {expect, loadCatalogues, test} from './fixtures';
 import type {Page} from '@playwright/test';
+import {translate} from '../src/i18n';
 
 test('manifest describes an installable app with relative URLs', async ({request}) => {
   const response = await request.get('/manifest.webmanifest');
@@ -241,8 +242,9 @@ test('a new build taking over before the catalogue loads is announced in the rea
   // What the browser fires when the new build claims the page; the real swap waits for the held request to finish.
   await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new Event('controllerchange')));
   release();
-  const notice = page.locator('.rp-toast.info', {hasText: '新版本已就緒，重新載入頁面後生效。'});
-  await expect(notice.getByRole('button', {name: '重新載入', exact: true})).toBeVisible();
+  await loadCatalogues();
+  const notice = page.locator('.rp-toast.info', {hasText: translate('zh-TW', 'ui.newBuild')});
+  await expect(notice.getByRole('button', {name: translate('zh-TW', 'ui.reloadPage'), exact: true})).toBeVisible();
   await expect(page.locator('.rp-toast', {hasText: 'ui.'})).toHaveCount(0);
 });
 
