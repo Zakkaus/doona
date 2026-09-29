@@ -2,6 +2,23 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
 import type {Node, OperationAccepted, Provider} from '../model';
 import {geodataPreset} from '../../dae/geodata';
+import {ApiError, errorText} from '../error';
+import {translate, type Translator} from '../../i18n';
+
+it('returns a translated refusal and structured path for an unmatched new source', async () => {
+  const error = await createMockApi()
+    .createConfigSource('work.dae', '')
+    .then(
+      () => null,
+      (failure: unknown) => failure as ApiError
+    );
+  expect(error).toBeInstanceOf(ApiError);
+  expect(error?.details).toMatchObject({
+    diagnostics: [{code: 'source-not-included', message: 'No include pattern matches work.dae', params: {path: 'work.dae'}}]
+  });
+  const t: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(errorText(error, t)).toBe(t('config.diagnostic.sourceNotIncluded', {path: 'work.dae'}));
+});
 
 afterEach(() => vi.useRealTimers());
 

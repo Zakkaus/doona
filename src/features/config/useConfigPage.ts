@@ -187,7 +187,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   const told = useRef(false);
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
   const shown = saveErrors ?? found ?? diagnostics;
-  const marks = useMemo(() => sourceMarks(shown, source.id), [shown, source.id]);
+  const marks = useMemo(() => sourceMarks(shown, source.id, t), [shown, source.id, t]);
   const text = draft?.text ?? source.content ?? '';
   // Names to complete after "->": the groups of every source, this one as edited.
   const outbounds = () => allGroupNames(sources, {id: source.id, content: text});

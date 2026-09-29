@@ -3,6 +3,41 @@ import {LANGS, LOCALE, translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
 test.beforeAll(loadCatalogues);
+test.describe('translated configuration text', () => {
+  test.use({storage: {'doona-lang': 'zh-TW'}});
+
+  test('shows one localized diagnostic in the row and editor tooltip', async ({page}) => {
+    await page.goto('/#/config?source=src-rules');
+    const editor = page.locator('.cm-content[contenteditable="true"]');
+    await editor.fill((await editor.innerText()) + '\nrouting { fallback: nowhere }\n');
+    await page.getByRole('button', {name: translate('zh-TW', 'config.validate'), exact: true}).click();
+    const message = translate('zh-TW', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
+    await expect(page.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(message);
+    await expect(async () => {
+      // The mark can be redrawn under a pointer that never moved, which raises no new hover.
+      await page.mouse.move(0, 0);
+      await editor.locator('.cm-lintRange-error').last().hover();
+      await expect(page.locator('.cm-tooltip-lint')).toContainText(message, {timeout: 1500});
+    }).toPass();
+  });
+
+  test('updates module diagnostic tooltips when the language changes', async ({page}) => {
+    await page.goto('/#/config');
+    const routing = page.getByRole('region', {name: 'routing', exact: true});
+    await routing.getByRole('button', {name: translate('zh-TW', 'config.edit'), exact: true}).click();
+    await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: resilient\n}');
+    const traditional = translate('zh-TW', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
+    await expect(routing.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(traditional);
+    await routing.locator('.cm-lintRange-error').hover();
+    await expect(page.locator('.cm-tooltip-lint')).toContainText(traditional);
+    await page.getByRole('button', {name: translate('zh-TW', 'lang'), exact: true}).click();
+    await page.getByRole('menuitemradio', {name: 'English'}).click();
+    const english = translate('en', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
+    await expect(routing.getByRole('list', {name: translate('en', 'config.diagnostics')})).toContainText(english);
+    await routing.locator('.cm-lintRange-error').hover();
+    await expect(page.locator('.cm-tooltip-lint')).toContainText(english);
+  });
+});
 for (const [lang] of LANGS) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});

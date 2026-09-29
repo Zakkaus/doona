@@ -3,7 +3,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
-import {backendMessage, knownCode} from '../../i18n/backend';
+import {diagnosticMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
 import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
@@ -60,15 +60,23 @@ export function sectionUnder(draft: SectionDraft, sections: ModuleSection[]): {n
   return {next, conflict: now !== base && text !== base && now !== text};
 }
 
-export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, block: TextBlock, text: string): EditorMark[] {
+export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, block: TextBlock, text: string, t: Translator): EditorMark[] {
   const end = block.line + text.split('\n').length;
   return diagnostics
     .filter(d => d.source_id === sourceId && d.line !== null && d.line > block.line && d.line <= end)
-    .map(d => ({line: d.line! - block.line, column: d.column, level: d.level, message: d.message}));
+    .map(d => ({line: d.line! - block.line, column: d.column, level: d.level, message: diagnosticText(diagnosticMessage(d, t), t)}));
 }
 
-export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string): EditorMark[] {
-  return diagnostics.filter(d => d.source_id === sourceId && d.line !== null).map(d => ({line: d.line!, column: d.column, level: d.level, message: d.message}));
+export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string, t: Translator): EditorMark[] {
+  return diagnostics
+    .filter(d => d.source_id === sourceId && d.line !== null)
+    .map(d => ({line: d.line!, column: d.column, level: d.level, message: diagnosticText(diagnosticMessage(d, t), t)}));
+}
+
+// A diagnostic's words, the same in its row and its editor mark. A translated code keeps the backend's own words, which
+// name the entry the code cannot.
+function diagnosticText({summary, detail}: BackendMessage, t: Translator, text = summary): string {
+  return detail ? t('config.backendDetail', {text, message: detail}) : text;
 }
 
 function ruleCount(text: string, block: TextBlock, tokens: TextToken[]): number {
@@ -273,17 +281,17 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
   // The key is also the row id, so a selection follows its diagnostic when the polled list changes around it.
   const groups = new Map<string, {item: ConfigDiagnostic; count: number}>();
   for (const item of diagnostics) {
-    const key = JSON.stringify([item.level, item.source_id, item.line, item.column, item.code, item.message]);
+    const key = JSON.stringify([item.level, item.source_id, item.line, item.column, item.code, item.message, item.params]);
     const group = groups.get(key);
     if (group) group.count++;
     else groups.set(key, {item, count: 1});
   }
   return [...groups].map(([key, {item, count}]) => {
     const path = paths.get(item.source_id) ?? item.source_id;
-    const text = backendMessage(item.code, item.message, t).summary;
+    const presented = diagnosticMessage(item, t);
+    const text = presented.summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
-    // A translated code keeps the backend's own words in the detail, which names the entry the code cannot.
-    const described = knownCode(item.code) ? t('config.backendDetail', {text: message, message: item.message}) : message;
+    const described = diagnosticText(presented, t, message);
     return {
       id: key,
       level: item.level,

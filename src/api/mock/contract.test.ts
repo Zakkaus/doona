@@ -53,6 +53,8 @@ const calls: Call[] = [
   ['queryDns', 200, api => api.dnsQuery('example.com', ['A', 'AAAA'])],
   ['getConfig', 200, api => api.config()],
   ['validateConfig', 200, async api => api.validateConfig({mode: 'syntax', sources: [{id: 'main', content: 'global {}\n'}]})],
+  // The demo's own diagnostics, one from the checks and one from include resolution.
+  ['validateConfig', 200, api => api.validateConfig({mode: 'full', sources: [{id: 'main', content: 'mystery {}\ninclude { missing.dae }\n'}]})],
   ['traceRouting', 200, api => api.routingTrace({input: {network: 'tcp', dst_ip: '1.1.1.1', dst_port: 443}, resolve: 'none'})],
   ['selectGroupMember', 200, api => api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'})],
   ['clearGroupOverride', 200, api => api.clearGroupOverride('proxy', 'both')],
@@ -63,6 +65,7 @@ const calls: Call[] = [
   ['refreshProvider', 202, async api => api.refreshProvider((await first(api.providers().then(list => list.providers)))?.id ?? 'missing')],
   ['updateGeoData', 202, api => api.updateGeodata()],
   ['createConfigSource', 202, api => api.createConfigSource('config.d/contract.dae', '')],
+  ['createConfigSource', 422, api => api.createConfigSource('unmatched.dae', '')],
   ['deleteDnsCacheEntry', 200, async api => api.deleteDnsEntry((await first(api.dnsCache().then(list => list.entries)))?.entry_id ?? 'missing')],
   ['flushDnsCache', 200, api => api.flushDnsCache()],
   ['closeConnections', 200, api => api.closeConnections({all: true})],
