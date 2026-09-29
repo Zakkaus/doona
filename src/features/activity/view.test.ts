@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {connections, nodeFixtures, runtime, runtimeMemory, runtimeOutbounds} from '../../api/mock/fixtures';
+import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
 import {activityOutbounds, activityRanking, activityView, interestingNotice, modeReasons, modeView, nodeView, noticeRows, trafficState} from './view';
@@ -7,16 +7,11 @@ const t: Translator = (key, params) => translate('en', key, params);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
 it('distinguishes missing metrics from zero and keeps block traffic separate from named groups', () => {
-  const missing = activityView(undefined, undefined, t);
+  const missing = activityView(undefined, t);
   expect(missing.connections).toBe('—');
-  expect(missing.memoryBadge).toBeNull();
-  const model = activityView(
-    {...runtime, traffic: {...runtime.traffic, connections: {tcp: 0, udp: 0, total: 0}}},
-    {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: '91', limit_bytes: '100'}},
-    t
-  );
+  expect(missing.cpu).toBe('—');
+  const model = activityView({...runtime, traffic: {...runtime.traffic, connections: {tcp: 0, udp: 0, total: 0}}}, t);
   expect(model.connections).toBe('0');
-  expect(model.memoryBadge?.tone).toBe('err');
   expect(activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows.find(row => row.name === t('ui.block'))?.color).toBe('red');
   const ranking = activityRanking(connections, 'dev', colors, 'en', t);
   expect(ranking[0].pct).toBeGreaterThan(ranking[1].pct);
@@ -83,19 +78,17 @@ it('renders measured local traffic even without backend history', () => {
   expect(trafficState({down: [], up: []}, true, true)).toBe('empty');
 });
 
-it('distinguishes unsupported runtime from loading without hiding independent memory metrics', () => {
-  const view = activityView(undefined, runtimeMemory, t, false);
-  expect(view.status.text).toBe(t('act.modeUnavailable'));
-  expect(view.rss).not.toBe('—');
-  expect(activityView(undefined, undefined, t).status.text).toBe(t('ui.loading'));
+it('distinguishes unsupported runtime from loading', () => {
+  expect(activityView(undefined, t, false).status.text).toBe(t('act.modeUnavailable'));
+  expect(activityView(undefined, t).status.text).toBe(t('ui.loading'));
 });
 
 it('reports a degraded or failed datapath in the status as Overview does, without its link', () => {
-  expect(activityView(runtime, undefined, t, true, 'en', 'degraded').status).toEqual({
+  expect(activityView(runtime, t, true, 'en', 'degraded').status).toEqual({
     tone: 'warn',
     text: t('ov.status.datapathDegraded', {status: t('lifecycle.running')})
   });
-  expect(activityView(runtime, undefined, t, true, 'en', 'active').status).toEqual({tone: 'ok', text: t('lifecycle.running')});
+  expect(activityView(runtime, t, true, 'en', 'active').status).toEqual({tone: 'ok', text: t('lifecycle.running')});
 });
 
 it('says why Apply or the global target is disabled, and nothing while a change is being applied', () => {
@@ -106,4 +99,13 @@ it('says why Apply or the global target is disabled, and nothing while a change 
   // The mode card shows a read-only backend's status beside its switch; the global target repeats it.
   expect(modeReasons({...view, writable: false}, false, t)).toEqual({mode: null, global: 'Read-only'});
   expect(modeReasons(view, true, t)).toEqual({mode: null, global: null});
+});
+
+it('shows the CPU card as a percent of one core, dashed until the backend has two samples', () => {
+  const cpu = (cpu_percent: number | null, locale = 'en') => activityView({...runtime, process: {...runtime.process, cpu_percent}}, t, true, locale).cpu;
+  expect(cpu(null)).toBe('—');
+  expect(cpu(0)).toBe('0.0%');
+  expect(cpu(42.5)).toBe('42.5%');
+  expect(cpu(180)).toBe('180.0%');
+  expect(activityView(runtime, t).cpuHelp).toEqual({title: t('act.cpu'), text: t('act.cpuHelp')});
 });
