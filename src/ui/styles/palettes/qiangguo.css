@@ -1,7 +1,7 @@
 /* A parody palette with no upstream, so the official-values rule does not apply.
-   Clock-in (light) follows a patriotic proxy app: a flag-red hero at the top of the page fading into pale rice paper,
+   Day shift (light) follows a patriotic proxy app: a flag-red hero at the top of the page fading into pale rice paper,
    and white cards with a landmark faint in a corner: the Great Wall, Mount Tai, the Three Gorges or Sun Moon Lake.
-   All-nighter (dark) is a red and gold poster after midnight, with the same hero at night. */
+   Night shift (dark) is a red and gold poster after midnight, with the same hero at night. */
 :root[data-family='qiangguo'] {
   --rp-base: #fffaf6;
   --rp-surface: #f8ebe5;
