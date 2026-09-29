@@ -91,13 +91,9 @@ export function useT(): Translator {
   return useMemo(() => (key: Key, params?: Params) => translate(lang, rewording?.[key] ?? key, params), [lang, rewording]);
 }
 
-const lists = new Map<Lang, Intl.ListFormat>();
-// A plain enumeration for cells and captions: Chinese uses the enumeration comma, English a comma with no "and".
+// A plain enumeration for cells and captions, without a conjunction.
 export function formatList(lang: Lang, values: string[]): string {
-  if (lang.startsWith('zh')) return values.join('、');
-  let formatter = lists.get(lang);
-  if (!formatter) lists.set(lang, (formatter = new Intl.ListFormat(LOCALE[lang], {style: 'narrow', type: 'conjunction'})));
-  return formatter.format(values);
+  return values.join(translate(lang, 'ui.listSeparator'));
 }
 
 const numbers = new Map<string, Intl.NumberFormat>();
