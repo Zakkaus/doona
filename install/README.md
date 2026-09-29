@@ -19,21 +19,21 @@ archive hashes in `SHA256SUMS`.
 
 ## Version spellings
 
-The recipes use tag `v0.1.0-beta.9`. Release assets keep the upstream version without the tag's `v`;
+The recipes use tag `v0.1.0-beta.10`. Release assets keep the upstream version without the tag's `v`;
 package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts`.
 
-| Format           | `doona` asset                                 | Version in package or recipe                       |
-| ---------------- | --------------------------------------------- | -------------------------------------------------- |
-| Program archive  | `doona-0.1.0-beta.9.tar.gz`                   | n/a                                                |
-| Fonts archive    | `doona-fonts-0.1.0-beta.9.tar.gz`             | n/a                                                |
-| Debian           | `doona_0.1.0-beta.9-1_all.deb`                | `0.1.0~beta.9-1`                                   |
-| RPM              | `doona-0.1.0-beta.9-1.noarch.rpm`             | Version `0.1.0~beta.9`, Release `1`                |
-| OpenWrt ipk      | `doona_0.1.0-beta.9-1_all.ipk`                | `0.1.0~beta.9-1`                                   |
-| Arch             | `doona-0.1.0beta9-1-any.pkg.tar.zst`          | pkgver `0.1.0beta9`, pkgrel `1`, default epoch `0` |
-| Alpine APKBUILD  | Download the program and fonts archives above | pkgver `0.1.0_beta9`, pkgrel `0`                   |
-| Gentoo ebuild    | Download the program and fonts archives above | PV `0.1.0_beta9`                                   |
-| OpenWrt Makefile | Download the program and fonts archives above | PKG_VERSION `0.1.0_beta9`, PKG_RELEASE `1`         |
-| Nix recipe       | Download the program and fonts archives above | `0.1.0-beta.9`                                     |
+| Format           | `doona` asset                                 | Version in package or recipe                        |
+| ---------------- | --------------------------------------------- | --------------------------------------------------- |
+| Program archive  | `doona-0.1.0-beta.10.tar.gz`                  | n/a                                                 |
+| Fonts archive    | `doona-fonts-0.1.0-beta.10.tar.gz`            | n/a                                                 |
+| Debian           | `doona_0.1.0-beta.10-1_all.deb`               | `0.1.0~beta.10-1`                                   |
+| RPM              | `doona-0.1.0-beta.10-1.noarch.rpm`            | Version `0.1.0~beta.10`, Release `1`                |
+| OpenWrt ipk      | `doona_0.1.0-beta.10-1_all.ipk`               | `0.1.0~beta.10-1`                                   |
+| Arch             | `doona-0.1.0beta10-1-any.pkg.tar.zst`         | pkgver `0.1.0beta10`, pkgrel `1`, default epoch `0` |
+| Alpine APKBUILD  | Download the program and fonts archives above | pkgver `0.1.0_beta10`, pkgrel `0`                   |
+| Gentoo ebuild    | Download the program and fonts archives above | PV `0.1.0_beta10`                                   |
+| OpenWrt Makefile | Download the program and fonts archives above | PKG_VERSION `0.1.0_beta10`, PKG_RELEASE `1`         |
+| Nix recipe       | Download the program and fonts archives above | `0.1.0-beta.10`                                     |
 
 The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
@@ -42,7 +42,7 @@ and 25.12, Alpine 3.22), and the ebuild through `pkgcheck scan` and `emerge` in 
 keyworded untested; the overlay's CI installs it). The recipes need new release hashes before submission.
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
-under the subject `net-proxy/doona: new package, add 0.1.0_beta9`, keep the `Manifest` in the same commit, and add
+under the subject `net-proxy/doona: new package, add 0.1.0_beta10`, keep the `Manifest` in the same commit, and add
 a `.github/workflows/overlay.toml` entry in `category/package` order. The semver beta tag maps onto the
 ebuild's pre-release version with this overlay rule:
 
