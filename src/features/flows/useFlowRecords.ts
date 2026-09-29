@@ -32,9 +32,10 @@ export function useFlowRecords({go, query}: PageProps) {
   const pinned = params.get('path');
   const shown = useMemo(() => {
     const all = resource.data?.flows ?? [];
-    return pinned ? flowsThrough(all, pinned, rules.data?.rules ?? []) : all;
+    return pinned ? flowsThrough(all, pinned, rules.data) : all;
   }, [resource.data, pinned, rules.data]);
-  const view = useMemo(() => flowRecordsView(shown, resource.data, names, t, lang), [shown, resource.data, names, t, lang]);
+  const generation = rules.data?.generation_id;
+  const view = useMemo(() => flowRecordsView(shown, resource.data, generation, names, t, lang), [shown, resource.data, generation, names, t, lang]);
   const row = view.rows.find(flow => flow.id === id);
   const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, t, lang, row), [detail.data, t, lang, row]);
   const quick = useQuickRule(go);

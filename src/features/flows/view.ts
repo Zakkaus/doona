@@ -210,7 +210,15 @@ type FlowDetailView = {
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
-export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined, names: OutboundNames, t: Translator, lang: Lang): FlowRecordsView {
+// `generation` is the listed rules' generation: a flow routed by another or an unknown one keeps its rule text with no link.
+export function flowRecordsView(
+  flows: FlowSummary[],
+  list: FlowList | undefined,
+  generation: string | undefined,
+  names: OutboundNames,
+  t: Translator,
+  lang: Lang
+): FlowRecordsView {
   return {
     rows: flows.map(flow => ({
       id: flow.id,
@@ -218,7 +226,7 @@ export function flowRecordsView(flows: FlowSummary[], list: FlowList | undefined
       node: nodeLabel(flow, t, names),
       path: chainPath(flow, t, names),
       expression: flow.rule_expression,
-      ruleId: flow.rule_id,
+      ruleId: flow.rule_generation_id !== null && flow.rule_generation_id === generation ? flow.rule_id : null,
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: enumLabel(connectionStates, flow.state, t),

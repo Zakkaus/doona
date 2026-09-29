@@ -17,7 +17,7 @@ export function useRoutingMap({go, query}: PageProps) {
   const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const by: TreeBy = params.get('by') === 'client' ? 'client' : 'rule';
   const tree = useMemo(
-    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data?.rules ?? [], by),
+    () => routingTree(resource.data?.flows ?? [], groups.data ?? [], nodes.data ?? [], rules.data, by),
     [resource.data, groups.data, nodes.data, rules.data, by]
   );
   const pinned = params.get('path');
@@ -27,10 +27,7 @@ export function useRoutingMap({go, query}: PageProps) {
     latest.current = query;
   }, [query]);
   const pin = useCallback((path: string | null) => go('flows', within(latest.current, {path})), [go]);
-  const count = useMemo(
-    () => (pinned ? flowsThrough(resource.data?.flows ?? [], pinned, rules.data?.rules ?? []).length : 0),
-    [resource.data, pinned, rules.data]
-  );
+  const count = useMemo(() => (pinned ? flowsThrough(resource.data?.flows ?? [], pinned, rules.data).length : 0), [resource.data, pinned, rules.data]);
   // The tree waits for every source so it is laid out once rather than growing or renaming tiles as each one lands.
   const settled = [resource, rules, groups, nodes].every(item => item.data !== undefined || item.error || !item.loading);
   return {
