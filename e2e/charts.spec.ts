@@ -51,22 +51,23 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(plot.getByRole('region', {name: 'shadowsocks'})).toBeVisible();
 });
 
-test('a traffic point opens its connection in the list', async ({page}) => {
-  await page.goto('/#/connections?tab=traffic');
+test('traffic is the first connections tab, and a point opens its connection in the list', async ({page}) => {
+  await page.goto('/#/connections');
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');
   await expect(fact(page, 'Heaviest connection').locator('.rp-big')).toHaveText('cdn.bilibili.com');
   await expect(fact(page, 'Heaviest connection').locator('.rp-fact-caption')).toHaveText('direct');
   await expect(fact(page, 'Download')).toHaveText('1.2 GB');
   await expect(page.getByText(/^Connections: \d+(?:, without byte totals: \d+)?$/)).toBeVisible();
   await page.locator('.rp-scatter circle').first().click();
-  await expect(page).toHaveURL(/#\/connections\?id=[^&]+$/);
+  await expect(page).toHaveURL(/[?&]tab=list/);
+  await expect(page).toHaveURL(/[?&]id=/);
   await expect(page.getByRole('tab', {name: 'Connections'})).toHaveAttribute('aria-selected', 'true');
 });
 
 const nodeLatency = (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'Node latency', exact: true});
 
 test('the traffic tab plots every node latency and marks the nodes current connections use', async ({page}) => {
-  await page.goto('/#/connections?tab=traffic');
+  await page.goto('/#/connections');
   const card = nodeLatency(page);
   await expect(card.getByText(/^Nodes with a latency: \d+, without: \d+$/)).toBeVisible();
   await expect(card.getByText(/^All nodes, P50: \d+ ms, P90: \d+ ms$/)).toBeVisible();
@@ -91,7 +92,7 @@ test('the weighted median counts the connections whose node has no latency', asy
     const failed = (node: (typeof list.nodes)[number]) => ({...node, health: node.health.map(h => ({...h, state: 'unavailable' as const, latency_ms: null}))});
     return {...list, nodes: list.nodes.map(node => (node.id === 'hk-02' ? failed(node) : node))};
   };
-  await page.goto('/#/connections?tab=traffic');
+  await page.goto('/#/connections');
   await expect(nodeLatency(page).getByText(/^Nodes in use, weighted by connections, P50: \d+ ms, connections without a latency: [1-9]\d*$/)).toBeVisible();
 });
 
@@ -101,7 +102,7 @@ test('without connection chains the latency card plots every node alike', async 
     const list = await backend.api.connections({detail: 'full', limit: 1000});
     return {...list, tcp: list.tcp.map(row => ({...row, chain: []})), udp: list.udp.map(row => ({...row, chain: []}))};
   };
-  await page.goto('/#/connections?tab=traffic');
+  await page.goto('/#/connections');
   const card = nodeLatency(page);
   await expect(card.getByText(/^All nodes, P50: \d+ ms, P90: \d+ ms$/)).toBeVisible();
   await expect(card.getByText(/weighted/)).toHaveCount(0);
@@ -116,7 +117,7 @@ test('the latency card waits for a latency, and stays out without health samples
     return {...list, nodes: list.nodes.map(node => ({...node, ...health(node)}))};
   };
   backend.handlers['GET nodes'] = () => nodes(node => ({health: node.health.map(h => ({...(h as object), state: 'unavailable', latency_ms: null}))}));
-  await page.goto('/#/connections?tab=traffic');
+  await page.goto('/#/connections');
   await expect(nodeLatency(page).getByText('No node has a latency sample yet.', {exact: true})).toBeVisible();
   await expect(nodeLatency(page).locator('.rp-swarm')).toHaveCount(0);
   for (const health of [() => ({health: []}), () => ({health: undefined})]) {
@@ -141,7 +142,7 @@ test('a failed node read keeps the latency card with the reason and a retry', as
     if (fail) throw new ApiError(500, 'internal', 'Node list failed', null, null, null);
     return backend.api.nodes({limit: 1000});
   };
-  await page.goto('/#/connections?tab=traffic');
+  await page.goto('/#/connections');
   await expect(page.locator('.rp-scatter')).toBeVisible();
   const alert = nodeLatency(page).getByRole('alert');
   await expect(alert).toBeVisible();
