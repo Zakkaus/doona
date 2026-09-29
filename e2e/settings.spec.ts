@@ -133,7 +133,7 @@ test('navigation cancels a connection probe without a timeout toast', async ({pa
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
   await request;
   await page.locator('.rp-nav[href="#/connections"]').click();
-  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.getByRole('heading', {name: 'Connections', exact: true})).toBeVisible();
   resolve();
   await expect(page.locator('.rp-toast')).toHaveCount(0);
@@ -159,7 +159,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await page.evaluate(api => {
     location.hash = '#/settings?api=' + encodeURIComponent(api) + '&token=paired';
   }, origin + '/new-backend');
-  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue(origin + '/new-backend');
   await expect(probe).toBeEnabled();
   resolve();
@@ -169,7 +169,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await page.evaluate(() => {
     location.hash = '#/settings?api=mock';
   });
-  await page.getByRole('alertdialog', {name: 'Discard unsaved changes?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue('mock');
   await expect(page.locator('form').getByRole('status')).toHaveCount(0);
 });
@@ -246,7 +246,7 @@ test('profile switching confirms draft loss without saving edits to the profile 
   const picker = page.getByRole('button', {name: /Profile$/});
   await picker.click();
   await page.getByRole('option', {name: /Backend B/}).click();
-  const confirm = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const confirm = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page.getByLabel('Backend URL', {exact: true})).toHaveValue('https://unsaved.example');
   expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');

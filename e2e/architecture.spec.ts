@@ -67,7 +67,7 @@ for (const tab of ['source', 'setup']) {
       await page.locator('.cm-content').fill('draft that must survive');
     } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/unsaved');
     await page.locator('.rp-nav[href="#/connections"]').click();
-    const dialog = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+    const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
     await expect(page).toHaveURL(new RegExp(`config\\?tab=${tab}$`));
@@ -471,7 +471,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
   await saving;
   await expect(records).toBeDisabled();
   await page.locator('.rp-nav[href="#/connections"]').click();
-  const discard = page.getByRole('alertdialog', {name: 'Discard unsaved changes?'});
+  const discard = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await discard.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(records).toHaveValue('512');
   await page.locator('.rp-nav[href="#/connections"]').click();
@@ -576,7 +576,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
   await page.evaluate(() => {
     location.hash = '#/settings';
   });
-  await expect(page.getByRole('alertdialog', {name: 'Discard unsaved changes?'})).toBeVisible();
+  await expect(page.getByRole('alertdialog', {name: 'Discard changes not applied?'})).toBeVisible();
 });
 
 test('provider host labels cannot enable interval writes without node tag metadata', async ({page}) => {

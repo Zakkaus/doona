@@ -194,7 +194,7 @@
   "config.diagnostics": "Diagnostics",
   "config.discard": "Discard changes",
   "config.discardHelp": "Changes to this source are lost when you leave.",
-  "config.discardTitle": "Discard unsaved changes?",
+  "config.discardTitle": "Discard changes not applied?",
   "config.diskAhead": "The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart",
   "config.edit": "Edit",
   "config.editNote": "Click the text to edit it. If the file changes on disk after loading, the backend refuses the write and does not overwrite the file.",
@@ -244,7 +244,7 @@
     "one": "{n} upstream",
     "other": "{n} upstreams"
   },
-  "config.moduleEditBlocked": "Another section has unsaved changes; apply or cancel them first",
+  "config.moduleEditBlocked": "Another section has changes not applied; apply or cancel them first",
   "config.moduleGroups": {
     "one": "{n} group: {policies}",
     "other": "{n} groups: {policies}"
@@ -324,7 +324,7 @@
   "config.tabValidate": "Validation",
   "config.tooLarge": "The configuration is larger than the backend accepts. Limit: {limit} bytes",
   "config.unquotable": "Cannot write this value losslessly as a single-quoted string: it contains an apostrophe, line break, or trailing backslash.",
-  "config.unsaved": "Unsaved",
+  "config.unsaved": "Not applied",
   "config.unsavedHint": "Reloading or closing the page loses the changes",
   "config.valid": "Validation passed",
   "config.validate": "Validate",
@@ -1525,8 +1525,8 @@
   "settings.geodataRouteRoutingVia": "By routing rules ({group})",
   "settings.geodataRouteSaved": "Download route saved",
   "settings.geodataSaveFailed": "Could not save the geodata settings",
-  "settings.geodataSaveSources": "Save",
-  "settings.geodataSaveUpdate": "Save and update",
+  "settings.geodataSaveSources": "Apply",
+  "settings.geodataSaveUpdate": "Apply and update",
   "settings.geodataSaved": "Geodata sources saved; they download at the next automatic update",
   "settings.geodataSize": "Size",
   "settings.geodataSource": "Source",
