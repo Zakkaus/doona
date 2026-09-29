@@ -111,7 +111,7 @@ export function Shortcuts({
             <Row label={t('shell.shortcutSearch')} keys={[t(mac ? 'shell.macShortcut' : 'shell.shortcut')]} />
             <Row label={t('shell.shortcutHelp')} keys={['?']} />
             <Row label={t('shell.shortcutFilter')} keys={['/']} />
-            <Row label={t('refresh')} keys={['r']} />
+            <Row label={t('refresh')} keys={['R']} />
           </section>
           <section>
             <h3>{t('shell.shortcutTables')}</h3>
@@ -131,7 +131,7 @@ export function Shortcuts({
           <h3>{t('shell.shortcutGoTo')}</h3>
           <p className="rp-label">{t('shell.shortcutSequence')}</p>
           {entries.map(entry => (
-            <Row key={entry.id} label={entry.label} keys={[entry.sequence]} />
+            <Row key={entry.id} label={entry.label} keys={entry.keys} />
           ))}
         </section>
       </div>
@@ -145,8 +145,8 @@ function Row({label, keys}: {label: string; keys: string[]}) {
     <div className="rp-row">
       <span>{label}</span>
       <span className="keys">
-        {keys.map(key => (
-          <kbd className="rp-kbd" key={key}>
+        {keys.map((key, index) => (
+          <kbd className="rp-kbd" key={index}>
             {key}
           </kbd>
         ))}

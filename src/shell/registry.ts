@@ -87,7 +87,7 @@ const definitions = {
     requires: {resources: ['nodes', 'providers']}
   },
   config: {
-    shortcut: 'g',
+    shortcut: 'e',
     nav: {titleKey: 'nav.config', hintKey: 'hint.config', Icon: FileText},
     ...lazyPage(() => import('../features/config/Config').then(m => ({default: m.Config}))),
     // The editor is the heaviest chunk.
@@ -95,7 +95,7 @@ const definitions = {
     requires: {resources: ['config']}
   },
   events: {
-    shortcut: 'e',
+    shortcut: 'v',
     nav: {titleKey: 'nav.events', hintKey: 'hint.events', Icon: History},
     ...lazyPage(() => import('../features/events/Events').then(m => ({default: m.Events}))),
     requires: {resources: ['events']}
