@@ -42,7 +42,7 @@ export const capabilities: Capabilities = {
     },
     rules: {available: true, max_rules: 4096},
     // create is true because the demo's main source includes config.d/*.dae.
-    config: {available: true, content: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
+    config: {available: true, writable: true, create: true, max_bytes: 1048576, max_sources: 32},
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {available: true, levels: ['trace', 'debug', 'info', 'warn', 'error'], filters: ['level', 'target'], retention_seconds: 86400, max_buffered_records: 4096},
     dns_log: {available: true, max_records: 2048, max_page_size: 500},
@@ -143,7 +143,7 @@ export const capabilitiesBase: Capabilities = {
     nodes: {available: true, can_manage: false},
     // The subscription service has not started, so the overview shows a service that is not running.
     providers: {available: true, can_refresh: false, can_manage: false, max_page_size: 1000},
-    config: {available: false, content: false, create: false},
+    config: {available: false, create: false},
     config_validate: {available: false},
     flows: {...capabilities.resources.flows, available: false},
     routing_trace: {...capabilities.resources.routing_trace, available: false},

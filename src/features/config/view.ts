@@ -151,7 +151,7 @@ const sectionPages: Record<SectionKind, string | null> = {
 // A section counts wherever the main file or an include defines it; a read-only file still shows its sections.
 export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: Lang, t: Translator): ModuleSection[] {
   const eligible = sources.filter(source => source.kind === 'main' || source.kind === 'include');
-  const parsed = eligible.map(source => ({source, ...scanConfig(source.content ?? '')}));
+  const parsed = eligible.map(source => ({source, ...scanConfig(source.content)}));
   const main = sources.find(source => source.kind === 'main') ?? null;
   const sections = sectionKinds.flatMap<ModuleSection>(kind => {
     const href = sectionPages[kind];
@@ -165,12 +165,11 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
           block,
           href,
           range: sectionRange(source, block),
-          summary: sectionSummary(kind, source.content!, block, tokens, lang, t),
+          summary: sectionSummary(kind, source.content, block, tokens, lang, t),
           note: null
         }))
     );
-    // A main file whose text is withheld gets one card of its own below; absence cannot be told from it.
-    if (occurrences.length || (main && main.content === undefined)) return occurrences;
+    if (occurrences.length) return occurrences;
     return [
       {
         id: kind,
@@ -180,26 +179,13 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
         href,
         range: main ? fileName(main) : 'config.dae',
         // Only a writable main file is offered as the place to add the section.
-        summary: main?.content === undefined ? '' : main.writable ? t('config.moduleAbsent', {file: fileName(main)}) : t('config.moduleAbsentReadOnly'),
-        note: main?.content === undefined ? t('config.contentWithheld') : null
+        summary: main?.writable ? t('config.moduleAbsent', {file: fileName(main)}) : t('config.moduleAbsentReadOnly'),
+        note: null
       }
     ];
   });
-  const withheld: ModuleSection[] = parsed.flatMap(({source, blocks}) => {
-    if (source.content === undefined)
-      return [
-        {
-          id: source.id,
-          kind: fileName(source),
-          source,
-          block: null,
-          href: null,
-          range: fileName(source),
-          summary: '',
-          note: t('config.contentWithheld')
-        }
-      ];
-    return engine.redactedSections(blocks).map(({block, name}, index) => ({
+  const withheld: ModuleSection[] = parsed.flatMap(({source, blocks}) =>
+    engine.redactedSections(blocks).map(({block, name}, index) => ({
       id: `${source.id}:${block.name}:${index}`,
       kind: name,
       source,
@@ -208,8 +194,8 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
       range: sectionRange(source, block),
       summary: '',
       note: t('config.incomplete')
-    }));
-  });
+    }))
+  );
   return [...sections, ...withheld];
 }
 
@@ -220,13 +206,12 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
     label: redacted(source) ? `${kind} ${source.id.slice(0, 8)}` : source.path,
     kind,
     facts: t('config.sourceFacts', {n: source.line_count, size: formatBytes(String(source.bytes), locale)}),
-    loaded: t('config.loadedAt', {time: localTime(source.loaded_at, locale)}),
-    hasContent: source.content !== undefined
+    loaded: t('config.loadedAt', {time: localTime(source.loaded_at, locale)})
   };
 }
-type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string; hasContent: boolean};
+type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'withheld' | 'redacted';
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'redacted';
 // The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
@@ -235,14 +220,13 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
   secret: {label: 'config.secretSource', note: 'config.secretNote'},
   refused: {label: 'config.readOnly', note: 'config.refusedNote'},
-  withheld: {label: 'config.withheldSource', note: 'config.contentWithheld'},
   redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
 // Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
 // the server allows. The contract carries no reason for a main or include file refused on its own, and an engine may
 // refuse one for more than one reason: only the engine's adapter can name the secrets it holds as the reason;
-// otherwise the file is just read-only. A source without text was not sent at all. A text that does not match its
-// digest (`complete` false) had values hidden by the backend; saving it would drop them.
+// otherwise the file is just read-only. A text that does not match its digest (`complete` false) had listener
+// secrets masked by the backend; saving it would write the masks over them.
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable' | 'content'>,
   configWritable: boolean,
@@ -259,11 +243,9 @@ export function readOnlyBadge(
           ? engine.holdsCredentials(source)
             ? 'secret'
             : 'refused'
-          : source.content === undefined
-            ? 'withheld'
-            : complete === false
-              ? 'redacted'
-              : null;
+          : complete === false
+            ? 'redacted'
+            : null;
   if (!reason) return null;
   const text = readOnlyText[reason];
   const label = t(text.label);

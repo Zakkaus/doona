@@ -28,12 +28,11 @@ import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
 const t: Translator = (key, params) => translate('en', key, params);
 const honk = engineOf(version);
-it('keeps hidden source paths out of source labels and exposes content availability', async () => {
+it('keeps hidden source paths out of source labels', async () => {
   const configSources = (await createMockApi().config()).sources;
-  const source = {...configSources[0], id: 'abcdef012345', path: '<redacted>', content: undefined, writable: false};
+  const source = {...configSources[0], id: 'abcdef012345', path: '<redacted>', writable: false};
   const row = sourceView(source, 'en-US', t);
   expect(row.label).not.toContain('<redacted>');
-  expect(row.hasContent).toBe(false);
   expect(sourceView(configSources[0], 'en-US', t).label).toBe(configSources[0].path);
 });
 it('counts a source in lines and bytes and leaves its load time to the tooltip', () => {
@@ -41,6 +40,7 @@ it('counts a source in lines and bytes and leaves its load time to the tooltip',
     id: 's',
     path: 'a.dae',
     kind: 'main',
+    content: 'a\nb',
     content_sha256: '0'.repeat(64),
     bytes: 102,
     writable: true,
@@ -83,12 +83,6 @@ it('names the one reason a source is read-only', () => {
   expect(reason('main', true, true, true)).toBeNull();
   expect(reason('main', false, true, false)).toBe('refused');
   expect(reason('generated', false, true, false)).toBe('generated');
-  // No text at all is not a redaction: the backend did not send the file.
-  const withheld = readOnlyBadge({kind: 'main', writable: true, content: undefined}, true, false, honk, t)!;
-  expect(withheld.reason).toBe('withheld');
-  expect(withheld.label).toBe(t('config.withheldSource'));
-  expect(withheld.note).toBe(t('config.contentWithheld'));
-  expect(readOnlyBadge({kind: 'include', writable: false, content: undefined}, true, false, honk, t)!.reason).toBe('refused');
   const badge = readOnlyBadge({kind: 'generated', writable: false, content: ''}, true, true, honk, t)!;
   expect(badge.label).toBe('Generated');
   // The line under the text already says why; only the write switch needs more than that line holds.
@@ -279,13 +273,9 @@ it('maps only diagnostics within the edited section using its current line count
   ]);
 });
 
-it('withholds editing for missing source text and native_api sections', () => {
-  const hidden = {...source(''), content: undefined};
-  const cards = sectionSummaries([hidden, source('experimental { native_api { token: redacted } }', 'include')], honk, 'en', t);
+it('withholds editing for native_api sections', () => {
+  const cards = sectionSummaries([source(''), source('experimental { native_api { token: redacted } }', 'include')], honk, 'en', t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
-  expect(cards.find(card => card.id === 'main')).toMatchObject({block: null, note: t('config.contentWithheld')});
-  // One card says the main text is withheld; no per-section cards repeat it.
-  expect(cards.filter(card => card.note === t('config.contentWithheld'))).toHaveLength(1);
 });
 
 it('counts untagged entries and arrows written without spaces', () => {
@@ -346,7 +336,6 @@ it('constructs main-first candidates with include paths and refuses missing cont
     {id: include.id, path: include.path, content: 'routing { fallback: direct }'}
   ]);
   expect(validationSources([include])).toBeNull();
-  expect(validationSources([main, {...include, content: undefined}])).toEqual([{id: main.id, path: main.path, content: main.content}]);
   expect(validationSources([{...main, path: '<redacted>'}, include])![0]).toEqual({id: main.id, content: main.content});
 });
 
@@ -355,7 +344,6 @@ it('does not submit pathless includes or validate an omitted replacement source'
   const include = {...source('routing {}', 'include'), path: '<redacted>'};
   expect(validationSources([main, include])).toEqual([{id: main.id, path: main.path, content: main.content}]);
   expect(validationSources([main, include], {id: include.id, content: 'routing { fallback: direct }'})).toBeNull();
-  expect(validationSources([{...main, content: undefined}, include])).toBeNull();
 });
 
 it('describes only the selected template’s groups and omits routing changes for keep', () => {
@@ -406,7 +394,6 @@ it('says why Validate is disabled: the main file is not whole, or the file on sh
   expect(validateReason(null, [main, sub], () => undefined, t)).toBeNull();
   expect(validateReason(null, [main, sub], () => true, t)).toBe(t('config.validateOther'));
   expect(validateReason(null, [main, sub], () => false, t)).toBe(t('config.validateNoMain'));
-  expect(validateReason(null, [{...main, content: undefined}], () => true, t)).toBe(t('config.validateNoMain'));
 });
 
 it('shows one row, the config version, and never the generation id', () => {

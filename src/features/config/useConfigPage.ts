@@ -94,7 +94,6 @@ export function useConfigPage({go, query}: PageProps) {
         canWrite,
         readOnly,
         isComplete,
-        contentOffered: resources?.config.content === true,
         editor,
         focusLine
       }
@@ -117,7 +116,7 @@ export function useConfigPage({go, query}: PageProps) {
       : null;
   const newSourceProps: NewSourceProps | null =
     resources?.config.create === true && resources.config.writable === true
-      ? {sources, contentOffered: resources.config.content === true, refetch: config.refetch, open: id => openSource(id, null)}
+      ? {sources, refetch: config.refetch, open: id => openSource(id, null)}
       : null;
   const validateProps: ValidateTabProps | null = config.data
     ? {
@@ -173,7 +172,6 @@ export type SourceCardProps = {
   canWrite: boolean;
   readOnly: ReturnType<typeof readOnlyBadge>;
   isComplete: (source: ConfigSource) => boolean | undefined;
-  contentOffered: boolean;
   editor: ConfigEditor;
   focusLine: number | null;
 };

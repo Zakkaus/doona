@@ -55,10 +55,10 @@ export function Config(props: PageProps) {
               </>
             )}
           </span>
-          {(newSourceProps || sourceModel?.hasContent) && (
+          {(newSourceProps || sourceModel) && (
             <span className="rp-cluster nowrap">
               {newSourceProps && <NewSource {...newSourceProps} />}
-              {sourceModel?.hasContent && (
+              {sourceModel && (
                 <Button onPress={exportSource}>
                   <Download />
                   {t('config.export')}
@@ -67,7 +67,7 @@ export function Config(props: PageProps) {
             </span>
           )}
         </div>
-        {sourceModel?.hasContent && <span className="rp-label">{t('config.exportWarning')}</span>}
+        {sourceModel && <span className="rp-label">{t('config.exportWarning')}</span>}
         {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
       </>
     ),

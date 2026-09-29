@@ -193,7 +193,7 @@ describe('backendLimits on an older honk', () => {
       ...capabilities,
       resources: {
         ...kept,
-        config: {available: true, content: true, create: false},
+        config: {available: true, create: false},
         flows: {...kept.flows, recording: 'off'},
         runtime_settings: {available: true}
       } as unknown as ReportedCapabilities['resources']

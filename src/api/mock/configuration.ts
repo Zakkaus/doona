@@ -185,7 +185,7 @@ export function createConfiguration(
       return {
         generation_id: generation,
         revision: generation,
-        sources: list.map(source => (capabilities.resources.config.content ? {...source} : {...source, content: undefined})),
+        sources: list.map(source => ({...source})),
         diagnostics: [
           ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
           ...(faults ? fixtures.configNotes : [])

@@ -30,7 +30,7 @@ export const editProblem = (result: EditResult, t: Translator): Notice | null =>
 
 export function useMainSourceEdit(): MainSourceEdit {
   const resources = useCapabilities().data?.resources;
-  const writable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true && resources?.config.content === true;
+  const writable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const editor = useConfigEditor(config.refetch, {rethrow: true});
   const source = config.data?.sources.find(source => source.kind === 'main' && source.writable) ?? null;

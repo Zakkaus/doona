@@ -1,10 +1,10 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Badge, Button, Card, Empty, Light} from '../../ui/ui';
+import {ActionHelp, Badge, Button, Card, Light} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
 export function SourceCard(props: SourceCardProps) {
-  const {canValidate, contentOffered} = props;
+  const {canValidate} = props;
   const t = useT();
   const {
     writable,
@@ -41,7 +41,7 @@ export function SourceCard(props: SourceCardProps) {
                 <span className="rp-label">{t('config.unsavedHint')}</span>
               </>
             ) : (
-              view.hasContent && <span className="rp-label">{note}</span>
+              <span className="rp-label">{note}</span>
             )}
           </span>
           {(canValidate || dirty) && (
@@ -80,21 +80,17 @@ export function SourceCard(props: SourceCardProps) {
           ))}
         </div>
       )}
-      {!view.hasContent ? (
-        <Empty>{t(contentOffered ? 'config.contentWithheld' : 'config.contentHidden')}</Empty>
-      ) : (
-        <CodeEditor
-          label={view.label}
-          value={text}
-          readOnly={!writable || busy}
-          onChange={change}
-          onReadOnlyAttempt={refused}
-          marks={marks}
-          focusLine={focus}
-          outbounds={outbounds}
-          onSave={dirty && !busy ? () => void save() : undefined}
-        />
-      )}
+      <CodeEditor
+        label={view.label}
+        value={text}
+        readOnly={!writable || busy}
+        onChange={change}
+        onReadOnlyAttempt={refused}
+        marks={marks}
+        focusLine={focus}
+        outbounds={outbounds}
+        onSave={dirty && !busy ? () => void save() : undefined}
+      />
     </Card>
   );
 }
