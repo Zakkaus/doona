@@ -1,5 +1,6 @@
 import {createContext, useContext, useEffect, useId, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
+import {VisuallyHidden} from 'react-aria';
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
 
@@ -73,6 +74,9 @@ export function Button({
   const disabled = isDisabled && !isPending;
   const reasonId = useReasonId(disabled);
   const reasoned = !!reasonId;
+  // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
+  const tipId = useId();
+  const tipReason = disabled && !reasoned && !!tip;
   // An icon marked rp-spin-on-press (the refresh arrows) turns once per press and keeps turning while the button is
   // pending, always finishing a whole turn; one animation owns the rotation, so a long refetch never hands over.
   const spin = useRef<Animation | null>(null);
@@ -118,7 +122,7 @@ export function Button({
       className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
       onPress={press}
       aria-label={label}
-      aria-describedby={reasonId}
+      aria-describedby={reasonId ?? (tipReason ? tipId : undefined)}
       isDisabled={disabled}
       isPending={isPending}
       type={type}
@@ -140,6 +144,7 @@ export function Button({
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop */}
         <span className="rp-tipwrap" tabIndex={disabled ? 0 : -1} data-passive={disabled ? undefined : ''}>
           {btn}
+          {tipReason && <VisuallyHidden id={tipId}>{tip}</VisuallyHidden>}
         </span>
       </Focusable>
       <Tip triggerRef={ref}>{text}</Tip>

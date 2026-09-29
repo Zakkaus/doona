@@ -38,6 +38,24 @@ test('the rule list shows the dictionary in evaluation order with its source lin
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=51$/);
 });
 
+test('a rule from an include file says why it cannot be changed here and opens its file at the line', async ({page}) => {
+  await page.goto('/#/rules?tab=list');
+  const row = rows(page).nth(6);
+  await expect(row).toContainText('rules.dae:6');
+  const reason = 'This rule is in the include file rules.dae, outside a routing section, so it cannot be changed here. Use Open source to edit it in the file.';
+  for (const name of ['Edit outbound settings', 'Remove rule']) {
+    const control = row.getByRole('button', {name, exact: true});
+    await expect(control).toBeDisabled();
+    await expect(control).toHaveAccessibleDescription(reason);
+  }
+  await row.getByRole('button', {name: 'Remove rule', exact: true}).hover({force: true});
+  await expect(page.getByRole('tooltip')).toHaveText(reason);
+  // The fallback has nothing to remove, so it shows no remove control.
+  await expect(rows(page).last().getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await row.getByRole('button', {name: 'Open source', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-rules&line=6$/);
+});
+
 test('a rule is added before the fallback and removed again through validate, save and reload', async ({page}) => {
   await page.goto('/#/rules?tab=list');
   const list = rows(page);
