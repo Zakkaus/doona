@@ -528,3 +528,34 @@ test('a node search looks through every source and names the source of each resu
   await expect(source).toHaveCount(0);
   await expect(list.first()).not.toContainText('config.dae');
 });
+
+test('a node write conflict names its cause, and only a delete without groups reads as a change meanwhile', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const [node, other] = (await api.nodes({limit: 1000})).nodes.filter(item => item.provider_id === 'inline');
+  handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
+    throw new ApiError(409, 'state_conflict', 'Groups still name this node as their final outbound', null, {stage: 'state_conflict', groups: ['proxy']});
+  };
+  handlers[`DELETE nodes/${encodeURIComponent(other.id)}`] = async () => {
+    throw new ApiError(409, 'state_conflict', 'Configuration changed during the write', null, {stage: 'state_conflict'});
+  };
+  handlers['POST nodes'] = async () => {
+    throw new ApiError(409, 'state_conflict', 'A resource with this name already exists', null, {stage: 'state_conflict'});
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  const confirmation = page.getByRole('alertdialog');
+  await confirmation.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  await expect(confirmation.getByRole('alert')).toContainText('Groups still name this node as their final outbound');
+  await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('button', {name: `Remove ${other.name}`, exact: true}).click();
+  await confirmation.getByRole('button', {name: `Remove ${other.name}`, exact: true}).click();
+  await expect(confirmation.getByRole('alert')).toContainText('The configuration changed or another write was still in progress');
+  await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill(node.name);
+  await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#dup');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(dialog.getByRole('alert')).toContainText('A resource with this name already exists');
+  await expect(dialog.getByRole('alert')).not.toContainText('changed or another write');
+});

@@ -84,9 +84,11 @@ const reused = new Set(['invalid_request', 'unsupported_value', 'state_conflict'
 export type BackendMessage = {summary: string; detail?: string};
 
 // honk names the step that failed in details.stage. A stage with its own words says more than the code; any other
-// stage is added to the code's words.
+// stage is added to the code's words. A known stage that repeats the code, as a management write's `state_conflict`
+// does, adds nothing, so a reused code keeps the backend's words.
 export function backendMessage(code: string, message: string, t: Translator, details?: unknown): BackendMessage {
-  const stage = (details as {stage?: unknown} | null | undefined)?.stage;
+  const named = (details as {stage?: unknown} | null | undefined)?.stage;
+  const stage = named === code && known[code] ? undefined : named;
   if (typeof stage === 'string' && known[stage]) return {summary: t(known[stage])};
   const text = known[code] ? t(known[code]) : t('ui.backendMessage', {message});
   const summary = typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
