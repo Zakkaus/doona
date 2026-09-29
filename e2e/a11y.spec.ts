@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, offered, routes, test} from './fixtures';
+import {expect, offered, routes, test, detail, mockBackend} from './fixtures';
 
 // Palettes carry their official values, so their own secondary text on their own base and surface is a known
 // exception: Rosé Pine Dawn's subtle is 4.0:1 and Moon's 4.5:1. Any other pairing fails. Glass is not checked for
@@ -57,4 +57,21 @@ for (const [palette, scheme] of looks)
         ).toHaveLength(0);
       });
     }
+  });
+
+// Each panel's More menu, open, passes the same rules as the page.
+const menus = [
+  ['connections?id=1', (page: import('@playwright/test').Page) => detail(page), 'More actions'],
+  ['policies', (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'resilient', exact: true}), 'More actions'],
+  ['nodes?tab=list', (page: import('@playwright/test').Page) => page.locator('body'), 'More actions for sub-c']
+] as const;
+for (const [route, scope, name] of menus)
+  test(`the More menu on ${route.split('?')[0]} passes axe`, async ({page}) => {
+    await mockBackend(page);
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.goto(`/#/${route}`);
+    await scope(page).getByRole('button', {name, exact: true}).click();
+    await expect(page.getByRole('menu', {name})).toBeVisible();
+    const results = await new AxeBuilder({page}).include('[role=menu]').withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(results.violations.map(rule => rule.id)).toHaveLength(0);
   });
