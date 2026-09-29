@@ -87,7 +87,7 @@ it('names a policy by what it does, whatever the native spelling', async () => {
   const notes = (native: string) => tileViews(routingTree([], [{...group, policy: {...group.policy, native}}], [], undefined), t, 'en')[0].notes;
   expect(notes('min_avg10')).toContainEqual({text: t('policy.kind.urltest')});
   expect(notes('min_last_delay')).toContainEqual({text: t('policy.kind.urltest')});
-  expect(notes('min_moving_avg')).toContainEqual({text: t('arrange.policy.fastest')});
+  expect(notes('min_moving_avg')).toContainEqual({text: t('policy.kind.urltest')});
   expect(notes('')).toContainEqual({text: t('policy.kind.urltest')});
 });
 
