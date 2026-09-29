@@ -103,12 +103,7 @@ export function Shortcuts({
   }, [go, openSearch, refresh, paths]);
   const mod = mac ? '⌘' : 'Ctrl ';
   return (
-    <ModalDialog
-      title={t('shell.shortcuts')}
-      isOpen={open}
-      onOpenChange={setOpen}
-      footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}
-    >
+    <ModalDialog title={t('shell.shortcuts')} isOpen={open} onOpenChange={setOpen} footer={() => <Button onPress={() => setOpen(false)}>{t('close')}</Button>}>
       <div className="rp-shortcuts">
         <div>
           <section>

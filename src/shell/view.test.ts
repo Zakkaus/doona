@@ -19,9 +19,20 @@ it('uses the same capability policy for navigation, shortcuts and content', () =
   // Every sidebar page has a sequence, in sidebar order.
   const all = structuredClone(capabilitiesBase);
   for (const resource of Object.values(all.resources)) resource.available = true;
-  expect(shellView(settings, 'activity', all, null, version, null, t).shortcuts.map(item => item.sequence)).toEqual(
-    ['g a', 'g o', 'g c', 'g f', 'g d', 'g p', 'g r', 'g n', 'g g', 'g e', 'g l', 'g s']
-  );
+  expect(shellView(settings, 'activity', all, null, version, null, t).shortcuts.map(item => item.sequence)).toEqual([
+    'g a',
+    'g o',
+    'g c',
+    'g f',
+    'g d',
+    'g p',
+    'g r',
+    'g n',
+    'g g',
+    'g e',
+    'g l',
+    'g s'
+  ]);
   expect(view.content).toEqual({kind: 'unavailable'});
   expect(view.backend.text).toContain(version.engine.version);
   expect(view.about.items.some(([, value]) => value.includes(version.api.name))).toBe(true);
