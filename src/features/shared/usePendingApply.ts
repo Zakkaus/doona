@@ -39,12 +39,14 @@ export function usePendingApply() {
     } catch (error) {
       if (signal.aborted) return undefined;
       // A lost operation is only reported after the backend accepted the write, so the file already holds the rules, as
-      // it does after an activation that reports the write saved or leaves its outcome unknown.
+      // it does after an activation that reports the write saved or leaves its outcome unknown, unless the backend
+      // says `written: false`: then nothing is stored and the rules stay held.
       const written =
         error instanceof LocalError &&
         ['ui.writtenNotApplied', 'ui.operationUnknown', 'ui.activationDegradedSaved', 'ui.activationDegradedUnconfirmed', 'ui.activationUnknown'].includes(
           error.key
-        );
+        ) &&
+        (error.details as {written?: unknown} | null)?.written !== false;
       return {written, failure: ruleFailure(error, null, sources, t)};
     }
   };
