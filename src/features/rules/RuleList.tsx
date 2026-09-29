@@ -117,8 +117,16 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
                 <Edit />
               </Button>
             )}
-            {canWrite && row.removable && (
-              <Button small quiet icon isDisabled={busy} label={t('rule.remove')} onPress={() => latest.current.openRemove(row.id)}>
+            {canWrite && (row.removable || row.removeReason) && (
+              <Button
+                small
+                quiet
+                icon
+                isDisabled={busy || !row.removable}
+                tip={row.removeReason ?? undefined}
+                label={t('rule.remove')}
+                onPress={() => latest.current.openRemove(row.id)}
+              >
                 <Close />
               </Button>
             )}

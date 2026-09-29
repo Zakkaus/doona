@@ -1179,6 +1179,7 @@
   "rule.hold": "暂存",
   "rule.holdHelp": "暂存的规则在右上角应用时一并写入；立即应用则现在写入并重载。",
   "rule.id": "序",
+  "rule.inInclude": "此规则位于引入文件 {file}，不在 routing 区段内，因此无法在此更改。请使用“打开来源”在文件中编辑。",
   "rule.invalidLive": "解析模式须提供域名，且目标 IP 必须留空。",
   "rule.invalidPort": "端口须为 1 至 65535 的整数。",
   "rule.invalidTarget": "请提供域名或目标 IP。",

@@ -1368,6 +1368,7 @@
   "rule.hold": "Hold",
   "rule.holdHelp": "Held rules are written together when you apply them from the top bar. Apply now writes this rule and reloads at once.",
   "rule.id": "#",
+  "rule.inInclude": "This rule is in the include file {file}, outside a routing section, so it cannot be changed here. Use Open source to edit it in the file.",
   "rule.invalidLive": "Resolving requires a domain and an empty destination IP.",
   "rule.invalidPort": "Ports must be integers from 1 to 65535.",
   "rule.invalidTarget": "Enter a domain or destination IP.",

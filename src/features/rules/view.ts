@@ -68,6 +68,8 @@ type DictionaryRow = {
   removable: boolean;
   // Why the rule's target cannot be edited here, or null when it can.
   editReason: string | null;
+  // Why a rule that is not removable cannot be removed here; null when it is, or for a fallback.
+  removeReason: string | null;
   sourceQuery: string | null;
 };
 export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; positions: Choice[]; outbounds: Choice[]};
@@ -137,7 +139,9 @@ function listedRows<R extends Listed>(
     if (!source.writable) return t('config.readOnlyAttempt');
     if (source.content === undefined) return t('config.incomplete');
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
-    return anchor(source, rule, scans.get(source.id)!) === null ? t('rule.notLocated') : null;
+    if (anchor(source, rule, scans.get(source.id)!) !== null) return null;
+    // An include file spliced into a routing section holds bare rules, outside any routing section of its own.
+    return source.kind === 'include' ? t('rule.inInclude', {file: fileName(source)}) : t('rule.notLocated');
   };
   const rows = rules.map(rule => {
     const linked = resolve(rule.source);
@@ -151,6 +155,7 @@ function listedRows<R extends Listed>(
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       removable: rule.kind === 'rule' && editReason === null,
       editReason,
+      removeReason: rule.kind === 'rule' ? editReason : null,
       sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
   });

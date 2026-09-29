@@ -1179,6 +1179,7 @@
   "rule.hold": "暫存",
   "rule.holdHelp": "暫存的規則在右上角套用時一併寫入；立即套用則現在寫入並重載。",
   "rule.id": "序",
+  "rule.inInclude": "此規則位於引入檔 {file}，不在 routing 區段內，因此無法在此變更。請使用「開啟來源」在檔案中編輯。",
   "rule.invalidLive": "解析模式須提供網域，且目的 IP 必須留空。",
   "rule.invalidPort": "連接埠須為 1 至 65535 的整數。",
   "rule.invalidTarget": "請提供網域或目的 IP。",
