@@ -103,7 +103,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
   await expect(dialog.getByRole('status')).toContainText('truncated');
   await dialog.getByRole('button', {name: 'Connections', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections$/);
-  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('search results are reached with arrow keys while the field keeps focus', async ({page}) => {

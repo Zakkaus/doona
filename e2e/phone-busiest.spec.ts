@@ -46,7 +46,7 @@ test.describe('390px', () => {
   test.use({viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true});
 
   test('the busiest connection takes the first row whole, download and upload share the second', async ({page}) => {
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const busiest = tile(page, 'Heaviest connection');
     const down = tile(page, 'Download');
     const up = tile(page, 'Upload');
@@ -71,7 +71,7 @@ test.describe('390px', () => {
 
   test('a host too long for the row loses its start, keeps its end and shows whole on a tap', async ({page}) => {
     await longHost(page);
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
@@ -85,7 +85,7 @@ test.describe('390px', () => {
 
     test('a hover on a cut host shows it whole', async ({page}) => {
       await longHost(page);
-      await page.goto('/#/connections?tab=traffic');
+      await page.goto('/#/connections');
       const value = tile(page, 'Heaviest connection').locator('.rp-big');
       await expect(value).toHaveAttribute('data-tip', '');
       await expect(async () => {
@@ -101,7 +101,7 @@ test.describe('390px', () => {
     test.use({storage: {'doona-lang': 'en', 'doona-mirror': 'on'}});
 
     test('the host sits at the start, on the right', async ({page}) => {
-      await page.goto('/#/connections?tab=traffic');
+      await page.goto('/#/connections');
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       const busiest = tile(page, 'Heaviest connection');
       await expect(busiest.locator('.rp-big')).toHaveText('cdn.bilibili.com');
@@ -112,7 +112,7 @@ test.describe('390px', () => {
 
     test('a long host still loses its start, not its end', async ({page}) => {
       await longHost(page);
-      await page.goto('/#/connections?tab=traffic');
+      await page.goto('/#/connections');
       const value = tile(page, 'Heaviest connection').locator('.rp-big');
       await expect(value).toHaveAttribute('data-tip', '');
       await expect.poll(() => edges(value)).toEqual({cut: true, first: false, last: true});
@@ -124,7 +124,7 @@ test.describe('1440px', () => {
   test.use({viewport: {width: 1440, height: 900}});
 
   test('the three tiles share one row with the same values, the busiest taking two shares', async ({page}) => {
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const busiest = tile(page, 'Heaviest connection');
     await expect(busiest.locator('.rp-big')).toHaveText('cdn.bilibili.com');
     await expect(busiest.locator('.rp-big')).not.toHaveAttribute('data-tip');
@@ -140,7 +140,7 @@ test.describe('1440px', () => {
 
   test('a long host loses its start and keeps its end, as on a phone', async ({page}) => {
     await longHost(page);
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
@@ -153,7 +153,7 @@ test.describe('740px', () => {
   test.use({viewport: {width: 740, height: 900}});
 
   test('the busiest host fits its tile uncut', async ({page}) => {
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText('cdn.bilibili.com');
     expect(await value.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -161,7 +161,7 @@ test.describe('740px', () => {
 
   test('a host too long for two shares loses its start, keeps its end and shows whole on focus', async ({page}) => {
     await longHost(page);
-    await page.goto('/#/connections?tab=traffic');
+    await page.goto('/#/connections');
     const value = tile(page, 'Heaviest connection').locator('.rp-big');
     await expect(value).toHaveText(long);
     await expect(value).toHaveAttribute('data-tip', '');
