@@ -115,6 +115,41 @@ test('a query result adds a response rule for an answered address, then queries 
   await expect.poll(() => requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/query').length).toBe(2);
 });
 
+test('Query again from another page opens DNS Query and runs the query there', async ({page}) => {
+  const {requests} = await backend(page);
+  const card = await query(page);
+  await card.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await pick(page, /Action$/, /^reject/);
+  await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
+  const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
+  await expect(toast).toBeVisible();
+  await page.locator('.rp-nav[href="#/settings"]').click();
+  await expect(page.locator('#settings-backend')).toBeVisible();
+  await toast.getByRole('button', {name: 'Query again', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=query&domain=example\.org&type=A$/);
+  await expect(page.locator('form').getByLabel('Domain', {exact: true})).toHaveValue('example.org');
+  await expect(page.getByRole('heading', {name: 'example.org. A', exact: true})).toBeVisible();
+  await expect.poll(() => requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/query').length).toBe(2);
+});
+
+test('a DNS rule written without DNS queries on offer does not offer to query again', async ({page}) => {
+  const {api, handlers} = await backend(page);
+  handlers['GET capabilities'] = async () => {
+    const capabilities = await api.capabilities();
+    capabilities.resources.events.available = false;
+    capabilities.resources.dns_query = {...capabilities.resources.dns_query, available: false};
+    return capabilities;
+  };
+  await page.goto('/#/dns?tab=log');
+  const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
+  await first.click();
+  await page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true}).click();
+  await pick(page, /Action$/, /^reject/);
+  await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Query again', exact: true})).toHaveCount(0);
+});
+
 test('the DNS cache adds a rule for the selected entry by its name and type', async ({page}) => {
   await backend(page);
   await page.goto('/#/dns?tab=cache');
