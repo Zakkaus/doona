@@ -467,7 +467,7 @@ test('an engine whose configuration syntax doona does not write shows no mode an
   const marked = main.content!.replace('\nrouting {\n', '\nrouting {\n  l4proto(tcp, udp) -> proxy # doona: outbound mode\n');
   await api.pollOperation(await api.replaceConfigSource(main.id, marked, `"${main.content_sha256}"`));
   const version = await api.version();
-  handlers['GET version'] = async () => ({...version, api: {...version.api, name: 'other/backend'}});
+  handlers['GET version'] = async () => ({...version, engine: {...version.engine, name: 'other'}});
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toBeVisible();
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});

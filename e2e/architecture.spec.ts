@@ -492,7 +492,7 @@ test('runtime drafts survive a changed poll and explicit discard loads the curre
   const card = page.getByRole('region', {name: 'Backend options'});
   const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
   await records.fill('512');
-  settings.log.buffered_records = 2048;
+  settings.log!.buffered_records = 2048;
   const refresh = page.waitForResponse('**/api/v1/runtime/settings');
   await page.clock.runFor(16000);
   await refresh;
@@ -760,17 +760,6 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
-});
-
-test('withheld rule source disables editing and explains the restriction', async ({page}) => {
-  const api = await backend(page);
-  const config = await api.config();
-  config.sources = config.sources.map(source => ({...source, content: undefined}));
-  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-  await page.goto('/#/rules?tab=list');
-  await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
-  await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
-  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('The text is incomplete or redacted; it cannot be edited here');
 });
 
 test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {

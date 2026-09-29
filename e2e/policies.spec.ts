@@ -180,7 +180,7 @@ test('a check URL another client changed while the dialog was open is not overwr
 
 test('a check save refused with 409 keeps the edit and shows what the group holds now', async ({page}) => {
   const {api} = await mockBackend(page);
-  expectLoadFailures(page, /\/groups\/resilient$/);
+  expectLoadFailures(page, /\/groups\/resilient\/config$/);
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});

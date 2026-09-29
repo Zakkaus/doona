@@ -469,7 +469,7 @@ test('source application works without the optional full validation endpoint', a
 test('incomplete sources cannot be transformed by rule edits or quick setup', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
-  for (const source of config.sources) if (source.content !== undefined) source.content = source.content.replace('direct', 'redacted');
+  for (const source of config.sources) source.content = source.content.replace('direct', 'redacted');
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   let mutations = 0;
   page.on('request', request => {
@@ -477,7 +477,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   });
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Redacted']);
-  await expect(page.locator('.rp-card')).toContainText('Writing it back would lose those values');
+  await expect(page.locator('.rp-card')).toContainText('Listener secrets are masked here; edit this file on the host.');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await page.getByRole('tab', {name: 'Quick setup'}).click();
@@ -935,11 +935,11 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await expect(page).toHaveURL(/source=src-main.*line=2/);
 });
 
-test('withheld includes do not disable main validation or background diagnostics', async ({page}) => {
+test('redacted includes do not disable main validation or background diagnostics', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
   const include = config.sources.find(source => source.kind === 'include')!;
-  delete include.content;
+  include.content = include.content.replace('direct', 'redacted');
   include.path = '<redacted>';
   include.writable = false;
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -960,7 +960,7 @@ test('withheld includes do not disable main validation or background diagnostics
   await expect(routing.getByRole('list', {name: 'Diagnostics'})).toContainText('No group named "nowhere"');
 });
 
-test('source withholding does not certify exports or diagnose the hidden include', async ({page}) => {
+test('source redaction does not certify exports or diagnose the redacted include', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
   config.secrets_redacted = true;
@@ -968,7 +968,7 @@ test('source withholding does not certify exports or diagnose the hidden include
   main.path = '<redacted>';
   const include = config.sources.find(source => source.kind === 'include')!;
   include.path = '<redacted>';
-  delete include.content;
+  include.content = include.content.replace('direct', 'redacted');
   include.writable = false;
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
@@ -980,8 +980,8 @@ test('source withholding does not certify exports or diagnose the hidden include
   expect(await downloadText(await downloading)).toBe(main.content);
   await page.getByRole('button', {name: /Source/}).click();
   await page.getByRole('option', {name: /Include/}).click();
-  await expect(page.locator('.rp-content')).toContainText('The backend did not return this source');
-  await expect(page.locator('.cm-content')).toHaveCount(0);
+  await expect(page.locator('.rp-content')).toContainText('The backend does not accept writes to this file, so it can only be viewed.');
+  await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
 });
 
