@@ -49,6 +49,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Narrow menu items keep their titles visible when their descriptions wrap. Hidden tab panels keep their width when reopened; DNS log type and duration columns fit their values. A table at fractional zoom no longer drops a column after its first layout. (#181, #183, #185)
 - A refused synchronous write, including closing connections or changing runtime settings, is reported without retrying the write. (#168)
 - The China palette's pinned top bar no longer carries a torn strip of its hero image over scrolled content. The Glass palette keeps the sign-in game's mortar and score card readable. (#167, #204)
+- When a new version took over an open page before its language had loaded, the update notice showed message keys such as `ui.newBuild` instead of its text. It now waits for the language to load. (#212)
 
 ### For contributors
 
