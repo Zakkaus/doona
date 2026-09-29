@@ -627,6 +627,15 @@ test('the active connections tile opens the connection list', async ({page}) => 
   await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
+test('the download and upload tiles open the connections traffic', async ({page}) => {
+  for (const name of ['Download', 'Upload']) {
+    await page.goto('/#/activity');
+    await page.getByRole('link', {name, exact: true}).click();
+    await expect(page).toHaveURL(/#\/connections\?tab=traffic$/);
+    await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
+  }
+});
+
 test('the rankings, outbound usage and latency tile open the connections and node they name', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/activity');
