@@ -18,6 +18,7 @@ import {
   rulePositions,
   ruleTargets,
   ruleWritable,
+  ruleWritten,
   typedCondition,
   type QuickRuleSeed
 } from './rule';
@@ -307,4 +308,20 @@ it('names a DNS duplicate by its action, comparing upstreams without case, and o
   const held: PendingRule[] = [{list: 'response', id: 1, condition: 'ip(1.2.3.4/32)', outbound: 'reject', must: false, before: null, sourceId: 'src-main'}];
   expect(duplicateOf('response', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBe('A held rule already has the same condition and action.');
   expect(duplicateOf('request', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBeNull();
+});
+
+it('says a settled rule write is in effect, keeps the count and notes that open connections keep their route', () => {
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(ruleWritten('rule.added', t)).toEqual({text: 'New rule is in effect', detail: 'Existing connections keep their current route until they reconnect.'});
+  expect(ruleWritten('rule.edited', t).text).toBe('Rule change is in effect');
+  expect(ruleWritten('rule.removed', t).text).toBe('Rule removed; the change is in effect');
+  expect(ruleWritten('rule.applied', t, 1).text).toBe('1 rule is in effect');
+  expect(ruleWritten('rule.applied', t, 3).text).toBe('3 rules are in effect');
+  const localized = ruleWritten('rule.applied', zh, 2);
+  expect(localized.text).toMatch(/^2 /);
+  expect(localized.detail).toBe(translate('zh-TW', 'rule.keepsRoute'));
+  expect(localized.detail).not.toBe(ruleWritten('rule.applied', t, 2).detail);
+  for (const lang of ['zh-TW', 'zh-CN', 'en'] as const)
+    for (const key of ['rule.added', 'rule.edited', 'rule.removed', 'rule.applied'] as const)
+      expect(translate(lang, key, {n: 2})).not.toMatch(/重載|重载|reload/i);
 });

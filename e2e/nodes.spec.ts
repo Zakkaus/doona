@@ -1,6 +1,7 @@
 import type {Locator} from '@playwright/test';
 import {expect, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
 
@@ -64,6 +65,9 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   const added = page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'});
   await expect(added).toBeVisible();
   await expect(sources).toHaveCount(3);
+  // The new row is selected without the toast's help.
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&provider=[^&]+$/);
+  await expect(page.getByText(/Showing nodes from sub-d\./)).toBeVisible();
   // The toast opens the new subscription's nodes.
   await added.getByRole('button', {name: 'View nodes', exact: true}).click();
   await expect(page).toHaveURL(/#\/nodes\?provider=[^&]+$/);
@@ -74,6 +78,40 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-c removed'})).toBeVisible();
   await expect(sources).toHaveCount(2);
   await expect(sources.first()).toContainText('config.dae');
+});
+
+test('a new subscription is selected even when its first refresh fails', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['POST providers'] = async request => {
+    const created = await backend.api.createProvider(request.postDataJSON());
+    backend.handlers[`POST providers/${created.id}/refresh`] = async () => {
+      throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
+    };
+    return created;
+  };
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('sub-f');
+  await dialog.getByLabel('Subscription URL').fill('https://example.org/sub');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'sub-f was written to the configuration, but could not be refreshed'})).toBeVisible();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&provider=[^&]+$/);
+  await expect(page.getByText(/Showing nodes from sub-f\./)).toBeVisible();
+});
+
+test('a new subscription is selected when the backend cannot refresh it', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  capabilities.resources.providers.can_refresh = false;
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('sub-u');
+  await dialog.getByLabel('Subscription URL').fill('https://example.org/sub');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-u added'})).toBeVisible();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&provider=[^&]+$/);
+  await expect(page.getByText(/Showing nodes from sub-u\./)).toBeVisible();
 });
 
 test('a subscription is added with its refresh interval, User-Agent and cache setting', async ({page}) => {
