@@ -1,4 +1,4 @@
-import {detail, expect, test, moreAction} from './fixtures';
+import {detail, expect, mockBackend, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -42,6 +42,16 @@ test('a trace result opens its matched rule in the rule list', async ({page}) =>
   await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(geosite: telegram)');
   await page.goBack();
   await expect(page).toHaveURL(/#\/rules\?tab=trace&/);
+});
+
+// Rule ids are joined within one generation: a trace from another generation than the rule list links to no rule.
+test('a trace result from another generation does not link its rules', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET rules'] = async () => ({...(await api.rules()), generation_id: 'next'});
+  handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
+  await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
+  await expect(evaluation(page).getByText('domain(geosite: telegram) -> proxy', {exact: true})).toBeVisible();
+  await expect(evaluation(page).getByRole('link', {name: /in the rule list$/})).toHaveCount(0);
 });
 
 test('a trace result opens the group and the node it selects', async ({page}) => {
