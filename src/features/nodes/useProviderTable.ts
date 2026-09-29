@@ -73,6 +73,8 @@ export function useProviderTable(input: ProviderTableInput) {
     writable: input.source.writable,
     editing: rows.some(row => row.action !== null),
     sourceBusy: input.source.busy || !input.source.main,
+    // An edit writes the file that declares the entry, which need not be the main source.
+    editBusy: input.source.busy,
     sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
     // Refreshing every subscription, as Settings offers it, where the backend can refresh them.
     refreshAll: input.canRefresh ? input.refreshAll : null,
@@ -118,6 +120,7 @@ export type ProviderTableView = {
   writable: boolean;
   editing: boolean;
   sourceBusy: boolean;
+  editBusy: boolean;
   sourceTip?: string;
   refreshAll: ReturnType<typeof useRefreshAll> | null;
   onAdd: () => void;
