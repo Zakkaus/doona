@@ -424,7 +424,7 @@ it('selects both networks with an independent revision and preserves configurati
   expect(released).toMatchObject({network: 'both', selection: {tcp: {member_id: 'hk-02', source: 'policy'}, udp: {member_id: 'hk-02', source: 'policy'}}});
   expect((await api.group('gaming')).runtime.selection.udp).toMatchObject({member_id: 'hk-02', source: 'policy'});
   await expect(api.clearGroupOverride('proxy', 'both')).rejects.toMatchObject({code: 'state_conflict'});
-  await expect(api.selectGroup('proxy', {member_id: 'missing', network: 'both'})).rejects.toMatchObject({status: 404});
+  await expect(api.selectGroup('proxy', {member_id: 'missing', network: 'both'})).rejects.toMatchObject({status: 422});
 });
 
 it('completes probes with fixture failures and publishes fresh health', async () => {

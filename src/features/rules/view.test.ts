@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import type {Capabilities, ConfigSource, DnsRoutingRule, RoutingRule} from '../../api/model';
+import type {ConfigSource, DnsRoutingRule, ReportedCapabilities, RoutingRule} from '../../api/model';
 import {normalizeCapabilities} from '../../api/capabilities';
 import {translate, type Translator} from '../../i18n';
 import {
@@ -279,7 +279,7 @@ it('puts the rule lists first, routing then DNS, and offers DNS only when the ba
 
 it('opens the rules page without a DNS tab on a backend that does not report DNS rules', async () => {
   const raw = await createMockApi().capabilities();
-  const older = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key !== 'dns_rules')) as Capabilities['resources'];
+  const older = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key !== 'dns_rules')) as ReportedCapabilities['resources'];
   const {resources} = normalizeCapabilities({...raw, resources: older});
   expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
 });

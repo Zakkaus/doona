@@ -110,7 +110,7 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
   for (const [key, value] of Object.entries(group.config)) document['/config/' + key] = value;
   const mutable = (path: string) => group.capabilities.mutable_config.some(key => path === (key === 'policy' ? '/policy' : '/config/' + key));
   const missing = (path: string) => {
-    if (!(path in document)) throw new ApiError(422, 'unsupported_value', 'Patch path does not exist');
+    if (!(path in document)) throw new ApiError(400, 'invalid_request', 'Patch path does not exist');
   };
   for (const op of ops) {
     if (!mutable(op.path) || ('from' in op && !mutable(op.from))) throw new ApiError(422, 'unsupported_value', 'Group field is not mutable');

@@ -55,7 +55,7 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
   };
   return {
     settings: (): GeoDataSettings => ({
-      source: stored ? 'db' : 'default',
+      source: stored ? 'override' : 'default',
       geosite: {urls: urls().geosite},
       geoip: {urls: urls().geoip},
       auto_update: {...auto},

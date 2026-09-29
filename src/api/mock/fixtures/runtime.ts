@@ -124,7 +124,7 @@ export const datapath: Datapath = {
   ebpf: {
     ...runtime.datapath.ebpf!,
     attachments: ['lan0', 'wan0'].flatMap(iface =>
-      (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, interface: iface, direction, state: 'attached' as const}))
+      (['ingress', 'egress'] as const).map(direction => ({name: 'honk_' + direction, kind: 'interface' as const, interface: iface, direction, state: 'attached' as const}))
     ),
     maps: {state: 'ready', conn_state: {occupancy: live.length, capacity: 65536, occupancy_known: true}}
   },

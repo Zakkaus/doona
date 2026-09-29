@@ -1,6 +1,7 @@
 import type {Api} from '../api';
 import type {Capabilities, ConfigSource, RuleList, Runtime} from '../model';
 import {ApiError} from '../error';
+import {logLevelLabels} from '../selectors';
 import * as fixtures from './fixtures/configuration';
 import {found} from './common';
 import {diagnose, includedFiles, includePaths, sectionLines, stored, validate} from './config';
@@ -284,10 +285,12 @@ export function createConfiguration(
         'flows.retention_seconds': resources.flows.retention_seconds ?? 0
       };
       const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+      // A field or level the backend does not advertise is semantic, not malformed.
+      const unsupported = (message: string) => new ApiError(422, 'unsupported_value', message);
       // geodata is stored apart from the other settings and leaves the top-level source alone.
       const {geodata: geodataPatch, ...rest} = patch;
       if (geodataPatch !== undefined && (!allowed.has('geodata') || resources.geodata.configurable_sources !== true))
-        throw invalid('geodata cannot be changed on this backend');
+        throw unsupported('geodata cannot be changed on this backend');
       patch = rest;
       // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
       const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
@@ -296,9 +299,9 @@ export function createConfiguration(
         return value === undefined ? [] : [[field, store, value] as const];
       });
       for (const [field, store, value] of modes) {
-        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
         if (value !== 'auto' && typeof value !== 'boolean') throw invalid(`${field} must be true, false or auto`);
-        if (value === true && !settings.recording?.[store].allowed) throw invalid(`${field} is forbidden by the configuration`);
+        if (value === true && !settings.recording?.[store].allowed) throw unsupported(`${field} is forbidden by the configuration`);
       }
       const fields = Object.entries(patch)
         .filter(([section]) => !(section in recorders))
@@ -306,9 +309,10 @@ export function createConfiguration(
           Object.entries((values ?? {}) as Record<string, unknown>).map(([field, value]) => [`${section}.${field}`, value] as const)
         );
       for (const [field, value] of fields) {
-        if (!allowed.has(field as never)) throw invalid(`${field} cannot be changed on this backend`);
+        if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
         if (field === 'log.level') {
-          if (!(resources.logs.levels ?? []).includes(value as never)) throw invalid(`${value} is not an advertised log level`);
+          if (!(value as string in logLevelLabels)) throw invalid(`${value} is not a log level`);
+          if (!(resources.logs.levels ?? []).includes(value as never)) throw unsupported(`${value} is not an advertised log level`);
           continue;
         }
         const ceiling = ceilings[field as keyof typeof ceilings];

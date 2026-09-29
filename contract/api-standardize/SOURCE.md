@@ -1,12 +1,7 @@
-Pin: aa7103a
+Pin: 1fb08ad
 
-SHA-256: 5e5d0d89e89828b31af51042d182cefff88d8ecaf201864b1d9b0f52aa006728
+SHA-256: 104e871b88d4857072cc233c2838128f7335a85070905c9f824375173bd58e58
 
-openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch runtime-degradations, commit aa7103a (PR #33, stacked on #32 and #30, none merged yet).
-
-The merged changes include PR #4 client fixes, #5 config, #6 observability and management, #7 connection close, and #8 GroupOverrideCleared with the native outbound mode dropped.
-They also include #9 rule source IDs, #12 recorder modes and unredacted administrative data, #13 password authentication (8 to 128 characters), #14 DNS cache usage by entry count, #15 configurable geodata sources with automatic updates and update status, #16 flow demand, #17 short DNS pages, and #18 geodata seeding from the configuration file.
-They also include #19 schema gaps (GET /nodes/{id}, the logs replay age limit, snapshot_unavailable as a retryable 503), #20 a public discovery view for callers the listener does not admit, #21 early eviction of completed operations, #22 Retry-After on rules and trace 503, #23 the route geodata downloads take, #24 automatic geodata updates on by default, #25 routing as the default download route, #27 the update interval, User-Agent and cache options for a new subscription, #28 reading the DNS routing rules, and #29 notes on cpu_percent, connection rates and the check_url scope.
-The draft #30 adds POST /config/sources and resources.config.create for a new source file that an include loads, and #32 on top of it adds geodata.verify_checksum, which turns off checksum verification for geodata updates. #33 on top of both adds runtime.degradations, the features running reduced after a recovered failure.
+openapi.yaml is the generated bundle (`npm run bundle`) of daeuniverse/api-standardize, branch honk, commit 1fb08ad.
 
 Regenerate src/api/types.ts with `pnpm gen:api`.

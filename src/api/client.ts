@@ -248,10 +248,10 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     runtimeMemory: async signal => read(await client.GET('/api/v1/runtime/memory', {signal})),
     nodes: async (query, signal) => read(await client.GET('/api/v1/nodes', {params: {query}, signal})),
     groups: async signal => read(await client.GET('/api/v1/groups', {signal})),
-    group: async (id, signal) => read(await client.GET('/api/v1/groups/{groupId}', {params: {path: {groupId: id}}, signal})),
-    selectGroup: async (groupId, body, signal) => read(await client.PUT('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}}, body, signal})),
+    group: async (id, signal) => read(await client.GET('/api/v1/groups/{group_id}', {params: {path: {group_id: id}}, signal})),
+    selectGroup: async (groupId, body, signal) => read(await client.PUT('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}}, body, signal})),
     clearGroupOverride: async (groupId, network, signal) =>
-      read(await client.DELETE('/api/v1/groups/{groupId}/selection', {params: {path: {groupId}, query: {network}}, signal})),
+      read(await client.DELETE('/api/v1/groups/{group_id}/selection', {params: {path: {group_id: groupId}, query: {network}}, signal})),
     patchGroup: async (groupId, body, ifMatch, signal) => {
       const result = await starts.PATCH('/api/v1/groups/{groupId}', {
         params: {path: {groupId}, header: {'If-Match': ifMatch}},
@@ -277,11 +277,11 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     closeConnections: async (query, signal) => read(await client.DELETE('/api/v1/connections', {params: {query}, signal})),
     runtimeSettings: async signal => read(await client.GET('/api/v1/runtime/settings', {signal})),
     providers: async (query, signal) => read(await client.GET('/api/v1/providers', {params: {query}, signal})),
-    refreshProvider: async (id, signal) => accepted(await starts.POST('/api/v1/providers/{id}/refresh', {params: {path: {id}}, signal})),
+    refreshProvider: async (id, signal) => accepted(await starts.POST('/api/v1/providers/{provider_id}/refresh', {params: {path: {provider_id: id}}, signal})),
     createProvider: async (body, signal) => read(await client.POST('/api/v1/providers', {body, signal})),
-    deleteProvider: async (id, signal) => read(await client.DELETE('/api/v1/providers/{id}', {params: {path: {id}}, signal})),
+    deleteProvider: async (id, signal) => read(await client.DELETE('/api/v1/providers/{provider_id}', {params: {path: {provider_id: id}}, signal})),
     createNode: async (body, signal) => read(await client.POST('/api/v1/nodes', {body, signal})),
-    deleteNode: async (id, signal) => read(await client.DELETE('/api/v1/nodes/{id}', {params: {path: {id}}, signal})),
+    deleteNode: async (id, signal) => read(await client.DELETE('/api/v1/nodes/{node_id}', {params: {path: {node_id: id}}, signal})),
     geodata: async signal => read(await client.GET('/api/v1/geodata', {signal})),
     rules: async signal => read(await client.GET('/api/v1/rules', {signal})),
     dnsRules: async signal => read(await client.GET('/api/v1/dns/rules', {signal})),

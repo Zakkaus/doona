@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import type {Capabilities, Version} from '../../api/model';
+import type {Capabilities, ReportedCapabilities, Version} from '../../api/model';
 import {capabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, type LimitCause, type LimitGroup} from './limits';
@@ -196,7 +196,7 @@ describe('backendLimits on an older honk', () => {
         config: {available: true, content: true, create: false},
         flows: {...kept.flows, recording: 'off'},
         runtime_settings: {available: true}
-      } as unknown as Resources
+      } as unknown as ReportedCapabilities['resources']
     });
     const groups = limits(older);
     expect(group(groups, 'recordOff')).toBeUndefined();
