@@ -895,6 +895,8 @@
   "ov.f.visibility": "可见度",
   "ov.failed": "失败",
   "ov.interface": "接口",
+  "ov.kind.cgroup": "cgroup",
+  "ov.kind.other": "其他",
   "ov.lastReload": "上次重载",
   "ov.lim.close": "关闭连接",
   "ov.lim.configMissing": "honk 仍在启动，或配置文件超过 32 个，或总大小超过 8 MiB。",

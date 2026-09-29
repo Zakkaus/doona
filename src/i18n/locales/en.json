@@ -1057,6 +1057,8 @@
   "ov.f.visibility": "Visibility",
   "ov.failed": "Failed",
   "ov.interface": "Interface",
+  "ov.kind.cgroup": "cgroup",
+  "ov.kind.other": "Other",
   "ov.lastReload": "Last reload",
   "ov.lim.close": "Closing connections",
   "ov.lim.configMissing": "honk is still starting, or the configuration has more than 32 files or more than 8 MiB in total.",
