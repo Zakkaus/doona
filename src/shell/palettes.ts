@@ -27,7 +27,9 @@ export const palettes = [
       'act.good': 'palette.qiangguoGood',
       'lifecycle.running': 'palette.qiangguoGood',
       'act.unavailable': 'palette.qiangguoBad',
-      'lifecycle.degraded': 'palette.qiangguoBad'
+      'lifecycle.degraded': 'palette.qiangguoBad',
+      'theme.light': 'palette.qiangguoLight',
+      'theme.dark': 'palette.qiangguoDark'
     }
   }
 ] as const satisfies ReadonlyArray<{id: `${string}/${string}`; group: Key; label: Key; desc: Key; words?: Rewording}>;
