@@ -110,8 +110,15 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !=
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     void report();
     if (!running) return;
-    const lang = loadedLang(readLang());
-    toast('info', translate(lang, 'ui.newBuild'), {action: {label: translate(lang, 'ui.reloadPage'), onAction: () => location.reload()}});
+    // The new build can take over while the page's catalogue is still loading, so the notice waits for it. When no
+    // catalogue loads, the page already offers its own reload.
+    void (language ??= startLanguage()).then(
+      () => {
+        const lang = loadedLang(readLang());
+        toast('info', translate(lang, 'ui.newBuild'), {action: {label: translate(lang, 'ui.reloadPage'), onAction: () => location.reload()}});
+      },
+      () => undefined
+    );
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);

@@ -210,6 +210,42 @@ test('a new build taking over offers Reload, which loads it', async ({context, p
   await expect(notice).toHaveCount(0);
 });
 
+test('a new build taking over before the catalogue loads is announced in the reader’s language', async ({context, page, browserName}) => {
+  test.skip(browserName === 'webkit', 'WebKit request interception does not see what the service worker fetches');
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-TW'));
+  await page.goto('http://127.0.0.1:4186/ui/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.reload();
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  // A new deploy renames the catalogue, so the reloaded page fetches it past the old build's cache; it is held
+  // there while the new build takes over.
+  await page.evaluate(async () => {
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) if (/\/assets\/locale-zh-TW-/.test(request.url)) await cache.delete(request);
+    }
+  });
+  let release!: () => void;
+  const released = new Promise<void>(resolve => (release = resolve));
+  let requested!: () => void;
+  const catalogue = new Promise<void>(resolve => (requested = resolve));
+  await context.route('**/assets/locale-zh-TW-*.js', async route => {
+    requested();
+    await released;
+    await route.continue();
+  });
+  await page.reload({waitUntil: 'commit'});
+  await catalogue;
+  expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  // What the browser fires when the new build claims the page; the real swap waits for the held request to finish.
+  await page.evaluate(() => navigator.serviceWorker.dispatchEvent(new Event('controllerchange')));
+  release();
+  const notice = page.locator('.rp-toast.info', {hasText: '新版本已就緒，重新載入頁面後生效。'});
+  await expect(notice.getByRole('button', {name: '重新載入', exact: true})).toBeVisible();
+  await expect(page.locator('.rp-toast', {hasText: 'ui.'})).toHaveCount(0);
+});
+
 test('an early install offer is consumed on dismissal and failures are reported', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();
