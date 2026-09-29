@@ -25,11 +25,13 @@ export function NodeCard() {
                 <span className="rp-big">{vm.latency}</span>
               )}
             </span>
-            <TextTooltip text={vm.healthError}>
-              <Light small tone={vm.tone}>
-                {vm.status}
-              </Light>
-            </TextTooltip>
+            {vm.status && (
+              <TextTooltip text={vm.healthError}>
+                <Light small tone={vm.tone}>
+                  {vm.status}
+                </Light>
+              </TextTooltip>
+            )}
           </>
         )}
       </div>

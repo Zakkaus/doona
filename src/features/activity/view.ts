@@ -123,7 +123,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
-    status: t(node?.alive ? 'act.good' : node?.unavailable ? 'act.unavailable' : 'act.unknown'),
+    // A healthy node's latency says so; the light names only what the value cannot, an unavailable or unknown node.
+    status: node?.alive ? null : t(node?.unavailable ? 'act.unavailable' : 'act.unknown'),
     healthError: node?.healthError
   };
 }
