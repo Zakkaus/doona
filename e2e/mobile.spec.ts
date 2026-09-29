@@ -450,7 +450,8 @@ test.describe('360px actions', () => {
       await expect(action(visible)).toBeVisible();
       for (const name of collapsed) await expect(action(name)).toBeHidden();
       await content.getByRole('button', {name: 'More actions'}).click();
-      await expect(page.getByRole('menu', {name: 'More actions'}).getByRole('menuitem')).toHaveText([...collapsed]);
+      // A disabled item also says why under its label, so only the labels are compared.
+      await expect(page.getByRole('menu', {name: 'More actions'}).getByRole('menuitem').locator('[slot="label"]')).toHaveText([...collapsed]);
       await page.keyboard.press('Escape');
     }
     await page.goto('/#/logs');
