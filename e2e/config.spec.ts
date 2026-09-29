@@ -484,7 +484,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
   await expect(page.getByRole('button', {name: 'Apply and reload', exact: true})).toBeDisabled();
   await page.goto('/#/rules?tab=list');
-  await page.getByRole('button', {name: 'Remove rule', exact: true}).first().click();
+  await page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false}).first().click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('incomplete');
   expect(mutations).toBe(0);
@@ -611,7 +611,10 @@ test('rule writes require a stable source ID even when the display path matches'
   const reason = 'No rule is in a file doona can write, so there is no place to insert.';
   await expect(page.getByText(reason, {exact: true})).toBeVisible();
   await expect(add).toHaveAccessibleDescription(reason);
-  await expect(page.getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  // Remove stays in each row, disabled with the reason, rather than disappearing.
+  const remove = page.getByRole('button', {name: 'Remove rule', exact: true});
+  await expect(remove.first()).toHaveAccessibleDescription("Cannot locate this rule's line in its source file; it cannot be edited here");
+  await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Open source', exact: true})).toHaveCount(0);
 });
 
