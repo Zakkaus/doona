@@ -1,9 +1,20 @@
 import {useMemo, useState} from 'react';
 import type {Key} from 'react-aria-components';
 import {useLang, useT} from '../../i18n';
-import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules} from '../../store';
+import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useDnsRules} from '../../store';
 import type {PageProps} from '../routes';
-import {connectionEntries, groupEntries, nodeEntries, pageEntries, providerEntries, ruleEntries, searchSections, searchView, sourceEntries} from './view';
+import {
+  connectionEntries,
+  dnsRuleEntries,
+  groupEntries,
+  nodeEntries,
+  pageEntries,
+  providerEntries,
+  ruleEntries,
+  searchSections,
+  searchView,
+  sourceEntries
+} from './view';
 import {offered} from '../../api/capabilities';
 
 export function useSearch(go: PageProps['go'], onClose: () => void) {
@@ -18,7 +29,8 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
-  const sources = [capabilities, connections, nodes, groups, providers, config, rules];
+  const dnsRules = useDnsRules(offered(resources, 'dns_rules', {whileLoading: false}));
+  const sources = [capabilities, connections, nodes, groups, providers, config, rules, dnsRules];
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
   const pages = useMemo(() => pageEntries(capabilities.data, config.data, t), [capabilities.data, config.data, t]);
   const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
@@ -27,9 +39,14 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const providerHits = useMemo(() => providerEntries(providers.data, t), [providers.data, t]);
   const sourceHits = useMemo(() => sourceEntries(config.data, t), [config.data, t]);
   const ruleHits = useMemo(() => ruleEntries(rules.data, lang), [rules.data, lang]);
+  const dnsRuleHits = useMemo(() => dnsRuleEntries(dnsRules.data, lang, t), [dnsRules.data, lang, t]);
   const view = searchView(
     q,
-    searchSections({pages, conns, nodes: nodeHits, groups: groupHits, providers: providerHits, sources: sourceHits, rules: ruleHits}, connections.data, t)
+    searchSections(
+      {pages, conns, nodes: nodeHits, groups: groupHits, providers: providerHits, sources: sourceHits, rules: ruleHits, dnsRules: dnsRuleHits},
+      connections.data,
+      t
+    )
   );
   return {
     q,

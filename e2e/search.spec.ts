@@ -58,6 +58,22 @@ test('search finds a routing rule by its condition and lands on its row', async 
   await expect(row).toBeInViewport();
 });
 
+test('search opens a connections tab and the DNS rules tab from a DNS rule condition', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  let dialog = await open(page, 'traffic');
+  await dialog.getByRole('option', {name: /^Traffic/}).click();
+  await expect(page).toHaveURL(/#\/connections\?tab=traffic$/);
+  await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
+  dialog = await open(page, 'home.arpa');
+  const hit = dialog.getByRole('option', {name: /qname\(suffix: lan, home\.arpa\).*Request rules #2 → asis/});
+  await expect(hit).toHaveCount(1);
+  await hit.click();
+  await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+  await expect(page.getByRole('tab', {name: 'DNS rules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('qname(suffix: lan, home.arpa)').first()).toBeVisible();
+});
+
 test('search respects destination capabilities, preserves loose-node ownership and qualifies partial results', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
@@ -82,6 +98,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
     '/groups': await api.groups(),
     '/config': await api.config(),
     '/rules': await api.rules(),
+    '/dns/rules': await api.dnsRules(),
     '/connections': connections
   };
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
