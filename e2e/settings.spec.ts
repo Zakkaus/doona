@@ -275,7 +275,7 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await page.getByRole('option', {name: t('settings.record.off'), exact: true}).click();
   const saving = page.waitForRequest(request => request.method() === 'PATCH' && request.url().endsWith('/runtime/settings'));
   await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
-  expect((await saving).postDataJSON()).toEqual({record_flows: false});
+  expect((await saving).postDataJSON()).toEqual({record_flows: 'off'});
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.runtimeSaved')})).toBeVisible();
   await expect(recording.getByText(t('settings.recordingIdle'))).toHaveCount(1);
   expect((await api.runtimeSettings()).recording?.flows.mode).toBe('off');

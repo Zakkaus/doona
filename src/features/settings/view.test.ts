@@ -23,11 +23,12 @@ import {
 import {ApiError} from '../../api/error';
 const t: Translator = (key, params) => translate('en', key, params);
 it('validates numeric bounds and writes typed partial patches without losing sibling edits', () => {
-  expect(numericFieldView('flows.max_flows', '63', 128, 'en-US', t).invalid).toBe(true);
-  expect(numericFieldView('flows.max_flows', '128', 128, 'en-US', t).invalid).toBe(false);
-  expect(numericFieldView('flows.max_flows', '129', 128, 'en-US', t).invalid).toBe(true);
-  expect(numericFieldView('flows.retention_seconds', '1.5', undefined, 'en-US', t).invalid).toBe(true);
-  expect(numericFieldView('flows.max_flows', '100', undefined, 'en-US', t).description).toBe('At least 64');
+  expect(numericFieldView('flows.max_flows', '63', 64, 128, 'en-US', t).invalid).toBe(true);
+  expect(numericFieldView('flows.max_flows', '128', 64, 128, 'en-US', t).invalid).toBe(false);
+  expect(numericFieldView('flows.max_flows', '129', 64, 128, 'en-US', t).invalid).toBe(true);
+  expect(numericFieldView('flows.retention_seconds', '1.5', 1, undefined, 'en-US', t).invalid).toBe(true);
+  expect(numericFieldView('flows.max_flows', '100', 64, undefined, 'en-US', t).description).toBe('At least 64');
+  expect(numericFieldView('flows.max_flows', '1', 1, undefined, 'en-US', t).invalid).toBe(false);
   const patch: RuntimeSettingsPatch = {log: {level: 'debug'}};
   numericAccess['log.buffered_records'].write(patch, 128);
   numericAccess['flows.max_flows'].write(patch, 256);
@@ -35,6 +36,7 @@ it('validates numeric bounds and writes typed partial patches without losing sib
   numericAccess['dns_log.max_records'].write(patch, 64);
   expect(patch).toEqual({log: {level: 'debug', buffered_records: 128}, flows: {max_flows: 256, retention_seconds: 10}, dns_log: {max_records: 64}});
   expect(numericAccess['log.buffered_records'].read(runtimeSettings)).toBe(1024);
+  expect(numericAccess['flows.max_flows'].read({...runtimeSettings, flows: undefined})).toBeUndefined();
 });
 it('keeps full geodata digests in tooltips and handles absent provenance', () => {
   const rows = geodataRows([{...geodata.assets[0], modified_at: null, source_redacted: null}], 'en');
@@ -63,12 +65,13 @@ it('recorder controls follow the reported state and the wire form', () => {
   expect(forbidden.status).toBe('settings.recordingForbidden');
   expect(recorderView('record_dns_log', 'off', undefined, t).tone).toBe('neutral');
   expect(recorderPatchValue('auto')).toBe('auto');
-  expect(recorderPatchValue('on')).toBe(true);
-  expect(recorderPatchValue('off')).toBe(false);
+  expect(recorderPatchValue('on')).toBe('on');
+  expect(recorderPatchValue('off')).toBe('off');
   const recording = {flows: active, logs: active, dns_log: active, events: {active: false}, grace_remaining_seconds: 0} as never;
   expect(recordingNote(recording, t)).toBe('settings.recordingDetached');
   expect(recordingNote({...(recording as object), grace_remaining_seconds: 42} as never, t)).toBe('settings.recordingGrace:{"n":42}');
   expect(recordingNote(undefined, t)).toBeNull();
+  expect(recordingNote({} as never, t)).toBeNull();
 });
 
 it('names the pages that make automatic flow recording capture', () => {

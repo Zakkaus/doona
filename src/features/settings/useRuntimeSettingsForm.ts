@@ -32,7 +32,7 @@ export function useRuntimeSettingsForm() {
   const fields = new Set<RuntimeSettingField>(capabilities?.runtime_settings.fields ?? []);
   const settings = useRuntimeSettings(available);
   const baseline = settings.data;
-  const modeOf = (id: Recorder): RecorderChoice => baseline?.recording?.[recorderAccess[id].state].mode ?? 'auto';
+  const modeOf = (id: Recorder): RecorderChoice => baseline?.recording?.[recorderAccess[id].state]?.mode ?? 'auto';
   const stamp = baseline ? JSON.stringify([baseline.log, baseline.dns_log, baseline.flows, recorderFields.map(modeOf)]) : '';
   const [draft, setDraft] = useState<{
     at: string;
@@ -41,7 +41,7 @@ export function useRuntimeSettingsForm() {
     modes: Partial<Record<Recorder, RecorderChoice>>;
   } | null>(null);
   const edits = draft ?? {at: stamp, values: {}, modes: {}};
-  const level = edits.level ?? baseline?.log.level ?? '';
+  const level = edits.level ?? baseline?.log?.level ?? '';
   const dirty = !!draft && (draft.level !== undefined || Object.keys(draft.values).length > 0 || Object.keys(draft.modes).length > 0);
   const guard = useDraftGuard(dirty, () => setDraft(null));
   const ceilings: Record<Numeric, number | undefined> = {
@@ -50,16 +50,25 @@ export function useRuntimeSettingsForm() {
     'flows.max_flows': capabilities?.flows.max_flows,
     'flows.retention_seconds': capabilities?.flows.retention_seconds
   };
+  // An absent minimum means 1.
+  const floors: Record<Numeric, number> = {
+    'log.buffered_records': capabilities?.logs.min_buffered_records ?? 1,
+    'dns_log.max_records': capabilities?.dns_log.min_records ?? 1,
+    'flows.max_flows': capabilities?.flows.min_flows ?? 1,
+    'flows.retention_seconds': 1
+  };
+  // A control whose section or member the engine omits stays hidden.
+  const hasLevel = fields.has('log.level') && (!baseline || baseline.log?.level !== undefined);
   const numeric = numericFields
-    .filter(id => fields.has(id))
+    .filter(id => fields.has(id) && (!baseline || numericAccess[id].read(baseline) !== undefined))
     .map(id => ({
-      ...numericFieldView(id, edits.values[id] ?? (baseline ? String(numericAccess[id].read(baseline)) : ''), ceilings[id], locale, t),
+      ...numericFieldView(id, edits.values[id] ?? String((baseline && numericAccess[id].read(baseline)) ?? ''), floors[id], ceilings[id], locale, t),
       change: (value: string) => {
         if (!settings.busy) setDraft({...edits, values: {...edits.values, [id]: value.trim()}});
       }
     }));
   const recorders = recorderFields
-    .filter(id => fields.has(id))
+    .filter(id => fields.has(id) && (!baseline || baseline.recording?.[recorderAccess[id].state] !== undefined))
     .map(id => ({
       ...recorderView(id, edits.modes[id] ?? modeOf(id), baseline?.recording?.[recorderAccess[id].state], t),
       change: (value: string) => {
@@ -69,7 +78,7 @@ export function useRuntimeSettingsForm() {
   const patch: RuntimeSettingsPatch = {};
   if (baseline) {
     for (const recorder of recorders) if (recorder.value !== modeOf(recorder.id)) patch[recorder.id] = recorderPatchValue(recorder.value);
-    if (fields.has('log.level') && level !== baseline.log.level) patch.log = {level: level as RuntimeSettings['log']['level']};
+    if (hasLevel && level !== baseline.log?.level) patch.log = {level: level as NonNullable<RuntimeSettings['log']>['level']};
     for (const field of numeric)
       if (!field.invalid && Number(field.value) !== numericAccess[field.id].read(baseline)) numericAccess[field.id].write(patch, Number(field.value));
   }
@@ -95,7 +104,7 @@ export function useRuntimeSettingsForm() {
       if (!settings.busy) setDraft({...edits, level: value});
     },
     levels: (capabilities?.logs.levels ?? (['trace', 'debug', 'info', 'warn', 'error'] as const)).map(id => ({id, label: enumLabel(logLevelLabels, id, t)})),
-    hasLevel: fields.has('log.level'),
+    hasLevel,
     hasBaseline: !!baseline,
     source: baseline ? t(baseline.source === 'runtime' ? 'settings.sourceRuntime' : 'settings.sourceConfig') : null,
     sourceTone: baseline?.source === 'runtime' ? ('info' as const) : ('neutral' as const),

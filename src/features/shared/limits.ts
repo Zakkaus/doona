@@ -121,8 +121,8 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
   for (const id of Object.keys(resourceLabels) as Resource[]) {
     const resource = resources[id];
     if (id === 'config' || (id === 'config_validate' && validateUnloaded)) continue;
-    // Flows stay available with recording off.
-    const flowsOff = id === 'flows' && resource.available && resources.flows.recording === 'off';
+    // Flows stay available with recording off; auto records on demand, which reads the same.
+    const flowsOff = id === 'flows' && resource.available && (resources.flows.recording === 'off' || resources.flows.recording === 'auto');
     if (flowsOff || !resource.available) {
       const code = reason(id)?.code;
       add((code && reasonCause[code]) ?? (flowsOff ? 'flowsIdle' : 'notProvided'), id);
