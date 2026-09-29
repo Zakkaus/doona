@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast, useLinked} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, type CheckEditDraft, type CheckField} from './view';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, type CheckEditDraft, type CheckField} from './view';
 export type CheckEditView = {
   title: string;
   open: boolean;
@@ -81,23 +81,27 @@ export function useCheckEdit(
     available: !!draft || fields.length > 0,
     busy,
     changed: ops.length > 0,
-    fields: draft
-      ? fields.map(id => {
-          const theirs = draft.theirs[id];
-          return {
-            id,
-            label: t(labels[id]),
-            value: draft.value[id],
-            // A value the group took meanwhile replaces the help while the field still differs from it.
-            description: theirs !== undefined && theirs !== draft.value[id] ? t('policy.checkChangedElsewhere', {value: theirs || t('ui.none')}) : t(help[id]),
-            error: tried && checkInvalid(id, draft.value[id]) ? t(invalid[id]) : undefined,
-            // Edits wait while a save is in flight; what was submitted is what the outcome describes.
-            change: (value: string) => {
-              if (!busy) setDraft(prev => (prev ? {...prev, value: {...prev.value, [id]: value}} : prev));
-            }
-          };
-        })
-      : [],
+    fields:
+      draft && g
+        ? fields.map(id => {
+            const theirs = draft.theirs[id];
+            return {
+              id,
+              label: t(labels[id]),
+              value: draft.value[id],
+              // A value the group took meanwhile replaces the help while the field still differs from it.
+              description:
+                theirs !== undefined && theirs !== draft.value[id]
+                  ? t('policy.checkChangedElsewhere', {value: theirs || t('ui.none')})
+                  : t(checkUnset(g, id, draft.value[id]) ? 'policy.unsetDefault' : help[id]),
+              error: tried && checkInvalid(id, draft.value[id]) ? t(invalid[id]) : undefined,
+              // Edits wait while a save is in flight; what was submitted is what the outcome describes.
+              change: (value: string) => {
+                if (!busy) setDraft(prev => (prev ? {...prev, value: {...prev.value, [id]: value}} : prev));
+              }
+            };
+          })
+        : [],
     show: () => {
       if (!g) return;
       session.next();

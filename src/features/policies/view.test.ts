@@ -8,6 +8,7 @@ import {
   actionErrorText,
   checkDraft,
   checkFields,
+  checkUnset,
   checkInvalid,
   checkPatch,
   checkRebase,
@@ -177,6 +178,14 @@ it('offers the check fields a group lists as writable, whatever its policy', () 
   // honk lists no check_interval; a backend that also lists it gets every field, in the dialog's order.
   expect(checkFields(resilient)).toEqual(['check_url', 'tolerance', 'idle_timeout']);
   expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval', 'tolerance', 'idle_timeout']);
+});
+it('captions an unset tolerance as the engine default while its field stays empty', () => {
+  const g = nodeFixtures(0).groups[1];
+  const unset = {...g, config: {...g.config, tolerance: null}};
+  expect(checkUnset(unset, 'tolerance', '')).toBe(true);
+  expect(checkUnset(unset, 'tolerance', '50')).toBe(false);
+  expect(checkUnset(unset, 'idle_timeout', '')).toBe(false);
+  expect(checkUnset({...g, config: {...g.config, tolerance: 50}}, 'tolerance', '')).toBe(false);
 });
 it('patches only the check fields that changed, testing each against its opening value and sending null for an empty one', () => {
   const g = withInterval(nodeFixtures(0).groups[1]);

@@ -51,6 +51,9 @@ export const checkDraft = (g: Group): CheckDraft => ({
   tolerance: countText(g.config.tolerance),
   idle_timeout: countText(g.config.idle_timeout)
 });
+// A tolerance the group leaves unset opens as an empty field; while it stays empty its caption says the engine default
+// applies, in place of the help.
+export const checkUnset = (g: Group, field: CheckField, value: string) => field === 'tolerance' && g.config.tolerance === null && value === '';
 // `theirs`: the fields both the user and the group changed since the dialog opened, with the group's value.
 export type CheckEditDraft = {base: CheckDraft; value: CheckDraft; theirs: Partial<CheckDraft>};
 // After a save refused as conflicting, a field only the group changed takes its current value and a field the user
