@@ -1583,6 +1583,7 @@
   "ui.cache": "缓存",
   "ui.cancel": "取消",
   "ui.changeApplying": "另一项修改正在应用",
+  "ui.chartPart": "{label} {value}",
   "ui.clearFilters": "清除筛选",
   "ui.config": "配置",
   "ui.current": "当前",
