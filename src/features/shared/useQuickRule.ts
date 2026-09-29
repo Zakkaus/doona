@@ -24,6 +24,7 @@ import {
   ruleLists,
   rulePositions,
   ruleTargets,
+  ruleWritten,
   typedCondition,
   type PositionPin,
   type QuickRuleSeed,
@@ -166,7 +167,11 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
     if (rule.list !== 'routing') {
       // A DNS rule shows in what the resolver answers, so the origin can ask again.
       const again = query && queryAgain;
-      toast('positive', t('rule.added'), again ? {action: {label: t('rule.queryAgain'), onAction: () => again(query), closeOnAction: true}} : undefined);
+      const notice = ruleWritten('rule.added', t);
+      toast('positive', notice.text, {
+        detail: notice.detail,
+        action: again ? {label: t('rule.queryAgain'), onAction: () => again(query), closeOnAction: true} : undefined
+      });
       return;
     }
     // The reload that follows the write may not have landed yet, so View rule reads the list itself. Without the rule
@@ -178,7 +183,8 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       const id = listed && acceptedRule(listed.rules, rule.condition, rule.outbound, rule.before);
       go('rules', within('', {tab: 'list', rule: id}));
     };
-    toast('positive', t('rule.added'), {action: {label: t('rule.view'), onAction: () => void view(), closeOnAction: true}});
+    const notice = ruleWritten('rule.added', t);
+    toast('positive', notice.text, {detail: notice.detail, action: {label: t('rule.view'), onAction: () => void view(), closeOnAction: true}});
   };
   const listData = routing ? rules.data : dnsRules.data;
   const loadError = (routing ? rules.error : dnsRules.error) ?? config.error ?? (routing ? groups.error : null);

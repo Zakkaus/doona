@@ -6,6 +6,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {ruleCondition, type RuleConditionKind} from '../../dae/groups';
 import {addRule, removeRule, replaceRuleTarget, type RuleAnchor} from '../../dae/ruleText';
 import type {RuleSeed} from '../shared/link';
+import {ruleWritten} from '../shared/rule';
 import {addRuleReason, addRuleTip, removalView, ruleDraftView, type ReasonKeys, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
 
@@ -185,7 +186,8 @@ export function useRuleEditor<R extends EditedRule>({
             : addRule(text, at, condition, form.outbound, form.must)
       );
       if (written) {
-        toast('positive', t(dialog.kind === 'remove' ? 'rule.removed' : dialog.kind === 'edit' ? 'rule.edited' : 'rule.added'));
+        const notice = ruleWritten(dialog.kind === 'remove' ? 'rule.removed' : dialog.kind === 'edit' ? 'rule.edited' : 'rule.added', t);
+        toast('positive', notice.text, {detail: notice.detail});
         pending.current = false;
         dismiss();
       }

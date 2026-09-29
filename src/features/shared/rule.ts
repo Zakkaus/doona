@@ -262,3 +262,8 @@ export function ruleDialogReason(
   if (busy || failed || unplaceable) return null;
   return waiting ? t('ui.loading') : outbound ? null : t(dns ? 'rule.dns.actionMissing' : 'rule.outboundMissing');
 }
+// What a successful rule write toasts. It is shown once the reload has settled, so the change is in effect, but a
+// connection already open keeps the route it was given until it reconnects.
+export function ruleWritten(key: 'rule.added' | 'rule.edited' | 'rule.removed' | 'rule.applied', t: Translator, n?: number) {
+  return {text: n === undefined ? t(key) : t(key, {n}), detail: t('rule.keepsRoute')};
+}

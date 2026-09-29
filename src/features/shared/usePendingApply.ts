@@ -6,6 +6,7 @@ import {pendingRules, readConfigFresh, refetchAll, useConfigEditor, usePendingRu
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {byFile, insertRules, partialFailure, ruleFailure} from './pending';
+import {ruleWritten} from './rule';
 
 // How many rules reached their files, and the failure that stopped the rest, if any.
 export type ApplyOutcome = {written: number; failure: PendingFailure | null};
@@ -89,7 +90,12 @@ export function useApplyHeld() {
       const outcome = await apply(rules);
       if (!outcome) return;
       pendingRules.fail(outcome.failure);
-      toast(outcome.failure ? 'negative' : 'positive', outcome.failure ? outcome.failure.text : t('rule.applied', {n: rules.length}));
+      if (outcome.failure) {
+        toast('negative', outcome.failure.text);
+        return;
+      }
+      const notice = ruleWritten('rule.applied', t, rules.length);
+      toast('positive', notice.text, {detail: notice.detail});
     }
   };
 }
