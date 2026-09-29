@@ -117,7 +117,7 @@ for (const how of Object.keys(failures) as Failure[])
       const provider = (await api.providers({limit: 1000})).providers.find(item => item.kind !== 'inline')!;
       const counted = await failOnce(page, handlers, 'DELETE', `providers/${provider.id}`, how, () => api.deleteProvider(provider.id));
       await page.goto('/#/nodes?tab=list');
-      await page.getByRole('button', {name: `Remove ${provider.name}`, exact: true}).click();
+      await moreAction(page.locator('body'), `Remove ${provider.name}`, `More actions for ${provider.name}`);
       const dialog = page.getByRole('alertdialog');
       const confirm = dialog.getByRole('button', {name: `Remove ${provider.name}`, exact: true});
       await confirm.click();
