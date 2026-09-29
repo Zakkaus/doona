@@ -11,7 +11,6 @@ import logo from './logo.svg';
 import {toast} from './ui/ui';
 import {DEFAULT_LANG, LangContext, loadLanguage, loadedLang, readLang, translate, type Lang} from './i18n';
 import {unloaded} from './i18n/unloaded';
-import {reloadForStaleChunk} from './ui/staleChunk';
 
 stampAppearance();
 // The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
@@ -86,9 +85,6 @@ function Startup() {
     </LangContext.Provider>
   );
 }
-// Vite raises this when a lazy chunk or its stylesheet cannot be fetched, before the import rejects. A reload here
-// does not cancel the rejection: the page's LoadBoundary still sees it and knows the reload is under way.
-window.addEventListener('vite:preloadError', () => void reloadForStaleChunk());
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Startup />

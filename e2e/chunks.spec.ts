@@ -198,7 +198,6 @@ test('a search dialog that fails to load leaves nothing open and says so', async
   expectLoadFailures(page, /\/SearchDialog-[^/]+\.js$/);
   await page.addInitScript(() => {
     window.requestIdleCallback = () => 0;
-    sessionStorage.setItem('doona-stale-reload', String(Date.now()));
   });
   await page.route('**/assets/SearchDialog-*.js', route => route.abort());
   await page.goto('/#/activity');
