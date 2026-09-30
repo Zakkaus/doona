@@ -8,6 +8,7 @@ import {
   logLevelLabels,
   logLevels,
   memoryTone,
+  noNodeSources,
   nodeOwner,
   resolveSelectedLeaf,
   routineGap,
@@ -119,4 +120,14 @@ it('lists every log level once, least severe first as the contract orders them',
 it('lists every labelled event kind', () => {
   expect(eventKinds).toEqual(Object.keys(eventKindLabels));
   expect(eventKinds).toEqual(['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed']);
+});
+
+it('counts a backend as without node sources only once both lists load empty of subscriptions and own nodes', () => {
+  const builtin = {protocol: 'direct'};
+  expect(noNodeSources(undefined, [])).toBe(false);
+  expect(noNodeSources([], undefined)).toBe(false);
+  expect(noNodeSources([], [builtin])).toBe(true);
+  expect(noNodeSources([{kind: 'inline'}], [builtin])).toBe(true);
+  expect(noNodeSources([{kind: 'subscription'}], [])).toBe(false);
+  expect(noNodeSources([], [builtin, {protocol: 'vless'}])).toBe(false);
 });

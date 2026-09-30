@@ -943,6 +943,7 @@
   "nodes.newGroupHelp": "Adds a group to the group section and includes {name} using a name filter. Its policy can be changed on the policies page.",
   "nodes.noMatch": "No matching nodes",
   "nodes.noProviders": "No node sources",
+  "nodes.noSources": "No subscriptions or nodes yet. Add a subscription to get nodes.",
   "nodes.node": "Node",
   "nodes.note": "Sources are subscriptions, files and the nodes in the configuration. When the backend allows it, subscriptions and share links are added here; changes are written to the main configuration and reloaded.",
   "nodes.of": "Nodes of {name}",

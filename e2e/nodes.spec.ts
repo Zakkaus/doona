@@ -893,3 +893,16 @@ test('an edit refused because the entry left its file says so on the next save',
   await apply.click();
   await expect(dialog.getByRole('alert')).toContainText('This subscription is no longer in its source file');
 });
+
+test('with no subscription and no node the page says so and offers Add subscription', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET providers'] = async () => ({providers: [], next_cursor: null});
+  backend.handlers['GET nodes'] = async () => ({observed_at: new Date().toISOString(), nodes: [], next_cursor: null});
+  await page.goto('/#/nodes');
+  const empty = page.locator('.rp-empty', {hasText: 'No subscriptions or nodes yet.'});
+  await expect(empty).toBeVisible();
+  await expect(page.locator('.rp-table')).toHaveCount(0);
+  await expect(empty.getByRole('button', {name: 'Paste node link', exact: true})).toBeVisible();
+  await empty.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Add subscription'})).toBeVisible();
+});
