@@ -132,7 +132,8 @@ export const providers: Provider[] = [
     expires_at: new Date(now + 23 * 86400 * 1000).toISOString(),
     traffic: {upload_bytes: '48318382080', download_bytes: '412316860416', total_bytes: '1099511627776'},
     status: 'ok',
-    last_error: null
+    last_error: null,
+    download: {route: 'routing', group_id: null}
   },
   {
     id: 'inline',

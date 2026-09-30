@@ -37,7 +37,7 @@ import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
 import type {SubscriptionDraft, SubscriptionFieldSet} from '../shared/SubscriptionFields';
 
-const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
+const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null, route: ''};
 
 type NodeDialog =
   | {kind: 'provider'}
@@ -60,7 +60,11 @@ export function useNodesPage({go, query}: PageProps) {
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
   const edited =
     dialog?.kind === 'editProvider'
-      ? form.name !== dialog.entry.tag || form.value !== dialog.entry.url || form.agent !== (dialog.entry.ua ?? '') || form.cache !== null
+      ? form.name !== dialog.entry.tag ||
+        form.value !== dialog.entry.url ||
+        form.agent !== (dialog.entry.ua ?? '') ||
+        form.cache !== null ||
+        form.route !== (dialog.entry.route ?? '')
       : !!(form.name || form.value);
   const guard = useDraftGuard(!!dialog && edited, () => {
     session.current++;
@@ -72,7 +76,8 @@ export function useNodesPage({go, query}: PageProps) {
     setPolicy(newGroupPolicies[0].id);
     setUpdateGroups(true);
     setProblem(null);
-    if (next.kind === 'editProvider') setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? ''});
+    if (next.kind === 'editProvider')
+      setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
     setDialog(next);
   }, []);
   const lang = useLang();
@@ -230,7 +235,9 @@ export function useNodesPage({go, query}: PageProps) {
             tag,
             url,
             ...(form.agent !== (dialog.entry.ua ?? '') ? {ua: form.agent.trim() || null} : {}),
-            ...(editCache.changed ? {cache: editCache.value} : {})
+            ...(editCache.changed ? {cache: editCache.value} : {}),
+            // Following the routing rules is honk's default, so choosing it removes the route.
+            ...(routeChanged ? {route: editRoute === 'routing' ? null : editRoute} : {})
           });
           if (!follow) return written;
           return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
@@ -292,6 +299,8 @@ export function useNodesPage({go, query}: PageProps) {
         : declared.has(editName)
           ? t('nodes.tagTaken')
           : null;
+  const editRoute = form.route || 'routing';
+  const routeChanged = dialog?.kind === 'editProvider' && editRoute !== (dialog.entry.route || 'routing');
   const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
   const references =
     dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
@@ -320,7 +329,8 @@ export function useNodesPage({go, query}: PageProps) {
         (editName !== dialog.entry.tag ||
           form.value.trim() !== dialog.entry.url ||
           (form.agent !== (dialog.entry.ua ?? '') && (form.agent.trim() || null) !== dialog.entry.ua) ||
-          editCache.changed)
+          editCache.changed ||
+          routeChanged)
       : dialog?.kind === 'provider'
         ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
         : dialog?.kind === 'node'
@@ -328,12 +338,18 @@ export function useNodesPage({go, query}: PageProps) {
           : dialog?.kind === 'group'
             ? nameError === null
             : true;
-  const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache};
+  const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
+  const groupsEverywhere = [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))];
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
   // edit writes the entry's own User-Agent and cache, and leaves the interval to the table's picker.
   const subscriptionFields: SubscriptionFieldSet =
     dialog?.kind === 'editProvider'
-      ? {agent: {fallback: createOptions?.user_agent, description: t('nodes.agentDefault')}, cache: writtenCache}
+      ? {
+          agent: {fallback: createOptions?.user_agent, description: t('nodes.agentDefault')},
+          cache: writtenCache,
+          // An engine that fetches subscriptions only directly leaves the route out of its providers.
+          routes: dialog.item.download === undefined ? undefined : groupsEverywhere
+        }
       : {
           interval: createOptions?.update_interval,
           agent: createOptions?.user_agent === undefined ? undefined : {fallback: createOptions.user_agent},
@@ -429,7 +445,8 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'editProvider'
           ? t('policy.save')
           : t('nodes.add'),
-    editOptions: dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, writtenCache !== undefined) : [],
+    editOptions:
+      dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, {cache: writtenCache !== undefined, route: !!subscriptionFields.routes}) : [],
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
     // unless another source or an expression names it too: a write across sources is not atomic, so the rename waits.
     renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,

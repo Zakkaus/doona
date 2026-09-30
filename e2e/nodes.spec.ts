@@ -659,6 +659,46 @@ test("a subscription's User-Agent is set and removed where its entry is written"
   await expect(page.locator('.cm-content')).not.toContainText('clash.meta');
 });
 
+test("a subscription's download route is written into its entry and removed again", async ({page}) => {
+  const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  let dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  const route = dialog.getByRole('button', {name: 'Download route'});
+  await expect(route).toContainText('By routing rules');
+  await route.click();
+  await page.getByRole('option', {name: 'Direct', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}' {\n    route: direct\n  }`);
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await expect(dialog.getByRole('button', {name: 'Download route'})).toContainText('Direct');
+  await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Download route'}).click();
+  await page.getByRole('option', {name: 'By routing rules', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'`);
+  await expect(page.locator('.cm-content')).not.toContainText('route: direct');
+});
+
+test('an engine that fetches subscriptions only directly offers no download route', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET providers'] = async () => {
+    const list = await api.providers();
+    return {...list, providers: list.providers.map(({download: _download, ...provider}) => provider)};
+  };
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Download route'})).toHaveCount(0);
+});
+
 test('changing the interval of a block-form subscription keeps its User-Agent', async ({page}) => {
   const {api} = await mockBackend(page);
   const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';

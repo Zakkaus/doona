@@ -316,3 +316,28 @@ it('judges a User-Agent against the contract bound, and one written into an entr
   expect(agentProblem(`it's "x"`, false)).toBeNull();
   expect(agentProblem(`it's "x"`, true)).toBe('config.unquotable');
 });
+
+it("reads and writes the download route, replacing the old block form's download_detour", () => {
+  const source = `subscription {
+  plain: 'https://one.example/sub'
+  opts: 'https://two.example/sub' {
+    ua: 'clash'
+    route: direct
+  }
+  old: {
+    url: 'https://three.example/sub'
+    download_detour: proxy
+  }
+}
+`;
+  expect(readSubscriptionEntries(source).map(entry => entry.route)).toEqual([null, 'direct', 'proxy']);
+  expect(writeSubscriptionEntry(source, 'plain', {route: 'direct'})).toContain("plain: 'https://one.example/sub' {\n    route: direct\n  }");
+  expect(writeSubscriptionEntry(source, 'plain', {route: 'my group'})).toContain("route: 'my group'\n");
+  expect(writeSubscriptionEntry(source, 'opts', {route: 'proxy'})).toContain("    ua: 'clash'\n    route: proxy\n  }");
+  expect(writeSubscriptionEntry(source, 'opts', {route: null})).toContain("opts: 'https://two.example/sub' {\n    ua: 'clash'\n  }");
+  const old = writeSubscriptionEntry(source, 'old', {route: 'direct'});
+  expect(old).toContain("old: {\n    url: 'https://three.example/sub'\n    route: direct\n  }");
+  expect(old).not.toContain('download_detour');
+  expect(readSubscriptionEntries(writeSubscriptionEntry(source, 'old', {route: null})).find(entry => entry.tag === 'old')!.route).toBeNull();
+  expect(writeSubscriptionEntry(source, 'opts', {route: 'direct'})).toBe(source);
+});

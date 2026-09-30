@@ -2,9 +2,9 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {LabeledSelect, Switch, TextField} from '../../ui/ui';
 import {intervalItems} from './subscription';
 
-// A subscription as typed. An empty interval and a null cache leave that option to what applies
+// A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
 // without it, so a caller writes only what the person changed.
-export type SubscriptionDraft = {name: string; url: string; interval: string; agent: string; cache: boolean | null};
+export type SubscriptionDraft = {name: string; url: string; interval: string; agent: string; cache: boolean | null; route: string};
 
 // The optional fields to show, each with the value that applies while the draft leaves it empty; a field left out
 // is not shown.
@@ -12,6 +12,8 @@ export type SubscriptionFieldSet = {
   interval?: number;
   agent?: {fallback?: string; description?: string};
   cache?: boolean;
+  // The groups a fetch can be sent through, for the download route.
+  routes?: string[];
 };
 
 // The fields alone: the caller owns the draft, checks it and decides what saving it means.
@@ -33,6 +35,7 @@ export function SubscriptionFields({
   const t = useT();
   const locale = LOCALE[useLang()];
   const set = (patch: Partial<SubscriptionDraft>) => onChange({...value, ...patch});
+  const route = value.route || 'routing';
   return (
     <>
       <TextField
@@ -79,6 +82,23 @@ export function SubscriptionFields({
             {t('nodes.cache')}
           </Switch>
           <span className="rp-label">{t('nodes.cacheHelp')}</span>
+        </>
+      )}
+      {fields.routes && (
+        <>
+          <LabeledSelect
+            label={t('settings.geodataRoute')}
+            items={[
+              {id: 'routing', label: t('settings.geodataRouteRouting')},
+              {id: 'direct', label: t('settings.geodataRouteDirect')},
+              // A route naming a group this list lacks is kept, so the select can show it.
+              ...[...new Set([...fields.routes, ...(route === 'routing' || route === 'direct' ? [] : [route])])].map(group => ({id: group, label: group}))
+            ]}
+            value={route}
+            isDisabled={isDisabled}
+            onChange={next => set({route: next})}
+          />
+          <span className="rp-label">{t('nodes.routeHelp')}</span>
         </>
       )}
     </>

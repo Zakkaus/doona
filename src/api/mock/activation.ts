@@ -2,6 +2,7 @@ import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
 import {groupAdmits, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
+import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {redactUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
 
@@ -105,6 +106,17 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
   });
   for (const node of nextNodes) node.group_ids = memberships.get(node.id)!;
   for (const provider of nextProviders) provider.node_count = nextNodes.filter(node => node.provider_id === provider.id).length;
+  // Like honk, a subscription reports the route its fetches take: empty or `routing` follows the rules, `direct` goes
+  // straight out, and anything else names a group.
+  const routes = new Map(readSubscriptionEntries(text).map(entry => [entry.tag, entry.route]));
+  for (const provider of nextProviders) {
+    if (provider.kind !== 'subscription') continue;
+    const route = routes.get(provider.name) || 'routing';
+    provider.download =
+      route === 'routing' || route === 'direct'
+        ? {route, group_id: null}
+        : {route: 'group', group_id: nextGroups.find(group => group.name === route)?.id ?? null};
+  }
   nodes.splice(0, nodes.length, ...nextNodes);
   groups.splice(0, groups.length, ...nextGroups);
   providers.splice(0, providers.length, ...nextProviders);
