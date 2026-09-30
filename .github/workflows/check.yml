@@ -37,6 +37,11 @@ jobs:
   # The browser suite is most of the run's time, so it is split over parallel runners; each builds its own dist.
   e2e:
     runs-on: ubuntu-latest
+    # The image ships the browsers and their OS packages; installing those per run took up to 21 minutes on some runners.
+    # Bump the tag together with @playwright/test (the step below fails on a mismatch).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -49,14 +54,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Read Playwright version
-        id: playwright
-        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}
-      - run: pnpm e2e:install --with-deps
+      - name: Match the container to @playwright/test
+        run: test "$(node -p "require('./package.json').devDependencies['@playwright/test']")" = "${PLAYWRIGHT_VERSION}"
+        env:
+          PLAYWRIGHT_VERSION: 1.63.0
       - run: pnpm e2e --shard=${{ matrix.shard }}/4
         env:
           DOONA_E2E_WEBKIT: '1'
@@ -65,3 +66,35 @@ jobs:
         with:
           name: test-results-${{ matrix.shard }}
           path: test-results/
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-reports:
+    if: ${{ !cancelled() }}
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+      - run: pnpm exec playwright merge-reports --reporter html ./all-blob-reports
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: error
+          retention-days: 14
