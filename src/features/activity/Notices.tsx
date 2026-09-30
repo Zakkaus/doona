@@ -45,11 +45,16 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
               <Light small tone={row.tone}>
                 {row.kindText}
               </Light>
-              <span className="rp-note rp-grow">{row.summaryText}</span>
-              {row.action && (
-                <Link appearance="button" quiet small href={row.action.href}>
-                  {row.action.label}
-                </Link>
+              {row.action ? (
+                /* The action ends the summary's line, so the row keeps the list's two columns. */
+                <span className="rp-cluster nowrap">
+                  <span className="rp-note rp-grow">{row.summaryText}</span>
+                  <Link appearance="button" quiet small href={row.action.href}>
+                    {row.action.label}
+                  </Link>
+                </span>
+              ) : (
+                <span className="rp-note rp-grow">{row.summaryText}</span>
               )}
             </div>
           ))}
