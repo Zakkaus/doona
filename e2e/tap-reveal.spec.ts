@@ -9,7 +9,7 @@ test.describe('on a phone', () => {
   test.use({viewport: {width: 360, height: 780}, hasTouch: true, isMobile: true});
 
   test('a tap on a truncated rule cell shows it whole until a tap elsewhere', async ({page}) => {
-    await page.goto('/#/rules?tab=list');
+    await page.goto('/#/rules?tab=list&view=advanced');
     const cell = firstCut(page);
     const full = (await cell.textContent())!.trim();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
@@ -43,7 +43,7 @@ test.describe('on a phone', () => {
   });
 
   test('a tap in a table whose row press does something else shows the tip and still presses the row', async ({page}) => {
-    await page.goto('/#/rules?tab=list');
+    await page.goto('/#/rules?tab=list&view=advanced');
     const cell = firstCut(page);
     const row = cell.locator('xpath=ancestor::*[@role="row"][1]');
     await cell.tap();

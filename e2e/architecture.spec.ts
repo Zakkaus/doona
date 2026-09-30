@@ -192,7 +192,7 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
     writes++;
     await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
   });
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
@@ -217,7 +217,7 @@ test('a source shifted since the rule list was read offers no rule edits', async
   main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
   main.content_sha256 = await sha256(main.content);
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   await expect(panel.getByRole('row').nth(1)).toBeVisible();
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
@@ -748,7 +748,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
     await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
   });
   const original = (await api.config()).sources.find(source => source.kind === 'main')!.content;
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
   await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('accepted.example');

@@ -164,7 +164,7 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   // Refresh stays a plain re-read beside it.
   await expect(top(page).getByRole('button', {name: 'Refresh', exact: true}).locator('.rp-held-count')).toHaveCount(0);
   // The rule list shows what is held, and a held rule can be discarded there.
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const held = page.getByRole('region', {name: 'Pending: 2'});
   await expect(held).toContainText('domain(full: api.telegram.org) -> proxy');
   await expect(held).toContainText('domain(full: cdn.bilibili.com) -> direct');
@@ -190,7 +190,7 @@ test('a refused apply keeps the held rules and shows the diagnostics in the rule
     diagnostics: [{level: 'error', source_id: 'src-main', line: 44, column: 3, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
   });
   await hold(page, '1');
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await top(page).getByRole('button', {name: 'Apply (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: 'Validation found 1 error; nothing written'})).toBeVisible();
   const held = page.getByRole('region', {name: 'Pending: 1'});
@@ -261,7 +261,7 @@ test('reload with rules held reloads only and keeps them held', async ({page}) =
   await expect(page.locator('.rp-toast.positive', {hasText: 'Reload'})).toBeVisible();
   expect(requests.filter(request => request.method() !== 'GET').map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/reload$/)]);
   await expect(top(page).getByRole('button', {name: 'Apply (1)', exact: true}).locator('.rp-held-count')).toHaveText('1');
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('domain(full: api.telegram.org) -> proxy');
 });
 
@@ -349,7 +349,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('Last, before the fallback');
 });
 
@@ -380,7 +380,7 @@ test('an apply that fails in a later file keeps what it could not write and says
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await hold(page, '1');
   await hold(page, inInclude.id);
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const held = page.getByRole('region', {name: 'Pending: 2'});
   await expect(held).toContainText('Writes 2 files');
   await top(page).getByRole('button', {name: 'Apply (2); writes 2 files', exact: true}).click();
@@ -439,7 +439,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   slow = false;
   read.open();
   // The rule list is read again after the close; a write would come before that settles.
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite: telegram)');
   await page.waitForTimeout(500);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
@@ -508,7 +508,7 @@ test('held rules cannot be discarded while they are applied', async ({page}) => 
   };
   await hold(page, '1');
   await hold(page, '2');
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const held = page.getByRole('region', {name: 'Pending: 2'});
   const discard = held.getByRole('button', {name: 'Discard held rule', exact: true});
   await expect(discard).toHaveCount(2);
@@ -699,7 +699,7 @@ test('the matched rule is edited from a connection: only its outbound changes, o
 test('a routing rule edits its outbound from its own row, and a read-only file disables that with the reason', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content!;
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const row = page.getByRole('row', {name: /domain\(geosite: telegram\)/});
   await row.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});

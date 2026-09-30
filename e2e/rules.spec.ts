@@ -15,7 +15,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows.first()).toBeVisible();
@@ -67,7 +67,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const rows = panel.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rows).toHaveCount(15);
@@ -150,7 +150,7 @@ test('without a rule dictionary, Retry refetches the flows the distribution is b
   };
   // Frozen timers: only the retry, not the next poll, can bring the flows back.
   await page.clock.install();
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const panel = page.getByRole('tabpanel', {name: 'Routing rules'});
   const alert = panel.getByRole('alert').filter({hasText: 'Flows unavailable'});
   await expect(alert).toBeVisible();
@@ -164,7 +164,7 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
   const {api} = await mockBackend(page);
   // The page's polls of the accepted write never answer; only the backend finishes it.
   await page.route('**/api/v1/operations/**', () => {});
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const add = page.getByRole('button', {name: 'Add rule', exact: true});
   const dialog = page.getByRole('dialog');
   const write = async (value: string) => {
@@ -185,7 +185,7 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
 });
 
 test('the rule list fits its rows instead of holding a page of empty space', async ({page}) => {
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Routing rules'})});
   await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
   const rows = await table.locator('[role=row][data-key]').count();

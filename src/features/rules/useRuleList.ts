@@ -112,7 +112,8 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     anchor: ruleAnchor,
     kinds: conditionKinds,
     onClose: () => {
-      if (seed || edit) go('rules', within(query, {add: null, edit: null}));
+      // The link opened the rule table; dropping its params keeps the table rather than falling back to the simple view.
+      if (seed || edit) go('rules', within(query, {add: null, edit: null, view: params.get('view') ?? 'advanced'}));
     },
     link: edit
       ? {key: `edit:${edit}`, open: edited ? {kind: 'edit', rule: edited, outbound: edited.outbound ?? '', must: edited.must} : null}

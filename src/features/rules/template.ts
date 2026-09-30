@@ -23,6 +23,17 @@ export function templateChoice(id: RuleTemplate, t: Translator): TemplateChoice 
   return {id, name: t(name), help: t(help, {groups: templates[id].groups.map(group => group.name).join(', ')})};
 }
 
+export type RuleViewMode = 'simple' | 'advanced';
+// The params that point at one rule: a rule to select, a rule to edit, a condition to add, or held rules to review.
+const ruleTargets = ['rule', 'edit', 'add', 'held'];
+// The routing list's view: the one `view` names, else the rule table for a link to a rule and the simple view otherwise.
+export function ruleViewMode(query: string): RuleViewMode {
+  const params = new URLSearchParams(query);
+  const asked = params.get('view');
+  if (asked === 'simple' || asked === 'advanced') return asked;
+  return ruleTargets.some(key => params.has(key)) ? 'advanced' : 'simple';
+}
+
 // The files a person writes whose top level holds a routing block; generated and subscription files hold none.
 export function routingSources(sources: ConfigSource[]): ConfigSource[] {
   return sources.filter(

@@ -108,7 +108,7 @@ test.describe('right to left at 1280px', () => {
   });
 
   test('rules keep rule text left to right', async ({page}) => {
-    await page.goto('/#/rules?tab=list');
+    await page.goto('/#/rules?tab=list&view=advanced');
     const cells = page.locator('.rp-table :is([role=rowheader], [role=gridcell])');
     await expect(cells.first()).toBeVisible();
     await expectRtlLayout(page);
