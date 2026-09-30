@@ -148,7 +148,7 @@ export function useRoute(api: string | null) {
         return;
       }
       const hash = currentHash(api);
-      const nextPosition: number = history.state?.doonaPosition ?? position.current;
+      const nextPosition = historyPosition(position.current + 1);
       const next = updateRoute(loc, hash);
       if (next !== loc && dirty.current) {
         const delta = restoreDraftRoute(loc, position.current);
