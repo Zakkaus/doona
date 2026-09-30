@@ -950,6 +950,7 @@
   "ov.operationResult": "{action}：{status}（{operationId}）",
   "ov.profileBase": "基本",
   "ov.profileFull": "完整可观测",
+  "ov.queued": "排队中",
   "ov.r.configValidate": "配置校验",
   "ov.r.dnsCache": "DNS 缓存",
   "ov.r.dnsLog": "DNS 记录",

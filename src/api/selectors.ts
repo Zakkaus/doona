@@ -1,4 +1,5 @@
-import type {Key} from '../i18n';
+import type {Key, Translator} from '../i18n';
+import {enumLabel} from '../i18n/enum';
 import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {
   ApiEvent,
@@ -193,7 +194,8 @@ function droppedCount(value: string | null): string | number {
   if (count === null) return value ?? '—';
   return count <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(count) : formatNumber(count, LOCALE[readLang()]);
 }
-export function eventSummary(event: ApiEvent, t?: (key: Key) => string): MessageRef {
+const operationStatuses: Record<string, Key> = {queued: 'ov.queued', running: 'ov.running', succeeded: 'ov.succeeded', failed: 'ov.failed'};
+export function eventSummary(event: ApiEvent, t?: Translator): MessageRef {
   switch (event.event) {
     case 'stream.ready':
       return {key: 'event.resource', params: {resource: event.data.instance_id}};
@@ -203,8 +205,7 @@ export function eventSummary(event: ApiEvent, t?: (key: Key) => string): Message
       return {key: 'event.flow', params: {resourceId: event.data.resource_id, revision: String(event.data.revision)}};
     case 'operation.updated': {
       const status = event.data.status;
-      const label = status === 'running' || status === 'succeeded' || status === 'failed' ? (`ov.${status}` as Key) : null;
-      return {key: 'event.operation', params: {resourceId: event.data.resource_id, status: t && label ? t(label) : status}};
+      return {key: 'event.operation', params: {resourceId: event.data.resource_id, status: t ? enumLabel(operationStatuses, status, t) : status}};
     }
     case 'generation.changed':
       return {key: 'event.generation', params: {previous: event.data.previous_generation_id, current: event.data.generation_id}};
