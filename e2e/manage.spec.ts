@@ -73,11 +73,16 @@ test('a group declared in an include is edited there while the main source is re
   await page.goto('/#/policies');
   // A group the read-only main source declares says why it cannot be edited.
   const proxy = page.getByRole('region', {name: 'proxy', exact: true});
-  const locked = await moreItem(proxy, 'Edit group');
-  await expect(locked).toBeDisabled();
-  await expect(locked).toHaveAccessibleDescription('This group is defined in /etc/honk/config.dae, which is read-only');
+  const reason = 'This group is defined in /etc/honk/config.dae, which is read-only';
+  await expect(proxy.getByRole('img', {name: reason})).toBeVisible();
+  // Its configuration still opens, read-only, with the reason it cannot be edited.
+  await expect(await moreItem(proxy, 'Edit group')).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect(proxy.getByText('This group is defined in /etc/honk/config.dae, which is read-only', {exact: true}).first()).toBeVisible();
+  await moreAction(proxy, 'View configuration');
+  const view = page.getByRole('dialog', {name: 'proxy configuration'});
+  await expect(view.getByText(reason, {exact: true})).toBeVisible();
+  await expect(view.getByRole('textbox')).toHaveCount(0);
+  await view.getByRole('button', {name: 'Close', exact: true}).click();
   const card = page.getByRole('region', {name: 'gaming', exact: true});
   await card.scrollIntoViewIfNeeded();
   await moreAction(card, 'Edit group');

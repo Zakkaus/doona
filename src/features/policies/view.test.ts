@@ -23,10 +23,14 @@ import {
   routeWritable,
   groupConfigFields,
   groupActionsReason,
+  groupKind,
+  kindFilter,
+  kindView,
   memberViews,
   nodeGridView,
   policyCardView,
   probeSummary,
+  selectionSummary,
   untestedHelp
 } from './view';
 import {memberHealth} from './health';
@@ -401,4 +405,43 @@ it('writes back a name read from the file and refuses one the file cannot hold',
   expect(routeWritable("it's", `"it's"`)).toBe(true);
   expect(routeWritable('jp 01', null)).toBe(true);
   expect(routeWritable("it's", null)).toBe(false);
+});
+
+it('sorts groups into manual and automatic by the kind the backend reports, and counts each', () => {
+  expect(groupKind({kind: 'selector'})).toBe('manual');
+  for (const kind of ['urltest', 'score', 'fallback', 'loadbalance', 'random', 'fixed'] as const) expect(groupKind({kind})).toBe('auto');
+  expect([kindFilter('manual'), kindFilter('auto'), kindFilter(null), kindFilter('other')]).toEqual(['manual', 'auto', 'all', 'all']);
+  const cards = [
+    {id: 'a', kind: 'manual' as const},
+    {id: 'b', kind: 'auto' as const},
+    {id: 'c', kind: 'auto' as const}
+  ];
+  const all = kindView(cards, 'all', null, t);
+  expect(all.items).toEqual([
+    ['all', 'All 3'],
+    ['manual', 'Manual 1'],
+    ['auto', 'Automatic 2']
+  ]);
+  expect(all.shown.map(card => card.id)).toEqual(['a', 'b', 'c']);
+  expect(kindView(cards, 'auto', null, t)).toMatchObject({kind: 'auto', shown: [{id: 'b'}, {id: 'c'}], empty: null});
+  expect(kindView(cards, 'manual', 'a', t)).toMatchObject({kind: 'manual', shown: [{id: 'a'}]});
+  // A link to a group the filter hides shows every group, so it lands on the group.
+  expect(kindView(cards, 'manual', 'b', t)).toMatchObject({kind: 'all', shown: cards});
+  // A link to a group that is not listed leaves the filter alone.
+  expect(kindView(cards, 'manual', 'gone', t).kind).toBe('manual');
+  expect(kindView(cards.slice(1), 'manual', null, t).empty).toBe('No manual groups');
+  expect(kindView(cards.slice(0, 1), 'auto', null, t).empty).toBe('No automatic groups');
+  // No groups at all is the page's own empty state, not the filter's.
+  expect(kindView([], 'auto', null, t).empty).toBeNull();
+});
+it('sums an automatic group up in one line: the member in place, per network when they differ, and how many are available', () => {
+  const g = nodeFixtures(0).groups[0];
+  const members = memberViews(memberHealth(g, new Map()), t);
+  const available = members.filter(member => member.healthy).length;
+  const name = (id: string) => members.find(member => member.id === id)!.name;
+  expect(selectionSummary(g, members, t)).toBe(`Current TCP: ${name('hk-01')}, UDP: ${name('hk-02')}; ${available} available`);
+  const same = {runtime: {...g.runtime, selection: {tcp: g.runtime.selection.tcp, udp: g.runtime.selection.tcp}}};
+  expect(selectionSummary(same, members, t)).toBe(`Current: ${name('hk-01')}, ${available} available`);
+  expect(selectionSummary({runtime: {...g.runtime, selection: {tcp: null, udp: null}}}, [], t)).toBe('Current: no member selected yet, 0 available');
+  expect(policyCardView(g, members, 'both', t)).toMatchObject({automatic: g.policy.kind !== 'selector', summary: selectionSummary(g, members, t)});
 });
