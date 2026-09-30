@@ -138,6 +138,10 @@ test('an expanded stack and its underlay close when the page changes', async ({p
   await expect(page.locator('.rp-toast-underlay')).toHaveCount(0);
   await expect(page.locator('.rp-toasts')).not.toHaveClass(/expanded/);
   await expect(page.locator('.rp-toast.background')).not.toHaveCount(0);
+  await page.goBack();
+  await expect(page.getByRole('heading', {level: 1})).toHaveText('Nodes');
+  await expect(page.locator('.rp-toast-underlay')).toHaveCount(0);
+  await expect(page.locator('.rp-toasts')).not.toHaveClass(/expanded/);
 });
 
 test('a repeated actionable toast replaces its earlier copy', async ({page}) => {
