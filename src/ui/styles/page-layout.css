@@ -87,9 +87,11 @@
   --rp-code-punctuation: var(--rp-subtle);
   --rp-code-operator: var(--rp-subtle);
 }
+/* Code shows what was typed: a programming font's ligatures would draw `->` or `!=` as one glyph. */
 .rp-code {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: var(--rp-text-sm);
+  font-variant-ligatures: none;
 }
 /* Right to left, technical values keep their own order. A table cell or a detail value takes its direction from its
    text, so a domain, address or path reads left to right while a name in the page's script does not; code, rule text
