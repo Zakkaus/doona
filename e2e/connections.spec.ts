@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem} from './fixtures';
+import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 
@@ -493,11 +493,7 @@ test('the connection list exports the filtered rows as CSV', async ({page}) => {
   await page.getByRole('button', {name: 'Export CSV', exact: true}).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^connections-.*\.csv$/);
-  // The download stream is read chunk by chunk; the spec stays free of Node typings.
-  const stream = await file.createReadStream();
-  const decoder = new TextDecoder();
-  let body = '';
-  for await (const chunk of stream as AsyncIterable<Uint8Array>) body += decoder.decode(chunk, {stream: true});
+  const body = await downloadText(file);
   const lines = body.trim().split('\n');
   expect(lines[0]).toBe('id,target,domain,source,network,state,outbound,chain,rule,upload_bytes,download_bytes,started_at');
   expect(lines.length).toBe(151);

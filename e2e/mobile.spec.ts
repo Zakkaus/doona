@@ -1,6 +1,6 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
-import {expect, mockBackend, routes, test} from './fixtures';
+import {expect, mockBackend, routes, scrollTableToEnd, test} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
@@ -553,9 +553,7 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
   await expect(line).toBeVisible();
   expect((await line.boundingBox())!.y).toBeLessThan((await grid.boundingBox())!.y);
   // The Delete column sits past the phone's width until the table is scrolled sideways.
-  await grid.evaluate(table => {
-    for (let box: Element | null = table; box; box = box.parentElement) if (box.scrollWidth > box.clientWidth) return void (box.scrollLeft = box.scrollWidth);
-  });
+  await scrollTableToEnd(grid);
   await expectReason(page, grid.getByRole('button', {name: /^Delete the /}).first(), 'This backend does not support deleting cache entries');
 });
 
