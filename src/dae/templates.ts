@@ -131,8 +131,8 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
   }
 };
 
-// The top-level routing of `text` as honk reads it, one token list per rule or field: comments dropped, and spacing and
-// line breaks inside parentheses ignored. Null when a routing block nests a section, which no template writes.
+// The top-level routing of `text` as honk reads it, one token list per rule or field: comments dropped, and spacing,
+// line breaks inside parentheses and quotes around match arguments ignored. Null when a routing block nests a section, which no template writes.
 function routingEntries(text: string): string[][] | null {
   const {blocks, tokens} = scanConfig(text);
   const entries: string[][] = [];
@@ -144,8 +144,9 @@ function routingEntries(text: string): string[][] | null {
       const raw = text.slice(token.from, token.to);
       if (token.line !== line && token.parens === 0) entries.push([]);
       line = token.line;
+      // A match argument reads the same quoted or not; an outbound keeps its quotes, which honk keeps in group names.
       // The scanner keeps `&&` and `!` in the word they touch, as in `l4proto(udp)&&dport(443)`.
-      entries.at(-1)!.push(...(token.kind === 'quoted' ? [unquote(raw)] : raw.split(/(&&|\|\||!)/).filter(Boolean)));
+      entries.at(-1)!.push(...(token.kind === 'quoted' ? [token.parens ? unquote(raw) : raw] : raw.split(/(&&|\|\||!)/).filter(Boolean)));
     }
   }
   return entries;

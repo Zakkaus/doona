@@ -127,7 +127,7 @@ function removal(text: string, block: TextBlock) {
   else if (before) from -= before[0].length - 1;
   return {from, to, text: ''};
 }
-// The groups a template adds beside `defined`, the names already declared: its own that are missing, or, for a template
+// The groups a template adds beside `defined`, the names already declared as written: its own that are missing, or, for a template
 // without groups, the default group when there is none at all.
 export function templateGroups(rules: RuleTemplate, defined: string[]): string[] {
   const have = new Set(defined);
@@ -187,7 +187,7 @@ export function writeState(current: string, state: WizardState): string {
   const appended: string[] = [];
   if (!subscriptionSections.length && state.subscriptions.length) appended.push(subscriptionBlock(state).join('\n'));
   const missing = groupLines(
-    readGroupEntries(current).map(entry => entry.name),
+    readGroupEntries(current).map(entry => entry.written),
     state.rules
   );
   addGroups(current, blocks, missing, edits, appended);
@@ -201,7 +201,8 @@ export function writeState(current: string, state: WizardState): string {
 export function writeTemplate(current: string, rules: RuleTemplate, defined: Array<{name: string; written: string}>): string {
   const {blocks} = scanConfig(current);
   const own = readGroupEntries(current);
-  const names = [...own.map(entry => entry.name), ...defined.map(entry => entry.name)];
+  // honk keeps the quotes in a group's name, so only a group written as the template writes it is the same group.
+  const names = [...own.map(entry => entry.written), ...defined.map(entry => entry.written)];
   const edits: Edit[] = [];
   const appended: string[] = [];
   addGroups(current, blocks, groupLines(names, rules), edits, appended);
