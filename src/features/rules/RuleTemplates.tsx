@@ -63,6 +63,13 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
                 rows={dialog.impact.reused.map(group => ({name: group.name, label: null, warning: group.pinned ? t('rule.template.pinnedHelp') : null}))}
               />
             )}
+            {dialog.impact.removedIncludes.length > 0 && (
+              <ImpactList
+                title={t('rule.template.removedIncludes')}
+                description={t('rule.template.removedIncludesHelp')}
+                rows={dialog.impact.removedIncludes.map(name => ({name, label: null, warning: null}))}
+              />
+            )}
             {dialog.dns !== null && (
               <Checkbox
                 label={t('rule.template.addDns')}
@@ -85,13 +92,14 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
 type ImpactRow = {name: string; label: string | null; warning: string | null};
 // A titled list of groups in the apply dialog: each name with its label, and a warning light under it. `columns` lays
 // a long list out in as many columns as fit.
-function ImpactList({title, empty, columns, rows}: {title: string; empty?: string; columns?: boolean; rows: ImpactRow[]}) {
+function ImpactList({title, description, empty, columns, rows}: {title: string; description?: string; empty?: string; columns?: boolean; rows: ImpactRow[]}) {
   const headingId = useId();
   return (
     <section className="rp-impact-section" aria-labelledby={headingId}>
       <h3 className="rp-h3" id={headingId}>
         {title}
       </h3>
+      {description && <p className="rp-note">{description}</p>}
       {rows.length ? (
         <ul className={columns ? 'rp-impact grid' : 'rp-impact'}>
           {rows.map(row => (

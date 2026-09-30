@@ -81,35 +81,45 @@ export function templatesView(sources: ConfigSource[], t: Translator): Templates
 }
 
 // Why a template cannot be applied, in the order a person would fix it.
-export type TemplateRefusal = 'syntax' | 'writesOff' | 'noSource' | 'split' | 'include' | 'secret' | 'readOnly' | 'incomplete' | 'denied';
+export type TemplateRefusal = 'syntax' | 'writesOff' | 'noSource' | 'split' | 'secret' | 'readOnly' | 'incomplete' | 'denied';
 const refusalText: Record<TemplateRefusal, Key> = {
   syntax: 'rule.template.refused.syntax',
   writesOff: 'rule.template.refused.writesOff',
   noSource: 'rule.template.refused.noSource',
   split: 'rule.template.refused.split',
-  include: 'rule.template.refused.include',
   secret: 'rule.template.refused.secret',
   readOnly: 'rule.template.refused.readOnly',
   incomplete: 'rule.template.refused.incomplete',
   denied: 'rule.template.refused.denied'
 };
-// Whether a routing block of `text` pulls in another file with an `include` statement, whose rules a replacement would
-// drop. Only a statement's first word is one: `fallback: include` and `-> include` name a group called include.
-function routingIncludes(text: string): boolean {
+// Paths as written in routing include statements; route targets named include are not statements.
+function routingIncludes(text: string): string[] {
   const {blocks, tokens} = scanConfig(text);
-  return blocks
-    .filter(block => block.name === 'routing')
-    .some(block => {
-      const inside = tokens.filter(token => token.from > block.open && token.from < block.close && token.kind !== 'comment');
-      return inside.some(
-        (token, index) =>
-          token.kind === 'text' &&
-          token.parens === 0 &&
-          text.slice(token.from, token.to) === 'include' &&
-          (index === 0 || inside[index - 1].line !== token.line) &&
-          text.slice(inside[index + 1]?.from, inside[index + 1]?.to) !== ':'
-      );
-    });
+  const paths: string[] = [];
+  for (const block of blocks.filter(block => block.name === 'routing')) {
+    const inside = tokens.filter(token => token.from > block.open && token.from < block.close && token.kind !== 'comment');
+    // Count from routing's own brace: an unquoted path elsewhere can leave the scanner's count raised.
+    let parens = 0;
+    for (const [index, token] of inside.entries()) {
+      const raw = text.slice(token.from, token.to);
+      const next = inside[index + 1];
+      if (
+        token.kind === 'text' &&
+        raw === 'include' &&
+        parens === 0 &&
+        (index === 0 || inside[index - 1].line !== token.line) &&
+        next?.line === token.line &&
+        text.slice(next.from, next.to) !== ':'
+      ) {
+        let end = index + 1;
+        while (inside[end + 1]?.line === token.line) end++;
+        paths.push(text.slice(next.from, inside[end].to));
+      }
+      if (token.kind === 'symbol' && raw === '(') parens++;
+      else if (token.kind === 'symbol' && raw === ')') parens = Math.max(0, parens - 1);
+    }
+  }
+  return [...new Set(paths)];
 }
 export type TemplateTargetInput = {
   sources: ConfigSource[];
@@ -122,7 +132,7 @@ export type TemplateTargetInput = {
   denied: string | null;
 };
 // The one file a template replaces the routing of, or why none can be written. A template rewrites a single file in
-// one write: routing spread over files, or pulling one in, would need several writes that can fail halfway.
+// one write: routing spread over files would need several writes that can fail halfway.
 export function templateTarget({sources, configWritable, daeText, complete, holdsCredentials, denied}: TemplateTargetInput): {
   source: ConfigSource | null;
   refusal: TemplateRefusal | null;
@@ -137,17 +147,15 @@ export function templateTarget({sources, configWritable, daeText, complete, hold
         ? 'noSource'
         : holders.length > 1
           ? 'split'
-          : source.content !== undefined && routingIncludes(source.content)
-            ? 'include'
-            : source.content !== undefined && holdsCredentials(source)
-              ? 'secret'
-              : !source.writable
-                ? 'readOnly'
-                : complete(source) === false || source.content === undefined
-                  ? 'incomplete'
-                  : denied === source.id
-                    ? 'denied'
-                    : null;
+          : source.content !== undefined && holdsCredentials(source)
+            ? 'secret'
+            : !source.writable
+              ? 'readOnly'
+              : complete(source) === false || source.content === undefined
+                ? 'incomplete'
+                : denied === source.id
+                  ? 'denied'
+                  : null;
   return {source, refusal};
 }
 export const refusalReason = (refusal: TemplateRefusal, source: ConfigSource | null, t: Translator) =>
@@ -166,6 +174,8 @@ export type TemplateImpact = {
   reused: Array<{name: string; pinned: boolean}>;
   // New groups named like a node: a rule naming one reaches the group rather than the node.
   collisions: string[];
+  // Routing include paths whose rules the replacement stops applying; the files are kept.
+  removedIncludes: string[];
 };
 // What applying `template` to `target` adds and relies on, given every loaded file and the node names.
 export function templateImpact(template: RuleTemplate, target: ConfigSource, sources: ConfigSource[], nodes: string[]): TemplateImpact {
@@ -181,6 +191,7 @@ export function templateImpact(template: RuleTemplate, target: ConfigSource, sou
   return {
     created: created.map(name => ({name, label: labels.get(name) ?? null})),
     reused: named.filter(name => byName.has(name)).map(name => ({name, pinned: pinned(byName.get(name)!)})),
-    collisions: created.filter(name => taken.has(name))
+    collisions: created.filter(name => taken.has(name)),
+    removedIncludes: routingIncludes(target.content ?? '')
   };
 }
