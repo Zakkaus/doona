@@ -47,6 +47,8 @@
   "act.noHistory": "This backend does not provide history",
   "act.noIssues": "No issues require attention",
   "act.noOutbounds": "This backend does not provide outbound counters",
+  "act.noRoutingMode": "No routing mode chosen",
+  "act.noSubscriptions": "No subscriptions yet",
   "act.node": "Node",
   "act.nodePickHelp": "Selecting a node changes only the latency shown on this card; routing is unchanged.",
   "act.noticeRepeat": {

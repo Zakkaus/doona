@@ -2,7 +2,18 @@ import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
-import {activityOutbounds, activityRanking, activityView, interestingNotice, modeReasons, modeView, nodeView, noticeRows, trafficState} from './view';
+import {
+  activityOutbounds,
+  activityRanking,
+  activityView,
+  interestingNotice,
+  modeReasons,
+  modeView,
+  nodeView,
+  noticeRows,
+  setupNotices,
+  trafficState
+} from './view';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
@@ -122,4 +133,18 @@ it('shows the CPU card as a percent of one core, dashed until the backend has tw
   expect(cpu(42.5)).toBe('42.5%');
   expect(cpu(180)).toBe('180.0%');
   expect(activityView(runtime, t).cpuHelp).toEqual({title: t('act.cpu'), text: t('act.cpuHelp')});
+});
+
+it('lists what the backend lacks to route through a proxy, each with the page that adds it, and nothing once it is there', () => {
+  expect(setupNotices({noNodeSources: false, noRouting: false}, t)).toEqual([]);
+  expect(setupNotices({noNodeSources: true, noRouting: true}, t)).toEqual([
+    {id: 'setup:nodes', tone: 'info', kindText: 'Notice', summaryText: 'No subscriptions yet', action: {label: 'Nodes', href: '#/nodes'}},
+    {
+      id: 'setup:routing',
+      tone: 'info',
+      kindText: 'Notice',
+      summaryText: 'No routing mode chosen',
+      action: {label: 'Routing mode', href: '#/rules?tab=list&view=simple'}
+    }
+  ]);
 });

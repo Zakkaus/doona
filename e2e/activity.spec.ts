@@ -2,6 +2,7 @@ import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppe
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
+import {scanConfig} from '../src/dae/text';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
@@ -738,4 +739,38 @@ test('the CPU tile opens the overview', async ({page}) => {
   await page.goto('/#/activity');
   await page.locator('.rp-card', {hasText: 'CPU usage'}).locator('.rp-tile-val > .rp-link').click();
   await expect(page).toHaveURL(/#\/overview$/);
+});
+
+test('the notices card says what is missing to route through a proxy until it is added', async ({page}) => {
+  const backend = await mockBackend(page);
+  const config = await backend.api.config();
+  // Every top-level routing block goes; the DNS routing nested in dns stays.
+  const unrouted = {
+    ...config,
+    sources: config.sources.map(source => {
+      if (!source.content) return source;
+      const blocks = scanConfig(source.content).blocks.filter(block => block.name === 'routing');
+      const content = blocks.reduceRight((text, block) => text.slice(0, block.from) + text.slice(block.to), source.content);
+      return {...source, content};
+    })
+  };
+  backend.handlers['GET config'] = async () => unrouted;
+  backend.handlers['GET providers'] = async () => ({providers: [], next_cursor: null});
+  backend.handlers['GET nodes'] = async () => ({observed_at: new Date().toISOString(), nodes: [], next_cursor: null});
+  await page.goto('/#/activity');
+  const card = page.getByRole('region', {name: 'Notifications'});
+  const subscriptions = card.getByRole('listitem').filter({hasText: 'No subscriptions yet'});
+  const routing = card.getByRole('listitem').filter({hasText: 'No routing mode chosen'});
+  await expect(subscriptions.getByRole('link', {name: 'Nodes', exact: true})).toHaveAttribute('href', '#/nodes');
+  await routing.getByRole('link', {name: 'Routing mode', exact: true}).click();
+  await expect(page).toHaveURL(/#\/rules\?tab=list&view=simple$/);
+  await expect(page.getByRole('radiogroup', {name: 'Routing mode'})).toBeVisible();
+  // Once the backend has both, the notices are gone.
+  delete backend.handlers['GET config'];
+  delete backend.handlers['GET providers'];
+  delete backend.handlers['GET nodes'];
+  await page.goto('/#/activity');
+  await page.reload();
+  await expect(card.getByText('No subscriptions yet')).toHaveCount(0);
+  await expect(card.getByText('No routing mode chosen')).toHaveCount(0);
 });
