@@ -214,7 +214,7 @@
   outline: none;
 }
 .rp-dialog-body[data-overflow] {
-  border-color: var(--rp-hl-low);
+  border-color: var(--rp-hl-med);
 }
 .rp-dialog-body[data-focus-visible],
 .rp-dialog-body:focus-visible {
@@ -317,10 +317,10 @@
 }
 /* A unified line diff (Diff.tsx) in the code face: added and removed lines take a faint positive or negative tint and
    their mark the matching text colour; a gap between hunks is a label. The tint is see-through, so a tinted row still
-   reads as part of the panel in every palette (an opaque highlight can match the dialog behind the panel instead). Each row is a mark column and a text column on the
-   one panel, so a highlight runs from edge to edge and a long line wraps under its text instead of scrolling sideways.
-   The mark hangs in the row's start padding rather than sitting in a grid cell: a grid item is a block, and a copy
-   would put the mark and its text on separate lines. */
+   reads as part of the panel in every palette, where an opaque highlight can match the dialog behind it. A long line
+   wraps inside the panel, its continuation indented past the text so it does not read as a line of its own. The mark
+   hangs in the row's start padding rather than sitting in a grid cell: a grid item is a block, and a copy would put the
+   mark and its text on separate lines. */
 .rp-diff {
   max-height: 320px;
   margin: 0;
@@ -331,8 +331,8 @@
 }
 .rp-diff-line {
   display: block;
-  padding-inline: calc(8px + 2ch) 8px;
-  text-indent: -2ch;
+  padding-inline: calc(8px + 6ch) 8px;
+  text-indent: -6ch;
   white-space: pre-wrap;
 }
 .rp-diff-line[data-kind='add'] {
