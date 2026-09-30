@@ -40,9 +40,8 @@ export function RuleRef({expression, href, tooltip, className}: {expression: str
 export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
 // `mark` tags a member in place that is not the one selection, such as the member one network uses.
 type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean; mark?: string};
-// A measured latency reads in body text and turns `warn` only when slow; red stays for a node that did not answer.
-// The threshold suits HTTP through the node, which adds the proxy dial and a request to the check URL.
-export const latencyTone = (ms: number): 'warn' | undefined => (ms >= 600 ? 'warn' : undefined);
+// A measured latency is green below 100 ms, yellow below 300 ms and red from there; a node that did not answer is red too.
+export const latencyTone = (ms: number): 'ok' | 'warn' | 'err' => (ms < 100 ? 'ok' : ms < 300 ? 'warn' : 'err');
 export function NodeTile({name, status, description, current, mark}: NodeTileProps) {
   const t = useT();
   return (

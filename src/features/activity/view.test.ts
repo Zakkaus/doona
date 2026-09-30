@@ -37,12 +37,14 @@ it('chooses measured nodes and preserves an explicitly selected unavailable node
   expect(nodeView([], '', t).tone).toBe('muted');
 });
 
-it('tones the latency tile like the nodes table, only when the value is slow', () => {
+it('tones the latency tile like the nodes table, by speed', () => {
   const {nodes} = nodeFixtures(0, true);
   const hk = nodes.find(node => node.id === 'hk-01')!;
   const at = (latency_ms: number) => nodeView([{...hk, health: hk.health.map(h => (h.transport === 'tcp' ? {...h, latency_ms} : h))}], 'hk-01', t).latencyClass;
-  expect(at(599)).toBe('rp-big');
-  expect(at(600)).toBe('rp-big ms warn');
+  expect(at(99)).toBe('rp-big ms ok');
+  expect(at(100)).toBe('rp-big ms warn');
+  expect(at(299)).toBe('rp-big ms warn');
+  expect(at(300)).toBe('rp-big ms err');
   expect(nodeView(nodes, 'jp-01', t).latencyClass).toBe('rp-big');
 });
 

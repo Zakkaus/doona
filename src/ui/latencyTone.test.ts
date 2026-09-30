@@ -1,9 +1,11 @@
 import {expect, it} from 'vitest';
 import {latencyTone} from './Tile';
 
-it('keeps a latency in body text below 600 ms and marks it slow from there, never red', () => {
-  expect(latencyTone(0)).toBeUndefined();
-  expect(latencyTone(599)).toBeUndefined();
-  expect(latencyTone(600)).toBe('warn');
-  expect(latencyTone(5000)).toBe('warn');
+it('is green below 100 ms, yellow from 100 to 299 ms and red from 300 ms', () => {
+  expect(latencyTone(0)).toBe('ok');
+  expect(latencyTone(99)).toBe('ok');
+  expect(latencyTone(100)).toBe('warn');
+  expect(latencyTone(299)).toBe('warn');
+  expect(latencyTone(300)).toBe('err');
+  expect(latencyTone(5000)).toBe('err');
 });

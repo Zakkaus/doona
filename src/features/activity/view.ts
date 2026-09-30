@@ -122,8 +122,8 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     id: node?.id ?? '',
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
-    // A slow value takes the tone the nodes table gives it; one that is fine keeps body text.
-    latencyClass: node?.alive && node.tcp !== undefined && latencyTone(node.tcp) ? 'rp-big ms warn' : 'rp-big',
+    // A measured value takes the tone the nodes table gives it.
+    latencyClass: node?.alive && node.tcp !== undefined ? `rp-big ms ${latencyTone(node.tcp)}` : 'rp-big',
     tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
     // A healthy node's latency says so; the light names only what the value cannot, an unavailable or unknown node.
     status: node?.alive ? null : t(node?.unavailable ? 'act.unavailable' : 'act.unknown'),
