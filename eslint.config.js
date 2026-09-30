@@ -159,7 +159,7 @@ export default [
     files: [
       'src/features/policies/arrange/Arrange.tsx',
       'src/features/flows/Tree.tsx',
-      'src/features/activity/{NodeMenu,NodeSearch}.tsx',
+      'src/features/activity/NodeMenu.tsx',
       'src/shell/search/SearchDialog.tsx'
     ],
     rules: {'@typescript-eslint/no-restricted-imports': 'off'}

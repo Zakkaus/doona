@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem, scrollIntoList} from './fixtures';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
   const {requests} = await mockBackend(page);
@@ -230,4 +230,118 @@ test('a group is switched to the score policy in its edit dialog', async ({page}
   await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
   dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
+});
+
+test('the Configuration list opens the edit dialog, where a node becomes the final outbound and None clears it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'proxy', exact: true});
+  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  const member = dialog.getByRole('button', {name: /Default member$/});
+  const final = dialog.getByRole('button', {name: /Final outbound$/});
+  // Opened from the list, the dialog starts on the first of the fields it shows.
+  await expect(member).toBeFocused();
+  // The demo's proxy group names hk-01 as its default, as the Configuration list shows.
+  await expect(member).toContainText('hk-01');
+  await expect(final).toContainText('None');
+  await expect(final).toHaveAccessibleDescription('Used when the group has no eligible member. None sets no fallback.');
+  await final.click();
+  const list = page.getByRole('listbox');
+  // The group itself is not offered; the built-ins and the other groups come before the nodes.
+  await expect(list.getByRole('group', {name: 'Built-in'}).getByRole('option')).toHaveText(['direct', 'block']);
+  await expect(list.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText(['resilient', 'gaming', 'skylink']);
+  // A node's latency takes the node menus' tone: under 100 ms ok, under 300 ms warn.
+  for (const [name, tone] of [
+    ['sg-01', 'ok'],
+    ['us-01', 'warn']
+  ]) {
+    const option = list.getByRole('option', {name: new RegExp(`^${name}`)});
+    await scrollIntoList(option);
+    await expect(option.locator('.desc')).toHaveClass(`desc ${tone}`);
+  }
+  await page.getByRole('searchbox', {name: 'Filter', exact: true}).fill('SG-0');
+  await expect(list.getByRole('option')).toHaveText([/^sg-01/]);
+  const node = list.getByRole('option', {name: /^sg-01/});
+  await scrollIntoList(node);
+  await node.click();
+  await expect(final).toContainText('sg-01');
+  await member.click();
+  const hk = page.getByRole('listbox').getByRole('option', {name: /^hk-02/});
+  await scrollIntoList(hk);
+  await hk.click();
+  await expect(member).toContainText('hk-02');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for proxy written and reloaded');
+  await expect.poll(async () => (await api.group('proxy')).config).toMatchObject({default_member_id: 'hk-02', final_outbound: 'sg-01'});
+  await expect(card.getByText('sg-01', {exact: true})).toBeVisible();
+  // None removes the line again.
+  await moreAction(card, 'Edit group');
+  await expect(final).toContainText('sg-01');
+  await final.click();
+  await page.getByRole('option', {name: 'None', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(async () => (await api.group('proxy')).config.final_outbound).toBeNull();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  expect(main.content).toMatch(/proxy \{[^}]*default: hk-02[^}]*\}/);
+  expect(main.content).not.toMatch(/proxy \{[^}]*final:/);
+});
+
+test('a final outbound does not offer the group or a group that nests it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  // gaming nests resilient, so a final of resilient that named gaming would lead back to resilient.
+  const accepted = await api.replaceConfigSource(
+    main.id,
+    main.content!.replace('gaming { filter:', 'gaming { filter: group(resilient) filter:'),
+    `"${main.content_sha256}"`
+  );
+  await expect.poll(async () => (await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'resilient', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
+  await dialog.getByRole('button', {name: /Final outbound$/}).click();
+  await expect(page.getByRole('listbox').getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText(['proxy', 'skylink']);
+});
+
+test('the default member is offered only while the dialog selects manual selection, and a hidden one stays in the file', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'resilient', exact: true});
+  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  let dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
+  const member = dialog.getByRole('button', {name: /Default member$/});
+  const policy = dialog.getByRole('button', {name: /Selection policy/});
+  // honk reads a default member only under manual selection, so a group that picks the fastest starts on the final outbound.
+  await expect(dialog.getByRole('button', {name: /Final outbound$/})).toBeFocused();
+  await expect(member).toHaveCount(0);
+  await policy.click();
+  await page.getByRole('option', {name: /^Manual/}).click();
+  await expect(member).toBeVisible();
+  // Appearing later, the picker leaves focus where it was.
+  await expect(policy).toBeFocused();
+  await policy.click();
+  await page.getByRole('option', {name: /^First available/}).click();
+  await expect(member).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  // Switching a manual group away writes the new policy and keeps its default line as written.
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+  dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
+  await dialog.getByRole('button', {name: /Selection policy/}).click();
+  await page.getByRole('option', {name: /^Fastest on average/}).click();
+  await expect(dialog.getByRole('button', {name: /Default member$/})).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for proxy written and reloaded');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  expect(main.content).toMatch(/proxy \{[^}]*policy: min_moving_avg[^}]*default: hk-01[^}]*\}/);
 });

@@ -1,6 +1,6 @@
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../model';
 import {ago, now, observedAt} from './clock';
-import {groupPolicies} from './configuration';
+import {groupDefaultMembers, groupPolicies} from './configuration';
 import {groupCapabilities, groupConfig} from '../groupDefaults';
 import {defaultGeodataPreset} from '../../../dae/geodata';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
@@ -51,7 +51,7 @@ function group(name: keyof typeof groupPolicies, members: string[], leaf: string
     config_revision: '40',
     policy: {...policy},
     members: members.map(id => ({id, name: id, kind: nodeIds.has(id) ? 'node' : 'group'})),
-    config: groupConfig(kind, kind === 'selector' ? leaf : null),
+    config: {...groupConfig(kind), default_member_id: groupDefaultMembers[name] ?? null},
     runtime: {
       // The proxy group selects different members per network so the TCP/UDP switch has something to show.
       selection: {

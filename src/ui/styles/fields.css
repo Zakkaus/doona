@@ -165,3 +165,11 @@
     grid-column: 1 / -1;
   }
 }
+
+/* A searchable picker's popover spans its trigger, as a picker's list does; the virtual rows cannot size it. */
+.rp-popover.rp-search-popover {
+  width: max(var(--trigger-width), 260px);
+}
+.rp-search-popover .rp-menu-search {
+  width: auto;
+}

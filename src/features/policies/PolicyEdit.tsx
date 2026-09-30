@@ -1,6 +1,7 @@
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {Button, InlineAlert, ModalDialog, TextField} from '../../ui/ui';
+import {SearchSelect} from '../../ui/SearchSelect';
 import type {PolicyEditView} from './usePolicyEdit';
 import {PolicyPicker} from '../shared/PolicyPicker';
 export function PolicyEdit({model: m}: {model: PolicyEditView}) {
@@ -49,6 +50,19 @@ export function PolicyEdit({model: m}: {model: PolicyEditView}) {
           <Button small quiet onPress={m.add}>
             {t('policy.addFilter')}
           </Button>
+          {m.routes.map(field => (
+            <SearchSelect
+              key={field.id}
+              label={field.label}
+              searchLabel={field.searchLabel}
+              sections={field.sections}
+              value={field.value}
+              description={field.description}
+              takeFocus={field.takeFocus}
+              isDisabled={m.busy}
+              onChange={field.change}
+            />
+          ))}
         </div>
       )}
     </ModalDialog>

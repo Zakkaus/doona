@@ -7,6 +7,9 @@ export type GroupEntry = {
   written: string;
   filters: string[];
   policy: string | null;
+  // `default` and `final` as written, quotes included, or null when the entry sets none.
+  default: string | null;
+  final: string | null;
   from: number;
   to: number;
 };
@@ -19,11 +22,14 @@ export function readGroupEntries(text: string): GroupEntry[] {
       block.children.map(entry => {
         const fields = blockFields(text, entry, tokens);
         const head = tokens.find(token => token.from === entry.from);
+        const last = (name: string) => fields.filter(field => field.name === name).at(-1)?.value ?? null;
         return {
           name: entry.name,
           written: head ? text.slice(head.from, head.to) : entry.name,
           filters: fields.filter(field => field.name === 'filter').map(field => field.value),
-          policy: fields.filter(field => field.name === 'policy').at(-1)?.value ?? null,
+          policy: last('policy'),
+          default: last('default'),
+          final: last('final'),
           from: entry.line,
           to: entry.endLine
         };
@@ -39,7 +45,10 @@ export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'inv
   return !isBareName(name) ? 'invalid' : taken.has(name) ? 'taken' : null;
 }
 
-export function writeGroupEntry(text: string, name: string, next: {filters: string[]; policy: string | null}): string {
+// What writeGroupEntry sets. `default` and `final` are written as given, quotes included; undefined leaves the line
+// alone and null removes it.
+export type GroupEntryUpdate = {filters: string[]; policy: string | null; default?: string | null; final?: string | null};
+export function writeGroupEntry(text: string, name: string, next: GroupEntryUpdate): string {
   const {blocks, tokens} = scanConfig(text);
   const sections = blocks.filter(block => block.name === 'group');
   const entry = sections.flatMap(block => block.children).find(entry => entry.name === name);
@@ -66,6 +75,8 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
     `${indent}${quoteName(name)} {`,
     ...next.filters.map(filter => `${indent}${indent}filter: ${filter}`),
     ...(next.policy ? [`${indent}${indent}policy: ${next.policy}`] : []),
+    ...(next.default ? [`${indent}${indent}default: ${next.default}`] : []),
+    ...(next.final ? [`${indent}${indent}final: ${next.final}`] : []),
     `${indent}}`
   ].join('\n');
   if (block) {
@@ -76,10 +87,11 @@ export function writeGroupEntry(text: string, name: string, next: {filters: stri
   return `${text.replace(/\n+$/, '')}\n\ngroup {\n${body}\n}\n`;
 }
 
-// Changes the filter and policy fields where they stand, so comments and other fields keep their place.
-function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inner: string, next: {filters: string[]; policy: string | null}): string {
+// Changes the filter, policy, default and final fields where they stand, so comments and other fields keep their place.
+// A new line goes after the last line of its own key or of a key listed before it, in the order a group is written.
+const singleKeys = ['policy', 'default', 'final'] as const;
+function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inner: string, next: GroupEntryUpdate): string {
   const filters = fields.filter(field => field.name === 'filter');
-  const policies = fields.filter(field => field.name === 'policy');
   const edits: Array<{from: number; to: number; text: string}> = [];
   const lineEnd = (at: number) => text.indexOf('\n', at) + 1;
   const remove = (field: TextField) => {
@@ -94,20 +106,51 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
     edits.push({from: field.valueFrom + lead.length, to: field.valueTo, text: (lead ? '' : ' ') + value});
   };
   filters.forEach((field, i) => (i < next.filters.length ? replace(field, next.filters[i]) : remove(field)));
-  policies.slice(0, -1).forEach(remove);
-  if (policies.length) {
-    if (next.policy) replace(policies.at(-1)!, next.policy);
-    else remove(policies.at(-1)!);
-  }
-  const added = [
-    ...next.filters.slice(filters.length).map(filter => `${inner}filter: ${filter}\n`),
-    ...(next.policy && !policies.length ? [`${inner}policy: ${next.policy}\n`] : [])
-  ].join('');
-  if (added) {
-    const at = filters.length ? lineEnd(filters.at(-1)!.to) : policies.length ? text.lastIndexOf('\n', policies[0].from - 1) + 1 : lineEnd(entry.open);
-    edits.push({from: at, to: at, text: added});
-  }
+  const added = new Map<number, string>();
+  const add = (at: number, line: string) => added.set(at, (added.get(at) ?? '') + line);
+  // Filters go after the last filter, or before the policy line, or first in the body.
+  const policies = fields.filter(field => field.name === 'policy');
+  const filterAt = filters.length ? lineEnd(filters.at(-1)!.to) : policies.length ? text.lastIndexOf('\n', policies[0].from - 1) + 1 : lineEnd(entry.open);
+  for (const filter of next.filters.slice(filters.length)) add(filterAt, `${inner}filter: ${filter}\n`);
+  singleKeys.forEach((key, i) => {
+    const value = next[key];
+    if (value === undefined) return;
+    const own = fields.filter(field => field.name === key);
+    own.slice(0, -1).forEach(remove);
+    if (own.length) {
+      if (value) replace(own.at(-1)!, value);
+      else remove(own.at(-1)!);
+      return;
+    }
+    if (!value) return;
+    if (key === 'policy') return add(filterAt, `${inner}policy: ${value}\n`);
+    const before = fields.filter(field => field.name === 'filter' || singleKeys.slice(0, i).includes(field.name as (typeof singleKeys)[number])).at(-1);
+    add(before ? lineEnd(before.to) : lineEnd(entry.open), `${inner}${key}: ${value}\n`);
+  });
+  for (const [at, lines] of added) edits.push({from: at, to: at, text: lines});
   return edits.sort((a, b) => b.from - a.from || b.to - a.to).reduce((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), text);
+}
+
+// A name as `default` or `final` takes it: as written when it still names the same value, otherwise quoted as needed.
+export function nameText(value: string | null, written: string | null): string | null {
+  if (value === null) return null;
+  return written !== null && unquote(written) === value ? written : quoteName(value);
+}
+
+// The groups an entry nests through `filter: group(...)`, which takes comma-separated arguments and `|`-separated tags.
+export function nestedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
+  return entry.filters.flatMap(filter =>
+    splitTop(filter, '&&').flatMap(term =>
+      term.startsWith('group(') && term.endsWith(')')
+        ? splitTop(term.slice(6, -1), ',').flatMap(argument =>
+            unquote(argument)
+              .split('|')
+              .map(tag => tag.trim())
+              .filter(Boolean)
+          )
+        : []
+    )
+  );
 }
 
 // Only a filter line that is exactly one plain call can be extended without changing filter semantics: filter

@@ -24,15 +24,15 @@ import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {useT, type Translator} from '../i18n';
 
-type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
-const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
+export type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
+export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
   <span className="rp-il">
     {i.icon && <span className="ic">{i.icon}</span>}
     <TextTooltip cut={cut}>{i.label}</TextTooltip>
   </span>
 );
 // The title and what follows it share a line while both fit; otherwise the rest moves under the title and wraps.
-const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
+export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
     <ItemLabel i={i} />
     {children ?? (i.desc && <span className="desc">{i.desc}</span>)}

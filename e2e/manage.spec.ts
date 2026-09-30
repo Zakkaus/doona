@@ -77,7 +77,7 @@ test('a group declared in an include is edited there while the main source is re
   await expect(locked).toBeDisabled();
   await expect(locked).toHaveAccessibleDescription('This group is defined in /etc/honk/config.dae, which is read-only');
   await page.keyboard.press('Escape');
-  await expect(proxy.getByText('This group is defined in /etc/honk/config.dae, which is read-only', {exact: true})).toBeVisible();
+  await expect(proxy.getByText('This group is defined in /etc/honk/config.dae, which is read-only', {exact: true}).first()).toBeVisible();
   const card = page.getByRole('region', {name: 'gaming', exact: true});
   await card.scrollIntoViewIfNeeded();
   await moreAction(card, 'Edit group');

@@ -3,7 +3,7 @@ import {enumLabel} from '../../i18n/enum';
 import {isFragment} from '../../dae/text';
 import type {Translator} from '../../i18n';
 import {policyKindLabels} from '../../api/selectors';
-import {newGroupPolicies} from '../../dae/vocab';
+import {newGroupPolicies, policyKind} from '../../dae/vocab';
 import type {Group} from '../../api/model';
 
 // A group without a policy line is a selector in honk, which is what `select` writes.
@@ -23,6 +23,9 @@ export function groupPolicyText(policy: Pick<Group['policy'], 'kind' | 'native'>
   const id = policy.native || policy.kind;
   return label === id ? {label} : {label, id};
 }
+
+// Whether a policy as written picks by hand. honk reads a policy it does not recognise as a selector too.
+export const manualPolicy = (value: string | null): boolean => (policyKind(value ?? IMPLIED) ?? 'selector') === 'selector';
 
 // The picker keeps a policy it does not offer as its own choice, so opening an editor never rewrites it.
 export function policyChoices(value: string | null, t: Translator) {
