@@ -10,6 +10,7 @@ import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {replaceRoute} from '../../shell/route';
+import {defaultRoute, type RoutePath} from '../../shell/routes';
 import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
 
@@ -22,7 +23,7 @@ function readPairing(query: string): {api: string; token: string} | null {
   return api ? {api, token: params.get('token') ?? ''} : null;
 }
 
-export function useBackendForm(query: string) {
+export function useBackendForm(query: string, startPage: RoutePath = defaultRoute) {
   const t = useT();
   const [saved] = useState(readSettings);
   const [api, setApi] = useState(saved.api ?? '');
@@ -118,7 +119,7 @@ export function useBackendForm(query: string) {
     setToken(value);
     resetProbe();
   };
-  const persist = (profiles: Profile[], activeId: string) => {
+  const persist = (profiles: Profile[], activeId: string, destination?: RoutePath) => {
     if (saveLock.current) return;
     saveLock.current = true;
     flushSync(() => setSaving(true));
@@ -138,6 +139,7 @@ export function useBackendForm(query: string) {
     } catch {
       /* Storage can be unavailable. */
     }
+    if (destination) replaceRoute(destination);
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };
@@ -149,7 +151,7 @@ export function useBackendForm(query: string) {
   };
   const save = () => {
     const profiles = editedProfiles();
-    if (profiles) persist(profiles, active?.id ?? profiles[0].id);
+    if (profiles) persist(profiles, active?.id ?? profiles[0].id, saved.api === null ? startPage : undefined);
     else toast('negative', t('settings.invalidUrl'));
   };
   const [switchId, setSwitchId] = useState<string | null>(null);

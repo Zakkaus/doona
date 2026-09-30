@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {shouldOpenSettings} from './preferences';
-import {defaultRoute, isRoutePath, type Go, type RoutePath} from './routes';
+import {defaultRoute, hasRoute, isRoutePath, type Go, type RoutePath} from './routes';
 
 type Route = {route: RoutePath; query: string};
 
@@ -78,10 +78,10 @@ export function historyPosition(fallback = 0): number {
   return typeof value === 'number' ? value : fallback;
 }
 
-function currentHash(api: string | null): string {
+function currentHash(api: string | null, startPage: RoutePath = defaultRoute): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
   else {
-    const {route, query} = parseHash(location.hash);
+    const {route, query} = hasRoute(location.hash) ? parseHash(location.hash) : {route: startPage, query: ''};
     const canonical = buildHash(route, query);
     if (location.hash !== canonical) history.replaceState(history.state, '', canonical);
   }
@@ -97,9 +97,9 @@ export function replaceRoute(route: RoutePath, query = '') {
   else history.replaceState(history.state, '', buildHash(route, query));
 }
 
-export function useRoute(api: string | null) {
+export function useRoute(api: string | null, startPage: RoutePath = defaultRoute) {
   const [loc, setLoc] = useState(() => {
-    const hash = currentHash(api);
+    const hash = currentHash(api, startPage);
     history.replaceState({...history.state, doonaPosition: historyPosition()}, '', hash);
     return parseHash(hash);
   });

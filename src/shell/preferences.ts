@@ -4,6 +4,7 @@ import {readProfiles, type Profile, type StoragePort} from '../api/profiles';
 import {storageKeys} from '../api/storage';
 import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 import type {ToastPlacement} from '../ui/ui';
+import {defaultRoute, hasRoute, isRoutePath, type RoutePath} from './routes';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
 export type {PaletteId, ToastPlacement};
@@ -20,10 +21,15 @@ export type Settings = {
   wordmark: Wordmark;
   mirrored: boolean;
   toastPlacement: ToastPlacement;
+  startPage: RoutePath;
 };
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
-export function writeSetting(key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'toastPlacement', value: string, storage?: StoragePort) {
+export function writeSetting(
+  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'toastPlacement' | 'startPage',
+  value: string,
+  storage?: StoragePort
+) {
   try {
     (storage ?? localStorage).setItem(storageKeys[key], value);
   } catch {}
@@ -40,6 +46,7 @@ export function readSettings(storage?: StoragePort): Settings {
   const scheme = read(storageKeys.scheme);
   const palette = read(storageKeys.palette);
   const placement = read(storageKeys.toastPlacement);
+  const startPage = read(storageKeys.startPage);
   const profiles = readProfiles(storage);
   const active = profiles.profiles.find(profile => profile.id === profiles.activeId);
   return {
@@ -51,12 +58,13 @@ export function readSettings(storage?: StoragePort): Settings {
     palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
     wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient',
     mirrored: read(storageKeys.mirror) === 'on',
+    startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
   };
 }
 
 export function shouldOpenSettings(api: string | null, hash: string): boolean {
-  return api === null && (hash === '' || hash === '#' || hash === '#/');
+  return api === null && !hasRoute(hash);
 }
 
 type Appearance = {
@@ -72,10 +80,13 @@ type Appearance = {
   pickMirrored: (value: boolean) => void;
   toastPlacement: ToastPlacement;
   pickToastPlacement: (value: ToastPlacement) => void;
+  startPage: RoutePath;
+  pickStartPage: (value: RoutePath) => void;
 };
 export const SettingsContext = createContext<{
   lang: Lang;
   pickLang: (value: Lang) => void;
   ap: Appearance;
   paletteSections: Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}>;
+  startPageItems: Array<{id: RoutePath; label: string}>;
 } | null>(null);

@@ -13,10 +13,10 @@ export function useSettingsPage(query: string) {
   const capabilities = useCapabilities();
   const version = useVersion();
   const controls = useContext(SettingsContext);
-  const form = useBackendForm(query);
+  const form = useBackendForm(query, controls?.ap.startPage);
   const [showToken, setShowToken] = useState(false);
   if (!controls) throw new Error('Settings requires shell controls');
-  const {lang, pickLang, ap, paletteSections} = controls;
+  const {lang, pickLang, ap, paletteSections, startPageItems} = controls;
   const profile = profileView(form.saved.profiles, form.result, t);
   const install = offer
     ? () => {
@@ -32,6 +32,7 @@ export function useSettingsPage(query: string) {
     pickLang,
     ap,
     paletteSections,
+    startPageItems,
     profile,
     palette: paletteLabel(paletteSections, ap.palette),
     error: capabilities.error,

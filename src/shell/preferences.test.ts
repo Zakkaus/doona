@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {consumeProfileReadError, detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../api/profiles';
 import {readSettings, shouldOpenSettings} from './preferences';
+import {routePaths} from './routes';
 
 describe('backend URL normalization', () => {
   it.each([
@@ -114,6 +115,7 @@ it('keeps demo navigation usable when storage is unavailable', () => {
     }
   });
   expect(settings.api).toBeNull();
+  expect(settings.startPage).toBe('activity');
   expect(shouldOpenSettings(settings.api, '#/')).toBe(true);
 });
 
@@ -174,4 +176,12 @@ describe('hosted backend detection', () => {
     expect(readProfiles(chosen).profiles).toEqual([]);
     expect(await detectHostedBackend(storageFrom(), {...at('/ui/'), protocol: 'file:'}, answer(200, {}, {}))).toBe(false);
   });
+});
+
+it.each(routePaths)('reads the startup page %s from preferences', route => {
+  expect(readSettings(storageFrom([['doona-start-page', route]])).startPage).toBe(route);
+});
+
+it.each([null, '', 'last', 'login', 'unknown', 'rules?tab=dns'])('defaults an invalid startup page %j to Activity', value => {
+  expect(readSettings(storageFrom(value === null ? [] : [['doona-start-page', value]])).startPage).toBe('activity');
 });

@@ -19,6 +19,10 @@ export type RoutePath = (typeof routePaths)[number];
 // Where an empty or unknown address lands.
 export const defaultRoute: RoutePath = 'activity';
 
+export function hasRoute(hash: string): boolean {
+  return hash.replace(/^#\/?/, '').split('?')[0] !== '';
+}
+
 // Every page belongs to one hub. The side navigation shows the hubs as its sections; a phone shows them in the bottom
 // bar, with the open hub's pages above the content. The first page is where a hub opens until another is visited.
 export const hubs = [

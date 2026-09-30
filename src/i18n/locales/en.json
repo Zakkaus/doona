@@ -1697,6 +1697,7 @@
   "settings.signOutTokenHelp": "Clears the token saved in this browser. The token stays valid on the backend.",
   "settings.sourceConfig": "From configuration",
   "settings.sourceRuntime": "Runtime override",
+  "settings.startPage": "Open at startup",
   "settings.switchProfileHelp": "Switching profiles discards unsaved backend URL and token changes. Saved profiles remain unchanged.",
   "settings.test": "Test connection",
   "settings.testing": "Testing connection…",
