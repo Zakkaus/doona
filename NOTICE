@@ -13,27 +13,27 @@ The fonts in public/fonts are the Google Fonts subsets of Noto Sans TC and SC
 from https://github.com/notofonts/noto-cjk.
 Licensed under the SIL Open Font License, Version 1.1; see public/fonts/OFL.txt.
 
-src/ui/styles/palettes/qiangguo-wall-*.webp are cropped, tinted and faded from
+src/ui/styles/palettes/qiangguo/wall-*.webp are cropped, tinted and faded from
 "Great Wall of China" by j4p4n, public domain, via Openclipart:
 https://openclipart.org/detail/279931/great-wall-of-china
 
-src/ui/styles/palettes/qiangguo-taishan-*.webp are cut into strokes, tinted and faded from
+src/ui/styles/palettes/qiangguo/taishan-*.webp are cut into strokes, tinted and faded from
 "Nantianmen (" porte Céleste du Sud ") - A1365.jpg" by Stéphane Passet (1913),
 Musée départemental Albert-Kahn, CC0 1.0, via Wikimedia Commons:
 https://commons.wikimedia.org/wiki/File:Nantianmen_(%22_porte_C%C3%A9leste_du_Sud_%22)_-_A1365.jpg
 
-src/ui/styles/palettes/qiangguo-gorges-*.webp are cut into strokes, tinted and faded from
+src/ui/styles/palettes/qiangguo/gorges-*.webp are cut into strokes, tinted and faded from
 "Qutang Gorge on Changjiang.jpg" by Tan Wei Liang Byorn, CC BY 3.0, via Wikimedia Commons:
 https://commons.wikimedia.org/wiki/File:Qutang_Gorge_on_Changjiang.jpg
 The images are licensed under CC BY 3.0; see LICENSES/CC-BY-3.0.txt.
 
-src/ui/styles/palettes/qiangguo-lake-*.webp are cut, combined and tinted from
+src/ui/styles/palettes/qiangguo/lake-*.webp are cut, combined and tinted from
 two photographs by Bernard Gagnon on Wikimedia Commons, CC BY-SA 3.0:
 https://commons.wikimedia.org/wiki/File:Lalu_Island.jpg
 https://commons.wikimedia.org/wiki/File:Ci_En_Pagoda_01.jpg
 The combined images are licensed under CC BY-SA 4.0; see LICENSES/CC-BY-SA-4.0.txt.
 
-src/ui/styles/palettes/qiangguo-square-*.webp are cut, combined and tinted from
+src/ui/styles/palettes/qiangguo/square-*.webp are cut, combined and tinted from
 three photographs on Wikimedia Commons:
 "20200110 Tiananmen-6.jpg" and "20200110 Tiananmen statue-1.jpg" by Balon Greyjoy,
 CC0 1.0:
@@ -43,6 +43,6 @@ https://commons.wikimedia.org/wiki/File:20200110_Tiananmen_statue-1.jpg
 https://commons.wikimedia.org/wiki/File:Beijing_(November_2016)_-_234.jpg
 The combined images are licensed under CC BY-SA 4.0; see LICENSES/CC-BY-SA-4.0.txt.
 
-src/ui/styles/palettes/qiangguo-flag-*.svg draw the five stars with the geometry
+src/ui/styles/palettes/qiangguo/flag-*.svg draw the five stars with the geometry
 of the flag of the People's Republic of China, public domain:
 https://commons.wikimedia.org/wiki/File:Flag_of_the_People%27s_Republic_of_China.svg

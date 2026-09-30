@@ -87,10 +87,10 @@
 :root[data-family='qiangguo'] {
   --qg-sky: linear-gradient(#b8141b, #de2910 45%, #e8452a);
   --qg-sky-top: #b8141b;
-  --qg-flag: url('./qiangguo-flag-light.svg');
+  --qg-flag: url('./qiangguo/flag-light.svg');
   --qg-fold-lit: rgba(255, 236, 200, 0.2);
   --qg-fold-shade: rgba(90, 0, 4, 0.24);
-  --qg-square: url('./qiangguo-square-light.webp');
+  --qg-square: url('./qiangguo/square-light.webp');
   --qg-bar-ink: rgba(90, 0, 4, 0.55);
   /* Where the hero starts and ends across the shell, how tall it is from the top of the page, where it turns to
      paper, how far above its end the title sits, how wide its start fades into the side column, and the boxes of the
@@ -129,10 +129,10 @@
 :root[data-family='qiangguo'][data-scheme='dark'] {
   --qg-sky: linear-gradient(#5c0006, #1a0000);
   --qg-sky-top: #5c0006;
-  --qg-flag: url('./qiangguo-flag-dark.svg');
+  --qg-flag: url('./qiangguo/flag-dark.svg');
   --qg-fold-lit: rgba(255, 150, 120, 0.12);
   --qg-fold-shade: rgba(0, 0, 0, 0.45);
-  --qg-square: url('./qiangguo-square-dark.webp');
+  --qg-square: url('./qiangguo/square-dark.webp');
   --qg-bar-ink: rgba(0, 0, 0, 0.6);
 }
 @media (min-width: 1024px) {
@@ -253,31 +253,31 @@
    Openclipart (public domain), tinted flag red by day and gold after midnight, and faded towards the text. */
 :root[data-family='qiangguo'] .rp-card {
   background:
-    url('./qiangguo-wall-light.webp') no-repeat right bottom / min(60%, 300px) auto,
+    url('./qiangguo/wall-light.webp') no-repeat right bottom / min(60%, 300px) auto,
     var(--rp-base);
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card {
-  background-image: url('./qiangguo-wall-dark.webp');
+  background-image: url('./qiangguo/wall-dark.webp');
 }
 /* Neighbouring cards take turns with Mount Tai's South Gate of Heaven, Kuimen in the Three Gorges and Sun Moon Lake,
    cut from photographs into the same strokes (sources in NOTICE). */
 :root[data-family='qiangguo'] .rp-card:nth-child(4n + 2) {
-  background-image: url('./qiangguo-taishan-light.webp');
+  background-image: url('./qiangguo/taishan-light.webp');
 }
 :root[data-family='qiangguo'] .rp-card:nth-child(4n + 3) {
-  background-image: url('./qiangguo-gorges-light.webp');
+  background-image: url('./qiangguo/gorges-light.webp');
 }
 :root[data-family='qiangguo'] .rp-card:nth-child(4n) {
-  background-image: url('./qiangguo-lake-light.webp');
+  background-image: url('./qiangguo/lake-light.webp');
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n + 2) {
-  background-image: url('./qiangguo-taishan-dark.webp');
+  background-image: url('./qiangguo/taishan-dark.webp');
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n + 3) {
-  background-image: url('./qiangguo-gorges-dark.webp');
+  background-image: url('./qiangguo/gorges-dark.webp');
 }
 :root[data-family='qiangguo'][data-scheme='dark'] .rp-card:nth-child(4n) {
-  background-image: url('./qiangguo-lake-dark.webp');
+  background-image: url('./qiangguo/lake-dark.webp');
 }
 /* Titles in bold flag red, like the app's section heads; gold after midnight. */
 :root[data-family='qiangguo'] h1 {
