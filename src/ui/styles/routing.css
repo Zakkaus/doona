@@ -130,7 +130,8 @@
   font-variant-numeric: tabular-nums;
   color: var(--rp-subtle);
 }
-/* The apply dialog's group lists: a name and its label on one line, and any warning under it in the notice colour. */
+/* The apply dialog's group lists: each group's name and label, and any warning under them. Groups to create run in
+   two columns where the dialog is wide enough. */
 .rp-impact-section {
   display: flex;
   flex-direction: column;
@@ -145,63 +146,18 @@
   padding: 0;
   list-style: none;
 }
+.rp-impact.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr));
+  gap: 8px 24px;
+}
 .rp-impact > li {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.rp-impact-label {
-  margin-inline-start: 8px;
-  color: var(--rp-subtle);
-  font-size: var(--rp-text-sm);
-}
-.rp-impact-warning {
-  display: flex;
   align-items: flex-start;
-  gap: 6px;
-  color: var(--rp-notice-text);
-  font-size: var(--rp-text-sm);
+  gap: 4px;
+  min-width: 0;
 }
-.rp-impact-warning > svg {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-}
-/* A unified line diff: added and removed lines take a quiet highlight and their mark the positive or negative text
-   colour; a gap between hunks is secondary text. */
-.rp-diff {
-  max-height: 320px;
-  margin: 0;
-  padding: 8px 0;
-  overflow: auto;
-  border-radius: var(--rp-r-md);
-  background: var(--rp-base);
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
-  font-size: var(--rp-text-xs);
-  line-height: 1.6;
-}
-.rp-diff-line {
-  display: block;
-  padding-inline: 8px;
-  white-space: pre;
-}
-.rp-diff-line:is([data-kind='add'], [data-kind='del']) {
-  background: var(--rp-hl-low);
-}
-.rp-diff-line[data-kind='gap'] {
-  color: var(--rp-subtle);
-  font-family: inherit;
-}
-.rp-diff-mark {
-  display: inline-block;
-  width: 2ch;
-}
-.rp-diff-line[data-kind='add'] .rp-diff-mark {
-  color: var(--rp-positive-text);
-}
-.rp-diff-line[data-kind='del'] .rp-diff-mark {
-  color: var(--rp-negative-text);
+.rp-impact > li > .rp-cluster {
+  gap: 8px;
 }

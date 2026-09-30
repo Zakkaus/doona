@@ -194,7 +194,8 @@
   width: min(480px, 90vw);
 }
 /* S2's dialog anatomy for long content: the title and the footer keep their place and only the content between them
-   scrolls. The padding moves from the dialog to each part so the scrollbar runs along the content alone. */
+   scrolls. The padding moves from the dialog to each part so the scrollbar runs along the content alone; while the
+   content overflows, a divider sets it off from each. */
 .rp-dialog.split {
   padding: 0;
   gap: 0;
@@ -202,30 +203,41 @@
 }
 .rp-dialog.split > h2 {
   flex: none;
-  padding: 24px 32px 16px;
+  padding: 24px 32px 12px;
 }
 .rp-dialog-body {
   flex: 1 1 auto;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 0 32px 16px;
+  padding: 12px 32px;
   overflow: hidden auto;
+  border-block: 1px solid transparent;
   outline: none;
+}
+.rp-dialog-body[data-overflow] {
+  border-color: var(--rp-hl-low);
 }
 .rp-dialog-body[data-focus-visible],
 .rp-dialog-body:focus-visible {
   outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
+.rp-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
 .rp-dialog.split > .foot {
   flex: none;
-  padding: 16px 32px 24px;
+  padding: 12px 32px 24px;
 }
 .rp-dialog.split > .foot + .rp-label {
   margin: -16px 0 0;
   padding: 0 32px 24px;
+}
+/* The diff in a scrolling dialog grows with its lines: the dialog is the only vertical scroller. */
+.rp-dialog-body .rp-diff {
+  max-height: none;
 }
 
 /* Keyboard shortcuts: titled sections of rows, a label and its key caps. Two columns fit it in the viewport above phone
@@ -302,4 +314,32 @@
 }
 .rp-kv.row .k {
   line-height: 20px;
+}
+/* A unified line diff (Diff.tsx) in the code face: added and removed lines take a quiet highlight and their mark the
+   positive or negative text colour; a gap between hunks is a label. */
+.rp-diff {
+  max-height: 320px;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  border-radius: var(--rp-r-md);
+  background: var(--rp-base);
+}
+.rp-diff-line {
+  display: block;
+  padding-inline: 8px;
+  white-space: pre;
+}
+.rp-diff-line:is([data-kind='add'], [data-kind='del']) {
+  background: var(--rp-hl-low);
+}
+.rp-diff-mark {
+  display: inline-block;
+  width: 2ch;
+}
+.rp-diff-line[data-kind='add'] .rp-diff-mark {
+  color: var(--rp-positive-text);
+}
+.rp-diff-line[data-kind='del'] .rp-diff-mark {
+  color: var(--rp-negative-text);
 }

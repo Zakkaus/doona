@@ -88,6 +88,8 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   // The changes are folded away until asked for.
   const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
   await expect(diff).toBeHidden();
+  // Content that fits needs no dividers.
+  await expect(dialog.locator('.rp-dialog-body')).not.toHaveAttribute('data-overflow');
   await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
   await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
@@ -196,6 +198,10 @@ test('on a phone the dialog content scrolls between a title and a footer that st
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
   const title = dialog.getByRole('heading', {name: 'Apply ACL4SSR Full?'});
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect(body).toHaveAttribute('data-overflow', 'true');
+  // The body is the only vertical scroller: the diff grows with its lines.
+  const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
+  expect(await diff.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
   const before = {apply: await box(apply), title: await box(title)};
   expect(before.apply.y + before.apply.height).toBeLessThanOrEqual(844);
   await body.evaluate(el => el.scrollTo(0, el.scrollHeight));
@@ -204,4 +210,16 @@ test('on a phone the dialog content scrolls between a title and a footer that st
   expect(await box(title)).toEqual(before.title);
   // Nothing in the dialog widens the page.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('the view switch ends the toolbar row beside the rule count, in the same place in both views', async ({page}) => {
+  await backend(page);
+  await page.goto('/#/rules?tab=list&view=simple');
+  const views = page.getByRole('radiogroup', {name: 'Rules view'});
+  const simple = await box(views);
+  const caption = await box(page.locator('.rp-toolbar > .rp-label').first());
+  expect(Math.abs(simple.y + simple.height / 2 - (caption.y + caption.height / 2))).toBeLessThan(4);
+  await views.getByText('Advanced', {exact: true}).click();
+  await expect(page.getByRole('button', {name: 'Add rule'})).toBeVisible();
+  expect(await box(views)).toEqual(simple);
 });

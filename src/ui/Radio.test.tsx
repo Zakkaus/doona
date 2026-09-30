@@ -17,7 +17,7 @@ it('names each radio by its label and describes it by its help, and the group by
   expect(markup).toContain(`id="${root.match(/aria-describedby="([^" ]+)/)![1]}" slot="description">Every mode keeps LAN traffic direct.</span>`);
   const input = markup.match(/<input[^>]*value="bypass"[^>]*>/)![0];
   expect(markup).toContain(`id="${input.match(/aria-labelledby="([^"]+)"/)![1]}">Bypass mainland China</span>`);
-  expect(markup).toContain(`id="${input.match(/aria-describedby="([^" ]+)/)![1]}">Mainland China connects directly.</span>`);
+  expect(markup).toContain(`id="${input.match(/aria-describedby="([^" ]+)/)![1]}" class="rp-note">Mainland China connects directly.</span>`);
   // A radio without help is described by the group's help alone.
   expect(markup.match(/<input[^>]*value="global"[^>]*>/)![0]).not.toMatch(/aria-describedby="_/);
 });

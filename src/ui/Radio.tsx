@@ -43,7 +43,11 @@ export function Radio({value, label, description, isDisabled}: {value: string; l
       <span className="rp-radio-mark" />
       <span className="rp-radio-text">
         <span id={labelId}>{label}</span>
-        {description && <span id={descriptionId}>{description}</span>}
+        {description && (
+          <span id={descriptionId} className="rp-note">
+            {description}
+          </span>
+        )}
       </span>
     </RRadio>
   );

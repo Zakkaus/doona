@@ -7,6 +7,9 @@
   width: 100%;
   text-align: start;
 }
+.rp-disclosure-trigger.flush {
+  padding-inline-start: 0;
+}
 .rp-disclosure-trigger > svg {
   rotate: calc(-90deg * var(--rp-dir));
   transition: rotate var(--rp-duration-panel) var(--rp-ease-out);

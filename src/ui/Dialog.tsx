@@ -36,11 +36,18 @@ import {ActionHelp, Button} from './Button';
 import {InlineAlert} from './Feedback';
 import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
-export function Disclosure({title, children, ...props}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; children: ReactNode}) {
+// `flush` sets the chevron on the content's start edge, for a disclosure among items that start there, such as radios
+// or a dialog's sections.
+export function Disclosure({
+  title,
+  flush,
+  children,
+  ...props
+}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; flush?: boolean; children: ReactNode}) {
   return (
     <RDisclosure {...props} className="rp-disclosure">
       <Heading level={3}>
-        <RButton slot="trigger" className="rp-btn quiet rp-disclosure-trigger">
+        <RButton slot="trigger" className={cx('rp-btn quiet rp-disclosure-trigger', flush && 'flush')}>
           <ChevronDown />
           {title}
         </RButton>
@@ -98,10 +105,7 @@ export function ModalDialog({
             <ActionHelp reason={footer ? reason : null}>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
               {scrollBody ? (
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrolling content needs keyboard focus to scroll.
-                <div className="rp-dialog-body" tabIndex={0}>
-                  {typeof children === 'function' ? children(close) : children}
-                </div>
+                <ScrollBody>{typeof children === 'function' ? children(close) : children}</ScrollBody>
               ) : typeof children === 'function' ? (
                 children(close)
               ) : (
@@ -121,6 +125,29 @@ export function ModalDialog({
     </DialogTrigger>
   ) : (
     modal
+  );
+}
+
+// A dialog's scrolling content. While it overflows, dividers set it off from the title and the footer, as in S2.
+function ScrollBody({children}: {children: ReactNode}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const body = ref.current;
+    if (!body) return;
+    const measure = () => setOverflows(body.scrollHeight > body.clientHeight + 1);
+    // The body's own size stops changing at the dialog's height cap, so its content is watched as well.
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    if (body.firstElementChild) observer.observe(body.firstElementChild);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrolling content needs keyboard focus to scroll.
+    <div ref={ref} className="rp-dialog-body" data-overflow={overflows || undefined} tabIndex={0}>
+      <div className="rp-dialog-content">{children}</div>
+    </div>
   );
 }
 
