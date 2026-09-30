@@ -9,4 +9,3 @@ export {Waffle, type WaffleShare} from './Waffle';
 export {MarkerPlot, type MarkerGroup, type MarkerRow, type MarkerKind} from './MarkerPlot';
 export {Heatmap, type HeatRow} from './Heatmap';
 export {Scatter, ScatterLegend, type ScatterPoint, type ScatterSeries} from './Scatter';
-export {ShareBar, type ShareSegment} from './ShareBar';

@@ -184,7 +184,6 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     canSubmit: !busy && canSubmit,
     reason: traceReason({loaded: !!capabilities.data, busy: busy !== null, available, invalid: invalid?.key ?? null, modeOffered: modes.includes(resolve)}, t),
     submit,
-    available,
     modes: modes.map(id => ({id, label: t(resolveLabels[id])})),
     // An untouched form is not wrong yet; submit stays disabled until it is complete.
     errors: {

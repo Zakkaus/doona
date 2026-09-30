@@ -1,5 +1,5 @@
 import {formatBytes} from '../../i18n/format';
-import type {Capabilities, RecorderMode, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData, Version} from '../../api/model';
+import type {Capabilities, RecorderState, RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch, GeoData, Version} from '../../api/model';
 import {engineOf} from '../../api/engines';
 import {formatList, formatNumber, type Lang, type Params, type Translator} from '../../i18n';
 import {href} from '../../shell/route';
@@ -18,8 +18,6 @@ export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_lo
 };
 export const recorderFields = Object.keys(recorderAccess) as Recorder[];
 const recorderChoiceLabel: Record<RecorderChoice, Key> = {auto: 'settings.record.auto', on: 'settings.record.on', off: 'settings.record.off'};
-// The wire form is the choice itself.
-export const recorderPatchValue = (choice: RecorderChoice): RecorderMode => choice;
 export function recorderView(id: Recorder, choice: RecorderChoice, state: RecorderState | undefined, t: Translator) {
   const forbidden = state ? !state.allowed : false;
   return {

@@ -17,7 +17,6 @@ import {
   profileView,
   recorderAccess,
   recorderFields,
-  recorderPatchValue,
   recorderView,
   flowRecordingNote,
   recordingNote,
@@ -73,9 +72,6 @@ it('recorder controls follow the reported state and the wire form', () => {
   expect(forbidden.disabled).toBe(true);
   expect(forbidden.status).toBe('settings.recordingForbidden');
   expect(recorderView('record_dns_log', 'off', undefined, t).tone).toBe('neutral');
-  expect(recorderPatchValue('auto')).toBe('auto');
-  expect(recorderPatchValue('on')).toBe('on');
-  expect(recorderPatchValue('off')).toBe('off');
   const recording = {flows: active, logs: active, dns_log: active, events: {active: false}, grace_remaining_seconds: 0} as never;
   expect(recordingNote(recording, t)).toBe('settings.recordingDetached');
   expect(recordingNote({...(recording as object), grace_remaining_seconds: 42} as never, t)).toBe('settings.recordingGrace:{"n":42}');
