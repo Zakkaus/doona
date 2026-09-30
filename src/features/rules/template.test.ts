@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {currentTemplate, routingSources, templatesView} from './template';
+import {currentTemplate, refusalReason, routingSources, templatesView, templateTarget} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -37,4 +37,31 @@ it('reads routing split over files, or held by a generated file, as custom', () 
   expect(currentTemplate([source('main', bypass, 'main'), source('more', 'routing { fallback: proxy }\n')])).toBeNull();
   expect(routingSources([source('gen', bypass, 'generated')])).toEqual([]);
   expect(currentTemplate([source('main', bypass.replace('fallback: proxy', 'fallback: direct'), 'main')])).toBeNull();
+});
+
+const input = (sources: ConfigSource[], patch: Partial<Parameters<typeof templateTarget>[0]> = {}) =>
+  templateTarget({sources, configWritable: true, daeText: true, complete: () => true, holdsCredentials: () => false, denied: null, ...patch});
+
+it('writes the one file that holds the routing, or the main file when none does', () => {
+  const main = source('main', 'group { proxy {} }\n', 'main');
+  const rules = source('rules', 'routing { fallback: proxy }\n');
+  expect(input([main, rules])).toEqual({source: rules, refusal: null});
+  expect(input([main])).toEqual({source: main, refusal: null});
+});
+
+it('refuses routing split over files or pulling one in, and files it may not write', () => {
+  const main = source('main', 'routing {\n  include rules.dae\n  fallback: proxy\n}\n', 'main');
+  expect(input([main]).refusal).toBe('include');
+  expect(input([main, source('more', 'routing { fallback: direct }\n')]).refusal).toBe('split');
+  const plain = source('main', 'routing { fallback: proxy }\n', 'main');
+  expect(input([plain], {configWritable: false}).refusal).toBe('writesOff');
+  expect(input([plain], {daeText: false}).refusal).toBe('syntax');
+  expect(input([plain], {holdsCredentials: () => true}).refusal).toBe('secret');
+  expect(input([{...plain, writable: false}]).refusal).toBe('readOnly');
+  expect(input([plain], {complete: () => false}).refusal).toBe('incomplete');
+  expect(input([plain], {denied: 'main'}).refusal).toBe('denied');
+  expect(input([]).refusal).toBe('noSource');
+  expect(refusalReason('secret', plain, t)).toBe(
+    'main.dae holds API listener settings or secrets, which the backend does not write back. Edit it on the host.'
+  );
 });
