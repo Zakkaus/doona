@@ -57,6 +57,23 @@ test('the open hub lists its pages as links, the current one marked', async ({pa
   await expect(pages.getByRole('link', {name: 'Events'})).toHaveAttribute('aria-current', 'page');
 });
 
+test('another page opens at its top, while a change within the page keeps the scroll position', async ({page}) => {
+  await page.goto('/#/activity');
+  // The tiles fill in as their reads arrive, so the page may not reach 400 px on the first try.
+  await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
+  await page.evaluate(() => {
+    location.hash = '#/activity?unused=1';
+  });
+  await expect(page).toHaveURL(/unused=1$/);
+  expect(await page.evaluate(() => scrollY)).toBe(400);
+  await bar(page).getByRole('link', {name: 'Monitor'}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect(page.locator('.rp-content > *').first()).toBeVisible();
+  // Tall enough that keeping the old offset would have left it at 400; WebKit fills the rows in a little later.
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight + 400)).toBe(true);
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+});
+
 test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   await page.goto('/#/overview');
   await expect(page.locator('.rp-content > *').first()).toBeVisible();
