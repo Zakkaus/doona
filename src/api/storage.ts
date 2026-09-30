@@ -7,6 +7,7 @@ export const storageKeys = {
   wordmark: 'doona-wordmark',
   mirror: 'doona-mirror',
   toastPlacement: 'doona-toast-placement',
+  startPage: 'doona-start-page',
   profiles: 'doona-profiles',
   profile: 'doona-profile',
   // The single-backend settings from before profiles, read once to migrate them.

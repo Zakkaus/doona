@@ -1,6 +1,7 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
 import {writeSetting, type PaletteId, type Scheme, type Settings, type ToastPlacement, type Wordmark} from './preferences';
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
+import type {RoutePath} from './routes';
 
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark) {
   const [family, flavour] = palette.split('/');
@@ -16,6 +17,7 @@ export function useAppearance(stored: Settings) {
   const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
   const [mirrored, setMirrored] = useState(stored.mirrored);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
+  const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
   useLayoutEffect(() => applyAppearance(dark, palette, wordmark), [dark, palette, wordmark]);
@@ -41,8 +43,42 @@ export function useAppearance(stored: Settings) {
     setToastPlacement(next);
     writeSetting('toastPlacement', next);
   }, []);
+  const pickStartPage = useCallback((next: RoutePath) => {
+    setStartPage(next);
+    writeSetting('startPage', next);
+  }, []);
   return useMemo(
-    () => ({scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark, mirrored, pickMirrored, toastPlacement, pickToastPlacement}),
-    [scheme, dark, toggle, pickScheme, palette, pickPalette, wordmark, pickWordmark, mirrored, pickMirrored, toastPlacement, pickToastPlacement]
+    () => ({
+      scheme,
+      dark,
+      toggle,
+      pickScheme,
+      palette,
+      pickPalette,
+      wordmark,
+      pickWordmark,
+      mirrored,
+      pickMirrored,
+      toastPlacement,
+      pickToastPlacement,
+      startPage,
+      pickStartPage
+    }),
+    [
+      scheme,
+      dark,
+      toggle,
+      pickScheme,
+      palette,
+      pickPalette,
+      wordmark,
+      pickWordmark,
+      mirrored,
+      pickMirrored,
+      toastPlacement,
+      pickToastPlacement,
+      startPage,
+      pickStartPage
+    ]
   );
 }

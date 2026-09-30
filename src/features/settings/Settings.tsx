@@ -9,7 +9,7 @@ import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
 import {About} from '../../shell/About';
 import {openShortcuts} from '../../shell/shortcuts';
-import type {PageProps} from '../../shell/routes';
+import type {PageProps, RoutePath} from '../../shell/routes';
 import {settingsCard, settingsCards, type SettingsCardId} from './nav';
 
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
@@ -49,6 +49,7 @@ export function Settings({query}: PageProps) {
     pickLang,
     ap,
     paletteSections,
+    startPageItems,
     profile,
     palette,
     tokenType,
@@ -192,6 +193,7 @@ export function Settings({query}: PageProps) {
               {id: 'bottom end', label: t('settings.toastBottomEnd')}
             ]}
           />
+          <LabeledSelect label={t('settings.startPage')} value={ap.startPage} onChange={value => ap.pickStartPage(value as RoutePath)} items={startPageItems} />
         </div>
         <div className="rp-field">
           <Switch isSelected={ap.mirrored} onChange={ap.pickMirrored} aria-describedby={mirrorHelpId}>

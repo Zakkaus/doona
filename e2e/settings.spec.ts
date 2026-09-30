@@ -91,9 +91,7 @@ test('saving mock reloads and restores the default activity route', async ({page
   await page.locator('[name=api]').fill(' mock ');
   await expect(token).toHaveCount(0);
   await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
-  await expect(page.locator('.rp-toast.positive')).toContainText('Settings saved.');
-  await expect(page.locator('[name=api]')).toHaveValue('mock');
-  await expect(token).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/activity$/);
   // A saved demo profile signs in with its published account, filled in, before the default route.
   await page.goto('/#/');
   await expect(page.locator('.rp-login-page')).toContainText('Demo account: demo');

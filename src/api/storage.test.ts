@@ -9,6 +9,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-wordmark',
     'doona-mirror',
     'doona-toast-placement',
+    'doona-start-page',
     'doona-profiles',
     'doona-profile',
     'doona-api',

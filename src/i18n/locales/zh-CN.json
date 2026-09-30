@@ -1487,6 +1487,7 @@
   "settings.signOutTokenHelp": "仅清除此浏览器保存的 Token；该 Token 在后端仍然有效。",
   "settings.sourceConfig": "配置值",
   "settings.sourceRuntime": "运行时覆盖",
+  "settings.startPage": "启动时打开",
   "settings.switchProfileHelp": "切换连接方案会放弃尚未保存的后端网址与 Token 修改；已保存的连接方案保持不变。",
   "settings.test": "测试连接",
   "settings.testing": "正在测试连接…",

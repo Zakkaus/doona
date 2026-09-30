@@ -8,7 +8,7 @@ import type {SettingsContext} from './preferences';
 import {FONT, LANGS, languages, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';
-import {warmAllPages} from './registry';
+import {features, warmAllPages} from './registry';
 import {searchDialog} from './search/load';
 import {parseHash, useRoute} from './route';
 import {useAppearance} from './useAppearance';
@@ -37,7 +37,7 @@ export function useShellController(initial: Lang) {
     addEventListener('scroll', mark, {passive: true});
     return () => removeEventListener('scroll', mark);
   }, []);
-  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
+  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api, settings.startPage);
   // Another page opens at its top; a tab or filter change within the page keeps the reader's place.
   const shownRoute = useRef(route);
   useLayoutEffect(() => {
@@ -116,7 +116,11 @@ export function useShellController(initial: Lang) {
 export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap'], route: string) {
   const t = useT();
   const paletteSections = useMemo(() => paletteMenu(t), [t]);
-  const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections}), [lang, pickLang, ap, paletteSections]);
+  const startPageItems = useMemo<NonNullable<ContextType<typeof SettingsContext>>['startPageItems']>(
+    () => features.flatMap(feature => (feature.nav ? [{id: feature.path, label: t(feature.nav.titleKey)}] : [])),
+    [t]
+  );
+  const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections, startPageItems}), [lang, pickLang, ap, paletteSections, startPageItems]);
   const menu = useMemo(() => appearanceMenu(t, ap.scheme, ap.dark), [t, ap.scheme, ap.dark]);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   // One object per measured position: a fresh one on every render would re-render the memoised navigation.
