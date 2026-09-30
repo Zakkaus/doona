@@ -10,6 +10,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+WORKER_BUILD = rb"(?<=const BUILD = ')[^']+(?=')"
+BUILD_REPLY = rb'\n  if \(event\.data\?\.build === true\) \{.*?\n  \}'
+PAGE_BUILD = rb'(?<=<meta name="doona-build" content=")[^"]+(?=")'
+
 class NoCache(SimpleHTTPRequestHandler):
     def __init__(self, *args, prefix='', worker_update=False, **kwargs):
         self.prefix = prefix
@@ -22,23 +26,28 @@ class NoCache(SimpleHTTPRequestHandler):
         if self.prefix and path != self.prefix and not path.startswith(self.prefix + '/'):
             self.send_error(404)
             return None
-        # A cookie makes the worker, or the page, stand for an older build than the files on disk.
-        if self.worker_update and path == self.prefix + '/sw.js' and self.cookie('doona-pwa-update'):
-            return self.rewritten('sw.js', rb"(?<=const BUILD = ')[^']+(?=')", 'text/javascript')
+        # A cookie makes the worker, or the page, stand for an older build than the files on disk: a legacy worker is one
+        # from before workers reported their build.
+        if self.worker_update and path == self.prefix + '/sw.js':
+            if self.cookie('doona-pwa-legacy'):
+                return self.rewritten('sw.js', 'text/javascript', (WORKER_BUILD, b'legacy'), (BUILD_REPLY, b''))
+            if self.cookie('doona-pwa-update'):
+                return self.rewritten('sw.js', 'text/javascript', (WORKER_BUILD, b'update'))
         if self.worker_update and requested in (self.prefix + '/', self.prefix + '/index.html') and self.cookie('doona-pwa-page'):
-            return self.rewritten('index.html', rb'(?<=<meta name="doona-build" content=")[^"]+(?=")', 'text/html; charset=utf-8')
+            return self.rewritten('index.html', 'text/html; charset=utf-8', (PAGE_BUILD, b'update'))
         return super().send_head()
 
     def cookie(self, name):
         morsel = SimpleCookie(self.headers.get('Cookie', '')).get(name)
         return morsel is not None and morsel.value == '1'
 
-    def rewritten(self, name, build, content_type):
-        original = (Path(self.directory) / name).read_bytes()
-        updated, count = re.subn(build, b'update', original)
-        if count != 1:
-            self.send_error(500, f'build not found in {name}')
-            return None
+    def rewritten(self, name, content_type, *edits):
+        updated = (Path(self.directory) / name).read_bytes()
+        for pattern, replacement in edits:
+            updated, count = re.subn(pattern, replacement, updated, flags=re.S)
+            if count != 1:
+                self.send_error(500, f'{pattern!r} not found in {name}')
+                return None
         self.send_response(200)
         self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(updated)))
