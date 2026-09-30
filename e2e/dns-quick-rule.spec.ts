@@ -273,7 +273,7 @@ test('a DNS rule written whose reload failed closes the dialog without offering 
   await card.getByRole('button', {name: 'Add rule', exact: true}).click();
   await pick(page, /Action$/, /^reject/);
   await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'Written to the configuration file but not applied'})).toBeVisible();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'Written to the config file but not applied'})).toBeVisible();
   await expect(dialogOf(page)).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Query again', exact: true})).toHaveCount(0);
   await expect(top(page).locator('.rp-held-count')).toHaveCount(0);

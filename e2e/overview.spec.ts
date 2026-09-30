@@ -267,7 +267,7 @@ test.describe('with the base profile', () => {
       'Subscriptions cannot be refreshed for now',
       'This honk build lacks 6 features'
     ]);
-    await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Validation, Nodes and sources');
+    await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Validation, Nodes and node sources');
     await expect(rows.nth(1).locator('.rp-note')).toHaveText('DNS log, Traffic history, Memory history, Logs');
     await expect(rows.nth(2).locator('.rp-note')).toHaveCount(0);
     await expect(card.locator('pre')).toHaveCount(0);

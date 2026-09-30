@@ -266,7 +266,7 @@ test('discarding source inside Config cancels its transaction and releases the n
   const validating = page.waitForRequest('**/config/validate');
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;
-  await page.getByRole('button', {name: / Source$/}).click();
+  await page.getByRole('button', {name: / Config file$/}).click();
   await page.getByRole('option', {name: /rules\.dae/}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   try {

@@ -464,7 +464,7 @@ test('a rule written whose reload failed is not held again and not offered for a
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await pick(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
-  const notice = page.locator('.rp-toast.negative', {hasText: 'Written to the configuration file but not applied'});
+  const notice = page.locator('.rp-toast.negative', {hasText: 'Written to the config file but not applied'});
   await expect(notice).toBeVisible();
   await expect(notice).not.toContainText('Could not write');
   await expect(dialog).toHaveCount(0);

@@ -53,7 +53,7 @@ test('the rule list shows the dictionary in evaluation order with its source lin
   await expect(list.nth(5)).toContainText('rules.dae:3');
   await expect(list.last()).toContainText('fallback: resilient');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('9 rules, generation 40');
-  await list.first().getByRole('button', {name: 'Open config source', exact: true}).click();
+  await list.first().getByRole('button', {name: 'Open config file', exact: true}).click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=51$/);
 });
 
@@ -62,7 +62,7 @@ test('a rule from an include file says why it cannot be changed here and opens i
   const row = rows(page).nth(6);
   await expect(row).toContainText('rules.dae:6');
   const reason =
-    'This rule is in the include file rules.dae, outside a routing section, so it cannot be changed here. Use Open config source to edit it in the file.';
+    'This rule is in the include file rules.dae, outside a routing section, so it cannot be changed here. Use Open config file to edit it in the file.';
   for (const name of ['Edit outbound settings', 'Remove rule']) {
     const control = row.getByRole('button', {name, exact: true});
     await expect(control).toBeDisabled();
@@ -76,7 +76,7 @@ test('a rule from an include file says why it cannot be changed here and opens i
   }).toPass();
   // The fallback has nothing to remove, so it shows no remove control.
   await expect(rows(page).last().getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
-  await row.getByRole('button', {name: 'Open config source', exact: true}).click();
+  await row.getByRole('button', {name: 'Open config file', exact: true}).click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-rules&line=6$/);
 });
 

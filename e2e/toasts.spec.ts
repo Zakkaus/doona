@@ -22,8 +22,12 @@ async function failingFirstFetch(page: Page, failures: number) {
   return {fetches: () => fetches};
 }
 async function addSubscription(page: Page, name: string) {
-  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
-  const dialog = page.getByRole('dialog');
+  const toolbar = page.locator('.rp-content .rp-toolbar').first();
+  await expect(toolbar).toBeVisible();
+  const add = toolbar.getByRole('button', {name: 'Add subscription', exact: true});
+  if (await add.isVisible()) await add.click();
+  else await moreAction(toolbar, 'Add subscription');
+  const dialog = page.getByRole('dialog', {name: 'Add subscription', exact: true});
   await dialog.getByLabel('Name', {exact: true}).fill(name);
   await dialog.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
