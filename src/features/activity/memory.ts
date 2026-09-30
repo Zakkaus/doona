@@ -1,10 +1,10 @@
 import type {MemoryHistory, RuntimeMemory} from '../../api/model';
-import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
+import {mean, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 
 type MemorySample = {time: number; rss: number | null; cgroup: number | null};
 
-const foldMemory: Fold<MemorySample> = (group, time) => ({time, rss: mean(group.map(s => s.rss)), cgroup: mean(group.map(s => s.cgroup))});
+export const foldMemory: Fold<MemorySample> = (group, time) => ({time, rss: mean(group.map(s => s.rss)), cgroup: mean(group.map(s => s.cgroup))});
 
 export function memorySample(memory: RuntimeMemory): MemorySample | undefined {
   const time = Date.parse(memory.observed_at);
@@ -12,10 +12,6 @@ export function memorySample(memory: RuntimeMemory): MemorySample | undefined {
   const rss = parseU64(memory.process?.rss_bytes ?? null);
   const cgroup = parseU64(memory.cgroup?.current_bytes ?? null);
   return {time, rss: rss === null ? null : Number(rss), cgroup: cgroup === null ? null : Number(cgroup)};
-}
-
-export function useMemorySamples(memory: RuntimeMemory | undefined): Rings<MemorySample> {
-  return useRings('memory', memory, memorySample, foldMemory);
 }
 
 export function historySamples(history: MemoryHistory): MemorySample[] {
