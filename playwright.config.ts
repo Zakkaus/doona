@@ -22,6 +22,7 @@ export default defineConfig({
   projects: [
     {name: 'chromium', testIgnore: 'subpath.spec.ts', use: {...devices['Desktop Chrome']}},
     {name: 'subpath', testMatch: 'subpath.spec.ts', use: {...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:4186'}},
+    ...(process.env.DOONA_E2E_FIREFOX === '1' ? [{name: 'firefox', testMatch: 'connections.spec.ts', use: {...devices['Desktop Firefox']}}] : []),
     ...(webkit
       ? [
           // Safari carries the installed iOS app: a smoke pass over navigation, drag and drop, dialogs and the keyboard.
