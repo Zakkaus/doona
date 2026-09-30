@@ -18,8 +18,7 @@ import {
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
-import {cx} from './cx';
-import {Button, TextTooltip, useReasonId} from './Button';
+import {Button, buttonClass, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
@@ -143,7 +142,7 @@ export function MenuButton({
         </Button>
       ) : (
         <RButton
-          className={cx('rp-btn', quiet && 'quiet', small && 'sm', !chevron && 'icon')}
+          className={buttonClass({quiet, small, icon: !chevron})}
           aria-label={label}
           aria-describedby={reasonId}
           isDisabled={isDisabled}
