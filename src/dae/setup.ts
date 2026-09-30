@@ -1,4 +1,4 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig} from './text';
+import {blockBody, blockEntries, blockFields, quote, scanConfig, uncomment} from './text';
 import {readSubscriptionEntries} from './subscriptions';
 import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
@@ -22,6 +22,9 @@ export const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >=
 export function validNetwork(state: WizardState): boolean {
   return isPort(state.listenerPort) && !!state.defaultDns.trim() && !!state.chinaDns.trim();
 }
+
+// Blank and comment-only lines in the block are written back where they stand but are no subscription to list.
+export const isSubscriptionRow = (item: Subscription) => item.raw === undefined || !!uncomment(item.raw).trim();
 
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 export function validSubscriptions(subscriptions: Subscription[]): boolean {
