@@ -145,7 +145,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
           <SearchSelect
             isDisabled={view.busy}
             label={target}
-            searchLabel={t('ui.filter')}
+            searchLabel={t('ui.filterOutbounds')}
             value={form.outbound}
             onChange={outbound => setForm({...form, outbound})}
             sections={view.table.outboundSections}
@@ -311,7 +311,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
               <SearchSelect
                 isDisabled={view.busy}
                 label={t('rule.position')}
-                searchLabel={t('ui.filter')}
+                searchLabel={t('ui.filterPositions')}
                 value={form.before}
                 onChange={before => setForm({...form, before})}
                 sections={view.table.positionSections}

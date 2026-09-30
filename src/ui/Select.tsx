@@ -164,7 +164,8 @@ export function MenuButton({
 
 export type ChoiceSection = {title: string; items: Item[]; value: string; onChange?: (key: string) => void};
 // A row that opens its own menu of choices, showing the current one, after S2's ActionMenu with submenus.
-export type ChoiceSubmenu = {label: string; icon?: ReactNode; sections: ChoiceSection[]};
+// `searchLabel` names the filter field of a list long enough to get one, by what the submenu lists.
+export type ChoiceSubmenu = {label: string; icon?: ReactNode; sections: ChoiceSection[]; searchLabel?: string};
 // A row after the submenus that runs a command and closes the menu, such as opening a dialog.
 export type ChoiceAction = {label: string; icon?: ReactNode; onAction: () => void};
 
@@ -252,7 +253,7 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
 // text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
 const phone = '(max-width: 639px)';
-function SubmenuMenu({label, submenus, actions = [], searchLabel}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; searchLabel?: string}) {
+function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]}) {
   const t = useT();
   const inline = useMediaQuery(phone);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
@@ -284,7 +285,7 @@ function SubmenuMenu({label, submenus, actions = [], searchLabel}: {label: strin
           <SubmenuTrigger key={submenu.label}>
             <SubmenuItem {...submenu} />
             <Popover className="rp-popover" offset={-4} crossOffset={-9}>
-              <SectionMenu label={submenu.label} sections={submenu.sections} headers={submenu.sections.length > 1} searchLabel={searchLabel} />
+              <SectionMenu label={submenu.label} sections={submenu.sections} headers={submenu.sections.length > 1} searchLabel={submenu.searchLabel} />
             </Popover>
           </SubmenuTrigger>
         ))}
@@ -315,7 +316,7 @@ function SubmenuMenu({label, submenus, actions = [], searchLabel}: {label: strin
           sections={submenu.sections}
           headers={submenu.sections.length > 1}
           focusedByCaller
-          searchLabel={searchLabel}
+          searchLabel={submenu.searchLabel}
         />
       </div>
     );
@@ -397,8 +398,8 @@ type NoActions = {actions?: never};
 // sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
 // toggling one through `onAction`); with neither `value` nor `selectionMode` it is an action menu that only runs
 // `onAction`. `onAction` hears every pick, including one of the already chosen item, for menus where picking it again
-// clears it. With `searchLabel`, naming its filter field, a list of user data longer than twelve items can be
-// filtered, as the node menus are; a shorter list stays plain.
+// clears it. With `searchLabel`, naming its filter field by what it filters (a submenu names its own), a list of
+// user data longer than twelve items can be filtered, as the node menus are; a shorter list stays plain.
 export function ChoiceMenu({
   items,
   selectionMode,
@@ -438,7 +439,7 @@ export function ChoiceMenu({
   const long = sections
     ? longList(itemCount(sections))
     : submenus
-      ? submenus.some(submenu => longList(itemCount(submenu.sections)))
+      ? submenus.some(submenu => !!submenu.searchLabel && longList(itemCount(submenu.sections)))
       : Array.isArray(items) && longList(items.length);
   return (
     <MenuButton
@@ -446,7 +447,7 @@ export function ChoiceMenu({
       onIntent={searchLabel && long ? preloadSearchList : undefined}
       content={
         submenus ? (
-          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} searchLabel={searchLabel} />
+          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
         ) : sections ? (
           <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
         ) : (

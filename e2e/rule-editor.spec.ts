@@ -38,7 +38,7 @@ test('the insert position is searchable by the rule it goes before', async ({pag
   const later = listbox.getByRole('option').nth(3);
   const label = (await later.locator('.rp-il').innerText()).trim();
   const expression = (await later.locator('.desc').innerText()).trim();
-  await page.getByRole('searchbox', {name: 'Filter'}).fill(expression);
+  await page.getByRole('searchbox', {name: 'Filter positions'}).fill(expression);
   await expect(listbox.getByRole('option', {name: new RegExp(`^${label}`)})).toBeVisible();
   await listbox.getByRole('option', {name: new RegExp(`^${label}`)}).click();
   await expect(dialog.getByRole('button', {name: /Insert/})).toContainText(label);
@@ -93,7 +93,7 @@ test('a rule is added before the fallback and removed again through validate, sa
   const outbounds = page.getByRole('listbox');
   await expect(outbounds.getByRole('group', {name: 'Built-in'}).getByRole('option')).toHaveText(['direct', 'block']);
   await expect(outbounds.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText(['proxy', 'resilient', 'gaming', 'skylink']);
-  await page.getByRole('searchbox', {name: 'Filter'}).fill('gam');
+  await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gam');
   await expect(outbounds.getByRole('option')).toHaveText(['gaming']);
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();

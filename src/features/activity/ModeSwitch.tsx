@@ -80,7 +80,7 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
             value={vm.target}
             onChange={vm.pickTarget}
             items={vm.targets}
-            searchLabel={t('ui.filter')}
+            searchLabel={t('ui.filterOutbounds')}
           >
             {vm.targetText}
           </ChoiceMenu>

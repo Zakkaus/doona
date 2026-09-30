@@ -8,7 +8,7 @@ test.describe('320px', () => {
 
   test('the filter field takes the toolbar row and ellipsises a value that does not fit', async ({page}) => {
     await page.goto('/#/connections?tab=list');
-    const field = page.getByRole('searchbox', {name: 'Filter'});
+    const field = page.getByRole('searchbox', {name: 'Filter', exact: true});
     await expect(field).toBeVisible();
     const box = await field.evaluate(el => el.closest('.rp-input')!.getBoundingClientRect());
     const menu = (await page.getByRole('button', {name: 'Filters', exact: true}).boundingBox())!;
@@ -34,7 +34,7 @@ test.describe('1280px', () => {
 
   test('the filter field keeps its 240px width on desktop', async ({page}) => {
     await page.goto('/#/connections?tab=list');
-    const field = page.getByRole('searchbox', {name: 'Filter'});
+    const field = page.getByRole('searchbox', {name: 'Filter', exact: true});
     const width = await field.evaluate(el => Math.round(el.closest('.rp-input')!.getBoundingClientRect().width));
     expect(width).toBe(240);
   });

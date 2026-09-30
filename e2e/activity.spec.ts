@@ -678,7 +678,7 @@ test('the rankings, outbound usage and latency tile open the connections and nod
   const name = (await domain.innerText()).trim();
   await domain.click();
   await expect(page).toHaveURL(new RegExp(`#/connections\\?q=${escape(name)}$`));
-  await expect(page.getByRole('searchbox', {name: 'Filter'})).toHaveValue(name);
+  await expect(page.getByRole('searchbox', {name: 'Filter', exact: true})).toHaveValue(name);
   await page.goBack();
   const usage = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Outbound downloads', exact: true})});
   await usage.getByRole('link', {name: 'proxy', exact: true}).click();
