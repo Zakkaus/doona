@@ -143,7 +143,7 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   expect(patches[0].headers()['if-match']).toBe('"40"');
 });
 
-test('a check URL another client changed while the dialog was open is not overwritten', async ({page}) => {
+test('a check URL another client changed while the dialog was open is shown before it is replaced', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
@@ -153,21 +153,28 @@ test('a check URL another client changed while the dialog was open is not overwr
   const remote = 'http://remote.example/';
   const accepted = await api.patchGroup('resilient', [{op: 'replace', path: '/config/check_url', value: remote}], '"40"');
   await expect.poll(async () => 'operation_id' in accepted && (await api.operation(accepted.operation_id)).status).toBe('succeeded');
-  await dialog.getByRole('textbox', {name: 'Check URL'}).fill('https://cp.cloudflare.com/generate_204');
+  const mine = 'https://cp.cloudflare.com/generate_204';
+  const url = dialog.getByRole('textbox', {name: 'Check URL'});
+  await url.fill(mine);
   const save = dialog.getByRole('button', {name: 'Apply', exact: true});
-  // The first save carries the revision the page loaded and is refused as stale, which fetches the group again.
+  // The save carries the revision the page loaded and is refused as stale, which fetches the group again.
   await save.click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Content changed since it was loaded');
   await expect.poll(() => requests.filter(request => request.method() === 'GET' && request.url().endsWith('/groups/resilient')).length).toBeGreaterThan(1);
-  // The retry carries the current revision, but the URL it opened with no longer holds, so the backend refuses it.
-  await save.click();
-  await expect(page.locator('.rp-toast.negative').filter({hasText: 'Patch test failed'})).toBeVisible();
+  // The dialog keeps the edit and already shows the URL the group holds; nothing was overwritten.
   await expect(dialog).toBeVisible();
-  // The dialog keeps the edit and shows the URL the group holds, which a further save tests against.
-  const url = dialog.getByRole('textbox', {name: 'Check URL'});
-  await expect(url).toHaveValue('https://cp.cloudflare.com/generate_204');
+  await expect(url).toHaveValue(mine);
   await expect(url).toHaveAccessibleDescription(`Changed to ${remote} on the backend after this opened. Applying again replaces it with the value here.`);
   expect((await api.group('resilient')).config.check_url).toBe(remote);
+  // Applying again tests against the URL shown, at the current revision, so it goes through.
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  const patches = requests.filter(request => request.method() === 'PATCH');
+  expect(patches.at(-1)?.postDataJSON()).toEqual([
+    {op: 'test', path: '/config/check_url', value: remote},
+    {op: 'replace', path: '/config/check_url', value: mine}
+  ]);
+  await expect.poll(async () => (await api.group('resilient')).config.check_url).toBe(mine);
 });
 
 test('a check save refused with 409 keeps the edit and shows what the group holds now', async ({page}) => {

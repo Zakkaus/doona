@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {latencyProbe} from './action';
-import {groupActions, patchConfig, probeGroup} from './groups';
+import {groupActions, groupConflict, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
 
@@ -66,6 +66,14 @@ it('does not submit the next batch after cancellation', async () => {
   await vi.runAllTimersAsync();
   expect(await result).toMatchObject({name: 'AbortError'});
   expect(api.startProbe).toHaveBeenCalledTimes(1);
+});
+
+it('treats a stale revision and a refused test op as the group changing first', () => {
+  expect(groupConflict(new ApiError(412, 'stale_revision', 'Group configuration revision changed'))).toBe(true);
+  expect(groupConflict(new ApiError(409, 'state_conflict', 'Patch test failed'))).toBe(true);
+  expect(groupConflict(new ApiError(422, 'validation_failed', 'Invalid check URL'))).toBe(false);
+  expect(groupConflict(new Error('offline'))).toBe(false);
+  expect(groupConflict(undefined)).toBe(false);
 });
 
 it('writes a group check URL at its revision and refuses a stale revision or an unsafe URL', async () => {

@@ -13,7 +13,7 @@ export {
   useCapabilities
 } from './runtime';
 export {useNodes, useProviders, useProviderRefresh, useNodeManage, useNodeProbe, useGeodata} from './nodes';
-export {useGroups, useGroupControl} from './groups';
+export {useGroups, useGroupControl, groupConflict} from './groups';
 export {useOutboundNames} from './outbounds';
 export {useConnections, useConnectionClose, useConnectionTotals} from './connections';
 export {useFlows, useFlow, useRules, useDnsRules, type FlowFilter} from './flows';
