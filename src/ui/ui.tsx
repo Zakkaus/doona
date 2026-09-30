@@ -21,7 +21,7 @@ export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
 export {Checkbox} from './Checkbox';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, ItemLabel, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
-export {ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, Tabs, useTabShown} from './Dialog';
+export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, Tabs, useTabShown} from './Dialog';
 export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
 export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, toastErrorDetail, Toasts, type ToastPlacement, Light, Badge, Bar} from './Feedback';

@@ -10,7 +10,10 @@ test('Policies stages all new group fields and writes them on Apply', async ({pa
   await page.goto('/#/policies?tab=arrange');
   await page.getByRole('button', {name: 'New group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
+  await expect(dialog).toHaveAccessibleDescription(en['arrange.newGroupNote']);
   const name = dialog.getByRole('textbox', {name: 'Group name'});
+  await expect(name).toHaveAttribute('aria-required', 'true');
+  await expect(dialog.locator('label').filter({hasText: 'Group name'})).toContainText('*');
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(name).toHaveAttribute('aria-invalid', 'true');
   await name.fill('proxy');
@@ -19,6 +22,7 @@ test('Policies stages all new group fields and writes them on Apply', async ({pa
   await name.fill('streaming');
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01)');
+  await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveAccessibleDescription(en['policy.filterHelp']);
   await dialog.getByRole('button', {name: /Selection policy/}).click();
   await page.getByRole('option', {name: /^Score/}).click();
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
@@ -176,10 +180,15 @@ for (const viewport of [
         await dialog.getByRole('textbox').nth(1).fill('name(hk-01)');
         await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await page.mouse.move(0, 0);
         await page.screenshot({path: info.outputPath('create-auto.png')});
-        await dialog.getByRole('button', {name: new RegExp(labels['arrange.policy'])}).click();
+        const policy = dialog.getByRole('button', {name: new RegExp(labels['arrange.policy'])});
+        await policy.click();
         await page.getByRole('option', {name: new RegExp(`^${labels['policy.kind.selector']}`)}).click();
         await expect(dialog.getByRole('button', {name: new RegExp(`${labels['policy.cfg.defaultMember']}$`)})).toBeVisible();
+        await expect(page.locator('.rp-popover')).toHaveCount(0);
+        await dialog.focus();
+        await page.mouse.move(0, 0);
         await page.screenshot({path: info.outputPath('create-manual.png')});
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
@@ -189,6 +198,10 @@ for (const viewport of [
         const edit = page.getByRole('dialog', {name: labels['policy.editTitle'].replace('{name}', 'proxy'), exact: true});
         await expect(edit).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        const heading = (await edit.getByRole('heading', {name: labels['policy.liveConfig']}).boundingBox())!;
+        const help = (await edit.getByText(labels['policy.finalOutboundHelp'], {exact: true}).boundingBox())!;
+        expect(heading.y - help.y - help.height).toBeGreaterThanOrEqual(16);
+        await page.mouse.move(0, 0);
         await page.screenshot({path: info.outputPath('edit.png')});
         await page.keyboard.press('Escape');
         await expect(edit).toHaveCount(0);
