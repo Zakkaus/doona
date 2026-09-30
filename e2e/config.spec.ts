@@ -855,6 +855,28 @@ test('code scrolled sideways passes under the line numbers', async ({page}) => {
   expect(await page.screenshot({clip})).toEqual(before);
 });
 
+test('quick setup keeps a subscription that a group filter cites', async ({page}) => {
+  await page.goto('/#/config?tab=setup');
+  const card = page.getByRole('region', {name: 'Quick setup'});
+  const reason = 'The filters of skylink use sub-c. Change them on the policies page before removing or renaming this subscription.';
+  const remove = card.getByRole('button', {name: 'Remove sub-c', exact: true});
+  await expect(remove).toBeDisabled();
+  await expect(remove).toHaveAccessibleDescription(reason);
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await remove.hover({force: true});
+    await expect(page.getByRole('tooltip')).toHaveText(reason, {timeout: 1500});
+  }).toPass();
+  const name = card.getByLabel('Name', {exact: true});
+  await name.fill('sub-d');
+  await expect(name).toHaveAttribute('aria-invalid', 'true');
+  await expect(card.getByText(reason).first()).toBeVisible();
+  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+  await name.fill('sub-c');
+  await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/renewed');
+  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
+});
+
 test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
   const {api} = await configBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;

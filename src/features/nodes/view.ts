@@ -10,9 +10,9 @@ import {addU64} from '../../api/u64';
 import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
-import {isBareName, scanConfig, unquote} from '../../dae/text';
+import {isBareName} from '../../dae/text';
 import {isSubscriptionUrl} from '../../dae/setup';
-import {classifyFilters, readGroupEntries} from '../../dae/groups';
+import {citingGroups, namedInExpression} from '../../dae/groups';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -41,20 +41,6 @@ export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin'
   sourceTag?: string;
 };
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
-
-// The groups of a source whose exact subtag filter names a subscription tag.
-export const citingGroups = (text: string, tag: string) =>
-  readGroupEntries(text)
-    .filter(group => classifyFilters(group).subtags.includes(tag))
-    .map(group => group.name);
-
-// Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) names the tag anywhere.
-const namedInExpression = (text: string, tag: string) =>
-  readGroupEntries(text).some(group =>
-    classifyFilters(group).rules.some(filter =>
-      scanConfig(filter).tokens.some(token => (token.kind === 'text' || token.kind === 'quoted') && unquote(filter.slice(token.from, token.to)) === tag)
-    )
-  );
 
 // A rename rewrites only exact subtag filters in the declaring source, so groups elsewhere that name the tag, and any
 // expression naming it, are left for the person to edit.

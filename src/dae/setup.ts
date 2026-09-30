@@ -4,6 +4,7 @@ import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
 // `suffix` is an option written after the quoted URL, such as the user agent in `'https://…'(clash)`.
+// `tag` is the name the file gives the entry, written or derived, which group filters cite as `subtag(...)`.
 type Subscription = {name: string; url: string; suffix?: string; raw?: string; section?: number; tag?: string};
 export type WizardState = {
   subscriptions: Subscription[];
@@ -25,6 +26,10 @@ export function validNetwork(state: WizardState): boolean {
 
 // Blank and comment-only lines in the block are written back where they stand but are no subscription to list.
 export const isSubscriptionRow = (item: Subscription) => item.raw === undefined || !!uncomment(item.raw).trim();
+
+// An entry whose name was edited away from the tag the file gives it. When group filters cite that tag the rename is
+// refused, as a removal is: the filters would match nothing, and rewriting them can widen a group to every node.
+export const isRenamed = (item: Subscription) => item.raw === undefined && item.tag !== undefined && item.name.trim() !== item.tag;
 
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 export function validSubscriptions(subscriptions: Subscription[]): boolean {
@@ -53,7 +58,7 @@ export function readState(text: string): WizardState {
       const editable = entry && entry.naming === 'tag' && entry.form !== 'block' && entry.form !== 'options' && isSubscriptionUrl(entry.url);
       if (editable) {
         const suffix = entry.form === 'agent' ? text.slice(entry.urlAt.to, entry.to) : undefined;
-        subscriptions.push({name: entry.tag, url: entry.url, ...(suffix ? {suffix} : {}), raw: line, section});
+        subscriptions.push({name: entry.tag, url: entry.url, ...(suffix ? {suffix} : {}), raw: line, section, tag: entry.tag});
       } else subscriptions.push({name: '', url: '', raw: line, section, ...(entry ? {tag: entry.tag} : {})});
     }
   }

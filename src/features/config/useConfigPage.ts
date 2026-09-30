@@ -104,6 +104,7 @@ export function useConfigPage({go, query}: PageProps) {
     setup && mainSource
       ? {
           main: mainSource,
+          sources,
           editor,
           onDone: () => go('config', within(query, {tab: 'setup'}), {replace: true}),
           next: [

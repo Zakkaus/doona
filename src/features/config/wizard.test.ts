@@ -260,10 +260,10 @@ it('reads subscriptions with the parser the Nodes page uses', () => {
     "subscription {\n  paid plan: 'https://a.example/sub'(clash)\n  squeezed: { url: 'https://b.example/sub' }\n  'https://c.example/sub'\n  c: https://d.example/sub\n  x: 'https://e.example' junk\n}\n";
   const state = readState(text);
   expect(state.subscriptions.map(({name, url, suffix, tag}) => [name, url, suffix, tag])).toEqual([
-    ['paid plan', 'https://a.example/sub', '(clash)', undefined],
+    ['paid plan', 'https://a.example/sub', '(clash)', 'paid plan'],
     ['', '', undefined, 'squeezed'],
     ['', '', undefined, 'c.example'],
-    ['c', 'https://d.example/sub', undefined, undefined],
+    ['c', 'https://d.example/sub', undefined, 'c'],
     ['', '', undefined, undefined]
   ]);
   // Names honk derives count too: a new entry named after a host already in use is refused.

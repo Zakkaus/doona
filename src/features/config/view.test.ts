@@ -362,6 +362,19 @@ it('flags only the row whose value cannot be quoted', () => {
   ]);
 });
 
+it('refuses removing or renaming a subscription that group filters cite', () => {
+  const text = "subscription {\n  sub-a: 'https://a.example/sub'\n  sub-b: 'https://b.example/sub'\n}\n";
+  const state = wizardInitial(text);
+  const cited = (tag: string) => (tag === 'sub-a' ? ['skylink', 'mix'] : []);
+  const message = t('config.wizardSubscriptionInUse', {groups: 'skylink, mix', name: 'sub-a'});
+  const view = wizardRows(state, 'en', t, cited);
+  expect(view.rows.map(row => row.inUse)).toEqual([message, null]);
+  expect(view.renameBlocked).toBeNull();
+  const renamed = wizardRows({...state, subscriptions: state.subscriptions.map(item => ({...item, name: item.name + '-new', raw: undefined}))}, 'en', t, cited);
+  expect(renamed.rows.map(row => row.nameError)).toEqual([t('config.wizardSubscriptionCited', {groups: 'skylink, mix'}), undefined]);
+  expect(renamed.renameBlocked).toBe(message);
+});
+
 it('marks only the edited source while retaining cross-source diagnostic locations', () => {
   const main = source('global {}');
   const include = source('routing {}', 'include');

@@ -201,6 +201,26 @@ export function removalWidens(entry: Pick<GroupEntry, 'filters'>, call: ExactCal
 
 // Adds to the first exact list of `call` (or appends one) and removes from every exact list; a list left empty is
 // dropped. Filters selecting by other means are kept as they are.
+// Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) names the tag anywhere.
+const expressionNames = (entry: Pick<GroupEntry, 'filters'>, tag: string) =>
+  classifyFilters(entry).rules.some(filter =>
+    scanConfig(filter).tokens.some(token => (token.kind === 'text' || token.kind === 'quoted') && unquote(filter.slice(token.from, token.to)) === tag)
+  );
+const citesExactly = (entry: Pick<GroupEntry, 'filters'>, tag: string) => classifyFilters(entry).subtags.includes(tag);
+
+// The groups of a source whose exact subtag filter names a subscription tag.
+export const citingGroups = (text: string, tag: string) =>
+  readGroupEntries(text)
+    .filter(group => citesExactly(group, tag))
+    .map(group => group.name);
+export const namedInExpression = (text: string, tag: string) => readGroupEntries(text).some(group => expressionNames(group, tag));
+// The groups of a source whose filters name a subscription tag in any form: removing or renaming the subscription
+// would leave those filters matching nothing.
+export const groupsNamingTag = (text: string, tag: string) =>
+  readGroupEntries(text)
+    .filter(group => citesExactly(group, tag) || expressionNames(group, tag))
+    .map(group => group.name);
+
 function editExact(text: string, group: string, call: ExactCall, add: string[], remove: string[]): string {
   const entry = readGroupEntries(text).find(e => e.name === group);
   if (!entry && !add.length) return text;

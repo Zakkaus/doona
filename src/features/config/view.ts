@@ -6,7 +6,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {diagnosticMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
-import {defaultGroup, isSubscriptionRow, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
+import {defaultGroup, isRenamed, isSubscriptionRow, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {isWritableName} from '../../dae/groups';
@@ -272,7 +272,18 @@ type DiagnosticRow = {
   detail: string;
   count: number;
 };
-type WizardRow = {index: number; name: string; url: string; raw: string | null; nameError?: string; error?: string; description?: string; removeLabel: string};
+type WizardRow = {
+  index: number;
+  name: string;
+  url: string;
+  raw: string | null;
+  nameError?: string;
+  error?: string;
+  description?: string;
+  removeLabel: string;
+  // Why the entry can be neither removed nor renamed here: group filters cite its tag.
+  inUse: string | null;
+};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 // Identical diagnostics, such as one warning per duplicate entry at the same place, share one row with their count.
@@ -317,9 +328,21 @@ export function wizardUnder(dirty: boolean, origin: ConfigSource, loaded: Config
   if (origin.content_sha256 === loaded.content_sha256) return null;
   return dirty ? 'conflict' : 'follow';
 }
-// A value the file cannot hold is flagged on its own field, not on every row.
-export function wizardRows(state: WizardState, lang: Lang, t: Translator): {groupUsedText: string | null; rows: WizardRow[]} {
+// A value the file cannot hold is flagged on its own field, not on every row. `cited` names the groups whose filters
+// cite a tag; `renameBlocked` is the first rename it refuses, which holds the save back.
+export function wizardRows(
+  state: WizardState,
+  lang: Lang,
+  t: Translator,
+  cited: (tag: string) => string[] = () => []
+): {groupUsedText: string | null; rows: WizardRow[]; renameBlocked: string | null} {
+  const inUse = (tag: string | undefined) => {
+    const groups = tag === undefined ? [] : cited(tag);
+    return groups.length ? t('config.wizardSubscriptionInUse', {groups: formatList(lang, groups), name: tag!}) : null;
+  };
+  const renamed = state.subscriptions.find(item => isRenamed(item) && inUse(item.tag));
   return {
+    renameBlocked: renamed ? inUse(renamed.tag) : null,
     groupUsedText:
       state.rules === 'keep'
         ? null
@@ -340,7 +363,12 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
               name: item.name,
               url: item.url,
               raw: item.raw !== undefined && !item.name ? item.raw.trim() : null,
-              nameError: item.raw === undefined && !isWritableName(item.name.trim()) ? t('config.unquotable') : undefined,
+              nameError:
+                item.raw === undefined && !isWritableName(item.name.trim())
+                  ? t('config.unquotable')
+                  : isRenamed(item) && inUse(item.tag)
+                    ? t('config.wizardSubscriptionCited', {groups: formatList(lang, cited(item.tag!))})
+                    : undefined,
               error:
                 item.url !== '' && !isSubscriptionUrl(item.url)
                   ? t('config.wizardSubscriptionHelp')
@@ -348,7 +376,8 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
                     ? t('config.unquotable')
                     : undefined,
               description: index === 0 ? t('config.wizardSubscriptionHelp') : undefined,
-              removeLabel: t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''})
+              removeLabel: t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''}),
+              inUse: inUse(item.tag)
             }
           ]
     )
