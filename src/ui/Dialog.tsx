@@ -36,21 +36,22 @@ import {ActionHelp, Button} from './Button';
 import {InlineAlert} from './Feedback';
 import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
-// `flush` sets the chevron on the content's start edge, for a disclosure among items that start there, such as radios
-// or a dialog's sections.
+// `flush` aligns the chevron with the content; `aside` keeps a status beside the trigger.
 export function Disclosure({
   title,
   flush,
+  aside,
   children,
   ...props
-}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; flush?: boolean; children: ReactNode}) {
+}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; flush?: boolean; aside?: ReactNode; children: ReactNode}) {
   return (
     <RDisclosure {...props} className="rp-disclosure">
-      <Heading level={3}>
+      <Heading level={3} className={aside ? 'rp-disclosure-head' : undefined}>
         <RButton slot="trigger" className={cx('rp-btn quiet rp-disclosure-trigger', flush && 'flush')}>
           <ChevronDown />
           {title}
         </RButton>
+        {aside}
       </Heading>
       <DisclosurePanel className="rp-disclosure-panel">
         <div className="rp-disclosure-content">{children}</div>
@@ -365,7 +366,8 @@ export function Tabs({
   items,
   value,
   onChange,
-  keepMounted
+  keepMounted,
+  actions
 }: {
   label: string;
   items: Array<{id: string; label: string; content: ReactNode}>;
@@ -374,6 +376,9 @@ export function Tabs({
   // Keep a panel mounted once opened, hidden while another is chosen, so coming back is instant. For panels that
   // browse data; a panel with drafts or editors unmounts, so nothing of it keeps running out of sight.
   keepMounted?: boolean;
+  // Controls at the end of the tab row, such as a filter for the panel shown; they wrap under the tabs on a phone.
+  // Passing the prop, even as null, keeps the row, so the tab bar is not remounted when the controls come and go.
+  actions?: ReactNode;
 }) {
   // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
@@ -389,18 +394,28 @@ export function Tabs({
   const kept = keepMounted ? opened : new Set([shown]);
   if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
   const visible = kept.has(value) ? value : shown;
+  const bar = (
+    <div className="rp-tabbar" ref={ref}>
+      {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
+      <TabList aria-label={label} className="rp-tablist">
+        {items.map(item => (
+          <Tab key={item.id} id={item.id} className="rp-tab">
+            {item.label}
+          </Tab>
+        ))}
+      </TabList>
+    </div>
+  );
   return (
     <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
-      <div className="rp-tabbar" ref={ref}>
-        {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
-        <TabList aria-label={label} className="rp-tablist">
-          {items.map(item => (
-            <Tab key={item.id} id={item.id} className="rp-tab">
-              {item.label}
-            </Tab>
-          ))}
-        </TabList>
-      </div>
+      {actions === undefined ? (
+        bar
+      ) : (
+        <div className="rp-tabhead">
+          {bar}
+          {actions}
+        </div>
+      )}
       {items
         .filter(item => kept.has(item.id) || item.id === shown)
         .map(item => (
