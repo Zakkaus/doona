@@ -24,6 +24,7 @@ import {useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
 import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
+import {cx} from './cx';
 
 export type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
 export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
@@ -59,7 +60,7 @@ function SelectBody({
   return (
     <Select
       aria-label={layout ? undefined : label}
-      className={layout === 'field' ? 'rp-field' : layout === 'side' ? 'rp-cluster' : undefined}
+      className={cx('rp-picker', layout === 'field' && 'rp-field', layout === 'side' && 'rp-cluster')}
       selectedKey={value}
       onSelectionChange={(k: Key | null) => {
         if (k != null) onChange(String(k));

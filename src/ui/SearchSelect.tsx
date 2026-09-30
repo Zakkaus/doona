@@ -46,7 +46,7 @@ export function SearchSelect({
   const shown = sections.flatMap(section => section.items).find(item => item.id === value);
   return (
     <Select
-      className={side ? 'rp-cluster' : 'rp-field'}
+      className={cx('rp-picker', side ? 'rp-cluster' : 'rp-field')}
       selectedKey={value}
       onSelectionChange={(k: Key | null) => {
         if (k != null) onChange(String(k));

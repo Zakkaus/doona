@@ -91,6 +91,21 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await expect(page.getByRole('tab', {name: 'Groups', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
+test('a focused select in the new group dialog draws one ring, on the control', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/policies?tab=arrange');
+  await page.getByRole('button', {name: 'New group'}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group'});
+  await dialog.getByRole('textbox', {name: 'Group name'}).click();
+  await page.keyboard.press('Tab');
+  const select = dialog.getByRole('button', {name: /Selection policy/});
+  await expect(select).toBeFocused();
+  await expect(select).toHaveCSS('outline-style', 'solid');
+  // The field around the label and the control carries the focus state as well, but draws no ring of its own.
+  await expect(select.locator('xpath=..')).toHaveAttribute('data-focus-visible', 'true');
+  await expect(select.locator('xpath=..')).toHaveCSS('outline-style', 'none');
+});
+
 test('a new group needs a member before it can be applied, and undoing a change drops it', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/policies?tab=arrange');

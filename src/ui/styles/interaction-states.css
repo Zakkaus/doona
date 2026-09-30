@@ -190,6 +190,11 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
+/* A picker's root carries its trigger's focus state too, but only the trigger draws the ring (S2: one ring on the
+   control); a ring on the root would box the label with the control and clip the trigger's own rounded ring. */
+.rp-picker[data-focus-visible] {
+  outline: none;
+}
 /* Disabled controls need a tooltip target; enabled wrappers stay boxless to preserve direct-child layout. The wrapper
    anchors the disabled button's visually hidden reason, which would otherwise escape a scrolling table and widen the
    page. */
