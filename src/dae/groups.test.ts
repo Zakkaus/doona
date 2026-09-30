@@ -125,6 +125,7 @@ describe('group entries', () => {
   it('composes conditions from a kind and values', () => {
     expect(ruleCondition('domainSuffix', 'example.com, example.net')).toBe('domain(suffix: example.com, suffix: example.net)');
     expect(ruleCondition('domain', 'example.com example.net')).toBe('domain(full: example.com, full: example.net)');
+    expect(ruleCondition('domainKeyword', 'tracker, ads')).toBe('domain(keyword: tracker, keyword: ads)');
     expect(ruleCondition('geosite', 'netflix, disney')).toBe('domain(geosite: netflix, geosite: disney)');
     expect(ruleCondition('geoip', 'cn us')).toBe('dip(geoip: cn, geoip: us)');
     expect(ruleCondition('dport', '80 443')).toBe('dport(80, 443)');

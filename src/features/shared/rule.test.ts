@@ -26,16 +26,17 @@ import {
 } from './rule';
 const t: Translator = (key, params) => translate('en', key, params);
 
-it('offers the exact domain first, then its subdomains, the destination IP and the source IP as one host', () => {
+it('offers the exact domain first, then its subdomains and keyword, the destination IP and the source IP as one host', () => {
   const text = (c: {domain?: string | null; dip?: string | null; sip?: string | null}) =>
     ruleTargets({domain: c.domain ?? null, dip: c.dip ?? null, sip: c.sip ?? null}).map(target => ruleLine(target.condition, 'proxy'));
   expect(text({domain: 'api.telegram.org.', dip: '149.154.167.220', sip: '192.168.1.20'})).toEqual([
     'domain(full: api.telegram.org) -> proxy',
     'domain(suffix: api.telegram.org) -> proxy',
+    'domain(keyword: api.telegram.org) -> proxy',
     'dip(149.154.167.220/32) -> proxy',
     'sip(192.168.1.20/32) -> proxy'
   ]);
-  expect(ruleTargets({domain: 'api.telegram.org', dip: null, sip: null}).map(target => target.kind)).toEqual(['domain', 'domainSuffix']);
+  expect(ruleTargets({domain: 'api.telegram.org', dip: null, sip: null}).map(target => target.kind)).toEqual(['domain', 'domainSuffix', 'domainKeyword']);
   expect(text({dip: '2001:db8::5'})).toEqual(["dip('2001:db8::5/128') -> proxy"]);
   // A domain dae cannot hold is left out; the addresses are still offered.
   expect(text({domain: "it's.example", dip: '1.1.1.1'})).toEqual(['dip(1.1.1.1/32) -> proxy']);

@@ -24,6 +24,7 @@ export type QuickRuleSeed = {
 export const ruleKindLabels: Record<RuleConditionKind, Key> = {
   domainSuffix: 'rule.kind.domainSuffix',
   domain: 'rule.kind.domain',
+  domainKeyword: 'rule.kind.domainKeyword',
   geosite: 'rule.kind.geosite',
   dip: 'rule.kind.dip',
   geoip: 'rule.kind.geoip',
@@ -53,7 +54,7 @@ export const answerAddresses = (answers: ReadonlyArray<Pick<DnsLogRecord['answer
 
 export type RuleTarget = {kind: RuleConditionKind; condition: string};
 // Every condition the seed allows in a list, the default first, each address as one host; a value dae cannot hold is
-// left out. Routing: the exact domain, then its subdomains, the destination IP and the source IP. A DNS request: the
+// left out. Routing: the exact domain, then its subdomains and keyword, the destination IP and the source IP. A DNS request: the
 // exact name, then its subdomains, and the client. A DNS response: each answered address, and the client.
 export function ruleTargets(seed: Pick<QuickRuleSeed, 'domain' | 'dip' | 'sip' | 'dns'>, list: RuleList = 'routing'): RuleTarget[] {
   // A name as the resolver writes it ends in a dot, which a domain rule does not.
@@ -64,6 +65,7 @@ export function ruleTargets(seed: Pick<QuickRuleSeed, 'domain' | 'dip' | 'sip' |
       ? [
           ['domain', domain],
           ['domainSuffix', domain],
+          ['domainKeyword', domain],
           ['dip', host(seed.dip)],
           ['sip', host(seed.sip)]
         ]

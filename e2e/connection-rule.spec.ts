@@ -33,6 +33,9 @@ test('a rule added from a connection is written before the rule it matched, in o
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Domain keyword', exact: true}).click();
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(keyword: api.telegram.org) -> proxy');
+  await dialog.getByRole('button', {name: /Match by$/}).click();
   await page.getByRole('option', {name: 'Domain suffix', exact: true}).click();
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();

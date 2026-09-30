@@ -1,6 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
 import type {Node, OperationAccepted, Provider} from '../model';
+import {ruleCondition} from '../../dae/groups';
 import {geodataPreset} from '../../dae/geodata';
 import {ApiError, errorText} from '../error';
 import {translate, type Translator} from '../../i18n';
@@ -337,4 +338,27 @@ it('answers node and provider writes with an operation when asked to', async () 
   await vi.advanceTimersByTimeAsync(1000);
   const operation = await api.operation((accepted as OperationAccepted).operation_id);
   expect(operation).toMatchObject({kind: 'node_create', status: 'succeeded', result: {name: 'queued-node', protocol: 'anytls'}});
+});
+
+it('round trips a written domain keyword condition and detects its match in a routing trace', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const condition = ruleCondition('domainKeyword', 'tracker')!;
+  const content = `routing {
+  ${condition} -> block
+  fallback: direct
+}`;
+  const accepted = await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  expect((await api.rules()).rules[0].expression).toBe(condition);
+  expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(content);
+  for (const [domain, outbound] of [
+    ['api.tracker.example', 'block'],
+    ['example.org', 'direct']
+  ]) {
+    const trace = await api.routingTrace({input: {network: 'tcp', domain, dst_ip: '192.0.2.1', dst_port: 443}, resolve: 'none'});
+    expect(trace.evaluations[0]).toMatchObject({decision: 'determinate', outbound});
+  }
 });

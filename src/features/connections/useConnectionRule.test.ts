@@ -14,5 +14,5 @@ it('seeds the add-rule dialog from a connection and vouches only for a recorded 
   // A redacted destination offers no address, and the domain and source still do.
   const redacted = connectionSeed({...base, dst: '<redacted>'});
   expect(redacted.dip).toBeNull();
-  expect(ruleTargets(redacted).map(target => target.kind)).toEqual(['domain', 'domainSuffix', 'sip']);
+  expect(ruleTargets(redacted).map(target => target.kind)).toEqual(['domain', 'domainSuffix', 'domainKeyword', 'sip']);
 });
