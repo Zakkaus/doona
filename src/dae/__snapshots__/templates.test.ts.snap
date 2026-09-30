@@ -1,0 +1,342 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`template output > writes the complete bypass configuration 1`] = `
+"
+
+group {
+  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Google China services and mainland games
+  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Mainland China
+  domain(geosite:cn) -> direct
+  dip(geoip:cn) -> direct
+  fallback: proxy
+}
+"
+`;
+
+exports[`template output > writes the complete gfw configuration 1`] = `
+"
+
+group {
+  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Telegram
+  domain(geosite:telegram) -> proxy
+  dip(geoip:telegram) -> proxy
+  # GFW list
+  domain(geosite:gfw) -> proxy
+  fallback: direct
+}
+"
+`;
+
+exports[`template output > writes the complete global configuration 1`] = `
+"
+
+group {
+  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  fallback: proxy
+}
+"
+`;
+
+exports[`template output > writes the complete homebound configuration 1`] = `
+"
+
+group {
+  # 🇨🇳 Mainland China
+  cn {
+    filter: name(regex: '(?i)回国|回國|中国|中國|大陆|大陸|(?:^|[^A-Za-z])(?:China|Mainland|CN)(?:[^A-Za-z]|$)') && !name(regex: '(?i)香港|澳门|澳門|台湾|台灣|臺灣|(?:^|[^A-Za-z])(?:HK|MO|TW)(?:[^A-Za-z]|$)|Hong ?Kong|Macau|Macao|Taiwan')
+    policy: min_moving_avg
+  }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Mainland China
+  domain(geosite:cn) -> cn
+  dip(geoip:cn) -> cn
+  fallback: direct
+}
+"
+`;
+
+exports[`template output > writes the complete regions configuration 1`] = `
+"
+
+group {
+  # Proxy
+  proxy {
+    filter: group('auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'auto'
+  }
+  # Automatic
+  auto {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
+  # 🇭🇰 Hong Kong
+  hk {
+    filter: name(regex: '港|HK|Hong Kong|HongKong')
+    policy: min_moving_avg
+  }
+  # 🇯🇵 Japan
+  jp {
+    filter: name(regex: '日|JP|Japan|Tokyo')
+    policy: min_moving_avg
+  }
+  # 🇺🇸 United States
+  us {
+    filter: name(regex: '美|US|United States|America')
+    policy: min_moving_avg
+  }
+  # 🇹🇼 Taiwan
+  tw {
+    filter: name(regex: '台|臺|TW|Taiwan')
+    policy: min_moving_avg
+  }
+  # 🇸🇬 Singapore
+  sg {
+    filter: name(regex: '新加坡|獅城|狮城|SG|Singapore')
+    policy: min_moving_avg
+  }
+  # 🇰🇷 South Korea
+  kr {
+    filter: name(regex: '韓|韩|KR|Korea')
+    policy: min_moving_avg
+  }
+  # Telegram
+  telegram {
+    filter: group('proxy', 'auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # OpenAI
+  ai {
+    filter: group('proxy', 'auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # YouTube
+  youtube {
+    filter: group('proxy', 'auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # Netflix
+  netflix {
+    filter: group('proxy', 'auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # Bahamut
+  bahamut {
+    filter: group('tw', 'proxy', 'auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'tw'
+  }
+  # Overseas media
+  media {
+    filter: group('proxy', 'auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Google China services and mainland games
+  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Microsoft
+  domain(geosite:microsoft) -> direct
+  # Apple
+  domain(geosite:apple) -> direct
+  # Telegram
+  domain(geosite:telegram) -> telegram
+  dip(geoip:telegram) -> telegram
+  # OpenAI
+  domain(geosite:openai) -> ai
+  # NetEase Music
+  domain(geosite:netease) -> direct
+  # Games
+  domain(geosite:category-games) -> direct
+  # YouTube
+  domain(geosite:youtube) -> youtube
+  # Netflix
+  domain(geosite:netflix) -> netflix
+  # Bahamut
+  domain(geosite:bahamut) -> bahamut
+  # Bilibili
+  domain(geosite:bilibili) -> direct
+  # Overseas media
+  domain(geosite:youtube, geosite:netflix, geosite:disney, geosite:hbo, geosite:primevideo, geosite:twitch, geosite:spotify) -> media
+  # GFW list
+  domain(geosite:gfw) -> proxy
+  # Mainland China
+  domain(geosite:cn) -> direct
+  dip(geoip:cn) -> direct
+  fallback: proxy
+}
+"
+`;
+
+exports[`template output > writes the complete services configuration 1`] = `
+"
+
+group {
+  # Proxy
+  proxy {
+    filter: group('auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'auto'
+  }
+  # Automatic
+  auto {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
+  # Telegram
+  telegram {
+    filter: group('proxy', 'auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # Overseas media
+  media {
+    filter: group('proxy', 'auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+  # Apple
+  apple {
+    filter: group('proxy', 'auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'proxy'
+  }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Google China services and mainland games
+  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Microsoft
+  domain(geosite:microsoft) -> direct
+  # Apple
+  domain(geosite:apple) -> apple
+  # Telegram
+  domain(geosite:telegram) -> telegram
+  dip(geoip:telegram) -> telegram
+  # Overseas media
+  domain(geosite:youtube, geosite:netflix, geosite:disney, geosite:hbo, geosite:primevideo, geosite:twitch, geosite:spotify) -> media
+  # GFW list
+  domain(geosite:gfw) -> proxy
+  # Mainland China
+  domain(geosite:cn) -> direct
+  dip(geoip:cn) -> direct
+  fallback: proxy
+}
+"
+`;
+
+exports[`template output > writes the complete single configuration 1`] = `
+"
+
+group {
+  # Proxy
+  proxy {
+    filter: group('auto')
+    filter: !name('direct', 'block')
+    policy: select
+    default: 'auto'
+  }
+  # Automatic
+  auto {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
+}
+
+routing {
+  # NetworkManager
+  pname(NetworkManager) -> direct
+  # dae presets: the LAN and multicast stay off the proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(geoip:private) -> direct
+  # Block UDP/443
+  l4proto(udp) && dport(443) -> block
+  # Google China services and mainland games
+  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Telegram
+  domain(geosite:telegram) -> proxy
+  dip(geoip:telegram) -> proxy
+  # Overseas media
+  domain(geosite:youtube, geosite:netflix, geosite:disney, geosite:hbo, geosite:primevideo, geosite:twitch, geosite:spotify) -> proxy
+  # GFW list
+  domain(geosite:gfw) -> proxy
+  # Mainland China
+  domain(geosite:cn) -> direct
+  dip(geoip:cn) -> direct
+  fallback: proxy
+}
+"
+`;

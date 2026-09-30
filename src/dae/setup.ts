@@ -1,14 +1,15 @@
+import type {Translator} from '../i18n';
 import {blockBody, scanConfig, quote, uncomment, type TextBlock} from './text';
 import {readGroupEntries} from './groups';
-import {templates, type RuleTemplate} from './templates';
+import {templates, templateRules, templateGroupLabel, type TemplateOptions, type RuleTemplate} from './templates';
 
 export const defaultGroup = 'proxy';
-function routingBlock(group: string | null, rules: RuleTemplate): string[] {
+function routingBlock(group: string | null, rules: RuleTemplate, options: Partial<TemplateOptions>): string[] {
   // The header as written: the templates must route to the group the file already has. A replacer function keeps a `$` in
   // the name literal, where a replacement string would read `$&` as a pattern.
   const first = group ?? defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', () => first);
-  return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
+  return ['routing {', ...templateRules(rules, options).map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
 // The DNS split a template can bring along: mainland names resolved by a mainland resolver, the rest over DNS over TLS.
 const dnsUpstreams = {cloudflare: 'tls://1.1.1.1:853', alidns: 'udp://223.5.5.5:53'};
@@ -37,12 +38,12 @@ export function holdsRouting(texts: string[]): boolean {
   return texts.some(text => scanConfig(text).blocks.some(block => block.name === 'routing' && blockBody(text, block).some(line => uncomment(line).trim())));
 }
 
-function groupLines(current: string[], rules: RuleTemplate): string[] {
+function groupLines(current: string[], rules: RuleTemplate, t: Translator): string[] {
   const have = new Set(current);
   const wanted = templates[rules].groups.filter(group => !have.has(group.name));
   if (!wanted.length && current.length) return [];
   if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
-  return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
+  return wanted.flatMap(group => [`  # ${templateGroupLabel(group, t)}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
 // The groups a template adds beside `defined`, the names already declared as written: its own that are missing, or, for a template
 // without groups, the default group when there is none at all.
@@ -82,7 +83,7 @@ export function writeTemplate(
   current: string,
   rules: RuleTemplate,
   defined: Array<{name: string; written: string}>,
-  {dns = false}: {dns?: boolean} = {}
+  {dns = false, t, ...options}: {dns?: boolean; t: Translator} & Partial<TemplateOptions>
 ): string {
   const {blocks} = scanConfig(current);
   const own = readGroupEntries(current);
@@ -90,9 +91,9 @@ export function writeTemplate(
   const names = [...own.map(entry => entry.written), ...defined.map(entry => entry.written)];
   const edits: Edit[] = [];
   const appended: string[] = [];
-  addGroups(current, blocks, groupLines(names, rules), edits, appended);
+  addGroups(current, blocks, groupLines(names, rules, t), edits, appended);
   const group = own[0]?.written ?? defined[0]?.written ?? null;
-  replaceRouting(blocks, routingBlock(group, rules).join('\n'), edits, appended);
+  replaceRouting(blocks, routingBlock(group, rules, options).join('\n'), edits, appended);
   if (dns) appended.push(dnsBlock().join('\n'));
   return applyEdits(current, edits, appended);
 }

@@ -18,22 +18,44 @@ const source = (id: string, content: string, kind: ConfigSource['kind'] = 'inclu
 });
 
 it('names the template the one routing file holds, in plain words', () => {
-  const main = source('main', writeTemplate('group { proxy {} }\n', 'bypass', []), 'main');
+  const main = source('main', writeTemplate('group { proxy {} }\n', 'bypass', [], {t}), 'main');
   const view = templatesView([main, source('extra', 'node { a: "vless://x" }\n')], t);
   expect(view.current?.name).toBe('Bypass mainland China');
-  expect(view.current?.help).toContain('connects directly for Google China services');
+  expect(view.current?.help).toContain('Connects directly for Google China services');
   expect(view.primary.map(choice => choice.id)).toEqual(['bypass', 'gfw', 'global']);
 });
 
-it('says which groups each of the ACL4SSR templates creates', () => {
+it.each([
+  {blockAds: false, blockQuic: true, networkManagerDirect: true},
+  {blockAds: true, blockQuic: false, networkManagerDirect: false},
+  {blockAds: false, blockQuic: false, networkManagerDirect: true},
+  {blockAds: true, blockQuic: true, networkManagerDirect: false}
+])('restores and writes template options $blockAds/$blockQuic/$networkManagerDirect', options => {
+  const main = source('main', writeTemplate('', 'bypass', [], {t, ...options}), 'main');
+  expect(templatesView([main], t)).toMatchObject(options);
+  for (const sources of [[], [source('main', 'routing { fallback: direct }', 'main')]])
+    expect(templatesView(sources, t)).toMatchObject({blockAds: false, blockQuic: true, networkManagerDirect: true});
+  const {plain, withDns} = templateWrites('bypass', source('main', '', 'main'), [], t, options);
+  for (const write of [plain, withDns]) expect(templatesView([source('main', write!.after, 'main')], t)).toMatchObject(options);
+});
+
+it('shows region flags in the apply impact while other labels stay plain', () => {
+  const main = source('main', '', 'main');
+  const created = templateImpact('regions', main, [main], [], t).created;
+  expect(created.find(group => group.name === 'hk')?.label).toBe('🇭🇰 Hong Kong');
+  expect(created.find(group => group.name === 'proxy')?.label).toBe('Proxy');
+  expect(templateImpact('homebound', main, [main], [], t).created).toEqual([{name: 'cn', label: '🇨🇳 Mainland China'}]);
+});
+
+it('says which groups each template creates', () => {
   const view = templatesView([], t);
-  expect(view.more.map(choice => choice.id)).toEqual(['mini', 'standard', 'full']);
+  expect(view.more.map(choice => choice.id)).toEqual(['single', 'services', 'regions', 'homebound']);
   expect(view.more[0].help).toContain('Uses the groups proxy, auto, creating any that are missing.');
   expect(view.more[1].help).toContain('proxy, auto, telegram, media, apple');
 });
 
 it('reads routing split over files, or held by a generated file, as custom', () => {
-  const bypass = writeTemplate('group { proxy {} }\n', 'bypass', []);
+  const bypass = writeTemplate('group { proxy {} }\n', 'bypass', [], {t});
   expect(currentTemplate([source('main', bypass, 'main'), source('more', 'routing { fallback: proxy }\n')])).toBeNull();
   expect(routingSources([source('gen', bypass, 'generated')])).toEqual([]);
   expect(currentTemplate([source('main', bypass.replace('fallback: proxy', 'fallback: direct'), 'main')])).toBeNull();
@@ -72,7 +94,7 @@ it('allows routing includes and lists the paths removed by applying a template',
     'main'
   );
   expect(input([main])).toEqual({source: main, refusal: null});
-  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual(['rules.dae', "'rules/more rules.dae'", 'rules/*.dae']);
+  expect(templateImpact('global', main, [main], [], t).removedIncludes).toEqual(['rules.dae', "'rules/more rules.dae'", 'rules/*.dae']);
   const {plain} = templateWrites('global', main, [main], t);
   expect(plain.after).not.toContain('include rules.dae');
   expect(plain.after).toContain('include { groups.dae }');
@@ -85,47 +107,47 @@ it('counts parentheses inside routing independently of earlier unquoted paths', 
     'global { log_file: /var/log/honk(.log }\nrouting {\n  domain(\n    include\n  ) -> direct\n  include rules.dae\n  fallback: include\n}\n',
     'main'
   );
-  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual(['rules.dae']);
+  expect(templateImpact('global', main, [main], [], t).removedIncludes).toEqual(['rules.dae']);
 });
 
 it('lists the groups a template creates and the existing ones it routes to, flagging one pinned to a node', () => {
   const main = source('main', 'group {\n  proxy { filter: name(hk-01) }\n}\nrouting { fallback: proxy }\n', 'main');
-  expect(templateImpact('bypass', main, [main], [])).toEqual({created: [], reused: [{name: 'proxy', pinned: true}], collisions: [], removedIncludes: []});
-  expect(templateImpact('mini', main, [main], ['auto'])).toEqual({
-    created: [{name: 'auto', label: '自动选择'}],
+  expect(templateImpact('bypass', main, [main], [], t)).toEqual({created: [], reused: [{name: 'proxy', pinned: true}], collisions: [], removedIncludes: []});
+  expect(templateImpact('single', main, [main], ['auto'], t)).toEqual({
+    created: [{name: 'auto', label: 'Automatic'}],
     reused: [{name: 'proxy', pinned: true}],
     collisions: ['auto'],
     removedIncludes: []
   });
   const open = source('main', 'group {\n  proxy { filter: subtag(sub) policy: min_moving_avg }\n}\n', 'main');
-  expect(templateImpact('gfw', open, [open], []).reused).toEqual([{name: 'proxy', pinned: false}]);
+  expect(templateImpact('gfw', open, [open], [], t).reused).toEqual([{name: 'proxy', pinned: false}]);
 });
 
 it('creates the default group only when no file declares one, and reuses one declared elsewhere', () => {
   const empty = source('main', 'routing { fallback: direct }\n', 'main');
-  expect(templateImpact('global', empty, [empty], [])).toEqual({created: [{name: 'proxy', label: null}], reused: [], collisions: [], removedIncludes: []});
+  expect(templateImpact('global', empty, [empty], [], t)).toEqual({created: [{name: 'proxy', label: null}], reused: [], collisions: [], removedIncludes: []});
   const other = source('groups', 'group { proxy { policy: fixed(0) } }\n');
-  expect(templateImpact('standard', empty, [empty, other], []).reused).toEqual([{name: 'proxy', pinned: true}]);
+  expect(templateImpact('services', empty, [empty, other], [], t).reused).toEqual([{name: 'proxy', pinned: true}]);
 });
 
 it('takes a group named include as a route target, not as an include', () => {
   const main = source('main', 'group { include {} }\nrouting {\n  domain(example.org) -> include\n  fallback: include\n}\n', 'main');
   expect(input([main]).refusal).toBeNull();
-  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual([]);
+  expect(templateImpact('global', main, [main], [], t).removedIncludes).toEqual([]);
 });
 
 it('reads a quoted group as its own group when listing what a template creates and keeps', () => {
   const main = source('main', "group {\n  'proxy' { filter: name(hk-01) }\n}\n", 'main');
-  expect(templateImpact('mini', main, [main], [])).toEqual({
+  expect(templateImpact('single', main, [main], [], t)).toEqual({
     created: [
-      {name: 'proxy', label: '节点选择'},
-      {name: 'auto', label: '自动选择'}
+      {name: 'proxy', label: 'Proxy'},
+      {name: 'auto', label: 'Automatic'}
     ],
     reused: [],
     collisions: [],
     removedIncludes: []
   });
-  expect(templateImpact('bypass', main, [main], []).reused).toEqual([{name: "'proxy'", pinned: true}]);
+  expect(templateImpact('bypass', main, [main], [], t).reused).toEqual([{name: "'proxy'", pinned: true}]);
 });
 
 it('opens the routing list on the simple view unless the link names a view or points at a rule', () => {

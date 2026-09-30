@@ -4,26 +4,39 @@ import {scanConfig} from '../../dae/text';
 import {allGroupNames, fileName} from '../../dae/sources';
 import {classifyFilters, readGroupEntries, type GroupEntry} from '../../dae/groups';
 import {defaultGroup, holdsDns, templateGroups, writeTemplate} from '../../dae/setup';
-import {detectTemplate, templates, type RuleTemplate} from '../../dae/templates';
+import {defaultTemplateOptions, detectTemplate, templates, templateGroupLabel, type TemplateOptions, type RuleTemplate} from '../../dae/templates';
 import type {DiffRow} from '../../ui/ui';
 import {lineDiff} from './diff';
 
-// The plain choices first; the ACL4SSR presets, which also create groups, are kept under More templates.
+// Templates that create groups are kept under More templates.
 export const primaryTemplates: RuleTemplate[] = ['bypass', 'gfw', 'global'];
-export const moreTemplates: RuleTemplate[] = ['mini', 'standard', 'full'];
+export const moreTemplates: RuleTemplate[] = ['single', 'services', 'regions', 'homebound'];
 const templateText: Record<RuleTemplate, [Key, Key]> = {
   bypass: ['rule.template.bypass', 'rule.template.bypassHelp'],
   gfw: ['rule.template.gfw', 'rule.template.gfwHelp'],
   global: ['rule.template.global', 'rule.template.globalHelp'],
-  mini: ['rule.template.mini', 'rule.template.miniHelp'],
-  standard: ['rule.template.standard', 'rule.template.standardHelp'],
-  full: ['rule.template.full', 'rule.template.fullHelp']
+  single: ['rule.template.single', 'rule.template.singleHelp'],
+  services: ['rule.template.services', 'rule.template.servicesHelp'],
+  regions: ['rule.template.regions', 'rule.template.regionsHelp'],
+  homebound: ['rule.template.homebound', 'rule.template.homeboundHelp']
 };
 export type TemplateChoice = {id: RuleTemplate; name: string; help: string};
 export function templateChoice(id: RuleTemplate, t: Translator): TemplateChoice {
   const [name, help] = templateText[id];
   return {id, name: t(name), help: t(help, {groups: templates[id].groups.map(group => group.name).join(t('ui.listSeparator'))})};
 }
+
+export const templateOptionText = {
+  blockAds: {label: 'rule.template.blockAds', help: 'rule.template.blockAdsHelp', on: 'rule.template.adsOn', off: 'rule.template.adsOff'},
+  blockQuic: {label: 'rule.template.blockQuic', help: 'rule.template.blockQuicHelp', on: 'rule.template.quicOn', off: 'rule.template.quicOff'},
+  networkManagerDirect: {
+    label: 'rule.template.networkManagerDirect',
+    help: 'rule.template.networkManagerDirectHelp',
+    on: 'rule.template.networkManagerOn',
+    off: 'rule.template.networkManagerOff'
+  }
+} as const satisfies Record<keyof TemplateOptions, Record<'label' | 'help' | 'on' | 'off', Key>>;
+export const templateOptionKeys = Object.keys(templateOptionText) as (keyof TemplateOptions)[];
 
 export type TemplateWrite = {after: string; diff: DiffRow[]};
 // What applying a template writes to `source`, and the line diff against it; `withDns` also appends the DNS split, and
@@ -32,11 +45,12 @@ export function templateWrites(
   rules: RuleTemplate,
   source: ConfigSource,
   sources: ConfigSource[],
-  t: Translator
+  t: Translator,
+  options: Partial<TemplateOptions> = {}
 ): {plain: TemplateWrite; withDns: TemplateWrite | null} {
   const before = source.content!;
   const written = (dns: boolean): TemplateWrite => {
-    const after = writeTemplate(before, rules, allGroupNames(sources), {dns});
+    const after = writeTemplate(before, rules, allGroupNames(sources), {dns, ...options, t});
     return {
       after,
       diff: lineDiff(before, after).map(line => (line.kind === 'gap' ? {kind: 'gap', text: t('rule.template.unchanged', {n: line.count})} : line))
@@ -65,16 +79,23 @@ export function routingSources(sources: ConfigSource[]): ConfigSource[] {
 }
 
 // The template the routing holds, when one file holds all of it; routing split over files is custom.
-export function currentTemplate(sources: ConfigSource[]): RuleTemplate | null {
+function detectedTemplate(sources: ConfigSource[]) {
   const holders = routingSources(sources);
-  return holders.length === 1 ? (detectTemplate(holders[0].content!)?.template ?? null) : null;
+  return holders.length === 1 ? detectTemplate(holders[0].content!) : null;
+}
+export function currentTemplate(sources: ConfigSource[]): RuleTemplate | null {
+  return detectedTemplate(sources)?.template ?? null;
 }
 
-export type TemplatesView = {current: TemplateChoice | null; primary: TemplateChoice[]; more: TemplateChoice[]};
+export type TemplatesView = TemplateOptions & {current: TemplateChoice | null; primary: TemplateChoice[]; more: TemplateChoice[]};
 export function templatesView(sources: ConfigSource[], t: Translator): TemplatesView {
-  const current = currentTemplate(sources);
+  const detected = detectedTemplate(sources);
+  const current = detected?.template;
   return {
-    current: current && templateChoice(current, t),
+    blockAds: detected?.blockAds ?? defaultTemplateOptions.blockAds,
+    blockQuic: detected?.blockQuic ?? defaultTemplateOptions.blockQuic,
+    networkManagerDirect: detected?.networkManagerDirect ?? defaultTemplateOptions.networkManagerDirect,
+    current: current ? templateChoice(current, t) : null,
     primary: primaryTemplates.map(id => templateChoice(id, t)),
     more: moreTemplates.map(id => templateChoice(id, t))
   };
@@ -168,7 +189,7 @@ const pinned = (entry: GroupEntry) => {
   return (names.length === 1 && !subtags.length && !rules.length) || /^fixed\b/.test(entry.policy ?? '');
 };
 export type TemplateImpact = {
-  // The groups the template declares, each with its ACL4SSR label; the default group has none.
+  // The groups the template declares, each with its translated label; the default group has none.
   created: Array<{name: string; label: string | null}>;
   // Groups the template's rules name that a file already declares, kept as they are.
   reused: Array<{name: string; pinned: boolean}>;
@@ -178,13 +199,13 @@ export type TemplateImpact = {
   removedIncludes: string[];
 };
 // What applying `template` to `target` adds and relies on, given every loaded file and the node names.
-export function templateImpact(template: RuleTemplate, target: ConfigSource, sources: ConfigSource[], nodes: string[]): TemplateImpact {
+export function templateImpact(template: RuleTemplate, target: ConfigSource, sources: ConfigSource[], nodes: string[], t: Translator): TemplateImpact {
   const entries = [target, ...sources.filter(source => source.id !== target.id)].flatMap(source => (source.content ? readGroupEntries(source.content) : []));
   // Groups are compared as written: honk keeps the quotes in a group's name, so `'proxy'` is not the template's `proxy`.
   const byName = new Map<string, GroupEntry>();
   for (const entry of entries) if (!byName.has(entry.written)) byName.set(entry.written, entry);
   const created = templateGroups(template, [...byName.keys()]);
-  const labels = new Map(templates[template].groups.map(group => [group.name, group.label]));
+  const labels = new Map(templates[template].groups.map(group => [group.name, templateGroupLabel(group, t)]));
   // A template without groups routes to the file's first group, or the first one declared anywhere.
   const named = templates[template].groups.length ? templates[template].groups.map(group => group.name) : [entries[0]?.written ?? defaultGroup];
   const taken = new Set(nodes);

@@ -8,7 +8,7 @@ import {engineOf} from '../../api/engines';
 import type {ConfigSource} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {fileName} from '../../dae/sources';
-import type {RuleTemplate} from '../../dae/templates';
+import type {RuleTemplate, TemplateOptions} from '../../dae/templates';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {
@@ -19,6 +19,8 @@ import {
   templatesView,
   templateTarget,
   templateWrites,
+  templateOptionKeys,
+  templateOptionText,
   type RuleViewMode,
   type TemplateChoice,
   type TemplateImpact,
@@ -29,7 +31,15 @@ import {
 // A template being confirmed, over the file as it was read when the dialog opened: that text is what the write's
 // If-Match names, so a change on disk since is refused rather than overwritten. `withDns` is the same write with the
 // DNS split appended, offered while the configuration has no `dns` block.
-type Pending = {choice: TemplateChoice; source: ConfigSource; impact: TemplateImpact; plain: TemplateWrite; withDns: TemplateWrite | null};
+type Pending = {
+  options: TemplateOptions;
+  optionImpact: string[];
+  choice: TemplateChoice;
+  source: ConfigSource;
+  impact: TemplateImpact;
+  plain: TemplateWrite;
+  withDns: TemplateWrite | null;
+};
 type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null};
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
@@ -41,9 +51,10 @@ export type RuleTemplatesModel = TemplatesView & {
   // The chosen template: the detected one until another is picked, and none for custom routing.
   selected: RuleTemplate | null;
   select: (id: RuleTemplate) => void;
+  setOption: (option: keyof TemplateOptions, enabled: boolean) => void;
   // Why no template can be applied, or null when one can; applying waits while the file's digest is checked.
   refusal: string | null;
-  // Whether the chosen template can be applied: it differs from the detected one and the file can be written.
+  // Whether the template or its options differ from the detected routing and the file can be written.
   canApply: boolean;
   open: () => void;
   // `dns` is whether the DNS split is added, or null when the configuration already has a `dns` block.
@@ -73,6 +84,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const editor = useConfigEditor(reread, {rethrow: true});
   const [denied, setDenied] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Pending | null>(null);
+  const [pickedOptions, setPickedOptions] = useState<Partial<TemplateOptions>>({});
   const [picked, setPicked] = useState<RuleTemplate | null>(null);
   const [addDns, setAddDns] = useState(true);
   const target = templateTarget({
@@ -85,10 +97,19 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   });
   const setMode = (mode: string) => go('rules', within(query, {view: mode}));
   const selected = picked ?? view.current?.id ?? null;
+  const options: TemplateOptions = {blockAds: view.blockAds, blockQuic: view.blockQuic, networkManagerDirect: view.networkManagerDirect, ...pickedOptions};
   const applying = editor.busy === 'save';
-  const canApply = !!selected && selected !== view.current?.id && !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
+  const canApply =
+    !!selected &&
+    (selected !== view.current?.id || templateOptionKeys.some(key => options[key] !== view[key])) &&
+    !target.refusal &&
+    !!target.source &&
+    isComplete(target.source) === true &&
+    !editor.busy;
   return {
     ...view,
+    ...options,
+    setOption: (option, enabled) => setPickedOptions(current => ({...current, [option]: enabled})),
     available: readable && !!config.data,
     mode: ruleViewMode(query),
     setMode,
@@ -102,18 +123,25 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       if (!canApply || !source || !selected) return;
       setAddDns(true);
       setDialog({
+        options,
+        optionImpact: templateOptionKeys
+          .filter(key => view.current && options[key] !== view[key])
+          .map(key => t(templateOptionText[key][options[key] ? 'on' : 'off'])),
         choice: templateChoice(selected, t),
         source,
         impact: templateImpact(
           selected,
           source,
           sources,
-          (nodes.data ?? []).map(node => node.name)
+          (nodes.data ?? []).map(node => node.name),
+          t
         ),
-        ...templateWrites(selected, source, sources, t)
+        ...templateWrites(selected, source, sources, t, options)
       });
     },
     dialog: dialog && {
+      options: dialog.options,
+      optionImpact: dialog.optionImpact,
       choice: dialog.choice,
       source: dialog.source,
       impact: dialog.impact,
@@ -142,6 +170,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         toast('positive', t('rule.template.applied', {name: dialog.choice.name, file: fileName(dialog.source)}));
         setDialog(null);
         setPicked(null);
+        setPickedOptions({});
         go('rules', within(query, {view: 'simple'}));
       } catch (error) {
         // honk answers 403 when the sign-in lacks control permission or the file sets API listener settings.
