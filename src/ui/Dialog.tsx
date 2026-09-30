@@ -156,9 +156,11 @@ export function PopoverDialog({
   label,
   subtitle,
   placement = 'top start',
+  boundaryElement,
   children
 }: {
   placement?: PopoverProps['placement'];
+  boundaryElement?: PopoverProps['boundaryElement'];
   children: (close: () => void) => ReactNode;
 } & (
   | {
@@ -174,7 +176,13 @@ export function PopoverDialog({
     | {trigger?: never; triggerRef: RefObject<Element | null>; isOpen: boolean; onOpenChange: (open: boolean) => void}
   )) {
   const popover = (
-    <Popover className={title ? 'rp-popover rp-popover-dialog' : 'rp-popover'} placement={placement} {...(trigger ? {} : {triggerRef, isOpen, onOpenChange})}>
+    <Popover
+      boundaryElement={boundaryElement}
+      style={() => (boundaryElement ? {maxWidth: boundaryElement.clientWidth - 24} : undefined)}
+      className={title ? 'rp-popover rp-popover-dialog' : 'rp-popover'}
+      placement={placement}
+      {...(trigger ? {} : {triggerRef, isOpen, onOpenChange})}
+    >
       {title ? (
         <Dialog className="rp-popover-body">
           {({close}) => (

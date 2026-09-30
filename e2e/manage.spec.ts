@@ -74,7 +74,7 @@ test('a group declared in an include is edited there while the main source is re
   // A group the read-only main source declares says why it cannot be edited.
   const proxy = page.getByRole('region', {name: 'proxy', exact: true});
   const reason = 'This group is defined in /etc/honk/config.dae, which is read-only';
-  await expect(proxy.getByRole('img', {name: reason})).toBeVisible();
+  await expect(proxy.getByRole('button', {name: 'Why proxy is locked'})).toBeVisible();
   // Its configuration still opens, read-only, with the reason it cannot be edited.
   await expect(await moreItem(proxy, 'Edit group')).toHaveCount(0);
   await page.keyboard.press('Escape');

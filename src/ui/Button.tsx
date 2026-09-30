@@ -291,18 +291,6 @@ export function TextTooltip({children, text, className, cut}: {children: ReactNo
   );
 }
 
-// An icon that stands for a sentence, such as why a card's actions are locked. The sentence is the icon's accessible
-// name and its tip, shown on hover, on keyboard focus and, on a touch screen, on a tap.
-export function IconTip({label, children}: {label: string; children: ReactNode}) {
-  return (
-    <TextTooltip className="rp-icontip" text={label}>
-      <span role="img" aria-label={label}>
-        {children}
-      </span>
-    </TextTooltip>
-  );
-}
-
 // Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
 // The button style applies only with `appearance="button"`.
 export function Link({

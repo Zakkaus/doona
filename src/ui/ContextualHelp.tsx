@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import {useCallback, useState, type ReactNode} from 'react';
 import InfoCircle from './icons/InfoCircle';
 import {useT} from '../i18n';
 import {Button} from './Button';
@@ -9,20 +9,40 @@ export type Help = {title: string; text: string | string[]};
 
 // An info button beside a label that opens its explanation in a popover, after S2's ContextualHelp: for a term or a
 // state the label alone cannot explain. The popover holds text only, so it needs no action to close.
-export function ContextualHelp({title, text}: Help) {
+export function ContextualHelp({
+  title,
+  text,
+  icon = <InfoCircle />,
+  label,
+  boundaryElement
+}: Help & {icon?: ReactNode; label?: string; boundaryElement?: Element}) {
   const t = useT();
   return (
     <PopoverDialog
       title={title}
       placement="bottom start"
+      boundaryElement={boundaryElement}
       trigger={
-        <Button quiet icon className="rp-help" label={t('ui.helpFor', {name: title})}>
-          <InfoCircle />
+        <Button quiet icon className="rp-help" label={label ?? t('ui.helpFor', {name: title})}>
+          {icon}
         </Button>
       }
     >
       {() => (typeof text === 'string' ? [text] : text).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
     </PopoverDialog>
+  );
+}
+
+// A status explanation stays inside the content column even when its trigger is near an edge.
+export function IconTip({label, text, children}: {label: string; text: string; children: ReactNode}) {
+  const [boundaryElement, setBoundaryElement] = useState<Element>();
+  const boundary = useCallback((element: HTMLSpanElement | null) => {
+    setBoundaryElement(element?.closest('.rp-content') ?? undefined);
+  }, []);
+  return (
+    <span className="rp-icontip" ref={boundary}>
+      <ContextualHelp title={label} label={label} text={text} icon={children} boundaryElement={boundaryElement} />
+    </span>
   );
 }
 

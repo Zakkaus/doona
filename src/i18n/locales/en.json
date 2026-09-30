@@ -1232,6 +1232,7 @@
   "policy.kind.urltest": "Fastest on average",
   "policy.liveConfig": "Running configuration",
   "policy.loading": "Loading {groupId}…",
+  "policy.lockHelp": "Why {name} is locked",
   "policy.memberPerNetwork": "TCP: {tcp}, UDP: {udp}",
   "policy.members": {
     "one": "{n} member",
