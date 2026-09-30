@@ -138,14 +138,19 @@ function routingEntries(text: string): string[][] | null {
   for (const block of blocks.filter(block => block.name === 'routing')) {
     if (block.children.length) return null;
     let line = -1;
+    // Parentheses count from the block's own brace: an unquoted `(` elsewhere, as in `log_file: /var/log/honk(.log`,
+    // leaves the scanner's count raised for the rest of the file.
+    let parens = 0;
     for (const token of tokens) {
       if (token.from <= block.open || token.from >= block.close || token.kind === 'comment') continue;
       const raw = text.slice(token.from, token.to);
-      if (token.line !== line && token.parens === 0) entries.push([]);
+      if (token.line !== line && parens === 0) entries.push([]);
       line = token.line;
       // A match argument reads the same quoted or not; an outbound keeps its quotes, which honk keeps in group names.
       // The scanner keeps `&&` and `!` in the word they touch, as in `l4proto(udp)&&dport(443)`.
-      entries.at(-1)!.push(...(token.kind === 'quoted' ? [token.parens ? unquote(raw) : raw] : raw.split(/(&&|\|\||!)/).filter(Boolean)));
+      entries.at(-1)!.push(...(token.kind === 'quoted' ? [parens ? unquote(raw) : raw] : raw.split(/(&&|\|\||!)/).filter(Boolean)));
+      if (token.kind === 'symbol' && raw === '(') parens++;
+      else if (token.kind === 'symbol' && raw === ')') parens = Math.max(0, parens - 1);
     }
   }
   return entries;
