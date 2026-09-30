@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
+import {useFilter} from 'react-aria-components';
 import {getApi} from '../../api';
 import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
@@ -111,9 +112,10 @@ export function useDnsCacheTab(domain: string) {
   const locale = LOCALE[useLang()];
   // A kept tab stays mounted while hidden; the full listing is walked only while its tab is on screen.
   const dns = useDnsControl(!useTabShown());
+  const {contains} = useFilter({sensitivity: 'base'});
   const view = useMemo(
-    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t),
-    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t]
+    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, contains),
+    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t, contains]
   );
   // The selected entry, while it is still listed, starts a new rule.
   const [selected, setSelected] = useState<string | null>(null);
