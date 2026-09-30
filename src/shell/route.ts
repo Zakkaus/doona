@@ -72,6 +72,12 @@ export function restoreDraftRoute(current: Route, position: number): number | un
   history.replaceState({...history.state, doonaPosition: position}, '', buildHash(current.route, current.query));
 }
 
+// Firefox drops an entry's state on a navigation to its own address, so it can be null on any render.
+export function historyPosition(fallback = 0): number {
+  const value: unknown = history.state?.doonaPosition;
+  return typeof value === 'number' ? value : fallback;
+}
+
 function currentHash(api: string | null): string {
   if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
   else {
@@ -85,10 +91,10 @@ function currentHash(api: string | null): string {
 export function useRoute(api: string | null) {
   const [loc, setLoc] = useState(() => {
     const hash = currentHash(api);
-    history.replaceState({...history.state, doonaPosition: history.state?.doonaPosition ?? 0}, '', hash);
+    history.replaceState({...history.state, doonaPosition: historyPosition()}, '', hash);
     return parseHash(hash);
   });
-  const position = useRef<number>(history.state.doonaPosition);
+  const position = useRef(historyPosition());
   const restoring = useRef<PendingRoute | null>(null);
   const dirty = useRef(false);
   const setDirty = useCallback((value: boolean) => {

@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {buildHash, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
+import {buildHash, historyPosition, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
 import type {RoutePath} from './routes';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -19,6 +19,14 @@ describe('draft history restoration', () => {
     expect(restoreDraftRoute({route: 'config', query: ''}, 3)).toBe(-2);
     expect(history.go).toHaveBeenCalledWith(2);
     expect(history.replaceState).not.toHaveBeenCalled();
+  });
+
+  it('reads the history position from an entry whose state the browser dropped', () => {
+    vi.stubGlobal('history', {state: null});
+    expect(historyPosition()).toBe(0);
+    expect(historyPosition(3)).toBe(3);
+    vi.stubGlobal('history', {state: {doonaPosition: 2}});
+    expect(historyPosition()).toBe(2);
   });
 });
 describe('hash routing', () => {
