@@ -169,6 +169,8 @@ export function Toasts({placement = 'bottom', page = ''}: {placement?: ToastPlac
   const [edge, align = 'center'] = placement.split(' ') as ['top' | 'bottom', 'end' | undefined];
   const t = useT();
   const [expandedOn, setExpandedOn] = useState<string | null>(null);
+  // Leaving the page drops the expansion, so coming back to it opens with the stack collapsed.
+  if (expandedOn !== null && expandedOn !== page) setExpandedOn(null);
   const expanded = expandedOn === page;
   const setExpanded = useCallback((open: boolean) => setExpandedOn(open ? page : null), [page]);
   useEffect(() => {
