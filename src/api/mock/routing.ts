@@ -1,5 +1,6 @@
 import type {DnsCacheList, RuleList, RoutingTraceInput, RoutingTraceRequest, RoutingTraceResponse} from '../model';
 import {ApiError} from '../error';
+import {scanConfig, unquote} from '../../dae/text';
 import {instanceId} from './fixtures/clock';
 
 type Evaluation = RoutingTraceResponse['evaluations'][number];
@@ -38,16 +39,21 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
   if (value == null || value === '') return {result: 'indeterminate', missing_inputs: [field ?? kind]};
   let matched = false;
   if (kind === 'domain') {
-    const [mode, term] = arg.split(':').map(s => s.trim());
     const name = domainName(String(value));
-    matched =
-      mode === 'geosite'
+    const commas = scanConfig(arg).tokens.filter(token => token.kind === 'symbol' && arg.slice(token.from, token.to) === ',');
+    const items = [0, ...commas.map(token => token.to)].map((start, i) => arg.slice(start, commas[i]?.from ?? arg.length).trim());
+    matched = items.some(item => {
+      const colon = item.indexOf(':');
+      const mode = item.slice(0, colon).trim();
+      const term = unquote(item.slice(colon + 1).trim());
+      return mode === 'geosite'
         ? (geosites[term] ?? []).some(s => suffix(name, s))
         : mode === 'suffix'
           ? suffix(name, domainName(term))
           : mode === 'full'
             ? name === domainName(term)
             : mode === 'keyword' && name.includes(domainName(term));
+    });
   } else if (kind === 'dip' || kind === 'sip') {
     const ip = String(value).toLowerCase();
     matched =
