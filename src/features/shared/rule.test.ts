@@ -16,6 +16,7 @@ import {
   quickRuleContext,
   ruleDialogReason,
   ruleLists,
+  ruleOutbounds,
   rulePositions,
   ruleTargets,
   ruleWritable,
@@ -364,4 +365,26 @@ it('shows the answering upstream of a DNS request as context only', () => {
   // A cache hit names no upstream, so there is no current line.
   expect(request({...seed, dns: {...dns, upstream: null}}).current).toBeNull();
   expect(quickRuleContext({list: 'response', seed, upstreams, outbound: 'accept', position: undefined}).current).toBeNull();
+});
+
+it('offers a routing rule direct and block, then each group once, as a final outbound offers them', () => {
+  expect(ruleOutbounds([{name: 'proxy'}, {name: 'gaming'}, {name: 'proxy'}, {name: 'direct'}], t)).toEqual([
+    {
+      id: 'builtin',
+      title: 'Built-in',
+      items: [
+        {id: 'direct', label: 'direct'},
+        {id: 'block', label: 'block'}
+      ]
+    },
+    {
+      id: 'groups',
+      title: 'Groups',
+      items: [
+        {id: 'proxy', label: 'proxy'},
+        {id: 'gaming', label: 'gaming'}
+      ]
+    }
+  ]);
+  expect(ruleOutbounds([], t).map(section => section.id)).toEqual(['builtin']);
 });

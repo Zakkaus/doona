@@ -4,7 +4,7 @@ import {offered} from '../../api/capabilities';
 import {getApi} from '../../api/index';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
-import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleLine, ruleOutbounds} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleLine} from '../../dae/ruleText';
 import {usePendingApply} from './usePendingApply';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
@@ -22,6 +22,7 @@ import {
   ruleKindLabels,
   ruleListLabels,
   ruleLists,
+  ruleOutbounds,
   rulePositions,
   ruleTargets,
   ruleWritten,
@@ -72,7 +73,13 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       ? dnsRulePositions(dnsList, listedDns ?? [], sources, t)
       : [];
   const upstreams = dnsList ? dnsUpstreamChoices(listedDns ?? [], sources) : [];
-  const choices = routing ? ruleOutbounds(groups.data ?? []) : dnsList ? dnsActions(dnsList, [...new Set(upstreams.map(upstream => upstream.name))], t) : [];
+  // A routing rule picks from sections, as a group's final outbound does; a DNS rule from its short list of actions.
+  const sections = routing ? ruleOutbounds(groups.data ?? [], t) : null;
+  const choices = sections
+    ? sections.flatMap(section => section.items)
+    : dnsList
+      ? dnsActions(dnsList, [...new Set(upstreams.map(upstream => upstream.name))], t)
+      : [];
   // Until the groups, or for a DNS rule the upstreams, are read, the target the traffic took may not be listed yet,
   // so nothing is written.
   const ready = routing ? !hasGroups || !!groups.data : !canWrite || !!config.data;
@@ -229,6 +236,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
       setTyped: (typed: boolean) => edit({typed}),
       targetLabel: t(routing ? 'ui.outbound' : 'rule.dns.action'),
       outbounds: choices,
+      outboundSections: sections,
       outbound,
       setOutbound: (value: string) => edit({outbound: value}),
       current: context?.current ? t('rule.current', {value: context.current}) : null,

@@ -1,5 +1,6 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
+import {SearchSelect} from '../../ui/SearchSelect';
 import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
 
@@ -55,7 +56,24 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
             </Switch>
           )}
           <div className="rp-toolbar top">
-            <LabeledSelect isDisabled={dialog.busy} label={dialog.targetLabel} value={dialog.outbound} onChange={dialog.setOutbound} items={dialog.outbounds} />
+            {dialog.outboundSections ? (
+              <SearchSelect
+                isDisabled={dialog.busy}
+                label={dialog.targetLabel}
+                searchLabel={t('ui.filter')}
+                value={dialog.outbound}
+                onChange={dialog.setOutbound}
+                sections={dialog.outboundSections}
+              />
+            ) : (
+              <LabeledSelect
+                isDisabled={dialog.busy}
+                label={dialog.targetLabel}
+                value={dialog.outbound}
+                onChange={dialog.setOutbound}
+                items={dialog.outbounds}
+              />
+            )}
             {!dialog.writable ? null : dialog.positions.length === 1 ? (
               <StaticField label={t('rule.position')} value={dialog.positions[0].label} description={dialog.positions[0].desc} />
             ) : (

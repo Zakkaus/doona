@@ -24,14 +24,15 @@ import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
-import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleOutbounds, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
+import type {SearchSection} from '../../ui/SearchSelect';
 import {ruleDistribution} from './distribution';
 import {href, pickTab, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {nodeHref} from '../shared/link';
 import type {Help} from '../../ui/ui';
 import {rulesTabs, type RuleTab} from './nav';
-import {dnsActions, dnsEndPosition, dnsUpstreamChoices, ruleKindLabels, type QuickRuleSeed} from '../shared/rule';
+import {dnsActions, dnsEndPosition, dnsUpstreamChoices, ruleKindLabels, ruleOutbounds, type QuickRuleSeed} from '../shared/rule';
 import {recorderEmpty} from '../shared/recorder';
 
 const kindHints: Record<RuleConditionKind, string> = {
@@ -72,7 +73,15 @@ type DictionaryRow = {
   removeReason: string | null;
   sourceQuery: string | null;
 };
-export type DictionaryView = {rows: DictionaryRow[]; caption: string | null; positions: Choice[]; outbounds: Choice[]};
+// `outbounds`: every target a rule can name. `outboundSections`: the same targets in sections, for a list long enough
+// to need the searchable picker; null for the short DNS action lists.
+export type DictionaryView = {
+  rows: DictionaryRow[];
+  caption: string | null;
+  positions: Choice[];
+  outbounds: Choice[];
+  outboundSections: SearchSection[] | null;
+};
 // The file a rule came from, by the name the configuration page uses; a redacted path shows nothing.
 function sourceLabel(source: RuleSource, linked: ConfigSource | undefined): string {
   return linked ? fileName(linked) : source.file === '<redacted>' ? '' : source.file;
@@ -184,6 +193,7 @@ export function dictionaryView(
   for (const row of ruleDistribution(flows?.flows ?? [])) {
     if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
   }
+  const sections = ruleOutbounds(groups, t);
   return {
     ...listedRows(
       rules,
@@ -198,7 +208,8 @@ export function dictionaryView(
       lang
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
-    outbounds: ruleOutbounds(groups)
+    outbounds: sections.flatMap(section => section.items),
+    outboundSections: sections
   };
 }
 // A DNS rule's expression is its source line; the table shows the target in its own column, so a rule shows only its
@@ -232,7 +243,8 @@ export function dnsDictionaryView(
       end && {id: 'end', ...dnsEndPosition(end.anchor, list, t)}
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
-    outbounds: dnsActions(list, upstreams, t)
+    outbounds: dnsActions(list, upstreams, t),
+    outboundSections: null
   };
 }
 type DistributionRow = {

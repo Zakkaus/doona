@@ -70,6 +70,12 @@ test('a rule is added before the fallback and removed again through validate, sa
   await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Condition'}).fill('domain(geosite:netflix)');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
+  // The outbound picker is a group's final outbound picker without None and the nodes, which a rule cannot name.
+  const outbounds = page.getByRole('listbox');
+  await expect(outbounds.getByRole('group', {name: 'Built-in'}).getByRole('option')).toHaveText(['direct', 'block']);
+  await expect(outbounds.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText(['proxy', 'resilient', 'gaming', 'skylink']);
+  await page.getByRole('searchbox', {name: 'Filter'}).fill('gam');
+  await expect(outbounds.getByRole('option')).toHaveText(['gaming']);
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();

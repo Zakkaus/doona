@@ -1,6 +1,7 @@
 import {useEffect, useId, useLayoutEffect, useMemo, useRef} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
+import {SearchSelect} from '../../ui/SearchSelect';
 import {
   ActionHelp,
   Badge,
@@ -140,13 +141,24 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
   const targetFields = (
     <>
       <div className="rp-toolbar end">
-        <LabeledSelect
-          isDisabled={view.busy}
-          label={target}
-          value={form.outbound}
-          onChange={outbound => setForm({...form, outbound})}
-          items={view.table.outbounds}
-        />
+        {view.table.outboundSections ? (
+          <SearchSelect
+            isDisabled={view.busy}
+            label={target}
+            searchLabel={t('ui.filter')}
+            value={form.outbound}
+            onChange={outbound => setForm({...form, outbound})}
+            sections={view.table.outboundSections}
+          />
+        ) : (
+          <LabeledSelect
+            isDisabled={view.busy}
+            label={target}
+            value={form.outbound}
+            onChange={outbound => setForm({...form, outbound})}
+            items={view.table.outbounds}
+          />
+        )}
         {view.copy.must && (
           <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
             {t('rule.must')} <code>must</code>
