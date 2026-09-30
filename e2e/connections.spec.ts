@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
+import {expect, expectLoadFailures, manyDevices, mockBackend, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
@@ -135,12 +135,15 @@ test('activating a checked source or rule removes that filter', async ({page}) =
   await selectedSource.click();
   await expect(page.locator('.rp-toolbar input')).toHaveValue('');
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
+  // Forty devices come before the rules, so the rules are reached through the menu's filter field.
   await pick.click();
+  await page.getByRole('searchbox', {name: 'Filter'}).fill('domain(');
   const rule = page.getByRole('menuitemradio').filter({hasText: 'domain('}).first();
   const ruleName = await rule.locator('.rp-il').innerText();
   await rule.click();
   await expect(page).toHaveURL(/rule=/);
   await pick.click();
+  await page.getByRole('searchbox', {name: 'Filter'}).fill(ruleName);
   const selectedRule = page.getByRole('menuitemradio').filter({hasText: ruleName});
   await expect(selectedRule).toHaveAttribute('aria-checked', 'true');
   await selectedRule.click();
@@ -510,6 +513,32 @@ test('connection filters live in the URL and survive a reload', async ({page}) =
   await expect(page).not.toHaveURL(/network=/);
 });
 
+test('the Select menu lists every device and rule and filters them once the list is long', async ({page}) => {
+  await manyDevices(page);
+  await page.goto('/#/connections?tab=list');
+  await page.getByRole('button', {name: 'Select', exact: true}).click();
+  const menu = page.getByRole('menu');
+  // The toolbar's own filter field has the same name; the menu's is in its popover.
+  const search = page.getByRole('dialog', {name: 'Select'}).getByRole('searchbox', {name: 'Filter'});
+  await expect(search).toBeFocused();
+  // The quietest device is past the twelve the menu used to list.
+  await search.fill('10.0.0.49');
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
+  await menu.getByRole('menuitemradio', {name: /^10\.0\.0\.49/}).click();
+  await expect(page).toHaveURL(/src=10\.0\.0\.49/);
+});
+
+test('the outbound filter is searchable', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  await page.getByRole('button', {name: /All outbounds/}).click();
+  const search = page.getByRole('dialog', {name: 'Outbound'}).getByRole('searchbox', {name: 'Filter'});
+  await expect(search).toBeFocused();
+  await search.fill('dire');
+  await expect(page.getByRole('option', {name: 'All outbounds'})).toHaveCount(0);
+  await page.getByRole('option', {name: /^direct/i}).click();
+  await expect(page).toHaveURL(/out=direct/);
+});
+
 test('close all with a rule filter closes the listed rows only', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'}).or(page.getByRole('treegrid', {name: 'Connections'}));
@@ -517,6 +546,7 @@ test('close all with a rule filter closes the listed rows only', async ({page}) 
   await expect.poll(listed).toBeGreaterThan(0);
   const total = await listed();
   await page.getByRole('button', {name: 'Select', exact: true}).click();
+  await page.getByRole('searchbox', {name: 'Filter'}).fill('telegram');
   // The telegram rule routes through a proxy group, so its connections are userspace-observed and closable.
   await page.getByRole('menu').getByRole('menuitemradio').filter({hasText: 'telegram'}).first().click();
   await expect(page).toHaveURL(/rule=/);

@@ -287,3 +287,20 @@ export async function mockBackend(page: Page, options: {faults?: boolean} = {}) 
   });
   return {api, capabilities, handlers, requests};
 }
+
+// A backend whose connections come from fifty devices, more than a menu lists without a filter field. The first twelve
+// have two connections each, so the rest rank below them; a source filter narrows the list as honk's does.
+export async function manyDevices(page: Page) {
+  const backend = await mockBackend(page);
+  const list = await backend.api.connections({detail: 'full', limit: 1000});
+  const template = list.tcp[0];
+  const tcp = Array.from({length: 50}, (_, i) =>
+    Array.from({length: i < 12 ? 2 : 1}, (_, n) => ({...template, id: `d${i}-${n}`, src: `10.0.0.${i}:${40000 + n}`, flow_id: null}))
+  ).flat();
+  backend.handlers['GET connections'] = async request => {
+    const src = new URL(request.url()).searchParams.get('src');
+    const rows = src ? tcp.filter(row => row.src.startsWith(`${src}:`)) : tcp;
+    return {...list, tcp: rows, udp: [], total_tcp: rows.length, total_udp: 0, truncated: false};
+  };
+  return backend;
+}
