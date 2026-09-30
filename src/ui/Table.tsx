@@ -340,16 +340,21 @@ export function DataTable<T extends {id: string}>({
       data-row-detail={rowDetail || detail ? '' : undefined}
       style={{height: fitted}}
       // RAC (1.21) keeps Home/End inside the row while a cell or a control in one has focus, which is where a click on
-      // cut text leaves it. Focusing the row first sends them to the first and last rows instead, as the tree mode
-      // promises. The container passes no key handlers, so a tree renders its own div to catch the key first.
+      // cut text leaves it. Focus the row and re-dispatch there so the cell cannot handle the original event.
+      // The container passes no key handlers, so a tree renders its own div to catch the key first.
       render={
         tree
           ? props => (
               <div
                 {...props}
                 onKeyDownCapture={event => {
-                  if (event.key === 'Home' || event.key === 'End')
-                    (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]')?.focus({preventScroll: true});
+                  if (event.key !== 'Home' && event.key !== 'End') return;
+                  const row = (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]');
+                  if (!row || event.target === row) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  row.focus({preventScroll: true});
+                  row.dispatchEvent(new KeyboardEvent(event.nativeEvent.type, event.nativeEvent));
                 }}
               />
             )

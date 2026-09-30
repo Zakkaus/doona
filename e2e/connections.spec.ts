@@ -92,7 +92,10 @@ test('Home and End move between rows from a control inside a cell', async ({page
   const grid = page.getByRole('grid', {name: 'Connections'});
   const focusedRow = grid.locator('[role=row]:focus');
   const inCell = grid.locator(':is([role=rowheader], [role=gridcell]) :focus');
-  await grid.locator('[data-key="c-0002"]').getByRole('gridcell').nth(1).click();
+  const cell = grid.locator('[data-key="c-0002"]').getByRole('gridcell').nth(1);
+  await cell.click();
+  await expect(grid.locator('[data-key="c-0002"]')).toHaveAttribute('aria-selected', 'true');
+  await cell.locator('.rp-truncate').focus();
   await expect(inCell).toHaveCount(1);
   await page.keyboard.press('End');
   await expect(focusedRow).toHaveAttribute('aria-rowindex', '1001');
