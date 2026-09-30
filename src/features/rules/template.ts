@@ -1,6 +1,7 @@
 import type {ConfigSource} from '../../api/model';
 import type {Key, Translator} from '../../i18n';
 import {scanConfig} from '../../dae/text';
+import {fileName} from '../../dae/sources';
 import {detectTemplate, templates, type RuleTemplate} from '../../dae/templates';
 
 // The plain choices first; the ACL4SSR presets, which also create groups, are kept under More templates.
@@ -43,3 +44,70 @@ export function templatesView(sources: ConfigSource[], t: Translator): Templates
     more: moreTemplates.map(id => templateChoice(id, t))
   };
 }
+
+// Why a template cannot be applied, in the order a person would fix it.
+export type TemplateRefusal = 'syntax' | 'writesOff' | 'noSource' | 'split' | 'include' | 'secret' | 'readOnly' | 'incomplete' | 'denied';
+const refusalText: Record<TemplateRefusal, Key> = {
+  syntax: 'rule.template.refused.syntax',
+  writesOff: 'rule.template.refused.writesOff',
+  noSource: 'rule.template.refused.noSource',
+  split: 'rule.template.refused.split',
+  include: 'rule.template.refused.include',
+  secret: 'rule.template.refused.secret',
+  readOnly: 'rule.template.refused.readOnly',
+  incomplete: 'rule.template.refused.incomplete',
+  denied: 'rule.template.refused.denied'
+};
+// Whether a routing block of `text` pulls in another file with `include`, whose rules a replacement would drop.
+function routingIncludes(text: string): boolean {
+  const {blocks, tokens} = scanConfig(text);
+  return blocks
+    .filter(block => block.name === 'routing')
+    .some(block =>
+      tokens.some(
+        token =>
+          token.from > block.open && token.from < block.close && token.kind === 'text' && token.parens === 0 && text.slice(token.from, token.to) === 'include'
+      )
+    );
+}
+export type TemplateTargetInput = {
+  sources: ConfigSource[];
+  configWritable: boolean;
+  daeText: boolean;
+  // Whether a source's text matches its digest; undefined until checked.
+  complete: (source: ConfigSource) => boolean | undefined;
+  holdsCredentials: (source: ConfigSource) => boolean;
+  // The backend refused a write of this file as not permitted.
+  denied: string | null;
+};
+// The one file a template replaces the routing of, or why none can be written. A template rewrites a single file in
+// one write: routing spread over files, or pulling one in, would need several writes that can fail halfway.
+export function templateTarget({sources, configWritable, daeText, complete, holdsCredentials, denied}: TemplateTargetInput): {
+  source: ConfigSource | null;
+  refusal: TemplateRefusal | null;
+} {
+  const holders = routingSources(sources);
+  const source = holders[0] ?? sources.find(item => item.kind === 'main') ?? null;
+  const refusal: TemplateRefusal | null = !daeText
+    ? 'syntax'
+    : !configWritable
+      ? 'writesOff'
+      : !source
+        ? 'noSource'
+        : holders.length > 1
+          ? 'split'
+          : source.content !== undefined && routingIncludes(source.content)
+            ? 'include'
+            : source.content !== undefined && holdsCredentials(source)
+              ? 'secret'
+              : !source.writable
+                ? 'readOnly'
+                : complete(source) === false || source.content === undefined
+                  ? 'incomplete'
+                  : denied === source.id
+                    ? 'denied'
+                    : null;
+  return {source, refusal};
+}
+export const refusalReason = (refusal: TemplateRefusal, source: ConfigSource | null, t: Translator) =>
+  t(refusalText[refusal], {file: source ? fileName(source) : ''});
