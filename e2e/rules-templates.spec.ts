@@ -1,22 +1,28 @@
+import {translate, type Translator} from '../src/i18n';
 import {test, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {allGroupNames} from '../src/dae/sources';
 import {writeTemplate} from '../src/dae/setup';
 import {scanConfig} from '../src/dae/text';
-import {box, expect} from './fixtures';
+import legacy from '../src/dae/templates.legacy.json' with {type: 'json'};
+import {box, expect, loadCatalogues} from './fixtures';
+
+const templateShots = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_TEMPLATE_SHOTS;
+const t: Translator = (key, params) => translate('en', key, params);
+test.beforeAll(loadCatalogues);
 
 test.use({viewport: {width: 1440, height: 1000}});
 
 // The demo backend served over HTTP, so a spec can change its files as another client would.
-async function backend(page: Page) {
+async function backend(page: Page, lang = 'en') {
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
-  await page.addInitScript(() => {
+  await page.addInitScript(language => {
     localStorage.setItem('doona-api', location.origin);
-    localStorage.setItem('doona-lang', 'en');
-  });
+    localStorage.setItem('doona-lang', language);
+  }, lang);
   const reads: Record<string, () => Promise<unknown>> = {
     capabilities: async () => capabilities,
     version: () => api.version(),
@@ -74,6 +80,158 @@ const choose = async (page: Page, name: string) => {
   await expect(modes(page).getByRole('radio', {name})).toBeChecked();
 };
 const applyButton = (page: Page) => page.getByRole('region', {name: 'Routing mode'}).getByRole('button', {name: 'Apply', exact: true});
+const optionImpacts = (page: Page) =>
+  page
+    .getByRole('dialog')
+    .locator('p')
+    .filter({
+      hasText: /^(?:Ad blocking is (?:on|off)\.|QUIC blocking is (?:on|off)\.|NetworkManager traffic (?:stays direct|follows the routing rules)\.)$/
+    });
+
+test('ads are off by default and switching them alone can be applied in both directions', async ({page}) => {
+  const {main, write} = await backend(page);
+  await write(oneFile);
+  await page.goto('/#/rules?tab=list&view=simple');
+  const ads = page.getByRole('switch', {name: 'Block ads', exact: true});
+  await expect(ads).not.toBeChecked();
+  await choose(page, 'Bypass mainland China');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await expect(optionImpacts(page)).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  expect((await main()).content).not.toContain('domain(geosite:category-ads-all) -> block');
+  await expect(applyButton(page)).toBeDisabled();
+  for (const enabled of [true, false]) {
+    await ads.focus();
+    await ads.press('Space');
+    await expect(ads).toBeChecked({checked: enabled});
+    await expect(applyButton(page)).toBeEnabled();
+    await applyButton(page).click();
+    await expect(dialog).toContainText(enabled ? 'Ad blocking is on.' : 'Ad blocking is off.');
+    await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+    await expect(dialog).toHaveCount(0);
+    expect((await main()).content!.includes('domain(geosite:category-ads-all) -> block')).toBe(enabled);
+    await expect(applyButton(page)).toBeDisabled();
+    await page.reload();
+    await expect(ads).toBeChecked({checked: enabled});
+    await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China', exact: true})).toBeChecked();
+  }
+});
+
+for (const option of [
+  {name: 'Block ads', initial: false, line: 'domain(geosite:category-ads-all) -> block', on: 'Ad blocking is on.', off: 'Ad blocking is off.'},
+  {name: 'Block QUIC', initial: true, line: 'l4proto(udp) && dport(443) -> block', on: 'QUIC blocking is on.', off: 'QUIC blocking is off.'},
+  {
+    name: 'Keep NetworkManager direct',
+    initial: true,
+    line: 'pname(NetworkManager) -> direct',
+    on: 'NetworkManager traffic stays direct.',
+    off: 'NetworkManager traffic follows the routing rules.'
+  }
+])
+  test(`${option.name} alone changes Global proxy routing and is restored after applying`, async ({page}) => {
+    const {main, write} = await backend(page);
+    await write(text => writeTemplate(oneFile(text), 'global', [], {t}));
+    await page.goto('/#/rules?tab=list&view=simple');
+    const control = page.getByRole('switch', {name: option.name, exact: true});
+    await expect(control).toBeChecked({checked: option.initial});
+    await expect(applyButton(page)).toBeDisabled();
+    for (const enabled of [!option.initial, option.initial]) {
+      await control.focus();
+      await control.press('Space');
+      await expect(applyButton(page)).toBeEnabled();
+      await applyButton(page).click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toContainText(enabled ? option.on : option.off);
+      await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+      await expect(dialog).toHaveCount(0);
+      expect((await main()).content!.includes(option.line)).toBe(enabled);
+      await expect(applyButton(page)).toBeDisabled();
+      await page.reload();
+      await expect(control).toBeChecked({checked: enabled});
+      await expect(modes(page).getByRole('radio', {name: 'Global proxy', exact: true})).toBeChecked();
+    }
+  });
+
+test('all changed options appear in the apply impact and restore together', async ({page}) => {
+  const {write} = await backend(page);
+  await write(text => writeTemplate(oneFile(text), 'bypass', [], {t}));
+  await page.goto('/#/rules?tab=list&view=simple');
+  for (const name of ['Block ads', 'Block QUIC', 'Keep NetworkManager direct']) {
+    const control = page.getByRole('switch', {name, exact: true});
+    await control.focus();
+    await control.press('Space');
+  }
+  await choose(page, 'Global proxy');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog');
+  for (const text of ['Ad blocking is on.', 'QUIC blocking is off.', 'NetworkManager traffic follows the routing rules.'])
+    await expect(dialog).toContainText(text);
+  await expect(optionImpacts(page)).toHaveCount(3);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('switch', {name: 'Block ads', exact: true})).toBeChecked();
+  for (const name of ['Block QUIC', 'Keep NetworkManager direct']) await expect(page.getByRole('switch', {name, exact: true})).not.toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+});
+
+test('changing templates lists only options changed from the detected routing', async ({page}) => {
+  const {write} = await backend(page);
+  await write(() => 'group { proxy {} }\n' + legacy.global);
+  await page.goto('/#/rules?tab=list&view=simple');
+  await choose(page, 'Bypass mainland China');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await expect(optionImpacts(page)).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  const ads = page.getByRole('switch', {name: 'Block ads', exact: true});
+  await ads.focus();
+  await ads.press('Space');
+  await applyButton(page).click();
+  await expect(optionImpacts(page)).toHaveText(['Ad blocking is on.']);
+});
+
+for (const variant of [
+  {lang: 'en', scheme: 'light', width: 1440, height: 1000, more: 'More templates'},
+  {lang: 'zh-TW', scheme: 'dark', width: 1440, height: 1000, more: '更多範本'},
+  {lang: 'zh-CN', scheme: 'light', width: 390, height: 844, more: '更多模板'}
+] as const)
+  test(`template switches share their size and left edge in ${variant.lang}`, async ({page}) => {
+    await page.setViewportSize({width: variant.width, height: variant.height});
+    await backend(page, variant.lang);
+    await page.addInitScript(scheme => localStorage.setItem('doona-scheme', scheme), variant.scheme);
+    await page.goto('/#/rules?tab=list&view=simple');
+    await page.getByRole('button', {name: variant.more, exact: true}).click();
+    const switches = page.locator('.rp-switch');
+    await expect(switches).toHaveCount(3);
+    const tracks = switches.locator('.track');
+    const boxes = await Promise.all([0, 1, 2].map(index => box(tracks.nth(index))));
+    for (const measured of boxes.slice(1)) {
+      expect(measured.x).toBe(boxes[0].x);
+      expect(measured.width).toBe(boxes[0].width);
+      expect(measured.height).toBe(boxes[0].height);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(variant.width);
+    if (templateShots) {
+      await page.setViewportSize({width: variant.width, height: variant.width === 390 ? 1800 : 1300});
+      await page.screenshot({
+        path: `${templateShots}/templates-after-${variant.width === 390 ? 'phone' : 'desktop'}-${variant.lang}-${variant.scheme}-list.png`,
+        fullPage: true
+      });
+    }
+  });
+
+test('legacy routing selects its template with ad blocking on', async ({page}) => {
+  const {write} = await backend(page);
+  await write(() => 'group { proxy { filter: name(hk-01) policy: min_moving_avg } }\n' + legacy.bypass);
+  await page.goto('/#/rules?tab=list&view=simple');
+  await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China', exact: true})).toBeChecked();
+  await expect(page.getByRole('switch', {name: 'Block ads', exact: true})).toBeChecked();
+  for (const name of ['Block QUIC', 'Keep NetworkManager direct']) await expect(page.getByRole('switch', {name, exact: true})).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+});
 
 test('a template replaces the routing of the one file that holds it', async ({page}) => {
   const {main, write} = await backend(page);
@@ -135,7 +293,7 @@ test('the routing list opens on the simple view for template and custom routing,
   await expect(modes(page).getByRole('radio', {checked: true})).toHaveCount(0);
   await expect(table).toHaveCount(0);
   const defined = allGroupNames((await api.config()).sources);
-  await write(text => writeTemplate(text, 'bypass', defined));
+  await write(text => writeTemplate(text, 'bypass', defined, {t}));
   // Only the hash changes, so a reload reads the file written behind the page's back.
   await page.goto('/#/rules');
   await page.reload();
@@ -187,16 +345,16 @@ test('without a dns block the dialog offers the DNS split, checked, and writes i
 test('the detected mode is selected, and the arrow keys move the selection through the visible modes', async ({page}) => {
   const {api, write} = await backend(page);
   const defined = allGroupNames((await api.config()).sources);
-  await write(text => writeTemplate(oneFile(text), 'mini', defined));
+  await write(text => writeTemplate(oneFile(text), 'single', defined, {t}));
   await page.goto('/#/rules?tab=list&view=simple');
   // A detected preset under More templates opens it, so the selection is in view.
-  const mini = modes(page).getByRole('radio', {name: 'ACL4SSR Mini'});
-  await expect(mini).toBeChecked();
-  await expect(mini).toBeVisible();
+  const single = modes(page).getByRole('radio', {name: 'Single proxy group'});
+  await expect(single).toBeChecked();
+  await expect(single).toBeVisible();
   await expect(page.getByRole('status')).toHaveCount(0);
   await expect(applyButton(page)).toBeDisabled();
   await page.getByRole('button', {name: 'More templates'}).click();
-  await expect(mini).toBeHidden();
+  await expect(single).toBeHidden();
   // With More templates closed, the arrows cycle through the three plain modes only.
   const bypass = modes(page).getByRole('radio', {name: 'Bypass mainland China'});
   await bypass.focus();
@@ -215,7 +373,7 @@ test('the detected mode is selected, and the arrow keys move the selection throu
   await page.getByRole('button', {name: 'More templates'}).click();
   await modes(page).getByRole('radio', {name: 'Global proxy'}).focus();
   await page.keyboard.press('ArrowDown');
-  await expect(mini).toBeChecked();
+  await expect(single).toBeChecked();
   await expect(applyButton(page)).toBeDisabled();
 });
 
@@ -280,13 +438,13 @@ test('on a phone the dialog content scrolls between a title and a footer that st
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/rules?tab=list&view=simple');
   await page.getByRole('button', {name: 'More templates'}).click();
-  await choose(page, 'ACL4SSR Full');
+  await choose(page, 'Groups by service and region');
   await applyButton(page).click();
-  const dialog = page.getByRole('dialog', {name: 'Apply ACL4SSR Full?'});
+  const dialog = page.getByRole('dialog', {name: 'Apply Groups by service and region?'});
   await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
   const body = dialog.locator('.rp-dialog-body');
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
-  const title = dialog.getByRole('heading', {name: 'Apply ACL4SSR Full?'});
+  const title = dialog.getByRole('heading', {name: 'Apply Groups by service and region?'});
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   await expect(body).toHaveAttribute('data-overflow', 'true');
   // The body is the only vertical scroller: the diff grows with its lines.
@@ -313,3 +471,48 @@ test('the view switch ends the toolbar row beside the rule count, in the same pl
   await expect(page.getByRole('button', {name: 'Add rule'})).toBeVisible();
   expect(await box(views)).toEqual(simple);
 });
+
+test('the template list uses doona names and homebound creates its mainland group', async ({page}) => {
+  const {main, write} = await backend(page);
+  await write(oneFile);
+  await page.goto('/#/rules?tab=list&view=simple');
+  await page.getByRole('button', {name: 'More templates'}).click();
+  for (const name of ['Single proxy group', 'Groups by service', 'Groups by service and region', 'Back to mainland China'])
+    await expect(modes(page).getByRole('radio', {name, exact: true})).toBeVisible();
+  await choose(page, 'Back to mainland China');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog', {name: 'Apply Back to mainland China?'});
+  await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('cn');
+  await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('Mainland China');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  const saved = (await main()).content!;
+  expect(saved).toContain('# 🇨🇳 Mainland China\n  cn {');
+  expect(saved).toContain('domain(geosite:cn) -> cn');
+  expect(saved).toContain('dip(geoip:cn) -> cn');
+  expect(saved).toContain('fallback: direct');
+  await expect(modes(page).getByRole('radio', {name: 'Back to mainland China'})).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+});
+
+for (const variant of [
+  {lang: 'zh-CN', more: '更多模板', names: ['单一代理组', '按服务分组', '按服务与地区分组', '回国'], apply: '应用', group: '回国节点'},
+  {lang: 'zh-TW', more: '更多範本', names: ['單一代理群組', '按服務分組', '按服務與地區分組', '回國'], apply: '套用', group: '回國節點'}
+])
+  test(`template names and generated group labels follow ${variant.lang}`, async ({page}) => {
+    const {main, write} = await backend(page, variant.lang);
+    await write(oneFile);
+    await page.goto('/#/rules?tab=list&view=simple');
+    await expect(page.getByRole('switch', {name: variant.lang === 'zh-CN' ? '屏蔽广告' : '封鎖廣告', exact: true})).not.toBeChecked();
+    await page.getByRole('button', {name: variant.more}).click();
+    for (const name of variant.names) await expect(page.getByRole('radio', {name, exact: true})).toBeVisible();
+    const radio = page.getByRole('radio', {name: variant.names[3], exact: true});
+    await page.getByRole('radiogroup').filter({has: radio}).getByText(variant.names[3], {exact: true}).click();
+    await expect(radio).toBeChecked();
+    await page.getByRole('button', {name: variant.apply, exact: true}).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText(variant.group);
+    await dialog.getByRole('button', {name: variant.apply, exact: true}).click();
+    await expect(dialog).toHaveCount(0);
+    expect((await main()).content).toContain(`# 🇨🇳 ${variant.group}\n  cn {`);
+  });

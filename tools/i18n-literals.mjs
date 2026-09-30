@@ -13,7 +13,7 @@ const visibleAttributes = new Set([
 const dataFiles = new Map([
   ['src/i18n/languages.ts', 'each language named in itself'],
   ['src/features/shared/geo.ts', 'place names matched in node names'],
-  ['src/dae/templates.ts', 'generated configuration keeps the ACL4SSR and dae vocabulary verbatim'],
+  ['src/dae/templates.ts', 'generated routing comments and bilingual node-name match patterns'],
   ['src/api/mock/fixtures/configuration.ts', 'demo backend data, as honk would send it'],
   ['src/api/mock/fixtures/inventory.ts', 'demo backend data, as honk would send it']
 ]);

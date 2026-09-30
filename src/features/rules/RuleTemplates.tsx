@@ -1,8 +1,8 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup} from '../../ui/ui';
+import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup, Switch} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
-import type {TemplateChoice} from './template';
+import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
 
 // The simple view of the routing list: the routing modes as one choice, the detected one selected, and Apply to write
@@ -10,6 +10,7 @@ import type {RuleTemplatesModel} from './useRuleTemplates';
 export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
   const t = useT();
   const headingId = useId();
+  const optionHelpId = useId();
   const {current, dialog} = model;
   const radios = (choices: TemplateChoice[]) =>
     choices.map(choice => <Radio key={choice.id} value={choice.id} label={choice.name} description={choice.help} />);
@@ -28,6 +29,23 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             {radios(model.more)}
           </Disclosure>
         </RadioGroup>
+        <div className="rp-col">
+          {templateOptionKeys.map(option => (
+            <div className="rp-field" key={option}>
+              <Switch
+                isSelected={model[option]}
+                onChange={enabled => model.setOption(option, enabled)}
+                isDisabled={model.applying}
+                aria-describedby={`${optionHelpId}-${option}`}
+              >
+                {t(templateOptionText[option].label)}
+              </Switch>
+              <span id={`${optionHelpId}-${option}`} className="rp-label">
+                {t(templateOptionText[option].help)}
+              </span>
+            </div>
+          ))}
+        </div>
         <div className="rp-toolbar">
           <Button accent isDisabled={!model.canApply} onPress={model.open}>
             {t('rule.template.apply')}
@@ -47,6 +65,9 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         {dialog && (
           <>
             <p>{t('rule.template.scope', {file: dialog.file})}</p>
+            {dialog.optionImpact.map(text => (
+              <p key={text}>{text}</p>
+            ))}
             <ImpactList
               title={t('rule.template.created')}
               columns

@@ -1,79 +1,86 @@
-// Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
+import type {Key, Translator} from '../i18n';
 import {quote, scanConfig, unquote} from './text';
 import {isBuiltinOutbound} from './vocab';
-export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
-// Keep local traffic direct and block UDP/443 before template-specific routing.
-const preset = [
-  '# dae presets: the local network manager, the LAN and multicast stay off the proxy',
-  'pname(NetworkManager) -> direct',
-  "dip(224.0.0.0/3, 'ff00::/8') -> direct",
-  'dip(geoip:private) -> direct',
-  '# Block UDP/443',
-  'l4proto(udp) && dport(443) -> block'
-];
-const ads = ['# BanAD, BanProgramAD', 'domain(geosite:category-ads-all) -> block'];
-const chinaVendors = ['# GoogleCN, SteamCN', 'domain(geosite:google-cn, geosite:category-games@cn) -> direct'];
-const china = ['# ChinaDomain, ChinaCompanyIp, GEOIP CN', 'domain(geosite:cn) -> direct', 'dip(geoip:cn) -> direct'];
+export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'single' | 'services' | 'regions' | 'homebound';
+export type TemplateOptions = {blockAds: boolean; blockQuic: boolean; networkManagerDirect: boolean};
+export const defaultTemplateOptions: TemplateOptions = {blockAds: false, blockQuic: true, networkManagerDirect: true};
+const networkManager = ['# NetworkManager', 'pname(NetworkManager) -> direct'];
+const local = ['# dae presets: the LAN and multicast stay off the proxy', "dip(224.0.0.0/3, 'ff00::/8') -> direct", 'dip(geoip:private) -> direct'];
+const quic = ['# Block UDP/443', 'l4proto(udp) && dport(443) -> block'];
+const preset = [...networkManager, ...local, ...quic];
+const ads = ['# Ads', 'domain(geosite:category-ads-all) -> block'];
+const chinaVendors = ['# Google China services and mainland games', 'domain(geosite:google-cn, geosite:category-games@cn) -> direct'];
+const china = ['# Mainland China', 'domain(geosite:cn) -> direct', 'dip(geoip:cn) -> direct'];
 const telegram = (target: string) => ['# Telegram', `domain(geosite:telegram) -> ${target}`, `dip(geoip:telegram) -> ${target}`];
 const media = (target: string) => [
-  '# ProxyMedia',
+  '# Overseas media',
   `domain(geosite:youtube, geosite:netflix, geosite:disney, geosite:hbo, geosite:primevideo, geosite:twitch, geosite:spotify) -> ${target}`
 ];
-const gfw = (target: string) => ['# ProxyGFWlist', `domain(geosite:gfw) -> ${target}`];
+const gfw = (target: string) => ['# GFW list', `domain(geosite:gfw) -> ${target}`];
 
 // Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an
 // unfiltered honk group would select them too.
-type GroupSpec = {name: string; label: string; lines: string[]};
+type GroupSpec = {name: string; label: Key; flag?: string; lines: string[]};
 const everyNode = "filter: !name('direct', 'block')";
-const selectGroup = (name: string, label: string, nested: string[], fallback = nested[0]): GroupSpec => ({
+const selectGroup = (name: string, label: Key, nested: string[], fallback = nested[0]): GroupSpec => ({
   name,
   label,
   lines: [`filter: group(${nested.map(quote).join(', ')})`, everyNode, 'policy: select', `default: ${quote(fallback)}`]
 });
-const region = (name: string, label: string, pattern: string): GroupSpec => ({
+// `exclude` drops nodes the pattern would also catch, such as Hong Kong nodes named 中国香港.
+const region = (name: string, label: Key, flag: string, pattern: string, exclude?: string): GroupSpec => ({
   name,
   label,
-  lines: [`filter: name(regex: ${quote(pattern)})`, 'policy: min_moving_avg']
+  flag,
+  lines: [`filter: name(regex: ${quote(pattern)})${exclude ? ` && !name(regex: ${quote(exclude)})` : ''}`, 'policy: min_moving_avg']
 });
-// Native ACL4SSR labels and match patterns are configuration data, not translated UI copy.
 const templateText = {
-  proxy: '节点选择',
-  auto: '自动选择',
-  hk: ['香港节点', '港|HK|Hong Kong|HongKong'],
-  jp: ['日本节点', '日|JP|Japan|Tokyo'],
-  us: ['美国节点', '美|US|United States|America'],
-  tw: ['台湾节点', '台|TW|Taiwan'],
-  sg: ['狮城节点', '新加坡|獅城|狮城|SG|Singapore'],
-  kr: ['韩国节点', '韓|韩|KR|Korea'],
-  telegram: '电报消息',
-  media: '国外媒体',
-  apple: '苹果服务',
-  ai: 'Ai平台',
-  youtube: '油管视频',
-  netflix: '奈飞视频',
-  bahamut: '巴哈姆特'
+  proxy: 'rule.template.group.proxy',
+  auto: 'rule.template.group.auto',
+  hk: ['rule.template.group.hk', '🇭🇰', '港|HK|Hong Kong|HongKong'],
+  jp: ['rule.template.group.jp', '🇯🇵', '日|JP|Japan|Tokyo'],
+  us: ['rule.template.group.us', '🇺🇸', '美|US|United States|America'],
+  tw: ['rule.template.group.tw', '🇹🇼', '台|臺|TW|Taiwan'],
+  sg: ['rule.template.group.sg', '🇸🇬', '新加坡|獅城|狮城|SG|Singapore'],
+  kr: ['rule.template.group.kr', '🇰🇷', '韓|韩|KR|Korea'],
+  cn: [
+    'rule.template.group.cn',
+    '🇨🇳',
+    String.raw`(?i)回国|回國|中国|中國|大陆|大陸|(?:^|[^A-Za-z])(?:China|Mainland|CN)(?:[^A-Za-z]|$)`,
+    String.raw`(?i)香港|澳门|澳門|台湾|台灣|臺灣|(?:^|[^A-Za-z])(?:HK|MO|TW)(?:[^A-Za-z]|$)|Hong ?Kong|Macau|Macao|Taiwan`
+  ],
+  telegram: 'rule.template.group.telegram',
+  media: 'rule.template.group.media',
+  apple: 'rule.template.group.apple',
+  ai: 'rule.template.group.ai',
+  youtube: 'rule.template.group.youtube',
+  netflix: 'rule.template.group.netflix',
+  bahamut: 'rule.template.group.bahamut'
 } as const;
 
 const proxy = selectGroup('proxy', templateText.proxy, ['auto']);
 const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: min_moving_avg']};
-const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1]));
-const service = (name: string, label: string, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
+const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1], templateText[id][2]));
+const service = (name: string, label: Key, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
-// Preserve ACL4SSR rule order using dae's default geosite/geoip data. honk groups cannot contain direct, so DIRECT
-// services remain direct and {group} names the file's first group.
+// honk groups cannot contain direct; {group} names the file's first group.
 export const templates: Record<RuleTemplate, {rules: string[]; fallback: string; groups: GroupSpec[]}> = {
   global: {rules: [...preset], fallback: '{group}', groups: []},
-  bypass: {rules: [...preset, ...ads, ...chinaVendors, ...china], fallback: '{group}', groups: []},
-  gfw: {rules: [...preset, ...ads, ...telegram('{group}'), ...gfw('{group}')], fallback: 'direct', groups: []},
-  mini: {
-    rules: [...preset, ...ads, ...chinaVendors, ...telegram('proxy'), ...media('proxy'), ...gfw('proxy'), ...china],
+  bypass: {rules: [...preset, ...chinaVendors, ...china], fallback: '{group}', groups: []},
+  gfw: {rules: [...preset, ...telegram('{group}'), ...gfw('{group}')], fallback: 'direct', groups: []},
+  homebound: {
+    rules: [...preset, '# Mainland China', 'domain(geosite:cn) -> cn', 'dip(geoip:cn) -> cn'],
+    fallback: 'direct',
+    groups: [region('cn', ...templateText.cn)]
+  },
+  single: {
+    rules: [...preset, ...chinaVendors, ...telegram('proxy'), ...media('proxy'), ...gfw('proxy'), ...china],
     fallback: 'proxy',
     groups: [proxy, auto]
   },
-  standard: {
+  services: {
     rules: [
       ...preset,
-      ...ads,
       ...chinaVendors,
       '# Microsoft',
       'domain(geosite:microsoft) -> direct',
@@ -87,21 +94,20 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
     fallback: 'proxy',
     groups: [proxy, auto, service('telegram', templateText.telegram), service('media', templateText.media), service('apple', templateText.apple)]
   },
-  full: {
+  regions: {
     rules: [
       ...preset,
-      ...ads,
       ...chinaVendors,
-      '# Bing, OneDrive, Microsoft',
+      '# Microsoft',
       'domain(geosite:microsoft) -> direct',
       '# Apple',
       'domain(geosite:apple) -> direct',
       ...telegram('telegram'),
-      '# AI, OpenAi',
+      '# OpenAI',
       'domain(geosite:openai) -> ai',
-      '# NetEaseMusic',
+      '# NetEase Music',
       'domain(geosite:netease) -> direct',
-      '# Epic, Origin, Sony, Steam, Nintendo',
+      '# Games',
       'domain(geosite:category-games) -> direct',
       '# YouTube',
       'domain(geosite:youtube) -> youtube',
@@ -109,7 +115,7 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
       'domain(geosite:netflix) -> netflix',
       '# Bahamut',
       'domain(geosite:bahamut) -> bahamut',
-      '# BilibiliHMT, Bilibili',
+      '# Bilibili',
       'domain(geosite:bilibili) -> direct',
       ...media('media'),
       ...gfw('proxy'),
@@ -129,6 +135,21 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
     ]
   }
 };
+
+export function templateGroupLabel(group: GroupSpec, t: Translator): string {
+  return `${group.flag ? group.flag + ' ' : ''}${t(group.label)}`;
+}
+
+export function templateRules(template: RuleTemplate, options: Partial<TemplateOptions> = {}): string[] {
+  const {blockAds, blockQuic, networkManagerDirect} = {...defaultTemplateOptions, ...options};
+  return [
+    ...(networkManagerDirect ? networkManager : []),
+    ...local,
+    ...(blockQuic ? quic : []),
+    ...(blockAds ? ads : []),
+    ...templates[template].rules.slice(preset.length)
+  ];
+}
 
 // The top-level routing of `text` as honk reads it, one token list per rule or field: comments dropped, and spacing,
 // line breaks inside parentheses and quotes around match arguments ignored. Null when a routing block nests a section, which no template writes.
@@ -157,31 +178,40 @@ function routingEntries(text: string): string[][] | null {
 }
 // Stands for the `{group}` a template fills with the file's first group, as one token that no written name uses.
 const groupSlot = '\u0000group';
-const templateEntries = (template: RuleTemplate) =>
-  routingEntries(['routing {', ...templates[template].rules, `fallback: ${templates[template].fallback}`, '}'].join('\n').replaceAll('{group}', groupSlot))!;
+const templateEntries = (template: RuleTemplate, options: TemplateOptions) =>
+  routingEntries(
+    ['routing {', ...templateRules(template, options), `fallback: ${templates[template].fallback}`, '}'].join('\n').replaceAll('{group}', groupSlot)
+  )!;
 // The template whose rules and fallback the top-level routing of `text` holds, in order and nothing else, with the
 // group its `{group}` names; null for any other routing, including none. A group slot takes one proxy group, the same
 // wherever the template repeats it.
-export function detectTemplate(text: string): {template: RuleTemplate; group: string | null} | null {
+export function detectTemplate(text: string): (TemplateOptions & {template: RuleTemplate; group: string | null}) | null {
   const entries = routingEntries(text);
   if (!entries?.length) return null;
   for (const template of Object.keys(templates) as RuleTemplate[]) {
-    const expected = templateEntries(template);
-    if (expected.length !== entries.length) continue;
-    let group: string | null = null;
-    const same = expected.every((want, i) => {
-      const got = entries[i];
-      return (
-        want.length === got.length &&
-        want.every((token, j) => {
-          if (token !== groupSlot) return token === got[j];
-          if (isBuiltinOutbound(got[j]) || (group !== null && group !== got[j])) return false;
-          group = got[j];
-          return true;
-        })
-      );
-    });
-    if (same) return {template, group};
+    for (const blockAds of [false, true]) {
+      for (const blockQuic of [true, false]) {
+        for (const networkManagerDirect of [true, false]) {
+          const options = {blockAds, blockQuic, networkManagerDirect};
+          const expected = templateEntries(template, options);
+          if (expected.length !== entries.length) continue;
+          let group: string | null = null;
+          const same = expected.every((want, i) => {
+            const got = entries[i];
+            return (
+              want.length === got.length &&
+              want.every((token, j) => {
+                if (token !== groupSlot) return token === got[j];
+                if (isBuiltinOutbound(got[j]) || (group !== null && group !== got[j])) return false;
+                group = got[j];
+                return true;
+              })
+            );
+          });
+          if (same) return {template, group, ...options};
+        }
+      }
+    }
   }
   return null;
 }
