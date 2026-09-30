@@ -1,7 +1,7 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
-import {Button, InlineAlert, Kv, ModalDialog, Switch, TextField} from '../../ui/ui';
+import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
@@ -12,39 +12,32 @@ export type PolicyDetails = {
   interrupt: {selected: boolean; unset: boolean; isDisabled: boolean; change: (value: boolean) => void} | null;
 };
 // The group's configuration and its interrupt switch, under the declaration while editing and alone read-only.
-function Details({id, details: d}: {id: string; details: PolicyDetails}) {
+function Details({details: d}: {details: PolicyDetails}) {
   const t = useT();
   return (
-    <>
-      {d.reason && <span className="rp-label">{d.reason}</span>}
-      {d.heading && (d.fields.length > 0 || d.interrupt) && <h3 className="rp-label">{d.heading}</h3>}
+    <DialogSection title={d.heading && (d.fields.length > 0 || d.interrupt) ? d.heading : null}>
+      {d.reason && <InlineAlert tone="informative">{d.reason}</InlineAlert>}
       {d.interrupt && (
-        <div className="rp-field">
-          <Switch
-            isSelected={d.interrupt.selected}
-            isDisabled={d.interrupt.isDisabled}
-            onChange={d.interrupt.change}
-            aria-describedby={d.interrupt.unset ? `${id}-interrupt-unset` : undefined}
-          >
-            {t('policy.interrupt')}
-          </Switch>
-          {d.interrupt.unset && (
-            <span id={`${id}-interrupt-unset`} className="rp-label">
-              {t('policy.unsetDefault')}
-            </span>
-          )}
-        </div>
+        <Switch
+          isSelected={d.interrupt.selected}
+          isDisabled={d.interrupt.isDisabled}
+          onChange={d.interrupt.change}
+          description={d.interrupt.unset ? t('policy.unsetDefault') : undefined}
+        >
+          {t('policy.interrupt')}
+        </Switch>
       )}
       {d.fields.length > 0 && <Kv items={d.fields} />}
-    </>
+    </DialogSection>
   );
 }
-export function GroupDialog({id, model: m, details}: {id: string; model: GroupDialogView; details: PolicyDetails | null}) {
+export function GroupDialog({model: m, details}: {id: string; model: GroupDialogView; details: PolicyDetails | null}) {
   const t = useT();
   const form = useId();
   return (
     <ModalDialog
       title={m.title}
+      description={m.editing ? m.help : undefined}
       narrow
       isOpen={m.open}
       onOpenChange={open => {
@@ -63,71 +56,70 @@ export function GroupDialog({id, model: m, details}: {id: string; model: GroupDi
         )
       }
     >
-      {m.open && !m.editing && details && (
-        <div className="rp-list">
-          <Details id={id} details={details} />
-        </div>
-      )}
+      {m.open && !m.editing && details && <Details details={details} />}
       {m.editing && (
-        <form
+        <DialogForm
           id={form}
-          className="rp-list"
           onSubmit={event => {
             event.preventDefault();
             m.save(m.close);
           }}
         >
-          {m.name && (
-            <TextField
-              label={t('arrange.groupName')}
-              value={m.name.value}
-              onChange={m.name.change}
-              description={t('arrange.groupNameHint')}
-              error={m.name.error ?? undefined}
-              spellCheck={false}
-              isDisabled={m.busy}
-            />
-          )}
-          {m.help && <span className="rp-label">{m.help}</span>}
-          {m.problem && (
-            <InlineAlert key={m.problem.id} takeFocus>
-              {m.problem.text}
-            </InlineAlert>
-          )}
-          <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
-          {m.filters.map(field => (
-            <TextField
-              key={field.id}
-              label={field.label}
-              value={field.value}
-              placeholder="name(keyword: 'HK')"
-              isDisabled={m.busy}
-              spellCheck={false}
-              onChange={field.change}
-              action={
-                <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
-                  <Close />
-                </Button>
-              }
-            />
-          ))}
-          <Button small quiet isDisabled={m.busy} onPress={m.add}>
-            {t('policy.addFilter')}
-          </Button>
-          {m.routes.map(field => (
-            <SearchSelect
-              key={field.id}
-              label={field.label}
-              searchLabel={field.searchLabel}
-              sections={field.sections}
-              value={field.value}
-              description={field.description}
-              isDisabled={m.busy}
-              onChange={field.change}
-            />
-          ))}
-          {!m.name && details && <Details id={id} details={details} />}
-        </form>
+          <DialogSection>
+            {m.name && (
+              <TextField
+                label={t('arrange.groupName')}
+                isRequired
+                validationBehavior="aria"
+                value={m.name.value}
+                onChange={m.name.change}
+                description={t('arrange.groupNameHint')}
+                error={m.name.error ?? undefined}
+                spellCheck={false}
+                isDisabled={m.busy}
+              />
+            )}
+            {m.problem && (
+              <InlineAlert key={m.problem.id} takeFocus>
+                {m.problem.text}
+              </InlineAlert>
+            )}
+            <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
+            {m.filters.map(field => (
+              <TextField
+                key={field.id}
+                label={field.label}
+                value={field.value}
+                placeholder="name(keyword: 'HK')"
+                description={field.id === 0 ? t('policy.filterHelp') : undefined}
+                isDisabled={m.busy}
+                spellCheck={false}
+                onChange={field.change}
+                action={
+                  <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
+                    <Close />
+                  </Button>
+                }
+              />
+            ))}
+            <Button small quiet isDisabled={m.busy} onPress={m.add}>
+              {t('policy.addFilter')}
+            </Button>
+            {m.routes.map(field => (
+              <SearchSelect
+                key={field.id}
+                label={field.label}
+                searchLabel={field.searchLabel}
+                sections={field.sections}
+                value={field.value}
+                description={field.description}
+                isDisabled={m.busy}
+                onChange={field.change}
+              />
+            ))}
+          </DialogSection>
+          {!m.name && details && <Details details={details} />}
+        </DialogForm>
       )}
     </ModalDialog>
   );

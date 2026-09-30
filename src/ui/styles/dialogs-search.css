@@ -35,6 +35,17 @@
   gap: 16px;
   outline: none;
 }
+.rp-dialog-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.rp-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
 .rp-underlay {
   position: fixed;
   inset: 0;

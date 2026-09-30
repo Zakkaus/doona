@@ -24,7 +24,8 @@ export function Switch({
   onChange,
   isDisabled,
   'aria-label': label,
-  'aria-describedby': describedBy
+  'aria-describedby': describedBy,
+  description
 }: {
   children?: ReactNode;
   isSelected: boolean;
@@ -32,12 +33,31 @@ export function Switch({
   isDisabled?: boolean;
   'aria-label'?: string;
   'aria-describedby'?: string;
+  description?: string;
 }) {
-  return (
-    <RSwitch className="rp-switch" isSelected={isSelected} onChange={onChange} isDisabled={isDisabled} aria-label={label} aria-describedby={describedBy}>
+  const id = useId();
+  const control = (
+    <RSwitch
+      className="rp-switch"
+      isSelected={isSelected}
+      onChange={onChange}
+      isDisabled={isDisabled}
+      aria-label={label}
+      aria-describedby={[describedBy, description && id].filter(Boolean).join(' ') || undefined}
+    >
       <span className="track" />
       {children}
     </RSwitch>
+  );
+  return description ? (
+    <div className="rp-field">
+      {control}
+      <span id={id} className="rp-label">
+        {description}
+      </span>
+    </div>
+  ) : (
+    control
   );
 }
 export function TextField({
@@ -59,7 +79,7 @@ export function TextField({
   ...props
 }: Pick<
   ComponentProps<typeof RTextField>,
-  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled'
+  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled' | 'isRequired'
 > &
   Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> & {
     label: string;
@@ -132,7 +152,10 @@ export function TextField({
       className={cx(side ? 'rp-cluster' : 'rp-field', className)}
       style={width ? {width} : undefined}
     >
-      <Label className="rp-label">{label}</Label>
+      <Label className="rp-label">
+        {label}
+        {props.isRequired && <span aria-hidden="true"> *</span>}
+      </Label>
       {action ? (
         <div className="rp-toolbar">
           {input}

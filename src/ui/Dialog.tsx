@@ -3,6 +3,7 @@ import {
   useContext,
   useDeferredValue,
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentProps,
@@ -23,6 +24,7 @@ import {
   ModalOverlay,
   Dialog,
   Heading,
+  Text,
   Popover,
   type PopoverProps
 } from 'react-aria-components';
@@ -62,6 +64,7 @@ export function Disclosure({
 export function ModalDialog({
   trigger,
   title,
+  description,
   children,
   footer,
   narrow,
@@ -75,6 +78,7 @@ export function ModalDialog({
 }: {
   trigger?: ReactElement;
   title: string;
+  description?: string;
   children: ReactNode | ((close: () => void) => ReactNode);
   footer?: (close: () => void) => ReactNode;
   narrow?: boolean;
@@ -89,13 +93,24 @@ export function ModalDialog({
   // S2's dialog anatomy for long content: only the content scrolls, between a title and a footer that stay in view.
   scrollBody?: boolean;
 }) {
+  const descriptionId = useId();
   const modal = (
     <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
-        <Dialog className={cx('rp-dialog', scrollBody && 'split')} role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
+        <Dialog
+          className={cx('rp-dialog', scrollBody && 'split')}
+          role={alert ? 'alertdialog' : 'dialog'}
+          aria-label={hideTitle ? title : undefined}
+          aria-describedby={description ? descriptionId : undefined}
+        >
           {({close}) => (
             <ActionHelp reason={footer ? reason : null}>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
+              {description && (
+                <Text slot="description" id={descriptionId} className="rp-label">
+                  {description}
+                </Text>
+              )}
               {scrollBody ? (
                 <ScrollBody>{typeof children === 'function' ? children(close) : children}</ScrollBody>
               ) : typeof children === 'function' ? (
@@ -117,6 +132,28 @@ export function ModalDialog({
     </DialogTrigger>
   ) : (
     modal
+  );
+}
+
+export function DialogForm({children, ...props}: Omit<ComponentProps<'form'>, 'className'>) {
+  return (
+    <form {...props} className="rp-dialog-sections">
+      {children}
+    </form>
+  );
+}
+
+export function DialogSection({title, children}: {title?: string | null; children: ReactNode}) {
+  const id = useId();
+  return (
+    <section className="rp-dialog-section" aria-labelledby={title ? id : undefined}>
+      {title && (
+        <Heading level={3} id={id} className="rp-label">
+          {title}
+        </Heading>
+      )}
+      {children}
+    </section>
   );
 }
 
