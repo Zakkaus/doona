@@ -79,7 +79,9 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(page.getByText(/Showing nodes from sub-d\./)).toBeVisible();
   await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
   await moreAction(page.locator('body'), 'Remove sub-d', 'More actions for sub-d');
-  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-d', exact: true}).click();
+  const removal = page.getByRole('alertdialog', {name: 'Remove node source sub-d', exact: true});
+  await expect(removal).toContainText('Deletes this node source and its nodes from the main configuration and reloads.');
+  await removal.getByRole('button', {name: 'Remove sub-d', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d removed'})).toBeVisible();
   await expect(sources).toHaveCount(2);
   await expect(sources.filter({hasText: 'sub-d'})).toHaveCount(0);
@@ -452,7 +454,7 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
   backend.handlers['GET geodata'] = slow(() => backend.api.geodata());
   const whole = (cell: Locator) => cell.evaluate(element => element.scrollWidth <= element.clientWidth);
   await page.goto('/#/nodes');
-  const sources = page.getByRole('grid', {name: 'Sources', exact: true});
+  const sources = page.getByRole('grid', {name: 'Node sources', exact: true});
   await expect(sources.getByRole('row')).toHaveCount(3);
   // A heading, two rows and the frame: no placeholder height left over from loading.
   await expect.poll(async () => (await page.locator('.rp-table', {has: sources}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
@@ -471,7 +473,7 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
 test('the note about node sources belongs to the list, not the latency tab', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/nodes');
-  const note = page.getByText(/^Sources are subscriptions, files/);
+  const note = page.getByText(/^Node sources are subscriptions, files/);
   await expect(note).toBeVisible();
   await page.getByRole('tab', {name: 'Latency', exact: true}).click();
   await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
@@ -540,7 +542,7 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
 
 test('the node list names its source, groups a node by a labelled menu, and refreshes every subscription', async ({page}) => {
   await page.goto('/#/nodes?tab=list&provider=inline');
-  await expect(page.getByText('Showing nodes from config.dae. Choose another source above to view its nodes.', {exact: true})).toBeVisible();
+  await expect(page.getByText('Showing nodes from config.dae. Choose another node source above to view its nodes.', {exact: true})).toBeVisible();
   const join = page.getByRole('button', {name: 'Add hk-01 to a group', exact: true});
   await expect(join).toHaveText('Add to group');
   await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
@@ -573,7 +575,7 @@ test('a node search looks through every source and names the source of each resu
   await page.goto('/#/nodes?provider=sub-c');
   const table = page.locator('.rp-table').nth(1);
   const list = rows(table);
-  const source = table.getByRole('columnheader', {name: /^Source/});
+  const source = table.getByRole('columnheader', {name: /^Node source/});
   await expect(source).toHaveCount(0);
   await page.getByLabel('Search nodes').fill('hk-0');
   await expect(list).toHaveCount(2);
@@ -756,7 +758,7 @@ test('a subscription in a read-only source offers its source file instead of an 
   };
   await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first();
-  const open = await moreItem(sources, 'Open config source', 'More actions for sub-c');
+  const open = await moreItem(sources, 'Open config file', 'More actions for sub-c');
   await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
   await open.click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
@@ -829,7 +831,7 @@ test('two subscriptions sharing a name offer their source file instead of an edi
   const named = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
   await expect(named).toHaveCount(2);
   for (const row of [named.first(), named.last()]) {
-    await expect(await moreItem(row, 'Open config source', 'More actions for sub-c')).toBeVisible();
+    await expect(await moreItem(row, 'Open config file', 'More actions for sub-c')).toBeVisible();
     await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
     await page.keyboard.press('Escape');
   }
@@ -892,7 +894,7 @@ test('an edit refused because the entry left its file says so on the next save',
   await apply.click();
   await expect(dialog.getByRole('alert')).toBeVisible();
   await apply.click();
-  await expect(dialog.getByRole('alert')).toContainText('This subscription is no longer in its source file');
+  await expect(dialog.getByRole('alert')).toContainText('This subscription is no longer in its config file');
 });
 
 test('with no subscription and no node the page says so and offers Add subscription', async ({page}) => {

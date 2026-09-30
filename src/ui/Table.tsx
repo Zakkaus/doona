@@ -1,5 +1,6 @@
-import {useEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
 import {cx} from './cx';
+import {VisuallyHidden} from 'react-aria';
 import {
   Table,
   ResizableTableContainer,
@@ -23,7 +24,17 @@ import {revealFlowRow, useTableFlow} from './tableFlow';
 
 // Minima include padding; positive drop priorities yield in ascending order when columns cannot fit. A phone drops none:
 // the table scrolls sideways instead (see DataTable).
-type Col = {id: string; label: string; minWidth: number; grow?: number; isRowHeader?: boolean; align?: 'end'; drop?: number; sortable?: boolean};
+type Col = {
+  id: string;
+  label: string;
+  minWidth: number;
+  grow?: number;
+  isRowHeader?: boolean;
+  align?: 'end';
+  drop?: number;
+  sortable?: boolean;
+  hideLabel?: boolean;
+};
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
 // A group row in tree mode: its label under the first column, its totals under the others, then its children.
@@ -48,7 +59,7 @@ export function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols
           {({sortDirection}) => (
             <>
               <span className="rp-th">
-                {c.label}
+                {c.hideLabel ? <VisuallyHidden>{c.label}</VisuallyHidden> : c.label}
                 {sortDirection && <ChevronDown className={cx('rp-sort', sortDirection)} />}
               </span>
               {resizable && <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />}
@@ -262,6 +273,31 @@ export function DataTable<T extends {id: string}>({
   const at = reveal && selected ? flat.findIndex(r => r.id === selected) : -1;
   // A virtualised grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
+  const scrollFrame = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!phone) return;
+    const frame = scrollFrame.current;
+    const scroller = virtual || tree ? grid.current : ref.current;
+    if (!frame || !scroller) return;
+    const rtl = getComputedStyle(scroller).direction === 'rtl';
+    const fade = () => {
+      const from = Math.abs(scroller.scrollLeft);
+      const start = from > 1;
+      const end = from < scroller.scrollWidth - scroller.clientWidth - 1;
+      const sides = [(rtl ? end : start) && 'left', (rtl ? start : end) && 'right'].filter(Boolean).join(' ');
+      if (sides) frame.dataset.fade = sides;
+      else delete frame.dataset.fade;
+    };
+    fade();
+    const observer = new ResizeObserver(fade);
+    observer.observe(scroller);
+    for (const child of scroller.children) observer.observe(child);
+    scroller.addEventListener('scroll', fade, {passive: true});
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener('scroll', fade);
+    };
+  }, [phone, virtual, tree, shown, ref]);
   const detailRef = useRef<HTMLDivElement>(null);
   const [restoreKey, setRestoreKey] = useState<string | null>(null);
   useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref, flow);
@@ -419,11 +455,18 @@ export function DataTable<T extends {id: string}>({
       )}
     </ResizableTableContainer>
   );
-  if (!detail) return container;
+  const scrolling = phone ? (
+    <div ref={scrollFrame} className="rp-table-scroll">
+      {container}
+    </div>
+  ) : (
+    container
+  );
+  if (!detail) return scrolling;
   const open = selected ? flat.find(row => row.id === selected && !isGroup(row)) : undefined;
   return (
     <>
-      {container}
+      {scrolling}
       {/* Always mounted, so the text it takes is announced; empty, it takes no room. */}
       <div ref={detailRef} className="rp-table-detail" data-flow={flow || undefined} aria-live="polite">
         {open && (

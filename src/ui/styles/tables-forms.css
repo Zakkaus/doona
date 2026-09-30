@@ -1,3 +1,33 @@
+.rp-table-scroll {
+  position: relative;
+  min-width: 0;
+}
+.rp-table-scroll::before,
+.rp-table-scroll::after {
+  content: '';
+  position: absolute;
+  inset-block: 1px;
+  width: 24px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+.rp-table-scroll::before {
+  left: 1px;
+  background: linear-gradient(to right, var(--rp-surface), transparent);
+  border-start-start-radius: var(--rp-r-md);
+  border-end-start-radius: var(--rp-r-md);
+}
+.rp-table-scroll::after {
+  right: 1px;
+  background: linear-gradient(to left, var(--rp-surface), transparent);
+  border-start-end-radius: var(--rp-r-md);
+  border-end-end-radius: var(--rp-r-md);
+}
+.rp-table-scroll[data-fade~='left']::before,
+.rp-table-scroll[data-fade~='right']::after {
+  opacity: 1;
+}
 .rp-table {
   width: 100%;
   min-width: 0;

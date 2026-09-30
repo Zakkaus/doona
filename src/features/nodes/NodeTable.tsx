@@ -1,10 +1,12 @@
 import {createContext, useContext, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
+import {phoneQuery, useMediaQuery} from '../../ui/hooks';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
 import {SearchSelect} from '../../ui/SearchSelect';
 import SpeedFast from '../../ui/icons/SpeedFast';
+import {primaryFirst} from './tableColumns';
 import type {NodeTableView} from './useNodeTable';
 
 // The node whose probe is running, read by the probe buttons alone, so a probe starting or ending re-renders the
@@ -20,6 +22,7 @@ function ProbeButton({row}: {row: NodeTableView['rows'][number]}) {
 }
 export function NodeTable({model: m}: {model: NodeTableView}) {
   const t = useT();
+  const phone = useMediaQuery(phoneQuery);
   const {canManage, writable, sourceBusy, busy, across} = m;
   const columns = useMemo<TableColumn<NodeTableView['rows'][number]>[]>(
     () => [
@@ -37,7 +40,15 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       },
       ...(across
-        ? [{id: 'source', label: t('nodes.provider'), minWidth: 140, render: (row: NodeTableView['rows'][number]) => <TextTooltip>{row.source}</TextTooltip>}]
+        ? [
+            {
+              id: 'source',
+              label: t('nodes.provider'),
+              minWidth: 140,
+              drop: 3,
+              render: (row: NodeTableView['rows'][number]) => <TextTooltip>{row.source}</TextTooltip>
+            }
+          ]
         : []),
       {id: 'protocol', label: t('nodes.protocol'), minWidth: 144, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
       {
@@ -54,6 +65,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {
         id: 'actions',
         label: t('ui.actions'),
+        hideLabel: phone,
         minWidth: (canManage ? 108 : 72) + (writable ? 112 : 0),
         grow: 0,
         render: row => (
@@ -74,8 +86,9 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       }
     ],
-    [t, across, canManage, writable, sourceBusy, busy]
+    [t, across, canManage, writable, sourceBusy, busy, phone]
   );
+  const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
   return (
     <>
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
@@ -90,14 +103,10 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         <LabeledSelect label={t('nodes.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
         <span className="rp-label">{m.shown}</span>
         <span className="rp-grow" />
-        {m.canManage && (
-          <Button small onPress={m.onAdd}>
-            {t('nodes.addNode')}
-          </Button>
-        )}
+        {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
       </div>
       <ProbeBusy.Provider value={m.probeBusy}>
-        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={m.empty} sort={m.sort} onSort={m.setSort} cols={columns} />
+        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={m.empty} sort={m.sort} onSort={m.setSort} cols={cols} />
       </ProbeBusy.Provider>
     </>
   );
