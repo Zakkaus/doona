@@ -29,20 +29,10 @@ export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
-            {lead && i === 0 ? (
-              <TextTooltip className="rp-big" cut="start">
-                {fact.value}
-              </TextTooltip>
-            ) : (
-              <span className="rp-big" title={fact.value}>
-                {fact.value}
-              </span>
-            )}
-            {fact.caption && (
-              <span className="rp-fact-caption" title={fact.caption}>
-                {fact.caption}
-              </span>
-            )}
+            <TextTooltip className="rp-big" cut={lead && i === 0 ? 'start' : undefined}>
+              {fact.value}
+            </TextTooltip>
+            {fact.caption && <TextTooltip className="rp-fact-caption">{fact.caption}</TextTooltip>}
           </dd>
         </div>
       ))}

@@ -79,7 +79,7 @@ const FirstShow = createContext<FirstShowGate>({hold() {}, release() {}});
 function PolicyList({loading, children}: {loading: boolean; children: ReactNode}) {
   const waiting = useRef(new Set<string>());
   const [shown, setShown] = useState(false);
-  const [, recheck] = useReducer((n: number) => n + 1, 0);
+  const [checks, recheck] = useReducer((n: number) => n + 1, 0);
   const gate = useMemo<FirstShowGate>(
     () => ({
       hold: id => void waiting.current.add(id),
@@ -93,7 +93,7 @@ function PolicyList({loading, children}: {loading: boolean; children: ReactNode}
   // opened on screen has already asked to be waited for.
   useLayoutEffect(() => {
     if (!shown && !loading && !waiting.current.size) setShown(true);
-  });
+  }, [shown, loading, checks]);
   return (
     <FirstShow value={gate}>
       <div className="rp-policy-list" data-wait={shown ? undefined : ''}>

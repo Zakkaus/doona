@@ -68,8 +68,8 @@ export function SourceCard(props: SourceCardProps) {
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
-          {shown.map((item, index) => (
-            <div className="rp-cluster" role="listitem" key={index}>
+          {shown.map(item => (
+            <div className="rp-cluster" role="listitem" key={item.id}>
               <Light small tone={item.tone}>
                 {item.detail}
               </Light>
