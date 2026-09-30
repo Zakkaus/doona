@@ -109,6 +109,7 @@
 .rp-tree-tile[data-stage='rule'] .l {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
   font-size: var(--rp-text-xs);
+  font-variant-ligatures: none;
 }
 .rp-tree-tile .s {
   margin-inline-start: 8px;

@@ -94,6 +94,10 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
   await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
   await expect(diff).not.toContainText('tproxy_port');
+  // At phone width a long line wraps inside the panel rather than scrolling it sideways.
+  await page.setViewportSize({width: 320, height: 800});
+  await expect.poll(() => diff.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
+  await page.setViewportSize({width: 1440, height: 1000});
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Applied Bypass mainland China to config.dae');
   await expect(dialog).toHaveCount(0);
