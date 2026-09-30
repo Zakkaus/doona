@@ -1174,7 +1174,7 @@
   "rule.kind": "依据",
   "rule.kind.dip": "目标 IP",
   "rule.kind.domain": "完整域名",
-  "rule.kind.domainKeyword": "域名 keyword",
+  "rule.kind.domainKeyword": "域名关键字",
   "rule.kind.domainSuffix": "域名后缀",
   "rule.kind.dport": "目标端口",
   "rule.kind.geoip": "geoip 地区",

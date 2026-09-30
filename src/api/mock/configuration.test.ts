@@ -340,11 +340,13 @@ it('answers node and provider writes with an operation when asked to', async () 
   expect(operation).toMatchObject({kind: 'node_create', status: 'succeeded', result: {name: 'queued-node', protocol: 'anytls'}});
 });
 
-it('round trips a written domain keyword condition and detects its match in a routing trace', async () => {
+it.each([
+  [ruleCondition('domainKeyword', 'tracker, ads, ad:slot')!, ['api.tracker.example', 'api.ads.example', 'api.ad:slot.example']],
+  [`domain(keyword: 'track,er', keyword: "ad:slot")`, ['api.track,er.example', 'api.ad:slot.example']]
+])('round trips %s and detects each keyword match in a routing trace', async (condition, domains) => {
   vi.useFakeTimers();
   const api = createMockApi();
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const condition = ruleCondition('domainKeyword', 'tracker')!;
   const content = `routing {
   ${condition} -> block
   fallback: direct
@@ -354,10 +356,8 @@ it('round trips a written domain keyword condition and detects its match in a ro
   expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
   expect((await api.rules()).rules[0].expression).toBe(condition);
   expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(content);
-  for (const [domain, outbound] of [
-    ['api.tracker.example', 'block'],
-    ['example.org', 'direct']
-  ]) {
+  for (const domain of [...domains, 'example.org', 'api.track.example', 'api.er.example', 'api.ad.example']) {
+    const outbound = domains.includes(domain) ? 'block' : 'direct';
     const trace = await api.routingTrace({input: {network: 'tcp', domain, dst_ip: '192.0.2.1', dst_port: 443}, resolve: 'none'});
     expect(trace.evaluations[0]).toMatchObject({decision: 'determinate', outbound});
   }
