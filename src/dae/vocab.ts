@@ -57,8 +57,8 @@ const policyKinds: Record<string, Group['policy']['kind']> = {
 export function policyKind(native: string): Group['policy']['kind'] | undefined {
   return policyKinds[native.toLowerCase().replace(/\(.*$/, '')];
 }
-// Written out rather than read from policyKinds, which also knows `random`: the editor does not offer it until the
-// engine is confirmed to accept it.
+// Written out rather than read from policyKinds, which also knows `random`: dae accepts it, but honk reads it as an
+// unknown policy and falls back to a selector, so the editor does not offer it.
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
