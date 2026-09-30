@@ -1179,7 +1179,6 @@
   "policy.addFilter": "Add filter",
   "policy.aliveOnly": "Available only",
   "policy.allRegions": "All regions",
-  "policy.automatic": "Automatic",
   "policy.backToAutomatic": "{name} is automatic again, currently {member}",
   "policy.both": "Both",
   "policy.byLatency": "By latency",

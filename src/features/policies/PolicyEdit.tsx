@@ -16,6 +16,7 @@ function Details({id, details: d}: {id: string; details: PolicyDetails}) {
   return (
     <>
       {d.reason && <span className="rp-label">{d.reason}</span>}
+      {d.heading && (d.fields.length > 0 || d.interrupt) && <h3 className="rp-label">{d.heading}</h3>}
       {d.interrupt && (
         <div className="rp-field">
           <Switch
@@ -33,7 +34,6 @@ function Details({id, details: d}: {id: string; details: PolicyDetails}) {
           )}
         </div>
       )}
-      {d.heading && d.fields.length > 0 && <h3 className="rp-label">{d.heading}</h3>}
       {d.fields.length > 0 && <Kv items={d.fields} />}
     </>
   );

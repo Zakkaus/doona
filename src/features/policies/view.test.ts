@@ -25,6 +25,7 @@ import {
   groupActionsReason,
   groupKind,
   kindFilter,
+  kindQuery,
   kindView,
   memberViews,
   nodeGridView,
@@ -35,6 +36,12 @@ import {
 } from './view';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
+it('writes the kind filter into the URL, clears a deep link and preserves other query state', () => {
+  expect(kindQuery('tab=groups&kind=auto&group=a&keep=1', 'manual')).toBe('tab=groups&kind=manual&keep=1');
+  expect(kindQuery('kind=manual&group=a&keep=1', 'auto')).toBe('kind=auto&keep=1');
+  expect(kindQuery('kind=manual&group=a&keep=1', 'all')).toBe('keep=1');
+  expect(kindQuery('kind=manual&group=a&keep=1', 'invalid')).toBe('keep=1');
+});
 it('projects nested, failed and unmeasured members without inventing latency', () => {
   const {groups} = nodeFixtures(0, true);
   const members = memberViews(memberHealth(groups[0], new Map()), t);

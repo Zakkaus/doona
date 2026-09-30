@@ -3,7 +3,7 @@ import {poll, useCapabilities, useGroups, useNodes} from '../../store';
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
-import {groupKind, groupOwners, kindFilter, kindView, outboundLinks, type OutboundCatalogue} from './view';
+import {groupKind, groupOwners, kindFilter, kindQuery, kindView, outboundLinks, type OutboundCatalogue} from './view';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
@@ -78,6 +78,10 @@ export function usePolicies({go, query}: PageProps) {
     [groupKey, named, health.map, owners]
   );
   const kinds = kindView(cards, kindFilter(params.get('kind')), focus, t);
+  const requested = kindFilter(params.get('kind'));
+  useEffect(() => {
+    if (kinds.kind !== requested) go('policies', within(query, {kind: null}), {replace: true});
+  }, [kinds.kind, requested, go, query]);
   const ready = !!groups.data;
   // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
   // once per link, and never after the user starts moving the page themselves.
@@ -118,7 +122,7 @@ export function usePolicies({go, query}: PageProps) {
     kindItems: kinds.items,
     kindEmpty: kinds.empty,
     kindLabel: t('policy.kind.label'),
-    setKind: (next: string) => go('policies', within(query, {kind: next === 'all' ? null : kindFilter(next), group: null})),
+    setKind: (next: string) => go('policies', kindQuery(query, next)),
     showKinds: cards.length > 0,
     focus,
     health: health.map,
