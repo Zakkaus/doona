@@ -1,6 +1,18 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent, GroupSummary} from './model';
-import {addressPort, eventSummary, memoryTone, nodeOwner, resolveSelectedLeaf, routineGap, shortId} from './selectors';
+import {
+  addressPort,
+  eventKindLabels,
+  eventKinds,
+  eventSummary,
+  logLevelLabels,
+  logLevels,
+  memoryTone,
+  nodeOwner,
+  resolveSelectedLeaf,
+  routineGap,
+  shortId
+} from './selectors';
 import {formatNumber, LOCALE, readLang, translate} from '../i18n';
 import {createMockApi} from './mock';
 
@@ -97,4 +109,14 @@ it('names every operation status, queued included, and shows an unknown one as s
   expect(summary('queued')).toBe('Queued');
   expect(summary('running')).toBe('Running');
   expect(summary('paused')).toBe('paused');
+});
+
+it('lists every log level once, least severe first as the contract orders them', () => {
+  expect(logLevels).toEqual(['trace', 'debug', 'info', 'warn', 'error']);
+  expect([...logLevels].sort()).toEqual(Object.keys(logLevelLabels).sort());
+});
+
+it('lists every labelled event kind', () => {
+  expect(eventKinds).toEqual(Object.keys(eventKindLabels));
+  expect(eventKinds).toEqual(['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed']);
 });

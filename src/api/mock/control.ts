@@ -1,6 +1,6 @@
 import type {Group, HealthObservation, JsonPatch, Node, ProbeRequest, ProbeResult} from '../model';
 import {ApiError} from '../error';
-import {safeHttpUrl} from '../selectors';
+import {policyKindLabels, safeHttpUrl} from '../selectors';
 
 export function resolveLeaf(id: string, network: 'tcp' | 'udp', nodes: Node[], groups: Group[], seen = new Set<string>()): Node | undefined {
   const node = nodes.find(n => n.id === id);
@@ -132,7 +132,7 @@ export function patchGroupConfig(group: Group, ops: JsonPatch): Pick<Group, 'pol
     typeof policy !== 'object' ||
     policy === null ||
     !('kind' in policy) ||
-    !['fixed', 'selector', 'urltest', 'loadbalance', 'fallback', 'random', 'score'].includes(String(policy.kind)) ||
+    !Object.hasOwn(policyKindLabels, String(policy.kind)) ||
     !('native' in policy) ||
     typeof policy.native !== 'string'
   )

@@ -165,7 +165,6 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
 export type LabelFn = (key: Key) => string;
-export const eventKinds: EventKind[] = ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'];
 export const eventKindLabels: Record<EventKind, Key> = {
   'stream.ready': 'event.k.streamReady',
   'runtime.updated': 'event.k.runtimeUpdated',
@@ -174,6 +173,7 @@ export const eventKindLabels: Record<EventKind, Key> = {
   'operation.updated': 'event.k.operationUpdated',
   'generation.changed': 'event.k.generationChanged'
 };
+export const eventKinds = Object.keys(eventKindLabels) as EventKind[];
 // Eviction, sampling and buffer overflow are routine: the backend drops records by design under load, so they stay
 // off the home card. A recording-scope change is still reported.
 export function routineGap(event: ApiEvent): boolean {
@@ -263,6 +263,8 @@ export const policyKindLabels: Record<Group['policy']['kind'], Key> = {
   random: 'policy.kind.random',
   score: 'policy.kind.score'
 };
+// Contract order, least severe first: trace < debug < info < warn < error.
+export const logLevels = ['trace', 'debug', 'info', 'warn', 'error'] as const satisfies readonly LogLevel[];
 export const logLevelLabels: Record<LogLevel, Key> = {
   trace: 'log.level.trace',
   debug: 'log.level.debug',

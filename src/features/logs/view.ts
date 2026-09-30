@@ -1,11 +1,10 @@
-import {logLevelLabels} from '../../api/selectors';
+import {logLevelLabels, logLevels} from '../../api/selectors';
 import {enumLabel} from '../../i18n/enum';
 import type {LogLevel, LogRecord, RecorderState} from '../../api/model';
 import {recorderEmpty} from '../shared/recorder';
 import {localTime} from '../../i18n/format';
 import {type Translator as LabelFn} from '../../i18n';
 
-const severity: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error'];
 const tones = {trace: 'muted', debug: 'neutral', info: 'info', warn: 'warn', error: 'err'} as const;
 type LogRow = {
   id: string;
@@ -53,7 +52,7 @@ export function logView(
   // The runtime log.level: the engine emits nothing below it, whatever the stream asks for.
   recorded?: LogLevel
 ) {
-  const below = (level: LogLevel) => !!recorded && severity.indexOf(level) < severity.indexOf(recorded);
+  const below = (level: LogLevel) => !!recorded && logLevels.indexOf(level) < logLevels.indexOf(recorded);
   return {
     rows: records.flatMap(record => {
       const row = logRow(record, locale, t);

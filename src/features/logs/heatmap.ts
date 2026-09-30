@@ -1,5 +1,6 @@
 import type {LogLevel, LogRecord} from '../../api/model';
 import {timeBuckets} from '../../ui/charts/layout';
+import {logLevels} from '../../api/selectors';
 
 // A record never changes once received, so its time is parsed once rather than on every publication.
 const parsed = new WeakMap<object, number>();
@@ -10,7 +11,7 @@ function timeOf(record: Pick<LogRecord, 'ts'>) {
 }
 
 // Most severe first, so the rows read top-down from what matters.
-const severity: LogLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
+const severity: LogLevel[] = [...logLevels].reverse();
 
 // Records per level per time bucket over the span the feed holds. Only levels the feed can contain are rows:
 // those the backend offers at or above the chosen minimum.
