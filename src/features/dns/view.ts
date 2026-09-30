@@ -202,12 +202,12 @@ export function dnsLogsExport(records: DnsLogRecord[]) {
   );
 }
 
-export function appendDnsLog(data: DnsLogList, page: DnsLogList): DnsLogList {
+export function appendDnsLog<T extends DnsLogList>(data: T, page: DnsLogList): T {
   const ids = new Set(data.records.map(record => record.id));
   return {...data, records: [...data.records, ...page.records.filter(record => !ids.has(record.id))], next_cursor: page.next_cursor};
 }
 
-export function dnsLogWindow(head: DnsLogList | undefined, held: DnsLogList | null) {
+export function dnsLogWindow<T extends DnsLogList>(head: T | undefined, held: T | null) {
   const ids = held && new Set(held.records.map(record => record.id));
   return {data: held ?? head, newerWaiting: !!ids && !!head?.records.some(record => !ids.has(record.id))};
 }

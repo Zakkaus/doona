@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
-import {backendCode, backendMessage, oneLine} from './backend';
+import {backendCode, backendMessage, diagnosticMessage, oneLine} from './backend';
 import {LANGS, translate, type Lang, type Translator} from './index';
+import type {ConfigDiagnostic} from '../api/model';
 
 // The codes honk sets on operation.error, provider.last_error and health.error, which the contract leaves to the adapter.
 const operationCodes = [
@@ -31,6 +32,13 @@ it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %
     expect(text, code).not.toContain('English message');
     expect(text, code).not.toContain('ui.backend.');
   }
+});
+
+it('reads an inherited property name as an unknown code', () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  expect(backendMessage('constructor', 'From the backend', t, {stage: 'toString'}).summary).toContain('From the backend');
+  expect(backendCode('hasOwnProperty', t)).toBe('hasOwnProperty');
+  expect(diagnosticMessage({code: 'constructor', message: 'From the backend', params: {}} as ConfigDiagnostic, t).summary).toContain('From the backend');
 });
 
 it('falls back to the backend message for a code it does not know', () => {

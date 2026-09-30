@@ -1,4 +1,5 @@
 import {expect, it, vi} from 'vitest';
+import {writeProfiles} from './profiles';
 import {append, bucket, fineLimit, mean, pruneRings, record, resetRings, window, type Fold} from './rings';
 
 type Sample = {time: number; value: number | null};
@@ -128,10 +129,7 @@ it('separates an edited backend while retaining history across credential change
     setItem: (key: string, value: string) => storage.set(key, value),
     removeItem: (key: string) => storage.delete(key)
   });
-  const profile = (api: string, token = '') => {
-    storage.set('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api, token}]));
-    storage.set('doona-profile', 'home');
-  };
+  const profile = (api: string, token = '') => writeProfiles({profiles: [{id: 'home', name: 'Home', api, token}], activeId: 'home'});
   vi.useFakeTimers();
   try {
     profile('https://one.example/');
@@ -149,7 +147,30 @@ it('separates an edited backend while retaining history across credential change
     ]);
   } finally {
     resetRings();
+    writeProfiles({profiles: [], activeId: ''});
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('keeps writing to its own backend when another tab edits the profile', () => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key)
+  });
+  try {
+    writeProfiles({profiles: [{id: 'home', name: 'Home', api: 'https://one.example', token: ''}], activeId: 'home'});
+    record('tabs', {time: 1, value: 10}, fold);
+    storage.set('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://two.example', token: ''}]));
+    expect(record<Sample>('tabs', {time: 2, value: 20}, fold).fine).toEqual([
+      {time: 1, value: 10},
+      {time: 2, value: 20}
+    ]);
+  } finally {
+    resetRings();
+    writeProfiles({profiles: [], activeId: ''});
     vi.unstubAllGlobals();
   }
 });

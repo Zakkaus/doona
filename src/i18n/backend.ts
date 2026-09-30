@@ -90,6 +90,9 @@ const demoDiagnostics: Record<string, [Key, ...string[]]> = {
   unknown_section: ['config.diagnostic.unknownSection', 'name']
 };
 
+// Codes arrive from the backend, so a name such as `constructor` must not find what every object inherits.
+const own = <V>(table: Record<string, V>, code: string): V | undefined => (Object.hasOwn(table, code) ? table[code] : undefined);
+
 // Codes honk reuses for unrelated failures, such as a group field, a probe target, a DNS record type, a node name
 // already in use or a connection that cannot be closed: their words alone cannot tell these apart, so the backend's
 // own message goes with them.
@@ -103,9 +106,11 @@ export type BackendMessage = {summary: string; detail?: string};
 // does, adds nothing, so a reused code keeps the backend's words.
 export function backendMessage(code: string, message: string, t: Translator, details?: unknown): BackendMessage {
   const named = (details as {stage?: unknown} | null | undefined)?.stage;
-  const stage = named === code && known[code] ? undefined : named;
-  if (typeof stage === 'string' && known[stage]) return {summary: t(known[stage])};
-  const text = known[code] ? t(known[code]) : t('ui.backendMessage', {message});
+  const codeKey = own(known, code);
+  const stage = named === code && codeKey ? undefined : named;
+  const stageKey = typeof stage === 'string' ? own(known, stage) : undefined;
+  if (stageKey) return {summary: t(stageKey)};
+  const text = codeKey ? t(codeKey) : t('ui.backendMessage', {message});
   const summary = typeof stage === 'string' ? t('ui.aside', {text, note: stage}) : text;
   return reused.has(code) && message ? {summary, detail: message} : {summary};
 }
@@ -113,8 +118,8 @@ export function backendMessage(code: string, message: string, t: Translator, det
 // A config diagnostic, for its row and its editor mark alike: a known code in the page language, with the backend's
 // words as the detail when they say more. A demo code missing a param its words take reads as any backend code.
 export function diagnosticMessage({code, message, params}: ConfigDiagnostic, t: Translator): BackendMessage {
-  const [demo, ...needs] = demoDiagnostics[code] ?? [];
-  const key = demo && needs.every(name => params?.[name] !== undefined) ? demo : known[code];
+  const [demo, ...needs] = own(demoDiagnostics, code) ?? [];
+  const key = demo && needs.every(name => params?.[name] !== undefined) ? demo : own(known, code);
   if (!key) return backendMessage(code, message, t);
   const summary = t(key, params);
   return message && message !== summary ? {summary, detail: message} : {summary};
@@ -126,4 +131,7 @@ export const oneLine = ({summary, detail}: BackendMessage, t: Translator) => (de
 export const knownCode = (code: string) => Object.hasOwn(known, code);
 
 // A bare code without a message of its own: its words when known, else the code itself.
-export const backendCode = (code: string, t: Translator) => (known[code] ? t(known[code]) : code);
+export const backendCode = (code: string, t: Translator) => {
+  const key = own(known, code);
+  return key ? t(key) : code;
+};

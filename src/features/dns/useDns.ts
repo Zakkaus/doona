@@ -4,7 +4,7 @@ import {getApi} from '../../api';
 import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
-import type {DnsLogList, DnsQueryResponse} from '../../api/model';
+import type {DnsQueryResponse} from '../../api/model';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, toastErrorDetail, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
@@ -214,7 +214,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
   const filter = {name: useDebounced(name), type, src: srcInvalid ? validSrc : parsedSrc};
   const key = JSON.stringify(filter);
   const log = useDnsLog(filter, enabled === true);
-  const [held, setHeld] = useState<DnsLogList | null>(null);
+  const [held, setHeld] = useState<NonNullable<typeof log.data> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const paging = useAction<'older'>({scope: key});
   // A new filter drops the held pages; useAction's scope aborts the paging for that filter after the commit.
@@ -227,14 +227,14 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
       let page;
       try {
         // A cursor is bound to the filters and the page size it was issued with, so an older page is always asked for at
-        // the head page's limit; only the head page falls back to a smaller one.
+        // the limit of the page that issued it, even after the head has fallen back to a smaller one.
         page = await api.dnsLog(
           {
             name: filter.name.trim() || undefined,
             type: type === 'all' ? undefined : type,
             src: filter.src,
             cursor: data.next_cursor,
-            limit: log.limit
+            limit: data.limit
           },
           signal
         );
