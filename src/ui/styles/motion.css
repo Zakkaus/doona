@@ -41,6 +41,12 @@
 .rp-btn[data-pending] > .rp-refresh {
   opacity: 1;
 }
+/* A radio's ring thickens and recolours as it is selected. */
+.rp-radio-mark {
+  transition:
+    border-color var(--rp-duration) var(--rp-ease),
+    border-width var(--rp-duration) var(--rp-ease);
+}
 /* The switch handle takes the press with the control. */
 .rp-switch .track::after {
   transition:

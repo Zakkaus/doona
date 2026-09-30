@@ -53,6 +53,64 @@
   opacity: 0.4;
   cursor: default;
 }
+/* S2 RadioGroup: radios stacked, each a 14px ring beside its label with any help under the label. Selected, the ring
+   thickens in the accent colour around a dot of the surface; the focus ring hugs the mark, not the row. */
+.rp-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rp-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--rp-control);
+  padding-block: 6px;
+  cursor: pointer;
+}
+.rp-radio-mark {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border: 2px solid var(--rp-subtle);
+  border-radius: 50%;
+  background: var(--rp-surface);
+}
+.rp-radio[data-hovered] .rp-radio-mark {
+  border-color: var(--rp-text);
+}
+.rp-radio[data-selected] .rp-radio-mark {
+  border-width: 4px;
+  border-color: var(--rp-accent);
+}
+.rp-radio[data-focus-visible] {
+  outline: none;
+}
+.rp-radio[data-focus-visible] .rp-radio-mark {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+.rp-radio[data-disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+.rp-radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 20px;
+}
+.rp-radio-text > span + span {
+  font-size: var(--rp-text-sm);
+  color: var(--rp-subtle);
+}
+.rp-radios > .rp-label:last-child {
+  margin-top: 4px;
+}
 .rp-field {
   display: flex;
   flex-direction: column;
