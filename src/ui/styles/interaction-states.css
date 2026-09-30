@@ -266,7 +266,7 @@
   outline-offset: 2px;
 }
 @media (max-width: 600px) {
-  .rp-brand-version {
+  .rp-brand .rp-brand-version {
     display: none;
   }
   .rp-main {

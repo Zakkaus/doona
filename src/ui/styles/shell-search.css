@@ -258,7 +258,7 @@
   border-radius: 1px;
 }
 /* Below 400px the brand, the compact search and the five actions no longer fit with the wide gutter: the bar
-   would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the brand. */
+   would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the top bar's brand. */
 @media (max-width: 399px) {
   .rp-top {
     padding: 0 12px;
@@ -267,7 +267,7 @@
   .rp-brand {
     gap: 8px;
   }
-  .rp-brand-version {
+  .rp-brand .rp-brand-version {
     display: none;
   }
   .rp-main {

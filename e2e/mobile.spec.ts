@@ -224,6 +224,15 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'])
     });
   });
 
+test('the About dialog shows the doona version on a phone, where the top bar leaves it out', async ({page}) => {
+  await page.goto('/#/overview');
+  await expect(page.locator('.rp-brand .rp-brand-version')).toBeHidden();
+  await page.locator('.rp-brand').click();
+  const version = page.getByRole('dialog').locator('.rp-brand-version');
+  await expect(version).toBeVisible();
+  await expect(version).toHaveText(/^v\d+\.\d+\.\d+/);
+});
+
 test.describe('desktop', () => {
   test.use({viewport: {width: 1280, height: 900}});
   test('moving between pages in the side navigation adds history entries that Back retraces', async ({page}) => {
