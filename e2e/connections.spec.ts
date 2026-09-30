@@ -84,6 +84,23 @@ test('connection selection follows clicks, arrows and Home/End across virtual ro
   expect(await page.locator('.rp-table [role="row"]').count()).toBeLessThan(60);
 });
 
+// From a control inside a cell, such as the tip on cut text, React Aria keeps Home and End inside the row. DataTable's
+// tree mode, which the connection list always uses, sends them to the first and last rows as on a focused row.
+test('Home and End move between rows from a control inside a cell', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  const grid = page.getByRole('grid', {name: 'Connections'});
+  const focusedRow = grid.locator('[role=row]:focus');
+  const inCell = grid.locator(':is([role=rowheader], [role=gridcell]) :focus');
+  await grid.locator('[data-key="c-0002"]').getByRole('gridcell').nth(1).click();
+  await expect(inCell).toHaveCount(1);
+  await page.keyboard.press('End');
+  await expect(focusedRow).toHaveAttribute('aria-rowindex', '1001');
+  await page.keyboard.press('ArrowRight');
+  await expect(inCell).toHaveCount(1);
+  await page.keyboard.press('Home');
+  await expect(focusedRow).toHaveAttribute('data-key', 'c-0001');
+});
+
 test('connection filtering narrows the collection and renders an empty result', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   const grid = page.getByRole('grid', {name: 'Connections'});

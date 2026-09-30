@@ -302,8 +302,9 @@ export function DataTable<T extends {id: string}>({
       className="rp-table"
       data-row-detail={rowDetail || detail ? '' : undefined}
       style={{height: fitted}}
-      // RAC scopes Home/End to cells unless the row itself has focus. The container passes no key handlers, so a
-      // tree renders its own div to catch the key first.
+      // RAC (1.21) keeps Home/End inside the row while a cell or a control in one has focus, which is where a click on
+      // cut text leaves it. Focusing the row first sends them to the first and last rows instead, as the tree mode
+      // promises. The container passes no key handlers, so a tree renders its own div to catch the key first.
       render={
         tree
           ? props => (
