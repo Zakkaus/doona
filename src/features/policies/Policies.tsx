@@ -188,7 +188,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
             // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
             // its light beside the summary while they are folded.
             <Disclosure title={g.summary} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
-              {network}
+              {network && <div className="rp-toolbar">{network}</div>}
               {grid}
             </Disclosure>
           ) : (

@@ -10,16 +10,25 @@
 .rp-disclosure-trigger.flush {
   padding-inline-start: 0;
 }
-/* A status beside the trigger (Disclosure's aside) keeps its size; the trigger takes the rest of the row. */
+/* A status beside the trigger (Disclosure's aside) follows the title and keeps its size. */
+
 .rp-disclosure-head {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .rp-disclosure-head > .rp-disclosure-trigger {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   width: auto;
   min-width: 0;
+}
+/* Closing a card, the panel's content ends on the card's own padding. */
+.rp-card > .rp-disclosure:last-child > .rp-disclosure-panel > .rp-disclosure-content {
+  padding-bottom: 0;
+}
+/* A section heading inside a form or dialog, in the label's size. */
+h3.rp-label {
+  margin: 0;
 }
 .rp-disclosure-head > :not(.rp-disclosure-trigger) {
   flex: none;
