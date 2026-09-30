@@ -7,12 +7,13 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64} from '../../api/u64';
-import {compareNames, formatDuration, localTime, formatBytes, formatLatency} from '../../i18n/format';
+import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName} from '../../dae/text';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {citingGroups, namedInExpression} from '../../dae/groups';
+import {intervalItems, intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -156,22 +157,6 @@ export function nodeRows(
     latency: (a, b) => compareLatency(latency.get(a.id), latency.get(b.id)) || byName(a.name, b.name)
   };
   return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
-}
-
-const intervals = [3600, 21600, 43200, 86400];
-export function intervalText(seconds: number, locale: string, t: Translator) {
-  return seconds === 0
-    ? t('nodes.manualOnly')
-    : intervals.includes(seconds)
-      ? t('nodes.everyHours', {n: seconds / 3600})
-      : formatDuration(String(seconds), locale);
-}
-// The presets, with a value outside them kept so a select can show it.
-export function intervalItems(current: number | null, locale: string, t: Translator) {
-  return [0, ...intervals, ...(current === null || current === 0 || intervals.includes(current) ? [] : [current])].map(value => ({
-    id: String(value),
-    label: intervalText(value, locale, t)
-  }));
 }
 
 // The options an edit leaves as written. The User-Agent, the interval (the table's Auto-refresh picker) and the cache,

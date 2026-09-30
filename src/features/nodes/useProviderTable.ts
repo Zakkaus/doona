@@ -4,7 +4,8 @@ import {useProviderRefresh} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import {writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
-import {providerRowView, intervalText, type ProviderRow} from './view';
+import {providerRowView, type ProviderRow} from './view';
+import {intervalText} from '../shared/subscription';
 import {errorText} from '../../api/error';
 import type {useRefreshAll} from '../shared/useRefreshAll';
 

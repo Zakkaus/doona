@@ -1,5 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useT, useLang, LOCALE, formatList} from '../../i18n';
+import {useT, useLang, formatList} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
@@ -7,14 +7,13 @@ import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, addSubtagsToGroup, applyChanges, citingGroups, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
-import {readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {agentProblem, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
 import {fileName} from '../../dae/sources';
 import {
-  intervalItems,
   isNodeLink,
   keptOptions,
   nodeFormReason,
@@ -37,6 +36,7 @@ import {pickTab, tabQuery, within} from '../../shell/route';
 import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
+import type {SubscriptionDraft, SubscriptionFieldSet} from '../shared/SubscriptionFields';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null};
 
@@ -77,7 +77,6 @@ export function useNodesPage({go, query}: PageProps) {
     setDialog(next);
   }, []);
   const lang = useLang();
-  const locale = LOCALE[lang];
   const resources = useCapabilities().data?.resources;
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
@@ -275,10 +274,11 @@ export function useNodesPage({go, query}: PageProps) {
               : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
   const createOptions = resources?.providers.create_options;
-  // The contract's User-Agent bound: up to 256 printable ASCII characters.
-  const agentError = /^[\x20-\x7E]{0,256}$/.test(form.agent.trim()) ? null : t('nodes.agentInvalid');
+  const agentKey = agentProblem(form.agent, false);
+  const agentError = agentKey && t(agentKey);
   // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
-  const editAgentError = agentError ?? (isQuotable(form.agent.trim()) ? null : t('config.unquotable'));
+  const editAgentKey = agentProblem(form.agent, true);
+  const editAgentError = editAgentKey && t(editAgentKey);
   // The switch shows the entry's cache, or the default a new subscription gets when the entry sets none.
   const writtenCache = dialog?.kind === 'editProvider' ? (dialog.entry.cache ?? createOptions?.cache) : undefined;
   const editCache = {value: form.cache ?? writtenCache ?? null, changed: form.cache !== null && form.cache !== writtenCache};
@@ -315,6 +315,17 @@ export function useNodesPage({go, query}: PageProps) {
           : dialog?.kind === 'group'
             ? nameError === null
             : true;
+  const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache};
+  // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
+  // edit writes the entry's own User-Agent and cache, and leaves the interval to the table's picker.
+  const subscriptionFields: SubscriptionFieldSet =
+    dialog?.kind === 'editProvider'
+      ? {agent: {fallback: createOptions?.user_agent, description: t('nodes.agentDefault')}, cache: writtenCache}
+      : {
+          interval: createOptions?.update_interval,
+          agent: createOptions?.user_agent === undefined ? undefined : {fallback: createOptions.user_agent},
+          cache: createOptions?.cache
+        };
   const providerTable = useProviderTable({
     rows: list,
     loading: providers.loading && !providers.data,
@@ -405,11 +416,7 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'editProvider'
           ? t('policy.save')
           : t('nodes.add'),
-    editNameError: editName ? editNameError : null,
     editOptions: dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, writtenCache !== undefined) : [],
-    editAgentError,
-    editAgentDefault: createOptions?.user_agent,
-    editCache: writtenCache === undefined ? null : editCache.value,
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
     // unless another source names it too: a write across sources is not atomic, so those files block the rename.
     renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,
@@ -422,14 +429,12 @@ export function useNodesPage({go, query}: PageProps) {
     groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
     // Only a name already typed is judged; an empty field is simply not ready.
     groupNameError: form.name.trim() ? nameError : null,
-    agentError,
-    // Each option shows only when the backend lists it, with its default preselected or as the placeholder.
-    options: createOptions && {
-      intervals: createOptions.update_interval === undefined ? null : intervalItems(createOptions.update_interval, locale, t),
-      interval: form.interval || String(createOptions.update_interval),
-      agent: createOptions.user_agent,
-      cache: createOptions.cache === undefined ? null : (form.cache ?? createOptions.cache)
+    subscription,
+    setSubscription: (next: SubscriptionDraft) => {
+      if (submitting.current !== dialog) setForm({...form, ...next, value: next.url});
     },
+    subscriptionFields,
+    subscriptionErrors: dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError},
     policy,
     setPolicy: (next: string) => {
       if (submitting.current !== dialog) setPolicy(next);
