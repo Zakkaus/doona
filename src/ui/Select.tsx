@@ -18,7 +18,7 @@ import {
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
-import {Button, buttonClass, TextTooltip, useReasonId} from './Button';
+import {buttonClass, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
@@ -136,25 +136,18 @@ export function MenuButton({
   const reasonId = useReasonId(isDisabled);
   return (
     <MenuTrigger>
-      {appearance ? (
-        <Button appearance={appearance} quiet={quiet} icon={!chevron} label={label} isDisabled={isDisabled}>
-          {children}
-          {chevron && <ChevronDown />}
-        </Button>
-      ) : (
-        <RButton
-          className={buttonClass({quiet, small, icon: !chevron})}
-          aria-label={label}
-          aria-describedby={reasonId}
-          isDisabled={isDisabled}
-          onHoverStart={onIntent}
-          onFocus={onIntent}
-        >
-          {children}
-          {badge}
-          {chevron && <ChevronDown />}
-        </RButton>
-      )}
+      <RButton
+        className={appearance ? 'rp-selectbtn' : buttonClass({quiet, small, icon: !chevron})}
+        aria-label={label}
+        aria-describedby={reasonId}
+        isDisabled={isDisabled}
+        onHoverStart={onIntent}
+        onFocus={onIntent}
+      >
+        {children}
+        {badge}
+        {chevron && <ChevronDown />}
+      </RButton>
       <Popover className="rp-popover" placement={placement}>
         {content}
       </Popover>
@@ -361,7 +354,8 @@ function FlatMenu({
   value,
   onChange,
   onAction,
-  searchLabel
+  searchLabel,
+  description
 }: {
   label: string;
   items: Items;
@@ -370,29 +364,40 @@ function FlatMenu({
   onChange?: (key: string) => void;
   onAction?: (key: string) => void;
   searchLabel?: string;
+  description?: string;
 }) {
+  const descriptionId = useId();
   const list = typeof items === 'function' ? items() : items;
   const long = !!searchLabel && longList(list.length);
   const menu = (
     <Menu
       aria-label={label}
+      aria-describedby={description ? descriptionId : undefined}
       className={long ? 'rp-menu-scroll' : undefined}
       selectionMode={selectionMode}
+      disallowEmptySelection={selectionMode === 'single'}
       selectedKeys={value == null ? undefined : typeof value === 'string' ? [value] : value}
       onSelectionChange={onChange && pickMenuKey(onChange)}
       // Several choices are picked one after another, so the menu stays open, as S2's does.
       shouldCloseOnSelect={selectionMode === 'multiple' ? false : undefined}
       onAction={onAction && (key => onAction(String(key)))}
     >
-      {list.map(item => (
-        <MenuChoice key={item.id} item={item} />
-      ))}
+      <MenuSection aria-label={label}>
+        {description && (
+          <Header className="rp-sec-h rp-menu-note">
+            <span id={descriptionId}>{description}</span>
+          </Header>
+        )}
+        {list.map(item => (
+          <MenuChoice key={item.id} item={item} />
+        ))}
+      </MenuSection>
     </Menu>
   );
   return long ? <LazySearchList label={searchLabel}>{menu}</LazySearchList> : menu;
 }
 
-type NotFlat = {items?: never; selectionMode?: never; value?: never; onChange?: never};
+type NotFlat = {description?: never; items?: never; selectionMode?: never; value?: never; onChange?: never};
 type NoActions = {actions?: never};
 // A menu of choices: flat, in titled sections each with its own selection, or as rows that each open a submenu of
 // sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
@@ -410,8 +415,9 @@ export function ChoiceMenu({
   actions,
   onAction,
   searchLabel,
+  description,
   ...props
-}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string} & (
+}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string; description?: string} & (
     | {
         items: Items;
         selectionMode?: 'single';
@@ -446,21 +452,24 @@ export function ChoiceMenu({
       {...props}
       onIntent={searchLabel && long ? preloadSearchList : undefined}
       content={
-        submenus ? (
-          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
-        ) : sections ? (
-          <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
-        ) : (
-          <FlatMenu
-            label={props.label}
-            items={items}
-            selectionMode={selectionMode ?? (value == null ? 'none' : 'single')}
-            value={value}
-            onChange={onChange}
-            onAction={onAction}
-            searchLabel={searchLabel}
-          />
-        )
+        <>
+          {submenus ? (
+            <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
+          ) : sections ? (
+            <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
+          ) : (
+            <FlatMenu
+              label={props.label}
+              items={items}
+              selectionMode={selectionMode ?? (value == null ? 'none' : 'single')}
+              value={value}
+              onChange={onChange}
+              onAction={onAction}
+              searchLabel={searchLabel}
+              description={description}
+            />
+          )}
+        </>
       }
     />
   );

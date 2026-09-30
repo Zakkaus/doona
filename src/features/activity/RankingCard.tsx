@@ -1,12 +1,10 @@
 import {useT} from '../../i18n';
 import {Badge, Bar, Card, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
-import {useRankingCard} from './useRankingCard';
+import type {useRankingCard} from './useRankingCard';
 
-// Top clients owns its own connections subscription: a 20-second poll over up to 1,000 connections
-// re-renders this card alone, not the traffic charts or the tiles beside it.
-export function RankingCard() {
+export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>}) {
   const t = useT();
-  const {ref, by, setBy, rows, state, error, retry, truncated} = useRankingCard();
+  const {ref, by, setBy, rows, state, error, retry, truncated} = model;
   return (
     <Card ref={ref}>
       <div className="rp-row">

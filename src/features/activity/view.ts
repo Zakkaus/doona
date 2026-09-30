@@ -1,16 +1,26 @@
-import type {ApiEvent, ConnectionList, Datapath, Group, Node, Runtime, RuntimeOutbounds} from '../../api/model';
+import type {ApiEvent, ConnectionList, Datapath, Group, GroupSummary, Node, Runtime, RuntimeOutbounds} from '../../api/model';
 import {latencyTone} from '../../ui/ui';
 import {enumLabel} from '../../i18n/enum';
 import {backendCode} from '../../i18n/backend';
 import {isBuiltinOutbound} from '../../dae/vocab';
-import {eventKindLabels, eventSummary, healthMillis, outboundLabel, outboundUsage, preferredHealth, routineGap, shortId} from '../../api/selectors';
+import {
+  connectionRows,
+  eventKindLabels,
+  eventSummary,
+  healthMillis,
+  outboundLabel,
+  outboundUsage,
+  preferredHealth,
+  resolveSelectedLeaf,
+  routineGap,
+  shortId
+} from '../../api/selectors';
 import {localTime, formatBytes, formatRate, formatLatency, formatCpu} from '../../i18n/format';
 import {formatNumber, type Key, type Translator as LabelFn} from '../../i18n';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
 import {engineStatus} from '../shared/engineStatus';
 import {href} from '../../shell/route';
-import {longList} from '../../ui/longList';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -101,53 +111,70 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
     summaryText: count > 1 ? t('ui.aside', {text: summaryText, note: t('act.noticeRepeat', {n: count})}) : summaryText
   }));
 }
-export type ActivityNodeMenu = {
-  options: NodeOption[];
-  big: boolean;
-  id: string;
-  name: string;
-};
-
 export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean, live = false) {
   if (series.down.some(value => value !== null) || series.up.some(value => value !== null)) return 'ready';
   if (available === false) return live ? 'loading' : 'unavailable';
   return !loaded ? 'loading' : 'empty';
 }
 
-type NodeOption = {id: string; name: string; label: string; tcp?: number; alive?: boolean; unavailable: boolean; healthError?: string};
 export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
-  const counts = new Map<string, number>();
-  for (const node of nodes) counts.set(node.name, (counts.get(node.name) ?? 0) + 1);
-  const options = nodes.map((node): NodeOption => {
-    const health = preferredHealth(node);
-    return {
-      id: node.id,
-      name: node.name,
-      label:
-        counts.get(node.name)! > 1
-          ? t('ui.aside', {text: node.name, note: [node.subscription_tag ?? node.provider_id ?? node.id, node.id].join(t('ui.separator'))})
-          : node.name,
-      tcp: healthMillis(health),
-      alive: health?.state === 'unavailable' ? false : health?.state === 'healthy' ? true : undefined,
-      unavailable: health?.state === 'unavailable',
-      healthError: health?.error ? backendCode(health.error, t) : undefined
-    };
-  });
-  const node = options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => !isBuiltinOutbound(n.name)) ?? options[0];
+  const node =
+    nodes.find(n => n.id === chosen) ??
+    nodes.find(n => healthMillis(preferredHealth(n)) !== undefined) ??
+    nodes.find(n => !isBuiltinOutbound(n.name)) ??
+    nodes[0];
+  const health = node && preferredHealth(node);
+  const tcp = healthMillis(health);
+  const alive = health?.state === 'healthy';
+  const unavailable = health?.state === 'unavailable';
   return {
-    options,
-    big: longList(options.length),
     id: node?.id ?? '',
     name: node?.name ?? '',
-    latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
+    latency: alive && tcp !== undefined ? formatLatency(tcp, t) : '—',
     // A measured value takes the tone the nodes table gives it.
-    latencyClass: node?.alive && node.tcp !== undefined ? `rp-big ms ${latencyTone(node.tcp)}` : 'rp-big',
-    tone: node?.alive ? ('ok' as const) : node?.unavailable ? ('err' as const) : ('muted' as const),
+    latencyClass: alive && tcp !== undefined ? `rp-big ms ${latencyTone(tcp)}` : 'rp-big',
+    tone: alive ? ('ok' as const) : unavailable ? ('err' as const) : ('muted' as const),
     // A healthy node's latency says so; the light names only what the value cannot, an unavailable or unknown node.
-    status: node?.alive ? null : t(node?.unavailable ? 'act.unavailable' : 'act.unknown'),
-    healthError: node?.healthError
+    status: alive ? null : t(unavailable ? 'act.unavailable' : 'act.unknown'),
+    healthError: health?.error ? backendCode(health.error, t) : undefined
   };
 }
+export function activityGroupView(groups: GroupSummary[], nodes: Node[], chosen: string, t: LabelFn, connections?: ConnectionList) {
+  const byName = new Map(groups.map(group => [group.name, group]));
+  const byId = new Map(groups.map(group => [group.id, group]));
+  const nodesById = new Map(nodes.map(node => [node.id, node]));
+  const options = groups.map(group => {
+    // Follow one transport through nested selections, as the routing tree does.
+    const selected = resolveSelectedLeaf(group.name, group.selection.tcp_member_id ? 'tcp' : 'udp', byName, byId, nodesById);
+    const node = selected.node;
+    return {
+      id: group.id,
+      label: group.name,
+      description: node?.name ?? '—',
+      node
+    };
+  });
+  const active = new Map<string, number>();
+  for (const connection of connectionRows(connections)) {
+    // Outbound grouping keys on the backend's outbound name, not the leaf in its chain.
+    if (connection.state === 'active' && connection.outbound) active.set(connection.outbound, (active.get(connection.outbound) ?? 0) + 1);
+  }
+  let busiest: (typeof options)[number] | undefined;
+  for (const option of options) {
+    if ((active.get(option.label) ?? 0) > (active.get(busiest?.label ?? '') ?? 0)) busiest = option;
+  }
+  const stored = options.find(option => option.id === chosen);
+  const group = stored ?? busiest ?? options.find(option => option.node && healthMillis(preferredHealth(option.node)) !== undefined) ?? options[0];
+  const view = nodeView(group ? (group.node ? [group.node] : []) : nodes, '', t);
+  return {
+    ...view,
+    options,
+    groupName: group?.label ?? view.name,
+    chosen: stored?.id ?? ''
+  };
+}
+export type ActivityGroupMenu = Pick<ReturnType<typeof activityGroupView>, 'options' | 'groupName' | 'chosen'>;
+
 export function activityView(runtime: Runtime | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en', datapath?: Datapath['state']) {
   // The status the System status page shows; the card's own link already leads there, so the status carries no link of its own.
   const {tone, text} = engineStatus(runtime?.lifecycle.state, datapath, t(runtimeAvailable === false ? 'act.modeUnavailable' : 'ui.loading'), t);

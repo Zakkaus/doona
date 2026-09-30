@@ -15,6 +15,7 @@ export const storageKeys = {
   // One key per backend and ring; see rings.ts.
   ringsPrefix: 'doona-rings-',
   connectionsView: 'doona-connections-view',
+  activityGroup: 'doona-activity-group',
   // sessionStorage
   session: 'doona-session',
   saved: 'doona-saved',

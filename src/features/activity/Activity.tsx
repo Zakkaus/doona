@@ -12,10 +12,12 @@ import {useActivity} from './useActivity';
 import {NodeCard} from './NodeCard';
 import {OutboundsCard} from './OutboundsCard';
 import {RankingCard} from './RankingCard';
+import {useRankingCard} from './useRankingCard';
 
 export function Activity() {
   const t = useT();
   const vm = useActivity();
+  const ranking = useRankingCard();
   const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
@@ -74,7 +76,7 @@ export function Activity() {
             </span>
           </div>
         </CardLink>
-        <NodeCard />
+        <NodeCard connections={ranking.connections} />
         <Card title={t('act.cpu')} tile={{icon: <Cpu />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
@@ -123,7 +125,7 @@ export function Activity() {
       </div>
 
       <div className="rp-g3">
-        <RankingCard />
+        <RankingCard model={ranking} />
         <Card
           title={t('act.memory')}
           aside={

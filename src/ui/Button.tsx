@@ -44,6 +44,7 @@ export function ActionHelp({reason, above, children}: {reason?: string | null; a
 export function Button({
   children,
   onPress,
+  onIntent,
   label,
   isDisabled,
   isPending,
@@ -56,6 +57,7 @@ export function Button({
 }: {
   children?: ReactNode;
   onPress?: () => void;
+  onIntent?: () => void;
   label?: string;
   isDisabled?: boolean;
   isPending?: boolean;
@@ -121,6 +123,8 @@ export function Button({
       ref={ref}
       className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
       onPress={press}
+      onHoverStart={onIntent}
+      onFocus={onIntent}
       aria-label={label}
       aria-describedby={reasonId ?? (tipReason ? tipId : undefined)}
       isDisabled={disabled}

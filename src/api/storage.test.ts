@@ -15,6 +15,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-api-token',
     'doona-rings-',
     'doona-connections-view',
+    'doona-activity-group',
     'doona-session',
     'doona-saved',
     'doona-hub-pages'
