@@ -134,6 +134,40 @@ export function cachedRows<T extends object, R>(cache: WeakMap<T, R>, items: T[]
     return row;
   });
 }
+// A menu or dialog opened from a control in a row gives focus back to that control when it closes, but RAC (1.21) then
+// moves it on to the cell's first control, or to the row. Focus that comes back from an overlay to the same row goes
+// to the control it left from; a press in the table first means the person chose where focus goes.
+const overlays = '[role="dialog"], [role="alertdialog"], [role="menu"]';
+function useOpenerFocus(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const table = ref.current;
+    if (!table) return;
+    let opener: HTMLElement | null = null;
+    const leave = (event: FocusEvent) => {
+      const to = event.relatedTarget as Element | null;
+      opener = to && !table.contains(to) && to.closest(overlays) ? (event.target as HTMLElement) : null;
+    };
+    const enter = (event: FocusEvent) => {
+      const back = opener;
+      opener = null;
+      const from = event.relatedTarget as Node | null;
+      const target = event.target as HTMLElement;
+      if (!back?.isConnected || target === back || (from && table.contains(from))) return;
+      if (back.closest('[role="row"]') === target.closest('[role="row"]')) back.focus({preventScroll: true});
+    };
+    const press = () => {
+      opener = null;
+    };
+    table.addEventListener('focusout', leave);
+    table.addEventListener('focusin', enter);
+    table.addEventListener('pointerdown', press, true);
+    return () => {
+      table.removeEventListener('focusout', leave);
+      table.removeEventListener('focusin', enter);
+      table.removeEventListener('pointerdown', press, true);
+    };
+  }, [ref]);
+}
 const virtualiseFrom = 40;
 const isGroup = <T extends object>(row: T | TableGroup<T>): row is TableGroup<T> => 'children' in row;
 // Plain text truncates with a tooltip.
@@ -221,6 +255,7 @@ export function DataTable<T extends {id: string}>({
   // A virtualised grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
   useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref);
+  useOpenerFocus(ref);
   // Tree cells wrap their content so it truncates inside the flex cell.
   const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
   const renderRow = (row: T) => {

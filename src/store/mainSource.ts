@@ -28,7 +28,8 @@ export const editProblem = (result: EditResult, t: Translator): Notice | null =>
       ? failureNotice(result.error, t, t('ui.writeFailed'))
       : null;
 
-export function useMainSourceEdit(): MainSourceEdit {
+// `checking`: the main source is there and its completeness is still being checked, as after each write.
+export function useMainSourceEdit(): MainSourceEdit & {checking: boolean} {
   const resources = useCapabilities().data?.resources;
   const writable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
@@ -42,6 +43,7 @@ export function useMainSourceEdit(): MainSourceEdit {
   const {apply} = editor;
   return {
     main,
+    checking: !!source && complete === null,
     writable,
     busy: editor.busy !== null,
     error,
