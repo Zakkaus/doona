@@ -78,7 +78,7 @@ for (const how of Object.keys(failures) as Failure[])
       expect(counted).toHaveLength(1);
       await expect(await moreItem(group, 'Back to automatic')).toBeEnabled();
       await page.getByRole('menuitem', {name: 'Back to automatic', exact: true}).click();
-      await expect(group.getByText('Automatic', {exact: true})).toBeVisible();
+      await expect(group.getByText('Pinned', {exact: true})).toHaveCount(0);
       expect(counted).toHaveLength(2);
     });
 

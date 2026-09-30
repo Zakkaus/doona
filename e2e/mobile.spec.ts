@@ -615,6 +615,8 @@ for (const [width, columns] of [
       await page.goto('/#/policies');
       const large = page.getByRole('region', {name: 'skylink'});
       await large.scrollIntoViewIfNeeded();
+      // An automatic group shows its members once opened.
+      await large.getByRole('button', {name: /^目前/}).click();
       const panel = large.locator('.rp-nodegrid');
       await expect(panel.locator('.rp-node').first()).toBeVisible();
       const m = await page.evaluate(() => {
