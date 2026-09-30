@@ -12,7 +12,8 @@ priority: optional
 maintainer: Zakkaus <zakk@gentoozh.org>
 vendor: Zakkaus
 homepage: https://github.com/Zakkaus/doona
-license: GPL-3.0-only
+# The bundled npm packages, the Spectrum icons, the palette images and the GitHub mark add to doona's own licence.
+license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
 description: |
   Web UI for the daeuniverse engines
   Static files for /usr/share/doona; configure the engine or a web server to serve that directory.
