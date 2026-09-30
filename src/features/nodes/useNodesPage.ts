@@ -12,7 +12,6 @@ import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
-import {readSubscriptions} from './subscriptions';
 import {fileName} from '../../dae/sources';
 import {
   citingGroups,
@@ -117,7 +116,7 @@ export function useNodesPage({go, query}: PageProps) {
       return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry})};
     return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
   };
-  const entries = useMemo(() => readSubscriptions(source.main?.content ?? ''), [source.main?.content]);
+  const entries = useMemo(() => readSubscriptionEntries(source.main?.content ?? ''), [source.main?.content]);
   const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);

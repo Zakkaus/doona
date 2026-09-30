@@ -3,7 +3,7 @@ import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
-import {writeInterval, type SubscriptionEntry} from './subscriptions';
+import {writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {providerRowView, intervalText, type ProviderRow} from './view';
 import {errorText} from '../../api/error';
 import type {useRefreshAll} from '../shared/useRefreshAll';
@@ -17,7 +17,7 @@ type ProviderTableInput = {
   canRefresh: boolean;
   busy: boolean;
   source: MainSourceEdit;
-  entries: SubscriptionEntry[];
+  entries: SubscriptionText[];
   reload: () => void;
   refresh: ReturnType<typeof useProviderRefresh>;
   refreshAll: ReturnType<typeof useRefreshAll>;
@@ -55,7 +55,7 @@ export function useProviderTable(input: ProviderTableInput) {
       if (!item.configTag) return;
       const seconds = Number(key);
       void input.source
-        .apply(text => writeInterval(text, item.configTag!, seconds))
+        .apply(text => writeSubscriptionEntry(text, item.configTag!, {interval: seconds}))
         .then(result => {
           if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
           const problem = editProblem(result, t);

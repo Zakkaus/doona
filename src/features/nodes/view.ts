@@ -2,7 +2,7 @@ import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '.
 import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
-import {urlHost, type SubscriptionEntry} from './subscriptions';
+import {urlHost, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
@@ -67,7 +67,7 @@ export function renameReferences(sources: ConfigSource[], declaring: ConfigSourc
   };
 }
 
-export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionEntry[], t: Translator) {
+export function providerRows(providers: Provider[], nodes: Node[], entries: SubscriptionText[], t: Translator) {
   // Node metadata authorizes a tag; URL and unmatched-entry guesses are display-only.
   const tags = new Map<string, Set<string>>();
   for (const node of nodes) {
@@ -82,7 +82,7 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
   };
   const byHost = (item: Provider) => {
     const hostname = urlHost(item.url_redacted);
-    const same = hostname ? entries.filter(entry => entry.host === hostname) : [];
+    const same = hostname ? entries.filter(entry => urlHost(entry.url) === hostname) : [];
     return same.length === 1 ? same[0].tag : undefined;
   };
   const named = new Map<string, string>();
