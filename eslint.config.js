@@ -167,7 +167,6 @@ export default [
   {
     // Raw compositions whose kit move would change the page, so they wait on a design call.
     files: [
-      'src/features/activity/ModeSwitch.tsx', // a kit ContextualHelp would be a new trigger and popover
       'src/features/policies/Nodes.tsx' // a kit TileGrid would change the grid's keyboard interaction
     ],
     rules: {'@typescript-eslint/no-restricted-imports': 'off'}

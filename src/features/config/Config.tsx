@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Button, ContextualHelp, ErrorMessage, Kv, LabeledSelect, Light, Loading, Tabs, TextTooltip} from '../../ui/ui';
+import {Badge, Button, ErrorMessage, HelpRow, Kv, LabeledSelect, Light, Loading, Tabs, TextTooltip} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage} from './useConfigPage';
@@ -44,10 +44,9 @@ export function Config(props: PageProps) {
             {sourceModel && (
               <>
                 {sourceModel.readOnly && (
-                  <span className="rp-help-row">
+                  <HelpRow help={sourceModel.readOnly.help}>
                     <Badge>{sourceModel.readOnly.label}</Badge>
-                    {sourceModel.readOnly.help && <ContextualHelp {...sourceModel.readOnly.help} />}
-                  </span>
+                  </HelpRow>
                 )}
                 <TextTooltip className="rp-label" text={sourceModel.loaded}>
                   {sourceModel.facts}

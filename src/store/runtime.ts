@@ -33,7 +33,7 @@ export function useTrafficHistory(windowSeconds: number, capabilities: Capabilit
   );
 }
 // The backend's memory ring over ten minutes at the recorder cadence, refreshed once a minute; the chart merges it
-// with the session's own samples (useMemorySamples).
+// with the session's own samples (useMemorySeries).
 export function useMemoryHistory(capabilities: Capabilities | undefined) {
   const api = getApi();
   const limits = capabilities?.resources.memory_history;

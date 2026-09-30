@@ -4,11 +4,12 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
 import {useMemorySeries} from './useMemorySeries';
-import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow, useTrafficSamples, type TrafficRange} from './traffic';
+import {foldTraffic, historyTrafficSamples, isTrafficRange, trafficRanges, trafficSample, trafficWindow, type TrafficRange} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
+import {useRings} from '../../api/rings';
 import {backendLimits} from '../shared/limits';
 
 export function useActivity() {
@@ -25,7 +26,7 @@ export function useActivity() {
   const windowSeconds = trafficRanges[range].seconds;
   const memoryHistory = useMemorySeries(capabilities.data, memory.data);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
-  const polledTraffic = useTrafficSamples(runtime.data);
+  const polledTraffic = useRings('traffic', runtime.data, trafficSample, foldTraffic);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
   const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, 24), [polledTraffic, historySamples]);

@@ -1,5 +1,5 @@
 import type {Runtime, TrafficHistory} from '../../api/model';
-import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
+import {mean, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
 import type {Key} from '../../i18n';
 
@@ -20,14 +20,14 @@ const rate = (value: string | null | undefined) => {
   return parsed === null ? null : Number(parsed) / 1000;
 };
 
-const foldTraffic: Fold<TrafficSample> = (group, time) => ({
+export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
   time,
   up: mean(group.map(s => s.up)),
   down: mean(group.map(s => s.down)),
   connections: group.some(s => s.connections !== null) ? Math.max(...group.map(s => s.connections ?? 0)) : null
 });
 
-function trafficSample(runtime: Runtime): TrafficSample | undefined {
+export function trafficSample(runtime: Runtime): TrafficSample | undefined {
   const traffic = runtime.traffic;
   const time = Date.parse(traffic.sampled_at ?? '');
   if (!Number.isFinite(time)) return undefined;
@@ -37,10 +37,6 @@ function trafficSample(runtime: Runtime): TrafficSample | undefined {
     down: rate(traffic.rates?.download_bytes_per_second),
     connections: traffic.connections.total
   };
-}
-
-export function useTrafficSamples(runtime: Runtime | undefined): Rings<TrafficSample> {
-  return useRings('traffic', runtime, trafficSample, foldTraffic);
 }
 
 export function historyTrafficSamples(history: TrafficHistory): TrafficSample[] {
