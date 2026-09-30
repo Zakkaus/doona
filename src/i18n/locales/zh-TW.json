@@ -720,7 +720,7 @@
   "login.passwordShort": "密碼少於 8 個字元。",
   "login.passwordTitle": "登入",
   "login.rateLimited": "嘗試次數過多，請在 {n} 秒後重試。",
-  "login.rejected": "後端拒絕了已儲存的 Token；請輸入新的 Token。",
+  "login.rejected": "後端拒絕了此 Token，請輸入有效的 Token。",
   "login.requirements": "原生 API 要求",
   "login.retryIn": "{n} 秒後可重試",
   "login.sessionEnded": "工作階段已結束，請重新登入。",

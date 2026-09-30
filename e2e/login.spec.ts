@@ -168,7 +168,7 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   await page.goto('/#/activity');
   const login = page.locator('.rp-login-page');
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Token required');
-  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the saved token; enter a new one.');
+  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the token; enter a valid one.');
   await expect(login.getByRole('button', {name: 'Language', exact: true})).toBeVisible();
   await expect(login.getByRole('link', {name: 'Change backend URL'})).toHaveAttribute('href', '#/settings');
   await login.getByLabel('Token', {exact: true}).fill('fresh-token');

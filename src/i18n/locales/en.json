@@ -858,7 +858,7 @@
     "one": "Too many attempts. Try again in {n} second.",
     "other": "Too many attempts. Try again in {n} seconds."
   },
-  "login.rejected": "The backend rejected the saved token; enter a new one.",
+  "login.rejected": "The backend rejected the token; enter a valid one.",
   "login.requirements": "Native API requirements",
   "login.retryIn": {
     "one": "Try again in {n} second",
