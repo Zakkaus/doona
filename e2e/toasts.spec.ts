@@ -122,6 +122,24 @@ for (const width of [1280, 390])
     expect(Math.abs(boxes.close.middle - (boxes.summary.top + 10))).toBeLessThanOrEqual(1);
   });
 
+test('an expanded stack and its underlay close when the page changes', async ({page}) => {
+  await failingFirstFetch(page, 9);
+  await page.goto('/#/nodes?tab=list');
+  await addSubscription(page, 'sub-s');
+  await addSubscription(page, 'sub-u');
+  await page
+    .locator('.rp-toast:not(.background)')
+    .getByRole('button', {name: /^Show all/})
+    .click();
+  await expect(page.locator('.rp-toast-underlay')).toHaveCount(1);
+  // The underlay covers the navigation, so the page changes the way a shortcut or the browser's back button would.
+  await page.evaluate(() => (location.hash = '#/rules'));
+  await expect(page.getByRole('heading', {level: 1})).toHaveText('Rules');
+  await expect(page.locator('.rp-toast-underlay')).toHaveCount(0);
+  await expect(page.locator('.rp-toasts')).not.toHaveClass(/expanded/);
+  await expect(page.locator('.rp-toast.background')).not.toHaveCount(0);
+});
+
 test('a repeated actionable toast replaces its earlier copy', async ({page}) => {
   await failingFirstFetch(page, 2);
   await page.goto('/#/nodes?tab=list');

@@ -1,4 +1,4 @@
-import {useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
+import {useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
   UNSTABLE_Toast as RToast,
@@ -163,10 +163,14 @@ export const toastErrorDetail = (error: unknown, t: Translator) => ({
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
 export type ToastPlacement = 'top' | 'top end' | 'bottom' | 'bottom end';
-export function Toasts({placement = 'bottom'}: {placement?: ToastPlacement}) {
+// `page` names the current page: the expanded list and its underlay belong to the page they were opened on, so moving
+// to another page collapses them.
+export function Toasts({placement = 'bottom', page = ''}: {placement?: ToastPlacement; page?: string}) {
   const [edge, align = 'center'] = placement.split(' ') as ['top' | 'bottom', 'end' | undefined];
   const t = useT();
-  const [expanded, setExpanded] = useState(false);
+  const [expandedOn, setExpandedOn] = useState<string | null>(null);
+  const expanded = expandedOn === page;
+  const setExpanded = useCallback((open: boolean) => setExpandedOn(open ? page : null), [page]);
   useEffect(() => {
     if (expanded) toasts.pauseAll();
     else toasts.resumeAll();
@@ -175,7 +179,7 @@ export function Toasts({placement = 'bottom'}: {placement?: ToastPlacement}) {
   useEffect(
     () =>
       toasts.subscribe(() => {
-        if (toasts.visibleToasts.length === 0) setExpanded(false);
+        if (toasts.visibleToasts.length === 0) setExpandedOn(null);
       }),
     []
   );
@@ -185,7 +189,7 @@ export function Toasts({placement = 'bottom'}: {placement?: ToastPlacement}) {
     const on = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const inToasts = (e.target as Element | null)?.closest?.('.rp-toasts');
-      if (inToasts || !document.querySelector(escapeLayers)) setExpanded(false);
+      if (inToasts || !document.querySelector(escapeLayers)) setExpandedOn(null);
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);

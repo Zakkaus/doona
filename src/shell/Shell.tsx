@@ -48,7 +48,7 @@ export function Shell({lang: initial}: {lang: Lang}) {
                 </Suspense>
               </LoadBoundary>
             )}
-            <ToastHost placement={ap.toastPlacement} />
+            <ToastHost placement={ap.toastPlacement} route={route} />
           </RouterProvider>
         </I18nProvider>
       </RewordingContext.Provider>
@@ -65,9 +65,9 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
   );
 }
 
-function ToastHost({placement}: {placement: ToastPlacement}) {
+function ToastHost({placement, route}: {placement: ToastPlacement; route: string}) {
   useStartupToasts();
-  return <Toasts placement={placement} />;
+  return <Toasts placement={placement} page={route} />;
 }
 
 type FrameProps = {
