@@ -5,7 +5,7 @@ import {isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../..
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames} from '../../dae/vocab';
 import type {Key} from '../../i18n';
-import {compareLatency, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
+import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText, manualPolicy} from '../shared/policyText';
 import {formatNumber, type Translator} from '../../i18n';
 import {latencyTone, type Help, type NodeStatus} from '../../ui/ui';
@@ -203,15 +203,11 @@ export function actionErrorText(error: Error, t: Translator, showRequestId = tru
   const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t, showRequestId)});
   return t('ui.valuePair', {label: errorText(error, t, showRequestId), value: progress});
 }
-// Count each member's worst address-family outcome, without letting an absent address hide a measured result.
-const probeRank = {unknown: 0, healthy: 1, unavailable: 2};
+// Count each member once, its address families folded as its tile folds them.
 export function probeSummary(result: ProbeResult): MessageRef {
-  const members = new Map<string, 'healthy' | 'unavailable' | 'unknown'>();
-  for (const item of result.results) {
-    const previous = members.get(item.member_id);
-    if (!previous || probeRank[item.state] > probeRank[previous]) members.set(item.member_id, item.state);
-  }
-  const states = [...members.values()];
+  const rows = new Map<string, ProbeResult['results']>();
+  for (const item of result.results) rows.set(item.member_id, [...(rows.get(item.member_id) ?? []), item]);
+  const states = [...rows.values()].map(items => foldFamilies(items)?.state);
   return {
     key: result.selection_changed.tcp || result.selection_changed.udp ? 'policy.probeChanged' : 'policy.probeUnchanged',
     params: {

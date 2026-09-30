@@ -247,7 +247,7 @@ function Tray({m}: {m: Model}) {
           }))),
       ...(show === 'subscription'
         ? []
-        : m.nodes.map(node => ({id: 'node:' + node.name, item: {kind: 'node' as const, value: node.name}, label: node.name, meta: node.protocol ?? ''})))
+        : m.nodes.map(node => ({id: 'node:' + node.id, item: {kind: 'node' as const, value: node.name}, label: node.name, meta: node.protocol ?? ''})))
     ],
     [show, m.subscriptions, m.nodes, t]
   );

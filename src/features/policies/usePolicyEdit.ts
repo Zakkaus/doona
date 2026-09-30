@@ -60,10 +60,13 @@ const routeLabels = {default_member_id: 'policy.cfg.defaultMember', final_outbou
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
-// `focus`: the picker that takes focus when the dialog opens from the Configuration list.
+// `focus`: the picker that takes focus when the dialog opens from the Configuration list. `origin` is the source the
+// dialog opened on, so a change on disk refuses the first save; once refused, a save goes against the source as it is
+// declared then, since the sources are read again after a refusal.
 type Draft = {
   name: string;
   origin: ConfigSource;
+  refused: boolean;
   policy: string | null;
   filters: string[];
   default: string | null;
@@ -102,6 +105,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
       return;
     }
     const current = session.start();
+    const origin = draft.refused ? (declared?.origin ?? draft.origin) : draft.origin;
     void source
       .apply(text => {
         const update = {filters, policy: draft.policy};
@@ -109,7 +113,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
         // has it.
         for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
         return writeGroupEntry(text, draft.name, update);
-      }, draft.origin)
+      }, origin)
       .then(result => {
         const open = current();
         if (result.kind === 'ok') {
@@ -122,8 +126,10 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
         const problem = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
         if (problem) {
-          if (open) refuse(noticeText(problem, t));
-          else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
+          if (open) {
+            refuse(noticeText(problem, t));
+            setDraft(prev => (prev ? {...prev, refused: true} : prev));
+          } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
         }
       });
   };
@@ -171,6 +177,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
         setDraft({
           name: declared.entry.name,
           origin: declared.origin,
+          refused: false,
           policy: declared.entry.policy,
           filters: declared.entry.filters,
           default: routeValue(declared.entry.default),

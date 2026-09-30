@@ -352,3 +352,25 @@ test('the default member is offered only while the dialog selects manual selecti
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   expect(main.content).toMatch(/proxy \{[^}]*policy: min_moving_avg[^}]*default: hk-01[^}]*\}/);
 });
+
+test('a group edit refused over a file changed on disk saves on retry', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'resilient', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
+  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await apply.click();
+  await rejected;
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for resilient written and reloaded');
+  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(saved).toContain('# concurrent edit');
+  expect(saved).toContain('filter: name(hk-01, sg-01)');
+});
