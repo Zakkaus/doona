@@ -60,7 +60,7 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   expect(policyCardView(g, members, 'both', t).interruptUnset).toBe(false);
   expect(patchGroupConfig(g, [{op: 'replace', path: '/config/interrupt_connections', value: null}]).config.interrupt_connections).toBeNull();
 });
-it('counts worst probe outcome once per member and reports selection changes', () => {
+it('counts each member once with its address families folded and reports selection changes', () => {
   const sample = {
     ...nodeFixtures(0).groups[0].runtime.health[0],
     resolved_leaf_node_id: null,
@@ -74,13 +74,15 @@ it('counts worst probe outcome once per member and reports selection changes', (
     selection_before: {tcp: null, udp: null},
     selection_after: {tcp: 'a', udp: null},
     results: [
-      {...sample, member_id: 'a', state: 'healthy'},
-      {...sample, member_id: 'a', state: 'unavailable'},
-      {...sample, member_id: 'b', state: 'unknown'}
+      {...sample, member_id: 'a', ip_version: 'ipv4', state: 'unavailable'},
+      {...sample, member_id: 'a', ip_version: 'ipv6', state: 'healthy'},
+      {...sample, member_id: 'b', ip_version: 'ipv4', state: 'unavailable'},
+      {...sample, member_id: 'b', ip_version: 'ipv6', state: 'unknown'},
+      {...sample, member_id: 'c', state: 'unknown'}
     ],
     selection_changed: {tcp: true, udp: false}
   });
-  expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 0, unavailable: 1, unknown: 1}});
+  expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 1, unavailable: 1, unknown: 1}});
 });
 
 it('names the policy as the picker does and keeps the engine spelling for the tooltip', () => {

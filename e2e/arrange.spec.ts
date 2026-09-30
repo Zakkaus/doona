@@ -146,6 +146,22 @@ test('a failed node list is shown with a retry instead of loading forever', asyn
   await expect(page.getByRole('grid', {name: 'Nodes and subscriptions'})).toBeVisible();
 });
 
+test('two nodes with the same name are separate rows in the tray', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET nodes'] = async () => {
+    const list = await backend.api.nodes({limit: 1000});
+    // Next to the first, so both are among the rows the virtualised tray renders.
+    const at = list.nodes.findIndex(node => node.name === 'sg-01');
+    return {...list, nodes: [...list.nodes.slice(0, at + 1), {...list.nodes[at], id: 'sg-01-twin'}, ...list.nodes.slice(at + 1)]};
+  };
+  await page.goto('/#/policies?tab=arrange');
+  const rows = page.getByRole('grid', {name: 'Nodes and subscriptions'}).getByRole('row', {name: /^sg-01/});
+  await expect(rows).toHaveCount(2);
+  await rows.nth(0).click();
+  await rows.nth(1).click();
+  await expect(page.getByText('2 selected', {exact: true})).toBeVisible();
+});
+
 test('a phone gets a hint that matches its single-column layout, not the desktop panel', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/policies?tab=arrange');
