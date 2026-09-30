@@ -218,6 +218,37 @@ test('a UDP-only node is measured through the node, and the table shows its late
   expect(kinds).toEqual(['http']);
 });
 
+test('an unavailable latency fits its column in English at 1440 px', async ({page}) => {
+  await udpOnlyNode(page, row => row);
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes?provider=inline');
+  const latency = rows(page.locator('.rp-table').nth(1)).filter({hasText: 'hk-01'}).locator('.ms.err');
+  await expect(latency).toHaveText('Unavailable');
+  const {text, room} = await latency.evaluate(el => {
+    const cell = el.closest<HTMLElement>('[role="gridcell"]')!;
+    const style = getComputedStyle(cell);
+    return {text: el.getBoundingClientRect().width, room: cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)};
+  });
+  expect(text).toBeLessThanOrEqual(room);
+});
+
+test('a long unavailable node name wraps inside the latency card', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const long = 'L' + 'o'.repeat(180) + 'ng';
+  handlers['GET nodes'] = async () => {
+    const list = await api.nodes({limit: 1000});
+    const node = list.nodes.find(node => node.group_ids.length)!;
+    const unavailable = node.health.map(health => ({...health, state: 'unavailable' as const, latency_ms: null, error: 'probe_failed'}));
+    return {...list, nodes: list.nodes.map(each => (each === node ? {...node, name: long, health: unavailable} : each))};
+  };
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes?tab=latency');
+  // The node sits in more than one group, and each group lists it.
+  const notes = page.locator('.rp-markerplot .note', {hasText: long});
+  await expect(notes.first()).toBeVisible();
+  expect(await notes.evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth))).toBe(true);
+});
+
 test('a probe toast names its reason in words, never as a backend code', async ({page}) => {
   await udpOnlyNode(page, row =>
     row.ip_version === 'ipv4'

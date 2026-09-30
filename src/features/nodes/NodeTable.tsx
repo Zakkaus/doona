@@ -43,7 +43,8 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {
         id: 'latency',
         label: t('nodes.latency'),
-        minWidth: 96,
+        // Fits the longest value, English "Unavailable" after its dot, with the cell's padding.
+        minWidth: 128,
         grow: 0,
         align: 'end',
         sortable: true,

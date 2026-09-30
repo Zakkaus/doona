@@ -261,6 +261,7 @@
 }
 .rp-markerplot .note {
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
 }
 .rp-markerplot .track {
   position: relative;

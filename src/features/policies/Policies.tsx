@@ -31,6 +31,7 @@ import {
   Switch,
   Empty,
   Tabs,
+  TextTooltip,
   MoreMenu
 } from '../../ui/ui';
 import {NodeGrid} from './Nodes';
@@ -125,9 +126,12 @@ function PolicyDetail(props: PolicyGroupInput) {
       {g && (
         <>
           <ActionHelp reason={m.actionsReason}>
-            <div className="rp-row">
+            {/* A long name gives way, truncating, so the More menu keeps its place on the title row. */}
+            <div className="rp-row nowrap">
               <span className="rp-cluster">
-                <h2 className="rp-h3">{g.name}</h2>
+                <h2 className="rp-h3">
+                  <TextTooltip>{g.name}</TextTooltip>
+                </h2>
                 <Badge tip={g.policy.id}>{g.policy.label}</Badge>
                 <Light small tone="ok">
                   {g.healthy}
