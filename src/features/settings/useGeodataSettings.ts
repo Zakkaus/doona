@@ -1,6 +1,7 @@
 import {useRef, useState} from 'react';
 import type {GeoDataSettingsPatch} from '../../api/model';
 import {useCapabilities, useGeodata, useGroups, useRuntimeSettings} from '../../store';
+import {offered} from '../../api/capabilities';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
@@ -38,7 +39,8 @@ export function useGeodataSettings() {
   const available = geodataConfigurable(caps.data?.resources);
   const settings = useRuntimeSettings(available);
   const geodata = useGeodata(available);
-  const groups = useGroups(available);
+  const groupsOffered = offered(caps.data?.resources, 'groups', {whileLoading: false});
+  const groups = useGroups(available && groupsOffered);
   const stored = settings.data?.geodata;
   // The patch being saved shows in the controls until the settings come back, and is dropped on failure.
   const [pending, setPending] = useState<Patch | null>(null);
@@ -218,10 +220,13 @@ export function useGeodataSettings() {
     // A backend that predates the download route reports none and refuses a patch that sets one.
     route: download && {
       value: route,
-      items: (['routing', 'direct', 'group'] as const).map(id => ({
-        id,
-        label: t(id === 'routing' ? 'settings.geodataRouteRouting' : id === 'direct' ? 'settings.geodataRouteDirect' : 'settings.geodataRouteGroup')
-      })),
+      // Without the groups resource there is no group to pick; a stored group route still shows as it is.
+      items: (['routing', 'direct', 'group'] as const)
+        .filter(id => id !== 'group' || groupsOffered || route === 'group')
+        .map(id => ({
+          id,
+          label: t(id === 'routing' ? 'settings.geodataRouteRouting' : id === 'direct' ? 'settings.geodataRouteDirect' : 'settings.geodataRouteGroup')
+        })),
       // A group route needs its group, so choosing it only reveals the group select.
       change: (id: string) => {
         if (id === 'group') return setRouteChoice('group');

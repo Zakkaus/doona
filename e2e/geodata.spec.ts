@@ -200,6 +200,19 @@ test('the download route follows the routing rules by default, and a group route
   expect(sent).toEqual(['patch', 'patch']);
 });
 
+test('a backend without groups neither asks for them nor offers a group route', async ({page}) => {
+  const {capabilities, requests} = await traffic(page);
+  capabilities.resources.groups.available = false;
+  await page.goto('/#/settings');
+  await section(page)
+    .getByRole('button', {name: t('settings.geodataRoute')})
+    .first()
+    .click();
+  await expect(page.getByRole('option', {name: t('settings.geodataRouteDirect'), exact: true})).toBeVisible();
+  await expect(page.getByRole('option', {name: t('settings.geodataRouteGroup'), exact: true})).toHaveCount(0);
+  expect(requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toEqual([]);
+});
+
 test('a backend that cannot update on request only stores the sources and says so', async ({page}) => {
   const {sent, capabilities} = await traffic(page);
   capabilities.resources.geodata.can_update = false;
