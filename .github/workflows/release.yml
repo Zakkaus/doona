@@ -61,10 +61,15 @@ jobs:
           mkdir -p "$program" "$fonts"
           tar -xzf "release/doona-${NPM}.tar.gz" -C "$program"
           tar -xzf "release/doona-fonts-${NPM}.tar.gz" -C "$fonts"
-          mkdir -p build/stage/doona/usr/share/doc/doona/LICENSES build/stage/doona-fonts/usr/share/doc/doona
-          mv "$program"/LICENSE "$program"/NOTICE "$program"/README.md "$program"/CHANGELOG.md build/stage/doona/usr/share/doc/doona/
-          mv "$program"/LICENSES/Apache-2.0.txt build/stage/doona/usr/share/doc/doona/LICENSES/
-          rmdir "$program"/LICENSES
+          doc=build/stage/doona/usr/share/doc/doona
+          mkdir -p "$doc" build/stage/doona-fonts/usr/share/doc/doona
+          mv "$program"/LICENSE "$program"/LICENSES "$program"/NOTICE "$program"/THIRD-PARTY-NOTICES.txt \
+            "$program"/README.md "$program"/CHANGELOG.md "$doc"/
+          # rpm takes the documentation files one by one from doona.yaml; a file it does not list would be missing.
+          (cd "$doc" && find . -type f) | sort | while read -r file; do
+            grep -qxF "    dst: /usr/share/doc/doona/${file#./}" install/nfpm/doona.yaml ||
+              { echo "install/nfpm/doona.yaml does not list ${file#./} for rpm" >&2; exit 1; }
+          done
           cp "$fonts"/fonts/OFL.txt build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
           for packager in deb rpm ipk archlinux; do
             for config in install/nfpm/doona.yaml install/nfpm/doona-fonts.yaml; do
