@@ -1,4 +1,5 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig, unquote} from './text';
+import {blockBody, blockEntries, blockFields, quote, scanConfig} from './text';
+import {readSubscriptionEntries} from './subscriptions';
 import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
 
@@ -39,17 +40,18 @@ export function nextSubscriptionName(subscriptions: Subscription[]): string {
 export function readState(text: string): WizardState {
   const {blocks, tokens} = scanConfig(text);
   const subscriptions: Subscription[] = [];
+  const entries = readSubscriptionEntries(text);
   for (const [section, block] of blocks.filter(block => block.name === 'subscription').entries()) {
-    const fields = blockFields(text, block, tokens);
     if (!text.slice(block.open + 1, block.close).trim()) continue;
-    for (const entry of blockEntries(text, block)) {
-      const line = text.slice(entry.from, entry.to);
-      const entryFields = fields.filter(field => field.from >= entry.from && field.to <= entry.to);
-      const field = entry.block ? undefined : entryFields.length === 1 ? entryFields[0] : undefined;
-      const option = field && /^(['"])(.*)\1(\([^()]*\))$/.exec(field.value);
-      const url = option ? option[2] : field ? unquote(field.value) : '';
-      if (field && isSubscriptionUrl(url)) subscriptions.push({name: field.name, url, ...(option ? {suffix: option[3]} : {}), raw: line, section});
-      else subscriptions.push({name: '', url: '', raw: line, section, ...(entry.block || field ? {tag: entry.block?.name ?? field!.name} : {})});
+    for (const range of blockEntries(text, block)) {
+      const line = text.slice(range.from, range.to);
+      const entry = entries.find(entry => entry.from >= range.from && entry.from <= range.to);
+      // A one-line entry with its own tag and an http(s) link is edited here; any other line is kept as written.
+      const editable = entry && entry.naming === 'tag' && entry.form !== 'block' && entry.form !== 'options' && isSubscriptionUrl(entry.url);
+      if (editable) {
+        const suffix = entry.form === 'agent' ? text.slice(entry.urlAt.to, entry.to) : undefined;
+        subscriptions.push({name: entry.tag, url: entry.url, ...(suffix ? {suffix} : {}), raw: line, section});
+      } else subscriptions.push({name: '', url: '', raw: line, section, ...(entry ? {tag: entry.tag} : {})});
     }
   }
   const group = readGroupEntries(text)[0]?.written ?? null;

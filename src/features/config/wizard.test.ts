@@ -254,3 +254,19 @@ it('keeps the option after a subscription URL when the URL is edited', () => {
   const out = writeState(text, {...readState(text), subscriptions: [{...sub, url: 'https://y.example/sub', raw: undefined}]});
   expect(out).toBe("subscription {\n  a: 'https://y.example/sub'(clash)\n}\n");
 });
+
+it('reads subscriptions with the parser the Nodes page uses', () => {
+  const text =
+    "subscription {\n  paid plan: 'https://a.example/sub'(clash)\n  squeezed: { url: 'https://b.example/sub' }\n  'https://c.example/sub'\n  c: https://d.example/sub\n  x: 'https://e.example' junk\n}\n";
+  const state = readState(text);
+  expect(state.subscriptions.map(({name, url, suffix, tag}) => [name, url, suffix, tag])).toEqual([
+    ['paid plan', 'https://a.example/sub', '(clash)', undefined],
+    ['', '', undefined, 'squeezed'],
+    ['', '', undefined, 'c.example'],
+    ['c', 'https://d.example/sub', undefined, undefined],
+    ['', '', undefined, undefined]
+  ]);
+  // Names honk derives count too: a new entry named after a host already in use is refused.
+  expect(validSubscriptions([...state.subscriptions, {name: 'c.example', url: 'https://f.example/sub'}])).toBe(false);
+  expect(writeState(text, state)).toBe(text);
+});
