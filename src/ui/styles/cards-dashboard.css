@@ -386,6 +386,40 @@
   color: var(--rp-subtle);
   white-space: nowrap;
 }
+.rp-latency .rp-tile-caption {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A phone tile has room for the icon and the group picker only; the caption stays as the tile's accessible name. */
+@media (max-width: 599.98px) {
+  .rp-latency .rp-tile-caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .rp-latency .rp-selectbtn {
+    flex: 1;
+  }
+}
+.rp-latency .rp-selectbtn {
+  flex: 0 1 auto;
+  min-width: 4.5em;
+  font-size: var(--rp-text-md);
+}
+.rp-latency .rp-selectbtn > .rp-il {
+  flex: 1;
+}
+.rp-latency .rp-tile-val {
+  flex: 1;
+  min-width: 0;
+}
+.rp-latency .rp-tile-val > .rp-link {
+  flex: none;
+}
 .rp-tile-body {
   display: flex;
   align-items: center;

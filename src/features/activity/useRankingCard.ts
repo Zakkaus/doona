@@ -21,6 +21,7 @@ export function useRankingCard() {
   const state = connections.data ? (rows.length ? 'ready' : 'empty') : connections.error ? 'error' : available === true ? 'loading' : 'unavailable';
   return {
     ref,
+    connections: connections.data,
     by,
     setBy,
     rows,

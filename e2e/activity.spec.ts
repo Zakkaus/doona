@@ -68,17 +68,18 @@ test('the traffic figures stay while the runtime read fails, muted until it reco
   const runtime = /\/api\/v1\/runtime$/;
   expectLoadFailures(page, runtime);
   await page.goto('/#/activity');
-  const figures = page.locator('.rp-strip .rp-big');
+  const tiles = page.locator('.rp-strip .rp-card').filter({hasNot: page.getByRole('button', {name: 'Groups', exact: true})});
+  const figures = tiles.locator('.rp-big');
   await expect(figures).toHaveCount(4);
-  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(0);
+  await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
   // The runtime is polled every five seconds.
   await page.route(runtime, route => route.abort('failed'));
   await expect(page.locator('.rp-content > .rp-alert')).toContainText('The backend could not be reached', {timeout: 10_000});
-  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(4);
+  await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(4);
   await expect(figures.first()).not.toBeEmpty();
   await page.unroute(runtime);
   await expect(page.locator('.rp-content > .rp-alert')).toHaveCount(0, {timeout: 10_000});
-  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(0);
+  await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
 });
 
 test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
@@ -173,18 +174,18 @@ test('read-only main configuration keeps the current mode and explains the write
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
 });
 
-test('the compact node menu selects by keyboard and returns focus to its trigger', async ({page}) => {
+test('the compact group menu selects by keyboard and returns focus to its trigger', async ({page}) => {
   await page.addInitScript(() => localStorage.setItem('doona-mock-big', '7'));
   await page.goto('/#/activity');
-  const trigger = page.getByRole('button', {name: 'Node', exact: true});
+  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
   await trigger.focus();
   await page.keyboard.press('ArrowDown');
-  const menu = page.getByRole('menu', {name: 'Node', exact: true});
+  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
   const last = menu.getByRole('menuitemradio').last();
   const name = await last.getAttribute('data-key');
   expect(name).not.toBeNull();
-  await expect(menu.getByRole('menuitemradio')).toHaveCount(12);
-  await expect(page.getByRole('searchbox', {name: 'Filter nodes'})).toHaveCount(0);
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(5);
+  await expect(page.getByRole('searchbox', {name: 'Groups'})).toHaveCount(0);
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await expect(menu).toHaveCount(0);
@@ -192,35 +193,144 @@ test('the compact node menu selects by keyboard and returns focus to its trigger
   await expect(trigger).toBeFocused();
 });
 
+test('the latency card follows the busiest group, remembers a choice and resolves its active node', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.events.available = false;
+  const snapshot = await backend.api.connections({detail: 'full', limit: 1000});
+  let groups = await backend.api.groups();
+  groups[0].selection.tcp_member_id = groups[1].id;
+  let busiest = 'proxy';
+  let reads = 0;
+  backend.handlers['GET groups'] = async () => groups;
+  backend.handlers['GET connections'] = async () => {
+    reads++;
+    return {...snapshot, tcp: [{...snapshot.tcp[0], state: 'active', outbound: busiest, chain: ['gaming', 'jp-01']}], udp: []};
+  };
+  // A saved node choice belongs to the old picker and must be ignored.
+  await page.addInitScript(() => localStorage.setItem('doona-activity-node', 'jp-01'));
+  await page.clock.install();
+  await page.goto('/#/activity');
+  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
+  const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
+  await expect(trigger).toHaveText('proxy');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('sg-0163 ms');
+  expect(reads).toBe(1);
+  busiest = 'gaming';
+  await page.clock.fastForward(20100);
+  await expect(trigger).toHaveText('gaming');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('hk-0291 ms');
+  expect(reads).toBe(2);
+  await trigger.click();
+  const follow = menu.getByRole('menuitemradio', {name: 'Follow the busiest group', exact: true});
+  await expect(menu.getByRole('menuitemradio').first()).toHaveText('Follow the busiest group');
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await expect(menu.locator('[data-key="proxy"] .desc')).toHaveText('sg-01');
+  await menu.locator('[data-key="proxy"]').click();
+  await expect(trigger).toHaveText('proxy');
+  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe('proxy');
+  groups[1].selection.tcp_member_id = 'hk-01';
+  await page.clock.fastForward(30100);
+  await expect(trigger).toHaveText('proxy');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('hk-0184 ms');
+  await page.reload();
+  await expect(trigger).toHaveText('proxy');
+  await trigger.click();
+  await expect(menu.locator('[data-key="proxy"]')).toHaveAttribute('aria-checked', 'true');
+  await follow.click();
+  await expect(trigger).toHaveText('gaming');
+  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
+  await trigger.click();
+  await menu.locator('[data-key="proxy"]').click();
+  const originalGroups = groups;
+  groups = groups.filter(group => group.name !== 'proxy');
+  await page.reload();
+  await expect(trigger).toHaveText('gaming');
+  await trigger.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
+  await follow.click();
+  groups = originalGroups;
+  await page.clock.fastForward(30100);
+  await expect(trigger).toHaveText('gaming');
+  expect(backend.requests.every(request => request.method() === 'GET')).toBe(true);
+});
+
+test('group latency preserves the ranking poll pause with follow and manual choices', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.events.available = false;
+  let reads = 0;
+  backend.handlers['GET connections'] = async () => {
+    reads++;
+    return backend.api.connections({detail: 'full', limit: 1000});
+  };
+  await page.setViewportSize({width: 390, height: 600});
+  await page.clock.install();
+  await page.goto('/#/activity');
+  const ranking = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Top traffic', exact: true})});
+  await expect(ranking.getByRole('link').first()).toBeVisible();
+  await ranking.scrollIntoViewIfNeeded();
+  await page.clock.runFor(100);
+  await page.clock.fastForward(20100);
+  await expect.poll(() => reads).toBe(2);
+  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  await page.getByRole('heading', {name: 'Activity', exact: true}).evaluate(el => el.scrollIntoView({block: 'start'}));
+  await expect.poll(async () => (await ranking.boundingBox())!.y).toBeGreaterThan(1000);
+  await page.clock.runFor(100);
+  const pausedReads = reads;
+  await page.clock.fastForward(40100);
+  await page.clock.runFor(100);
+  expect(reads).toBe(pausedReads);
+  await trigger.click();
+  await page.getByRole('menuitemradio').filter({hasText: 'proxy'}).click();
+  await page.clock.fastForward(40100);
+  await page.clock.runFor(100);
+  expect(reads).toBe(pausedReads);
+  await ranking.scrollIntoViewIfNeeded();
+  await page.clock.runFor(100);
+  await page.clock.fastForward(20100);
+  await expect.poll(() => reads).toBeGreaterThan(pausedReads);
+});
+
 test('the latency tile of a healthy node has no status light', async ({page}) => {
   await page.goto('/#/activity');
   const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
-  await expect(tile.getByRole('link')).toHaveAccessibleName(/^\S+: \d/);
+  await expect(tile.getByRole('link')).toHaveAccessibleName(/^[^→]+: \d/);
   await expect(tile.locator('.rp-light')).toHaveCount(0);
 });
 
-test('the latency tile names a node that is unavailable and keeps its size', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-mock-scenario', 'faults'));
+test('the latency tile names an active node that is unavailable and keeps its size', async ({page}) => {
+  const backend = await mockBackend(page, {faults: true});
+  const groups = await backend.api.groups();
+  groups.find(group => group.name === 'gaming')!.selection.tcp_member_id = 'jp-01';
+  backend.handlers['GET groups'] = async () => groups;
   await page.goto('/#/activity');
   const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
   // The value link appears once the nodes have loaded; before that the tile shows its placeholder.
-  await expect(tile.getByRole('link')).toHaveAccessibleName(/^\S+: \d/);
+  await expect(tile.getByRole('link')).toHaveAccessibleName(/^[^→]+: \d/);
   await expect(tile.locator('.rp-light')).toHaveCount(0);
   const height = (await tile.boundingBox())!.height;
-  await page.getByRole('button', {name: 'Node', exact: true}).click();
-  const jp = page.getByRole('menuitemradio').filter({hasText: 'jp-01'});
+  await page.getByRole('button', {name: 'Groups', exact: true}).click();
+  const jp = page.getByRole('menuitemradio').filter({hasText: 'gaming'});
   await scrollIntoList(jp);
   await jp.click();
   await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
   expect((await tile.boundingBox())!.height).toBe(height);
 });
 
-test('the latency node menu says it only changes the latency shown', async ({page}) => {
+test('the latency group menu says it only changes the latency shown', async ({page}) => {
   await page.goto('/#/activity');
-  await page.getByRole('button', {name: 'Node', exact: true}).click();
-  const menu = page.getByRole('menu', {name: 'Node', exact: true});
-  await expect(menu).toHaveAccessibleDescription('Selecting a node changes only the latency shown on this card; routing is unchanged.');
-  await expect(page.getByText('Selecting a node changes only the latency shown on this card; routing is unchanged.', {exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Groups', exact: true}).click();
+  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
+  await expect(menu).toHaveAccessibleDescription(
+    'By default, this card shows the active node of the policy group with the most connections. Choosing a group changes only this card and does not change routing.'
+  );
+  await expect(
+    page.getByText(
+      'By default, this card shows the active node of the policy group with the most connections. Choosing a group changes only this card and does not change routing.',
+      {exact: true}
+    )
+  ).toBeVisible();
 });
 
 test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
@@ -384,49 +494,70 @@ for (const width of [390, 1440]) {
   });
 }
 
-// A phone keeps two tiles to a row down to 320px; the Latency tile's node picker shrinks to its tile and ellipsises a
-// long name, which its own menu still lists in full.
+// The picker stays inside the tile; phones keep two tiles per row and truncate long group names.
 for (const [width, lang] of [
   [320, 'en'],
   [320, 'zh-TW'],
   [360, 'en'],
-  [360, 'zh-TW']
+  [360, 'zh-TW'],
+  [390, 'zh-CN'],
+  [1440, 'en']
 ] as const)
   test.describe(`${width}px ${lang} metric strip`, () => {
     test.use({viewport: {width, height: 800}, storage: {'doona-lang': lang}});
-    test('keeps two tiles to a row and the node picker inside its tile', async ({page}) => {
+    test('keeps two tiles to a row and the group picker inside its tile', async ({page}) => {
       const backend = await mockBackend(page);
-      backend.handlers['GET nodes'] = async () => {
-        const list = await backend.api.nodes({limit: 1000});
-        return {...list, nodes: list.nodes.map(node => ({...node, name: `${node.name}-relay-through-a-long-provider-name`}))};
-      };
+      backend.handlers['GET groups'] = async () =>
+        (await backend.api.groups()).map(group => ({...group, name: `${group.name}-relay-through-a-long-provider-name`}));
       await page.goto('/#/activity');
-      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-select')});
-      const picker = tile.locator('.rp-tile-head .rp-select');
+      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-selectbtn')});
+      const picker = tile.locator('.rp-tile-head .rp-selectbtn');
       await expect(picker).toContainText('-relay-through-a-long-provider-name');
       const tops = await page.locator('.rp-strip > *').evaluateAll(tiles => tiles.map(el => Math.round(el.getBoundingClientRect().top)));
       const rows = [...new Set(tops)].map(top => tops.filter(other => other === top).length);
-      expect(rows.slice(0, -1).every(count => count === 2) && rows.at(-1)! <= 2, `tiles per row: ${rows.join(', ')}`).toBe(true);
-      const {edge, parts, name} = await tile.evaluate(el => {
+      if (width < 600) expect(rows.slice(0, -1).every(count => count === 2) && rows.at(-1)! <= 2, `tiles per row: ${rows.join(', ')}`).toBe(true);
+      const {edge, left, start, parts, name, gap, height, chevron, control} = await tile.evaluate(el => {
         const box = el.getBoundingClientRect();
         const style = getComputedStyle(el);
-        const button = el.querySelector('.rp-tile-head .rp-select')!;
-        const text = button.querySelector<HTMLElement>('.rp-truncate');
+        const button = el.querySelector('.rp-tile-head .rp-selectbtn')!;
+        const text = button.querySelector<HTMLElement>('.rp-truncate:last-child');
         return {
           edge: box.right - parseFloat(style.paddingInlineEnd),
+          left: box.left + parseFloat(style.paddingInlineStart),
+          start: button.getBoundingClientRect().left,
           parts: [button, button.querySelector('svg')!].map(part => part.getBoundingClientRect().right),
-          name: text && {full: text.scrollWidth, shown: text.clientWidth}
+          name: text && {full: text.scrollWidth, shown: text.clientWidth, overflow: getComputedStyle(text).textOverflow},
+          gap: getComputedStyle(button).gap,
+          height: button.getBoundingClientRect().height,
+          chevron: button.querySelector('svg')!.getBoundingClientRect().width,
+          control: parseFloat(getComputedStyle(button).getPropertyValue('--rp-control'))
         };
       });
+      expect(start).toBeGreaterThanOrEqual(left - 0.5);
       for (const right of parts) expect(right).toBeLessThanOrEqual(edge + 0.5);
       expect(name, 'the name is ellipsised').not.toBeNull();
       expect(name!.full).toBeGreaterThan(name!.shown);
-      // The trigger's own text can shrink to nothing on the narrowest phones; the menu it opens still names every
-      // node in full.
+      expect(name!.overflow).toBe('ellipsis');
+      expect(gap).toBe('8px');
+      expect(height).toBe(control);
+      expect(chevron).toBe(20);
+      if (width === 1440) {
+        await expect(picker.locator('.rp-truncate')).toHaveAttribute('data-tip');
+        await picker.focus();
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Shift+Tab');
+        await expect(page.getByRole('tooltip')).toHaveText((await picker.textContent())!);
+      }
       await picker.click();
       await expect(page.getByRole('menuitemradio', {name: /-relay-through-a-long-provider-name/}).first()).toBeVisible();
     });
   });
+
+async function mockManyGroups(page: Page) {
+  const backend = await mockBackend(page);
+  const base = (await backend.api.groups())[0];
+  backend.handlers['GET groups'] = async () => Array.from({length: 40}, (_, i) => ({...base, id: `group-${i}`, name: `group-${i}`}));
+}
 
 test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
@@ -440,7 +571,8 @@ test.describe('many outbounds', () => {
   test.describe('without the service worker', () => {
     // Request interception does not see what a service worker fetches.
     test.use({serviceWorkers: 'block'});
-    test('the node search loads on intent and keeps the menu size while it arrives', async ({page}) => {
+    test('the group search loads on intent and keeps the menu size while it arrives', async ({page}) => {
+      await mockManyGroups(page);
       // The idle warm-up loads other pages that import the search list, which would fetch it before the hover.
       await page.addInitScript(() => {
         window.requestIdleCallback = () => 0;
@@ -455,7 +587,7 @@ test.describe('many outbounds', () => {
         await route.continue();
       });
       await page.goto('/#/activity');
-      const trigger = page.getByRole('button', {name: 'Node', exact: true});
+      const trigger = page.getByRole('button', {name: 'Groups', exact: true});
       await expect(trigger).toBeVisible();
       expect(fetched).toBe(0);
       await trigger.hover();
@@ -467,27 +599,28 @@ test.describe('many outbounds', () => {
       await popover.evaluate(el => Promise.all(el.getAnimations({subtree: true}).map(animation => animation.finished)));
       const pending = await popover.boundingBox();
       release();
-      await expect(page.getByRole('searchbox', {name: 'Filter nodes'})).toBeFocused();
+      await expect(page.getByRole('searchbox', {name: 'Groups'})).toBeFocused();
       expect(await popover.boundingBox()).toEqual(pending);
     });
   });
 
-  test('the node menu searches virtual sections and selects the filtered node by keyboard', async ({page}) => {
+  test('the group menu searches and selects the filtered group by keyboard', async ({page}) => {
+    await mockManyGroups(page);
     await page.goto('/#/activity');
-    const trigger = page.getByRole('button', {name: 'Node', exact: true});
+    const trigger = page.getByRole('button', {name: 'Groups', exact: true});
     await trigger.click();
-    const menu = page.getByRole('menu', {name: 'Node', exact: true});
-    const search = page.getByRole('searchbox', {name: 'Filter nodes'});
+    const menu = page.getByRole('menu', {name: 'Groups', exact: true});
+    const search = page.getByRole('searchbox', {name: 'Groups'});
     await expect(search).toBeFocused();
-    await expect(menu.locator('.rp-sec-h').first()).toBeVisible();
-    expect(await menu.getByRole('menuitemradio').count()).toBeLessThan(3000);
+    await expect(menu.getByRole('menuitemradio').first()).toHaveText('Follow the busiest group');
+    expect(await menu.getByRole('menuitemradio').count()).toBeLessThan(41);
     await menu.evaluate(el => el.scrollTo(0, el.scrollHeight));
     const target = menu.getByRole('menuitemradio').last();
     const name = await target.getAttribute('data-key');
     expect(name).not.toBeNull();
     await search.fill(name!);
     await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
-    const health = await menu.locator('.desc').innerText();
+    const activeNode = await menu.locator('.desc').innerText();
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(menu).toHaveCount(0);
@@ -497,7 +630,7 @@ test.describe('many outbounds', () => {
     // The virtual list renders the selected row only once the filter narrows it into view.
     await search.fill(name!);
     await expect(menu.getByRole('menuitemradio', {name: new RegExp(name!)})).toHaveAttribute('aria-checked', 'true');
-    await expect(menu.locator('.desc')).toHaveText(health);
+    await expect(menu.locator('.desc')).toHaveText(activeNode);
     await page.keyboard.press('Escape');
     await expect(search).toHaveValue('');
     await page.keyboard.press('Escape');
@@ -558,7 +691,7 @@ test('staged mode changes require discard before navigation', async ({page}) => 
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
 });
 
-test('local traffic renders without history and duplicate node names retain independent latency', async ({page}) => {
+test('local traffic renders without history and latency falls back to a node without groups', async ({page}) => {
   const api = createMockApi({faults: true});
   const capabilities = await api.capabilities();
   for (const resource of Object.values(capabilities.resources)) resource.available = false;
@@ -584,20 +717,13 @@ test('local traffic renders without history and duplicate node names retain inde
   });
   await page.goto('/#/activity');
   await expect(page.getByRole('region', {name: 'Traffic', exact: true}).locator('.rp-activity-surface')).toBeVisible();
-  const trigger = page.getByRole('button', {name: 'Node', exact: true});
-  await trigger.click();
-  await page.getByRole('menuitemradio').filter({hasText: 'provider-b'}).click();
+  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
   const card = trigger.locator('xpath=ancestor::*[contains(@class,"rp-card")][1]');
-  await expect(card.locator('.rp-big')).toHaveText('—');
-  await expect(card.getByText('Unavailable', {exact: true})).toBeVisible();
-  await expect(card.getByText('Timed out', {exact: true})).toHaveCount(0);
-  // The failure code honk sends reads as words.
-  await card.getByText('Unavailable', {exact: true}).hover();
-  await expect(page.getByRole('tooltip')).toHaveText('The probe failed');
-  await trigger.click();
-  await expect(page.getByRole('menuitemradio').filter({hasText: 'provider-b'})).toHaveAttribute('aria-checked', 'true');
-  await page.getByRole('menuitemradio').filter({hasText: 'provider-a'}).click();
+  await expect(trigger).toHaveText('HK');
   await expect(card.locator('.rp-big')).toContainText('ms');
+  await trigger.click();
+  await expect(page.getByRole('menuitemradio')).toHaveCount(1);
+  await expect(page.getByRole('menuitemradio')).toHaveText('Follow the busiest group');
 });
 
 browserTest('configuration read failures are shown instead of write restrictions', async ({page}) => {
@@ -628,7 +754,7 @@ test('optional runtime does not block independent activity sections or poll an u
   capabilities.resources.runtime.available = false;
   await page.clock.install();
   await page.goto('/#/activity');
-  await expect(page.getByRole('button', {name: 'Node', exact: true})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Groups', exact: true})).toBeVisible();
   await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.rp-activity-surface')).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
   await expect(page.getByText('Not provided by this backend', {exact: true})).toBeVisible();
@@ -728,7 +854,7 @@ test('the rankings, outbound usage and latency tile open the connections and nod
   await page.goBack();
   const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
   const node = tile.getByRole('link');
-  await expect(node).toHaveAccessibleName(/^\S+: /);
+  await expect(node).toHaveAccessibleName(/^[^→]+: /);
   const nodeName = (await node.getAttribute('aria-label'))!.split(':')[0];
   await node.click();
   await expect(page).toHaveURL(new RegExp(`#/nodes\\?provider=[^&]+&q=${escape(nodeName)}$`));
@@ -773,4 +899,15 @@ test('the notices card says what is missing to route through a proxy until it is
   await page.reload();
   await expect(card.getByText('No subscriptions yet')).toHaveCount(0);
   await expect(card.getByText('No routing rules configured')).toHaveCount(0);
+});
+
+test('the latency picker shows the whole group name on a phone', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  await page.setViewportSize({width: 390, height: 900});
+  await page.goto('/#/activity');
+  const picker = page.locator('.rp-latency .rp-selectbtn');
+  await expect(picker).toContainText('proxy');
+  // The caption is visually hidden on a phone tile, so the group name is not cut.
+  const cut = await picker.evaluate(button => [...button.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1));
+  expect(cut).toBe(false);
 });

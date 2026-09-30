@@ -21,6 +21,8 @@
   "act.global": "Global mode outbound",
   "act.globalMissing": "Global mode needs an outbound",
   "act.good": "Good",
+  "act.groupFollow": "Follow the busiest group",
+  "act.groupPickHelp": "By default, this card shows the active node of the policy group with the most connections. Choosing a group changes only this card and does not change routing.",
   "act.h1": "1 h",
   "act.h24": "24 h",
   "act.h6": "6 h",
@@ -49,8 +51,6 @@
   "act.noOutbounds": "This backend does not provide outbound counters",
   "act.noRoutingMode": "No routing rules configured",
   "act.noSubscriptions": "No subscriptions yet",
-  "act.node": "Node",
-  "act.nodePickHelp": "Selecting a node changes only the latency shown on this card; routing is unchanged.",
   "act.noticeRepeat": {
     "one": "{n} time",
     "other": "{n} times"
@@ -1886,7 +1886,6 @@
   "ui.saved": "Settings saved.",
   "ui.seconds": "{n} s",
   "ui.sectionChoice": "{section} {item}",
-  "ui.sectionCount": " ({n})",
   "ui.selectRow": "Select a row first",
   "ui.separator": ", ",
   "ui.share": "{bytes}, {percent}%",
