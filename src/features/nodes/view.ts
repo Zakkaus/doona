@@ -159,13 +159,19 @@ export function nodeRows(
   return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
 }
 
-// The options an edit leaves as written. The User-Agent, the interval (the table's Auto-refresh picker) and the cache,
-// while its switch shows, have their own controls.
-export function keptOptions(options: SubscriptionOption[], cacheControl: boolean): SubscriptionOption[] {
-  return options.filter(option => option.name !== 'ua' && option.name !== 'interval' && !(option.name === 'cache' && cacheControl));
+// The options an edit leaves as written. The User-Agent, the interval (the table's Auto-refresh picker), and the cache
+// and the download route while their controls show, have their own controls.
+export function keptOptions(options: SubscriptionOption[], controls: {cache: boolean; route: boolean}): SubscriptionOption[] {
+  return options.filter(
+    option =>
+      option.name !== 'ua' &&
+      option.name !== 'interval' &&
+      !(option.name === 'cache' && controls.cache) &&
+      !((option.name === 'route' || option.name === 'download_detour') && controls.route)
+  );
 }
 
-export type ProviderForm = {name: string; value: string; interval: string; agent: string; cache: boolean | null};
+export type ProviderForm = {name: string; value: string; interval: string; agent: string; cache: boolean | null; route: string};
 type CreateOptions = Capabilities['resources']['providers']['create_options'];
 // An option left at the backend's default is not sent, so the entry stays a one-line scalar.
 export function providerCreate(form: ProviderForm, options: CreateOptions): ProviderCreate {

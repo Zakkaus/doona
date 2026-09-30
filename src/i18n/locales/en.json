@@ -1009,6 +1009,7 @@
   "nodes.removed": "{name} removed",
   "nodes.renameGroups": "Also update the subscription filter in {groups}",
   "nodes.renameGroupsHelp": "Otherwise these groups lose the nodes of {name}.",
+  "nodes.routeHelp": "Applies to fetching the subscription itself, not to the traffic of its nodes.",
   "nodes.scope": "Showing nodes from {name}. Choose another source above to view its nodes.",
   "nodes.search": "Search nodes",
   "nodes.searchAll": "Search covers all node sources.",

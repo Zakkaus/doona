@@ -234,17 +234,19 @@ it('lists as written only the options without their own control', () => {
     {name: 'ua', value: "'clash.meta'"},
     {name: 'interval', value: '0s'},
     {name: 'cache', value: 'true'},
+    {name: 'download_detour', value: 'proxy'},
     {name: 'retry', value: '3'}
   ];
-  expect(keptOptions(options, true)).toEqual([{name: 'retry', value: '3'}]);
-  expect(keptOptions(options, false)).toEqual([
+  expect(keptOptions(options, {cache: true, route: true})).toEqual([{name: 'retry', value: '3'}]);
+  expect(keptOptions(options, {cache: false, route: false})).toEqual([
     {name: 'cache', value: 'true'},
+    {name: 'download_detour', value: 'proxy'},
     {name: 'retry', value: '3'}
   ]);
 });
 
 describe('providerCreate', () => {
-  const form = {name: ' sub-a ', value: ' https://example.org/sub ', interval: '', agent: '', cache: null};
+  const form = {name: ' sub-a ', value: ' https://example.org/sub ', interval: '', agent: '', cache: null, route: ''};
   const options = {update_interval: 86400, user_agent: 'honk/1.0', cache: true};
 
   it('sends only the options that differ from the backend default', () => {

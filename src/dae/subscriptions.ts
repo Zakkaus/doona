@@ -20,6 +20,9 @@ export type SubscriptionText = {
   ua: string | null;
   interval: number | null;
   cache: boolean | null;
+  // The download route as written: `routing`, `direct` or a group; the old block form may write it as
+  // `download_detour`.
+  route: string | null;
   // Options as written, values quotes included; the agent form's User-Agent is listed as `ua`.
   options: SubscriptionOption[];
   // The entry's own text, without a comment after it, and where its tag and its URL are written.
@@ -36,7 +39,7 @@ type Entry = SubscriptionText & {
   agentAt?: Range & {quoted: boolean; open: number; close: number};
   comment?: Range;
 };
-export type SubscriptionChange = {tag?: string; url?: string; ua?: string | null; interval?: number | null; cache?: boolean | null};
+export type SubscriptionChange = {tag?: string; url?: string; ua?: string | null; interval?: number | null; cache?: boolean | null; route?: string | null};
 
 // honk's duration grammar: an integer of seconds, minutes or hours, a bare number of seconds, or milliseconds
 // rounded up. Anything else is null: honk would fall back to 0 with a warning, which is not what was written.
@@ -144,7 +147,13 @@ function readEntry(text: string, segment: Segment, tokens: TextToken[]): Entry |
   const base = {from: first.from, to: block?.to ?? parts.at(-1)!.to, line: first.line + 1, comment: comment && {from: comment.from, to: comment.to}};
   // honk keeps the last of a repeated key.
   const lastOf = (fields: Field[], name: string) => fields.filter(field => field.name === name).at(-1);
-  const options = (fields: Field[]) => ({ua: lastOf(fields, 'ua'), interval: lastOf(fields, 'interval'), cache: lastOf(fields, 'cache')});
+  const options = (fields: Field[]) => ({
+    ua: lastOf(fields, 'ua'),
+    interval: lastOf(fields, 'interval'),
+    cache: lastOf(fields, 'cache'),
+    route: lastOf(fields, 'route'),
+    detour: lastOf(fields, 'download_detour')
+  });
   const read = (field: Field | undefined) =>
     field
       ? valueOf(
@@ -163,7 +172,8 @@ function readEntry(text: string, segment: Segment, tokens: TextToken[]): Entry |
     const known = {
       ua: read(found.ua),
       interval: found.interval ? parseInterval(read(found.interval)!) : null,
-      cache: found.cache ? parseBool(read(found.cache)!) : null
+      cache: found.cache ? parseBool(read(found.cache)!) : null,
+      route: read(found.route)
     };
     const listed = fields.map(({name, value}) => ({name, value}));
     if (!value.length) {
@@ -172,6 +182,7 @@ function readEntry(text: string, segment: Segment, tokens: TextToken[]): Entry |
       return {
         ...base,
         ...known,
+        route: known.route ?? read(found.detour),
         tag,
         naming: 'tag',
         form: 'block',
@@ -241,6 +252,7 @@ function readEntry(text: string, segment: Segment, tokens: TextToken[]): Entry |
     ua,
     interval: null,
     cache: null,
+    route: null,
     options: ua === null ? [] : [{name: 'ua', value: ua}],
     tagAt,
     urlAt,
@@ -270,6 +282,7 @@ export function readSubscriptionEntries(text: string): SubscriptionText[] {
 
 // A User-Agent in parentheses is written bare when honk reads it back unchanged, and quoted otherwise.
 const bareAgent = (value: string) => /^[^\s()#'"{}]([^()#'"{}]*[^\s()#'"{}])?$/.test(value);
+const writeName = (name: string) => (isBareName(name) ? name : quote(name));
 const writeTag = (name: string, written?: string) => (/^['"]/.test(written ?? '') || !isBareName(name) ? quote(name) : name);
 
 type Edit = {from: number; to: number; text: string};
@@ -307,7 +320,8 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     url: change.url ?? entry.url,
     ua: change.ua === undefined ? entry.ua : change.ua,
     interval: change.interval === undefined ? entry.interval : change.interval,
-    cache: change.cache === undefined ? entry.cache : change.cache
+    cache: change.cache === undefined ? entry.cache : change.cache,
+    route: change.route === undefined ? entry.route : change.route
   };
   if (next.tag !== tag && entries.some(other => other.tag === next.tag)) throw new LocalError('nodes.tagTaken');
   const changed = {
@@ -315,7 +329,8 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     url: next.url !== entry.url,
     ua: next.ua !== entry.ua,
     interval: change.interval !== undefined && next.interval !== entry.interval,
-    cache: change.cache !== undefined && next.cache !== entry.cache
+    cache: change.cache !== undefined && next.cache !== entry.cache,
+    route: change.route !== undefined && next.route !== entry.route
   };
   if (!Object.values(changed).some(Boolean)) return text;
   const writtenTag = entry.tagAt ? text.slice(entry.tagAt.from, entry.tagAt.to) : undefined;
@@ -324,13 +339,14 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     // A name derived from the link would follow a new link, so a changed one is written out.
     const named = entry.naming === 'tag' ? writtenTag! : writeTag(next.tag);
     const header = `${named}: ${quote(next.url)}`;
-    if ((changed.interval && next.interval !== null) || (changed.cache && next.cache !== null)) {
+    if ((changed.interval && next.interval !== null) || (changed.cache && next.cache !== null) || (changed.route && next.route !== null)) {
       const indent = indentAt(text, entry.from);
       const inner = indent + indentStep(text, entries, entry);
       const lines = [`${header} {${entry.comment ? ' ' + text.slice(entry.comment.from, entry.comment.to) : ''}`];
       if (next.ua !== null) lines.push(`${inner}ua: ${quote(next.ua)}`);
       if (next.interval !== null) lines.push(`${inner}interval: ${writeInterval(next.interval)}`);
       if (next.cache !== null) lines.push(`${inner}cache: ${next.cache}`);
+      if (next.route !== null) lines.push(`${inner}route: ${writeName(next.route)}`);
       lines.push(`${indent}}`);
       return applyEdits(text, [{from: entry.from, to: entry.comment?.to ?? entry.to, text: lines.join('\n')}]);
     }
@@ -350,7 +366,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     return applyEdits(text, edits);
   }
   // honk reads one option per line of a block, so a block written on one line is first opened onto several.
-  if (block.line === block.endLine && entry.fields.length && (changed.ua || changed.interval || changed.cache)) {
+  if (block.line === block.endLine && entry.fields.length && (changed.ua || changed.interval || changed.cache || changed.route)) {
     const indent = indentAt(text, entry.from);
     const inner = indent + indentStep(text, entries, entry);
     const body = text.slice(block.open + 1, block.close).trim();
@@ -365,8 +381,16 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   const closeOwnLine = /^[ \t]*$/.test(text.slice(closeLine, block.close));
   const removed: Field[] = [];
   let kept = false;
-  const set = (name: 'ua' | 'interval' | 'cache', value: string | number | boolean | null) => {
+  const set = (name: 'ua' | 'interval' | 'cache' | 'route', value: string | number | boolean | null) => {
     const fields = entry.fields.filter(field => field.name === name);
+    // honk refuses an old block that writes both, so a route set there replaces its `download_detour`.
+    const detours = name === 'route' && entry.form === 'block' ? entry.fields.filter(field => field.name === 'download_detour') : [];
+    removed.push(...detours);
+    for (const field of detours) {
+      const from = lineStart(text, field.key.from);
+      const end = text.indexOf('\n', field.at.to);
+      edits.push({from, to: end === -1 ? field.at.to : end + 1, text: ''});
+    }
     const last = fields.at(-1);
     if (value === null) {
       removed.push(...fields);
@@ -380,7 +404,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     kept = true;
     const quoted = !!last && /^['"]/.test(last.value);
     const plain = name === 'interval' ? writeInterval(Number(value)) : String(value);
-    const written = name === 'ua' ? quote(plain) : quoted ? `'${plain}'` : plain;
+    const written = name === 'ua' ? quote(plain) : name === 'route' ? writeName(plain) : quoted ? `'${plain}'` : plain;
     if (last) edits.push({...last.at, text: written});
     else if (closeOwnLine) edits.push({from: closeLine, to: closeLine, text: `${inner}${name}: ${written}\n`});
     else edits.push({from: block.close, to: block.close, text: `\n${inner}${name}: ${written}\n${indentAt(text, entry.from)}`});
@@ -388,6 +412,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   if (changed.ua) set('ua', next.ua);
   if (changed.interval) set('interval', next.interval);
   if (changed.cache) set('cache', next.cache);
+  if (changed.route) set('route', next.route);
   // `tag: 'url' { }` left with nothing in it goes back to `tag: 'url'`.
   if (entry.form === 'options' && !kept && removed.length === entry.fields.length) {
     const rest = removed.reduce(

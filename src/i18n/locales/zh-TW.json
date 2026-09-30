@@ -847,6 +847,7 @@
   "nodes.removed": "{name} 已移除",
   "nodes.renameGroups": "同時更新 {groups} 中的訂閱篩選條件",
   "nodes.renameGroupsHelp": "否則這些群組將失去 {name} 的節點。",
+  "nodes.routeHelp": "只影響擷取訂閱本身，不影響其節點的流量。",
   "nodes.scope": "目前顯示 {name} 的節點。可從上方清單選取其他來源。",
   "nodes.search": "搜尋節點",
   "nodes.searchAll": "搜尋範圍：所有節點來源。",
