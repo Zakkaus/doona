@@ -248,6 +248,27 @@ test('a worker of the build the page already runs takes over without a notice', 
   await expect(page.locator('.rp-toast.info')).toHaveCount(0);
 });
 
+test('a worker that does not report its build is taken for a new one', async ({context, page, browserName}) => {
+  // WebKit's late recheck fetches the worker without cookies, which would swap the legacy worker back.
+  test.skip(browserName === 'webkit', 'WebKit rechecks the worker without the page’s cookies');
+  await page.goto('http://127.0.0.1:4186/ui/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  // A rollback to a release from before workers reported their build.
+  await context.addCookies([{name: 'doona-pwa-legacy', value: '1', domain: '127.0.0.1', path: '/ui/sw.js'}]);
+  await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const taken = new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
+    await registration.update();
+    await taken;
+  });
+  const notice = page.locator('.rp-toast.info', {hasText: 'A new version is ready'});
+  await expect(notice.getByRole('button', {name: 'Reload', exact: true})).toBeVisible();
+});
+
 test('a new build taking over before the catalogue loads is announced in the reader’s language', async ({context, page, browserName}) => {
   test.skip(browserName === 'webkit', 'WebKit request interception does not see what the service worker fetches');
   // The page stands for an older build than the worker that controls it.
