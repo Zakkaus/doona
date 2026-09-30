@@ -43,3 +43,22 @@ for (const scheme of ['light', 'dark']) {
     expect(await dialog.evaluate(element => getComputedStyle(element).backdropFilter)).not.toBe('none');
   });
 }
+
+test('glass keeps the focus ring on a text field', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-palette', 'glass/glass'));
+  await page.goto('/#/connections?tab=list');
+  const filter = page.getByRole('searchbox', {name: 'Filter'});
+  await filter.focus();
+  const ring = await filter.evaluate(element => {
+    const field = element.closest('.rp-input')!;
+    const style = getComputedStyle(field);
+    const accent = document.createElement('div');
+    accent.style.color = 'var(--rp-accent)';
+    field.append(accent);
+    const color = getComputedStyle(accent).color;
+    accent.remove();
+    return {border: style.borderTopColor, shadow: style.boxShadow, accent: color};
+  });
+  expect(ring.border).toBe(ring.accent);
+  expect(ring.shadow).toContain(ring.accent);
+});
