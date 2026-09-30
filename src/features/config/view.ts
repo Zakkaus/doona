@@ -6,7 +6,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {diagnosticMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
-import {defaultGroup, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
+import {defaultGroup, isSubscriptionRow, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
 import {defaultTemplate, templates} from '../../dae/templates';
 import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {isWritableName} from '../../dae/groups';
@@ -332,7 +332,7 @@ export function wizardRows(state: WizardState, lang: Lang, t: Translator): {grou
             })
           : t('config.wizardGroupUsed', {name: state.group ?? defaultGroup}),
     rows: state.subscriptions.flatMap((item, index) =>
-      item.raw !== undefined && !item.raw.trim()
+      !isSubscriptionRow(item)
         ? []
         : [
             {
