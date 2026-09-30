@@ -17,9 +17,9 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
       {/* One line in every state: the count appearing must not wrap the header and grow the row. */}
       <div className="rp-row nowrap">
         <div className="rp-cluster nowrap">
-          <h3 className="rp-h3 rp-grow">
+          <h2 className="rp-h3 rp-grow">
             <TextTooltip>{t('act.issues')}</TextTooltip>
-          </h3>
+          </h2>
           {total > 0 && <span className="rp-label">{total}</span>}
         </div>
         <Link appearance="button" quiet small href={href('events')}>

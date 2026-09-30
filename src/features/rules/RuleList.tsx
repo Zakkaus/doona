@@ -188,7 +188,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
       {view.held && (
         <Card className="rp-list" aria-label={view.held.title} ref={heldRef} tabIndex={-1}>
           <div className="rp-cluster">
-            <h3 className="rp-h3">{view.held.title}</h3>
+            <h2 className="rp-h3">{view.held.title}</h2>
             {view.held.files && <span className="rp-label">{view.held.files}</span>}
             {view.held.elsewhere && <span className="rp-label">{view.held.elsewhere}</span>}
             <span className="rp-grow" />

@@ -66,7 +66,7 @@ export function Dns(props: PageProps) {
             <Card key={card.id} className="rp-col">
               <div className="rp-row">
                 <div className="rp-cluster">
-                  <h3 className="rp-h3">{card.title}</h3>
+                  <h2 className="rp-h3">{card.title}</h2>
                   <Badge tone={card.cacheTone}>{card.cacheText}</Badge>
                 </div>
                 <div className="rp-cluster">

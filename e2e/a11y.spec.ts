@@ -75,3 +75,13 @@ for (const [route, scope, name] of menus)
     const results = await new AxeBuilder({page}).include('[role=menu]').withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(results.violations.map(rule => rule.id)).toHaveLength(0);
   });
+
+// Headings step down one level at a time: cards under the page's h1 are h2, on each page and with a row's detail open.
+for (const route of ['activity', 'overview', 'connections?id=1', 'flows', 'dns', 'policies', 'config', 'logs'])
+  test(`headings on ${route.split('?')[0]} keep their order`, async ({page}) => {
+    await page.goto(`/#/${route}`);
+    await expect(page.locator('.rp-content').getByRole('heading').first()).toBeVisible();
+    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    const results = await new AxeBuilder({page}).withRules(['heading-order']).analyze();
+    expect(results.violations.flatMap(rule => rule.nodes.map(node => node.target.join(' ')))).toEqual([]);
+  });

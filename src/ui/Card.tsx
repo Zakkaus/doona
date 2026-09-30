@@ -32,7 +32,7 @@ type CardHeader = {tile: TileHeader; title: string} | {tile?: undefined; title?:
 
 export function Card({
   title,
-  level = 3,
+  level = 2,
   titleId,
   tile,
   note,

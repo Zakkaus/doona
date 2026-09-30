@@ -11,7 +11,7 @@ export function OutboundsCard() {
     <Card>
       <div className="rp-row">
         <div className="rp-cluster">
-          <h3 className="rp-h3">{t('act.outUsage')}</h3>
+          <h2 className="rp-h3">{t('act.outUsage')}</h2>
           {view.since && <span className="rp-label">{view.since}</span>}
         </div>
       </div>
