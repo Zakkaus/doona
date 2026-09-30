@@ -90,3 +90,11 @@ it('reads the port of an address, including a bracketed IPv6 one', () => {
   expect(addressPort('10.0.0.2')).toBeUndefined();
   expect(addressPort(undefined)).toBeUndefined();
 });
+
+it('names every operation status, queued included, and shows an unknown one as sent', () => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
+  const summary = (status: string) => eventSummary({event: 'operation.updated', data: {resource_id: 'op-1', status}} as unknown as ApiEvent, t).params?.status;
+  expect(summary('queued')).toBe('Queued');
+  expect(summary('running')).toBe('Running');
+  expect(summary('paused')).toBe('paused');
+});

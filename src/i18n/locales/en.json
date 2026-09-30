@@ -1121,6 +1121,7 @@
   "ov.operationResult": "{action}: {status} ({operationId})",
   "ov.profileBase": "Base",
   "ov.profileFull": "Full observability",
+  "ov.queued": "Queued",
   "ov.r.configValidate": "Validation",
   "ov.r.dnsCache": "DNS cache",
   "ov.r.dnsLog": "DNS log",
