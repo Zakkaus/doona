@@ -73,7 +73,15 @@ export function ModeCards({model: vm}: {model: ModeCardsModel}) {
         tile={{icon: <Filter />, tint: 2, kind: 'control'}}
         reason={vm.reasons.global}
         aside={
-          <ChoiceMenu quiet isDisabled={vm.busy || !vm.writable} label={t('act.global')} value={vm.target} onChange={vm.pickTarget} items={vm.targets}>
+          <ChoiceMenu
+            quiet
+            isDisabled={vm.busy || !vm.writable}
+            label={t('act.global')}
+            value={vm.target}
+            onChange={vm.pickTarget}
+            items={vm.targets}
+            searchLabel={t('ui.filter')}
+          >
             {vm.targetText}
           </ChoiceMenu>
         }

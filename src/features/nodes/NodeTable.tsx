@@ -3,6 +3,7 @@ import {useT} from '../../i18n';
 import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
+import {SearchSelect} from '../../ui/SearchSelect';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import type {NodeTableView} from './useNodeTable';
 
@@ -58,7 +59,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
             {writable && (
-              <ChoiceMenu quiet label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join}>
+              <ChoiceMenu quiet label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join} searchLabel={t('ui.filter')}>
                 <AddCircle />
                 {t('nodes.addToGroup')}
               </ChoiceMenu>
@@ -80,7 +81,11 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {m.scope && <p className="rp-label">{m.scope}</p>}
       <div className="rp-toolbar">
         <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
-        <LabeledSelect label={t('nodes.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />
+        {m.groupSections ? (
+          <SearchSelect side label={t('nodes.group')} searchLabel={t('ui.filter')} value={m.group} onChange={m.setGroup} sections={m.groupSections} />
+        ) : (
+          <LabeledSelect label={t('nodes.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />
+        )}
         <LabeledSelect label={t('nodes.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
         <span className="rp-label">{m.shown}</span>
         <span className="rp-grow" />
