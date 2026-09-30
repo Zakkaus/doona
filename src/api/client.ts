@@ -227,8 +227,11 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       signal,
       onConnectionChange,
       onCursorExpired,
+      // A kind from a newer backend still reaches the feeds, which describe it generically; only its payload has to
+      // be an object, as every event's is, for the feeds to read the fields they share.
       (event, data, cursor) => {
-        if (eventKinds.includes(event as EventKind)) onEvent({id: cursor, event, data} as ApiEvent);
+        if (eventKinds.includes(event as EventKind) || (typeof data === 'object' && data !== null && !Array.isArray(data)))
+          onEvent({id: cursor, event, data} as ApiEvent);
       },
       heartbeatSeconds
     );

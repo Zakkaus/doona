@@ -4,6 +4,7 @@ import {ApiError, send} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent, OperationAccepted} from './model';
 import {currentRefusal} from './refusal';
+import {eventSummary} from './selectors';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
@@ -279,6 +280,34 @@ describe('native transport', () => {
     expect(signals[0].aborted).toBe(false);
     controller.abort();
     await stream;
+  });
+  it('passes an event of a kind it does not know on, unless its payload is not an object', async () => {
+    const frames = [
+      'id: i:1\nevent: stream.ready\ndata: {"instance_id":"i","observed_at":"2026-09-15T14:00:00Z"}\n\n',
+      'id: i:2\nevent: route.changed\ndata: {"resource_id":"r1","observed_at":"2026-09-15T14:00:01Z"}\n\n',
+      'id: i:3\nevent: route.dropped\ndata: ["r2"]\n\n',
+      'id: i:4\nevent: route.dropped\ndata: null\n\n',
+      'id: i:5\nevent: runtime.updated\ndata: {"instance_id":"i","observed_at":"2026-09-15T14:00:02Z","href":"/api/v1/runtime"}\n\n'
+    ].join('');
+    const controller = new AbortController();
+    const events: ApiEvent[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(frames, {headers: {'Content-Type': 'text/event-stream'}}))
+    );
+    await createApi('https://honk.test').subscribeEvents({
+      signal: controller.signal,
+      onEvent: event => {
+        events.push(event);
+        if (event.id === 'i:5') controller.abort();
+      }
+    });
+    expect(events.map(event => [event.id, event.event])).toEqual([
+      ['i:1', 'stream.ready'],
+      ['i:2', 'route.changed'],
+      ['i:5', 'runtime.updated']
+    ]);
+    expect(eventSummary(events[1])).toEqual({key: 'event.resource', params: {resource: 'r1'}});
   });
   it('keeps a caller abort before the deadline an abort', async () => {
     vi.useFakeTimers();
