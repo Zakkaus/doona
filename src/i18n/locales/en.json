@@ -905,6 +905,7 @@
     "other": "{name} added and refreshed, {n} nodes"
   },
   "nodes.agent": "User-Agent",
+  "nodes.agentDefault": "Leave empty to use the engine default.",
   "nodes.agentInvalid": "Up to 256 printable ASCII characters",
   "nodes.anyGroup": "All groups",
   "nodes.anyProtocol": "All protocols",
@@ -914,7 +915,7 @@
   "nodes.edit": "Edit {name}",
   "nodes.editMissing": "This subscription is no longer in its source file",
   "nodes.editOptions": "Other options, kept as written",
-  "nodes.editProviderHelp": "Changes the tag and URL where the entry is written; other options stay as written.",
+  "nodes.editProviderHelp": "Changes the tag, URL and User-Agent where the entry is written; other options stay as written.",
   "nodes.editProviderTitle": "Edit subscription {name}",
   "nodes.edited": "Saved {name}",
   "nodes.empty": "This source has no nodes",
