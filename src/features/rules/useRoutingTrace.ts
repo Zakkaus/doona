@@ -151,7 +151,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
             seed: traceSeed(accepted.input, evaluation)
           };
         }) ?? [],
-    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providers.data, probe.canProbe, probe.busy, t, lang]
+    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providersListed, providers.data, probe.canProbe, probe.busy, t, lang]
   );
   const result = useMemo(
     () =>
