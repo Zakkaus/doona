@@ -44,6 +44,8 @@
   "act.noHistory": "此后端不提供历史数据",
   "act.noIssues": "当前没有需要处理的问题",
   "act.noOutbounds": "此后端不提供出站统计",
+  "act.noRoutingMode": "尚未选择分流方式",
+  "act.noSubscriptions": "尚无订阅",
   "act.node": "节点",
   "act.nodePickHelp": "选择节点只会更改此卡片显示的延迟，不会更改路由。",
   "act.noticeRepeat": "重复 {n} 次",

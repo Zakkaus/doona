@@ -1,4 +1,4 @@
-import {scanConfig, quote, type TextBlock} from './text';
+import {blockBody, scanConfig, quote, uncomment, type TextBlock} from './text';
 import {readGroupEntries} from './groups';
 import {templates, type RuleTemplate} from './templates';
 
@@ -30,6 +30,10 @@ function dnsBlock(): string[] {
 // Whether any of the texts holds a top-level `dns` block.
 export function holdsDns(texts: string[]): boolean {
   return texts.some(text => scanConfig(text).blocks.some(block => block.name === 'dns'));
+}
+// Whether any of the texts holds a top-level `routing` block with more than comments in it.
+export function holdsRouting(texts: string[]): boolean {
+  return texts.some(text => scanConfig(text).blocks.some(block => block.name === 'routing' && blockBody(text, block).some(line => uncomment(line).trim())));
 }
 
 function groupLines(current: string[], rules: RuleTemplate): string[] {

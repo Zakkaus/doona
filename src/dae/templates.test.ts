@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {detectTemplate, templates, type RuleTemplate} from './templates';
-import {templateGroups, writeTemplate} from './setup';
+import {holdsDns, holdsRouting, templateGroups, writeTemplate} from './setup';
 import {readGroupEntries} from './groups';
 
 const presets = Object.keys(templates) as RuleTemplate[];
@@ -114,4 +114,12 @@ describe('quoted group names', () => {
     const quoted = writeTemplate("group { 'direct' {} }\n", 'global', []);
     expect(detectTemplate(quoted)).toEqual({template: 'global', group: "'direct'"});
   });
+});
+
+it('tells a configuration with routing or dns blocks from one without', () => {
+  expect(holdsRouting(['global {}', 'routing {\n  fallback: direct\n}'])).toBe(true);
+  expect(holdsRouting(['routing {\n  # nothing yet\n}', 'dns {\n  routing {\n    request { fallback: a }\n  }\n}'])).toBe(false);
+  expect(holdsRouting([''])).toBe(false);
+  expect(holdsDns(['global {}', existing])).toBe(true);
+  expect(holdsDns(['routing { fallback: direct }'])).toBe(false);
 });

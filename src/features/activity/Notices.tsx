@@ -1,14 +1,16 @@
+import {useT} from '../../i18n';
+import {href} from '../../shell/route';
+import {Card, Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
+import type {NoticeRow} from './view';
+
 type NoticesModel = {
-  rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string}>;
+  rows: NoticeRow[];
   total: number;
   error: Error | null;
   retry: () => void;
   loading: boolean;
   empty: string;
 };
-import {useT} from '../../i18n';
-import {href} from '../../shell/route';
-import {Card, Empty, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 
 export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
   const t = useT();
@@ -44,6 +46,11 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
                 {row.kindText}
               </Light>
               <span className="rp-note rp-grow">{row.summaryText}</span>
+              {row.action && (
+                <Link appearance="button" quiet small href={row.action.href}>
+                  {row.action.label}
+                </Link>
+              )}
             </div>
           ))}
         </div>

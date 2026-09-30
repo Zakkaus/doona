@@ -5,7 +5,7 @@ import {backendCode} from '../../i18n/backend';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {eventKindLabels, eventSummary, healthMillis, outboundLabel, outboundUsage, preferredHealth, routineGap, shortId} from '../../api/selectors';
 import {localTime, formatBytes, formatRate, formatLatency, formatCpu} from '../../i18n/format';
-import {formatNumber, type Translator as LabelFn} from '../../i18n';
+import {formatNumber, type Key, type Translator as LabelFn} from '../../i18n';
 import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
 import {engineStatus} from '../shared/engineStatus';
@@ -50,6 +50,21 @@ export function modeReasons(
   if (busy) return {mode: null, global: null};
   if (!writable) return {mode: null, global: status};
   return {mode: incomplete ? t('act.globalMissing') : null, global: null};
+}
+export type NoticeRow = {id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; action?: {label: string; href: string}};
+// What the backend still lacks before it routes through a proxy, listed ahead of the event notices until it is added.
+export function setupNotices({noNodeSources, noRouting}: {noNodeSources: boolean; noRouting: boolean}, t: LabelFn): NoticeRow[] {
+  const notice = (id: string, summary: Key, action: NoticeRow['action']): NoticeRow => ({
+    id,
+    tone: 'info',
+    kindText: t('ui.notice'),
+    summaryText: t(summary),
+    action
+  });
+  return [
+    ...(noNodeSources ? [notice('setup:nodes', 'act.noSubscriptions', {label: t('nav.nodes'), href: href('nodes')})] : []),
+    ...(noRouting ? [notice('setup:routing', 'act.noRoutingMode', {label: t('rule.template.mode'), href: href('rules', {tab: 'list', view: 'simple'})})] : [])
+  ];
 }
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
 
