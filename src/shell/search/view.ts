@@ -10,7 +10,7 @@ import {dnsTabs} from '../../features/dns/nav';
 import {rulesTabs} from '../../features/rules/nav';
 import {flowsTabs} from '../../features/flows/nav';
 import {settingsCardList} from '../../features/settings/nav';
-import {configTabs, setupAvailable, sourceKinds} from '../../features/config/nav';
+import {configTabs, sourceKinds} from '../../features/config/nav';
 import {connectionsTabs} from '../../features/connections/nav';
 import {nodesTabs} from '../../features/nodes/nav';
 import {policiesTabs} from '../../features/policies/nav';
@@ -32,10 +32,9 @@ const entry = (
   keys: keys.flatMap(key => (key == null ? [] : [key.toLowerCase()]))
 });
 
-export function pageEntries(capabilities: Capabilities | undefined, config: EffectiveConfig | undefined, t: Translator): SearchEntry[] {
+export function pageEntries(capabilities: Capabilities | undefined, t: Translator): SearchEntry[] {
   const available = (path: string) => navAvailable(path, capabilities);
   const resources = capabilities?.resources;
-  const main = config?.sources.find(source => source.kind === 'main');
   // Each page's own tab list, so search offers exactly the tabs the page shows.
   const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
     ...connectionsTabs().map(tab => ({path: 'connections' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
@@ -44,7 +43,7 @@ export function pageEntries(capabilities: Capabilities | undefined, config: Effe
     ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
-    ...configTabs(setupAvailable(resources, main)).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    ...configTabs().map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...settingsCardList(resources).map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey}))
   ];
   const places = [

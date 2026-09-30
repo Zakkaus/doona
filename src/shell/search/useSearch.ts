@@ -32,7 +32,7 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const dnsRules = useDnsRules(offered(resources, 'dns_rules', {whileLoading: false}));
   const sources = [capabilities, connections, nodes, groups, providers, config, rules, dnsRules];
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
-  const pages = useMemo(() => pageEntries(capabilities.data, config.data, t), [capabilities.data, config.data, t]);
+  const pages = useMemo(() => pageEntries(capabilities.data, t), [capabilities.data, t]);
   const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
   const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang), [nodes.data, providers.data, lang]);
   const groupHits = useMemo(() => groupEntries(groups.data), [groups.data]);

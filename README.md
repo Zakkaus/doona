@@ -67,7 +67,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 | Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                   |
 | Rules         | Routing and DNS request and response rules, editable in their source when writable; rule hits and trace simulation                                                                |
 | Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                                                                                    |
-| Configuration | Create source files and edit them in place, diagnostics, validation, quick setup and export                                                                                       |
+| Configuration | Create source files and edit them in place, diagnostics, validation and export                                                                                                    |
 | Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                           |
 | Settings      | Backends, runtime settings and actions, geodata sources and SHA-256 verification when supported, language, appearance, palette and notification placement                         |
 

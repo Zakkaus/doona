@@ -18,9 +18,9 @@ it('finds text the page shows and CJK in any string', () => {
 });
 
 it('allows a sample only in the file and place it is listed for', () => {
-  expect(scan('<TextField placeholder="auto" />', 'src/features/config/Wizard.tsx')).toEqual([]);
-  expect(scan('<><button>auto</button><TextField label="auto" /></>', 'src/features/config/Wizard.tsx')).toEqual(['auto', 'auto']);
-  expect(scan('<TextField placeholder="auto" />', 'src/features/dns/Dns.tsx')).toEqual(['auto']);
+  expect(scan('<TextField placeholder="extra" />', 'src/features/config/NewSource.tsx')).toEqual([]);
+  expect(scan('<><button>extra</button><TextField label="extra" /></>', 'src/features/config/NewSource.tsx')).toEqual(['extra', 'extra']);
+  expect(scan('<TextField placeholder="extra" />', 'src/features/dns/Dns.tsx')).toEqual(['extra']);
 });
 
 it('ignores identifiers, styling, test files and data files', () => {

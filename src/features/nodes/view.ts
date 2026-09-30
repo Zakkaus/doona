@@ -2,7 +2,7 @@ import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '.
 import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
-import {urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
+import {isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
@@ -11,7 +11,6 @@ import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/fo
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName} from '../../dae/text';
-import {isSubscriptionUrl} from '../../dae/setup';
 import {citingGroups, namedInExpression} from '../../dae/groups';
 import {intervalItems, intervalText} from '../shared/subscription';
 

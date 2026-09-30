@@ -32,7 +32,7 @@ type SearchSources = {
 function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
   return searchSections(
     {
-      pages: pageEntries(sources.capabilities.data, sources.config.data, t),
+      pages: pageEntries(sources.capabilities.data, t),
       conns: connectionEntries(sources.connections.data, t),
       nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang),
       groups: groupEntries(sources.groups.data),

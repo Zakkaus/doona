@@ -2,7 +2,6 @@
 import {quote, scanConfig, unquote} from './text';
 import {isBuiltinOutbound} from './vocab';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
-export const defaultTemplate: RuleTemplate = 'standard';
 // Keep local traffic direct and block UDP/443 before template-specific routing.
 const preset = [
   '# dae presets: the local network manager, the LAN and multicast stay off the proxy',

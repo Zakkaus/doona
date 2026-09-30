@@ -6,10 +6,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import {diagnosticMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
-import {defaultGroup, isRenamed, isSubscriptionRow, isSubscriptionUrl, readState, type WizardState} from '../../dae/setup';
-import {defaultTemplate, templates} from '../../dae/templates';
-import {blockFields, isQuotable, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
-import {isWritableName} from '../../dae/groups';
+import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
 import {groupPolicyText} from '../shared/policyText';
 import {policyKind} from '../../dae/vocab';
@@ -272,18 +269,6 @@ type DiagnosticRow = {
   detail: string;
   count: number;
 };
-type WizardRow = {
-  index: number;
-  name: string;
-  url: string;
-  raw: string | null;
-  nameError?: string;
-  error?: string;
-  description?: string;
-  removeLabel: string;
-  // Why the entry can be neither removed nor renamed here: group filters cite its tag.
-  inUse: string | null;
-};
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 // Identical diagnostics, such as one warning per duplicate entry at the same place, share one row with their count.
@@ -318,72 +303,6 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
     };
   });
 }
-export function wizardInitial(content: string): WizardState {
-  const read = readState(content);
-  return {...read, rules: content.trim() ? 'keep' : defaultTemplate};
-}
-// The quick setup's form against its file as loaded now. An untouched form follows a file changed on disk; a changed
-// one is a conflict the person settles, as a section draft is, since saving would replace text they have not seen.
-export function wizardUnder(dirty: boolean, origin: ConfigSource, loaded: ConfigSource): 'follow' | 'conflict' | null {
-  if (origin.content_sha256 === loaded.content_sha256) return null;
-  return dirty ? 'conflict' : 'follow';
-}
-// A value the file cannot hold is flagged on its own field, not on every row. `cited` names the groups whose filters
-// cite a tag; `renameBlocked` is the first rename it refuses, which holds the save back.
-export function wizardRows(
-  state: WizardState,
-  lang: Lang,
-  t: Translator,
-  cited: (tag: string) => string[] = () => []
-): {groupUsedText: string | null; rows: WizardRow[]; renameBlocked: string | null} {
-  const inUse = (tag: string | undefined) => {
-    const groups = tag === undefined ? [] : cited(tag);
-    return groups.length ? t('config.wizardSubscriptionInUse', {groups: formatList(lang, groups), name: tag!}) : null;
-  };
-  const renamed = state.subscriptions.find(item => isRenamed(item) && inUse(item.tag));
-  return {
-    renameBlocked: renamed ? inUse(renamed.tag) : null,
-    groupUsedText:
-      state.rules === 'keep'
-        ? null
-        : templates[state.rules].groups.length
-          ? t('config.wizardNamedGroups', {
-              names: formatList(
-                lang,
-                templates[state.rules].groups.map(group => group.name)
-              )
-            })
-          : t('config.wizardGroupUsed', {name: state.group ?? defaultGroup}),
-    rows: state.subscriptions.flatMap((item, index) =>
-      !isSubscriptionRow(item)
-        ? []
-        : [
-            {
-              index,
-              name: item.name,
-              url: item.url,
-              raw: item.raw !== undefined && !item.name ? item.raw.trim() : null,
-              nameError:
-                item.raw === undefined && !isWritableName(item.name.trim())
-                  ? t('config.unquotable')
-                  : isRenamed(item) && inUse(item.tag)
-                    ? t('config.wizardSubscriptionCited', {groups: formatList(lang, cited(item.tag!))})
-                    : undefined,
-              error:
-                item.url !== '' && !isSubscriptionUrl(item.url)
-                  ? t('config.wizardSubscriptionHelp')
-                  : item.raw === undefined && !isQuotable(item.url.trim())
-                    ? t('config.unquotable')
-                    : undefined,
-              description: index === 0 ? t('config.wizardSubscriptionHelp') : undefined,
-              removeLabel: t('config.wizardRemove', {name: item.name || item.raw?.trim() || ''}),
-              inUse: inUse(item.tag)
-            }
-          ]
-    )
-  };
-}
-
 // The save button, shown only with unsaved changes. A refetch can make the source read-only while a draft is open;
 // then Save is refused and its tip gives the reason. While a validation runs the disabled button says so; otherwise,
 // saving included, it names the shortcut.

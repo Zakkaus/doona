@@ -6,18 +6,11 @@ import {sha256} from '../src/api/hash';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
-test('quick setup refuses an apostrophe without changing the subscription URL', async ({page}) => {
+test('the removed quick setup address opens the default tab', async ({page}) => {
   await page.goto('/#/config?tab=setup');
-  const url = page.getByLabel('Subscription URL', {exact: true});
-  await url.fill("https://example.org/o'brien");
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Cannot write this value losslessly');
-  await expect(url).toHaveValue("https://example.org/o'brien");
-  await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
-  await url.fill('https://example.org/accepted');
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  await expect(page.locator('.cm-content')).toContainText('https://example.org/accepted');
+  const tabs = page.getByRole('tablist', {name: 'Configuration'});
+  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Sources', 'Validation']);
+  await expect(tabs.getByRole('tab', {name: 'Modules'})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('configuration sources list with the main source open, read-only ones cannot be edited', async ({page}) => {
@@ -284,84 +277,6 @@ test.describe('without configuration readback', () => {
   });
 });
 
-test('the quick setup rewrites subscriptions and keeps groups and rules', async ({page}) => {
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
-  const input = await card.getByLabel('Name', {exact: true}).boundingBox();
-  const remove = await card.getByRole('button', {name: 'Remove sub-c', exact: true}).boundingBox();
-  expect(Math.abs(input!.y + input!.height / 2 - (remove!.y + remove!.height / 2))).toBeLessThanOrEqual(2);
-  await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/sub?token=abc&type=v2ray');
-  await expect(card.locator('.cm-content')).toContainText("sub-c: 'https://example.org/sub?token=abc&type=v2ray'");
-  await card.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
-  // The saved form stays and offers the pages that use what it wrote, and the file.
-  await expect(page).toHaveURL(/#\/config\?tab=setup$/);
-  // The reload after the save loads the written file into the form rather than reading it as a change on disk.
-  await expect(card.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://example.org/sub?token=abc&type=v2ray');
-  await expect(card.getByText(/changed on disk/)).toHaveCount(0);
-  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  for (const [name, url] of [
-    ['Nodes', '#/nodes'],
-    ['Policies', '#/policies'],
-    ['Routing rules', '#/rules?tab=list']
-  ])
-    await expect(card.getByRole('link', {name, exact: true})).toHaveAttribute('href', url);
-  await card.getByRole('link', {name: 'Open config source', exact: true}).click();
-  await expect(page).toHaveURL(/tab=source&source=src-main$/);
-  const main = page.locator('.cm-content[aria-label="/etc/honk/config.dae"]');
-  await expect(main).toContainText('resilient { filter: name(hk-01, sg-01, us-01) policy: min_avg10 }');
-  await expect(main).toContainText('gaming { filter: name(jp-01, hk-02) policy: min_last_delay }');
-  await expect(page.locator('.rp-toolbar').first()).toContainText('41');
-});
-
-for (const width of [320, 360])
-  test(`at ${width}px a subscription row keeps its remove button beside the name field`, async ({page}) => {
-    await page.setViewportSize({width, height: 900});
-    await page.goto('/#/config?tab=setup');
-    const card = page.getByRole('region', {name: 'Quick setup'});
-    const name = card.getByLabel('Name', {exact: true});
-    const url = card.getByLabel('Subscription URL', {exact: true});
-    const remove = card.getByRole('button', {name: 'Remove sub-c', exact: true});
-    const [nameBox, urlBox, removeBox] = await Promise.all([name.boundingBox(), url.boundingBox(), remove.boundingBox()]);
-    // The name field and the remove button share a row; the URL field, always too wide for a phone, wraps below it.
-    expect(Math.abs(nameBox!.y - removeBox!.y)).toBeLessThanOrEqual(2);
-    expect(urlBox!.y).toBeGreaterThan(nameBox!.y + nameBox!.height);
-    expect(removeBox!.width).toBeGreaterThanOrEqual(44);
-    expect(removeBox!.height).toBeGreaterThanOrEqual(44);
-  });
-
-test('the quick setup guards unsaved changes like the editor', async ({page}) => {
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^GFW list only/}).click();
-  await page.getByRole('tab', {name: 'Sources'}).click();
-  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(page).toHaveURL(/tab=setup$/);
-  await page.getByRole('tab', {name: 'Sources'}).click();
-  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
-  await expect(page).toHaveURL(/tab=source$/);
-});
-
-test('the quick setup writes a rule template into routing', async ({page}) => {
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Standard groups/}).click();
-  const preview = card.locator('.cm-content');
-  await expect(preview).toContainText('domain(geosite:category-ads-all) -> block');
-  await expect(preview).toContainText('geosite:category-games@cn) -> direct');
-  await expect(preview).toContainText('domain(geosite:telegram) -> telegram');
-  await expect(preview).toContainText('telegram {');
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^GFW list only/}).click();
-  await expect(preview).toContainText('domain(geosite:gfw) -> proxy');
-  await expect(preview).toContainText('fallback: direct');
-});
-
 async function configBackend(page: Page) {
   const api = createMockApi();
   const capabilities = await api.capabilities();
@@ -466,7 +381,7 @@ test('source application works without the optional full validation endpoint', a
   expect(validations).toBe(0);
 });
 
-test('incomplete sources cannot be transformed by rule edits or quick setup', async ({page}) => {
+test('incomplete sources cannot be transformed by rule edits', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
   for (const source of config.sources) source.content = source.content.replace('direct', 'redacted');
@@ -480,9 +395,6 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   await expect(page.locator('.rp-card')).toContainText('This file contains redacted listener secrets and cannot be edited here. Edit it on the host.');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
-  await page.getByRole('tab', {name: 'Quick setup'}).click();
-  await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false}).first().click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
@@ -552,50 +464,6 @@ httpTest('a file changed on disk under a draft blocks saving until the draft is 
   const saved = (await api.config()).sources.find(item => item.id === source.id)!.content!;
   expect(saved).toContain('# local draft');
   expect(saved).not.toContain('# concurrent edit');
-});
-
-// The quick setup holds its form over the file it opened; a change on disk under a changed form waits for the person.
-async function setupConflict(page: Page) {
-  const {api} = await configBackend(page);
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  const url = card.getByLabel('Subscription URL', {exact: true});
-  await url.fill('https://example.org/sub?token=local');
-  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
-  const content = async () => (await api.config()).sources.find(source => source.id === main.id)!.content!;
-  await expect.poll(content).toContain('# concurrent edit');
-  const apply = card.getByRole('button', {name: 'Apply', exact: true});
-  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
-  await apply.click();
-  await rejected;
-  const conflict = card.getByRole('alert').filter({hasText: 'changed on disk while you were editing'});
-  await expect(conflict).toBeVisible();
-  await expect(apply).toBeDisabled();
-  await expect(url).toHaveValue('https://example.org/sub?token=local');
-  return {card, url, apply, conflict, content, original: main.content!};
-}
-
-httpTest('a quick setup form over a file changed on disk saves only once it is kept', async ({page}) => {
-  const {card, apply, conflict, content} = await setupConflict(page);
-  await conflict.getByRole('button', {name: 'Keep changes', exact: true}).click();
-  await expect(conflict).toHaveCount(0);
-  // The form is written over the file as it is now, so the change outside it stays.
-  await expect(card.locator('.cm-content')).toContainText('# concurrent edit');
-  await apply.click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toBeVisible();
-  const saved = await content();
-  expect(saved).toContain('# concurrent edit');
-  expect(saved).toContain("'https://example.org/sub?token=local'");
-});
-
-httpTest('discarding a quick setup form over a file changed on disk loads the file as it is now', async ({page}) => {
-  const {url, apply, conflict, content, original} = await setupConflict(page);
-  await conflict.getByRole('button', {name: 'Discard changes', exact: true}).click();
-  await expect(conflict).toHaveCount(0);
-  await expect(url).toHaveValue('https://sub.example.net/api/v1/client/subscribe?token=demo');
-  await expect(apply).toBeDisabled();
-  expect(await content()).toBe('# concurrent edit\n' + original);
 });
 
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
@@ -855,59 +723,6 @@ test('code scrolled sideways passes under the line numbers', async ({page}) => {
   expect(await page.screenshot({clip})).toEqual(before);
 });
 
-test('quick setup keeps a subscription that a group filter cites', async ({page}) => {
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  const reason = 'The filters of skylink use sub-c. Change them on the policies page before removing or renaming this subscription.';
-  const remove = card.getByRole('button', {name: 'Remove sub-c', exact: true});
-  await expect(remove).toBeDisabled();
-  await expect(remove).toHaveAccessibleDescription(reason);
-  await expect(async () => {
-    await page.mouse.move(0, 0);
-    await remove.hover({force: true});
-    await expect(page.getByRole('tooltip')).toHaveText(reason, {timeout: 1500});
-  }).toPass();
-  const name = card.getByLabel('Name', {exact: true});
-  await name.fill('sub-d');
-  await expect(name).toHaveAttribute('aria-invalid', 'true');
-  await expect(card.getByText(reason).first()).toBeVisible();
-  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  await name.fill('sub-c');
-  await card.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/renewed');
-  await expect(card.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
-});
-
-test('quick setup preserves dotted tags and rejects duplicate subscription names', async ({page}) => {
-  const {api} = await configBackend(page);
-  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  await api.replaceConfigSource(main.id, main.content!.replace('sub-c:', 'sub.eu:'), `"${main.content_sha256}"`);
-  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('sub.eu:');
-  await page.goto('/#/config?tab=setup');
-  await expect(page.getByLabel('Name', {exact: true})).toHaveValue('sub.eu');
-  await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
-  await expect(page.locator('.cm-content')).toContainText("sub.eu: 'https://example.org/new'");
-  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
-  await page.getByLabel('Name', {exact: true}).last().fill('sub.eu');
-  await page.getByLabel('Subscription URL', {exact: true}).last().fill('https://duplicate.example/sub');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-});
-
-test('opening untouched quick setup does not inject sections or guard navigation', async ({page}) => {
-  const {api} = await configBackend(page);
-  const config = await api.config();
-  const main = config.sources.find(source => source.kind === 'main')!;
-  main.content = 'global {\n  tproxy_port: 12345\n}\nrouting {\n  fallback: direct\n}\n';
-  main.content_sha256 = await sha256(main.content);
-  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-  await page.goto('/#/config?tab=setup');
-  await expect(page.locator('.cm-content')).not.toContainText('subscription');
-  await expect(page.locator('.cm-content')).not.toContainText('group');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
-  await expect(page.getByRole('alertdialog')).toHaveCount(0);
-  await expect(page).toHaveURL(/tab=source$/);
-});
-
 test('explicit include validation sends the main-first set with source paths', async ({page}) => {
   const {api} = await configBackend(page);
   const config = await api.config();
@@ -1007,71 +822,6 @@ test('source redaction does not certify exports or diagnose the redacted include
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
 });
 
-test('first-run setup writes the chosen listener and DNS endpoints', async ({page}) => {
-  const {api} = await configBackend(page);
-  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  await api.replaceConfigSource(main.id, '', `"${main.content_sha256}"`);
-  await expect.poll(async () => (await api.config()).sources.find(source => source.id === main.id)!.content).toBe('');
-  await page.goto('/#/config?tab=setup');
-  await page.getByLabel('Transparent proxy port', {exact: true}).fill('23456');
-  await page.getByLabel('Default DNS upstream', {exact: true}).fill('udp://192.0.2.1:53');
-  await page.getByLabel('Mainland-China domain DNS upstream', {exact: true}).fill('tls://resolver.example:853');
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  const accepted = (await api.config()).sources.find(source => source.id === main.id)!.content;
-  expect(accepted).toContain('tproxy_port: 23456');
-  expect(accepted).toContain("cloudflare: 'udp://192.0.2.1:53'");
-  expect(accepted).toContain("alidns: 'tls://resolver.example:853'");
-});
-
-test('a chosen setup tab stays open when a refresh fills the main source', async ({page}) => {
-  const {api} = await configBackend(page);
-  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const original = main.content!;
-  const content = async () => (await api.config()).sources.find(source => source.id === main.id)!.content;
-  await api.replaceConfigSource(main.id, '', `"${main.content_sha256}"`);
-  await expect.poll(content).toBe('');
-  await page.goto('/#/config');
-  await expect(page.getByRole('tab', {name: 'Quick setup'})).toHaveAttribute('aria-selected', 'true');
-  await page.getByRole('tab', {name: 'Modules'}).click();
-  await page.getByRole('tab', {name: 'Quick setup'}).click();
-  await page.getByLabel('Transparent proxy port', {exact: true}).fill('23456');
-  const emptied = (await api.config()).sources.find(source => source.id === main.id)!;
-  await api.replaceConfigSource(main.id, original, `"${emptied.content_sha256}"`);
-  await expect.poll(content).toBe(original);
-  const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/config');
-  await page.locator('.rp-top').getByRole('button', {name: 'Refresh', exact: true}).click();
-  await refreshed;
-  await expect(page.getByRole('tab', {name: 'Quick setup'})).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByLabel('Transparent proxy port', {exact: true})).toHaveValue('23456');
-});
-
-test('choosing a template removes all previous traffic routing but retains DNS routing', async ({page}) => {
-  const {api} = await configBackend(page);
-  const config = await api.config();
-  const main = config.sources.find(source => source.kind === 'main')!;
-  main.content = 'group { mix {} }\ndns { routing { request { fallback: asis } } }\nrouting { fallback: direct }\nrouting { domain(old.example) -> block }\n';
-  main.content_sha256 = await sha256(main.content);
-  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-  await page.goto('/#/config?tab=setup');
-  const card = page.getByRole('region', {name: 'Quick setup'});
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Global proxy/}).click();
-  await expect(card).toContainText('This template uses mix');
-  await expect(card).toContainText('block remaining UDP/443');
-  const preview = card.locator('.cm-content');
-  await expect(preview).toContainText('fallback: mix');
-  await expect(preview).not.toContainText('old.example');
-  await expect(preview).toContainText('dns { routing { request { fallback: asis } } }');
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Standard groups/}).click();
-  await expect(card).toContainText('named groups: proxy, auto, telegram, media, apple');
-  await card.getByRole('button', {name: /Rules$/}).click();
-  await page.getByRole('option', {name: /^Keep the current rules/}).click();
-  await expect(card).not.toContainText('This template uses');
-  await expect(preview).toContainText('old.example');
-});
-
 for (const appearance of ['light', 'dark', 'glass'] as const) {
   test(`configuration details wrap on phones in ${appearance}`, async ({page}) => {
     const {api} = await configBackend(page);
@@ -1082,8 +832,6 @@ for (const appearance of ['light', 'dark', 'glass'] as const) {
     }, appearance);
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    main.content += "\nsubscription { preserved: { url: 'https://example.org/" + 'longtoken'.repeat(20) + "' } }\n";
-    main.content_sha256 = await sha256(main.content!);
     const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(20);
     config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
     await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -1091,10 +839,6 @@ for (const appearance of ['light', 'dark', 'glass'] as const) {
     const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`, {exact: true});
     await expect(diagnostic).toBeVisible();
     expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await page.getByRole('tab', {name: 'Quick setup', exact: true}).click();
-    const raw = page.locator('.rp-config-raw');
-    await expect(raw).toContainText('longtoken'.repeat(20));
-    expect(await raw.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   });
 }
 

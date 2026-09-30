@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {detectTemplate, templates, type RuleTemplate} from './templates';
-import {readState, templateGroups, writeState, writeTemplate} from './setup';
+import {templateGroups, writeTemplate} from './setup';
 import {readGroupEntries} from './groups';
 
 const presets = Object.keys(templates) as RuleTemplate[];
@@ -24,9 +24,8 @@ routing {
 `;
 
 describe('detectTemplate', () => {
-  it.each(presets)('finds %s in the file quick setup writes', template => {
-    const blank = readState('');
-    expect(detectTemplate(writeState('', {...blank, rules: template}))).toEqual({
+  it.each(presets)('finds %s written into an empty file', template => {
+    expect(detectTemplate(writeTemplate('', template, []))).toEqual({
       template,
       group: template === 'gfw' || template === 'global' || template === 'bypass' ? 'proxy' : null
     });

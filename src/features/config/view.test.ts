@@ -12,9 +12,6 @@ import {
   readOnlyBadge,
   diagnosticRows,
   moduleEditTip,
-  wizardInitial,
-  wizardRows,
-  wizardUnder,
   sectionSummaries,
   sectionRange,
   sectionMarks,
@@ -135,23 +132,6 @@ it('keeps a diagnostic row id when the diagnostics before it go away', async () 
   expect(after.id).toBe(before.id);
   expect(diagnosticRows([configNotes[0]], configSources, 'en-US', t)[0].id).not.toBe(before.id);
 });
-it('initializes empty setup and preserves opaque subscription lines while hiding blank lines', () => {
-  const empty = wizardInitial('');
-  expect(empty.rules).not.toBe('keep');
-  expect(empty.subscriptions).toEqual([]);
-  const state = wizardInitial("subscription {\n  a: 'https://example.org/sub'\n}\n");
-  expect(state.rules).toBe('keep');
-  state.subscriptions = [
-    {name: '', url: '', raw: '  '},
-    {name: '', url: '', raw: 'file: /etc/nodes'},
-    {name: 'bad', url: 'ftp://example.org'}
-  ];
-  const view = wizardRows(state, 'en', t);
-  expect(view.rows.map(row => row.index)).toEqual([1, 2]);
-  expect(view.rows[0].raw).toBe('file: /etc/nodes');
-  expect(view.rows[1].error).toBe(t('config.wizardSubscriptionHelp'));
-});
-
 function source(content: string, id = 'main'): ConfigSource {
   return {
     id,
@@ -240,15 +220,6 @@ it('carries a section draft over a change outside it and stops at a change to th
   expect(untouched).toMatchObject({conflict: false, next: {text: 'routing {\n  fallback: block\n}'}});
   // A section removed on disk can only be cancelled.
   expect(sectionUnder(draft, now({...source('global { log_level: info }'), content_sha256: 'e'}))).toEqual({next: null, conflict: true});
-});
-
-it('lets an untouched quick setup follow a change on disk and stops a changed one at it', () => {
-  const loaded = {...source("subscription {\n  a: 'https://example.org/a'\n}\n"), content_sha256: 'a'};
-  const changed = {...loaded, content: loaded.content + '# concurrent edit\n', content_sha256: 'b'};
-  expect(wizardUnder(false, loaded, loaded)).toBeNull();
-  expect(wizardUnder(true, loaded, {...loaded})).toBeNull();
-  expect(wizardUnder(false, loaded, changed)).toBe('follow');
-  expect(wizardUnder(true, loaded, changed)).toBe('conflict');
 });
 
 it('maps only diagnostics within the edited section using its current line count', () => {
@@ -345,36 +316,6 @@ it('keeps a card id when text before the section changes', () => {
   expect(id('# a\nrouting { fallback: direct }')).toBe(id('# a longer comment\n\nrouting { fallback: direct }'));
 });
 
-it('flags only the row whose value cannot be quoted', () => {
-  const state = {
-    ...wizardInitial(''),
-    subscriptions: [
-      {name: 'good', url: 'https://example.org/a'},
-      {name: 'bad', url: "https://example.org/it's"},
-      {name: "o'neil", url: 'https://example.org/c'}
-    ]
-  };
-  const rows = wizardRows(state, 'en', t).rows;
-  expect(rows.map(row => [row.nameError, row.error])).toEqual([
-    [undefined, undefined],
-    [undefined, t('config.unquotable')],
-    [t('config.unquotable'), undefined]
-  ]);
-});
-
-it('refuses removing or renaming a subscription that group filters cite', () => {
-  const text = "subscription {\n  sub-a: 'https://a.example/sub'\n  sub-b: 'https://b.example/sub'\n}\n";
-  const state = wizardInitial(text);
-  const cited = (tag: string) => (tag === 'sub-a' ? ['skylink', 'mix'] : []);
-  const message = t('config.wizardSubscriptionInUse', {groups: 'skylink, mix', name: 'sub-a'});
-  const view = wizardRows(state, 'en', t, cited);
-  expect(view.rows.map(row => row.inUse)).toEqual([message, null]);
-  expect(view.renameBlocked).toBeNull();
-  const renamed = wizardRows({...state, subscriptions: state.subscriptions.map(item => ({...item, name: item.name + '-new', raw: undefined}))}, 'en', t, cited);
-  expect(renamed.rows.map(row => row.nameError)).toEqual([t('config.wizardSubscriptionCited', {groups: 'skylink, mix'}), undefined]);
-  expect(renamed.renameBlocked).toBe(message);
-});
-
 it('marks only the edited source while retaining cross-source diagnostic locations', () => {
   const main = source('global {}');
   const include = source('routing {}', 'include');
@@ -400,15 +341,6 @@ it('does not submit pathless includes or validate an omitted replacement source'
   const include = {...source('routing {}', 'include'), path: '<redacted>'};
   expect(validationSources([main, include])).toEqual([{id: main.id, path: main.path, content: main.content}]);
   expect(validationSources([main, include], {id: include.id, content: 'routing { fallback: direct }'})).toBeNull();
-});
-
-it('describes only the selected template’s groups and omits routing changes for keep', () => {
-  const state = {...wizardInitial('group { mix {} }'), group: 'mix'};
-  expect(wizardRows(state, 'en', t).groupUsedText).toBeNull();
-  expect(wizardRows({...state, rules: 'global'}, 'en', t).groupUsedText).toContain('mix');
-  const named = wizardRows({...state, rules: 'standard'}, 'en', t).groupUsedText;
-  expect(named).toContain('proxy, auto, telegram, media, apple');
-  expect(named).not.toContain('mix');
 });
 
 it('names group policies in words, keeping one honk does not recognise as written', () => {

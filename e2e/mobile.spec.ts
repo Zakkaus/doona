@@ -326,7 +326,7 @@ for (const [scheme, palette] of [
   test.describe(`${scheme} ${palette}`, () => {
     test.use({storage: {'doona-scheme': scheme, 'doona-palette': palette}});
     test('tabs contain wrapped labels and their selection marker at phone width', async ({page}) => {
-      for (const route of ['rules', 'config?tab=setup']) {
+      for (const route of ['rules', 'config']) {
         await page.goto('/#/' + route);
         const bar = page.locator('.rp-tabbar').first();
         await expect(bar.getByRole('tab').first()).toBeVisible();
@@ -545,15 +545,6 @@ test.describe('on a touch screen', () => {
     await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
     await expect(page.locator('.cm-activeLine')).toHaveCount(0);
   });
-});
-
-test('quick setup keeps Apply disabled without a line saying so', async ({page}) => {
-  await page.goto('/#/config?tab=setup&source=src-sub-c');
-  const apply = page.getByRole('button', {name: 'Apply', exact: true});
-  await expect(apply).toBeDisabled();
-  await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
-  await page.getByLabel('Subscription URL', {exact: true}).first().fill('https://example.org/changed');
-  await expect(apply).toBeEnabled();
 });
 
 // Each case gives the reason under the disabled action, in view on a phone and named as the button's description.

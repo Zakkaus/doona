@@ -7,7 +7,6 @@ import {Modules} from './Modules';
 import {NewSource} from './NewSource';
 import {SourceCard} from './SourceCard';
 import {ValidateTab} from './ValidateTab';
-import {Wizard} from './Wizard';
 export function Config(props: PageProps) {
   const t = useT();
   const {
@@ -24,7 +23,6 @@ export function Config(props: PageProps) {
     select,
     sourceProps,
     newSourceProps,
-    wizardProps,
     validateProps,
     modulesProps,
     sourceModel,
@@ -35,7 +33,6 @@ export function Config(props: PageProps) {
   } = useConfigPage(props);
   const content = {
     modules: modulesProps && <Modules {...modulesProps} />,
-    setup: wizardProps && <Wizard {...wizardProps} />,
     source: (
       <>
         <div className="rp-toolbar">
