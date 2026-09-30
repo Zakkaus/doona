@@ -375,6 +375,30 @@ test('a group edit refused over a file changed on disk saves on retry', async ({
   expect(saved).toContain('filter: name(hk-01, sg-01)');
 });
 
+test('a group edit retried after a refusal writes against the declaration read again, not the one it opened on', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
+  await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01)');
+  // The concurrent edit quotes the default member: the same member, written differently.
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, main.content!.replace('default: hk-01', "default: 'hk-01'"), `"${main.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("default: 'hk-01'");
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await apply.click();
+  await rejected;
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for proxy written and reloaded');
+  // The unchanged member keeps the spelling on disk, so the retry took its baseline from the fresh read.
+  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(saved).toMatch(/proxy \{[^}]*filter: name\(hk-01\)[^}]*default: 'hk-01'[^}]*\}/);
+});
+
 test('a long group name truncates with a tooltip and keeps the More menu on its title row', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const long = 'G'.repeat(150);
