@@ -4,9 +4,10 @@ import {templates, type RuleTemplate} from './templates';
 
 export const defaultGroup = 'proxy';
 function routingBlock(group: string | null, rules: RuleTemplate): string[] {
-  // The header as written: the templates must route to the group the file already has.
+  // The header as written: the templates must route to the group the file already has. A replacer function keeps a `$` in
+  // the name literal, where a replacement string would read `$&` as a pattern.
   const first = group ?? defaultGroup;
-  const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
+  const fill = (line: string) => '  ' + line.replaceAll('{group}', () => first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
 // The DNS split a template can bring along: mainland names resolved by a mainland resolver, the rest over DNS over TLS.

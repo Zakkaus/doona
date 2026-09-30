@@ -71,6 +71,13 @@ describe('detectTemplate', () => {
     expect(detectTemplate(gfw.replaceAll('-> a', '-> direct'))).toBeNull();
   });
 
+  it('counts parentheses inside routing only', () => {
+    // honk reads an unquoted path with a stray `(`; the scanner's count stays raised past it.
+    const text = `global {\n  log_file: /var/log/honk(.log\n}\n\n${writeTemplate('', 'gfw', [])}`;
+    expect(detectTemplate(text)).toEqual({template: 'gfw', group: 'proxy'});
+    expect(detectTemplate(`global {\n  log_file: /var/log/honk(.log\n}\n\n${existing}`)).toBeNull();
+  });
+
   it('reads an include in routing as custom', () => {
     const bypass = writeTemplate(existing, 'bypass', []);
     expect(detectTemplate(bypass.replace(/^  fallback:/m, '  include rules.dae\n  fallback:'))).toBeNull();
@@ -82,6 +89,12 @@ describe('writeTemplate', () => {
     const out = writeTemplate('routing { fallback: direct }\n', 'mini', [{name: 'proxy', written: 'proxy'}]);
     expect(readGroupEntries(out).map(entry => entry.name)).toEqual(['auto']);
     expect(templateGroups('mini', ['proxy'])).toEqual(['auto']);
+  });
+
+  it('writes a group another file declares with $ in its name as written', () => {
+    const out = writeTemplate('', 'gfw', [{name: "'p$&'", written: "'p$&'"}]);
+    expect(out).toContain("domain(geosite:gfw) -> 'p$&'");
+    expect(detectTemplate(out)).toEqual({template: 'gfw', group: "'p$&'"});
   });
 
   it('adds the default group only when no file declares any', () => {
