@@ -14,6 +14,29 @@ test('same-route query changes selection through browser history', async ({page}
   await expect(selected).toHaveAttribute('data-key', 'flow-2');
 });
 
+test('Back after direct hash navigation preserves the guarded history entry', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(page.locator('.rp-nav[href="#/config"]')).toBeVisible();
+  const position = await page.evaluate(() => history.state.doonaPosition as number);
+  await page.evaluate(() => {
+    location.hash = '#/config';
+  });
+  await expect(page.getByRole('region', {name: 'routing', exact: true})).toBeVisible();
+  await expect.poll(() => page.evaluate(() => history.state.doonaPosition)).toBe(position + 1);
+  await page.getByRole('region', {name: 'routing', exact: true}).getByRole('button', {name: 'Edit', exact: true}).click();
+  await page.locator('.cm-content').fill('routing {\n  direct hash draft\n}');
+  await page.goBack();
+  const dialog = page.getByRole('alertdialog');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config$/);
+  await expect(page.locator('.cm-content')).toContainText('direct hash draft');
+  await page.goBack();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/config$/);
+});
+
 test('discard resets a source draft even when the destination selects the same editor', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-main');
   await page.locator('.cm-content').fill('discard this draft');
