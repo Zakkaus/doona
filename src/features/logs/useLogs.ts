@@ -44,13 +44,13 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
     setTarget,
     paused,
     setPaused,
-    error: capabilities.error ?? feed.error,
+    // The shell reports a failed capabilities read above every page; this page reports only its stream.
+    error: feed.error,
     loading: !capabilities.error && !feed.error && !feed.connected && !feed.records.length,
     clear: feed.clear,
     // The level and recording the list is limited by are set in Settings.
     openRecording: capabilities.data?.resources.runtime_settings.available ? () => go('settings', 'card=runtime') : null,
-    // A failed capabilities read is what blocks the page; otherwise the stream itself is reopened.
-    retry: capabilities.error ? capabilities.refetch : feed.retry,
+    retry: feed.retry,
     export: () => downloadFile(exportName(view.exportBase, 'txt'), logsExport(feed.records, feed.gaps, t), 'text/plain;charset=utf-8')
   };
 }

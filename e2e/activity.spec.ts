@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, scrollIntoList, setAppearance, test} from './fixtures';
+import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -60,6 +60,24 @@ test('home charts collect memory polls and change the traffic history range', as
   await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', memoryCurve!);
   await traffic.getByRole('radio', {name: '7 d', exact: true}).click();
   await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', memoryCurve!);
+});
+
+test('the traffic figures stay while the runtime read fails, muted until it recovers', async ({page}) => {
+  await mockBackend(page);
+  const runtime = /\/api\/v1\/runtime$/;
+  expectLoadFailures(page, runtime);
+  await page.goto('/#/activity');
+  const figures = page.locator('.rp-strip .rp-big');
+  await expect(figures).toHaveCount(4);
+  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(0);
+  // The runtime is polled every five seconds.
+  await page.route(runtime, route => route.abort('failed'));
+  await expect(page.locator('.rp-content > .rp-alert')).toContainText('The backend could not be reached', {timeout: 10_000});
+  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(4);
+  await expect(figures.first()).not.toBeEmpty();
+  await page.unroute(runtime);
+  await expect(page.locator('.rp-content > .rp-alert')).toHaveCount(0, {timeout: 10_000});
+  await expect(page.locator('.rp-strip .rp-big.rp-muted')).toHaveCount(0);
 });
 
 test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
