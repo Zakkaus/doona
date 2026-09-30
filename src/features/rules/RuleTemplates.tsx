@@ -1,6 +1,7 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert, Radio, RadioGroup} from '../../ui/ui';
+import {Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert, Radio, RadioGroup} from '../../ui/ui';
+import AlertTriangle from '../../ui/icons/AlertTriangle';
 import type {RuleTemplate} from '../../dae/templates';
 import type {TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -40,55 +41,67 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         tone="accent"
         confirmLabel={t('rule.template.apply')}
         isPending={model.applying}
+        scrollBody
         onCancel={model.close}
         onConfirm={() => void model.confirm()}
       >
         {dialog && (
-          <div className="rp-col">
+          <>
             <p>{t('rule.template.scope', {file: dialog.file})}</p>
-            <section className="rp-col" aria-label={t('rule.template.created')}>
-              <h3 className="rp-h3">{t('rule.template.created')}</h3>
-              {dialog.impact.created.length ? (
-                <ul className="rp-templates">
-                  {dialog.impact.created.map(group => (
-                    <li key={group.name} className="rp-template">
-                      <span className="rp-template-text">
-                        <code>{group.name}</code>
-                        {group.label && <span>{group.label}</span>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="rp-label">{t('rule.template.createdNone')}</span>
-              )}
-            </section>
+            <ImpactList
+              title={t('rule.template.created')}
+              empty={t('rule.template.createdNone')}
+              rows={dialog.impact.created.map(group => ({
+                name: group.name,
+                label: group.label,
+                warning: dialog.impact.collisions.includes(group.name) ? t('rule.template.collision', {name: group.name}) : null
+              }))}
+            />
             {dialog.impact.reused.length > 0 && (
-              <section className="rp-col" aria-label={t('rule.template.reused')}>
-                <h3 className="rp-h3">{t('rule.template.reused')}</h3>
-                <ul className="rp-templates">
-                  {dialog.impact.reused.map(group => (
-                    <li key={group.name} className="rp-template">
-                      <span className="rp-template-text">
-                        <code>{group.name}</code>
-                        {group.pinned && <span>{t('rule.template.pinnedHelp')}</span>}
-                      </span>
-                      {group.pinned && <Badge>{t('rule.template.pinned')}</Badge>}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <ImpactList
+                title={t('rule.template.reused')}
+                rows={dialog.impact.reused.map(group => ({name: group.name, label: null, warning: group.pinned ? t('rule.template.pinnedHelp') : null}))}
+              />
             )}
-            {dialog.impact.collisions.map(name => (
-              <InlineAlert key={name} tone="informative">
-                {t('rule.template.collision', {name})}
-              </InlineAlert>
-            ))}
-            <h3 className="rp-h3">{t('rule.template.changes', {file: dialog.file})}</h3>
-            <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
-          </div>
+            <Disclosure title={t('rule.template.changes', {file: dialog.file})}>
+              <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
+            </Disclosure>
+          </>
         )}
       </ConfirmDialog>
     </div>
+  );
+}
+
+type ImpactRow = {name: string; label: string | null; warning: string | null};
+// A titled list of groups in the apply dialog: each name with its label on one line, and a warning line under it.
+function ImpactList({title, empty, rows}: {title: string; empty?: string; rows: ImpactRow[]}) {
+  const headingId = useId();
+  return (
+    <section className="rp-impact-section" aria-labelledby={headingId}>
+      <h3 className="rp-h3" id={headingId}>
+        {title}
+      </h3>
+      {rows.length ? (
+        <ul className="rp-impact">
+          {rows.map(row => (
+            <li key={row.name}>
+              <span>
+                <code>{row.name}</code>
+                {row.label && <span className="rp-impact-label">{row.label}</span>}
+              </span>
+              {row.warning && (
+                <span className="rp-impact-warning">
+                  <AlertTriangle />
+                  {row.warning}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span className="rp-label">{empty}</span>
+      )}
+    </section>
   );
 }

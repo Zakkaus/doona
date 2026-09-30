@@ -193,6 +193,41 @@
 .rp-modal.narrow {
   width: min(480px, 90vw);
 }
+/* S2's dialog anatomy for long content: the title and the footer keep their place and only the content between them
+   scrolls. The padding moves from the dialog to each part so the scrollbar runs along the content alone. */
+.rp-dialog.split {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.rp-dialog.split > h2 {
+  flex: none;
+  padding: 24px 32px 16px;
+}
+.rp-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 32px 16px;
+  overflow: hidden auto;
+  outline: none;
+}
+.rp-dialog-body[data-focus-visible],
+.rp-dialog-body:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}
+.rp-dialog.split > .foot {
+  flex: none;
+  padding: 16px 32px 24px;
+}
+.rp-dialog.split > .foot + .rp-label {
+  margin: -16px 0 0;
+  padding: 0 32px 24px;
+}
+
 /* Keyboard shortcuts: titled sections of rows, a label and its key caps. Two columns fit it in the viewport above phone
    width; the rows are tighter than a control row, since nothing in them is pressed. */
 .rp-shortcuts {

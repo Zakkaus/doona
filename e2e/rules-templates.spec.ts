@@ -3,7 +3,7 @@ import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {allGroupNames} from '../src/dae/sources';
 import {writeTemplate} from '../src/dae/setup';
-import {expect} from './fixtures';
+import {box, expect} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
@@ -81,11 +81,14 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await choose(page, 'Bypass mainland China');
   await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
-  await expect(dialog).toContainText('Replaces the top-level routing in config.dae.');
+  await expect(dialog).toContainText('Replaces the top-level routing in config.dae; DNS routing and the other files stay as they are.');
   // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
   await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('No new groups.');
-  await expect(dialog.getByRole('region', {name: 'Existing groups kept'})).toContainText('proxy');
+  await expect(dialog.getByRole('region', {name: 'Existing groups used'})).toContainText('proxy');
+  // The changes are folded away until asked for.
   const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
+  await expect(diff).toBeHidden();
+  await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
   await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
   await expect(diff).not.toContainText('tproxy_port');
@@ -177,4 +180,28 @@ test('a file changed on disk after the dialog opened is refused rather than over
   const saved = (await main()).content!;
   expect(saved).toContain('# concurrent edit');
   expect(saved).not.toContain('domain(geosite:gfw)');
+});
+
+test('on a phone the dialog content scrolls between a title and a footer that stay put', async ({page}) => {
+  const {write} = await backend(page);
+  await write(oneFile);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/rules?tab=list&view=simple');
+  await page.getByRole('button', {name: 'More templates'}).click();
+  await choose(page, 'ACL4SSR Full');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog', {name: 'Apply ACL4SSR Full?'});
+  await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
+  const body = dialog.locator('.rp-dialog-body');
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  const title = dialog.getByRole('heading', {name: 'Apply ACL4SSR Full?'});
+  await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  const before = {apply: await box(apply), title: await box(title)};
+  expect(before.apply.y + before.apply.height).toBeLessThanOrEqual(844);
+  await body.evaluate(el => el.scrollTo(0, el.scrollHeight));
+  await expect.poll(() => body.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  expect(await box(apply)).toEqual(before.apply);
+  expect(await box(title)).toEqual(before.title);
+  // Nothing in the dialog widens the page.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
