@@ -29,6 +29,7 @@ export function NodeLatency() {
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
+  const tone = {ok: p.positive, warn: p.notice, err: p.negative};
   const averages = latencyAverages(view);
   // One entry per node for the summary, whichever groups it sits in.
   const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
@@ -110,7 +111,7 @@ export function NodeLatency() {
                 href: hrefs.get(row.id),
                 values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
                 text: formatLatency(row.latest, t),
-                tone: latencyTone(row.latest) && p.notice,
+                tone: tone[latencyTone(row.latest)],
                 description: details.join(t('ui.separator')),
                 details
               };
