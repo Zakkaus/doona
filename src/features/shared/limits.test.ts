@@ -87,7 +87,7 @@ describe('backendLimits', () => {
     expect(groups.map(g => g.cause)).toEqual(['configNotLoaded']);
     expect(groups[0]).toMatchObject({
       headline: t('ov.lim.h.configNotLoaded'),
-      features: 'Configuration, Nodes and sources, Geodata',
+      features: 'Configuration, Nodes and node sources, Geodata',
       help: why('ov.lim.configMissing')
     });
     expect(ids(groups[0])).toEqual(['config', 'manage', 'geodata']);
@@ -103,7 +103,7 @@ describe('backendLimits', () => {
     expect(configGroup).toMatchObject({
       cause: 'configReadOnly',
       headline: t('ov.lim.h.configReadOnly'),
-      features: 'Configuration, Nodes and sources',
+      features: 'Configuration, Nodes and node sources',
       help: howTo('ov.lim.configWrite', ['config_write: true'], {href: docsHref('en', 'read-only'), text: t('ov.lim.docsReadOnly'), external: true})
     });
     expect(ids(configGroup)).toEqual(['config', 'manage']);

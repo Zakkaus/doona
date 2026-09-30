@@ -9,7 +9,7 @@ test.use({viewport: {width: 1440, height: 1000}});
 test('the removed quick setup address opens the default tab', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const tabs = page.getByRole('tablist', {name: 'Configuration'});
-  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Sources', 'Validation']);
+  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Config files', 'Validation']);
   await expect(tabs.getByRole('tab', {name: 'Modules'})).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -17,7 +17,7 @@ test('configuration sources list with the main source open, read-only ones canno
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toContainText('tproxy_port: 12345');
   await expect(page.locator('.cm-content[aria-label="/etc/honk/config.dae"]')).toHaveAttribute('contenteditable', 'true');
-  const picker = page.getByRole('button', {name: /Source/});
+  const picker = page.getByRole('button', {name: /Config file/});
   await expect(picker).toContainText('/etc/honk/config.dae');
   await picker.click();
   await expect(page.getByRole('option')).toHaveCount(4);
@@ -35,7 +35,7 @@ test('the editor starts at the same height for writable and read-only sources', 
     return (await page.locator('.cm-editor').boundingBox())!.y;
   };
   const writable = await editorTop('/etc/honk/config.dae');
-  await page.getByRole('button', {name: /Source/}).click();
+  await page.getByRole('button', {name: /Config file/}).click();
   await page.getByRole('option', {name: /sub-c\.dae/}).click();
   const readOnly = await editorTop('/var/lib/honk/subscriptions/sub-c.dae');
   expect(Math.abs(writable - readOnly)).toBeLessThanOrEqual(1);
@@ -56,7 +56,7 @@ for (const width of [390, 768, 1440])
       return {toolbar: toolbar.height, note: note.height - text.height};
     };
     const writable = await rows('/etc/honk/config.dae');
-    await page.getByRole('button', {name: /Source/}).click();
+    await page.getByRole('button', {name: /Config file/}).click();
     await page.getByRole('option', {name: /sub-c\.dae/}).click();
     const readOnly = await rows('/var/lib/honk/subscriptions/sub-c.dae');
     expect(Math.abs(readOnly.toolbar - writable.toolbar)).toBeLessThanOrEqual(1);
@@ -92,7 +92,7 @@ test('switching sources discards the draft after confirmation', async ({page}) =
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('domain(example.org) -> proxy');
   await expect(editor).toContainText('domain(example.org) -> proxy');
-  const picker = page.getByRole('button', {name: /Source/});
+  const picker = page.getByRole('button', {name: /Config file/});
   await picker.click();
   await page.getByRole('option', {name: /\/etc\/honk\/config\.dae/}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
@@ -193,7 +193,7 @@ test('a read-only source explains itself once per visit when typed into, and kee
   await expect(page.locator('.rp-toast')).toHaveCount(0);
   await expect(editor).toHaveText(original, {useInnerText: true});
   // Another source and back is a new visit, so the first attempt explains again.
-  const picker = page.getByRole('button', {name: /Source/});
+  const picker = page.getByRole('button', {name: /Config file/});
   await picker.click();
   await page.getByRole('option', {name: /\/etc\/honk\/config\.dae/}).click();
   await picker.click();
@@ -231,7 +231,7 @@ test.describe(() => {
     await expect(rows).toHaveCount(0);
     await page.reload();
     await rows.filter({hasText: 'rules.dae:3'}).click();
-    await page.getByRole('button', {name: 'Open config source: rules.dae:3', exact: true}).click();
+    await page.getByRole('button', {name: 'Open config file: rules.dae:3', exact: true}).click();
     await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
     await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
     // An editable source marks the line with its caret; a read-only one with the focus line.
@@ -481,9 +481,9 @@ test('rule writes require a stable source ID even when the display path matches'
   await expect(add).toHaveAccessibleDescription(reason);
   // Remove stays in each row, disabled with the reason, rather than disappearing.
   const remove = page.getByRole('button', {name: 'Remove rule', exact: true});
-  await expect(remove.first()).toHaveAccessibleDescription("Cannot locate this rule's line in its source file; it cannot be edited here");
+  await expect(remove.first()).toHaveAccessibleDescription("Cannot locate this rule's line in its config file; it cannot be edited here");
   await expect(page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false})).toHaveCount(0);
-  await expect(page.getByRole('button', {name: 'Open config source', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Open config file', exact: true})).toHaveCount(0);
 });
 
 test('modules list top-level counts and edit only routing through reload', async ({page}) => {
@@ -519,7 +519,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await expect(routing).toContainText('6 rules, fallback: resilient');
   const expected = original.replace(section, edited);
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(expected);
-  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await page.getByRole('tab', {name: 'Config files', exact: true}).click();
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+A');
@@ -527,17 +527,17 @@ test('modules list top-level counts and edit only routing through reload', async
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
 });
 
-test('a module card opens its section in the Sources tab for editing by hand', async ({page}) => {
+test('a module card opens its section in the Config files tab for editing by hand', async ({page}) => {
   await configBackend(page);
   await page.goto('/#/config');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
   const routing = modules.getByRole('region', {name: 'routing', exact: true});
   // The card's actions share one size; editing by hand differs only in being quiet.
-  const manual = routing.getByRole('button', {name: 'Open source file', exact: true});
+  const manual = routing.getByRole('button', {name: 'Open config file', exact: true});
   const size = (button: Locator) => button.evaluate(element => getComputedStyle(element).fontSize);
   expect(await size(manual)).toBe(await size(routing.locator('.rp-cluster > .rp-btn:not(.quiet)').first()));
   await manual.click();
-  await expect(page.getByRole('tab', {name: 'Sources', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'Config files', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/tab=source&source=src-main&line=\d+$/);
   // The main source is editable as opened: the caret waits on the section's first line.
   await expect(page.locator('.cm-activeLine')).toContainText('routing {');
@@ -598,7 +598,7 @@ test('modules show sections from read-only include files and open the file that 
   await expect(routing).toContainText('route.dae:1-3');
   await expect(routing).toContainText('0 rules, fallback: hk');
   await expect(routing.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
-  await routing.getByRole('button', {name: 'Open source file', exact: true}).click();
+  await routing.getByRole('button', {name: 'Open config file', exact: true}).click();
   await expect(page).toHaveURL(/tab=source&source=src-route&line=1$/);
   await expect(page.locator('.cm-focusLine')).toContainText('routing {');
 });
@@ -610,7 +610,7 @@ test('cancelling a module discards its draft and navigation uses the draft guard
   const editor = routing.locator('.cm-content');
   const original = await editor.innerText();
   await editor.fill(original.replace('fallback: resilient', 'fallback: direct'));
-  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await page.getByRole('tab', {name: 'Config files', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
@@ -767,7 +767,7 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await expect(diagnostics).toContainText('config.dae');
   await expect(diagnostics).toContainText('Error in main source');
   await expect(editor.locator('.cm-diag-line-error')).toHaveCount(0);
-  await diagnostics.getByRole('button', {name: /^Open config source: config\.dae/}).click();
+  await diagnostics.getByRole('button', {name: /^Open config file: config\.dae/}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/source=src-main.*line=2/);
 });
@@ -810,12 +810,12 @@ test('source redaction does not certify exports or diagnose the redacted include
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.rp-content')).toContainText('Listener secret values are redacted');
-  await expect(page.locator('.rp-content')).toContainText('Exports preserve the displayed source bytes and may contain credentials');
+  await expect(page.locator('.rp-content')).toContainText('Exports preserve the displayed file bytes and may contain credentials');
   await expect(page.getByRole('button', {name: 'About Export', exact: true})).toHaveCount(0);
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export', exact: true}).click();
   expect(await downloadText(await downloading)).toBe(main.content);
-  await page.getByRole('button', {name: /Source/}).click();
+  await page.getByRole('button', {name: /Config file/}).click();
   await page.getByRole('option', {name: /Include/}).click();
   await expect(page.locator('.rp-content')).toContainText('The backend does not accept writes to this file, so it can only be viewed.');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
@@ -1042,13 +1042,13 @@ httpTest('a reload refused after the write says the file was written but not app
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# rejected reload\n');
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative')).toContainText('Written to the configuration file but not applied');
+  await expect(page.locator('.rp-toast.negative')).toContainText('Written to the config file but not applied');
 });
 
 test('a new file in the include directory is created empty and opens in the source editor', async ({page}) => {
   await page.goto('/#/config?tab=source');
   await page.getByRole('button', {name: 'New file', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  const dialog = page.getByRole('dialog', {name: 'New config file'});
   const name = dialog.getByLabel('Name', {exact: true});
   const create = dialog.getByRole('button', {name: 'Create', exact: true});
   // The one include pattern fixes the directory and the extension; only the name its `*` stands for is typed.
@@ -1087,7 +1087,7 @@ async function heldCreate(page: Page, answer: (route: Route, body: {path: string
     await answer(route, route.request().postDataJSON(), api);
   });
   await page.goto('/#/config?tab=source');
-  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  const dialog = page.getByRole('dialog', {name: 'New config file'});
   await page.getByRole('button', {name: 'New file', exact: true}).click();
   await dialog.getByLabel('Name', {exact: true}).fill('work');
   const sent = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/config/sources'));
@@ -1123,7 +1123,7 @@ test('a create that succeeds after its dialog closed leaves the dialog opened si
 test('a new file name is checked for what the path rules refuse', async ({page}) => {
   await page.goto('/#/config?tab=source');
   await page.getByRole('button', {name: 'New file', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'New configuration file'});
+  const dialog = page.getByRole('dialog', {name: 'New config file'});
   const name = dialog.getByLabel('Name', {exact: true});
   const create = dialog.getByRole('button', {name: 'Create', exact: true});
   await name.fill('sub/work');
@@ -1153,7 +1153,7 @@ async function newSourceBackend(page: Page, include: string) {
   });
   await page.goto('/#/config?tab=source');
   await page.getByRole('button', {name: 'New file', exact: true}).click();
-  return {dialog: page.getByRole('dialog', {name: 'New configuration file'}), created};
+  return {dialog: page.getByRole('dialog', {name: 'New config file'}), created};
 }
 
 test('several include patterns are picked from before the name is typed', async ({page}) => {

@@ -58,7 +58,7 @@ test('discard resets a source draft even when the destination selects the same e
   await page.locator('.rp-nav[href="#/config"]').click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/config$/);
-  await page.getByRole('tab', {name: 'Sources', exact: true}).click();
+  await page.getByRole('tab', {name: 'Config files', exact: true}).click();
   await expect(page.locator('.cm-content')).not.toContainText('discard this draft');
   await page.locator('.cm-content').fill('guard this new draft');
   await page.locator('.rp-nav[href="#/settings"]').click();
