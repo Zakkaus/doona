@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {ConfigSource, Node, Provider} from '../../api/model';
-import {readSubscriptions} from './subscriptions';
+import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {
   nodeFormReason,
   nodeRows,
@@ -45,7 +45,7 @@ const node = (name: string, overrides: Partial<Node> = {}): Node => ({
   ...overrides
 });
 
-const entries = readSubscriptions(`subscription {
+const entries = readSubscriptionEntries(`subscription {
   primary: 'https://primary.example/sub'
   secondary: 'https://secondary.example/sub'
   spare: 'https://spare.example/sub'
@@ -67,7 +67,7 @@ describe('providerRows', () => {
   });
 
   it('does not guess between duplicate hosts or multiple unclaimed subscriptions', () => {
-    const shared = readSubscriptions(`subscription {
+    const shared = readSubscriptionEntries(`subscription {
       first: 'https://shared.example/one'
       second: 'https://shared.example/two'
     }`);
