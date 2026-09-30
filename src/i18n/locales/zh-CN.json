@@ -367,6 +367,7 @@
   "dns.addRuleFor": "为 {value} 新建规则",
   "dns.allTypes": "所有支持类型",
   "dns.answer": "{name} {type}；TTL {ttl} 秒；{data}",
+  "dns.bypassCache": "略过缓存",
   "dns.cacheBusy": "缓存列表暂时不可用",
   "dns.cacheFilter": "域名：{domain}",
   "dns.cacheUnavailable": "此后端不提供缓存列表",

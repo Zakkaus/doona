@@ -83,6 +83,12 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(request).toHaveBeenCalledTimes(3);
   });
+  it.each(['normal', 'bypass'] as const)('sends the selected DNS cache mode %s in the request body', async cacheMode => {
+    const request = vi.fn().mockResolvedValue(json({domain: 'example.org', cache_mode: cacheMode, results: []}));
+    vi.stubGlobal('fetch', request);
+    await createApi('https://honk.test').dnsQuery('example.org', ['A', 'AAAA'], undefined, cacheMode);
+    expect(await (request.mock.calls[0][0] as Request).json()).toEqual({domain: 'example.org', type: ['A', 'AAAA'], cache_mode: cacheMode});
+  });
   it('shows a long rate-limit wait while it lasts', async () => {
     vi.useFakeTimers();
     const request = vi

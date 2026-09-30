@@ -215,3 +215,16 @@ it('fails permanent refusals immediately', async () => {
   await expect(queryTypes(permanent, 'example.com', ['A'], 1, new AbortController().signal)).rejects.toMatchObject({status: 400});
   expect(permanent).toHaveBeenCalledTimes(1);
 });
+
+it('preserves bypass cache mode and cancellation signal across every record type batch', async () => {
+  const api = createMockApi();
+  const query = vi.fn(api.dnsQuery);
+  const signal = new AbortController().signal;
+  const result = await queryTypes(query, 'example.com', ['A', 'AAAA', 'TXT'], 1, signal, 'bypass');
+  expect(query.mock.calls).toEqual([
+    ['example.com', ['A'], signal, 'bypass'],
+    ['example.com', ['AAAA'], signal, 'bypass'],
+    ['example.com', ['TXT'], signal, 'bypass']
+  ]);
+  expect(result.cache_mode).toBe('bypass');
+});

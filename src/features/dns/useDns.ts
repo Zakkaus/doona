@@ -24,6 +24,7 @@ export function useDns({go, query}: PageProps) {
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const [domain, setDomain] = useState(params.get('domain') ?? '');
   const [type, setType] = useState(params.get('type') ?? 'A');
+  const [bypassCache, setBypassCache] = useState(false);
   useLinked(params.get('domain'), value => setDomain(value ?? ''));
   useLinked(params.get('type'), value => setType(value ?? 'A'));
   const [result, setResult] = useState<DnsQueryResponse | null>(null);
@@ -43,7 +44,8 @@ export function useDns({go, query}: PageProps) {
           asked.domain.trim(),
           asked.type === 'all' ? view.types : [asked.type],
           resources?.dns_query.limits?.max_types_per_request ?? 1,
-          signal
+          signal,
+          bypassCache ? 'bypass' : 'normal'
         );
         if (!signal.aborted) setResult(value);
         return value;
@@ -81,6 +83,8 @@ export function useDns({go, query}: PageProps) {
     setDomain,
     type,
     setType,
+    bypassCache,
+    setBypassCache,
     pending: busy === 'query',
     queryError: error,
     submit: () => void submit(),

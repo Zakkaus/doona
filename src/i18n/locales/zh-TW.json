@@ -367,6 +367,7 @@
   "dns.addRuleFor": "為 {value} 新增規則",
   "dns.allTypes": "所有支援類型",
   "dns.answer": "{name} {type}；TTL {ttl} 秒；{data}",
+  "dns.bypassCache": "略過快取",
   "dns.cacheBusy": "快取清單暫時無法使用",
   "dns.cacheFilter": "網域：{domain}",
   "dns.cacheUnavailable": "此後端不提供快取清單",

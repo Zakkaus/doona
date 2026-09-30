@@ -222,16 +222,17 @@ export function createNetwork(
       // total counts the ring before filters, as the contract defines it.
       return {observed_at: new Date().toISOString(), total: ring.length, next_cursor: result.next_cursor, records: result.items};
     },
-    dnsQuery: async (domain, types, signal) => {
+    dnsQuery: async (domain, types, signal, cacheMode = 'normal') => {
       signal?.throwIfAborted();
       if (!capabilities.resources.dns_query.available) throw new ApiError(404, 'capability_not_supported', 'DNS query unavailable');
       const name = domain.trim().toLowerCase().replace(/\.$/, '') + '.';
       return {
         domain: name,
-        cache_mode: 'normal',
+        cache_mode: cacheMode,
         query_time: new Date().toISOString(),
         results: types.map(type => {
-          const entry = dnsCache.entries.find(e => e.domain === name && e.type === type && Date.parse(e.expires_at) > Date.now());
+          const entry =
+            cacheMode === 'normal' ? dnsCache.entries.find(e => e.domain === name && e.type === type && Date.parse(e.expires_at) > Date.now()) : undefined;
           const data = type === 'AAAA' ? '2001:db8::14' : type === 'HTTPS' ? '1 . alpn="h2"' : '192.0.2.14';
           return {
             type,
