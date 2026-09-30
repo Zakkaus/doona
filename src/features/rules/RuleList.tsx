@@ -308,12 +308,13 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
             {view.table.positions.length === 1 ? (
               <StaticField label={t('rule.position')} value={view.table.positions[0].label} description={view.table.positions[0].desc} />
             ) : (
-              <LabeledSelect
+              <SearchSelect
                 isDisabled={view.busy}
                 label={t('rule.position')}
+                searchLabel={t('ui.filter')}
                 value={form.before}
                 onChange={before => setForm({...form, before})}
-                items={view.table.positions}
+                sections={view.table.positionSections}
               />
             )}
           </div>

@@ -74,11 +74,13 @@ type DictionaryRow = {
   sourceQuery: string | null;
 };
 // `outbounds`: every target a rule can name. `outboundSections`: the same targets in sections, for a list long enough
-// to need the searchable picker; null for the short DNS action lists.
+// to need the searchable picker; null for the short DNS action lists. `positionSections`: the positions for the
+// searchable picker.
 export type DictionaryView = {
   rows: DictionaryRow[];
   caption: string | null;
   positions: Choice[];
+  positionSections: SearchSection[];
   outbounds: Choice[];
   outboundSections: SearchSection[] | null;
 };
@@ -133,7 +135,7 @@ function listedRows<R extends Listed>(
   lang: Lang,
   // The end position of a list whose fallback is not written, when it has one.
   end: {id: 'end'; label: string; desc?: string} | null = null
-): Pick<DictionaryView, 'rows' | 'positions'> {
+): Pick<DictionaryView, 'rows' | 'positions' | 'positionSections'> {
   const locale = LOCALE[lang];
   const byId = new Map(config.map(source => [source.id, source]));
   const resolve = (source: RuleSource | null | undefined) => {
@@ -168,14 +170,20 @@ function listedRows<R extends Listed>(
     };
   });
   const fallback = rules.find(rule => rule.kind === 'fallback');
+  const ends = fallback?.source ? (unanchored(fallback) === null ? [{id: 'end', label: t('rule.positionEnd')}] : []) : end ? [end] : [];
+  const placed = rules.filter((_, i) => rows[i].removable);
+  const before = (rule: R, label = t('rule.positionBefore', {n: rule.index + 1})) => ({id: rule.rule_id, label, desc: rule.expression});
+  // The picker lists the first place and the end in an untitled first section, reachable without filtering, then every
+  // other rule's place, which the filter also finds by the rule's text.
+  const [start, ...others] = placed;
+  const keyed = (choice: Choice) => ({...choice, keywords: choice.desc});
   return {
     rows,
-    positions: [
-      ...(fallback?.source ? (unanchored(fallback) === null ? [{id: 'end', label: t('rule.positionEnd')}] : []) : end ? [end] : []),
-      ...rules
-        .filter((_, i) => rows[i].removable)
-        .map(rule => ({id: rule.rule_id, label: t('rule.positionBefore', {n: rule.index + 1}), desc: rule.expression}))
-    ]
+    positions: [...ends, ...placed.map(rule => before(rule))],
+    positionSections: [
+      {id: 'ends', items: [...(start ? [keyed(before(start, start === rules[0] ? t('conn.ruleTop') : undefined))] : []), ...ends]},
+      {id: 'rules', title: t('rule.positionOthers'), items: others.map(rule => keyed(before(rule)))}
+    ].filter(section => section.items.length)
   };
 }
 export function dictionaryView(

@@ -1240,6 +1240,7 @@
   "rule.positionBefore": "第 {n} 条之前",
   "rule.positionEnd": "最后（fallback 之前）",
   "rule.positionLast": "最后",
+  "rule.positionOthers": "其他位置",
   "rule.queried": "查询时间",
   "rule.queryAgain": "重新查询",
   "rule.queryDns": "查询 DNS",
