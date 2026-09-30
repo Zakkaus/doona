@@ -73,8 +73,6 @@ export function useProviderTable(input: ProviderTableInput) {
     busy: input.busy,
     writable: input.source.writable,
     editing: rows.some(row => row.action !== null),
-    // A subscription never fetched offers the fetch beside its state.
-    fetchable: rows.some(row => row.never && row.refreshable),
     sourceBusy: input.source.busy || !input.source.main,
     // An edit writes the file that declares the entry, which need not be the main source.
     editBusy: input.source.busy,
@@ -102,7 +100,6 @@ export type ProviderTableView = {
     intervals: Array<{id: string; label: string}>;
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
-    never: boolean;
     error?: string;
     refreshLabel: string;
     removeLabel: string;
@@ -123,7 +120,6 @@ export type ProviderTableView = {
   busy: boolean;
   writable: boolean;
   editing: boolean;
-  fetchable: boolean;
   sourceBusy: boolean;
   editBusy: boolean;
   sourceTip?: string;

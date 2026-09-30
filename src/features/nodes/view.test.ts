@@ -324,14 +324,13 @@ it('a rename is blocked by a filter that names the tag inside an expression, in 
 });
 
 it('tells a subscription never fetched apart from one holding older data', () => {
-  expect(providerRowView(provider('a'), undefined, 'en-US', t)).toMatchObject({status: 'Not fetched', tone: 'neutral', never: true});
+  expect(providerRowView(provider('a'), undefined, 'en-US', t)).toMatchObject({status: 'Not fetched', tone: 'neutral'});
   expect(providerRowView(provider('a', {updated_at: '2026-09-30T00:00:00Z'}), undefined, 'en-US', t)).toMatchObject({
     status: 'Stale',
-    tone: 'warn',
-    never: false
+    tone: 'warn'
   });
   const failed = provider('a', {last_error: {code: 'fetch_failed', message: 'HTTP 502', details: null}});
-  expect(providerRowView(failed, undefined, 'en-US', t)).toMatchObject({status: 'Stale', tone: 'warn', never: false});
-  expect(providerRowView(provider('a', {status: 'error'}), undefined, 'en-US', t)).toMatchObject({status: 'Failed', never: false});
-  expect(providerRowView(provider('f', {kind: 'file'}), undefined, 'en-US', t)).toMatchObject({status: 'Stale', never: false});
+  expect(providerRowView(failed, undefined, 'en-US', t)).toMatchObject({status: 'Stale', tone: 'warn'});
+  expect(providerRowView(provider('a', {status: 'error'}), undefined, 'en-US', t)).toMatchObject({status: 'Failed'});
+  expect(providerRowView(provider('f', {kind: 'file'}), undefined, 'en-US', t)).toMatchObject({status: 'Stale'});
 });

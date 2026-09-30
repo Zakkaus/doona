@@ -153,7 +153,8 @@ export function Nodes(props: PageProps) {
         onCancel={() => setDialog(null)}
         confirmLabel={submitLabel}
         isPending={pending}
-        isDisabled={submitting || !!referenced || checkingRemoval}
+        isDisabled={submitting || checkingRemoval}
+        dismissOnly={!!referenced}
         error={problem}
         onConfirm={() => void submit(() => setDialog(null))}
       >

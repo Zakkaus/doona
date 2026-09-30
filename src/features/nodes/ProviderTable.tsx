@@ -79,21 +79,14 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
           {
             id: 'status',
             label: t('ui.state'),
-            minWidth: m.fetchable ? 200 : 96,
+            minWidth: 96,
             grow: 0,
             drop: 7,
             render: row =>
               row.status ? (
-                <span className="rp-chain">
-                  <Light small tone={row.tone}>
-                    <TextTooltip text={row.error}>{row.status}</TextTooltip>
-                  </Light>
-                  {row.never && row.refreshable && (
-                    <Button small quiet isPending={row.refreshing} isDisabled={row.refreshDisabled} onPress={row.refresh}>
-                      {t('nodes.fetchNow')}
-                    </Button>
-                  )}
-                </span>
+                <Light small tone={row.tone}>
+                  <TextTooltip text={row.error}>{row.status}</TextTooltip>
+                </Light>
               ) : (
                 '—'
               )

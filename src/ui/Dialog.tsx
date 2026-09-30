@@ -186,6 +186,7 @@ export function ConfirmDialog({
   tone = 'negative',
   isPending,
   isDisabled,
+  dismissOnly,
   reason,
   error,
   children
@@ -198,6 +199,8 @@ export function ConfirmDialog({
   tone?: 'negative' | 'accent';
   isPending?: boolean;
   isDisabled?: boolean;
+  // The action is not offered: the footer holds one Close button instead of Cancel and Confirm.
+  dismissOnly?: boolean;
   // Why Confirm is disabled, under the footer.
   reason?: string | null;
   error?: {id: number; text: string} | null;
@@ -214,14 +217,18 @@ export function ConfirmDialog({
       onOpenChange={open => {
         if (!open) onCancel();
       }}
-      footer={() => (
-        <>
-          <Button onPress={onCancel}>{t('ui.cancel')}</Button>
-          <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </>
-      )}
+      footer={() =>
+        dismissOnly ? (
+          <Button onPress={onCancel}>{t('ui.close')}</Button>
+        ) : (
+          <>
+            <Button onPress={onCancel}>{t('ui.cancel')}</Button>
+            <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
+              {confirmLabel}
+            </Button>
+          </>
+        )
+      }
     >
       {error && (
         <InlineAlert key={error.id} takeFocus>
