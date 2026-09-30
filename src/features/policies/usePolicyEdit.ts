@@ -1,7 +1,7 @@
 import {useState} from 'react';
-import {getApi} from '../../api';
 import {useT} from '../../i18n';
 import {nameText, writeGroupEntry} from '../../dae/groups';
+import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource, Group} from '../../api/model';
 import {toast} from '../../ui/ui';
@@ -56,7 +56,8 @@ export type PolicyEditView = {
   setPolicy: (value: string) => void;
   add: () => void;
   save: (close: () => void) => void;
-  refreshOrigin: (write: () => Promise<boolean | undefined>) => Promise<boolean | undefined>;
+  interrupt: boolean | null | undefined;
+  setInterrupt: (value: boolean) => void;
 };
 // Where the group is declared, and whether that source's text is complete and the configuration read.
 export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolean | undefined; loaded: boolean; error: Error | null};
@@ -76,6 +77,7 @@ type Draft = {
   filters: string[];
   default: string | null;
   final: string | null;
+  interrupt: string | null;
 };
 // Edits the group in the source that declares it; `source` carries the write and whether the backend takes one.
 export function usePolicyEdit(name: string, source: MainSourceEdit, declaration: PolicyDeclaration, context: RouteContext): PolicyEditView {
@@ -86,15 +88,15 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
   const blocked = editBlocked(owner, declaration, t);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const busy = source.busy || refreshing;
+  const busy = source.busy;
   const routes = routeFields(context.g, draft?.policy ?? null);
   const session = useDialogSession();
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
   const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
   const guard = useDraftGuard(
     !!draft &&
-      (draft.policy !== entry?.policy ||
+      (draft.interrupt !== entry?.interrupt ||
+        draft.policy !== entry?.policy ||
         JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters) ||
         routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null))),
     () => {
@@ -115,7 +117,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     const origin = draft.refused ? (declared?.origin ?? draft.origin) : draft.origin;
     void source
       .apply(text => {
-        const update = {filters, policy: draft.policy};
+        const update = {filters, policy: draft.policy, interrupt: draft.interrupt};
         // A field the dialog does not offer, such as the default member under an automatic policy, is left as the file
         // has it.
         for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
@@ -188,7 +190,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
           policy: declared.entry.policy,
           filters: declared.entry.filters,
           default: routeValue(declared.entry.default),
-          final: routeValue(declared.entry.final)
+          final: routeValue(declared.entry.final),
+          interrupt: declared.entry.interrupt
         });
     },
     view: () => {
@@ -206,26 +209,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     setPolicy: policy => edit(prev => ({...prev, policy})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
     save,
-    refreshOrigin: async write => {
-      if (!draft) return write();
-      const current = session.start();
-      setRefreshing(true);
-      try {
-        const api = getApi();
-        const before = await api.config().catch(() => null);
-        const saved = await write();
-        if (saved) {
-          const after = await api.config().catch(() => null);
-          const origin = after?.sources.find(item => item.id === draft.origin.id);
-          // A pre-existing external edit still requires a refusal; only our own write advances the draft's base.
-          if (current() && origin && before?.sources.find(item => item.id === draft.origin.id)?.content_sha256 === draft.origin.content_sha256)
-            setDraft(prev => (prev && prev.origin === draft.origin ? {...prev, origin} : prev));
-          source.retry();
-        }
-        return saved;
-      } finally {
-        setRefreshing(false);
-      }
-    }
+    interrupt: draft ? (draft.interrupt === null ? null : unquote(draft.interrupt) === 'true') : undefined,
+    setInterrupt: value => edit(prev => ({...prev, interrupt: value ? 'true' : prev.interrupt === null ? null : 'false'}))
   };
 }

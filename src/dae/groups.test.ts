@@ -81,6 +81,23 @@ describe('group entries', () => {
     );
   });
 
+  it('round-trips interruption and edits it without moving comments or other fields', () => {
+    const source = "group {\n  g {\n    policy: select\n    interrupt_connections: 'true' # keep\n    check_url: x\n  }\n}\n";
+    const unchanged = {filters: [], policy: 'select'};
+    expect(readGroupEntries(source)[0]).toMatchObject({interrupt: "'true'"});
+    expect(writeGroupEntry(source, 'g', unchanged)).toBe(source);
+    expect(writeGroupEntry(source, 'g', {...unchanged, interrupt: 'false'})).toBe(source.replace("'true'", 'false'));
+    expect(writeGroupEntry(source, 'g', {...unchanged, interrupt: null})).toBe(source.replace("interrupt_connections: 'true'", ''));
+    const absent = 'group {\n  g {\n    policy: select\n    check_url: x\n  }\n}\n';
+    const added = writeGroupEntry(absent, 'g', {...unchanged, interrupt: 'true'});
+    expect(added).toBe(absent.replace('    check_url:', '    interrupt_connections: true\n    check_url:'));
+    expect(writeGroupEntry(added, 'g', {...unchanged, interrupt: null})).toBe(absent);
+    expect(writeGroupEntry('group { g { policy: select interrupt_connections: true } }', 'g', {...unchanged, interrupt: 'false'})).toContain(
+      '    policy: select\n    interrupt_connections: false\n'
+    );
+    expect(writeGroupEntry('', 'g', {...unchanged, interrupt: 'true'})).toContain('interrupt_connections: true');
+  });
+
   it('writes a name back as it was written while it names the same value', () => {
     expect(nameText('hk', "'hk'")).toBe("'hk'");
     expect(nameText('jp 01', "'hk'")).toBe("'jp 01'");

@@ -85,8 +85,8 @@ test('releasing a collapsed automatic group clears overrides on both networks', 
   expect([selection.tcp?.source, selection.udp?.source]).not.toContain('override');
 });
 
-test('toggling interruption keeps unsaved filters and permits the next save', async ({page}) => {
-  const {api} = await mockBackend(page);
+test('toggling interruption stages it with unsaved filters in one conditional source write', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
   await page.goto('/#/policies');
   await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
@@ -94,6 +94,9 @@ test('toggling interruption keeps unsaved filters and permits the next save', as
   await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
   await expect(dialog.getByRole('switch')).toBeChecked();
+  expect(requests.filter(request => request.method() === 'PATCH')).toHaveLength(0);
+  expect((await api.group('proxy')).config.interrupt_connections).toBe(false);
+  const origin = (await api.config()).sources.find(source => source.kind === 'main')!;
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeEnabled();
   await apply.click();
@@ -101,6 +104,9 @@ test('toggling interruption keeps unsaved filters and permits the next save', as
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(saved).toContain('filter: name(hk-01, sg-01)');
   expect((await api.group('proxy')).config.interrupt_connections).toBe(true);
+  const writes = requests.filter(request => request.method() === 'PUT' && new URL(request.url()).pathname.includes('/config/sources/'));
+  expect(writes).toHaveLength(1);
+  expect(writes[0].headers()['if-match']).toBe(`"${origin.content_sha256}"`);
 });
 
 for (const when of ['before', 'after'])
@@ -114,14 +120,7 @@ for (const when of ['before', 'after'])
       await api.replaceConfigSource(main.id, '# external edit\n' + main.content, `"${main.content_sha256}"`);
       await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# external edit');
     };
-    if (when === 'before') {
-      await external();
-      const refreshed = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/groups/proxy'));
-      await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
-      await refreshed;
-      await expect(dialog.getByRole('switch')).not.toBeChecked();
-      await expect(dialog.getByRole('switch')).toBeEnabled();
-    }
+    if (when === 'before') await external();
     await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
     await expect(dialog.getByRole('switch')).toBeChecked();
     const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
@@ -182,28 +181,55 @@ test('an automatic group sums itself up, opens on a press and still takes a pinn
   ]);
 });
 
-test('the edit dialog shows the running configuration and the interrupt switch, which writes to the group', async ({page}) => {
-  const {requests} = await mockBackend(page);
-  await page.setViewportSize({width: 1440, height: 1000});
+test('cancelling an interrupt-only draft leaves the source and live group unchanged', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'proxy', exact: true});
-  // Nothing of the configuration stays on the card.
   await expect(card.getByRole('switch')).toHaveCount(0);
-  await expect(card.getByRole('button', {name: 'Configuration', exact: true})).toHaveCount(0);
   await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
-  await expect(dialog.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
   await expect(dialog.getByText('Check interval', {exact: true})).toBeVisible();
+  const origin = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
+  await expect(dialog.getByRole('switch')).toBeChecked();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  expect(requests.filter(request => ['PATCH', 'PUT'].includes(request.method()))).toHaveLength(0);
+  expect((await api.config()).sources.find(source => source.id === origin.id)!.content_sha256).toBe(origin.content_sha256);
+  expect((await api.group('proxy')).config.interrupt_connections).toBe(false);
+  await moreAction(card, 'Edit group');
+  await expect(dialog.getByRole('switch')).not.toBeChecked();
+});
+
+test('the view dialog patches interruption live and refetches after a PATCH 412', async ({page}) => {
+  const {api, capabilities, requests} = await mockBackend(page);
+  capabilities.resources.config.writable = false;
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'View configuration');
+  const dialog = page.getByRole('dialog', {name: 'proxy configuration'});
   const toggle = dialog.getByRole('switch', {name: 'Interrupt existing connections on switch'});
   await expect(toggle).not.toBeChecked();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, '# external edit\n' + main.content, `"${main.content_sha256}"`);
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# external edit');
+  let patchRejected = false;
+  const rejected = page.waitForResponse(response => {
+    if (response.request().method() !== 'PATCH' || response.status() !== 412) return false;
+    patchRejected = true;
+    return true;
+  });
+  const refreshed = page.waitForResponse(
+    response => patchRejected && response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/groups/proxy')
+  );
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
-  await expect(page.locator('.rp-toast.positive').filter({hasText: 'proxy'})).toBeVisible();
+  await rejected;
+  await refreshed;
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toBeEnabled();
+  const saved = page.waitForResponse(response => response.request().method() === 'PATCH' && response.status() === 202);
+  await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
+  await saved;
   await expect(toggle).toBeChecked();
-  const patches = requests.filter(request => request.method() === 'PATCH');
-  expect(patches.map(request => [new URL(request.url()).pathname, request.postDataJSON()])).toEqual([
-    ['/api/v1/groups/proxy/config', expect.arrayContaining([expect.objectContaining({path: '/config/interrupt_connections', value: true})])]
-  ]);
-  // The switch writes at once; cancelling the dialog leaves the file alone.
-  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  expect((await api.group('proxy')).config.interrupt_connections).toBe(true);
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
 });
