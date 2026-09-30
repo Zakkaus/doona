@@ -226,14 +226,14 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   await page.goto('/#/policies');
   const probe = await moreItem(page.getByRole('region', {name: 'resilient', exact: true}), 'Test all');
   await expect(probe).toBeDisabled();
-  // The reason is the lock beside the card's name, its tip on focus, and the menu item's description.
+  // The lock opens the same reason as the menu item's description.
   const reason = 'Test all is not available for this group';
   await expect(probe).toHaveAccessibleDescription(reason);
   await page.keyboard.press('Escape');
-  const lock = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('img', {name: reason});
+  const lock = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: 'Why resilient is locked'});
   await expect(lock).toBeVisible();
-  await lock.locator('xpath=..').focus();
-  await expect(page.getByRole('tooltip')).toHaveText(reason);
+  await lock.click();
+  await expect(page.getByRole('dialog', {name: 'Why resilient is locked'})).toContainText(reason);
 });
 
 test('a group is switched to the score policy in its edit dialog', async ({page}) => {

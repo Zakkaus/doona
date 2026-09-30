@@ -1061,6 +1061,7 @@
   "policy.kind.urltest": "平均最快",
   "policy.liveConfig": "執行中的組態",
   "policy.loading": "正在載入 {groupId}…",
+  "policy.lockHelp": "{name} 的鎖定原因",
   "policy.memberPerNetwork": "TCP：{tcp}，UDP：{udp}",
   "policy.members": "{n} 個成員",
   "policy.membersDown": "{n} 個成員，{down} 個無法使用",

@@ -33,22 +33,10 @@ h3.rp-label {
 .rp-disclosure-head > :not(.rp-disclosure-trigger) {
   flex: none;
 }
-/* An icon standing for a sentence (IconTip): small and subdued beside a title, never squeezed out of its row. */
+/* Keep the contextual help button beside the group's name when the row is crowded. */
 .rp-icontip {
   flex: none;
   display: inline-flex;
-  color: var(--rp-subtle);
-  border-radius: var(--rp-r-sm);
-}
-.rp-icontip .rp-icon {
-  display: block;
-  width: 16px;
-  height: 16px;
-}
-.rp-icontip:focus-visible {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
-
 }
 .rp-disclosure-trigger > svg {
   rotate: calc(-90deg * var(--rp-dir));
