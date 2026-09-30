@@ -162,7 +162,7 @@ export function createInventory(
       const limit = capabilities.resources.groups.max_patch_operations;
       if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
       const updated = patchGroupConfig(group, ops);
-      const activate = await editMain(text => writeGroupConfig(text, group.name, updated));
+      const activate = await editMain(text => writeGroupConfig(text, group.name, {...updated, members: group.members}));
       updating.add(groupId);
       return enqueue('group_update', () => {
         updating.delete(groupId);

@@ -218,6 +218,9 @@ export function createConfiguration(
       const check = validate({sources: sourceSet({id: sourceId, content}), mode: 'full'}, String(configRevision));
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
+      // A concurrent write may have landed while this one was stored.
+      if (disk.find(item => item.id === sourceId) !== source)
+        throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
       disk = disk.map(item => (item.id === sourceId ? next : item));
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {

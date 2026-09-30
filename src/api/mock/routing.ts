@@ -29,8 +29,10 @@ function subnet(ip: string, range: string): boolean {
   return (number(ip) & mask) === (number(base) & mask);
 }
 function predicate(expression: string, input: RoutingTraceInput): Pick<Condition, 'result' | 'missing_inputs'> {
-  const match = /^(\w+)\((.*)\)$/.exec(expression)!;
-  const [, kind, arg] = match;
+  const match = /^(!?)\s*(\w+)\((.*)\)$/.exec(expression.trim());
+  // A condition the demo cannot evaluate is reported as undecided rather than guessed.
+  if (!match) return {result: 'indeterminate', missing_inputs: []};
+  const [, negated, kind, arg] = match;
   const field = fields[kind];
   const value = field === 'mac' ? undefined : input[field];
   if (value == null || value === '') return {result: 'indeterminate', missing_inputs: [field ?? kind]};
@@ -56,7 +58,7 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
         : arg.split(',').some(range => subnet(ip, range.trim()));
   } else if (kind === 'ipversion') matched = arg === (String(value).includes(':') ? '6' : '4');
   else matched = arg.split(',').some(item => item.trim() === String(value));
-  return {result: matched ? 'matched' : 'not_matched', missing_inputs: []};
+  return {result: matched !== Boolean(negated) ? 'matched' : 'not_matched', missing_inputs: []};
 }
 function evaluate(input: RoutingTraceInput, snapshot: RuleList): Evaluation {
   let matched = false,
@@ -93,11 +95,12 @@ function evaluate(input: RoutingTraceInput, snapshot: RuleList): Evaluation {
     conditions: []
   });
   if (!matched) outbound = snapshot.fallback.outbound;
-  // A later match cannot resolve an earlier rule whose inputs are missing.
+  // A later match cannot resolve an earlier undecided rule.
+  const undecided = rules.some(rule => rule.result === 'indeterminate');
   return {
     dst_ip: input.dst_ip ?? null,
-    decision: missing.size ? 'indeterminate' : 'determinate',
-    outbound: missing.size ? null : outbound,
+    decision: undecided ? 'indeterminate' : 'determinate',
+    outbound: undecided ? null : outbound,
     missing_inputs: [...missing],
     rules
   };
