@@ -165,3 +165,19 @@ test('the routing picker writes a domain keyword condition', async ({page}) => {
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(rows(page).nth(8)).toContainText('domain(keyword: tracker)');
 });
+
+for (const lang of ['en', 'zh-CN']) {
+  test(`the open condition kind picker matches the values field height in ${lang}`, async ({page}) => {
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.goto('/#/rules?tab=list&view=advanced&add=domainKeyword:tracker');
+    await setAppearance(page, lang, 'light');
+    await page.reload();
+    const dialog = page.getByRole('dialog');
+    const kind = dialog.getByRole('button', {name: lang === 'en' ? /Match by$/ : /依据$/});
+    await kind.click();
+    await expect(page.getByRole('option', {name: lang === 'en' ? 'Domain keyword' : '域名关键字', exact: true})).toBeVisible();
+    const picker = await kind.boundingBox();
+    const values = await dialog.locator('.rp-input').boundingBox();
+    expect(picker!.height).toBe(values!.height);
+  });
+}
