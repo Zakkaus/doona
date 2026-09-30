@@ -138,13 +138,13 @@ it('shows the CPU card as a percent of one core, dashed until the backend has tw
 it('lists what the backend lacks to route through a proxy, each with the page that adds it, and nothing once it is there', () => {
   expect(setupNotices({noNodeSources: false, noRouting: false}, t)).toEqual([]);
   expect(setupNotices({noNodeSources: true, noRouting: true}, t)).toEqual([
-    {id: 'setup:nodes', tone: 'info', kindText: 'Notice', summaryText: 'No subscriptions yet', action: {label: 'Nodes', href: '#/nodes'}},
+    {id: 'setup:nodes', tone: 'info', kindText: 'Notice', summaryText: 'No subscriptions yet', action: {label: 'Add subscription', href: '#/nodes'}},
     {
       id: 'setup:routing',
       tone: 'info',
       kindText: 'Notice',
       summaryText: 'No routing mode chosen',
-      action: {label: 'Routing mode', href: '#/rules?tab=list&view=simple'}
+      action: {label: 'Choose a routing mode', href: '#/rules?tab=list&view=simple'}
     }
   ]);
 });
