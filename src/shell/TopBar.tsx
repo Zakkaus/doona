@@ -12,7 +12,8 @@ import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu, ConfirmDialog, Divider} from '../ui/ui';
+import {Button, ChoiceMenu, Divider} from '../ui/ui';
+import {ReloadConfirm} from '../features/shared/ReloadConfirm';
 import type {SettingsContext} from './preferences';
 import type {Scheme} from './preferences';
 import type {AppearanceMenu, BackendView, PaletteSection, TopBarCommands} from './view';
@@ -152,21 +153,16 @@ export const TopBar = memo(function TopBar({
           <BackendMenuPopover backend={backend} honk={honk} anchor={narrowMenu} isOpen={backendOpen} onOpenChange={setBackendOpen} />
         </span>
       </div>
-      <ConfirmDialog
-        title={t('shell.reloadTitle')}
-        tone="accent"
+      <ReloadConfirm
         isOpen={confirmReload && !!commands.reload}
         onCancel={() => setConfirmReload(false)}
-        confirmLabel={t('shell.reloadEngine')}
         isPending={commands.reload?.busy}
         isDisabled={commands.reload?.blocked}
         onConfirm={() => {
           setConfirmReload(false);
           reload();
         }}
-      >
-        <p className="rp-label">{t('shell.reloadHelp')}</p>
-      </ConfirmDialog>
+      />
     </header>
   );
 });
