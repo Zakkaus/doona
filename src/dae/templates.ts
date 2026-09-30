@@ -1,5 +1,6 @@
 // Adapted from ACL4SSR templates; preserve its group labels and bilingual region patterns.
-import {quote} from './text';
+import {quote, scanConfig, unquote} from './text';
+import {isBuiltinOutbound} from './vocab';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'mini' | 'standard' | 'full';
 export const defaultTemplate: RuleTemplate = 'standard';
 // Keep local traffic direct and block UDP/443 before template-specific routing.
@@ -129,3 +130,53 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
     ]
   }
 };
+
+// The top-level routing of `text` as honk reads it, one token list per rule or field: comments dropped, and spacing and
+// line breaks inside parentheses ignored. Null when a routing block nests a section, which no template writes.
+function routingEntries(text: string): string[][] | null {
+  const {blocks, tokens} = scanConfig(text);
+  const entries: string[][] = [];
+  for (const block of blocks.filter(block => block.name === 'routing')) {
+    if (block.children.length) return null;
+    let line = -1;
+    for (const token of tokens) {
+      if (token.from <= block.open || token.from >= block.close || token.kind === 'comment') continue;
+      const raw = text.slice(token.from, token.to);
+      if (token.line !== line && token.parens === 0) entries.push([]);
+      line = token.line;
+      // The scanner keeps `&&` and `!` in the word they touch, as in `l4proto(udp)&&dport(443)`.
+      entries.at(-1)!.push(...(token.kind === 'quoted' ? [unquote(raw)] : raw.split(/(&&|\|\||!)/).filter(Boolean)));
+    }
+  }
+  return entries;
+}
+// Stands for the `{group}` a template fills with the file's first group, as one token that no written name uses.
+const groupSlot = '\u0000group';
+const templateEntries = (template: RuleTemplate) =>
+  routingEntries(['routing {', ...templates[template].rules, `fallback: ${templates[template].fallback}`, '}'].join('\n').replaceAll('{group}', groupSlot))!;
+// The template whose rules and fallback the top-level routing of `text` holds, in order and nothing else, with the
+// group its `{group}` names; null for any other routing, including none. A group slot takes one proxy group, the same
+// wherever the template repeats it.
+export function detectTemplate(text: string): {template: RuleTemplate; group: string | null} | null {
+  const entries = routingEntries(text);
+  if (!entries?.length) return null;
+  for (const template of Object.keys(templates) as RuleTemplate[]) {
+    const expected = templateEntries(template);
+    if (expected.length !== entries.length) continue;
+    let group: string | null = null;
+    const same = expected.every((want, i) => {
+      const got = entries[i];
+      return (
+        want.length === got.length &&
+        want.every((token, j) => {
+          if (token !== groupSlot) return token === got[j];
+          if (isBuiltinOutbound(got[j]) || (group !== null && group !== got[j])) return false;
+          group = got[j];
+          return true;
+        })
+      );
+    });
+    if (same) return {template, group};
+  }
+  return null;
+}
