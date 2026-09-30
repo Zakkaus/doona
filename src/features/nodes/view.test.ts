@@ -11,6 +11,7 @@ import {
   providerRowView,
   intervalText,
   intervalItems,
+  keptOptions,
   providerCreate,
   renameReferences,
   selectedProvider
@@ -227,6 +228,20 @@ it('does not authorize writes from shared-host guesses or conflicting node tags'
   const unspecified = providerRowView(provider('a'), null, 'en-US', t);
   expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
   expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+});
+
+it('lists as written only the options without their own control', () => {
+  const options = [
+    {name: 'ua', value: "'clash.meta'"},
+    {name: 'interval', value: '0s'},
+    {name: 'cache', value: 'true'},
+    {name: 'retry', value: '3'}
+  ];
+  expect(keptOptions(options, true)).toEqual([{name: 'retry', value: '3'}]);
+  expect(keptOptions(options, false)).toEqual([
+    {name: 'cache', value: 'true'},
+    {name: 'retry', value: '3'}
+  ]);
 });
 
 describe('providerCreate', () => {

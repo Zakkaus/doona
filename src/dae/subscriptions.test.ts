@@ -217,9 +217,9 @@ describe('writeSubscriptionEntry options', () => {
   });
 
   it('changes the options of a block in place, keeping quotes, comments and other options', () => {
-    expect(write(text, 'old', {interval: 3600})).toBe(text.replace("'10000s'", "'3600s'"));
+    expect(write(text, 'old', {interval: 3600})).toBe(text.replace("'10000s'", "'1h'"));
     expect(write(text, 'quoted tag', {ua: 'v2rayN', cache: false})).toBe(text.replace("ua: 'honk/1.0'\n    cache: true", "ua: 'v2rayN'\n    cache: false"));
-    expect(write(text, 'quoted tag', {interval: 7200})).toBe(text.replace('    cache: true\n  }', '    cache: true\n    interval: 7200s\n  }'));
+    expect(write(text, 'quoted tag', {interval: 7200})).toBe(text.replace('    cache: true\n  }', '    cache: true\n    interval: 2h\n  }'));
     expect(write(text, 'old', {ua: 'agent'})).toBe(text.replace("    interval: '10000s'\n  }", "    interval: '10000s'\n    ua: 'agent'\n  }"));
     expect(write(text, 'quoted tag', {ua: null})).toBe(text.replace("    ua: 'honk/1.0'\n", ''));
   });
@@ -227,17 +227,14 @@ describe('writeSubscriptionEntry options', () => {
   it('keeps the User-Agent when the interval of a block-form entry changes', () => {
     const source = "subscription {\n  paid: 'https://example.com/sub' { # work\n    ua: 'clash.meta' # provider wants it\n    interval: 1h\n  }\n}\n";
     const out = write(source, 'paid', {interval: 21600});
-    expect(out).toBe(source.replace('interval: 1h', 'interval: 21600s'));
+    expect(out).toBe(source.replace('interval: 1h', 'interval: 6h'));
     expect(readSubscriptionEntries(out).map(({ua, interval}) => [ua, interval])).toEqual([['clash.meta', 21600]]);
   });
 
   it('turns a one-line entry into the options form when it gets an interval or cache', () => {
     const out = write(text, 'agent', {interval: 3600});
     expect(out).toBe(
-      text.replace(
-        "  agent: 'https://example.net/sub'(honk/1.0 like)",
-        "  agent: 'https://example.net/sub' {\n    ua: 'honk/1.0 like'\n    interval: 3600s\n  }"
-      )
+      text.replace("  agent: 'https://example.net/sub'(honk/1.0 like)", "  agent: 'https://example.net/sub' {\n    ua: 'honk/1.0 like'\n    interval: 1h\n  }")
     );
     expect(readSubscriptionEntries(out).find(entry => entry.tag === 'agent')).toMatchObject({ua: 'honk/1.0 like', interval: 3600, form: 'options'});
     expect(write(text, 'short', {cache: false})).toBe(
@@ -245,18 +242,41 @@ describe('writeSubscriptionEntry options', () => {
     );
     expect(write(text, 'example.org', {interval: 0})).toContain("  example.org: 'https://example.org/no_tag_link' {\n    interval: 0s\n  }");
     expect(write("subscription {\n\t'paid:https://example.com/sub'\n}", 'paid', {interval: 60})).toBe(
-      "subscription {\n\tpaid: 'https://example.com/sub' {\n\t\tinterval: 60s\n\t}\n}"
+      "subscription {\n\tpaid: 'https://example.com/sub' {\n\t\tinterval: 1m\n\t}\n}"
     );
   });
 
   it('opens a one-line block before adding an option, and folds an emptied options block back', () => {
     const squeezed = "subscription {\n  s: { url: 'https://example.org/one' }\n}";
-    expect(write(squeezed, 's', {interval: 3600})).toBe("subscription {\n  s: {\n    url: 'https://example.org/one'\n    interval: 3600s\n  }\n}");
+    expect(write(squeezed, 's', {interval: 3600})).toBe("subscription {\n  s: {\n    url: 'https://example.org/one'\n    interval: 1h\n  }\n}");
     const lone = "subscription {\n  s: 'https://example.org/one' { ua: agent }\n}";
     expect(write(lone, 's', {ua: null})).toBe("subscription {\n  s: 'https://example.org/one'\n}");
     expect(write("subscription {\n  s: 'https://example.org/one' {\n    ua: agent\n  }\n}", 's', {ua: null})).toBe(
       "subscription {\n  s: 'https://example.org/one'\n}"
     );
+  });
+
+  it('writes an interval in the largest exact unit and keeps an unchanged one as written', () => {
+    const one = (seconds: number) => write(text, 'quoted tag', {interval: seconds}).match(/cache: true\n +interval: (.*)/)![1];
+    expect([21600, 5400, 90, 0, 86400].map(one)).toEqual(['6h', '90m', '90s', '0s', '24h']);
+    const hour = "subscription {\n  s: 'https://example.org/one' {\n    interval: 60m\n  }\n}";
+    expect(write(hour, 's', {interval: 3600})).toBe(hour);
+    expect(write(hour, 's', {ua: 'agent'})).toBe(hour.replace('60m\n', "60m\n    ua: 'agent'\n"));
+  });
+
+  it('writes new option lines with the indentation the file already uses', () => {
+    const four = "subscription {\n    a: 'https://example.org/a'\n    b: 'https://example.org/b'\n}";
+    expect(write(four, 'a', {interval: 3600})).toBe(four.replace("a'\n", "a' {\n        interval: 1h\n    }\n"));
+    const nested = "subscription {\n    s: { url: 'https://example.org/one' }\n}";
+    expect(write(nested, 's', {cache: true})).toBe("subscription {\n    s: {\n        url: 'https://example.org/one'\n        cache: true\n    }\n}");
+    const empty = "subscription {\n    s: 'https://example.org/one' {\n    }\n}";
+    expect(write(empty, 's', {cache: false})).toBe("subscription {\n    s: 'https://example.org/one' {\n        cache: false\n    }\n}");
+    // Another entry's options set the step even where the section's own is different.
+    const mixed = "subscription {\n  a: 'https://example.org/a' {\n      ua: x\n  }\n  b: 'https://example.org/b'\n}";
+    expect(write(mixed, 'b', {interval: 60})).toBe(mixed.replace("b'\n", "b' {\n      interval: 1m\n  }\n"));
+    // Without a section step, the file's first indented line.
+    const flat = "global {\n   log_level: info\n}\nsubscription {\ns: 'https://example.org/one'\n}";
+    expect(write(flat, 's', {interval: 0})).toBe(flat.replace("one'\n", "one' {\n   interval: 0s\n}\n"));
   });
 
   it('writes nothing when the options do not change and refuses an unquotable agent', () => {
@@ -282,7 +302,7 @@ subscription {
     ['first', 'agent } #', 7200],
     ['second', null, null]
   ]);
-  expect(writeSubscriptionEntry(source, 'first', {interval: 3600})).toBe(source.replace("'2h'", "'3600s'"));
+  expect(writeSubscriptionEntry(source, 'first', {interval: 3600})).toBe(source.replace("'2h'", "'1h'"));
   expect(writeSubscriptionEntry(source, 'second', {interval: 0})).toContain("second: 'https://two.example/#' {\n    interval: 0s\n  }");
   const url = 'https://example.org/{#}?token=a\\b';
   expect(writeSubscriptionEntry(`subscription {\n  paid: '${url}'\n}\n`, 'paid', {interval: 3600})).toContain(`paid: '${url}' {`);

@@ -286,7 +286,7 @@ test('a subscription refresh interval is written into the configuration', async 
   await expect(sources.first()).toContainText('Every 6 hours');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
-    "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
+    "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
   );
   await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
@@ -615,11 +615,13 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
-  await expect(editor).toContainText(`sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 21600s\n  }`);
+  await expect(editor).toContainText(`sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 6h\n  }`);
   await page.goto('/#/nodes?tab=list');
   await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
+  // The interval belongs to the Auto-refresh picker, so it is not listed among the options kept as written either.
+  await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
 });
 
 test('renaming a subscription carries the groups whose subtag filter names it', async ({page}) => {
