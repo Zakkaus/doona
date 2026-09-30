@@ -24,6 +24,7 @@
   --rp-hl-med: #e5e6eb;
   --rp-hl-high: #c9cdd4;
   --rp-on-accent: #ffffff;
+  --rp-on-positive: var(--rp-text);
   --rp-on-text: #ffffff;
   --rp-line: #e5e6eb;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -59,6 +60,7 @@
   --rp-hl-med: #333335;
   --rp-hl-high: rgba(255, 255, 255, 0.16);
   --rp-on-accent: var(--rp-base);
+  --rp-on-positive: var(--rp-on-accent);
   --rp-on-text: #17171a;
   --rp-line: #333335;
   --rp-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
