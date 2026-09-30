@@ -37,6 +37,21 @@ test('Back after direct hash navigation preserves the guarded history entry', as
   await expect(page).toHaveURL(/#\/config$/);
 });
 
+test('navigating to the current address keeps the history position', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(page.locator('.rp-nav[href="#/config"]')).toBeVisible();
+  const position = await page.evaluate(() => history.state.doonaPosition as number);
+  await page.evaluate(() => {
+    // Firefox replaces the entry and drops its state when a link targets the current address.
+    history.replaceState(null, '');
+    dispatchEvent(new PopStateEvent('popstate', {state: null}));
+  });
+  await page.evaluate(() => {
+    location.hash = '#/config';
+  });
+  await expect.poll(() => page.evaluate(() => history.state.doonaPosition)).toBe(position + 1);
+});
+
 test('discard resets a source draft even when the destination selects the same editor', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-main');
   await page.locator('.cm-content').fill('discard this draft');
