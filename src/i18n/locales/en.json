@@ -216,8 +216,9 @@
   "config.discardTitle": "Discard changes not applied?",
   "config.diskAhead": "The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart",
   "config.edit": "Edit",
-  "config.editNote": "Click the text to edit it. If the file changes on disk after loading, the backend refuses the write and does not overwrite the file.",
-  "config.editNoteValidate": "Click the text to edit it; Validate checks it before you apply. If the file changes on disk after loading, the backend refuses the write and does not overwrite the file.",
+  "config.editNote": "Click the text to edit.",
+  "config.editNoteValidate": "Click the text to edit; validate before applying.",
+  "config.editor": "Editor",
   "config.errors": {
     "one": "{n} error",
     "other": "{n} errors"
@@ -353,6 +354,7 @@
     "other": "{n} warnings"
   },
   "config.where": "Where",
+  "config.writeHelp": "If the file changed on disk since loading, honk refuses the write.",
   "config.writeRestart": {
     "one": "{n} setting takes effect only after a restart; nothing written. Change it in the file, then restart honk",
     "other": "{n} settings take effect only after a restart; nothing written. Change them in the file, then restart honk"

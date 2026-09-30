@@ -29,6 +29,8 @@ import type {GroupEntry} from '../../dae/groups';
 import {readOnlyAttempts} from './readOnlyAttempt';
 import {Button} from '../Button';
 import {MenuButton} from '../Select';
+import {ActionGroup, MoreMenu, type Action} from '../ActionGroup';
+import {useOverflow} from '../hooks';
 
 // CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
@@ -214,7 +216,8 @@ export function CodeEditor({
   outbounds,
   onSave,
   onReadOnlyAttempt,
-  compact
+  compact,
+  actions = []
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -229,7 +232,14 @@ export function CodeEditor({
   // Typing, paste, cut or a touch tap while read-only; the caller explains why the text cannot change.
   onReadOnlyAttempt?: () => void;
   compact?: boolean;
+  actions?: Action[];
 }) {
+  const toolbar = useRef<HTMLDivElement>(null);
+  const collapsed = useOverflow(toolbar, actions.map(action => action.label).join('\n') + readOnly + label);
+  const overflow = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (collapsed && toolbar.current?.contains(document.activeElement)) overflow.current?.querySelector('button')?.focus();
+  }, [collapsed]);
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
@@ -352,32 +362,57 @@ export function CodeEditor({
   return (
     <>
       {!compact && (
-        <div className="rp-toolbar">
-          <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
-          <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
-          {onChange && (
-            <MenuButton
-              label={t('cm.commands')}
-              isDisabled={readOnly}
-              content={
-                <Menu
-                  aria-label={t('cm.commands')}
-                  onAction={key => {
-                    const command = editCommands.find(command => command.id === key);
-                    if (command) run(command.run);
-                  }}
+        <div className="rp-toolbar rp-editor-toolbar">
+          <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
+          <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
+            <div className="rp-toolbar" ref={toolbar}>
+              <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
+              <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
+              <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
+              {onChange && (
+                <MenuButton
+                  label={t('cm.commands')}
+                  isDisabled={readOnly}
+                  content={
+                    <Menu
+                      aria-label={t('cm.commands')}
+                      onAction={key => {
+                        const command = editCommands.find(command => command.id === key);
+                        if (command) run(command.run);
+                      }}
+                    >
+                      {editCommands.map(command => (
+                        <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
+                          {t(command.label)}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  }
                 >
-                  {editCommands.map(command => (
-                    <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
-                      {t(command.label)}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              }
-            >
-              {t('cm.commands')}
-            </MenuButton>
-          )}
+                  {t('cm.commands')}
+                </MenuButton>
+              )}
+            </div>
+            {collapsed && (
+              <div className="rp-editor-overflow" ref={overflow}>
+                <MoreMenu
+                  actions={[
+                    ...actions.slice(1),
+                    {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
+                    {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
+                    ...(onChange
+                      ? editCommands.map(command => ({
+                          id: command.id,
+                          label: t(command.label),
+                          isDisabled: readOnly,
+                          onAction: () => requestAnimationFrame(() => run(command.run))
+                        }))
+                      : [])
+                  ]}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
       <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />

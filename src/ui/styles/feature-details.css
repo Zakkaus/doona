@@ -29,6 +29,32 @@
   min-width: 0;
   max-width: 100%;
 }
+.rp-editor-toolbar,
+.rp-editor-actions > .rp-toolbar {
+  flex-wrap: nowrap;
+}
+.rp-editor-toolbar > :not(.rp-editor-actions) {
+  flex: none;
+}
+.rp-editor-actions {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.rp-editor-actions > .rp-toolbar > * {
+  flex: none;
+}
+.rp-editor-actions[data-collapsed] > .rp-toolbar {
+  visibility: hidden;
+  overflow: hidden;
+}
+.rp-editor-overflow {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 0 auto;
+  display: flex;
+  align-items: center;
+}
 .rp-editor .cm-editor {
   max-width: 100%;
 }

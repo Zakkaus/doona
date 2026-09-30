@@ -321,15 +321,17 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-/* The source toolbar and the card's note row keep one line layout for every source. The picker, read-only badge and
-   facts are one group whose basis, not the selected path's length, decides whether the buttons share its line; inside
-   it the path ellipsises from its start instead of the group wrapping. The buttons wrap as a pair, and the note row's
-   actions sit beside the note rather than on a line of their own. */
+/* The group's basis decides whether the action buttons share its line. Inside it, the picker keeps the basename
+   and chevron together while the badge and facts wrap on phones when they no longer fit. */
 .rp-source-pick {
   flex: 1 1 20rem;
 }
 .rp-source-pick > .rp-cluster {
   flex-wrap: nowrap;
+}
+.rp-source-pick .rp-label {
+  flex: none;
+  white-space: nowrap;
 }
 .rp-source-pick .rp-selectbtn,
 .rp-source-pick .rp-selectbtn > span {
@@ -341,11 +343,5 @@
   flex: none;
 }
 .rp-source-note {
-  flex-wrap: nowrap;
-}
-.rp-source-note > :first-child {
-  flex: 1 1 0;
-}
-.rp-source-note > :nth-child(2) {
-  flex: none;
+  min-height: 0;
 }

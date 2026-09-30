@@ -27,12 +27,24 @@ import {useT, type Translator} from '../i18n';
 import {cx} from './cx';
 
 export type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
-export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start'}) => (
-  <span className="rp-il">
-    {i.icon && <span className="ic">{i.icon}</span>}
-    <TextTooltip cut={cut}>{i.label}</TextTooltip>
-  </span>
-);
+export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start' | 'path'}) => {
+  const split = cut === 'path' ? i.label.lastIndexOf('/') + 1 : 0;
+  return (
+    <span className="rp-il">
+      {i.icon && <span className="ic">{i.icon}</span>}
+      {split ? (
+        <TextTooltip className="rp-path" text={i.label}>
+          <span className="rp-truncate rp-truncate-start">
+            <bdi>{i.label.slice(0, split)}</bdi>
+          </span>
+          <bdi>{i.label.slice(split)}</bdi>
+        </TextTooltip>
+      ) : (
+        <TextTooltip cut={cut === 'start' ? cut : undefined}>{i.label}</TextTooltip>
+      )}
+    </span>
+  );
+};
 // The title and what follows it share a line while both fit; otherwise the rest moves under the title and wraps.
 export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
@@ -56,7 +68,7 @@ function SelectBody({
   className,
   layout,
   cut
-}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start'}) {
+}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start' | 'path'}) {
   return (
     <Select
       aria-label={layout ? undefined : label}
@@ -485,8 +497,8 @@ export function LabeledSelect({
   isDisabled?: boolean;
   side?: boolean;
   bare?: boolean;
-  // Where the shown value ellipsises when the picker is narrower than it, as TextTooltip's `cut`.
-  cut?: 'start';
+  // Path values truncate the directory while reserving the basename and revealing the full path.
+  cut?: 'start' | 'path';
 }) {
   return (
     <SelectBody

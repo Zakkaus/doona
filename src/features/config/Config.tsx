@@ -37,7 +37,7 @@ export function Config(props: PageProps) {
       <>
         <div className="rp-toolbar">
           <span className="rp-cluster nowrap rp-source-pick">
-            <LabeledSelect side cut="start" label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
+            <LabeledSelect side cut="path" label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
             {sourceModel && (
               <>
                 {sourceModel.readOnly && (
