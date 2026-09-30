@@ -760,7 +760,7 @@ test('the notices card says what is missing to route through a proxy until it is
   await page.goto('/#/activity');
   const card = page.getByRole('region', {name: 'Notifications'});
   const subscriptions = card.getByRole('listitem').filter({hasText: 'No subscriptions yet'});
-  const routing = card.getByRole('listitem').filter({hasText: 'No routing mode chosen'});
+  const routing = card.getByRole('listitem').filter({hasText: 'No routing rules configured'});
   await expect(subscriptions.getByRole('link', {name: 'Add subscription', exact: true})).toHaveAttribute('href', '#/nodes');
   await routing.getByRole('link', {name: 'Choose a routing mode', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&view=simple$/);
@@ -772,5 +772,5 @@ test('the notices card says what is missing to route through a proxy until it is
   await page.goto('/#/activity');
   await page.reload();
   await expect(card.getByText('No subscriptions yet')).toHaveCount(0);
-  await expect(card.getByText('No routing mode chosen')).toHaveCount(0);
+  await expect(card.getByText('No routing rules configured')).toHaveCount(0);
 });

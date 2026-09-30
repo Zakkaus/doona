@@ -899,7 +899,7 @@ test('with no subscription and no node the page says so and offers Add subscript
   backend.handlers['GET providers'] = async () => ({providers: [], next_cursor: null});
   backend.handlers['GET nodes'] = async () => ({observed_at: new Date().toISOString(), nodes: [], next_cursor: null});
   await page.goto('/#/nodes');
-  const empty = page.locator('.rp-empty', {hasText: 'No subscriptions or nodes yet.'});
+  const empty = page.locator('.rp-empty', {hasText: 'No subscriptions or proxy nodes are available.'});
   await expect(empty).toBeVisible();
   await expect(page.locator('.rp-table')).toHaveCount(0);
   await expect(empty.getByRole('button', {name: 'Paste node link', exact: true})).toBeVisible();
