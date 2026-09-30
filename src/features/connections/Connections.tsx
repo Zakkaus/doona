@@ -33,7 +33,6 @@ export function Connections(props: PageProps) {
   const cur = vm.detail;
   const list = (
     <>
-      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-toolbar">
         {vm.compact ? (
           <span className="rp-filter-row">
@@ -180,6 +179,7 @@ export function Connections(props: PageProps) {
   };
   return (
     <div className="rp-page">
+      {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <Tabs
         keepMounted
         label={t('nav.connections')}
