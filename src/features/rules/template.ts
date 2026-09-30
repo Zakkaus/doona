@@ -2,6 +2,8 @@ import type {ConfigSource} from '../../api/model';
 import type {Key, Translator} from '../../i18n';
 import {scanConfig} from '../../dae/text';
 import {fileName} from '../../dae/sources';
+import {classifyFilters, readGroupEntries, type GroupEntry} from '../../dae/groups';
+import {defaultGroup, templateGroups} from '../../dae/setup';
 import {detectTemplate, templates, type RuleTemplate} from '../../dae/templates';
 
 // The plain choices first; the ACL4SSR presets, which also create groups, are kept under More templates.
@@ -111,3 +113,34 @@ export function templateTarget({sources, configWritable, daeText, complete, hold
 }
 export const refusalReason = (refusal: TemplateRefusal, source: ConfigSource | null, t: Translator) =>
   t(refusalText[refusal], {file: source ? fileName(source) : ''});
+
+// A group pinned to one node: one exact name and nothing else, or a fixed policy. Every rule a template points at it
+// then leaves through that one node.
+const pinned = (entry: GroupEntry) => {
+  const {names, subtags, rules} = classifyFilters(entry);
+  return (names.length === 1 && !subtags.length && !rules.length) || /^fixed\b/.test(entry.policy ?? '');
+};
+export type TemplateImpact = {
+  // The groups the template declares, each with its ACL4SSR label; the default group has none.
+  created: Array<{name: string; label: string | null}>;
+  // Groups the template's rules name that a file already declares, kept as they are.
+  reused: Array<{name: string; pinned: boolean}>;
+  // New groups named like a node: a rule naming one reaches the group rather than the node.
+  collisions: string[];
+};
+// What applying `template` to `target` adds and relies on, given every loaded file and the node names.
+export function templateImpact(template: RuleTemplate, target: ConfigSource, sources: ConfigSource[], nodes: string[]): TemplateImpact {
+  const entries = [target, ...sources.filter(source => source.id !== target.id)].flatMap(source => (source.content ? readGroupEntries(source.content) : []));
+  const byName = new Map<string, GroupEntry>();
+  for (const entry of entries) if (!byName.has(entry.name)) byName.set(entry.name, entry);
+  const created = templateGroups(template, [...byName.keys()]);
+  const labels = new Map(templates[template].groups.map(group => [group.name, group.label]));
+  // A template without groups routes to the file's first group, or the first one declared anywhere.
+  const named = templates[template].groups.length ? templates[template].groups.map(group => group.name) : [entries[0]?.name ?? defaultGroup];
+  const taken = new Set(nodes);
+  return {
+    created: created.map(name => ({name, label: labels.get(name) ?? null})),
+    reused: named.filter(name => byName.has(name)).map(name => ({name, pinned: pinned(byName.get(name)!)})),
+    collisions: created.filter(name => taken.has(name))
+  };
+}

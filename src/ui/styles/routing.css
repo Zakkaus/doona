@@ -159,3 +159,38 @@
   color: var(--rp-subtle);
   font-size: var(--rp-text-sm);
 }
+/* A unified line diff: added and removed lines take a quiet highlight and their mark the positive or negative text
+   colour; a gap between hunks is secondary text. */
+.rp-diff {
+  max-height: 320px;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  border-radius: var(--rp-r-md);
+  background: var(--rp-base);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
+  font-size: var(--rp-text-xs);
+  line-height: 1.6;
+}
+.rp-diff-line {
+  display: block;
+  padding-inline: 8px;
+  white-space: pre;
+}
+.rp-diff-line:is([data-kind='add'], [data-kind='del']) {
+  background: var(--rp-hl-low);
+}
+.rp-diff-line[data-kind='gap'] {
+  color: var(--rp-subtle);
+  font-family: inherit;
+}
+.rp-diff-mark {
+  display: inline-block;
+  width: 2ch;
+}
+.rp-diff-line[data-kind='add'] .rp-diff-mark {
+  color: var(--rp-positive-text);
+}
+.rp-diff-line[data-kind='del'] .rp-diff-mark {
+  color: var(--rp-negative-text);
+}

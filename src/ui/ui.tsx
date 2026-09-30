@@ -31,4 +31,5 @@ export {ActionBar} from './ActionBar';
 export {ActionGroup, MoreMenu, type Action} from './ActionGroup';
 export {Card, cardClass} from './Card';
 export {Divider} from './Divider';
+export {Diff, type DiffRow} from './Diff';
 export {VisuallyHidden} from 'react-aria';
