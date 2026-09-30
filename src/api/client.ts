@@ -42,6 +42,16 @@ type OperationStarts = {
 };
 // Requests that write nothing, so a refusal is safe to replay without an Idempotency-Key.
 const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
+// These requests write configuration; a missing reason still needs the backend's specific refusal message.
+const configurationWrites = new Set([
+  'PUT /api/v1/config/sources/{source_id}',
+  'POST /api/v1/config/sources',
+  'PATCH /api/v1/groups/{group_id}/config',
+  'POST /api/v1/nodes',
+  'DELETE /api/v1/nodes/{node_id}',
+  'POST /api/v1/providers',
+  'DELETE /api/v1/providers/{provider_id}'
+]);
 // Both streams send a heartbeat comment at least this often while idle. A half-open connection never errors, so a
 // stream silent for MISSED_HEARTBEATS intervals is treated as dropped.
 const HEARTBEAT_SECONDS = 15;
@@ -91,8 +101,12 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     }
   };
   const failures: Middleware = {
-    onResponse: async ({response}) => {
-      if (!response.ok) throw await responseError(response);
+    onResponse: async ({request, response, schemaPath}) => {
+      if (!response.ok) {
+        const error = await responseError(response);
+        error.configurationWrite = configurationWrites.has(`${request.method} ${schemaPath}`);
+        throw error;
+      }
       return response;
     }
   };

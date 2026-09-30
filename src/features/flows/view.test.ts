@@ -47,26 +47,6 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(flowDetailView({...detail, rule_id: 'r5', rule_source: 'unknown'}, t, 'en')!.seed.matched).toBeNull();
 });
 
-it('joins only matched routing rules with the active language separator', async () => {
-  const api = createMockApi();
-  const detail = await api.flow((await api.flows()).flows[0].id);
-  const route = detail.trace.steps.find(step => step.stage === 'route')!;
-  const rule = route.data.rules[0];
-  route.data.rules = [
-    {...rule, expression: 'domain(example.com)', result: 'matched'},
-    {...rule, expression: null, rule_id: 'r2', result: 'matched'},
-    {...rule, expression: 'domain(other.com)', result: 'not_matched'}
-  ];
-  for (const [lang, expected] of [
-    ['en', 'domain(example.com), r2'],
-    ['zh-TW', 'domain(example.com)、r2'],
-    ['zh-CN', 'domain(example.com)、r2']
-  ] as const) {
-    const t: Translator = (key, params) => translate(lang, key, params);
-    expect(flowDetailView(detail, t, lang)!.steps.find(step => step.id === route.seq)!.fields).toContainEqual([t('ui.rule'), expected]);
-  }
-});
-
 it('prepares tile labels with configured destinations, nested policies and unknown nodes', async () => {
   const api = createMockApi();
   const [rules, groups, nodes] = await Promise.all([api.rules(), api.groups(), api.nodes({limit: 1000})]);

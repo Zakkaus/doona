@@ -1,6 +1,8 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
-import {ApiError, send} from './error';
+import {translate} from '../i18n';
+import type {Api} from './api';
+import {ApiError, errorText, send} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent, OperationAccepted} from './model';
 import {currentRefusal} from './refusal';
@@ -15,6 +17,33 @@ afterEach(() => {
 });
 
 describe('native transport', () => {
+  it.each([
+    {name: 'source replacement', call: (api: Api) => api.replaceConfigSource('main', 'routing {}', '"digest"')},
+    {name: 'source creation', call: (api: Api) => api.createConfigSource('new.dae', 'routing {}')},
+    {name: 'group patch', call: (api: Api) => api.patchGroup('proxy', [], '"40"')},
+    {name: 'node creation', call: (api: Api) => api.createNode({name: 'edge', link: 'ss://node'})},
+    {name: 'node deletion', call: (api: Api) => api.deleteNode('edge')},
+    {name: 'provider creation', call: (api: Api) => api.createProvider({name: 'remote', kind: 'subscription', url: 'https://example.org/sub'})},
+    {name: 'provider deletion', call: (api: Api) => api.deleteProvider('remote')}
+  ])('retains the request context for a $name refusal without a reason', async ({call}) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({error: {code: 'permission_denied', message: 'Write refused'}}, 403))
+    );
+    const api = createApi('https://honk.test/prefix');
+    const error = await call(api).catch((error: ApiError) => error);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(errorText(error, (key, params) => translate('zh-TW', key, params))).toBe('Write refused');
+    for (const request of [
+      api.config(),
+      api.selectGroup('proxy', {member_id: 'direct', network: 'both'}),
+      api.refreshProvider('remote'),
+      api.startProbe({target: {type: 'node', node_id: 'edge'}, kind: 'tcp_connect', transport: ['tcp'], ip_version: 'ipv4', members: 'direct', warmth: 'cold'})
+    ]) {
+      const ordinary = await request.catch((error: ApiError) => error);
+      expect(errorText(ordinary, (key, params) => translate('zh-TW', key, params))).toBe(translate('zh-TW', 'ui.backend.permissionDenied'));
+    }
+  });
   it('reads the host clock from the observed_at of a response', async () => {
     const behind = Date.now() - 600_000;
     vi.stubGlobal(

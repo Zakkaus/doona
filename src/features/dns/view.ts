@@ -170,7 +170,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
       type: record.question.type,
       source: record.src ?? '—',
       resultError: record.status !== 'NOERROR',
-      result: record.status !== 'NOERROR' ? record.status : record.answers.map(answer => answer.data).join(t('ui.listSeparator')) || '—',
+      result: record.status !== 'NOERROR' ? record.status : record.answers.map(answer => answer.data).join(', ') || '—',
       cached: record.cached,
       upstream: record.cached ? t('dns.hit') : (record.upstream ?? '—'),
       elapsed: formatLatency(record.elapsed_ms, t)

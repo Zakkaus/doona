@@ -22,7 +22,7 @@ export const groupConfigLabels = {
   idle_timeout: 'policy.cfg.idleTimeout',
   interrupt_connections: 'policy.cfg.interruptConnections'
 } as const satisfies Record<string, Key>;
-const units: Record<string, Key> = {check_interval: 'ui.seconds', idle_timeout: 'ui.seconds', tolerance: 'ui.latency'};
+const units: Record<string, Key> = {check_interval: 'policy.cfg.seconds', idle_timeout: 'policy.cfg.seconds', tolerance: 'policy.cfg.millis'};
 // Known fields get a label and a unit; anything the contract adds later shows its raw name.
 export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
   return Object.entries(group.config)

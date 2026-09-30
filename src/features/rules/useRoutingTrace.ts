@@ -9,7 +9,6 @@ import {routingTrace, type RoutingTraceRun} from '../../store/flows';
 import {queryTypes, useGroups, useNodeProbe, useNodes, useProviders, useRules} from '../../store';
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
-import {enumLabel} from '../../i18n/enum';
 import {toast, toastErrorDetail, toastFailure, useLinked} from '../../ui/ui';
 import {chainLinks, dnsView, evaluationView, nameLinks, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeToast} from '../shared/probe';
@@ -185,7 +184,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     canSubmit: !busy && canSubmit,
     reason: traceReason({loaded: !!capabilities.data, busy: busy !== null, available, invalid: invalid?.key ?? null, modeOffered: modes.includes(resolve)}, t),
     submit,
-    modes: modes.map(id => ({id, label: enumLabel(resolveLabels, id, t)})),
+    modes: modes.map(id => ({id, label: t(resolveLabels[id])})),
     // An untouched form is not wrong yet; submit stays disabled until it is complete.
     errors: {
       domain: shown?.field === 'domain' ? t(shown.key) : undefined,
