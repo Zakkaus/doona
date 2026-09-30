@@ -39,6 +39,12 @@ it('lays the config out as a tree and weights it with retained flows', async () 
   expect(pinnedLabel('node:' + nodes.nodes[0].id, rules.rules, nodeNames(nodes.nodes), label)).toBe(nodes.nodes[0].name);
 });
 
+it('labels a pin that names no stage as unknown', () => {
+  const label = (name: string | null) => name ?? 'Unknown';
+  expect(pinnedLabel('direct', [], new Map(), label)).toBe('Unknown');
+  expect(pinnedLabel('policy:direct', [], new Map(), label)).toBe('Unknown');
+});
+
 it('follows a nested selection to its node and draws the inner group inside the outbound', async () => {
   const api = createMockApi();
   const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
