@@ -35,7 +35,7 @@ const invalid = {
   idle_timeout: 'policy.idleTimeoutInvalid'
 } as const;
 // The group's check settings, each offered only when the backend lists it as writable. `conflict`: the last save
-// was refused with 409, so the group is read again.
+// was refused because the group changed first (409 or 412), so the group is read again.
 export function useCheckEdit(
   g: Group | undefined,
   patchConfig: (ops: JsonPatch) => Promise<true | undefined>,

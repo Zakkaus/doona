@@ -51,6 +51,11 @@ export async function patchConfig(api: Api, group: Group, ops: JsonPatch, signal
   });
   if ('operation_id' in result) finished(await settle(api, result, signal), 'group_update', {written: true});
 }
+// A config write refused because the group changed first: 412 for the revision it carried, 409 for a test op or an
+// update still in flight. Either way the group is read again, and the check dialog moves its draft onto it.
+export function groupConflict(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 409 || error.status === 412);
+}
 // honk offers selection and config writes for groups as a whole (resources.groups) and for each group (its capabilities);
 // the group shows only the actions both offer, and none until capabilities load. The contract lists both top-level
 // flags whenever groups are available, so an absent one leaves the group's own flags in charge.
@@ -116,7 +121,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
         } catch (error) {
           // Someone else changed the group first: fetch it, so the next attempt carries the current revision and the
           // check dialog can show what the group holds now.
-          if (error instanceof ApiError && (error.status === 409 || error.status === 412)) refetch();
+          if (groupConflict(error)) refetch();
           throw error;
         }
         return true as const;

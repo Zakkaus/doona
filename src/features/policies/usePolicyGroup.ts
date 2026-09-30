@@ -1,6 +1,6 @@
 import {useEffect, useEffectEvent, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {useGroupControl} from '../../store';
+import {groupConflict, useGroupControl} from '../../store';
 import type {GroupSummary, HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
@@ -9,7 +9,7 @@ import {usePolicyEdit, type PolicyDeclaration} from './usePolicyEdit';
 import type {OutboundCatalogue} from './view';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
-import {ApiError, requestIdOf} from '../../api/error';
+import {requestIdOf} from '../../api/error';
 export type PolicyGroupInput = {
   id: string;
   name: string;
@@ -51,7 +51,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
   const edit = usePolicyEdit(g?.name ?? input.name, source, declaration, {g, members, outbounds});
-  const conflict = control.actionError instanceof ApiError && control.actionError.status === 409;
+  const conflict = groupConflict(control.actionError);
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
   const probe = () =>
