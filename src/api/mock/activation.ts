@@ -1,6 +1,6 @@
 import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
-import {groupAdmits, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {groupAdmits, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
 import {redactUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
@@ -110,16 +110,24 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
   providers.splice(0, providers.length, ...nextProviders);
 }
 
-export function writeGroupConfig(text: string, name: string, update: Pick<Group, 'policy' | 'config'>): string {
+export function writeGroupConfig(text: string, name: string, update: Pick<Group, 'policy' | 'config' | 'members'>): string {
   const entry = readGroupEntries(text).find(entry => entry.name === name)!;
-  text = writeGroupEntry(text, name, {filters: entry.filters, policy: update.policy.native});
+  // The API's default_member_id and final_outbound are the native `default` member tag and `final` outbound.
+  const {default_member_id, final_outbound, ...config} = update.config;
+  const member = update.members.find(member => member.id === default_member_id)?.name ?? null;
+  text = writeGroupEntry(text, name, {
+    filters: entry.filters,
+    policy: update.policy.native,
+    default: nameText(member, entry.default),
+    final: nameText(final_outbound, entry.final)
+  });
   const {blocks, tokens} = scanConfig(text);
   const block = blocks
     .filter(block => block.name === 'group')
     .flatMap(block => block.children)
     .find(block => block.name === name)!;
-  const existing = blockFields(text, block, tokens).filter(field => field.name in update.config);
-  const values = Object.entries(update.config)
+  const existing = blockFields(text, block, tokens).filter(field => field.name in config);
+  const values = Object.entries(config)
     .map(([key, value]) => `${key}: ${typeof value === 'string' ? quote(value) : String(value)}`)
     .join('\n    ');
   text = text.slice(0, block.close) + '\n    ' + values + '\n  ' + text.slice(block.close);
