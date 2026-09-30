@@ -219,12 +219,15 @@ it('sums current-expression hits across provenance without attributing historica
   const [rules, flows] = await Promise.all([api.rules(), api.flows()]);
   const rule = rules.rules[0];
   const flow = flows.flows[0];
+  const current = {...flow, rule_id: rule.rule_id, rule_generation_id: rules.generation_id};
   flows.flows = [
-    {...flow, id: 'kernel', rule_id: rule.rule_id, rule_expression: rule.expression, rule_source: 'kernel'},
-    {...flow, id: 'recomputed', rule_id: rule.rule_id, rule_expression: rule.expression, rule_source: 'recomputed'},
-    {...flow, id: 'historical', rule_id: rule.rule_id, rule_expression: 'domain(old.example)', rule_source: 'kernel'}
+    {...current, id: 'kernel', rule_expression: rule.expression, rule_source: 'kernel'},
+    {...current, id: 'recomputed', rule_expression: rule.expression, rule_source: 'recomputed'},
+    {...current, id: 'historical', rule_expression: 'domain(old.example)', rule_source: 'kernel'},
+    {...current, id: 'other-generation', rule_generation_id: 'older', rule_expression: rule.expression, rule_source: 'kernel'}
   ];
   expect(dictionaryView([rule], rules.generation_id, flows, [], [], t, 'en').rows[0].hits).toBe('2');
+  expect(dictionaryView([rule], undefined, flows, [], [], t, 'en').rows[0].hits).toBe('—');
 });
 
 it('does not infer a source from its display name when the ID is unknown', async () => {
@@ -258,8 +261,11 @@ it('tells an empty distribution apart by the recorder, then by the source filter
   expect(distributionEmpty(undefined, 'all', t)).toBe(t('rule.distributionEmpty'));
   const view = distributionView(undefined, 'all', t, 'en', recorder('off'));
   expect(view.empty).toBe(t('rule.distributionNotRecorded'));
+  expect(view.choices.map(([id]) => id)).toEqual(['all', 'kernel', 'userspace', 'recomputed', 'unknown']);
+  expect(t('rule.sourceRecomputed')).toBe('Recomputed');
   expect(view.sourceHelp.text).toEqual([
     t('ui.valuePair', {label: t('rule.sourceKernel'), value: t('rule.sourceHelp.kernel')}),
+    t('ui.valuePair', {label: t('rule.sourceUserspace'), value: t('rule.sourceHelp.userspace')}),
     t('ui.valuePair', {label: t('rule.sourceRecomputed'), value: t('rule.sourceHelp.recomputed')}),
     t('ui.valuePair', {label: t('rule.sourceUnknown'), value: t('rule.sourceHelp.unknown')})
   ]);

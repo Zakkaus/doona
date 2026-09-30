@@ -4,6 +4,7 @@ import type {
   DnsQueryResponse,
   DnsRoutingRule,
   FlowList,
+  FlowSummary,
   RecorderState,
   GroupSummary,
   Node,
@@ -55,8 +56,18 @@ const kindHints: Record<RuleConditionKind, string> = {
   answerIp: '0.0.0.0/32, 10.0.0.0/8',
   answerGeoip: 'cn, private'
 };
-const sources: Record<string, Key> = {kernel: 'rule.sourceKernel', recomputed: 'rule.sourceRecomputed', unknown: 'rule.sourceUnknown'};
-const sourceHelp: Record<string, Key> = {kernel: 'rule.sourceHelp.kernel', recomputed: 'rule.sourceHelp.recomputed', unknown: 'rule.sourceHelp.unknown'};
+const sources: Record<FlowSummary['rule_source'], Key> = {
+  kernel: 'rule.sourceKernel',
+  userspace: 'rule.sourceUserspace',
+  recomputed: 'rule.sourceRecomputed',
+  unknown: 'rule.sourceUnknown'
+};
+const sourceHelp: Record<FlowSummary['rule_source'], Key> = {
+  kernel: 'rule.sourceHelp.kernel',
+  userspace: 'rule.sourceHelp.userspace',
+  recomputed: 'rule.sourceHelp.recomputed',
+  unknown: 'rule.sourceHelp.unknown'
+};
 type Choice = {id: string; label: string; desc?: string};
 type DictionaryRow = {
   id: string;
@@ -198,7 +209,10 @@ export function dictionaryView(
   const locale = LOCALE[lang];
   const current = new Map(rules.map(rule => [rule.rule_id, rule.expression]));
   const hits = new Map<string, number>();
-  for (const row of ruleDistribution(flows?.flows ?? [])) {
+  // A flow's rule_id names a rule only within its own generation, so a flow from another one, or any flow while the
+  // generation is unknown, counts for no rule.
+  const joined = generation === undefined ? [] : (flows?.flows ?? []).filter(flow => flow.rule_generation_id === generation);
+  for (const row of ruleDistribution(joined)) {
     if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
   }
   const sections = ruleOutbounds(groups, t);
@@ -312,7 +326,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
     empty: distributionEmpty(recorder, source, t),
     sourceHelp: {
       title: t('rule.distributionSource'),
-      text: Object.entries(sourceHelp).map(([id, help]) => t('ui.valuePair', {label: t(sources[id]), value: t(help)}))
+      text: (Object.keys(sourceHelp) as Array<FlowSummary['rule_source']>).map(id => t('ui.valuePair', {label: t(sources[id]), value: t(sourceHelp[id])}))
     }
   };
 }
