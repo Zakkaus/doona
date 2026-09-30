@@ -7,11 +7,12 @@ const webkit = process.env.DOONA_E2E_WEBKIT === '1';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  workers: process.env.CI ? 2 : undefined,
   forbidOnly: !!process.env.CI,
   // One retry tells a flake from a regression in the report; a test that only passes on retry still fails the run.
   retries: process.env.CI ? 1 : 0,
   failOnFlakyTests: !!process.env.CI,
-  reporter: process.env.CI ? [['list'], ['github']] : 'list',
+  reporter: process.env.CI ? [['list'], ['github'], ['blob']] : 'list',
   outputDir: 'test-results',
   use: {
     baseURL: 'http://127.0.0.1:4177',

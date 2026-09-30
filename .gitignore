@@ -2,6 +2,9 @@ node_modules
 dist
 release/
 test-results/
+blob-report/
+all-blob-reports/
+playwright-report/
 coverage/
 *.tsbuildinfo
 # agent tooling state
