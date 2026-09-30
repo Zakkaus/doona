@@ -60,9 +60,9 @@ export function flowsThrough(flows: FlowSummary[], id: string, rules: RuleList |
 }
 
 export function pinnedLabel(id: string, rules: RoutingRule[], names: NodeNames, label: (name: string | null) => string): string {
-  const stage = id.slice(0, id.indexOf(':'));
-  const key = id.slice(id.indexOf(':') + 1);
-  if (key === '') return label(null);
+  const tag = readTag(id, stages);
+  if (!tag || tag.value === '') return label(null);
+  const {kind: stage, value: key} = tag;
   if (stage === 'rule')
     return key.includes(HISTORICAL) ? key.slice(key.indexOf(HISTORICAL) + 1) : (rules.find(rule => rule.rule_id === key)?.expression ?? key);
   if (stage === 'node') return names.get(key) ?? key;
@@ -110,7 +110,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
       : resolveSelectedLeaf(name, group?.selection.tcp_member_id ? 'tcp' : 'udp', groupsByName, byId, nodesById);
     const chain: TreeGroup[] = selected.groups.map(group => ({name: group.name, kind: group.policy.kind, policy: group.policy.native}));
     const leaf = selected.member;
-    const kind = unknown ? 'unknown' : name === 'direct' || name === 'block' ? name : chain.length ? 'group' : 'unknown';
+    const kind = unknown ? 'unknown' : isBuiltinOutbound(name) ? name : chain.length ? 'group' : 'unknown';
     entry = {id, label: name, count: 0, unknown: unknown || undefined, kind, groups: chain, node: leaf && nodeItem(leaf, names.get(leaf) ?? leaf).id};
     outboundItems.set(id, entry);
     if (entry.node) link(id, entry.node);
