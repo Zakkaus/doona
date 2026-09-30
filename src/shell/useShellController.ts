@@ -38,6 +38,13 @@ export function useShellController(initial: Lang) {
     return () => removeEventListener('scroll', mark);
   }, []);
   const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api);
+  // Another page opens at its top; a tab or filter change within the page keeps the reader's place.
+  const shownRoute = useRef(route);
+  useLayoutEffect(() => {
+    if (shownRoute.current === route) return;
+    shownRoute.current = route;
+    scrollTo(0, 0);
+  }, [route]);
   const [searchOpen, setSearchOpen] = useState(false);
   // The page keeps its language until the new catalogue has loaded; of several quick choices, the last one wins.
   const pickLang = useCallback((next: Lang) => {
