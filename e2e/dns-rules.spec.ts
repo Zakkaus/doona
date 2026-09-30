@@ -91,3 +91,40 @@ test('with no response block the one insert position reads as text with its help
   await expect(position).toHaveAccessibleDescription('The dns section has no response block yet; applying this rule creates it.');
   await expect(position.getByRole('button')).toHaveCount(0);
 });
+// The response fallback has no source when the file writes no fallback line or no response block; honk then keeps the
+// answer, and a response rule is still added: at the end of the block, or in a block written around it.
+for (const [name, strip, written] of [
+  [
+    'no fallback line',
+    (text: string) => text.replace('      fallback: accept\n', ''),
+    '      ip(geoip: private) && !qname(geosite: cn) -> cloudflare\n      qtype(AAAA) -> reject\n    }\n'
+  ],
+  [
+    'no response block',
+    (text: string) => text.replace(/\n {4}response \{[^}]*\}/, ''),
+    '      fallback: cloudflare\n    }\n    response {\n      qtype(AAAA) -> reject\n    }\n  }\n'
+  ]
+] as const) {
+  test(`a DNS response rule is added when the response list has ${name}`, async ({page}) => {
+    const {api} = await mockBackend(page);
+    const source = (await api.config()).sources.find(source => source.id === 'src-main')!;
+    await api.pollOperation(await api.replaceConfigSource(source.id, strip(source.content!), `"${source.content_sha256}"`));
+    await page.goto('/#/rules?tab=dns');
+    const response = rows(page, 'Response rules');
+    await expect(response.last()).toContainText('fallback: accept');
+    const before = await response.count();
+    await section(page, 'Response rules').getByRole('button', {name: 'Add rule', exact: true}).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', {name: /Match by$/}).click();
+    await page.getByRole('option', {name: 'Query type', exact: true}).click();
+    await dialog.getByRole('textbox', {name: 'Values'}).fill('AAAA');
+    await dialog.getByRole('button', {name: /Action$/}).click();
+    await page.getByRole('option', {name: /^reject/}).click();
+    await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+    await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+    await expect(response).toHaveCount(before + 1);
+    await expect(response.nth(before - 1)).toContainText('qtype(AAAA)');
+    await expect(response.last()).toContainText('fallback: accept');
+    expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toContain(written);
+  });
+}
