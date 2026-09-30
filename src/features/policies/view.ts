@@ -255,6 +255,44 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
     region: regionOf(member.name) ?? '?'
   }));
 }
+// Which filter a group falls under: manual when the backend runs it as a selector, whose member is picked by hand, and
+// automatic for every other policy it lists. The contract's kind is honk's own reading of the policy, so a spelling
+// doona does not know still lands on the right side.
+export type GroupKind = 'manual' | 'auto';
+export type KindFilter = GroupKind | 'all';
+export const groupKind = (policy: Pick<Group['policy'], 'kind'>): GroupKind => (policy.kind === 'selector' ? 'manual' : 'auto');
+// The filter a query asks for; anything else shows every group.
+export const kindFilter = (value: string | null): KindFilter => (value === 'manual' || value === 'auto' ? value : 'all');
+// The groups the filter shows and its choices with their counts. A link to a group the filter would hide shows every
+// group instead, so the link still lands on it.
+export function kindView<T extends {id: string; kind: GroupKind}>(cards: T[], requested: KindFilter, focus: string | null, t: Translator) {
+  const target = focus === null ? undefined : cards.find(card => card.id === focus);
+  const kind: KindFilter = target && requested !== 'all' && target.kind !== requested ? 'all' : requested;
+  const manual = cards.filter(card => card.kind === 'manual').length;
+  const shown = kind === 'all' ? cards : cards.filter(card => card.kind === kind);
+  return {
+    kind,
+    shown,
+    items: [
+      ['all', t('policy.kind.all', {n: cards.length})],
+      ['manual', t('policy.kind.manual', {n: manual})],
+      ['auto', t('policy.kind.auto', {n: cards.length - manual})]
+    ] as Array<[KindFilter, string]>,
+    // Only a filter can leave the list empty here; no groups at all has its own message.
+    empty: cards.length && !shown.length ? t(kind === 'manual' ? 'policy.kind.noManual' : 'policy.kind.noAuto') : null
+  };
+}
+// A collapsed automatic group's one line: the member in place, each network's when they differ, and how many members
+// are available.
+export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator): string {
+  const name = (id: string) => members.find(member => member.id === id)?.name ?? id;
+  const tcp = g.runtime.selection.tcp?.member_id;
+  const udp = g.runtime.selection.udp?.member_id;
+  const n = members.filter(member => member.healthy).length;
+  if (tcp && udp && tcp !== udp) return t('policy.summarySplit', {tcp: name(tcp), udp: name(udp), n});
+  const id = tcp ?? udp;
+  return t('policy.summary', {member: id ? name(id) : t('policy.noneSelected'), n});
+}
 export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator) {
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
@@ -275,6 +313,8 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     selectable,
     overridable,
     pinned,
+    automatic: groupKind(g.policy) === 'auto',
+    summary: selectionSummary(g, members, t),
     interruptable,
     interrupt: g.config.interrupt_connections === true,
     // null: the group sets no value and the engine's default applies.

@@ -10,14 +10,23 @@ test('policies select a member, pin one network, release and test the group', as
   await expect(selected).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.rp-toast.positive')).toContainText('proxy selected sg-01');
   const automatic = page.getByRole('region', {name: 'resilient', exact: true});
+  // An automatic group folds its members under the summary until opened.
+  const summary = automatic.getByRole('button', {name: /^Current/});
+  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  await expect(automatic.getByRole('radio', {name: 'TCP', exact: true})).toHaveCount(0);
+  await summary.click();
   await automatic.getByRole('radio', {name: 'TCP', exact: true}).click();
   const pinned = automatic.getByRole('button', {name: /^us-01\b/});
   await pinned.click();
   await expect(pinned).toHaveAttribute('aria-pressed', 'true');
   await expect(automatic.getByText('Pinned', {exact: true})).toBeVisible();
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'resilient pinned us-01'})).toBeVisible();
+  // The pinned light stays beside the summary while the members are folded.
+  await summary.click();
+  await expect(automatic.getByText('Pinned', {exact: true})).toBeVisible();
+  await summary.click();
   await moreAction(automatic, 'Back to automatic');
-  await expect(automatic.getByText('Automatic', {exact: true})).toBeVisible();
+  await expect(automatic.getByText('Pinned', {exact: true})).toHaveCount(0);
   await expect(await moreItem(automatic, 'Back to automatic')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(automatic.getByRole('button', {name: /^sg-01\b/})).toHaveAttribute('aria-pressed', 'true');
@@ -128,8 +137,12 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'Configuration for resilient written and reloaded'})).toBeVisible();
-  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
-  await expect(card.getByText(url204, {exact: true})).toBeVisible();
+  // The edit dialog lists the group's running configuration under the declaration.
+  await moreAction(card, 'Edit group');
+  const edit = page.getByRole('dialog', {name: 'Edit group resilient'});
+  await expect(edit.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
+  await expect(edit.getByText(url204, {exact: true})).toBeVisible();
+  await edit.getByRole('button', {name: 'Cancel', exact: true}).click();
   const patches = requests.filter(request => request.method() === 'PATCH');
   expect(patches.map(request => [new URL(request.url()).pathname, request.postDataJSON()])).toEqual([
     [
@@ -213,10 +226,14 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   await page.goto('/#/policies');
   const probe = await moreItem(page.getByRole('region', {name: 'resilient', exact: true}), 'Test all');
   await expect(probe).toBeDisabled();
-  // The reason is a line under the card's header, in view on every width, and the menu item's description.
+  // The reason is the lock beside the card's name, its tip on focus, and the menu item's description.
   const reason = 'Test all is not available for this group';
-  await expect(page.getByRole('region', {name: 'resilient', exact: true}).getByText(reason, {exact: true})).toBeVisible();
   await expect(probe).toHaveAccessibleDescription(reason);
+  await page.keyboard.press('Escape');
+  const lock = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('img', {name: reason});
+  await expect(lock).toBeVisible();
+  await lock.locator('xpath=..').focus();
+  await expect(page.getByRole('tooltip')).toHaveText(reason);
 });
 
 test('a group is switched to the score policy in its edit dialog', async ({page}) => {
@@ -239,19 +256,16 @@ test('a group is switched to the score policy in its edit dialog', async ({page}
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
 });
 
-test('the Configuration list opens the edit dialog, where a node becomes the final outbound and None clears it', async ({page}) => {
+test('the edit dialog makes a node the final outbound and None clears it', async ({page}) => {
   const {api} = await mockBackend(page);
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'proxy', exact: true});
-  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
-  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
   const member = dialog.getByRole('button', {name: /Default member$/});
   const final = dialog.getByRole('button', {name: /Final outbound$/});
-  // Opened from the list, the dialog starts on the first of the fields it shows.
-  await expect(member).toBeFocused();
-  // The demo's proxy group names hk-01 as its default, as the Configuration list shows.
+  // The demo's proxy group names hk-01 as its default, as its running configuration shows.
   await expect(member).toContainText('hk-01');
   await expect(final).toContainText('None');
   await expect(final).toHaveAccessibleDescription('Used when the group has no eligible member. None sets no fallback.');
@@ -284,9 +298,9 @@ test('the Configuration list opens the edit dialog, where a node becomes the fin
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for proxy written and reloaded');
   await expect.poll(async () => (await api.group('proxy')).config).toMatchObject({default_member_id: 'hk-02', final_outbound: 'sg-01'});
-  await expect(card.getByText('sg-01', {exact: true})).toBeVisible();
   // None removes the line again.
   await moreAction(card, 'Edit group');
+  await expect(dialog.locator('.rp-kv').getByText('sg-01', {exact: true})).toBeVisible();
   await expect(final).toContainText('sg-01');
   await final.click();
   await page.getByRole('option', {name: 'None', exact: true}).click();
@@ -321,13 +335,12 @@ test('the default member is offered only while the dialog selects manual selecti
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'resilient', exact: true});
-  await card.getByRole('button', {name: 'Configuration', exact: true}).click();
-  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  await moreAction(card, 'Edit group');
   let dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
   const member = dialog.getByRole('button', {name: /Default member$/});
   const policy = dialog.getByRole('button', {name: /Selection policy/});
-  // honk reads a default member only under manual selection, so a group that picks the fastest starts on the final outbound.
-  await expect(dialog.getByRole('button', {name: /Final outbound$/})).toBeFocused();
+  // honk reads a default member only under manual selection, so a group that picks the fastest offers the final outbound alone.
+  await expect(dialog.getByRole('button', {name: /Final outbound$/})).toBeVisible();
   await expect(member).toHaveCount(0);
   await policy.click();
   await page.getByRole('option', {name: /^Manual/}).click();

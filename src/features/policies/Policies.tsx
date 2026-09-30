@@ -15,25 +15,8 @@ import {
 import type {Arrange as ArrangeTab} from './arrange/Arrange';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
-import {
-  ActionHelp,
-  Badge,
-  Button,
-  Card,
-  HelpRow,
-  Disclosure,
-  DisclosureGroup,
-  ErrorMessage,
-  Light,
-  Loading,
-  Kv,
-  Segmented,
-  Switch,
-  Empty,
-  Tabs,
-  TextTooltip,
-  MoreMenu
-} from '../../ui/ui';
+import {Badge, Button, Card, HelpRow, Disclosure, ErrorMessage, IconTip, Light, Loading, Segmented, Empty, Tabs, TextTooltip, MoreMenu} from '../../ui/ui';
+import Lock from '../../ui/icons/Lock';
 import {NodeGrid} from './Nodes';
 import {PolicyEdit} from './PolicyEdit';
 import {CheckEdit} from './CheckEdit';
@@ -48,8 +31,16 @@ const arrange = preloadable<ComponentProps<typeof ArrangeTab>>(() => import('./a
 const Arrange = arrange.Component;
 void arrange.preload().catch(() => undefined);
 
-// Holds roughly the loaded card's height, so cards below do not move when the details arrive.
-function PolicyWait({heading, members, label}: {heading: ReactNode; members: number; label?: string}) {
+// Holds roughly the loaded card's height, so cards below do not move when the details arrive. A collapsed automatic
+// group holds its summary line alone.
+function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; members: number; label?: string; collapsed?: boolean}) {
+  if (collapsed)
+    return (
+      <>
+        <div className="rp-row">{heading}</div>
+        <div className="rp-wait-line" role={label ? 'status' : undefined} aria-label={label} />
+      </>
+    );
   return (
     <>
       <div className="rp-row">{heading}</div>
@@ -104,7 +95,7 @@ function PolicyList({loading, children}: {loading: boolean; children: ReactNode}
     </FirstShow>
   );
 }
-function PolicyDetail(props: PolicyGroupInput) {
+function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
   const t = useT();
   const m = usePolicyGroup(props);
   const g = m.card;
@@ -119,108 +110,112 @@ function PolicyDetail(props: PolicyGroupInput) {
     gate.hold(id);
     return () => gate.release(id);
   }, [gate, id, m.loading, paused]);
+  const network = g?.showNetwork && (
+    <Segmented
+      label={g.networkLabel}
+      value={m.network}
+      onChange={m.setNetwork}
+      items={[
+        ['both', t('policy.both')],
+        ['tcp', t('ui.tcp')],
+        ['udp', t('ui.udp')]
+      ]}
+    />
+  );
+  // Whether the group runs automatically or on a pinned member; an automatic group shows it only while pinned.
+  const pin = g?.overridable && (!g.automatic || g.pinned) && (
+    <Light small tone={g.overrideTone}>
+      {g.overrideText}
+    </Light>
+  );
+  const grid = g && <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />;
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
-      {m.loading && <PolicyWait heading={<h2 className="rp-h3">{props.name}</h2>} members={props.members} label={m.loadingText} />}
+      {m.loading && (
+        <PolicyWait
+          heading={<h2 className="rp-h3">{props.name}</h2>}
+          members={props.members}
+          label={m.loadingText}
+          collapsed={props.kind === 'auto' && !props.focused}
+        />
+      )}
       {g && (
         <>
-          <ActionHelp reason={m.actionsReason}>
-            {/* A long name gives way, truncating, so the More menu keeps its place on the title row. */}
-            <div className="rp-row nowrap">
-              <span className="rp-cluster">
-                <h2 className="rp-h3">
-                  <TextTooltip>{g.name}</TextTooltip>
-                </h2>
-                <Badge tip={g.policy.id}>{g.policy.label}</Badge>
-                <Light small tone="ok">
-                  {g.healthy}
-                </Light>
-                {g.down && (
-                  <Light small tone="err">
-                    {g.down}
-                  </Light>
-                )}
-                {g.untested && (
-                  <HelpRow help={m.untestedHelp}>
-                    <Light small tone="neutral">
-                      {g.untested}
-                    </Light>
-                  </HelpRow>
-                )}
-              </span>
-              {/* Choosing a member is the card's primary action; every command goes into its More menu. */}
-              <PolicyEdit model={m.edit} />
-              <CheckEdit model={m.check} />
-              <MoreMenu
-                actions={[
-                  ...(m.edit.available
-                    ? [{id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, reason: m.edit.tip, onAction: () => m.edit.show()}]
-                    : []),
-                  ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
-                  {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
-                  ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
-                ]}
-              />
-            </div>
-          </ActionHelp>
-          <Disclosure id={g.id} title={t('ui.config')}>
-            <Kv items={g.fields} />
-            {m.edit.available && (
-              <Button small quiet isDisabled={m.edit.disabled} tip={m.edit.tip} onPress={() => m.edit.show(true)}>
-                {t('policy.edit')}
-              </Button>
-            )}
-          </Disclosure>
-          <div className="rp-toolbar">
-            {g.showNetwork && (
-              <Segmented
-                label={g.networkLabel}
-                value={m.network}
-                onChange={m.setNetwork}
-                items={[
-                  ['both', t('policy.both')],
-                  ['tcp', t('ui.tcp')],
-                  ['udp', t('ui.udp')]
-                ]}
-              />
-            )}
-            {g.overridable && (
-              <Light small tone={g.overrideTone}>
-                {g.overrideText}
+          {/* A long name gives way, truncating, so the More menu keeps its place on the title row. */}
+          <div className="rp-row nowrap">
+            <span className="rp-cluster">
+              <h2 className="rp-h3">
+                <TextTooltip>{g.name}</TextTooltip>
+              </h2>
+              {m.actionsReason && (
+                <IconTip label={m.actionsReason}>
+                  <Lock />
+                </IconTip>
+              )}
+              <Badge tip={g.policy.id}>{g.policy.label}</Badge>
+              <Light small tone="ok">
+                {g.healthy}
               </Light>
-            )}
-            {g.interruptable && (
-              <div className="rp-field">
-                <Switch
-                  isSelected={g.interrupt}
-                  isDisabled={m.busy}
-                  onChange={m.interrupt}
-                  aria-describedby={g.interruptUnset ? `${g.id}-interrupt-unset` : undefined}
-                >
-                  {t('policy.interrupt')}
-                </Switch>
-                {g.interruptUnset && (
-                  <span id={`${g.id}-interrupt-unset`} className="rp-label">
-                    {t('policy.unsetDefault')}
-                  </span>
-                )}
-              </div>
-            )}
+              {g.down && (
+                <Light small tone="err">
+                  {g.down}
+                </Light>
+              )}
+              {g.untested && (
+                <HelpRow help={m.untestedHelp}>
+                  <Light small tone="neutral">
+                    {g.untested}
+                  </Light>
+                </HelpRow>
+              )}
+            </span>
+            {/* Choosing a member is the card's primary action; every command goes into its More menu. */}
+            <PolicyEdit id={g.id} model={m.edit} details={m.details} />
+            <CheckEdit model={m.check} />
+            <MoreMenu
+              actions={[
+                m.edit.editable
+                  ? {id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, onAction: m.edit.show}
+                  : {id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view},
+                ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
+                {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
+                ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
+              ]}
+            />
           </div>
-          <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />
+          {g.automatic ? (
+            // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
+            // its light beside the summary while they are folded.
+            <Disclosure title={g.summary} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
+              {network}
+              {grid}
+            </Disclosure>
+          ) : (
+            <>
+              {(network || pin) && (
+                <div className="rp-toolbar">
+                  {network}
+                  {pin}
+                </div>
+              )}
+              {grid}
+            </>
+          )}
         </>
       )}
     </>
   );
 }
-const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<PolicyGroupInput, 'paused'> & {focused: boolean; domId: string}) {
+type PolicyCardProps = Omit<PolicyGroupInput, 'paused'> & {domId: string; kind: 'manual' | 'auto'};
+const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) {
   const gate = use(FirstShow);
   const {id} = props;
   // Opening on screen happens in the card's ref, before its details mount and hold the list themselves.
   const hold = useCallback(() => gate.hold(id), [gate, id]);
   // A card removed before its details mount does not hold the list.
   useLayoutEffect(() => () => gate.release(id), [gate, id]);
+  const {focused} = props;
   const {ref, active, visible, expand} = usePolicyVisibility(focused, hold);
   return (
     <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1}>
@@ -234,6 +229,7 @@ const PolicyCard = memo(function PolicyCard({focused, domId, ...props}: Omit<Pol
             </Button>
           }
           members={props.members}
+          collapsed={props.kind === 'auto' && !focused}
         />
       )}
     </Card>
@@ -247,8 +243,9 @@ export function Policies(props: PageProps) {
       <p className="rp-note">{t('policy.note')}</p>
       <ErrorMessage error={m.error} onRetry={m.reload} />
       {m.empty && <Empty>{t('policy.empty')}</Empty>}
+      {m.kindEmpty && <Empty>{m.kindEmpty}</Empty>}
       <PolicyList loading={m.loading}>
-        <DisclosureGroup>
+        <div className="rp-col">
           {m.cards.map(card => (
             <PolicyCard
               key={card.id}
@@ -261,7 +258,7 @@ export function Policies(props: PageProps) {
               refreshNodes={m.refreshNodes}
             />
           ))}
-        </DisclosureGroup>
+        </div>
       </PolicyList>
     </>
   );
@@ -278,6 +275,7 @@ export function Policies(props: PageProps) {
       <Tabs
         keepMounted
         label={t('nav.policies')}
+        actions={m.tab === 'groups' && m.showKinds ? <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} /> : null}
         value={m.tab}
         onChange={m.setTab}
         items={policiesTabs().map(tab => ({id: tab.id, label: t(tab.titleKey), content: content[tab.id]}))}

@@ -1,4 +1,4 @@
-import {useEffect, useEffectEvent, useMemo} from 'react';
+import {useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {useT} from '../../i18n';
 import {groupConflict, useGroupControl} from '../../store';
 import type {GroupSummary, HealthObservation} from '../../api/model';
@@ -25,9 +25,11 @@ export type PolicyGroupInput = {
   selection: GroupSummary['selection'];
   // An off-screen card keeps what it shows and stops polling until it scrolls back.
   paused: boolean;
+  // The group a link opened, which shows its members at once.
+  focused: boolean;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
-  const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused} = input;
+  const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused, focused} = input;
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
@@ -50,7 +52,27 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   }, [behind, selection, refetch]);
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
-  const edit = usePolicyEdit(g?.name ?? input.name, source, declaration, {g, members, outbounds});
+  // An automatic group's members open on a press, or by themselves the first time the group is pinned or a link opens
+  // it; after that only the person opens and closes them. Nothing is kept once the card unmounts.
+  const [expanded, setExpanded] = useState(false);
+  const [opened, setOpened] = useState(false);
+  if (!opened && card && (card.pinned || focused)) {
+    setOpened(true);
+    setExpanded(true);
+  }
+  const declared = usePolicyEdit(g?.name ?? input.name, source, declaration, {g, members, outbounds});
+  // The dialog shows the group's configuration, so opening it reads the group again rather than waiting for its poll.
+  const edit = {
+    ...declared,
+    show: () => {
+      refetch();
+      declared.show();
+    },
+    view: () => {
+      refetch();
+      declared.view();
+    }
+  };
   const conflict = groupConflict(control.actionError);
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
@@ -108,8 +130,21 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     probing: control.busy === 'probe',
     probeDisabled: !!control.busy || !control.canProbe,
     probeTip: !control.canProbe ? t('policy.noProbe') : undefined,
+    expanded,
+    setExpanded,
+    // What the dialog shows beside the declaration, and alone when it opens read-only: the group's configuration as
+    // the backend reports it, and the interrupt switch, which writes to the group directly rather than to the file.
+    details: card
+      ? {
+          fields: card.fields,
+          heading: edit.editing ? t('policy.liveConfig') : null,
+          reason: edit.editing ? null : (edit.tip ?? null),
+          interrupt: card.interruptable ? {selected: card.interrupt, unset: card.interruptUnset, isDisabled: !!control.busy, change: interrupt} : null
+        }
+      : null,
+    // Why the group's actions are locked, which the card gives as the lock beside its name.
     actionsReason: groupActionsReason(
-      {shown: edit.available, busy: source.busy, blocked: edit.tip ?? null},
+      {shown: source.writable, busy: source.busy, blocked: edit.tip ?? null},
       {busy: !!control.busy, canProbe: !!control.canProbe},
       t
     ),

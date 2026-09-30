@@ -27,7 +27,6 @@ export function SearchSelect({
   onChange,
   isDisabled,
   description,
-  takeFocus,
   side
 }: {
   label: string;
@@ -38,8 +37,6 @@ export function SearchSelect({
   onChange: (key: string) => void;
   isDisabled?: boolean;
   description?: string;
-  // Focuses the trigger when it mounts, for a dialog opened to change this field.
-  takeFocus?: boolean;
   // The label beside the trigger, as LabeledSelect's `side`, for a toolbar.
   side?: boolean;
 }) {
@@ -54,8 +51,7 @@ export function SearchSelect({
       isDisabled={isDisabled}
     >
       <Label className={side ? 'rp-label' : 'lbl'}>{label}</Label>
-      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- a dialog opened for this field starts on it */}
-      <RButton className="rp-selectbtn" autoFocus={takeFocus}>
+      <RButton className="rp-selectbtn">
         {/* The list is built only while the popover is open, so the trigger finds the chosen item itself. */}
         <SelectValue>{() => (shown ? <ItemLabel i={shown} /> : value)}</SelectValue>
         <ChevronDown />

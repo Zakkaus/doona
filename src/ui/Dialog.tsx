@@ -13,7 +13,6 @@ import {
 import {
   Button as RButton,
   Disclosure as RDisclosure,
-  DisclosureGroup as RDisclosureGroup,
   DisclosurePanel,
   Tabs as RTabs,
   TabList,
@@ -57,14 +56,6 @@ export function Disclosure({
         <div className="rp-disclosure-content">{children}</div>
       </DisclosurePanel>
     </RDisclosure>
-  );
-}
-
-export function DisclosureGroup({children}: {children: ReactNode}) {
-  return (
-    <RDisclosureGroup className="rp-col" allowsMultipleExpanded>
-      {children}
-    </RDisclosureGroup>
   );
 }
 

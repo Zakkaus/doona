@@ -3,19 +3,21 @@ import {poll, useCapabilities, useGroups, useNodes} from '../../store';
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
-import {groupOwners, outboundLinks, type OutboundCatalogue} from './view';
+import {groupKind, groupOwners, kindFilter, kindView, outboundLinks, type OutboundCatalogue} from './view';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
-import {pickTab, tabQuery} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {openGroup} from '../shared/openGroup';
 import {useNearViewport} from '../../ui/ui';
 import {policiesTabs} from './nav';
+import {useT} from '../../i18n';
 
 const policyTabIds = policiesTabs().map(tab => tab.id);
 
 export function usePolicies({go, query}: PageProps) {
+  const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   // The list carries each group's selection, so a change made elsewhere shows within one live poll; the poll stops
@@ -23,7 +25,8 @@ export function usePolicies({go, query}: PageProps) {
   const groups = useGroups(offered(resources, 'groups', {whileLoading: true}), poll.live);
   const nodesOffered = offered(resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesOffered);
-  const focus = new URLSearchParams(query).get('group');
+  const params = new URLSearchParams(query);
+  const focus = params.get('group');
   const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
   if (health.from !== nodes.data) {
     const map = new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)]));
@@ -46,6 +49,7 @@ export function usePolicies({go, query}: PageProps) {
           domId: 'group-' + group.id,
           name: group.name,
           members: group.member_count,
+          kind: groupKind(group.policy),
           selection: group.selection,
           declaration: {
             owner,
@@ -73,6 +77,7 @@ export function usePolicies({go, query}: PageProps) {
     }),
     [groupKey, named, health.map, owners]
   );
+  const kinds = kindView(cards, kindFilter(params.get('kind')), focus, t);
   const ready = !!groups.data;
   // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
   // once per link, and never after the user starts moving the page themselves.
@@ -107,7 +112,14 @@ export function usePolicies({go, query}: PageProps) {
     // After an arrangement is written: the one group it changed, or the Groups tab when it changed several.
     viewGroup: (name: string | null) => (name === null ? go('policies') : openGroup(go, name)),
     setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),
-    cards,
+    cards: kinds.shown,
+    // The kind filter, in the query so a reload and Back keep it. Choosing one ends a link's hold on its group.
+    kind: kinds.kind,
+    kindItems: kinds.items,
+    kindEmpty: kinds.empty,
+    kindLabel: t('policy.kind.label'),
+    setKind: (next: string) => go('policies', within(query, {kind: next === 'all' ? null : kindFilter(next), group: null})),
+    showKinds: cards.length > 0,
     focus,
     health: health.map,
     outbounds,

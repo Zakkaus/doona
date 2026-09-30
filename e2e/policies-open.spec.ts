@@ -69,6 +69,10 @@ for (const viewport of [
 // A card that opened on screen and was scrolled away before its group arrived stops waiting for it, so the list shows.
 test('scrolling away from a loading card shows the list', async ({page}) => {
   const {api} = await mockBackend(page);
+  // Automatic groups open folded, so a few more manual ones make the page long enough to leave the first card behind.
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const extra = Array.from({length: 6}, (_, i) => `  manual${i} { filter: name(hk-01, hk-02, sg-01, us-01, jp-01) policy: fixed(0) }`).join('\n');
+  await api.pollOperation(await api.replaceConfigSource(main.id, main.content!.replace(/^group \{\n/m, `group {\n${extra}\n`), `"${main.content_sha256}"`));
   const [first] = await api.groups();
   await page.route(new RegExp(`/api/v1/groups/${first.id}(\\?.*)?$`), async route => {
     if (route.request().method() === 'GET') await new Promise(resolve => setTimeout(resolve, 15_000));

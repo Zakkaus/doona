@@ -26,8 +26,12 @@ import {
 export type PolicyEditView = {
   title: string;
   open: boolean;
-  available: boolean;
+  // Open on the file's declaration; false while the dialog only shows the group's configuration.
+  editing: boolean;
+  // Whether the dialog can open on the declaration; when it cannot, it opens read-only (`view`).
+  editable: boolean;
   disabled: boolean;
+  // Why the declaration cannot be edited.
   tip?: string;
   busy: boolean;
   // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
@@ -42,11 +46,11 @@ export type PolicyEditView = {
     searchLabel: string;
     value: string;
     sections: SearchSection[];
-    takeFocus: boolean;
     change: (id: string) => void;
   }>;
-  // `route`: opened from the Configuration list, so the first picker shown on opening takes focus.
-  show: (route?: boolean) => void;
+  show: () => void;
+  // Opens the dialog read-only, on the group's configuration alone.
+  view: () => void;
   close: () => void;
   setPolicy: (value: string) => void;
   add: () => void;
@@ -60,8 +64,7 @@ export type RouteContext = {g: Group | undefined; members: MemberView[]; outboun
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
-// `focus`: the picker that takes focus when the dialog opens from the Configuration list. `origin` is the source the
-// dialog opened on, so a change on disk refuses the first save; once refused, a save goes against the source as it is
+// `origin` is the source the dialog opened on, so a change on disk refuses the first save; once refused, a save goes against the source as it is
 // declared then, since the sources are read again after a refusal.
 type Draft = {
   name: string;
@@ -71,7 +74,6 @@ type Draft = {
   filters: string[];
   default: string | null;
   final: string | null;
-  focus: RouteField | null;
 };
 // Edits the group in the source that declares it; `source` carries the write and whether the backend takes one.
 export function usePolicyEdit(name: string, source: MainSourceEdit, declaration: PolicyDeclaration, context: RouteContext): PolicyEditView {
@@ -81,6 +83,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
   const entry = declared?.entry;
   const blocked = editBlocked(owner, declaration, t);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [viewing, setViewing] = useState(false);
   const routes = routeFields(context.g, draft?.policy ?? null);
   const session = useDialogSession();
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
@@ -138,11 +141,12 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     if (!source.busy) setDraft(prev => (prev ? update(prev) : prev));
   };
   return {
-    title: t('policy.editTitle', {name}),
-    open: !!draft,
-    available: !!draft || source.writable,
-    disabled: source.busy || blocked !== null,
-    tip: blocked ?? undefined,
+    title: t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
+    open: !!draft || viewing,
+    editing: !!draft,
+    editable: !!draft || (source.writable && blocked === null),
+    disabled: source.busy,
+    tip: source.writable ? (blocked ?? undefined) : undefined,
     busy: source.busy,
     problem,
     policy: draft?.policy ?? null,
@@ -165,12 +169,11 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
             searchLabel: t(id === 'default_member_id' ? 'ui.filterMembers' : 'ui.filterOutbounds'),
             value: routeChoiceId(draft[key]),
             sections: id === 'default_member_id' ? memberSections(context.members, held, t) : finalSections(draft.name, context.outbounds, held, t),
-            takeFocus: draft.focus === id,
             change: (choice: string) => edit(prev => ({...prev, [key]: routeChoiceValue(choice)}))
           };
         })
       : [],
-    show: (route = false) => {
+    show: () => {
       session.next();
       setProblem(null);
       if (declared && !blocked)
@@ -181,15 +184,20 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
           policy: declared.entry.policy,
           filters: declared.entry.filters,
           default: routeValue(declared.entry.default),
-          final: routeValue(declared.entry.final),
-          focus: route ? (routeFields(context.g, declared.entry.policy)[0] ?? null) : null
+          final: routeValue(declared.entry.final)
         });
+    },
+    view: () => {
+      session.next();
+      setProblem(null);
+      setViewing(true);
     },
     close: () => {
       session.next();
       setProblem(null);
       guard.clear();
       setDraft(null);
+      setViewing(false);
     },
     setPolicy: policy => edit(prev => ({...prev, policy})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
