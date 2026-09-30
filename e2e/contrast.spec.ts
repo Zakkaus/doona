@@ -50,7 +50,9 @@ const fillFloors: Record<string, number> = {
   'catppuccin/macchiato light text on positive': 3.7,
   'catppuccin/mocha light text on positive': 3.7,
   'nord/nord dark text on negative': 3,
+  'arco/arco light text on positive': 2.7,
   'arco/arco light text on negative': 3.7,
+  'semi/semi light text on positive': 2.7,
   'semi/semi light text on negative': 3.7
 };
 const known = new Map<string, number>([
