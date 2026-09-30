@@ -278,7 +278,7 @@ describe('arranging groups edits only exact lists', () => {
 
   it('applies staged changes in order and ignores repeats', () => {
     const changes: GroupChange[] = [
-      {kind: 'createGroup', group: 'streaming', policy: 'min_moving_avg'},
+      {kind: 'createGroup', filters: [], group: 'streaming', policy: 'min_moving_avg'},
       {kind: 'addNode', group: 'streaming', value: 'US 01'},
       {kind: 'addNode', group: 'streaming', value: 'US 01'},
       {kind: 'addSubscription', group: 'streaming', value: 'sub-b'}
@@ -362,4 +362,14 @@ it('names the groups whose filters cite a subscription tag, exactly or inside an
 `;
   expect(groupsNamingTag(text, 'sub-x')).toEqual(['exact', 'quoted', 'compound', 'negated']);
   expect(groupsNamingTag(text, 'sub-z')).toEqual([]);
+});
+
+it.each([
+  {group: 'streaming', final: undefined, header: 'streaming', finalLine: ''},
+  {group: 'streaming', final: 'direct', header: 'streaming', finalLine: '        final: direct\n'},
+  {group: 'streaming list', final: "'US 01'", header: "'streaming list'", finalLine: "        final: 'US 01'\n"}
+])('creates $group with final $final through staged source edits', ({group, final, header, finalLine}) => {
+  const next = applyChanges('group {\n}\n', [{kind: 'createGroup', group, filters: ['name(hk-01)'], policy: 'select', final}]);
+  expect(next).toBe(`group {\n    ${header} {\n        filter: name(hk-01)\n        policy: select\n${finalLine}    }\n}\n`);
+  expect(readGroupEntries(next)[0]).toMatchObject({name: group, filters: ['name(hk-01)'], policy: 'select', final: final ?? null});
 });

@@ -5,7 +5,7 @@ import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
-import {PolicyPicker} from '../shared/PolicyPicker';
+import {GroupDialog} from '../shared/GroupDialog';
 import {SubscriptionFields} from '../shared/SubscriptionFields';
 export function Nodes(props: PageProps) {
   const t = useT();
@@ -33,14 +33,11 @@ export function Nodes(props: PageProps) {
     pending,
     submitting,
     submitLabel,
-    groupHelp,
-    groupNameError,
+    groupCreate,
     subscription,
     setSubscription,
     subscriptionFields,
     subscriptionErrors,
-    policy,
-    setPolicy,
     editOptions,
     renameGroups,
     renameFrom,
@@ -144,22 +141,6 @@ export function Nodes(props: PageProps) {
             )}
           </div>
         )}
-        {dialog?.kind === 'group' && (
-          <div className="rp-list">
-            <span className="rp-label">{groupHelp}</span>
-            <TextField
-              isDisabled={pending}
-              label={t('nodes.name')}
-              value={form.name}
-              placeholder="hk"
-              spellCheck={false}
-              description={t('arrange.groupNameHint')}
-              error={groupNameError ?? undefined}
-              onChange={name => setForm({...form, name})}
-            />
-            <PolicyPicker value={policy} onChange={setPolicy} isDisabled={pending} />
-          </div>
-        )}
         {dialog?.kind === 'node' && (
           <div className="rp-list">
             <span className="rp-label">{t('nodes.addNodeHelp')}</span>
@@ -168,6 +149,7 @@ export function Nodes(props: PageProps) {
           </div>
         )}
       </ModalDialog>
+      <GroupDialog id="nodes-create" model={groupCreate} details={null} />
       <ConfirmDialog
         title={dialogTitle}
         isOpen={removing}

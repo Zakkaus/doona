@@ -45,17 +45,27 @@ import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupPolicyText} from '../../shared/policyText';
-import {newGroupPolicies} from '../../../dae/vocab';
-import {PolicyPicker} from '../../shared/PolicyPicker';
+import {GroupDialog} from '../../shared/GroupDialog';
+import type {OutboundCatalogue} from '../../shared/groupText';
 import {holds, parsePlaceable, removeReason, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
 
 type Model = ReturnType<typeof useArrange>;
 type Source = Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>;
 
-export function Arrange({source, groups, viewGroup}: {source: Source; groups: GroupSummary[] | undefined; viewGroup: (name: string | null) => void}) {
+export function Arrange({
+  source,
+  groups,
+  outbounds,
+  viewGroup
+}: {
+  source: Source;
+  groups: GroupSummary[] | undefined;
+  outbounds: OutboundCatalogue;
+  viewGroup: (name: string | null) => void;
+}) {
   const t = useT();
-  const m = useArrange(source, viewGroup);
+  const m = useArrange(source, viewGroup, outbounds);
   // The live summary of each group, for the same header the Groups tab shows.
   const live = useMemo(() => new Map((groups ?? []).map(group => [group.name, group])), [groups]);
   if (m.error) return <ErrorMessage error={m.error} onRetry={m.retry} />;
@@ -70,7 +80,9 @@ export function Arrange({source, groups, viewGroup}: {source: Source; groups: Gr
           <span className="rp-wide-only">{t('arrange.note')}</span>
           <span className="rp-narrow-only">{t('arrange.selectHint')}</span>
         </p>
-        <NewGroup m={m} />
+        <Button small onPress={() => m.create.show()} isDisabled={!!m.blocked || m.busy}>
+          {t('arrange.newGroup')}
+        </Button>
       </div>
       {m.blocked && <InlineAlert tone="informative">{m.blocked}</InlineAlert>}
       <div className="rp-arrange-grid">
@@ -93,6 +105,7 @@ export function Arrange({source, groups, viewGroup}: {source: Source; groups: Gr
           </Button>
         </ActionBar>
       )}
+      <GroupDialog id="arrange-create" model={m.create} details={null} />
       <Review m={m} />
     </div>
   );
@@ -334,69 +347,6 @@ function Tray({m}: {m: Model}) {
         </ChoiceMenu>
       </div>
     </Card>
-  );
-}
-
-function NewGroup({m}: {m: Model}) {
-  const t = useT();
-  const form = useId();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [policy, setPolicy] = useState(newGroupPolicies[0].id);
-  const [tried, setTried] = useState(false);
-  const problem = m.nameProblem(name.trim());
-  const reset = () => {
-    setName('');
-    setPolicy(newGroupPolicies[0].id);
-    setTried(false);
-  };
-  return (
-    <>
-      <Button small onPress={() => setOpen(true)} isDisabled={!!m.blocked || m.applying}>
-        {t('arrange.newGroup')}
-      </Button>
-      <ModalDialog
-        title={t('arrange.newGroup')}
-        narrow
-        isOpen={open}
-        onOpenChange={value => {
-          setOpen(value);
-          if (!value) reset();
-        }}
-        footer={close => (
-          <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent type="submit" form={form}>
-              {t('arrange.create')}
-            </Button>
-          </>
-        )}
-      >
-        <form
-          id={form}
-          className="rp-form"
-          onSubmit={event => {
-            event.preventDefault();
-            setTried(true);
-            if (problem) return;
-            m.create(name.trim(), policy);
-            setOpen(false);
-            reset();
-          }}
-        >
-          <TextField
-            label={t('arrange.groupName')}
-            value={name}
-            onChange={setName}
-            description={t('arrange.groupNameHint')}
-            error={tried && problem ? problem : undefined}
-            spellCheck={false}
-          />
-          <PolicyPicker value={policy} onChange={setPolicy} />
-          <p className="rp-label">{t('arrange.newGroupNote')}</p>
-        </form>
-      </ModalDialog>
-    </>
   );
 }
 

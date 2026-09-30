@@ -1,16 +1,17 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
+import {useCapabilities, useGroups, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {addNamesToGroup, addSubtagsToGroup, applyChanges, citingGroups, groupsNamingTag, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
+import {addNamesToGroup, addSubtagsToGroup, citingGroups, groupsNamingTag, readGroupEntries, quoteName, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {groupNameError} from '../shared/policyText';
-import {newGroupPolicies} from '../../dae/vocab';
+import {useGroupDialog} from '../shared/useGroupDialog';
+import {groupOwners, outboundLinks} from '../shared/groupText';
+import {healthMillis, preferredHealth} from '../../api/selectors';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -43,7 +44,6 @@ const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache
 type NodeDialog =
   | {kind: 'provider'}
   | {kind: 'node'}
-  | {kind: 'group'; item: Node}
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
   | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText};
@@ -52,7 +52,6 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
-  const [policy, setPolicy] = useState(newGroupPolicies[0].id);
   const [updateGroups, setUpdateGroups] = useState(true);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
@@ -74,7 +73,6 @@ export function useNodesPage({go, query}: PageProps) {
   const open = useCallback((next: NodeDialog) => {
     session.current++;
     setForm(blank);
-    setPolicy(newGroupPolicies[0].id);
     setUpdateGroups(true);
     setProblem(null);
     if (next.kind === 'editProvider')
@@ -86,6 +84,7 @@ export function useNodesPage({go, query}: PageProps) {
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const names = useOutboundNames();
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
   const reload = useCallback(() => {
@@ -127,7 +126,6 @@ export function useNodesPage({go, query}: PageProps) {
     return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
   };
   const entries = useMemo(() => readSubscriptionEntries(source.main?.content ?? ''), [source.main?.content]);
-  const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const canAddProvider = resources?.providers.can_manage === true;
@@ -163,7 +161,31 @@ export function useNodesPage({go, query}: PageProps) {
     [apply, t, viewGroup]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
-  const newGroup = useCallback((item: Node) => open({kind: 'group', item}), [open]);
+  const outbounds = useMemo(
+    () => ({
+      groups: [
+        ...new Set([...(groups.data ?? []).map(group => group.name), ...sources.flatMap(item => readGroupEntries(item.content).map(entry => entry.name))])
+      ],
+      nodes: (nodes.data ?? []).map(node => {
+        const health = preferredHealth(node);
+        return {name: node.name, tcp: healthMillis(health), alive: health?.state === 'unavailable' ? false : undefined};
+      }),
+      links: outboundLinks(groupOwners(sources))
+    }),
+    [groups.data, sources, nodes.data]
+  );
+  const groupCreate = useGroupDialog({
+    mode: 'create',
+    source,
+    taken: new Set(outbounds.groups),
+    outbounds,
+    onCreated: group => {
+      toast('positive', t('policy.updated', {name: group}), {action: viewGroup(group)});
+    }
+  });
+  const newGroup = (item: Node) => {
+    groupCreate.show([`name(${quoteName(item.name)})`]);
+  };
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.
   const shown = useRef<string | null>(query);
@@ -219,19 +241,6 @@ export function useNodesPage({go, query}: PageProps) {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
         toast('positive', t('nodes.added', {name: created.name}));
-      } else if (dialog.kind === 'group') {
-        const group = form.name.trim();
-        const node = dialog.item.name;
-        const result = await apply(text =>
-          applyChanges(text, [
-            {kind: 'createGroup', group, policy},
-            {kind: 'addNode', group, value: node}
-          ])
-        );
-        const problem = editProblem(result, t);
-        if (problem) refuseNotice(problem);
-        if (result.kind !== 'ok') return;
-        toast('positive', t('nodes.joined', {name: node, group}), {action: viewGroup(group)});
       } else if (dialog.kind === 'editProvider') {
         const from = dialog.entry.tag;
         const tag = form.name.trim();
@@ -286,12 +295,9 @@ export function useNodesPage({go, query}: PageProps) {
         ? t('nodes.addProvider')
         : dialog.kind === 'node'
           ? t('nodes.addNode')
-          : dialog.kind === 'group'
-            ? t('nodes.newGroup')
-            : dialog.kind === 'editProvider'
-              ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
-              : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
-  const nameError = dialog?.kind === 'group' ? groupNameError(form.name.trim(), groupNames, t) : null;
+          : dialog.kind === 'editProvider'
+            ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
+            : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const createOptions = resources?.providers.create_options;
   const agentKey = agentProblem(form.agent, false);
   const agentError = agentKey && t(agentKey);
@@ -347,9 +353,7 @@ export function useNodesPage({go, query}: PageProps) {
         ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
         : dialog?.kind === 'node'
           ? form.name.trim() !== '' && isNodeLink(form.value)
-          : dialog?.kind === 'group'
-            ? nameError === null
-            : true;
+          : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   const groupsEverywhere = [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))];
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
@@ -454,13 +458,7 @@ export function useNodesPage({go, query}: PageProps) {
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.
     submitting: pendingDialog !== null,
-    submitLabel: removing
-      ? t('nodes.remove', {name: dialog.item.name})
-      : dialog?.kind === 'group'
-        ? t('nodes.join')
-        : dialog?.kind === 'editProvider'
-          ? t('policy.save')
-          : t('nodes.add'),
+    submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'editProvider' ? t('policy.save') : t('nodes.add'),
     editOptions:
       dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, {cache: writtenCache !== undefined, route: !!subscriptionFields.routes}) : [],
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
@@ -473,18 +471,12 @@ export function useNodesPage({go, query}: PageProps) {
     setUpdateGroups: (next: boolean) => {
       if (submitting.current !== dialog) setUpdateGroups(next);
     },
-    groupHelp: dialog?.kind === 'group' ? t('nodes.newGroupHelp', {name: dialog.item.name}) : '',
-    // Only a name already typed is judged; an empty field is simply not ready.
-    groupNameError: form.name.trim() ? nameError : null,
+    groupCreate,
     subscription,
     setSubscription: (next: SubscriptionDraft) => {
       if (submitting.current !== dialog) setForm({...form, ...next, value: next.url});
     },
     subscriptionFields,
-    subscriptionErrors: dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError},
-    policy,
-    setPolicy: (next: string) => {
-      if (submitting.current !== dialog) setPolicy(next);
-    }
+    subscriptionErrors: dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError}
   };
 }

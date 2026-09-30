@@ -18,7 +18,7 @@ import {useT} from '../../i18n';
 import {Badge, Button, Card, HelpRow, Disclosure, ErrorMessage, IconTip, Light, Loading, Segmented, Empty, Tabs, TextTooltip, MoreMenu} from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
 import {NodeGrid} from './Nodes';
-import {PolicyEdit} from './PolicyEdit';
+import {GroupDialog} from '../shared/GroupDialog';
 import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
@@ -170,7 +170,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
               )}
             </span>
             {/* Choosing a member is the card's primary action; every command goes into its More menu. */}
-            <PolicyEdit id={g.id} model={m.edit} details={m.details} />
+            <GroupDialog id={g.id} model={m.edit} details={m.details} />
             <CheckEdit model={m.check} />
             <MoreMenu
               actions={[
@@ -265,7 +265,7 @@ export function Policies(props: PageProps) {
     groups,
     arrange: (
       <Suspense fallback={<Loading />}>
-        <Arrange source={m.source} groups={m.groups} viewGroup={m.viewGroup} />
+        <Arrange source={m.source} groups={m.groups} outbounds={m.outbounds} viewGroup={m.viewGroup} />
       </Suspense>
     )
   };
