@@ -154,3 +154,14 @@ test('a consumed rule seed keeps edits across generation misalignment and accept
   });
   await expect(values).toHaveValue('2001:db8::1');
 });
+
+test('the routing picker writes a domain keyword condition', async ({page}) => {
+  await page.goto('/#/rules?tab=list&view=advanced&add=domainKeyword:tracker');
+  const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
+  await expect(dialog.getByRole('textbox', {name: 'Values', exact: true})).toHaveValue('tracker');
+  await expect(dialog.getByRole('button', {name: /Match by$/})).toContainText('Domain keyword');
+  await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await page.getByRole('option', {name: 'block', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await expect(rows(page).nth(8)).toContainText('domain(keyword: tracker)');
+});

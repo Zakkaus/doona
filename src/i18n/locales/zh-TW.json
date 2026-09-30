@@ -1173,6 +1173,7 @@
   "rule.kind": "依據",
   "rule.kind.dip": "目的 IP",
   "rule.kind.domain": "完整網域",
+  "rule.kind.domainKeyword": "網域 keyword",
   "rule.kind.domainSuffix": "網域後綴",
   "rule.kind.dport": "目的連接埠",
   "rule.kind.geoip": "geoip 地區",

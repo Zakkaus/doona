@@ -1365,6 +1365,7 @@
   "rule.kind": "Match by",
   "rule.kind.dip": "Destination IP",
   "rule.kind.domain": "Full domain",
+  "rule.kind.domainKeyword": "Domain keyword",
   "rule.kind.domainSuffix": "Domain suffix",
   "rule.kind.dport": "Destination port",
   "rule.kind.geoip": "geoip region",

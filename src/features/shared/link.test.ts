@@ -6,7 +6,8 @@ import {tagId} from './taggedId';
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
   for (const seed of [
     {kind: 'dip' as const, value: '2001:db8::1'},
-    {kind: 'domainSuffix' as const, value: 'a+b&c.example'}
+    {kind: 'domainSuffix' as const, value: 'a+b&c.example'},
+    {kind: 'domainKeyword' as const, value: 'tracker+ads&metrics'}
   ]) {
     const query = new URLSearchParams({tab: 'list', add: tagId(seed.kind, seed.value)}).toString();
     expect(parseRuleSeed(new URLSearchParams(query).get('add'))).toEqual(seed);

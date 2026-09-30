@@ -350,8 +350,20 @@ function applyChange(text: string, change: GroupChange): string {
 }
 export const applyChanges = (text: string, changes: GroupChange[]) => changes.reduce(applyChange, text);
 
-export type ConditionKind = 'domain' | 'domainSuffix' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
-export const conditionKinds: ConditionKind[] = ['domainSuffix', 'domain', 'geosite', 'dip', 'geoip', 'sip', 'dport', 'sport', 'pname', 'l4proto'];
+export type ConditionKind = 'domain' | 'domainSuffix' | 'domainKeyword' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
+export const conditionKinds: ConditionKind[] = [
+  'domainSuffix',
+  'domain',
+  'domainKeyword',
+  'geosite',
+  'dip',
+  'geoip',
+  'sip',
+  'dport',
+  'sport',
+  'pname',
+  'l4proto'
+];
 // DNS rule conditions, as honk's parser reads them: request rules match the query by qname, qtype and sip; response
 // rules may also match the upstream that answered and the answer's addresses with ip.
 export type DnsConditionKind = 'qnameSuffix' | 'qnameFull' | 'qnameKeyword' | 'qnameGeosite' | 'qtype' | 'sip' | 'upstream' | 'answerIp' | 'answerGeoip';
@@ -384,6 +396,8 @@ function conditionText(kind: RuleConditionKind, values: string[]): string {
       return `domain(${qualified('full')})`;
     case 'domainSuffix':
       return `domain(${qualified('suffix')})`;
+    case 'domainKeyword':
+      return `domain(${qualified('keyword')})`;
     case 'geosite':
       return `domain(${qualified('geosite')})`;
     case 'dip':

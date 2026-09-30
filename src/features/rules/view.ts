@@ -39,6 +39,7 @@ import {recorderEmpty} from '../shared/recorder';
 const kindHints: Record<RuleConditionKind, string> = {
   domainSuffix: 'example.com, example.org',
   domain: 'www.example.com',
+  domainKeyword: 'tracker',
   geosite: 'netflix, cn',
   dip: '10.0.0.0/8, 224.0.0.0/4',
   geoip: 'cn, private',
