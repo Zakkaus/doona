@@ -445,6 +445,7 @@
   "dns.addRuleFor": "Add a rule for {value}",
   "dns.allTypes": "All supported types",
   "dns.answer": "{name} {type}; TTL {ttl} s; {data}",
+  "dns.bypassCache": "Bypass cache",
   "dns.cacheBusy": "The cache listing is temporarily unavailable",
   "dns.cacheFilter": "Domain: {domain}",
   "dns.cacheUnavailable": "This backend does not provide a cache listing",

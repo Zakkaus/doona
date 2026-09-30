@@ -17,6 +17,7 @@ import {
   LabeledSelect,
   Tabs,
   TextField,
+  Switch,
   DetailPanel,
   ConfirmButton,
   Empty,
@@ -54,6 +55,9 @@ export function Dns(props: PageProps) {
           <div className="rp-toolbar">
             <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
             <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
+            <Switch isSelected={vm.bypassCache} onChange={vm.setBypassCache}>
+              {t('dns.bypassCache')}
+            </Switch>
             <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
               {t('dns.query')}
             </Button>

@@ -595,3 +595,14 @@ it('serves the base profile from storage and refuses its unavailable resources',
     vi.unstubAllGlobals();
   }
 });
+
+it('bypasses a cached DNS answer without removing or changing the entry', async () => {
+  const api = createMockApi();
+  const before = await api.dnsCache();
+  const entry = before.entries[0];
+  const answer = await api.dnsQuery(entry.domain, [entry.type], undefined, 'bypass');
+  expect(answer.cache_mode).toBe('bypass');
+  expect(answer.results[0]).toMatchObject({cached: false, cache_entry_id: null, upstream: 'udp://192.0.2.53'});
+  expect(await api.dnsCache()).toEqual(before);
+  expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: true, cache_entry_id: entry.entry_id});
+});

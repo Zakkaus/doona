@@ -39,20 +39,30 @@ test('all supported DNS types are queried in bounded batches and shown together'
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
-  const requested: string[][] = [];
+  const requested: Array<{type: string[]; cache_mode: string}> = [];
   await page.route('**/api/v1/dns/query?*', async route => {
     const body = route.request().postDataJSON();
     const types = body.type;
-    requested.push(types);
+    requested.push(body);
     expect(types).toHaveLength(1);
-    await route.fulfill({json: await api.dnsQuery(body.domain, types)});
+    await route.fulfill({json: await api.dnsQuery(body.domain, types, undefined, body.cache_mode)});
   });
   await page.goto('/#/dns?domain=example.com&type=all');
   await page.getByRole('button', {name: 'Query', exact: true}).click();
   await expect(page.getByRole('heading', {name: 'example.com. TXT', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'example.com. A', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'example.com. AAAA', exact: true})).toBeVisible();
-  expect(requested).toEqual([['A'], ['AAAA'], ['TXT']]);
+  expect(requested).toEqual(['A', 'AAAA', 'TXT'].map(type => ({domain: 'example.com', type: [type], cache_mode: 'normal'})));
+  const bypass = page.getByRole('switch', {name: 'Bypass cache', exact: true});
+  await expect(bypass).not.toBeChecked();
+  await bypass.focus();
+  await page.keyboard.press('Space');
+  await expect(bypass).toBeChecked();
+  requested.length = 0;
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect.poll(() => requested.length).toBe(3);
+  expect(requested).toEqual(['A', 'AAAA', 'TXT'].map(type => ({domain: 'example.com', type: [type], cache_mode: 'bypass'})));
+  await expect(page.getByRole('button', {name: 'Query', exact: true})).not.toHaveAttribute('data-pending');
 });
 
 test('DNS tabs preserve linked query drafts', async ({page}) => {
