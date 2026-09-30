@@ -38,8 +38,8 @@ for entry in dist/* dist/.[!.]* dist/..?*; do
     cp -R "$entry" "$stage/program/"
 done
 cp LICENSE NOTICE CHANGELOG.md README.md "$stage/program/"
-mkdir "$stage/program/LICENSES"
-cp LICENSES/Apache-2.0.txt "$stage/program/LICENSES/"
+# Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
+node tools/notices.mjs "$stage/program"
 cp -R dist/fonts "$stage/font-package/"
 
 archive() {
