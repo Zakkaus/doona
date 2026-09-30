@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {currentTemplate, refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget} from './template';
+import {currentTemplate, refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -109,4 +109,28 @@ it('opens the routing list on the simple view unless the link names a view or po
   expect(ruleViewMode('view=advanced')).toBe('advanced');
   for (const query of ['tab=list&rule=r1', 'edit=r1', 'add=domain%3Aexample.org', 'held=1']) expect(ruleViewMode(query)).toBe('advanced');
   expect(ruleViewMode('rule=r1&view=simple')).toBe('simple');
+});
+
+it('offers the DNS split while no file has a dns block, and writes it only when asked', () => {
+  const main = source('main', 'group {\n  proxy { policy: min_moving_avg }\n}\nrouting {\n  fallback: proxy\n}\n', 'main');
+  const {plain, withDns} = templateWrites('bypass', main, [main], t);
+  expect(plain.after).not.toContain('dns {');
+  expect(withDns).not.toBeNull();
+  expect(withDns!.after.startsWith(plain.after.replace(/\n$/, ''))).toBe(true);
+  for (const line of [
+    'dns {',
+    "    cloudflare: 'tls://1.1.1.1:853'",
+    "    alidns: 'udp://223.5.5.5:53'",
+    '      qname(geosite:cn) -> alidns',
+    '      fallback: cloudflare'
+  ])
+    expect(withDns!.diff).toContainEqual({kind: 'add', text: line});
+});
+
+it('leaves DNS alone when any loaded file has a dns block', () => {
+  const main = source('main', 'routing {\n  fallback: direct\n}\n', 'main');
+  const dns = source('dns', "dns {\n  upstream {\n    google: 'udp://8.8.8.8:53'\n  }\n}\n");
+  const {plain, withDns} = templateWrites('global', main, [main, dns], t);
+  expect(withDns).toBeNull();
+  expect(plain.after).not.toContain('dns {');
 });

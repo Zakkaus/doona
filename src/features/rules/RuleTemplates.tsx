@@ -1,6 +1,6 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup} from '../../ui/ui';
+import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import type {TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -62,6 +62,9 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
                 title={t('rule.template.reused')}
                 rows={dialog.impact.reused.map(group => ({name: group.name, label: null, warning: group.pinned ? t('rule.template.pinnedHelp') : null}))}
               />
+            )}
+            {dialog.dns !== null && (
+              <Checkbox label={t('rule.template.addDns')} description={t('rule.template.addDnsHelp')} isSelected={dialog.dns} onChange={model.setDns} />
             )}
             <Disclosure flush title={t('rule.template.changes', {file: dialog.file})}>
               <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />

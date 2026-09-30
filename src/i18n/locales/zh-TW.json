@@ -1246,6 +1246,8 @@
   "rule.sourceUserspace": "使用者空間",
   "rule.srcPort": "來源連接埠",
   "rule.stale": "規則清單與組態不同步，已重新整理清單，請重試",
+  "rule.template.addDns": "同時加入 DNS 分流",
+  "rule.template.addDnsHelp": "加入 dns 區塊：geosite:cn 中的網域經 alidns（223.5.5.5）解析，其餘經 cloudflare 以 DNS over TLS（1.1.1.1）解析。",
   "rule.template.applied": "已將 {name} 套用至 {file}",
   "rule.template.apply": "套用",
   "rule.template.bypass": "繞過中國大陸",

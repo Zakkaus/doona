@@ -1,10 +1,12 @@
 import type {ConfigSource} from '../../api/model';
 import type {Key, Translator} from '../../i18n';
 import {scanConfig} from '../../dae/text';
-import {fileName} from '../../dae/sources';
+import {allGroupNames, fileName} from '../../dae/sources';
 import {classifyFilters, readGroupEntries, type GroupEntry} from '../../dae/groups';
-import {defaultGroup, templateGroups} from '../../dae/setup';
+import {defaultGroup, holdsDns, templateGroups, writeTemplate} from '../../dae/setup';
 import {detectTemplate, templates, type RuleTemplate} from '../../dae/templates';
+import type {DiffRow} from '../../ui/ui';
+import {lineDiff} from './diff';
 
 // The plain choices first; the ACL4SSR presets, which also create groups, are kept under More templates.
 export const primaryTemplates: RuleTemplate[] = ['bypass', 'gfw', 'global'];
@@ -21,6 +23,26 @@ export type TemplateChoice = {id: RuleTemplate; name: string; help: string};
 export function templateChoice(id: RuleTemplate, t: Translator): TemplateChoice {
   const [name, help] = templateText[id];
   return {id, name: t(name), help: t(help, {groups: templates[id].groups.map(group => group.name).join(', ')})};
+}
+
+export type TemplateWrite = {after: string; diff: DiffRow[]};
+// What applying a template writes to `source`, and the line diff against it; `withDns` also appends the DNS split, and
+// is offered only while no loaded file has a `dns` block.
+export function templateWrites(
+  rules: RuleTemplate,
+  source: ConfigSource,
+  sources: ConfigSource[],
+  t: Translator
+): {plain: TemplateWrite; withDns: TemplateWrite | null} {
+  const before = source.content!;
+  const written = (dns: boolean): TemplateWrite => {
+    const after = writeTemplate(before, rules, allGroupNames(sources), {dns});
+    return {
+      after,
+      diff: lineDiff(before, after).map(line => (line.kind === 'gap' ? {kind: 'gap', text: t('rule.template.unchanged', {n: line.count})} : line))
+    };
+  };
+  return {plain: written(false), withDns: holdsDns(sources.map(item => item.content ?? '')) ? null : written(true)};
 }
 
 export type RuleViewMode = 'simple' | 'advanced';
