@@ -179,12 +179,17 @@ export function useNodesPage({go, query}: PageProps) {
     source,
     taken: new Set(outbounds.groups),
     outbounds,
+    nodes: nodes.data ?? [],
     onCreated: group => {
       toast('positive', t('policy.updated', {name: group}), {action: viewGroup(group)});
     }
   });
   const newGroup = (item: Node) => {
-    groupCreate.show([`name(${quoteName(item.name)})`]);
+    try {
+      groupCreate.show([`name(${quoteName(item.name)})`], t('nodes.newGroupHelp', {name: item.name}));
+    } catch (error) {
+      toast('negative', errorText(error, t));
+    }
   };
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.

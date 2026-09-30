@@ -3,11 +3,11 @@ import {useT} from '../../i18n';
 import {nameText, readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../../dae/groups';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
-import type {ConfigSource, Group} from '../../api/model';
+import type {ConfigSource, Group, Node} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {LocalError, noticeText} from '../../api/error';
-import {groupEditSafe, groupNameError} from './policyText';
+import {groupEditSafe, groupNameError, manualPolicy} from './policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {SearchSection} from '../../ui/SearchSelect';
 import {
@@ -16,6 +16,7 @@ import {
   finalExcluded,
   groupConfigLabels,
   memberSections,
+  draftMembers,
   routeChoiceId,
   routeChoiceValue,
   routeFields,
@@ -53,7 +54,7 @@ export type GroupDialogView = {
     sections: SearchSection[];
     change: (id: string) => void;
   }>;
-  show: (filters?: string[]) => void;
+  show: (filters?: string[], help?: string) => void;
   // Opens the dialog read-only, on the group's configuration alone.
   view: () => void;
   close: () => void;
@@ -75,6 +76,7 @@ const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as con
 // declared then, since the sources are read again after a refusal.
 type Draft = {
   name: string;
+  help?: string;
   origin: ConfigSource | null;
   refused: boolean;
   policy: string | null;
@@ -90,6 +92,7 @@ type Input =
       source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply'>;
       taken: ReadonlySet<string>;
       outbounds: OutboundCatalogue;
+      nodes: Node[];
       stage?: (name: string, entry: GroupEntryUpdate) => void;
       onCreated?: (name: string) => void;
     };
@@ -107,7 +110,12 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
-  const routes: RouteField[] = creating ? ['final_outbound'] : routeFields(context.g, draft?.policy ?? null);
+  const routes: RouteField[] = creating
+    ? manualPolicy(draft?.policy ?? null)
+      ? ['default_member_id', 'final_outbound']
+      : ['final_outbound']
+    : routeFields(context.g, draft?.policy ?? null);
+  const members = creating ? (draft && manualPolicy(draft.policy) ? draftMembers(draft.filters, input.nodes, t) : []) : context.members;
   const groupName = creating ? (draft?.name.trim() ?? '') : (draft?.name ?? '');
   const excluded = finalExcluded(groupName, context.outbounds.links);
   const [tried, setTried] = useState(false);
@@ -193,7 +201,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
       creating && draft
         ? {value: draft.name, error: tried || draft.name.trim() ? nameProblem : null, change: value => edit(prev => ({...prev, name: value}))}
         : null,
-    help: creating ? '' : t('policy.editHelp'),
+    help: creating ? (draft?.help ?? t('arrange.newGroupNote')) : t('policy.editHelp'),
     submitLabel: t(creating ? 'arrange.create' : 'policy.save'),
     open: !!draft || viewing,
     editing: !!draft,
@@ -221,21 +229,17 @@ export function useGroupDialog(input: Input): GroupDialogView {
             description: t(routeHelp[id]),
             searchLabel: t(id === 'default_member_id' ? 'ui.filterMembers' : 'ui.filterOutbounds'),
             value: routeChoiceId(draft[key]),
-            sections:
-              id === 'default_member_id'
-                ? memberSections(context.members, held, t)
-                : finalSections(groupName, context.outbounds, held, t)
-                    .map(section => (creating ? {...section, items: section.items.filter(item => !excluded.has(routeChoiceValue(item.id) ?? ''))} : section))
-                    .filter(section => section.items.length),
+            sections: id === 'default_member_id' ? memberSections(members, held, t) : finalSections(groupName, context.outbounds, held, t),
             change: (choice: string) => edit(prev => ({...prev, [key]: routeChoiceValue(choice)}))
           };
         })
       : [],
-    show: (filters = []) => {
+    show: (filters = [], help) => {
       session.next();
       setProblem(null);
       setTried(false);
-      if (creating) setDraft({name: '', origin: source.main, refused: false, policy: newGroupPolicies[0].id, filters, default: null, final: null, interrupt: null});
+      if (creating)
+        setDraft({name: '', help, origin: source.main, refused: false, policy: newGroupPolicies[0].id, filters, default: null, final: null, interrupt: null});
       else if (declared && !blocked)
         setDraft({
           name: declared.entry.name,
