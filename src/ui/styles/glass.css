@@ -197,6 +197,15 @@
   border-color: transparent;
   box-shadow: none;
 }
+/* The reset outranks the focus ring every field shows, so it is drawn again here, in red for an invalid field. */
+:root[data-family='glass'] .rp-input:focus-within {
+  border-color: var(--rp-accent);
+  box-shadow: 0 0 0 1px var(--rp-accent);
+}
+:root[data-family='glass'] :is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input:focus-within {
+  border-color: var(--rp-negative);
+  box-shadow: 0 0 0 1px var(--rp-negative);
+}
 :root[data-family='glass'] :is(.rp-btn, .rp-selectbtn, .rp-search, .rp-node)[data-hovered] {
   background: var(--rp-hl-med);
 }
