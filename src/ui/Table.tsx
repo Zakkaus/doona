@@ -28,7 +28,9 @@ export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
 // A group row in tree mode: its label under the first column, its totals under the others, then its children.
 export type TableGroup<T> = {id: string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
 
-export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisibleHeader?: boolean}) {
+// `resizable`: false leaves the resizers out. In a grid with no rows React Aria (1.21) keeps Tab on the first column's
+// resizer, so a table without rows has none.
+export function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols: Col[]; firstVisibleHeader?: boolean; resizable?: boolean}) {
   const t = useT();
   return (
     <TableHeader>
@@ -48,7 +50,7 @@ export function TableColumns({cols, firstVisibleHeader}: {cols: Col[]; firstVisi
                 {c.label}
                 {sortDirection && <ChevronDown className={cx('rp-sort', sortDirection)} />}
               </span>
-              <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />
+              {resizable && <ColumnResizer className="rp-resizer" aria-label={t('ui.resizeColumn', {name: c.label})} />}
             </>
           )}
         </Column>
@@ -280,7 +282,7 @@ export function DataTable<T extends {id: string}>({
       sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
       onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
     >
-      <TableColumns cols={shown} firstVisibleHeader={!!tree} />
+      <TableColumns cols={shown} firstVisibleHeader={!!tree} resizable={rows.length > 0} />
       <TableBody<T | TableGroup<T>>
         items={rows}
         dependencies={[shown, getTextValue]}

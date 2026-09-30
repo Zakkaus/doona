@@ -1,3 +1,4 @@
+import type {Locator, Page} from '@playwright/test';
 import {expect, isLive, mockBackend, test} from './fixtures';
 
 test('search shortcut moves focus into a dismissible dialog', async ({page}) => {
@@ -168,4 +169,33 @@ test('charts are named and icon buttons show their tooltip on keyboard focus', a
   await page.keyboard.press('Tab');
   await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);
   await expect(page.getByRole('tooltip')).toBeVisible();
+});
+
+// A column resizer in a grid with no rows used to hold focus on every Tab.
+async function tabThroughEmptyTable(page: Page, table: Locator, start: Locator) {
+  await expect(table.locator('.rp-table-empty')).toBeVisible();
+  await start.focus();
+  const inTable = () => table.evaluate(element => element.contains(document.activeElement));
+  let entered = false;
+  for (let i = 0; i < 20 && !entered; i++) {
+    await page.keyboard.press('Tab');
+    entered = await inTable();
+  }
+  expect(entered).toBe(true);
+  await page.keyboard.press('Tab');
+  expect(await inTable()).toBe(false);
+}
+
+test('Tab leaves a resizable table that has no rows', async ({page}) => {
+  await page.goto('/#/connections?tab=list&q=no-such-connection');
+  await tabThroughEmptyTable(page, page.getByRole('treegrid', {name: 'Connections'}), page.getByRole('searchbox', {name: 'Filter'}));
+});
+
+test('Tab leaves an empty resizable table in flat mode', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await api.flushDnsCache();
+  await page.goto('/#/dns?tab=cache');
+  const tab = page.getByRole('tab', {name: 'Cache', exact: true});
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await tabThroughEmptyTable(page, page.getByRole('grid'), tab);
 });
