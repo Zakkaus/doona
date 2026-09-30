@@ -1,18 +1,12 @@
-import {Suspense, useId, useMemo, type ComponentProps} from 'react';
+import {useId, useMemo} from 'react';
 import {Header, Menu, MenuSection} from 'react-aria-components';
-import {MenuButton, MenuChoice, pickMenuKey, TextField} from '../../ui/ui';
-import {preloadable} from '../../ui/preloadable';
+import {MenuButton, MenuChoice, pickMenuKey} from '../../ui/ui';
+import {LazySearchList, preloadSearchList} from '../../ui/LazySearchList';
 import {useT} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
-import type {SearchList} from '../../ui/SearchList';
 import type {ActivityNodeMenu} from './view';
 
 type Model = ActivityNodeMenu & {setChosen: (id: string) => void};
-
-// The search for a long list stays out of the startup bundle; hovering or focusing the trigger loads it ahead of the
-// press.
-const nodeSearch = preloadable<ComponentProps<typeof SearchList>>(() => import('../../ui/SearchList').then(module => ({default: module.SearchList})));
-const preloadNodeSearch = () => void nodeSearch.preload().catch(() => undefined);
 
 export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
   const t = useT();
@@ -25,7 +19,7 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
       {t('act.nodePickHelp')}
     </p>
   );
-  const warm = vm.big ? preloadNodeSearch : undefined;
+  const warm = vm.big ? preloadSearchList : undefined;
   return (
     <span className="rp-contents" onPointerEnter={warm} onFocus={warm}>
       <MenuButton
@@ -35,20 +29,7 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
         content={
           <>
             {note}
-            {vm.big ? (
-              <Suspense
-                fallback={
-                  <>
-                    <TextField search label={t('policy.filter')} isDisabled className="rp-menu-search" />
-                    <div className="rp-menu-scroll rp-menu-pending" />
-                  </>
-                }
-              >
-                <nodeSearch.Component label={t('policy.filter')}>{menu}</nodeSearch.Component>
-              </Suspense>
-            ) : (
-              menu
-            )}
+            {vm.big ? <LazySearchList label={t('policy.filter')}>{menu}</LazySearchList> : menu}
           </>
         }
       >

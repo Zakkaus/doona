@@ -10,6 +10,7 @@ import {connectionRanking} from './ranking';
 import {sameMode, type OutboundMode} from './mode';
 import {engineStatus} from '../shared/engineStatus';
 import {href} from '../../shell/route';
+import {longList} from '../../ui/longList';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -118,7 +119,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
   const node = options.find(n => n.id === chosen) ?? options.find(n => n.tcp !== undefined) ?? options.find(n => !isBuiltinOutbound(n.name)) ?? options[0];
   return {
     options,
-    big: options.length > 12,
+    big: longList(options.length),
     id: node?.id ?? '',
     name: node?.name ?? '',
     latency: node?.alive && node.tcp !== undefined ? formatLatency(node.tcp, t) : '—',
