@@ -238,7 +238,7 @@ test.describe(() => {
     await expect(rows).toHaveCount(0);
     await page.reload();
     await rows.filter({hasText: 'rules.dae:3'}).click();
-    await page.getByRole('button', {name: 'Open source: rules.dae:3', exact: true}).click();
+    await page.getByRole('button', {name: 'Open config source: rules.dae:3', exact: true}).click();
     await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
     await expect(page.locator('.cm-content[aria-label="/etc/honk/rules.dae"]')).toBeVisible();
     // An editable source marks the line with its caret; a read-only one with the focus line.
@@ -930,7 +930,7 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
   await expect(diagnostics).toContainText('config.dae');
   await expect(diagnostics).toContainText('Error in main source');
   await expect(editor.locator('.cm-diag-line-error')).toHaveCount(0);
-  await diagnostics.getByRole('button', {name: /^Open source: config\.dae/}).click();
+  await diagnostics.getByRole('button', {name: /^Open config source: config\.dae/}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/source=src-main.*line=2/);
 });
