@@ -1,5 +1,5 @@
-import type {ConfigSource, Group} from '../../api/model';
-import {isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
+import type {ConfigSource, Group, Node} from '../../api/model';
+import {compileFilters, isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {formatLatency} from '../../i18n/format';
@@ -8,6 +8,7 @@ import {latencyTone, type NodeStatus} from '../../ui/ui';
 import type {SearchItem, SearchSection} from '../../ui/SearchSelect';
 import {manualPolicy} from './policyText';
 import {errorText} from '../../api/error';
+import {healthMillis, preferredHealth} from '../../api/selectors';
 export const groupConfigLabels = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',
@@ -111,6 +112,25 @@ export function memberSections(members: Array<{name: string; status: NodeStatus}
     tone: member.status.tone
   }));
   return [noneFirst(items, held, t), {id: 'members', title: t('policy.pickMembers'), items}].filter(section => section.items.length);
+}
+
+// A new group's direct members follow its draft filters, before it exists on the backend.
+export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; status: NodeStatus}> {
+  const admits = compileFilters(filters);
+  return [
+    ...nestedIn({filters}).map(name => ({name, status: {text: t('ui.group'), badge: true}})),
+    ...nodes.filter(admits).map(node => {
+      const health = preferredHealth(node);
+      const tcp = healthMillis(health);
+      const status: NodeStatus =
+        tcp !== undefined
+          ? {text: formatLatency(tcp, t), tone: latencyTone(tcp)}
+          : health?.state === 'unavailable'
+            ? {text: t('ui.unavailable'), tone: 'err'}
+            : {text: '—'};
+      return {name: node.name, status};
+    })
+  ];
 }
 
 // Where a group is declared: its entry and the source whose group section holds it. 'ambiguous' when more than one

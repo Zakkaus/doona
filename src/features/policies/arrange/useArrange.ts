@@ -66,6 +66,7 @@ export function useArrange(
   const existing = new Set(view.groups.map(group => group.name));
   const create = useGroupDialog({
     mode: 'create',
+    nodes: nodes ?? [],
     source: {...source, busy: source.busy || applying},
     taken: new Set([...outbounds.groups, ...existing]),
     outbounds: {
