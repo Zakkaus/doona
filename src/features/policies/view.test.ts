@@ -388,8 +388,10 @@ it('offers the direct members as default members, and only the fields the group 
 it('offers the default member only while the selected policy picks by hand', () => {
   const {groups} = nodeFixtures(0, true);
   const g: Group = {...groups[0], capabilities: {...groups[0].capabilities, mutable_config: ['default_member_id', 'final_outbound']}};
-  for (const policy of [null, 'select', 'fixed(0)', 'Fixed(1)', 'unknown']) expect(routeFields(g, policy)).toEqual(['default_member_id', 'final_outbound']);
-  for (const policy of ['min_moving_avg', 'urltest', 'fallback', 'roundrobin', 'score']) expect(routeFields(g, policy)).toEqual(['final_outbound']);
+  for (const policy of [null, 'select', 'selector', 'fixed(0)', 'Fixed(1)', 'random', 'unknown'])
+    expect(routeFields(g, policy)).toEqual(['default_member_id', 'final_outbound']);
+  for (const policy of ['min_moving_avg', 'urltest', 'fallback', 'roundrobin', 'round_robin', 'balance', 'score'])
+    expect(routeFields(g, policy)).toEqual(['final_outbound']);
 });
 
 it('writes back a name read from the file and refuses one the file cannot hold', () => {

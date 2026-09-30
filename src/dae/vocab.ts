@@ -40,25 +40,34 @@ export const globalKeys = [
   'max_concurrent_dials'
 ];
 // Group policies: the canonical names first, then the dae spellings the engine maps onto them.
-// Which contract kind a native policy expression behaves as; undefined for one doona does not know.
+// Which contract kind a native policy expression behaves as, read as honk reads it: the name before `(`, trimmed, in
+// ASCII lower case. Undefined for a policy honk does not recognise; honk runs that as a selector and warns, except for
+// `honk`, which it rejects as the old name of `score`.
 const policyKinds: Record<string, Group['policy']['kind']> = {
   select: 'selector',
+  selector: 'selector',
   fixed: 'selector',
   urltest: 'urltest',
   min_moving_avg: 'urltest',
   min_avg10: 'urltest',
   min_last_delay: 'urltest',
-  fallback: 'fallback',
   roundrobin: 'loadbalance',
+  round_robin: 'loadbalance',
   loadbalance: 'loadbalance',
-  random: 'random',
+  balance: 'loadbalance',
+  fallback: 'fallback',
   score: 'score'
 };
 export function policyKind(native: string): Group['policy']['kind'] | undefined {
-  return policyKinds[native.toLowerCase().replace(/\(.*$/, '')];
+  const base = native
+    .trim()
+    .replace(/\(.*$/, '')
+    .trim()
+    .replace(/[A-Z]/g, letter => letter.toLowerCase());
+  return Object.hasOwn(policyKinds, base) ? policyKinds[base] : undefined;
 }
-// Written out rather than read from policyKinds, which also knows `random`: dae accepts it, but honk reads it as an
-// unknown policy and falls back to a selector, so the editor does not offer it.
+// Written out rather than read from policyKinds, so completion keeps to the spellings dae shares. dae's `random` is
+// left out: honk reads it as an unknown policy and falls back to a selector.
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
