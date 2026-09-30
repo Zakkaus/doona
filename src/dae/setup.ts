@@ -73,7 +73,7 @@ function subscriptionBlock(state: WizardState): string[] {
 }
 const subscriptionLine = (s: Subscription) => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}${s.suffix ?? ''}`;
 export const defaultGroup = 'proxy';
-function routingBlock(state: WizardState, rules: RuleTemplate): string[] {
+function routingBlock(state: Pick<WizardState, 'group'>, rules: RuleTemplate): string[] {
   // The header as written: the templates must route to the group the file already has.
   const first = state.group ?? defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
@@ -127,6 +127,36 @@ function removal(text: string, block: TextBlock) {
   else if (before) from -= before[0].length - 1;
   return {from, to, text: ''};
 }
+// The groups a template adds beside `defined`, the names already declared: its own that are missing, or, for a template
+// without groups, the default group when there is none at all.
+export function templateGroups(rules: RuleTemplate, defined: string[]): string[] {
+  const have = new Set(defined);
+  const wanted = templates[rules].groups.filter(group => !have.has(group.name)).map(group => group.name);
+  return wanted.length || defined.length ? wanted : [defaultGroup];
+}
+type Edit = {from: number; to: number; text: string};
+// Adds the group lines to the file's last group section, or a new section at the end.
+function addGroups(current: string, blocks: TextBlock[], missing: string[], edits: Edit[], appended: string[]) {
+  const groupSection = blocks.find(block => block.name === 'group');
+  if (!groupSection && missing.length) appended.push(['group {', ...missing, '}'].join('\n'));
+  else if (groupSection && missing.length) {
+    const at = current.lastIndexOf('\n', groupSection.close - 1) + 1;
+    const inline = !/^[ \t]*$/.test(current.slice(at, groupSection.close));
+    edits.push({from: inline ? groupSection.close : at, to: inline ? groupSection.close : at, text: (inline ? '\n' : '') + missing.join('\n') + '\n'});
+  }
+}
+// Replaces every top-level routing block with one holding the template, or appends it; DNS routing is nested and stays.
+function replaceRouting(blocks: TextBlock[], text: string, edits: Edit[], appended: string[]) {
+  const routing = blocks.filter(block => block.name === 'routing');
+  if (routing.length) routing.forEach((block, index) => edits.push({from: block.from, to: block.to, text: index === 0 ? text : ''}));
+  else appended.push(text);
+}
+function applyEdits(current: string, edits: Edit[], appended: string[]): string {
+  let out = current;
+  for (const edit of edits.sort((a, b) => b.from - a.from)) out = out.slice(0, edit.from) + edit.text + out.slice(edit.to);
+  if (appended.length) out = out.replace(/\n$/, '') + '\n\n' + appended.join('\n\n') + '\n';
+  return out;
+}
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
     return [
@@ -145,7 +175,7 @@ export function writeState(current: string, state: WizardState): string {
     ].join('\n');
   }
   const {blocks} = scanConfig(current);
-  const edits: Array<{from: number; to: number; text: string}> = [];
+  const edits: Edit[] = [];
   const subscriptionSections = blocks.filter(block => block.name === 'subscription');
   for (const [section, block] of subscriptionSections.entries()) {
     const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
@@ -156,26 +186,26 @@ export function writeState(current: string, state: WizardState): string {
   }
   const appended: string[] = [];
   if (!subscriptionSections.length && state.subscriptions.length) appended.push(subscriptionBlock(state).join('\n'));
-  const groupSection = blocks.find(block => block.name === 'group');
   const missing = groupLines(
     readGroupEntries(current).map(entry => entry.name),
     state.rules
   );
-  if (!groupSection && missing.length) appended.push(['group {', ...missing, '}'].join('\n'));
-  else if (groupSection && missing.length) {
-    const at = current.lastIndexOf('\n', groupSection.close - 1) + 1;
-    const inline = !/^[ \t]*$/.test(current.slice(at, groupSection.close));
-    edits.push({from: inline ? groupSection.close : at, to: inline ? groupSection.close : at, text: (inline ? '\n' : '') + missing.join('\n') + '\n'});
-  }
-  if (state.rules !== 'keep') {
-    const routing = blocks.filter(block => block.name === 'routing');
-    const text = routingBlock(state, state.rules).join('\n');
-    if (routing.length) {
-      routing.forEach((block, index) => edits.push({from: block.from, to: block.to, text: index === 0 ? text : ''}));
-    } else appended.push(text);
-  }
-  let out = current;
-  for (const edit of edits.sort((a, b) => b.from - a.from)) out = out.slice(0, edit.from) + edit.text + out.slice(edit.to);
-  if (appended.length) out = out.replace(/\n$/, '') + '\n\n' + appended.join('\n\n') + '\n';
-  return out;
+  addGroups(current, blocks, missing, edits, appended);
+  if (state.rules !== 'keep') replaceRouting(blocks, routingBlock(state, state.rules).join('\n'), edits, appended);
+  return applyEdits(current, edits, appended);
+}
+// Applies a template to one file and nothing else in it: the template's missing groups join its group section and its
+// rules replace the file's top-level routing. `defined` are the groups every loaded file declares, as written, so a
+// group another file declares is reused rather than declared twice; `{group}` names the file's first group, or the
+// first one declared anywhere.
+export function writeTemplate(current: string, rules: RuleTemplate, defined: Array<{name: string; written: string}>): string {
+  const {blocks} = scanConfig(current);
+  const own = readGroupEntries(current);
+  const names = [...own.map(entry => entry.name), ...defined.map(entry => entry.name)];
+  const edits: Edit[] = [];
+  const appended: string[] = [];
+  addGroups(current, blocks, groupLines(names, rules), edits, appended);
+  const group = own[0]?.written ?? defined[0]?.written ?? null;
+  replaceRouting(blocks, routingBlock({group}, rules).join('\n'), edits, appended);
+  return applyEdits(current, edits, appended);
 }
