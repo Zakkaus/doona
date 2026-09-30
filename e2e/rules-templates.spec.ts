@@ -117,6 +117,11 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   // The applied mode is now the detected one: selected, with nothing left to apply.
   await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
   await expect(applyButton(page)).toBeDisabled();
+  // The rules are read again with the file, so the table holds them at once though no event stream announces them.
+  await page.getByRole('radiogroup', {name: 'Rules view'}).getByText('Advanced', {exact: true}).click();
+  const table = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('.rp-table');
+  await expect(table).toContainText('dip(geoip:cn)');
+  await expect(table).not.toContainText('geosite: telegram');
 });
 
 test('the routing list opens on the simple view for template and custom routing, and a link to a rule on the table', async ({page}) => {
@@ -158,7 +163,19 @@ test('without a dns block the dialog offers the DNS split, checked, and writes i
   await expect(split).not.toBeChecked();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'alidns'})).toHaveCount(0);
   await dialog.getByText('Also add DNS split', {exact: true}).click();
+  // Validation is held, so the checkbox can be tried while the write runs: it keeps the choice the write holds.
+  let release = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/config/validate', async route => {
+    await held;
+    await route.fallback();
+  });
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(split).toBeDisabled();
+  await dialog.getByText('Also add DNS split', {exact: true}).click({force: true});
+  await expect(split).toBeChecked();
+  await expect(diff.locator('[data-kind="add"]', {hasText: 'qname(geosite:cn) -> alidns'})).toHaveCount(1);
+  release();
   await expect(dialog).toHaveCount(0);
   const saved = (await main()).content!;
   expect(saved).toContain("alidns: 'udp://223.5.5.5:53'");

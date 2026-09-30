@@ -64,7 +64,13 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
               />
             )}
             {dialog.dns !== null && (
-              <Checkbox label={t('rule.template.addDns')} description={t('rule.template.addDnsHelp')} isSelected={dialog.dns} onChange={model.setDns} />
+              <Checkbox
+                label={t('rule.template.addDns')}
+                description={t('rule.template.addDnsHelp')}
+                isSelected={dialog.dns}
+                onChange={model.setDns}
+                isDisabled={model.applying}
+              />
             )}
             <Disclosure flush title={t('rule.template.changes', {file: dialog.file})}>
               <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
