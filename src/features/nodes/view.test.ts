@@ -119,9 +119,12 @@ describe('node rows', () => {
       node('hk-3', {group_ids: ['gaming'], protocol: 'trojan'}),
       node('sg-1', {group_ids: ['gaming']})
     ];
-    expect(nodeRows(nodes, ' HK- ', 'gaming', 'vless', {column: 'name', direction: 'ascending'}, contains).map(item => item.id)).toEqual(['hk-2', 'HK-10']);
+    expect(nodeRows(nodes, ' HK- ', 'gaming', 'vless', {column: 'name', direction: 'ascending'}, contains, 'en-US').map(item => item.id)).toEqual([
+      'hk-2',
+      'HK-10'
+    ]);
     expect(nodes.map(item => item.id)).toEqual(['HK-10', 'hk-2', 'hk-1', 'hk-3', 'sg-1']);
-    expect(nodeRows(nodes, '', '', '', {column: 'protocol', direction: 'ascending'}, contains).map(item => item.id)).toEqual([
+    expect(nodeRows(nodes, '', '', '', {column: 'protocol', direction: 'ascending'}, contains, 'en-US').map(item => item.id)).toEqual([
       'hk-3',
       'HK-10',
       'hk-2',
@@ -153,8 +156,8 @@ describe('node rows', () => {
       node('unavailable', {health: [{...sample, state: 'unavailable', latency_ms: 1}]})
     ];
     const ascending = ['zero', 'slow-2', 'slow-10', 'missing', 'unavailable'];
-    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}, contains).map(item => item.id)).toEqual(ascending);
-    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}, contains).map(item => item.id)).toEqual([...ascending].reverse());
+    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}, contains, 'en-US').map(item => item.id)).toEqual(ascending);
+    expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}, contains, 'en-US').map(item => item.id)).toEqual([...ascending].reverse());
   });
 });
 

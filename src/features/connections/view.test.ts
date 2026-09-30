@@ -37,6 +37,7 @@ it('groups by client address without losing IPv6 hosts or UInt64 precision', () 
       {...c, id: 'd', src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
     ],
     {hidden: [], sort: null, group: 'source'},
+    'en-US',
     t
   );
   expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download] : row.id))).toEqual([
@@ -50,10 +51,10 @@ it('keys groups by their name so a reorder keeps each id', () => {
   const view: ConnectionView = {hidden: [], sort: {column: 'src', direction: 'ascending'}, group: 'source'};
   const a = {...c, id: 'a', src: '10.0.0.1:1'};
   const b = {...c, id: 'b', src: '10.0.0.2:1'};
-  const ids = (list: (typeof c)[]) => tableRows(list, view, t).map(row => row.id);
+  const ids = (list: (typeof c)[]) => tableRows(list, view, 'en-US', t).map(row => row.id);
   expect(ids([a, b])).toEqual(['g:10.0.0.1', 'g:10.0.0.2']);
   expect(ids([b])).toEqual(['g:10.0.0.2']);
-  expect(tableRows([a, b], {...view, sort: {column: 'src', direction: 'descending'}}, t).map(row => row.id)).toEqual(['g:10.0.0.2', 'g:10.0.0.1']);
+  expect(tableRows([a, b], {...view, sort: {column: 'src', direction: 'descending'}}, 'en-US', t).map(row => row.id)).toEqual(['g:10.0.0.2', 'g:10.0.0.1']);
 });
 
 it('keys outbound groups on the outbound, whatever the language or a label it shares', () => {
@@ -63,7 +64,7 @@ it('keys outbound groups on the outbound, whatever the language or a label it sh
     {...c, id: 'b', outbound: 'Direct'}
   ];
   const zh: Translator = (key, params) => translate('zh-TW', key, params);
-  const keys = (translator: Translator) => tableRows(list, {hidden: [], sort: null, group: 'outbound'}, translator).map(row => row.id);
+  const keys = (translator: Translator) => tableRows(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', translator).map(row => row.id);
   expect(keys(t)).toEqual(['g:direct', 'g:Direct']);
   expect(keys(zh)).toEqual(keys(t));
 });
@@ -116,15 +117,17 @@ it('groups, sorts and describes by the displayed labels', () => {
     {...c, id: 'b', outbound: null, state: 'active' as const},
     {...c, id: 'c', outbound: 'unknown', state: 'blocked' as const}
   ];
-  const groups = tableRows(list, {hidden: [], sort: null, group: 'outbound'}, t);
+  const groups = tableRows(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', t);
   expect(groups.map(row => ('group' in row ? [row.group, row.children.length] : row.id))).toEqual([
     ['direct', 1],
     ['unknown', 2]
   ]);
   const described = connectionTableView(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', new Map(), false, t);
   expect(described.map(row => ('label' in row ? row.label : row.id))).toEqual([`${t('ui.direct')} (1)`, `${t('ui.unknown')} (2)`]);
-  const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, t);
-  expect(sorted.map(row => row.id)).toEqual([...list].sort((x, y) => compareNames(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id));
+  const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, 'en-US', t);
+  expect(sorted.map(row => row.id)).toEqual(
+    [...list].sort((x, y) => compareNames('en-US')(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id)
+  );
   const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
   expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
   expect(connectionDetails(c, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
@@ -186,10 +189,10 @@ it('sorts every column as comparing the displayed values pairwise would', () => 
           right = shown(b, column);
         if (left == null) return right == null ? 0 : 1;
         if (right == null) return -1;
-        const order = typeof left === 'string' && typeof right === 'string' ? compareNames(left, right) : left < right ? -1 : left > right ? 1 : 0;
+        const order = typeof left === 'string' && typeof right === 'string' ? compareNames('en-US')(left, right) : left < right ? -1 : left > right ? 1 : 0;
         return direction === 'descending' ? -order : order;
       });
-      const sorted = tableRows(list, {hidden: [], sort: {column, direction}, group: 'none'}, t);
+      const sorted = tableRows(list, {hidden: [], sort: {column, direction}, group: 'none'}, 'en-US', t);
       expect(sorted.map(row => row.id)).toEqual(expected.map(row => row.id));
     }
 });
@@ -198,7 +201,7 @@ it('sorts the download rate by value, with unknown rates last', () => {
   const c = connections.tcp[0];
   const list = ['900', null, '10000', '0'].map((rate, i) => ({...c, id: 'r' + i, download_bytes_per_second: rate}));
   const order = (direction: 'ascending' | 'descending') =>
-    tableRows(list, {hidden: [], sort: {column: 'downRate', direction}, group: 'none'}, t).map(row => row.id);
+    tableRows(list, {hidden: [], sort: {column: 'downRate', direction}, group: 'none'}, 'en-US', t).map(row => row.id);
   expect(order('descending')).toEqual(['r2', 'r0', 'r3', 'r1']);
   expect(order('ascending')).toEqual(['r3', 'r0', 'r2', 'r1']);
   const [row] = connectionTableView(list.slice(2, 3), {hidden: [], sort: null, group: 'none'}, 'en-US', new Map(), false, t);

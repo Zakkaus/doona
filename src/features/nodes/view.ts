@@ -148,17 +148,26 @@ export function nodeSource(list: ProviderRow[], providers: Provider[]): (node: N
 }
 
 // `contains` is the locale-aware matcher the policy grid also uses, so both pages find the same names.
-export function nodeRows(owned: Node[], search: string, group: string, protocol: string, sort: TableSort, contains: (value: string, query: string) => boolean) {
+export function nodeRows(
+  owned: Node[],
+  search: string,
+  group: string,
+  protocol: string,
+  sort: TableSort,
+  contains: (value: string, query: string) => boolean,
+  locale: string
+) {
   const needle = search.trim();
   const kept = owned.filter(
     node => (!needle || contains(node.name, needle)) && (!group || node.group_ids.includes(group)) && (!protocol || node.protocol === protocol)
   );
   const sign = sort.direction === 'ascending' ? 1 : -1;
+  const byName = compareNames(locale);
   const latency = sort.column === 'latency' ? new Map(kept.map(node => [node.id, latencyOf(node)])) : new Map();
   const by: Record<string, (a: Node, b: Node) => number> = {
-    name: (a, b) => compareNames(a.name, b.name),
-    protocol: (a, b) => compareNames(a.protocol ?? '', b.protocol ?? ''),
-    latency: (a, b) => compareLatency(latency.get(a.id), latency.get(b.id)) || compareNames(a.name, b.name)
+    name: (a, b) => byName(a.name, b.name),
+    protocol: (a, b) => byName(a.protocol ?? '', b.protocol ?? ''),
+    latency: (a, b) => compareLatency(latency.get(a.id), latency.get(b.id)) || byName(a.name, b.name)
   };
   return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
 }

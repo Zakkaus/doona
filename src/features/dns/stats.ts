@@ -14,7 +14,7 @@ export type UpstreamLatency = {upstream: string; median: number; samples: Latenc
 
 // What the loaded records say about speed and outcomes. Latency only counts uncached lookups that reached an
 // upstream, since a cache hit or a failure before sending measures nothing about the upstream.
-export function dnsAnalysis(records: DnsLogRecord[]) {
+export function dnsAnalysis(records: DnsLogRecord[], locale: string) {
   const counts: Record<DnsOutcome, number> = {cached: 0, answered: 0, nxdomain: 0, failed: 0};
   const samples: LatencySample[] = [];
   for (const record of records) {
@@ -34,7 +34,7 @@ export function dnsAnalysis(records: DnsLogRecord[]) {
     )!,
     samples: list
   }));
-  upstreams.sort((a, b) => b.samples.length - a.samples.length || compareNames(a.upstream, b.upstream));
+  upstreams.sort((a, b) => b.samples.length - a.samples.length || compareNames(locale)(a.upstream, b.upstream));
   const uncached = records.length - counts.cached;
   return {
     domains: ranked(

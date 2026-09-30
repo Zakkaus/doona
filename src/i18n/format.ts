@@ -86,10 +86,14 @@ export function formatBytes(input: string | bigint | number | null, locale: stri
 export function formatRate(input: string | bigint | number | null, locale: string): string {
   return scaledBytes(input, locale, byteRateUnits);
 }
-// Names sort Chinese first by pinyin, then numbers by value and text without regard to case, in every language, so a
-// node or group name sits in the same place on every page whatever the browser's own language.
-const names = new Intl.Collator(['zh-Hans-CN', 'en'], {numeric: true, sensitivity: 'base'});
-export const compareNames = (a: string, b: string) => names.compare(a, b);
+// Names sort by the interface language's collation, numbers by value and text without regard to case. Callers pass the
+// interface locale, not the browser's, so a node or group name sits in the same place on every page.
+const nameOrders = new Map<string, (a: string, b: string) => number>();
+export function compareNames(locale: string): (a: string, b: string) => number {
+  let compare = nameOrders.get(locale);
+  if (!compare) nameOrders.set(locale, (compare = new Intl.Collator(locale, {numeric: true, sensitivity: 'base'}).compare));
+  return compare;
+}
 // Unknown or unmeasured latency is a dash, like any other missing value.
 export const formatLatency = (value: number | null | undefined, t: Translator) => (value == null ? '—' : t('ui.latency', {n: millis(value)}));
 

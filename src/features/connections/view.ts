@@ -134,10 +134,11 @@ export function sortByKey<T, K>(items: T[], key: (item: T) => K, compare: (a: K,
 }
 
 // Sorts and groups by what the table shows: a state sorts by its label, not the wire value.
-export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn): TableRow[] {
+export function tableRows(rows: Connection[], view: ConnectionView, locale: string, t: LabelFn): TableRow[] {
   let sorted = rows;
   if (view.sort) {
     const {column, direction} = view.sort;
+    const byName = compareNames(locale);
     const value = (row: Connection) => {
       switch (column) {
         case 'dst':
@@ -159,7 +160,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, t: LabelFn):
     sorted = sortByKey(rows, value, (left, right) => {
       if (left == null) return right == null ? 0 : 1;
       if (right == null) return -1;
-      const order = typeof left === 'string' && typeof right === 'string' ? compareNames(left, right) : left < right ? -1 : left > right ? 1 : 0;
+      const order = typeof left === 'string' && typeof right === 'string' ? byName(left, right) : left < right ? -1 : left > right ? 1 : 0;
       return direction === 'descending' ? -order : order;
     });
   }
@@ -226,7 +227,7 @@ export function connectionTableView(
     projected.set(c, {locale, names, rulesListed, t, row});
     return row;
   };
-  return tableRows(rows, view, t).map(row =>
+  return tableRows(rows, view, locale, t).map(row =>
     'connection' in row
       ? {id: row.id, connection: project(row.connection)}
       : {
