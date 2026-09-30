@@ -7,6 +7,8 @@ export const groupPolicies = {
   gaming: {kind: 'urltest', native: 'min_last_delay'},
   skylink: {kind: 'urltest', native: 'min_moving_avg'}
 } satisfies Record<string, Group['policy']>;
+// The members the demo's groups name as `default`, so the Configuration list and the Edit group dialog show one.
+export const groupDefaultMembers: Partial<Record<keyof typeof groupPolicies, string>> = {proxy: 'hk-01'};
 // Runtime-setting defaults come from configuration; capability values provide their ceilings.
 export const runtimeSettings: RuntimeSettings = {
   observed_at: observedAt,
@@ -54,7 +56,7 @@ node {
 }
 
 group {
-  proxy { policy: ${groupPolicies.proxy.native} }
+  proxy { policy: ${groupPolicies.proxy.native} default: ${groupDefaultMembers.proxy} }
   resilient { filter: name(hk-01, sg-01, us-01) policy: ${groupPolicies.resilient.native} }
   gaming { filter: name(jp-01, hk-02) policy: ${groupPolicies.gaming.native} }
   skylink { filter: subtag(sub-c) policy: ${groupPolicies.skylink.native} }

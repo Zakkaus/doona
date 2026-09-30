@@ -1,9 +1,9 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {poll, useCapabilities, useGroups, useNodes} from '../../store';
-import {preferredHealth} from '../../api/selectors';
+import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
-import {groupOwners} from './view';
+import {groupOwners, outboundLinks, type OutboundCatalogue} from './view';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
@@ -57,6 +57,22 @@ export function usePolicies({go, query}: PageProps) {
       }),
     [groups.data, owners, isComplete, sources, config.error]
   );
+  // Rebuilt only when a name, a declaration or a shown latency changes, so a poll that changes none keeps the cards memoised.
+  const groupKey = (groups.data ?? []).map(group => group.name).join('\n');
+  const nodeKey = (nodes.data ?? []).map(node => `${node.id}\u0000${node.name}`).join('\n');
+  const [named, setNamed] = useState<{key: string; nodes: Array<{id: string; name: string}>}>({key: '', nodes: []});
+  if (named.key !== nodeKey) setNamed({key: nodeKey, nodes: (nodes.data ?? []).map(({id, name}) => ({id, name}))});
+  const outbounds = useMemo<OutboundCatalogue>(
+    () => ({
+      groups: groupKey ? groupKey.split('\n') : [],
+      nodes: named.nodes.map(node => {
+        const observed = health.map.get(node.id);
+        return {name: node.name, tcp: healthMillis(observed), alive: observed?.state === 'unavailable' ? false : undefined};
+      }),
+      links: outboundLinks(owners)
+    }),
+    [groupKey, named, health.map, owners]
+  );
   const ready = !!groups.data;
   // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
   // once per link, and never after the user starts moving the page themselves.
@@ -94,6 +110,7 @@ export function usePolicies({go, query}: PageProps) {
     cards,
     focus,
     health: health.map,
+    outbounds,
     source,
     error: groups.error ?? nodes.error,
     // A card's size depends on its members' health as well, so the cards wait for the node list too, and for the

@@ -56,12 +56,15 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
     const kind = policyKind(native) ?? 'selector';
-    const config = groupConfig(kind, null);
+    const config = groupConfig(kind);
     const block = blocks
       .filter(block => block.name === 'group')
       .flatMap(block => block.children)
       .find(block => block.name === entry.name)!;
     for (const field of blockFields(text, block, tokens)) {
+      // honk's own keys: `default` names a member by its tag, `final` an outbound.
+      if (field.name === 'default') config.default_member_id = members.find(member => member.name === unquote(field.value))?.id ?? null;
+      if (field.name === 'final') config.final_outbound = unquote(field.value);
       if (!(field.name in config)) continue;
       const value = unquote(field.value);
       Object.assign(config, {
@@ -75,12 +78,12 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
                 : value
       });
     }
-    if (config.default_member_id === null && kind === 'selector')
-      config.default_member_id = members[Number(/^fixed\((\d+)\)$/.exec(native)?.[1] ?? 0)]?.id ?? null;
+    // Without a default, a fixed policy starts on the member it numbers.
+    const fixed = kind === 'selector' ? members[Number(/^fixed\((\d+)\)$/.exec(native)?.[1] ?? 0)]?.id : undefined;
     const selection: Group['runtime']['selection'] = {tcp: null, udp: null};
     for (const network of ['tcp', 'udp'] as const) {
       const old = previous?.runtime.selection[network];
-      const id = old && members.some(member => member.id === old.member_id) ? old.member_id : (config.default_member_id ?? members[0]?.id);
+      const id = old && members.some(member => member.id === old.member_id) ? old.member_id : (config.default_member_id ?? fixed ?? members[0]?.id);
       if (id) selection[network] = {member_id: id, resolved_leaf_node_id: id, source: kind === 'selector' ? 'runtime' : 'policy'};
     }
     return {

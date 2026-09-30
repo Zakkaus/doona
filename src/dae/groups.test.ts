@@ -12,6 +12,8 @@ import {
   ruleCondition,
   dnsConditionKinds,
   writeGroupEntry,
+  nameText,
+  nestedIn,
   type GroupChange
 } from './groups';
 
@@ -55,6 +57,34 @@ describe('group entries', () => {
     );
     expect(readGroupEntries(next)[1]).toMatchObject({name: 'proxy', policy: 'select'});
     expect(readGroupEntries(next)[0]).toMatchObject({name: 'hk', policy: 'score'});
+  });
+
+  it('reads default and final as written and the groups an entry nests', () => {
+    expect(readGroupEntries(text).map(e => [e.name, e.default, e.final, nestedIn(e)])).toEqual([
+      ['hk', null, 'direct', []],
+      ['proxy', "'hk'", null, ['hk']]
+    ]);
+    expect(nestedIn({filters: ["group('a', b|c) && name(x)", 'name(group)', 'group()']})).toEqual(['a', 'b', 'c']);
+  });
+
+  it('sets, replaces and removes default and final, and leaves them alone when not given', () => {
+    const set = writeGroupEntry(text, 'hk', {filters: readGroupEntries(text)[0].filters, policy: 'min_moving_avg', default: "'jp 01'", final: 'block'});
+    expect(set).toContain(
+      "        policy: min_moving_avg\n        default: 'jp 01'\n        check_url: 'https://www.gstatic.com/generate_204' # keep\n        final: block\n    }"
+    );
+    const cleared = writeGroupEntry(text, 'proxy', {filters: ["group('hk')", "name('backup', b2)"], policy: 'select', default: null, final: 'hk'});
+    expect(cleared).toContain('        policy: select\n        final: hk\n    }');
+    expect(writeGroupEntry(text, 'proxy', {filters: ["group('hk')", "name('backup', b2)"], policy: 'select'})).toBe(text);
+    expect(writeGroupEntry('group {\n  g {\n    check_url: x\n  }\n}\n', 'g', {filters: [], policy: null, final: 'direct'})).toBe(
+      'group {\n  g {\n    final: direct\n    check_url: x\n  }\n}\n'
+    );
+  });
+
+  it('writes a name back as it was written while it names the same value', () => {
+    expect(nameText('hk', "'hk'")).toBe("'hk'");
+    expect(nameText('jp 01', "'hk'")).toBe("'jp 01'");
+    expect(nameText('direct', null)).toBe('direct');
+    expect(nameText(null, "'hk'")).toBeNull();
   });
 
   it('appends a new group and creates the section when there is none', () => {

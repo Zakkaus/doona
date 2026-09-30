@@ -3,7 +3,7 @@ import {nodeFixtures} from '../../api/mock/fixtures';
 import {patchGroupConfig} from '../../api/mock/control';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
-import type {ConfigSource} from '../../api/model';
+import type {ConfigSource, Group} from '../../api/model';
 import {
   actionErrorText,
   checkDraft,
@@ -13,7 +13,14 @@ import {
   checkPatch,
   checkRebase,
   editBlocked,
+  finalExcluded,
+  finalSections,
   groupOwners,
+  memberSections,
+  outboundLinks,
+  routeChoiceValue,
+  routeFields,
+  routeWritable,
   groupConfigFields,
   groupActionsReason,
   memberViews,
@@ -318,7 +325,7 @@ it('finds the one source that declares each group, and none when two entries do'
 
 it('says why a group cannot be edited in the source that declares it', () => {
   const origin = {id: 'extra', path: '/etc/honk/extra.dae', writable: true} as ConfigSource;
-  const owner = {entry: {name: 'media', written: 'media', filters: [], policy: null, from: 1, to: 1}, origin};
+  const owner = {entry: {name: 'media', written: 'media', filters: [], policy: null, default: null, final: null, from: 1, to: 1}, origin};
   const state = {loaded: true, complete: true, error: null};
   expect(editBlocked(owner, state, t)).toBeNull();
   expect(editBlocked(owner, {...state, error: new LocalError('ui.groupNotLoaded')}, t)).toBe(t('ui.groupNotLoaded'));
@@ -328,4 +335,66 @@ it('says why a group cannot be edited in the source that declares it', () => {
   expect(editBlocked({...owner, origin: {...origin, writable: false}}, state, t)).toBe('This group is defined in /etc/honk/extra.dae, which is read-only');
   expect(editBlocked(owner, {...state, complete: undefined}, t)).toBe(t('policy.editNoConfig'));
   expect(editBlocked(owner, {...state, complete: false}, t)).toBe(t('config.incomplete'));
+});
+
+it('keeps a final outbound from naming its group or any group that leads back to it', () => {
+  const text = [
+    'group {',
+    "  hk { filter: name(a) final: 'relay' }",
+    '  relay { filter: group(proxy) }',
+    '  proxy { filter: group(hk|jp) }',
+    '  jp { filter: name(b) final: direct }',
+    '  solo { filter: name(c) }',
+    '}'
+  ].join('\n');
+  const origin = {id: 'main', path: 'config.dae', kind: 'main', content: text, writable: true} as ConfigSource;
+  const links = outboundLinks(groupOwners([origin]));
+  expect(links.get('hk')).toEqual(['relay']);
+  expect(links.get('proxy')).toEqual(['hk', 'jp']);
+  // proxy nests hk; relay nests proxy; jp is nested by proxy but does not contain hk.
+  expect([...finalExcluded('hk', links)].sort()).toEqual(['hk', 'proxy', 'relay']);
+  expect([...finalExcluded('solo', links)]).toEqual(['solo']);
+  const sections = finalSections(
+    'hk',
+    {groups: ['hk', 'relay', 'proxy', 'jp', 'solo'], nodes: [{name: 'a', tcp: 42}, {name: 'b', alive: false}, {name: 'c'}, {name: 'jp'}, {name: 'a'}], links},
+    ['relay', 'gone'],
+    t
+  );
+  expect(sections.map(section => [section.title, section.items.map(item => routeChoiceValue(item.id))])).toEqual([
+    [undefined, [null, 'relay', 'gone']],
+    ['Built-in', ['direct', 'block']],
+    ['Groups', ['jp', 'solo']],
+    ['Nodes', ['a', 'b', 'c']]
+  ]);
+  expect(sections[3].items.map(item => [item.desc, item.tone])).toEqual([
+    ['42 ms', 'ok'],
+    [t('ui.unavailable'), 'err'],
+    ['—', undefined]
+  ]);
+});
+
+it('offers the direct members as default members, and only the fields the group can change', () => {
+  const {groups} = nodeFixtures(0, true);
+  const members = memberViews(memberHealth(groups[0], new Map()), t);
+  const [none, list] = memberSections(members, [null, null], t);
+  expect(none.items.map(item => item.label)).toEqual(['None']);
+  expect(list.title).toBe('Members');
+  expect(list.items.map(item => item.label)).toEqual(members.map(member => member.name));
+  expect(list.items.find(item => item.label === 'jp-01')).toMatchObject({desc: t('ui.unavailable'), tone: 'err'});
+  expect(routeFields(undefined, null)).toEqual([]);
+  expect(routeFields({...groups[0], capabilities: {...groups[0].capabilities, mutable_config: ['final_outbound']}}, null)).toEqual(['final_outbound']);
+});
+
+it('offers the default member only while the selected policy picks by hand', () => {
+  const {groups} = nodeFixtures(0, true);
+  const g: Group = {...groups[0], capabilities: {...groups[0].capabilities, mutable_config: ['default_member_id', 'final_outbound']}};
+  for (const policy of [null, 'select', 'fixed(0)', 'Fixed(1)', 'unknown']) expect(routeFields(g, policy)).toEqual(['default_member_id', 'final_outbound']);
+  for (const policy of ['min_moving_avg', 'urltest', 'fallback', 'roundrobin', 'score']) expect(routeFields(g, policy)).toEqual(['final_outbound']);
+});
+
+it('writes back a name read from the file and refuses one the file cannot hold', () => {
+  expect(routeWritable(null, "'x'")).toBe(true);
+  expect(routeWritable("it's", `"it's"`)).toBe(true);
+  expect(routeWritable('jp 01', null)).toBe(true);
+  expect(routeWritable("it's", null)).toBe(false);
 });

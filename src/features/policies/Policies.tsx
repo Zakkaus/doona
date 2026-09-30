@@ -150,7 +150,9 @@ function PolicyDetail(props: PolicyGroupInput) {
               <CheckEdit model={m.check} />
               <MoreMenu
                 actions={[
-                  ...(m.edit.available ? [{id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, reason: m.edit.tip, onAction: m.edit.show}] : []),
+                  ...(m.edit.available
+                    ? [{id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, reason: m.edit.tip, onAction: () => m.edit.show()}]
+                    : []),
                   ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
                   {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
                   ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
@@ -160,6 +162,11 @@ function PolicyDetail(props: PolicyGroupInput) {
           </ActionHelp>
           <Disclosure id={g.id} title={t('ui.config')}>
             <Kv items={g.fields} />
+            {m.edit.available && (
+              <Button small quiet isDisabled={m.edit.disabled} tip={m.edit.tip} onPress={() => m.edit.show(true)}>
+                {t('policy.edit')}
+              </Button>
+            )}
           </Disclosure>
           <div className="rp-toolbar">
             {g.showNetwork && (
@@ -244,6 +251,7 @@ export function Policies(props: PageProps) {
               {...card}
               focused={m.focus === card.id}
               health={m.health}
+              outbounds={m.outbounds}
               source={m.source}
               refreshGroups={m.refreshGroups}
               refreshNodes={m.refreshNodes}

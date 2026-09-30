@@ -6,6 +6,7 @@ import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
 import {usePolicyEdit, type PolicyDeclaration} from './usePolicyEdit';
+import type {OutboundCatalogue} from './view';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {ApiError, requestIdOf} from '../../api/error';
@@ -13,6 +14,8 @@ export type PolicyGroupInput = {
   id: string;
   name: string;
   health: Map<string, HealthObservation | undefined>;
+  // What the edit dialog's final outbound can name.
+  outbounds: OutboundCatalogue;
   refreshGroups: () => void;
   refreshNodes: () => void;
   source: MainSourceEdit;
@@ -24,7 +27,7 @@ export type PolicyGroupInput = {
   paused: boolean;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
-  const {id, health, refreshGroups, refreshNodes, source, declaration, selection, paused} = input;
+  const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused} = input;
   const t = useT();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused);
   // A language switch does not repeat the toast.
@@ -47,7 +50,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   }, [behind, selection, refetch]);
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
-  const edit = usePolicyEdit(g?.name ?? input.name, source, declaration);
+  const edit = usePolicyEdit(g?.name ?? input.name, source, declaration, {g, members, outbounds});
   const conflict = control.actionError instanceof ApiError && control.actionError.status === 409;
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;

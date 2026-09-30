@@ -4,14 +4,14 @@ import {MenuButton, MenuChoice, pickMenuKey, TextField} from '../../ui/ui';
 import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import {menuViews} from '../shared/nodeMenu';
-import type {NodeSearch} from './NodeSearch';
+import type {SearchList} from '../../ui/SearchList';
 import type {ActivityNodeMenu} from './view';
 
 type Model = ActivityNodeMenu & {setChosen: (id: string) => void};
 
 // The search for a long list stays out of the startup bundle; hovering or focusing the trigger loads it ahead of the
 // press.
-const nodeSearch = preloadable<ComponentProps<typeof NodeSearch>>(() => import('./NodeSearch').then(module => ({default: module.NodeSearch})));
+const nodeSearch = preloadable<ComponentProps<typeof SearchList>>(() => import('../../ui/SearchList').then(module => ({default: module.SearchList})));
 const preloadNodeSearch = () => void nodeSearch.preload().catch(() => undefined);
 
 export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
@@ -44,7 +44,7 @@ export function NodeMenu({model: vm, label}: {model: Model; label: string}) {
                   </>
                 }
               >
-                <nodeSearch.Component>{menu}</nodeSearch.Component>
+                <nodeSearch.Component label={t('policy.filter')}>{menu}</nodeSearch.Component>
               </Suspense>
             ) : (
               menu
