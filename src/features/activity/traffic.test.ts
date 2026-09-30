@@ -1,6 +1,6 @@
 import {afterEach, expect, it} from 'vitest';
 import {createServerClock, selectServerClock} from '../../api/serverClock';
-import {historyTrafficSamples, trafficWindow} from './traffic';
+import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow} from './traffic';
 
 afterEach(() => selectServerClock(createServerClock()));
 
@@ -40,4 +40,13 @@ it('keeps malformed rates unknown rather than converting them to zero', () => {
       samples: [{sampled_at: '2026-08-15T10:00:00Z', upload_bytes_per_second: 'broken', download_bytes_per_second: '0', connections: 0}]
     })
   ).toEqual([{time: Date.parse('2026-08-15T10:00:00Z'), up: null, down: 0, connections: 0}]);
+});
+
+it('offers each traffic range once, shortest first, and nothing outside the table', () => {
+  expect(Object.keys(trafficRanges)).toEqual(['live', 'm10', 'h1', 'h6', 'h24', 'd7']);
+  const seconds = Object.values(trafficRanges).map(range => range.seconds);
+  expect(seconds).toEqual([...seconds].sort((a, b) => a - b));
+  expect(isTrafficRange('h6')).toBe(true);
+  expect(isTrafficRange('h2')).toBe(false);
+  expect(isTrafficRange('toString')).toBe(false);
 });

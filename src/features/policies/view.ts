@@ -13,7 +13,7 @@ import type {SearchItem, SearchSection} from '../../ui/SearchSelect';
 import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
-const groupConfigLabels: Record<string, Key> = {
+export const groupConfigLabels = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',
   check_url: 'policy.cfg.checkUrl',
@@ -21,14 +21,14 @@ const groupConfigLabels: Record<string, Key> = {
   tolerance: 'policy.cfg.tolerance',
   idle_timeout: 'policy.cfg.idleTimeout',
   interrupt_connections: 'policy.cfg.interruptConnections'
-};
+} as const satisfies Record<string, Key>;
 const units: Record<string, Key> = {check_interval: 'policy.cfg.seconds', idle_timeout: 'policy.cfg.seconds', tolerance: 'policy.cfg.millis'};
 // Known fields get a label and a unit; anything the contract adds later shows its raw name.
 export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
   return Object.entries(group.config)
     .filter(([, value]) => value !== null)
     .map(([key, value]) => {
-      const label: Key | MessageRef = groupConfigLabels[key] ?? {key: 'flow.f.input', params: {name: key}};
+      const label: Key | MessageRef = (groupConfigLabels as Record<string, Key | undefined>)[key] ?? {key: 'flow.f.input', params: {name: key}};
       if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
       if (typeof value === 'number' && units[key]) return [label, {key: units[key], params: {n: value}}];
       if (key === 'default_member_id') return [label, group.members.find(member => member.id === value)?.name ?? String(value)];

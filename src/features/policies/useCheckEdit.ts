@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast, useLinked} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, type CheckEditDraft, type CheckField} from './view';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, groupConfigLabels, type CheckEditDraft, type CheckField} from './view';
 export type CheckEditView = {
   title: string;
   open: boolean;
@@ -16,12 +16,6 @@ export type CheckEditView = {
   close: () => void;
   save: (close: () => void) => void;
 };
-const labels = {
-  check_url: 'policy.cfg.checkUrl',
-  check_interval: 'policy.cfg.checkInterval',
-  tolerance: 'policy.cfg.tolerance',
-  idle_timeout: 'policy.cfg.idleTimeout'
-} as const;
 const help = {
   check_url: 'policy.checkUrlHelp',
   check_interval: 'policy.checkIntervalHelp',
@@ -87,7 +81,7 @@ export function useCheckEdit(
             const theirs = draft.theirs[id];
             return {
               id,
-              label: t(labels[id]),
+              label: t(groupConfigLabels[id]),
               value: draft.value[id],
               // A value the group took meanwhile replaces the help while the field still differs from it.
               description:
