@@ -1,6 +1,7 @@
 import type {Locator} from '@playwright/test';
-import {expect, expectLoadFailures, manyDevices, mockBackend, test, moreAction, moreItem} from './fixtures';
+import {expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
+import {ApiError} from '../src/api/error';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.
 // At 1440px the detail opens beside the table and the table keeps its main columns.
@@ -754,4 +755,22 @@ test.describe('with motion', () => {
     const running = await page.evaluate(() => document.getAnimations().filter(a => (a.effect as KeyframeEffect).target?.closest?.('.rp-underlay')).length);
     expect(running).toBe(0);
   });
+});
+
+test('a failed connection read is shown on both tabs with a retry', async ({page}) => {
+  const backend = await mockBackend(page);
+  let fail = true;
+  backend.handlers['GET connections'] = async request => {
+    if (fail) throw new ApiError(503, 'unavailable', 'Connection table unavailable');
+    return backend.api.connections(query(request));
+  };
+  await page.goto('/#/connections');
+  await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
+  const alert = page.getByRole('alert').filter({hasText: 'Connection table unavailable'});
+  await expect(alert).toBeVisible();
+  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await expect(alert).toBeVisible();
+  fail = false;
+  await alert.getByRole('button', {name: 'Retry'}).click();
+  await expect(alert).toHaveCount(0);
 });
