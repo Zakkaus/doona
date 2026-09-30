@@ -37,6 +37,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
     '/runtime/traffic/history': await api.trafficHistory(),
     '/connections': await api.connections({detail: 'full', limit: 1000}),
     '/nodes': await api.nodes({limit: 1000}),
+    '/providers': await api.providers({limit: 1000}),
     '/config': await api.config(),
     '/groups': await api.groups()
   };
