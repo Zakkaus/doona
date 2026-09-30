@@ -123,9 +123,9 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
     />
   );
   // Whether the group runs automatically or on a pinned member; an automatic group shows it only while pinned.
-  const pin = g?.overridable && (!g.automatic || g.pinned) && (
-    <Light small tone={g.overrideTone}>
-      {g.overrideText}
+  const pin = g?.pinned && (
+    <Light small tone="neutral">
+      {t('policy.overridden')}
     </Light>
   );
   const grid = g && <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />;

@@ -13,6 +13,7 @@ import type {SearchItem, SearchSection} from '../../ui/SearchSelect';
 import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
+import {within} from '../../shell/route';
 export const groupConfigLabels = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',
@@ -263,6 +264,7 @@ export type KindFilter = GroupKind | 'all';
 export const groupKind = (policy: Pick<Group['policy'], 'kind'>): GroupKind => (policy.kind === 'selector' ? 'manual' : 'auto');
 // The filter a query asks for; anything else shows every group.
 export const kindFilter = (value: string | null): KindFilter => (value === 'manual' || value === 'auto' ? value : 'all');
+export const kindQuery = (query: string, next: string) => within(query, {kind: kindFilter(next) === 'all' ? null : kindFilter(next), group: null});
 // The groups the filter shows and its choices with their counts. A link to a group the filter would hide shows every
 // group instead, so the link still lands on it.
 export function kindView<T extends {id: string; kind: GroupKind}>(cards: T[], requested: KindFilter, focus: string | null, t: Translator) {
@@ -324,8 +326,6 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     healthy: t('policy.healthy', {n: healthy}),
     down: down ? t('policy.down', {n: down}) : null,
     untested: untested ? t('policy.untested', {n: untested}) : null,
-    overrideTone: pinned ? ('neutral' as const) : ('ok' as const),
-    overrideText: t(pinned ? 'policy.overridden' : 'policy.automatic'),
     fields: groupConfigFields(g)
       .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
       .map(([key, value]): [string, string] => [

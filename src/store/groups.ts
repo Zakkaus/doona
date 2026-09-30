@@ -138,7 +138,7 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     busy: action.busy,
     canProbe,
     select: useCallback((member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal)), [api, id, network, run]),
-    clearOverride: useCallback(() => run('selection', signal => api.clearGroupOverride(id, network, signal)), [api, id, network, run]),
+    clearOverride: useCallback((scope = network) => run('selection', signal => api.clearGroupOverride(id, scope, signal)), [api, id, network, run]),
     probe: useCallback(
       () =>
         run('probe', async signal => {

@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {getApi} from '../../api';
 import {useT} from '../../i18n';
 import {nameText, writeGroupEntry} from '../../dae/groups';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
@@ -55,6 +56,7 @@ export type PolicyEditView = {
   setPolicy: (value: string) => void;
   add: () => void;
   save: (close: () => void) => void;
+  refreshOrigin: (write: () => Promise<boolean | undefined>) => Promise<boolean | undefined>;
 };
 // Where the group is declared, and whether that source's text is complete and the configuration read.
 export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolean | undefined; loaded: boolean; error: Error | null};
@@ -84,6 +86,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
   const blocked = editBlocked(owner, declaration, t);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const busy = source.busy || refreshing;
   const routes = routeFields(context.g, draft?.policy ?? null);
   const session = useDialogSession();
   const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
@@ -100,7 +104,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     }
   );
   const save = (close: () => void) => {
-    if (!draft) return;
+    if (!draft || busy) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
     const written = {default: entry?.default ?? null, final: entry?.final ?? null};
     if (!groupEditSafe(filters, draft.policy, entry) || !routes.every(id => routeWritable(draft[routeKeys[id]], written[routeKeys[id]]))) {
@@ -138,16 +142,16 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
   };
   // Edits wait while a save is in flight; what was submitted is what the outcome describes.
   const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
-    if (!source.busy) setDraft(prev => (prev ? update(prev) : prev));
+    if (!busy) setDraft(prev => (prev ? update(prev) : prev));
   };
   return {
     title: t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
     open: !!draft || viewing,
     editing: !!draft,
     editable: !!draft || (source.writable && blocked === null),
-    disabled: source.busy,
-    tip: source.writable ? (blocked ?? undefined) : undefined,
-    busy: source.busy,
+    disabled: busy,
+    tip: source.writable ? (blocked ?? undefined) : t('arrange.readOnly'),
+    busy,
     problem,
     policy: draft?.policy ?? null,
     filters: (draft?.filters ?? []).map((value, id) => ({
@@ -201,6 +205,27 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     },
     setPolicy: policy => edit(prev => ({...prev, policy})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
-    save
+    save,
+    refreshOrigin: async write => {
+      if (!draft) return write();
+      const current = session.start();
+      setRefreshing(true);
+      try {
+        const api = getApi();
+        const before = await api.config().catch(() => null);
+        const saved = await write();
+        if (saved) {
+          const after = await api.config().catch(() => null);
+          const origin = after?.sources.find(item => item.id === draft.origin.id);
+          // A pre-existing external edit still requires a refusal; only our own write advances the draft's base.
+          if (current() && origin && before?.sources.find(item => item.id === draft.origin.id)?.content_sha256 === draft.origin.content_sha256)
+            setDraft(prev => (prev && prev.origin === draft.origin ? {...prev, origin} : prev));
+          source.retry();
+        }
+        return saved;
+      } finally {
+        setRefreshing(false);
+      }
+    }
   };
 }

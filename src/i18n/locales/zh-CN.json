@@ -1008,7 +1008,6 @@
   "policy.addFilter": "添加筛选",
   "policy.aliveOnly": "只显示可用节点",
   "policy.allRegions": "全部地区",
-  "policy.automatic": "自动",
   "policy.backToAutomatic": "{name} 已恢复自动选择，当前成员为 {member}",
   "policy.both": "两者",
   "policy.byLatency": "按延迟",

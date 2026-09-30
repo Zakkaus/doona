@@ -43,6 +43,7 @@ test('a link to a group the filter hides shows every group and opens the linked 
   await mockBackend(page);
   await page.goto('/#/policies?kind=manual&group=resilient');
   await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'All 4'})).toBeChecked();
+  await expect(page).toHaveURL(/policies\?group=resilient$/);
   const card = page.getByRole('region', {name: 'resilient', exact: true});
   await expect(card).toBeInViewport();
   // The linked automatic group opens with its members shown.
@@ -50,6 +51,112 @@ test('a link to a group the filter hides shows every group and opens the linked 
   await expect(card.getByRole('button', {name: /^us-01\b/})).toBeVisible();
   // An automatic group nobody linked stays folded.
   await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('returning to a deep-linked group reopens it while a collapse within the visit stays closed', async ({page}) => {
+  await mockBackend(page);
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies?group=resilient');
+  const summary = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: /^Current/});
+  await expect(summary).toHaveAttribute('aria-expanded', 'true');
+  await summary.click();
+  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  await page.evaluate(() => (location.hash = '#/policies?group=gaming'));
+  await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'true');
+  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  await page.goBack();
+  await expect(summary).toHaveAttribute('aria-expanded', 'true');
+});
+
+test('releasing a collapsed automatic group clears overrides on both networks', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  await api.selectGroup('gaming', {member_id: 'hk-02', network: 'udp'});
+  await api.selectGroup('gaming', {member_id: 'jp-01', network: 'tcp'});
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies?group=gaming');
+  const card = page.getByRole('region', {name: 'gaming', exact: true});
+  await card.getByRole('radiogroup', {name: 'Select network for gaming'}).getByRole('radio', {name: 'TCP', exact: true}).click();
+  await card.getByRole('button', {name: /^Current/}).click();
+  await expect(card.getByRole('radiogroup')).toHaveCount(0);
+  await moreAction(card, 'Back to automatic');
+  await expect(card.getByText('Pinned', {exact: true})).toHaveCount(0);
+  expect(requests.find(request => request.method() === 'DELETE')?.url()).toContain('network=both');
+  const selection = (await api.group('gaming')).runtime.selection;
+  expect([selection.tcp?.source, selection.udp?.source]).not.toContain('override');
+});
+
+test('toggling interruption keeps unsaved filters and permits the next save', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
+  await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
+  await expect(dialog.getByRole('switch')).toBeChecked();
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(dialog).toHaveCount(0);
+  const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(saved).toContain('filter: name(hk-01, sg-01)');
+  expect((await api.group('proxy')).config.interrupt_connections).toBe(true);
+});
+
+for (const when of ['before', 'after'])
+  test(`an external source edit ${when} toggling interruption still refuses the first save`, async ({page}) => {
+    const {api} = await mockBackend(page);
+    await page.goto('/#/policies');
+    await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+    const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+    const external = async () => {
+      const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+      await api.replaceConfigSource(main.id, '# external edit\n' + main.content, `"${main.content_sha256}"`);
+      await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# external edit');
+    };
+    if (when === 'before') {
+      await external();
+      const refreshed = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/groups/proxy'));
+      await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
+      await refreshed;
+      await expect(dialog.getByRole('switch')).not.toBeChecked();
+      await expect(dialog.getByRole('switch')).toBeEnabled();
+    }
+    await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
+    await expect(dialog.getByRole('switch')).toBeChecked();
+    const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+    await expect(apply).toBeEnabled();
+    if (when === 'after') await external();
+    const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+    await apply.click();
+    await rejected;
+    await expect(dialog.getByRole('alert')).toBeVisible();
+  });
+
+test('a resource-level read-only dialog explains why configuration cannot be edited', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  capabilities.resources.config.writable = false;
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'View configuration');
+  await expect(page.getByRole('dialog', {name: 'proxy configuration'})).toContainText(
+    'This backend does not provide configuration writes, so this view is read-only.'
+  );
+});
+
+test('running configuration has a heading when interruption is its only field', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET groups/proxy'] = async () => {
+    const group = await api.group('proxy');
+    for (const key of Object.keys(group.config)) Object.assign(group.config, {[key]: null});
+    group.capabilities.mutable_config = ['interrupt_connections'];
+    return group;
+  };
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await expect(dialog.locator('.rp-kv')).toHaveCount(0);
+  await expect(dialog.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
+  await expect(dialog.getByRole('switch')).toBeVisible();
 });
 
 test('an automatic group sums itself up, opens on a press and still takes a pinned member', async ({page}) => {

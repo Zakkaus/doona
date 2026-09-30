@@ -52,10 +52,14 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   }, [behind, selection, refetch]);
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
   const card = g ? policyCardView(g, members, control.network, t) : null;
-  // An automatic group's members open on a press, or by themselves the first time the group is pinned or a link opens
-  // it; after that only the person opens and closes them. Nothing is kept once the card unmounts.
+  // Pinning opens members once; each new visit from a link opens them again.
   const [expanded, setExpanded] = useState(false);
   const [opened, setOpened] = useState(false);
+  const [wasFocused, setWasFocused] = useState(focused);
+  if (wasFocused !== focused) {
+    setWasFocused(focused);
+    if (focused) setExpanded(true);
+  }
   if (!opened && card && (card.pinned || focused)) {
     setOpened(true);
     setExpanded(true);
@@ -84,7 +88,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       }
     });
   const release = () =>
-    void control.clearOverride().then(result => {
+    void control.clearOverride(card?.automatic && !expanded ? 'both' : control.network).then(result => {
       if (!result || !g) return;
       const tcp = result.selection.tcp?.member_id,
         udp = result.selection.udp?.member_id;
@@ -97,9 +101,11 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       toast('positive', t('policy.backToAutomatic', {name: g.name, member}));
     });
   const interrupt = (value: boolean) =>
-    void control.setInterrupt(value).then(saved => {
-      if (saved && g) toast('positive', t('policy.updated', {name: g.name}));
-    });
+    void declared
+      .refreshOrigin(() => control.setInterrupt(value))
+      .then(saved => {
+        if (saved && g) toast('positive', t('policy.updated', {name: g.name}));
+      });
   const select =
     card && (card.selectable || card.overridable)
       ? (memberId: string) => {
@@ -139,7 +145,9 @@ export function usePolicyGroup(input: PolicyGroupInput) {
           fields: card.fields,
           heading: edit.editing ? t('policy.liveConfig') : null,
           reason: edit.editing ? null : (edit.tip ?? null),
-          interrupt: card.interruptable ? {selected: card.interrupt, unset: card.interruptUnset, isDisabled: !!control.busy, change: interrupt} : null
+          interrupt: card.interruptable
+            ? {selected: card.interrupt, unset: card.interruptUnset, isDisabled: !!control.busy || edit.busy, change: interrupt}
+            : null
         }
       : null,
     // Why the group's actions are locked, which the card gives as the lock beside its name.
