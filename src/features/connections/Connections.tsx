@@ -17,6 +17,7 @@ import {
   MoreMenu
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
+import {SearchSelect} from '../../ui/SearchSelect';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
 import {RuleDialog} from '../shared/RuleDialog';
@@ -41,6 +42,7 @@ export function Connections(props: PageProps) {
               label={vm.filterMenu.active ? t('conn.filtersActive', {n: vm.filterMenu.active}) : t('conn.filters')}
               count={vm.filterMenu.active}
               submenus={vm.filterMenu.submenus}
+              searchLabel={t('ui.filter')}
             >
               {t('conn.filters')}
             </ChoiceMenu>
@@ -49,8 +51,8 @@ export function Connections(props: PageProps) {
           <>
             <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
             <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
-            <LabeledSelect label={t('ui.outbound')} side value={vm.out} onChange={vm.setOut} items={vm.outbounds} />
-            <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick}>
+            <SearchSelect side label={t('ui.outbound')} searchLabel={t('ui.filter')} value={vm.out} onChange={vm.setOut} sections={vm.outboundSections} />
+            <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick} searchLabel={t('ui.filter')}>
               {t('conn.pick')}
             </ChoiceMenu>
           </>

@@ -377,6 +377,18 @@ it('lists devices and rules with equal counts in the same order whatever order t
   expect(menus([...rows].reverse())).toEqual(menus(rows));
 });
 
+it('lists every device and rule for the searchable menu, and the outbounds in one section for the picker', () => {
+  const c = {...connections.tcp[0], network: 'tcp'};
+  const rows = Array.from({length: 30}, (_, i) => ({...c, id: `c${i}`, src: `10.0.0.${i}:1`, rule_expression: `domain(r${i})`, outbound: `node-${i % 20}`}));
+  const lists = connectionsView(rows, connections, undefined, 'all', 'all', 'en-US', t);
+  expect(lists.picks.map(pick => pick.items.length)).toEqual([30, 30]);
+  const [section] = lists.outboundSections;
+  expect(lists.outboundSections).toHaveLength(1);
+  expect(section).not.toHaveProperty('title');
+  expect(section.items).toEqual(lists.outbounds);
+  expect(section.items).toHaveLength(21);
+});
+
 it('explains the states before a connection is established, and no other', () => {
   const help = connectionStateHelp('routing', t);
   expect(help?.title).toBe(t('ui.state'));
