@@ -101,33 +101,43 @@ createRoot(document.getElementById('root')!).render(
 );
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol !== 'file:') {
-  // A new build takes over an open tab silently; say so, since the page only changes on a reload.
-  // clients.claim() fires controllerchange on first install too; only a replaced controller is a new build.
+  // A new build takes over an open tab silently; say so, since the page only changes on a reload. An online load
+  // already fetches the new build's page while the old worker still controls it, so only a worker whose build differs
+  // from the page's is news. clients.claim() fires controllerchange on first install too, which stays silent.
   const running = navigator.serviceWorker.controller !== null;
+  const build = document.querySelector<HTMLMetaElement>('meta[name="doona-build"]')?.content;
+  // A worker claims the page while it activates; the page messages it once it has.
+  const activated = async (controller: ServiceWorker) => {
+    if (controller.state === 'activating') await new Promise<void>(resolve => controller.addEventListener('statechange', () => resolve(), {once: true}));
+    return controller.state === 'activated' && navigator.serviceWorker.controller === controller;
+  };
+  const controllerBuild = (controller: ServiceWorker) =>
+    new Promise<unknown>(resolve => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = event => resolve(event.data);
+      controller.postMessage({build: true}, [channel.port2]);
+    });
   // The worker installs no language or mock up front, so the page tells each active controller the language it shows
   // and whether it runs on the mock.
   const report = async () => {
     if (!(await (language ??= startLanguage()).catch(() => null))) return;
     await start().catch(() => null);
     const controller = navigator.serviceWorker.controller;
-    if (!controller) return;
-    if (controller.state === 'activating') await new Promise<void>(resolve => controller.addEventListener('statechange', () => resolve(), {once: true}));
-    if (controller.state === 'activated' && navigator.serviceWorker.controller === controller)
-      controller.postMessage({language: loadedLang(readLang()), mock: startedOnMock()});
+    if (controller && (await activated(controller))) controller.postMessage({language: loadedLang(readLang()), mock: startedOnMock()});
   };
   void navigator.serviceWorker.ready.then(report);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     void report();
-    if (!running) return;
+    const controller = navigator.serviceWorker.controller;
+    if (!running || !controller) return;
     // The new build can take over while the page's catalogue is still loading, so the notice waits for it. When no
     // catalogue loads, the page already offers its own reload.
-    void (language ??= startLanguage()).then(
-      () => {
-        const lang = loadedLang(readLang());
-        toast('info', translate(lang, 'ui.newBuild'), {action: {label: translate(lang, 'ui.reloadPage'), onAction: () => location.reload()}});
-      },
-      () => undefined
-    );
+    void (async () => {
+      if (!(await activated(controller)) || (await controllerBuild(controller)) === build) return;
+      await (language ??= startLanguage());
+      const lang = loadedLang(readLang());
+      toast('info', translate(lang, 'ui.newBuild'), {action: {label: translate(lang, 'ui.reloadPage'), onAction: () => location.reload()}});
+    })().catch(() => undefined);
   });
   navigator.serviceWorker.register('./sw.js').catch(error => {
     console.error('Service worker registration failed:', error);

@@ -93,11 +93,16 @@ export default defineConfig({
           const entry = bundle[name];
           hash.update(name).update(entry.type === 'chunk' ? entry.code : entry.source);
         }
+        const build = hash.digest('hex').slice(0, 16);
+        // index.html carries the build too, so a page can tell a worker of a new build from one of its own.
+        const html = bundle['index.html'];
+        if (html?.type !== 'asset' || !String(html.source).includes('<head>\n')) this.error('index.html has no <head> to stamp the build on');
+        html.source = String(html.source).replace('<head>\n', `<head>\n<meta name="doona-build" content="${build}">\n`);
         this.emitFile({
           type: 'asset',
           fileName: 'sw.js',
           source: template
-            .replace('__BUILD_HASH__', hash.digest('hex').slice(0, 16))
+            .replace('__BUILD_HASH__', build)
             .replace("'__PRECACHE__'", JSON.stringify(precache))
             .replace("'__LANGUAGES__'", JSON.stringify(perLanguage))
             .replace("'__MOCK__'", JSON.stringify(mock))
