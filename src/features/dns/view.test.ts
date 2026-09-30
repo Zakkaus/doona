@@ -18,6 +18,23 @@ const record: DnsLogRecord = {
   answers: [{name: 'example.com.', type: 'A', class: 'IN', ttl: 60, data: '192.0.2.1'}]
 };
 
+it('joins DNS answers with the active language separator', () => {
+  const data = {
+    observed_at: record.observed_at,
+    records: [{...record, answers: [...record.answers, {...record.answers[0], data: '192.0.2.2'}]}],
+    total: 1,
+    next_cursor: null
+  };
+  for (const [lang, expected] of [
+    ['en', '192.0.2.1, 192.0.2.2'],
+    ['zh-TW', '192.0.2.1、192.0.2.2'],
+    ['zh-CN', '192.0.2.1、192.0.2.2']
+  ] as const) {
+    const t: Translator = (key, params) => translate(lang, key, params);
+    expect(dnsLogView(data, true, t).rows[0].result).toBe(expected);
+  }
+});
+
 it('uses the same nullable field and answer projection for queries and log details', () => {
   const result: DnsQueryResponse = {
     domain: 'example.com',
