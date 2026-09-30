@@ -2,14 +2,13 @@ import type {Api} from './api';
 import {createApi} from './client';
 import {createServerClock, selectServerClock} from './serverClock';
 import {isDemoApi, pinnedProfile, storageRevision, touchStorage} from './profiles';
-import {sessionExpiry, sessionToken} from './session';
+import {sessionToken} from './session';
 
 let selected: Api | undefined;
 let configuration = '';
 let mockFactory: typeof import('./mock').createMockApi | undefined;
-// Every store hook asks for the client on every render; storage is read again only once something may have changed
-// it, or once the session it was built with has lapsed.
-let checked = {revision: -1, until: 0};
+// Every store hook asks for the client on every render; storage is read again only once something may have changed it.
+let checked = -1;
 if (typeof window !== 'undefined') window.addEventListener('storage', touchStorage);
 
 export async function initializeApi(): Promise<Api> {
@@ -22,7 +21,7 @@ export async function initializeApi(): Promise<Api> {
 export const startedOnMock = () => mockFactory !== undefined;
 
 export function getApi(): Api {
-  if (selected && checked.revision === storageRevision() && Date.now() < checked.until) return selected;
+  if (selected && checked === storageRevision()) return selected;
   // Another tab editing or deleting this tab's profile does not move this tab: it keeps that backend until it is reloaded.
   const profile = pinnedProfile();
   const base = profile?.api;
@@ -47,6 +46,6 @@ export function getApi(): Api {
     } else throw new Error('API initialization has not completed');
     configuration = key;
   }
-  checked = {revision: storageRevision(), until: profile && base ? sessionExpiry(profile.id, base) : Infinity};
+  checked = storageRevision();
   return selected;
 }

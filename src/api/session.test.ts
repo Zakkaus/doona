@@ -14,21 +14,24 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('serves a session only to its own profile and endpoint until it expires', () => {
-  saveSession('router', 'https://router.test/', 'hnk1_x', '2026-09-23T12:00:00Z');
-  const before = Date.parse('2026-09-23T11:59:59Z');
-  expect(sessionToken('router', 'https://router.test', before)).toBe('hnk1_x');
-  expect(sessionToken('other', 'https://router.test', before)).toBeNull();
-  expect(sessionToken('router', 'https://elsewhere.test', before)).toBeNull();
-  expect(sessionToken('router', 'https://router.test', Date.parse('2026-09-23T12:00:00Z'))).toBeNull();
+it('serves a session only to its own profile and endpoint', () => {
+  saveSession('router', 'https://router.test/', 'hnk1_x');
+  expect(sessionToken('router', 'https://router.test')).toBe('hnk1_x');
+  expect(sessionToken('other', 'https://router.test')).toBeNull();
+  expect(sessionToken('router', 'https://elsewhere.test')).toBeNull();
   clearSession();
-  expect(sessionToken('router', 'https://router.test', before)).toBeNull();
+  expect(sessionToken('router', 'https://router.test')).toBeNull();
 });
 
-it('reports a session that lapsed on its own as ended and drops it from storage', () => {
-  vi.useFakeTimers({now: Date.parse('2026-09-23T11:00:00Z')});
-  saveSession('router', 'https://router.test', 'hnk1_x', '2026-09-23T12:00:00Z');
-  vi.setSystemTime(Date.parse('2026-09-23T12:00:01Z'));
+it('keeps serving a session when the browser clock runs far ahead of the backend', () => {
+  // A router without an RTC hands out a session that ends before the browser's now; only its 401 ends it.
+  store.set('doona-session', JSON.stringify({profileId: 'router', api: 'https://router.test', token: 'hnk1_x', expiresAt: '2026-09-23T12:00:00Z'}));
+  vi.useFakeTimers({now: Date.parse('2026-09-24T00:30:00Z')});
+  expect(sessionToken('router', 'https://router.test')).toBe('hnk1_x');
+});
+
+it('drops a session the backend refused and reports it as ended', () => {
+  saveSession('router', 'https://router.test', 'hnk1_x');
   expect(endSession('router', 'https://router.test')).toBe(true);
   expect(store.has('doona-session')).toBe(false);
 });

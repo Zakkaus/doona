@@ -18,8 +18,7 @@ function storage(values: Map<string, string>) {
   return port;
 }
 
-it('reads storage for the client again only after a write, a storage event or the session lapsing', async () => {
-  vi.useFakeTimers({now: Date.parse('2026-09-23T11:00:00Z')});
+it('reads storage for the client again only after a write or a storage event', async () => {
   const local = storage(new Map([['doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://home.example', token: ''}])]]));
   const session = storage(new Map());
   const window = new EventTarget();
@@ -40,16 +39,13 @@ it('reads storage for the client again only after a write, a storage event or th
   expect(getApi()).toBe(first);
   expect(reads()).toBeGreaterThan(before);
 
-  saveSession('home', 'https://home.example', 'hnk1_x', '2026-09-23T12:00:00Z');
+  saveSession('home', 'https://home.example', 'hnk1_x');
   const signedIn = getApi();
   expect(signedIn).not.toBe(first);
   expect(getApi()).toBe(signedIn);
-  vi.setSystemTime(Date.parse('2026-09-23T12:00:00Z'));
-  const lapsed = getApi();
-  expect(lapsed).not.toBe(signedIn);
 
   writeProfiles({profiles: [{id: 'home', name: 'Home', api: 'https://other.example', token: ''}], activeId: 'home'});
-  expect(getApi()).not.toBe(lapsed);
+  expect(getApi()).not.toBe(signedIn);
 });
 
 it('keeps its backend when another tab deletes the profile this tab uses', async () => {
