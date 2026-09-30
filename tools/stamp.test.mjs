@@ -1,18 +1,18 @@
-import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {expect, it} from 'vitest';
 import {DEFAULT_PALETTE, palettes} from '../src/shell/palettes';
 import {LANGS, LOCALE} from '../src/i18n';
 import {pageDirection, rtlScripts, textDirection} from '../src/i18n/direction';
 import {negotiationCases} from '../src/i18n/negotiation.test-cases';
+import {stampScript} from './stamp.mjs';
 
-// The same injection vite.config.ts makes at build.
-const stamp = readFileSync(new URL('./stamp.js', import.meta.url), 'utf8')
-  .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
-  .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
-  .replace("'__LOCALES__'", JSON.stringify(LOCALE))
-  .replace("'__REFERENCE_LOCALE__'", JSON.stringify(LOCALE.en))
-  .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
+const stamp = stampScript({
+  palettes: palettes.map(palette => palette.id),
+  defaultPalette: DEFAULT_PALETTE,
+  locales: LOCALE,
+  referenceLocale: LOCALE.en,
+  rtlScripts
+});
 // `intl` stands in for the engine's Intl; the script's own context has the real one.
 const prepaint = (stored, dark, intl, tags = []) => {
   const document = {documentElement: {dataset: {}, lang: '', dir: ''}};
