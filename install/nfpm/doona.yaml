@@ -32,6 +32,26 @@ contents:
     dst: /usr/share/doc/doona/LICENSES/Apache-2.0.txt
     type: license
     packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/CC-BY-3.0.txt
+    dst: /usr/share/doc/doona/LICENSES/CC-BY-3.0.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/CC-BY-SA-4.0.txt
+    dst: /usr/share/doc/doona/LICENSES/CC-BY-SA-4.0.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/CC0-1.0.txt
+    dst: /usr/share/doc/doona/LICENSES/CC0-1.0.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/LicenseRef-GitHub-Logos.txt
+    dst: /usr/share/doc/doona/LICENSES/LicenseRef-GitHub-Logos.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/THIRD-PARTY-NOTICES.txt
+    dst: /usr/share/doc/doona/THIRD-PARTY-NOTICES.txt
+    type: license
+    packager: rpm
   - src: build/stage/doona/usr/share/doc/doona/NOTICE
     dst: /usr/share/doc/doona/NOTICE
     type: doc
