@@ -337,7 +337,7 @@ function Distribution({view}: {view: Model}) {
         isRowHeader: true,
         render: row => <TextTooltip className={row.expressionClass}>{row.expressionClass ? <DaeCode text={row.expression} /> : row.expression}</TextTooltip>
       },
-      {id: 'source', label: t('rule.distributionSource'), minWidth: 96, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
+      {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
       {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},
       {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => row.share}
     ],

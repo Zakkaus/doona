@@ -143,6 +143,9 @@
 .rp-help-row {
   display: inline-flex;
   align-items: center;
+  /* Bounded by its container, so a segmented control inside collapses to its picker instead of pushing the help out. */
+  min-width: 0;
+  max-width: 100%;
 }
 .rp-help-row-fill {
   display: flex;
