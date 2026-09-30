@@ -36,9 +36,11 @@ export function Modules(props: ModulesProps) {
               </span>
             </div>
           </ActionHelp>
-          <Light small tone={card.muted ? 'muted' : 'info'}>
-            {card.summary}
-          </Light>
+          {card.summary && (
+            <Light small tone={card.muted ? 'muted' : 'info'}>
+              {card.summary}
+            </Light>
+          )}
           {card.note && (
             <Light small tone="muted">
               {card.note}
