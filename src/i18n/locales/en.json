@@ -917,7 +917,7 @@
   "nodes.edit": "Edit {name}",
   "nodes.editMissing": "This subscription is no longer in its source file",
   "nodes.editOptions": "Other options, kept as written",
-  "nodes.editProviderHelp": "Changes the tag, URL and User-Agent where the entry is written; other options stay as written.",
+  "nodes.editProviderHelp": "Edits the subscription where it is written; other options stay as written.",
   "nodes.editProviderTitle": "Edit subscription {name}",
   "nodes.edited": "Saved {name}",
   "nodes.empty": "This source has no nodes",
@@ -926,7 +926,6 @@
     "other": "Every {n} hours"
   },
   "nodes.expires": "Expires",
-  "nodes.fetchNow": "Fetch now",
   "nodes.group": "Group",
   "nodes.groups": "Groups",
   "nodes.interval": "Auto-refresh",

@@ -102,7 +102,8 @@ test('a subscription a group filters on cannot be removed until the group change
   await moreAction(page.locator('body'), 'Remove sub-c', 'More actions for sub-c');
   const confirmation = page.getByRole('alertdialog');
   await expect(confirmation).toContainText('Groups that filter on sub-c: skylink, roaming. Change their filters on the Policies page first.');
-  await expect(confirmation.getByRole('button', {name: 'Remove sub-c', exact: true})).toBeDisabled();
+  await expect(confirmation.getByRole('button', {name: 'Remove sub-c', exact: true})).toHaveCount(0);
+  await expect(confirmation.getByRole('button')).toHaveText(['Close']);
   await confirmation.getByRole('link', {name: 'Open Policies', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies/);
   await expect(confirmation).toHaveCount(0);
@@ -760,7 +761,7 @@ test('a subscription in a read-only source offers its source file instead of an 
   await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
 });
 
-test('a subscription never fetched says so and offers the fetch', async ({page}) => {
+test('a subscription never fetched says so and refreshes from its row', async ({page}) => {
   const {api} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://example.org/sub'\n");
@@ -768,11 +769,10 @@ test('a subscription never fetched says so and offers the fetch', async ({page})
   await page.goto('/#/nodes?tab=list');
   const row = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-d'});
   await expect(row).toContainText('Not fetched');
-  await expect(rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'})).not.toContainText('Fetch now');
-  await row.getByRole('button', {name: 'Fetch now', exact: true}).click();
+  await expect(row.getByRole('button', {name: 'Fetch now'})).toHaveCount(0);
+  await row.getByRole('button', {name: 'Refresh sub-d', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d refreshed'})).toBeVisible();
   await expect(row).toContainText('OK');
-  await expect(row.getByRole('button', {name: 'Fetch now', exact: true})).toHaveCount(0);
 });
 
 test('a subscription not fetched yet is edited through its name', async ({page}) => {

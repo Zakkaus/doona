@@ -222,7 +222,6 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],
-    never,
     error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
     refreshLabel: t('nodes.refresh', {name}),
     removeLabel: t('nodes.remove', {name})
