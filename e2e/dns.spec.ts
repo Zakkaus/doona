@@ -165,6 +165,45 @@ test('paging holds the DNS window through new arrivals until Refresh', async ({p
   await expect(page.getByText(/Newer records are waiting/)).toHaveCount(0);
 });
 
+test('an older DNS page keeps the limit its cursor was issued with after the head falls back to a smaller one', async ({page}) => {
+  const {api, capabilities, handlers} = await mockBackend(page);
+  capabilities.resources.dns_log.max_page_size = 8;
+  const seed = await api.dnsLog();
+  const record = seed.records[0];
+  const sent: Array<[string | null, string | null]> = [];
+  let refuse = false;
+  handlers['GET dns/log'] = async request => {
+    const params = new URL(request.url()).searchParams;
+    const cursor = params.get('cursor');
+    sent.push([cursor, params.get('limit')]);
+    if (!cursor && refuse && params.get('limit') === '8') throw new ApiError(503, 'snapshot_unavailable', 'Busy', null, null, 1);
+    const ids = cursor === 'c1' ? ['d2'] : cursor === 'c2' ? ['d1'] : ['d4', 'd3'];
+    const next = cursor === 'c1' ? 'c2' : cursor === 'c2' ? null : 'c1';
+    return {...seed, records: ids.map(id => ({...record, id, question: {...record.question, name: id + '.test'}})), next_cursor: next};
+  };
+  await page.clock.install();
+  await page.goto('/#/dns?tab=log');
+  const older = page.getByRole('button', {name: 'Load older records'});
+  await older.click();
+  const rows = page.getByRole('grid', {name: 'Resolution log'}).getByRole('rowheader');
+  await expect(rows).toHaveText(['d4.test', 'd3.test', 'd2.test']);
+  const mark = sent.length;
+  refuse = true;
+  // The head poll is refused at 8, waits the second it is asked to, and is served at 2.
+  await expect
+    .poll(async () => {
+      await page.clock.fastForward(5100);
+      return sent.slice(mark).some(([cursor, limit]) => cursor === null && limit === '2');
+    })
+    .toBe(true);
+  await older.click();
+  await expect(rows).toHaveText(['d4.test', 'd3.test', 'd2.test', 'd1.test']);
+  expect(sent.filter(([cursor]) => cursor !== null)).toEqual([
+    ['c1', '8'],
+    ['c2', '8']
+  ]);
+});
+
 test('DNS source filters send IP literals only on head and older requests', async ({page}) => {
   const {api, capabilities, handlers, requests} = await mockBackend(page);
   capabilities.resources.dns_log.max_page_size = 1;
