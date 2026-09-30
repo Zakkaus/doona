@@ -321,6 +321,7 @@ function Tray({m}: {m: Model}) {
           label={t('arrange.addSelected')}
           isDisabled={locked || !targets.length}
           items={targets.map(group => ({id: group.name, label: group.name}))}
+          searchLabel={t('ui.filter')}
           onAction={group => {
             m.place(
               group,

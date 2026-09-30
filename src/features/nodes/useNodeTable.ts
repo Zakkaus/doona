@@ -10,6 +10,8 @@ import {namedIn, readGroupEntries} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {nodeRows, nodeRowView} from './view';
 import {compareNames} from '../../i18n/format';
+import {longList} from '../../ui/longList';
+import type {SearchSection} from '../../ui/SearchSelect';
 import {probeToast} from '../shared/probe';
 import {policyLabel} from '../shared/policyText';
 import {errorText} from '../../api/error';
@@ -64,6 +66,7 @@ export function useNodeTable(input: NodeTableInput) {
         .map(id => ({id, label: id})),
     [nodes, locale]
   );
+  const groupItems = [{id: '', label: t('nodes.anyGroup')}, ...groups];
   // A filter chosen for another source applies only if this source offers that value.
   const activeGroup = groups.some(item => item.id === group) ? group : '';
   const activeProtocol = protocols.some(item => item.id === protocol) ? protocol : '';
@@ -120,7 +123,8 @@ export function useNodeTable(input: NodeTableInput) {
     setProtocol,
     sort,
     setSort,
-    groups: [{id: '', label: t('nodes.anyGroup')}, ...groups],
+    groups: groupItems,
+    groupSections: longList(groups.length) ? [{id: 'groups', items: groupItems}] : null,
     protocols: [{id: '', label: t('nodes.anyProtocol')}, ...protocols],
     shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
@@ -166,6 +170,8 @@ export type NodeTableView = {
   sort: TableSort;
   setSort: (value: TableSort) => void;
   groups: Array<{id: string; label: string}>;
+  // The same choices for the searchable picker when there are more groups than a menu shows; null otherwise.
+  groupSections: SearchSection[] | null;
   protocols: Array<{id: string; label: string}>;
   shown: string;
   loading: boolean;
