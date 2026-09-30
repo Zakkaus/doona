@@ -100,12 +100,12 @@ test('without discovery, the nodes page reads its nodes but not the groups it on
   expect(backend.requests.filter(request => new URL(request.url()).pathname.endsWith('/api/v1/groups'))).toHaveLength(0);
 });
 
-test('a failed discovery is reported once, by the shell, on the activity and DNS pages', async ({page}) => {
+test('a failed discovery is reported once, by the shell, on the activity, DNS and logs pages', async ({page}) => {
   const backend = await mockBackend(page);
   backend.handlers['GET capabilities'] = async () => {
     throw new ApiError(500, 'internal_error', 'Discovery failed');
   };
-  for (const route of ['activity', 'dns']) {
+  for (const route of ['activity', 'dns', 'logs']) {
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content > .rp-alert').first()).toContainText('Discovery failed');
     await expect(page.locator('.rp-alert', {hasText: 'Discovery failed'})).toHaveCount(1);

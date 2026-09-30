@@ -18,6 +18,7 @@ export function Activity() {
   const vm = useActivity();
   const {p, locale, range, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
+  const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   if (!vm.ready) return alert || (vm.discoveryFailed ? null : <Loading>{t('ui.loading')}</Loading>);
   return (
     <>
@@ -46,7 +47,7 @@ export function Activity() {
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{vm.download}</span>
+              <span className={big}>{vm.download}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
@@ -56,7 +57,7 @@ export function Activity() {
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{vm.upload}</span>
+              <span className={big}>{vm.upload}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
@@ -66,7 +67,7 @@ export function Activity() {
         <CardLink href={href('connections', {tab: 'list'})} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
-              <span className="rp-big">{vm.connections}</span>
+              <span className={big}>{vm.connections}</span>
             </span>
             <span className="rp-spark">
               <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />
@@ -79,7 +80,7 @@ export function Activity() {
             <span className="rp-tile-val">
               {/* The value opens the overview, where the engine's process figures sit. */}
               <Link appearance="link" href={href('overview')} label={t('ui.valuePair', {label: t('act.cpu'), value: vm.cpu})}>
-                <span className="rp-big">{vm.cpu}</span>
+                <span className={big}>{vm.cpu}</span>
               </Link>
             </span>
           </div>

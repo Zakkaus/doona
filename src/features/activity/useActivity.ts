@@ -84,6 +84,8 @@ export function useActivity() {
     // The shell reports a failed discovery above every page; this page reports only its own reads.
     discoveryFailed: !!capabilities.error,
     error: runtime.error,
+    // The last figures stay while a read fails, marked as out of date.
+    stale: !!runtime.error && !!runtime.data,
     retry: runtime.refetch,
     history: {
       error: history.error,

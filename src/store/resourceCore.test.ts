@@ -313,6 +313,22 @@ it('honours a hold across polls, refreshes and invalidations', async () => {
   expect(fetch).toHaveBeenCalledTimes(2);
 });
 
+it('reads a failed resource again when its stream reconnects instead of waiting out the retry delay', async () => {
+  const fetch = vi.fn().mockRejectedValueOnce(new Error('unreachable')).mockResolvedValue('capabilities');
+  const resource = watchResource(createMockApi(), {key: ['capabilities'], every: 0, retryErrors: true, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(resource.getSnapshot().error?.message).toBe('unreachable');
+  // A refresh asked during the delay waits for it, and is answered by the read the reconnect starts.
+  const refresh = resource.refetch();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  resource.invalidate(true);
+  await expect(refresh).resolves.toEqual({key: '["capabilities",[]]', ok: true});
+  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(resource.getSnapshot()).toMatchObject({data: 'capabilities', error: null});
+});
+
 it('defers an initial automatic load and a held retry while hidden, resuming each once', async () => {
   Object.assign(document, {hidden: true});
   const fetch = vi
