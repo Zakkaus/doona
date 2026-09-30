@@ -65,9 +65,12 @@ it('waits for discovery and yields protected pages to login without blocking set
     profileId: 'router',
     api: 'https://router.test',
     backend: 'Router',
-    rejected: true
+    rejected: true,
+    missingApi: false
   });
   expect(shellView(configured, 'settings', undefined, error, undefined, null, t).content.kind).toBe('page');
+  const missing = new ApiError(404, 'resource_not_found', 'not found');
+  expect(shellView(configured, 'connections', undefined, missing, undefined, null, t).content).toMatchObject({kind: 'login', missingApi: true});
 });
 
 it('surfaces discovery failures and suppresses authentication only on the login surface', () => {

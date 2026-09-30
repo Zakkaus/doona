@@ -121,15 +121,19 @@ export function secondsLeft(until: number, now: number): number {
   return Math.max(0, Math.ceil((until - now) / 1000));
 }
 
-export function useLogin(profileId: string, api: string, backend: string, rejected: boolean) {
+export function useLogin(profileId: string, api: string, backend: string, rejected: boolean, missingApi: boolean) {
   const t = useT();
   const lang = useLang();
   // A session this tab held and the backend no longer accepts has ended; it is dropped before asking again.
   // endSession is idempotent for the page load, so running it in the initializer is safe under StrictMode.
   const [ended] = useState(() => endSession(profileId, api));
-  const [kind, setKind] = useState<SignIn | 'no-api' | null>(null);
+  const [discovered, setKind] = useState<SignIn | 'no-api' | null>(null);
+  // Discovery runs without the saved credential, so a Clash API guarded by a secret answers 401 there and passes for a
+  // token backend; the shell's capabilities read, made with the credential, already found no native API.
+  const kind = missingApi ? 'no-api' : discovered;
   const [discovery, setDiscovery] = useState<{attempt: number; error: Error | null}>({attempt: 0, error: null});
   useEffect(() => {
+    if (missingApi) return;
     const controller = new AbortController();
     resolveSignInKind(api, controller.signal).then(
       kind => setKind(kind),
@@ -139,7 +143,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
       }
     );
     return () => controller.abort();
-  }, [api, discovery.attempt]);
+  }, [api, discovery.attempt, missingApi]);
   const [token, setToken] = useState('');
   // The demo backend publishes its account, so its form arrives filled in and says so.
   const demo = isDemoApi(api);
