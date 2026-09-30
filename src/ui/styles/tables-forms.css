@@ -184,7 +184,7 @@
   margin-block-start: -8px;
   text-align: end;
 }
-.rp-dialog h2 {
+.rp-dialog h2:not(.rp-h3) {
   margin: 0;
   font-size: var(--rp-text-xl);
   line-height: 24px;

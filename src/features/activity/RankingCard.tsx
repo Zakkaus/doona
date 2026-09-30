@@ -11,7 +11,7 @@ export function RankingCard() {
     <Card ref={ref}>
       <div className="rp-row">
         <TextTooltip text={t('act.rankingScope')}>
-          <h3 className="rp-h3">{t('act.topDevices')}</h3>
+          <h2 className="rp-h3">{t('act.topDevices')}</h2>
         </TextTooltip>
         <Segmented
           label={t('act.topDevices')}

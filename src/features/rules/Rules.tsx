@@ -144,7 +144,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           {trace.result.query && (
             <Card>
               <div className="rp-row">
-                <h3 className="rp-h3">{trace.result.query.heading}</h3>
+                <h2 className="rp-h3">{trace.result.query.heading}</h2>
                 <ResultLinks links={trace.result.query.links} />
               </div>
               <Kv inline items={trace.result.query.fields} />
@@ -153,7 +153,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           {trace.result.evaluations.map((evaluation, i) => (
             <Card key={i}>
               <div className="rp-row">
-                <h3 className="rp-h3">{evaluation.heading}</h3>
+                <h2 className="rp-h3">{evaluation.heading}</h2>
                 <Kv inline items={evaluation.fields} />
                 {evaluation.probe && (
                   <Button
@@ -179,7 +179,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           {trace.result.dns.map(dns => (
             <Card key={dns.id}>
               <div className="rp-row">
-                <h3 className="rp-h3">{dns.heading}</h3>
+                <h2 className="rp-h3">{dns.heading}</h2>
                 <ResultLinks links={dns.links} />
               </div>
               <Kv inline items={dns.fields} />

@@ -624,7 +624,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await page.goto('/#/config');
   await expect(page.getByRole('tab', {name: 'Modules', exact: true})).toHaveAttribute('aria-selected', 'true');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
-  await expect(modules.getByRole('heading', {level: 3})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  await expect(modules.getByRole('heading', {level: 2})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
   await expect(modules.getByRole('region', {name: 'global', exact: true})).toContainText('6 settings');
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
   await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
@@ -719,7 +719,7 @@ test('modules show sections from read-only include files and open the file that 
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
-  await expect(modules.getByRole('heading', {level: 3})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  await expect(modules.getByRole('heading', {level: 2})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
   // The read-only main file is not offered as the place to add a missing section.
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('Section not configured.');
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).not.toContainText('add it to');

@@ -147,9 +147,9 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
         <>
           <div className="rp-row">
             <span className="rp-cluster">
-              <h3 className="rp-h3" id={heading}>
+              <h2 className="rp-h3" id={heading}>
                 {group.name}
-              </h3>
+              </h2>
               {policy && <Badge tip={policy.id}>{policy.label}</Badge>}
               {live && (
                 <Light small tone="neutral">

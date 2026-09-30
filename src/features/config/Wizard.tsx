@@ -49,7 +49,7 @@ export function Wizard({
     <Card aria-label={t('config.wizard')}>
       <span className="rp-label">{t('config.wizardNote')}</span>
 
-      <h3 className="rp-h3">{t('config.wizardSubscriptions')}</h3>
+      <h2 className="rp-h3">{t('config.wizardSubscriptions')}</h2>
       <div className="rp-list">
         {rows.map(item => (
           <div className={item.raw === null ? 'rp-toolbar top rp-sub-row' : 'rp-toolbar top'} key={item.index}>
@@ -93,7 +93,7 @@ export function Wizard({
         </div>
       </div>
 
-      <h3 className="rp-h3">{t('config.wizardTemplate')}</h3>
+      <h2 className="rp-h3">{t('config.wizardTemplate')}</h2>
       <div className="rp-toolbar top">
         <LabeledSelect
           isDisabled={busy}
@@ -142,7 +142,7 @@ export function Wizard({
         </div>
       )}
 
-      <h3 className="rp-h3">{t('config.wizardPreview')}</h3>
+      <h2 className="rp-h3">{t('config.wizardPreview')}</h2>
       <CodeEditor label={t('config.wizardPreview')} value={text} readOnly compact />
       {diagnostics.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>

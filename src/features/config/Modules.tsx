@@ -13,7 +13,7 @@ export function Modules(props: ModulesProps) {
           <ActionHelp reason={card.editReason}>
             <div className="rp-row">
               <span className="rp-cluster">
-                <h3 className="rp-h3 rp-code">{card.kind}</h3>
+                <h2 className="rp-h3 rp-code">{card.kind}</h2>
                 <span className="rp-label rp-code">{card.range}</span>
                 {card.editing && vm.dirty && <Badge tone="warn">{t('config.unsaved')}</Badge>}
               </span>

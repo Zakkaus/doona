@@ -388,7 +388,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
   if (!showing) return null;
   const head = (
     <div className="rp-row">
-      <h3 className="rp-h3">{title}</h3>
+      <h2 className="rp-h3">{title}</h2>
       <RButton className="rp-btn quiet icon close" aria-label={t('ui.close')} onPress={onClose}>
         <Close />
       </RButton>
