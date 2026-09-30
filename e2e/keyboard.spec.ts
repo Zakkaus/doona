@@ -224,3 +224,32 @@ test('Escape on a menu or dialog opened from a table row returns focus to its tr
   await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeHidden();
   await expect(edit).toBeFocused();
 });
+
+test('keyboard focus draws one ring on the focused tab', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  const tab = page.getByRole('tab', {name: 'Connections', exact: true});
+  await tab.focus();
+  await page.keyboard.press('ArrowLeft');
+  const focused = page.getByRole('tab').and(page.locator(':focus'));
+  await expect(focused).toHaveCSS('outline-style', 'solid');
+  await expect(page.locator('.rp-tabs')).toHaveAttribute('data-focus-visible', 'true');
+  await expect(page.locator('.rp-tabs')).toHaveCSS('outline-style', 'none');
+});
+
+test('segmented and table wrappers leave the ring on the focused control', async ({page}) => {
+  await page.goto('/#/connections?tab=list');
+  const group = page.getByRole('radiogroup', {name: 'Network protocol'});
+  await group.getByRole('radio').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio').and(page.locator(':focus'))).toHaveCSS('outline-style', 'solid');
+  await expect(group).toHaveCSS('outline-style', 'none');
+  const grid = page.getByRole('treegrid', {name: 'Connections'});
+  const row = grid.locator('[role=row][data-key]:not([data-disabled])').first();
+  await row.focus();
+  await page.keyboard.press('ArrowRight');
+  const focused = grid.locator(':focus');
+  await expect(focused).toHaveCSS('outline-style', 'solid');
+  await expect(row).toHaveCSS('outline-style', 'none');
+  await expect(grid).toHaveCSS('outline-style', 'none');
+  await expect(page.locator('.rp-table')).toHaveCSS('outline-style', 'none');
+});
