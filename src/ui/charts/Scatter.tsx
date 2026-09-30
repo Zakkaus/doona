@@ -1,4 +1,3 @@
-import {formatNumber, LOCALE, useLang} from '../../i18n';
 import {useChartDescription} from './description';
 import {LegendItem} from './LegendItem';
 import {useContentWidth} from '../hooks';
@@ -107,11 +106,10 @@ export function Scatter({
 }
 
 export function ScatterLegend({series}: {series: ScatterSeries[]}) {
-  const locale = LOCALE[useLang()];
   return (
     <div className="rp-legend">
       {series.map(s => (
-        <LegendItem key={s.id} swatch={s.color} label={s.label} value={formatNumber(s.points.length, locale)} />
+        <LegendItem key={s.id} swatch={s.color} label={s.label} value={String(s.points.length)} />
       ))}
     </div>
   );

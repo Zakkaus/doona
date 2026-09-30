@@ -37,7 +37,7 @@ const inputLabels: Record<string, Key | string> = {
 };
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
 
-function flowStepFields(step: FlowStep, lang: Lang): Array<[Key | MessageRef, string | MessageRef]> | null {
+function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
   const text = (value: unknown) => (value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
   switch (step.stage) {
     case 'input':
@@ -55,10 +55,10 @@ function flowStepFields(step: FlowStep, lang: Lang): Array<[Key | MessageRef, st
         ['flow.f.plane', word(step.data.plane)],
         [
           'ui.rule',
-          formatList(
-            lang,
-            step.data.rules.filter(rule => rule.result === 'matched').map(rule => rule.expression ?? rule.rule_id)
-          ) || '—'
+          step.data.rules
+            .filter(rule => rule.result === 'matched')
+            .map(rule => rule.expression ?? rule.rule_id)
+            .join(', ') || '—'
         ],
         ['ui.outbound', text(step.data.outbound)],
         ['flow.f.must', yesNo(step.data.must)]
@@ -279,7 +279,7 @@ export function flowDetailView(
     steps: [...detail.trace.steps]
       .sort((a, b) => a.seq - b.seq)
       .map(step => {
-        const fields = flowStepFields(step, lang);
+        const fields = flowStepFields(step);
         return {
           id: step.seq,
           stage: enumLabel(stages, step.stage, t),

@@ -1,5 +1,6 @@
-import type {Key, Params, Translator} from '../i18n';
+import type {Key, Translator} from '../i18n';
 import {enumLabel} from '../i18n/enum';
+import {formatNumber, LOCALE, readLang} from '../i18n';
 import type {
   ApiEvent,
   Connection,
@@ -166,7 +167,7 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
   return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
 }
 
-export type MessageRef = {key: Key; params?: Params};
+export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
 export type LabelFn = (key: Key) => string;
 export const eventKindLabels: Record<EventKind, Key> = {
@@ -191,6 +192,13 @@ const gapReasons: Record<string, Key> = {
   evicted: 'event.gap.evicted',
   recording_changed: 'event.gap.recording'
 };
+// A safe integer goes to the translator, which groups it in the caller's language; a larger UInt64 is grouped
+// here as a bigint, since a JS number would round it.
+function droppedCount(value: string | null): string | number {
+  const count = parseU64(value);
+  if (count === null) return value ?? '—';
+  return count <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(count) : formatNumber(count, LOCALE[readLang()]);
+}
 const operationStatuses: Record<string, Key> = {queued: 'ov.queued', running: 'ov.running', succeeded: 'ov.succeeded', failed: 'ov.failed'};
 export function eventSummary(event: ApiEvent, t?: Translator): MessageRef {
   switch (event.event) {
@@ -199,7 +207,7 @@ export function eventSummary(event: ApiEvent, t?: Translator): MessageRef {
     case 'runtime.updated':
       return {key: 'event.resource', params: {resource: event.data.href}};
     case 'flow.updated':
-      return {key: 'event.flow', params: {resourceId: event.data.resource_id, revision: event.data.revision}};
+      return {key: 'event.flow', params: {resourceId: event.data.resource_id, revision: String(event.data.revision)}};
     case 'operation.updated': {
       const status = event.data.status;
       return {key: 'event.operation', params: {resourceId: event.data.resource_id, status: t ? enumLabel(operationStatuses, status, t) : status}};
@@ -214,7 +222,7 @@ export function eventSummary(event: ApiEvent, t?: Translator): MessageRef {
       const id = event.data.resource_id;
       if (parseU64(event.data.dropped_records) === 0n)
         return id === null ? {key: 'event.gapUnscopedNoCount', params: {reason}} : {key: 'event.gapNoCount', params: {reason, resourceId: id}};
-      const params = {reason, n: parseU64(event.data.dropped_records) ?? event.data.dropped_records ?? '—'};
+      const params = {reason, n: droppedCount(event.data.dropped_records)};
       return id === null ? {key: 'event.gapUnscoped', params} : {key: 'event.gap', params: {...params, resourceId: id}};
     }
     // An event kind from a newer backend: the resource it names, when it names one.

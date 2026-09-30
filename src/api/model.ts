@@ -50,7 +50,10 @@ export type RoutingTraceInput = Extract<Schema['RoutingTraceInput'], {network: u
 export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> & {input: RoutingTraceInput};
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
-export type ErrorResponse = Schema['ErrorResponse'];
+export type ErrorDetails = Record<string, unknown> & {reason?: string};
+export type ErrorResponse = Omit<Schema['ErrorResponse'], 'error'> & {
+  error: Omit<Schema['ErrorResponse']['error'], 'details'> & {details?: ErrorDetails | null};
+};
 export type OperationAccepted = Schema['OperationAccepted'] & {retryAfter: number};
 // The generator narrows the open OperationCommon.result object to Record<string, never>.
 type SucceededOperation<K extends Schema['OperationKind'], R> = Omit<Schema['OperationCommon'], 'kind' | 'status' | 'result' | 'error'> & {

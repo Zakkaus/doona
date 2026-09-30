@@ -2,9 +2,10 @@ import type {ErrorResponse} from './model';
 
 import type {Key} from '../i18n';
 import type {Params, Translator} from '../i18n/index';
-import {backendMessage, oneLine, type BackendMessage} from '../i18n/backend';
+import {backendMessage, oneLine, refusalMessage, type BackendMessage} from '../i18n/backend';
 
 export class ApiError extends Error {
+  configurationWrite = false;
   constructor(
     public status: number,
     public code: string,
@@ -175,17 +176,17 @@ export class LocalError extends Error {
 const localDetail = (error: LocalError, t: Translator) =>
   error.detail ? (error.code ? oneLine(backendMessage(error.code, error.detail, t, error.details), t) : error.detail) : undefined;
 
-// The words for a failure: doona's own errors in the current language, the backend's message as it sent it. A code
-// honk reuses keeps the backend's words as the detail, which carries the request note when there is one and it is shown:
-// a toast leaves it out, the places that stay on screen keep it for a bug report.
+// Local failures use the page language; backend refusals name the recovery or keep the backend's message.
 export function errorLines(error: unknown, t: Translator, showRequestId = true): BackendMessage {
   if (error instanceof LocalError) {
+    const refusal = error.key === 'ui.operationFailed' && error.code ? refusalMessage(error.details, t) : undefined;
+    if (refusal) return {summary: refusal};
     const detail = localDetail(error, t);
     return {summary: detail ? t('ui.valuePair', {label: t(error.key), value: detail}) : t(error.key)};
   }
   if (error instanceof ApiError && error.text) return {summary: t(error.text.key, error.text.params)};
   if (!(error instanceof ApiError)) return {summary: error instanceof Error ? error.message : String(error)};
-  const {summary, detail} = backendMessage(error.code, error.message, t, error.details);
+  const {summary, detail} = backendMessage(error.code, error.message, t, error.details, error.configurationWrite);
   const note = showRequestId && error.requestId ? t('ui.requestNote', {requestId: error.requestId}) : '';
   return detail ? {summary, detail: detail + note} : {summary: summary + note};
 }

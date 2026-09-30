@@ -52,7 +52,7 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   expect(policyCardView(g, members, 'tcp', t).selected).toBe('hk-01');
   expect(policyCardView(g, members, 'udp', t).selected).toBe('hk-02');
   expect(policyCardView(g, members, 'both', t).fields.some(([key]) => key === t('policy.cfg.interruptConnections'))).toBe(false);
-  expect(groupConfigFields(g)).toContainEqual(['policy.cfg.checkInterval', {key: 'ui.seconds', params: {n: 30}}]);
+  expect(groupConfigFields(g)).toContainEqual(['policy.cfg.checkInterval', {key: 'policy.cfg.seconds', params: {n: 30}}]);
   expect(groupConfigFields(g)).toContainEqual(['policy.cfg.interruptConnections', {key: 'ui.no'}]);
   // An unset option reads as off, flagged so the card can say the engine default applies.
   const unset = {...g, config: {...g.config, interrupt_connections: null}};

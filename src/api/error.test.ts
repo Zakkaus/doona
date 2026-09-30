@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {LANGS, translate} from '../i18n';
-import {ApiError, LocalError, errorLines, errorText, failureNotice, noticeText, requestIdOf} from './error';
+import {ApiError, LocalError, errorLines, errorText, failureNotice, noticeText, requestIdOf, responseError} from './error';
 
 it('joins a local error and its detail with the colon of the active language', () => {
   const error = new LocalError('ui.operationFailed', 'member refused');
@@ -62,10 +62,93 @@ it('gives a reused code the backend message as its detail, with the request note
   });
 });
 
+const reasons = [
+  ['writes_disabled', 'ui.refusal.writesDisabled'],
+  ['configuration_unavailable', 'ui.refusal.configurationUnavailable'],
+  ['listener_secret_source', 'ui.refusal.listenerSecretSource'],
+  ['listener_secret_in_content', 'ui.refusal.listenerSecretInContent'],
+  ['listener_settings_changed', 'ui.refusal.listenerSettingsChanged'],
+  ['credential_sources_changed', 'ui.refusal.credentialSourcesChanged'],
+  ['import_entry_changed', 'ui.refusal.importEntryChanged'],
+  ['unsafe_path', 'ui.refusal.unsafePath']
+] as const;
+
+it.each(reasons)('shows the recovery for %s in every language before the code, stage or message', (reason, key) => {
+  for (const [lang] of LANGS) {
+    const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate(lang, key, params);
+    const error = new ApiError(403, 'permission_denied', 'Backend refusal', 'refusal-9', {reason, stage: 'write'});
+    expect(errorText(error, t, false)).toBe(t(key));
+    expect(errorText(error, t)).toBe(t(key) + t('ui.requestNote', {requestId: 'refusal-9'}));
+    expect(errorText(new LocalError('ui.operationFailed', error.message, error.code, error.details), t)).toBe(t(key));
+  }
+});
+
+const configurationCodes = [
+  [403, 'permission_denied', 'ui.backend.permissionDenied'],
+  [404, 'capability_not_supported', 'ui.backend.capabilityNotSupported'],
+  [503, 'temporarily_unavailable', 'ui.backend.temporarilyUnavailable'],
+  [400, 'invalid_request', 'ui.backend.invalidRequest']
+] as const;
+
+it.each(configurationCodes)('renders configuration-write refusals for HTTP %s %s without a code prefix', (status, code, key) => {
+  for (const [lang] of LANGS) {
+    const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate(lang, key, params);
+    for (const details of [null, {}, {reason: 'future_reason'}, {reason: 'constructor'}, {reason: 42}, {reason: 'credential_sources_changed'}]) {
+      const error = new ApiError(status, code, 'A specific refusal', null, details);
+      error.configurationWrite = true;
+      expect(errorLines(error, t)).toEqual({
+        summary: details?.reason === 'credential_sources_changed' ? t('ui.refusal.credentialSourcesChanged') : 'A specific refusal'
+      });
+      error.message = '';
+      expect(errorText(error, t)).toBe(details?.reason === 'credential_sources_changed' ? t('ui.refusal.credentialSourcesChanged') : t(key));
+    }
+  }
+});
+
+it.each([
+  [422, 'unsupported_value', 'ui.backend.unsupportedValue'],
+  [409, 'state_conflict', 'ui.backend.stateConflict'],
+  [412, 'stale_revision', 'ui.backend.staleRevision'],
+  [428, 'precondition_required', 'ui.backend.preconditionRequired'],
+  [413, 'request_too_large', 'ui.backend.requestTooLarge'],
+  [415, 'unsupported_media_type', 'ui.backend.unsupportedMediaType'],
+  [429, 'rate_limited', 'ui.backend.rateLimited']
+] as const)('keeps the existing mapping for other configuration-write errors: HTTP %s %s', (status, code, key) => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
+  const error = new ApiError(status, code, 'Backend detail');
+  error.configurationWrite = true;
+  expect(errorLines(error, t)).toEqual({summary: t(key), ...(['unsupported_value', 'state_conflict'].includes(code) ? {detail: 'Backend detail'} : {})});
+});
+
+it.each([null, {}, {reason: 'unrelated_reason'}])('keeps ordinary permission errors localized: %j', details => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('zh-TW', key, params);
+  expect(errorLines(new ApiError(403, 'permission_denied', 'Access denied', null, details), t)).toEqual({summary: t('ui.backend.permissionDenied')});
+});
+
+it('carries reason and other details from an HTTP error into the recovery text', async () => {
+  const error = await responseError(
+    new Response(
+      JSON.stringify({
+        error: {code: 'permission_denied', message: 'Refused', details: {reason: 'credential_sources_changed', stage: 'write'}},
+        request_id: 'http-9'
+      }),
+      {status: 403}
+    )
+  );
+  expect(error.details).toEqual({reason: 'credential_sources_changed', stage: 'write'});
+  expect(errorText(error, (key, params) => translate('en', key, params), false)).toBe('The sources declaring API secrets have changed. Reload honk and retry.');
+});
+
 it('finds the request id on a failure or on the failure that stopped a partial one', () => {
   const cause = new ApiError(502, 'upstream_unavailable', 'Upstream unreachable', 'probe-9');
   expect(requestIdOf(cause)).toBe('probe-9');
   expect(requestIdOf(Object.assign(new LocalError('ui.operationFailed'), {cause}))).toBe('probe-9');
   expect(requestIdOf(new ApiError(502, 'upstream_unavailable', 'Upstream unreachable'))).toBeUndefined();
   expect(requestIdOf(new Error('offline'))).toBeUndefined();
+});
+
+it('shows refusal recovery directly for a failed operation', () => {
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
+  const error = new LocalError('ui.operationFailed', 'Refused', 'permission_denied', {reason: 'credential_sources_changed'});
+  expect(errorText(error, t)).toBe('The sources declaring API secrets have changed. Reload honk and retry.');
 });

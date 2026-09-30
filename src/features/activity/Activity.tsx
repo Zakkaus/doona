@@ -46,7 +46,7 @@ export function Activity() {
 
       {/* Each tile opens what it measures: the rates open the connections' traffic, the count opens their list. */}
       <div className="rp-strip">
-        <CardLink href={href('connections', {tab: 'traffic'})} label={t('ui.download')} tile={{icon: <Download />, tint: 1}}>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className={big}>{vm.download}</span>
@@ -56,7 +56,7 @@ export function Activity() {
             </span>
           </div>
         </CardLink>
-        <CardLink href={href('connections', {tab: 'traffic'})} label={t('ui.upload')} tile={{icon: <Upload />, tint: 4}}>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
               <span className={big}>{vm.upload}</span>

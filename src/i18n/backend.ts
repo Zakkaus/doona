@@ -76,6 +76,19 @@ const known: Record<string, Key> = {
   'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };
 
+const configurationRefusals = new Set(['permission_denied', 'capability_not_supported', 'temporarily_unavailable', 'invalid_request']);
+
+const refusalReasons: Record<string, Key> = {
+  configuration_unavailable: 'ui.refusal.configurationUnavailable',
+  credential_sources_changed: 'ui.refusal.credentialSourcesChanged',
+  import_entry_changed: 'ui.refusal.importEntryChanged',
+  listener_secret_in_content: 'ui.refusal.listenerSecretInContent',
+  listener_secret_source: 'ui.refusal.listenerSecretSource',
+  listener_settings_changed: 'ui.refusal.listenerSettingsChanged',
+  unsafe_path: 'ui.refusal.unsafePath',
+  writes_disabled: 'ui.refusal.writesDisabled'
+};
+
 // Codes the demo's own validation sets, with the params their words take. honk may send the same code without them.
 const demoDiagnostics: Record<string, [Key, ...string[]]> = {
   bare_condition: ['config.diagnostic.bareCondition'],
@@ -101,10 +114,19 @@ const reused = new Set(['invalid_request', 'unsupported_value', 'state_conflict'
 // A backend message as a summary in the page language and, for a reused code, the backend's words as its detail.
 export type BackendMessage = {summary: string; detail?: string};
 
+export function refusalMessage(details: unknown, t: Translator): string | undefined {
+  const reason = (details as {reason?: unknown} | null)?.reason;
+  const key = typeof reason === 'string' ? own(refusalReasons, reason) : undefined;
+  return key ? t(key) : undefined;
+}
+
 // honk names the step that failed in details.stage. A stage with its own words says more than the code; any other
 // stage is added to the code's words. A known stage that repeats the code, as a management write's `state_conflict`
 // does, adds nothing, so a reused code keeps the backend's words.
-export function backendMessage(code: string, message: string, t: Translator, details?: unknown): BackendMessage {
+export function backendMessage(code: string, message: string, t: Translator, details?: unknown, configurationWrite = false): BackendMessage {
+  const refusal = refusalMessage(details, t);
+  if (refusal) return {summary: refusal};
+  if (configurationWrite && configurationRefusals.has(code) && message) return {summary: message};
   const named = (details as {stage?: unknown} | null | undefined)?.stage;
   const codeKey = own(known, code);
   const stage = named === code && codeKey ? undefined : named;

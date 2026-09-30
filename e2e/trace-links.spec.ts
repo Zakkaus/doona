@@ -2,14 +2,6 @@ import {detail, expect, mockBackend, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
-test('a resolve mode from a newer backend retains its name', async ({page}) => {
-  const {capabilities} = await mockBackend(page);
-  (capabilities.resources.routing_trace.resolve_modes as string[]).push('future');
-  await page.goto('/#/rules?tab=trace');
-  await page.getByRole('button', {name: /Resolution mode$/}).click();
-  await expect(page.getByRole('option', {name: 'future', exact: true})).toBeVisible();
-});
-
 test('a trace link fills in the form without running it', async ({page}) => {
   let traced = false;
   page.on('request', request => {

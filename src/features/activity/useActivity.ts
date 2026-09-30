@@ -32,8 +32,8 @@ export function useActivity() {
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, 24), [polledTraffic, historySamples]);
   const traffic = useMemo(
     () => [
-      {label: t('ui.download'), color: p.cat[0], values: series.down},
-      {label: t('ui.upload'), color: p.cat[3], values: series.up}
+      {label: t('act.download'), color: p.cat[0], values: series.down},
+      {label: t('act.upload'), color: p.cat[3], values: series.up}
     ],
     [t, p, series]
   );
