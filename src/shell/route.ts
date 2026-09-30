@@ -148,8 +148,10 @@ export function useRoute(api: string | null) {
         return;
       }
       const hash = currentHash(api);
-      const nextPosition = historyPosition(position.current + 1);
       const next = updateRoute(loc, hash);
+      // An entry without a position is a new hash the browser pushed, unless it is the current address again, which
+      // replaces the entry in place (and is where Firefox drops its state).
+      const nextPosition = historyPosition(next === loc ? position.current : position.current + 1);
       if (next !== loc && dirty.current) {
         const delta = restoreDraftRoute(loc, position.current);
         if (delta !== undefined) {
