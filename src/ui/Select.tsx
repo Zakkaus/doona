@@ -22,6 +22,8 @@ import {cx} from './cx';
 import {Button, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
+import {LazySearchList, preloadSearchList} from './LazySearchList';
+import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
 
 export type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
@@ -110,8 +112,22 @@ type MenuButtonProps = {
   // How many of the menu's choices are in force, as S2 badges an ActionButton; zero shows none. The label must say
   // it too, since the badge is hidden from assistive technology.
   count?: number;
+  // Runs when the trigger is hovered or focused, ahead of a press, such as to load what the menu will need.
+  onIntent?: () => void;
 };
-export function MenuButton({children, content, label, quiet, small, chevron = true, isDisabled, appearance, placement = 'bottom end', count}: MenuButtonProps) {
+export function MenuButton({
+  children,
+  content,
+  label,
+  quiet,
+  small,
+  chevron = true,
+  isDisabled,
+  appearance,
+  placement = 'bottom end',
+  count,
+  onIntent
+}: MenuButtonProps) {
   const badge = count ? (
     <span className="rp-count" aria-hidden="true">
       {count}
@@ -131,6 +147,8 @@ export function MenuButton({children, content, label, quiet, small, chevron = tr
           aria-label={label}
           aria-describedby={reasonId}
           isDisabled={isDisabled}
+          onHoverStart={onIntent}
+          onFocus={onIntent}
         >
           {children}
           {badge}
@@ -156,7 +174,8 @@ function SectionMenu({
   sections,
   headers = true,
   focusedByCaller,
-  onAction
+  onAction,
+  searchLabel
 }: {
   label: string;
   labelledBy?: string;
@@ -165,11 +184,14 @@ function SectionMenu({
   // The caller moves focus itself, so the menu does not take it to its first item as a trigger's menu does.
   focusedByCaller?: boolean;
   onAction?: (key: string) => void;
+  searchLabel?: string;
 }) {
-  return (
+  const long = !!searchLabel && longList(itemCount(sections));
+  const menu = (
     <Menu
       aria-label={label}
       aria-labelledby={labelledBy}
+      className={long ? 'rp-menu-scroll' : undefined}
       // eslint-disable-next-line jsx-a11y/no-autofocus -- false only: the caller places focus instead of the trigger
       autoFocus={focusedByCaller ? false : undefined}
       onAction={onAction && (key => onAction(String(key)))}
@@ -191,7 +213,9 @@ function SectionMenu({
       ))}
     </Menu>
   );
+  return long ? <LazySearchList label={searchLabel}>{menu}</LazySearchList> : menu;
 }
+const itemCount = (sections: ChoiceSection[]) => sections.reduce((n, section) => n + section.items.length, 0);
 
 // The chosen item, named with its section when the submenu has several and the item alone would not say which.
 export function chosen(sections: ChoiceSection[], t: Translator) {
@@ -228,7 +252,7 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
 // text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
 const phone = '(max-width: 639px)';
-function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]}) {
+function SubmenuMenu({label, submenus, actions = [], searchLabel}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; searchLabel?: string}) {
   const t = useT();
   const inline = useMediaQuery(phone);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
@@ -260,7 +284,7 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
           <SubmenuTrigger key={submenu.label}>
             <SubmenuItem {...submenu} />
             <Popover className="rp-popover" offset={-4} crossOffset={-9}>
-              <SectionMenu label={submenu.label} sections={submenu.sections} headers={submenu.sections.length > 1} />
+              <SectionMenu label={submenu.label} sections={submenu.sections} headers={submenu.sections.length > 1} searchLabel={searchLabel} />
             </Popover>
           </SubmenuTrigger>
         ))}
@@ -285,7 +309,14 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
           <span id={title}>{submenu.label}</span>
         </RButton>
         {/* Named by its title, not by the menu button the trigger would name it after. */}
-        <SectionMenu label={submenu.label} labelledBy={title} sections={submenu.sections} headers={submenu.sections.length > 1} focusedByCaller />
+        <SectionMenu
+          label={submenu.label}
+          labelledBy={title}
+          sections={submenu.sections}
+          headers={submenu.sections.length > 1}
+          focusedByCaller
+          searchLabel={searchLabel}
+        />
       </div>
     );
   }
@@ -328,7 +359,8 @@ function FlatMenu({
   selectionMode,
   value,
   onChange,
-  onAction
+  onAction,
+  searchLabel
 }: {
   label: string;
   items: Items;
@@ -336,10 +368,14 @@ function FlatMenu({
   value?: string | string[];
   onChange?: (key: string) => void;
   onAction?: (key: string) => void;
+  searchLabel?: string;
 }) {
-  return (
+  const list = typeof items === 'function' ? items() : items;
+  const long = !!searchLabel && longList(list.length);
+  const menu = (
     <Menu
       aria-label={label}
+      className={long ? 'rp-menu-scroll' : undefined}
       selectionMode={selectionMode}
       selectedKeys={value == null ? undefined : typeof value === 'string' ? [value] : value}
       onSelectionChange={onChange && pickMenuKey(onChange)}
@@ -347,11 +383,12 @@ function FlatMenu({
       shouldCloseOnSelect={selectionMode === 'multiple' ? false : undefined}
       onAction={onAction && (key => onAction(String(key)))}
     >
-      {(typeof items === 'function' ? items() : items).map(item => (
+      {list.map(item => (
         <MenuChoice key={item.id} item={item} />
       ))}
     </Menu>
   );
+  return long ? <LazySearchList label={searchLabel}>{menu}</LazySearchList> : menu;
 }
 
 type NotFlat = {items?: never; selectionMode?: never; value?: never; onChange?: never};
@@ -360,7 +397,8 @@ type NoActions = {actions?: never};
 // sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
 // toggling one through `onAction`); with neither `value` nor `selectionMode` it is an action menu that only runs
 // `onAction`. `onAction` hears every pick, including one of the already chosen item, for menus where picking it again
-// clears it.
+// clears it. With `searchLabel`, naming its filter field, a list of user data longer than twelve items can be
+// filtered, as the node menus are; a shorter list stays plain.
 export function ChoiceMenu({
   items,
   selectionMode,
@@ -370,9 +408,9 @@ export function ChoiceMenu({
   submenus,
   actions,
   onAction,
+  searchLabel,
   ...props
-}: Omit<MenuButtonProps, 'content'> &
-  (
+}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string} & (
     | {
         items: Items;
         selectionMode?: 'single';
@@ -396,14 +434,21 @@ export function ChoiceMenu({
     | (NotFlat & NoActions & {sections: ChoiceSection[]; onAction?: (key: string) => void; submenus?: never})
     | (NotFlat & {submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; onAction?: never; sections?: never})
   )) {
+  // A list read only once the menu opens is not counted ahead; its search loads when it first opens long.
+  const long = sections
+    ? longList(itemCount(sections))
+    : submenus
+      ? submenus.some(submenu => longList(itemCount(submenu.sections)))
+      : Array.isArray(items) && longList(items.length);
   return (
     <MenuButton
       {...props}
+      onIntent={searchLabel && long ? preloadSearchList : undefined}
       content={
         submenus ? (
-          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
+          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} searchLabel={searchLabel} />
         ) : sections ? (
-          <SectionMenu label={props.label} sections={sections} onAction={onAction} />
+          <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
         ) : (
           <FlatMenu
             label={props.label}
@@ -412,6 +457,7 @@ export function ChoiceMenu({
             value={value}
             onChange={onChange}
             onAction={onAction}
+            searchLabel={searchLabel}
           />
         )
       }
