@@ -6,7 +6,7 @@ const rows = (page: import('@playwright/test').Page) =>
 
 test('the add-rule switch explains the must keyword in each locale', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
       await setAppearance(page, lang, scheme);
@@ -27,7 +27,7 @@ test('the add-rule switch explains the must keyword in each locale', async ({pag
 
 test('the insert position is searchable by the rule it goes before', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Add rule', exact: true}).first().click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', {name: /Insert/}).click();
@@ -45,7 +45,7 @@ test('the insert position is searchable by the rule it goes before', async ({pag
 });
 
 test('the rule list shows the dictionary in evaluation order with its source lines', async ({page}) => {
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const list = rows(page);
   await expect(list).toHaveCount(9);
   await expect(list.first()).toContainText('pname(NetworkManager, systemd-resolved)');
@@ -58,7 +58,7 @@ test('the rule list shows the dictionary in evaluation order with its source lin
 });
 
 test('a rule from an include file says why it cannot be changed here and opens its file at the line', async ({page}) => {
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const row = rows(page).nth(6);
   await expect(row).toContainText('rules.dae:6');
   const reason =
@@ -81,7 +81,7 @@ test('a rule from an include file says why it cannot be changed here and opens i
 });
 
 test('a rule is added before the fallback and removed again through validate, save and reload', async ({page}) => {
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const list = rows(page);
   await expect(list).toHaveCount(9);
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();

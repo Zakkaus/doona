@@ -312,7 +312,7 @@ test('an apply that fails in a later file keeps the rule it could not write and 
     '/api/v1/config/sources/src-main',
     '/api/v1/config/sources/src-rules'
   ]);
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await expect(page.getByRole('region', {name: 'Pending: 1'})).toContainText('rules.dae line 7: Backend message: no group proxy');
   await page.goto('/#/rules?tab=dns');
   await expect(page.getByRole('region', {name: /^Pending/})).toHaveCount(0);

@@ -660,7 +660,7 @@ test('the demo switches the outbound mode and back through its own configuration
   await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Direct');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   // The catch-all is a real rule of the new generation, right after the must rules.
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const rules = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(rules.nth(2)).toContainText('l4proto(tcp, udp)');
   await expect(rules.nth(2)).toContainText('direct');

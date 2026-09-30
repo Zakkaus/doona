@@ -52,7 +52,7 @@ test('editing only filters preserves the native policy spelling', async ({page})
 });
 
 test('a rule condition is composed from a kind and values, or typed as an expression', async ({page}) => {
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', {name: /Match by$/}).click();

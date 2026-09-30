@@ -483,7 +483,7 @@ test('incomplete sources cannot be transformed by rule edits or quick setup', as
   await page.getByRole('tab', {name: 'Quick setup'}).click();
   await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/new');
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   await page.getByRole('button', {name: 'Remove rule', exact: true, disabled: false}).first().click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('incomplete');
@@ -603,7 +603,7 @@ test('rule writes require a stable source ID even when the display path matches'
   const rules = await api.rules();
   for (const rule of rules.rules) if (rule.source) rule.source.source_id = 'unknown-source';
   await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
-  await page.goto('/#/rules?tab=list');
+  await page.goto('/#/rules?tab=list&view=advanced');
   const add = page.getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
   // The button is disabled while the configuration loads too, but gains its reason, a line under the toolbar, only once

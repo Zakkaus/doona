@@ -15,16 +15,17 @@ import {within} from '../../shell/route';
 import {lineDiff} from './diff';
 import {
   refusalReason,
+  ruleViewMode,
   templateChoice,
   templateImpact,
   templatesView,
   templateTarget,
+  type RuleViewMode,
   type TemplateChoice,
   type TemplateImpact,
   type TemplatesView
 } from './template';
 
-export type RuleViewMode = 'simple' | 'advanced';
 // A template being confirmed, over the file as it was read when the dialog opened: that text is what the write's
 // If-Match names, so a change on disk since is refused rather than overwritten.
 type Pending = {choice: TemplateChoice; source: ConfigSource; after: string; impact: TemplateImpact; diff: DiffRow[]};
@@ -49,7 +50,7 @@ export type RuleTemplatesModel = TemplatesView & {
   applying: boolean;
 };
 // The routing list's simple view: the template the routing holds, in plain words, and the templates to replace it with.
-// It opens on the simple view when the routing holds a template and on the rule table otherwise.
+// It opens on the simple view, template or custom, and on the rule table for a link to a rule.
 export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const t = useT();
   const resources = useCapabilities().data?.resources;
@@ -74,14 +75,13 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     holdsCredentials: source => engine.holdsCredentials(source),
     denied
   });
-  const asked = new URLSearchParams(query).get('view');
   const setMode = (mode: string) => go('rules', within(query, {view: mode}));
   const selected = picked ?? view.current?.id ?? null;
   const canApply = !!selected && selected !== view.current?.id && !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
   return {
     ...view,
     available: readable && !!config.data,
-    mode: asked === 'simple' || asked === 'advanced' ? asked : view.current ? 'simple' : 'advanced',
+    mode: ruleViewMode(query),
     setMode,
     file: target.source && fileName(target.source),
     selected,

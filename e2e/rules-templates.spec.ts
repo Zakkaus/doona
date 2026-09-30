@@ -112,6 +112,27 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await expect(applyButton(page)).toBeDisabled();
 });
 
+test('the routing list opens on the simple view for template and custom routing, and a link to a rule on the table', async ({page}) => {
+  const {api, write} = await backend(page);
+  const table = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('.rp-table');
+  await write(oneFile);
+  await page.goto('/#/rules?tab=list');
+  await expect(modes(page)).toBeVisible();
+  await expect(modes(page).getByRole('radio', {checked: true})).toHaveCount(0);
+  await expect(table).toHaveCount(0);
+  const defined = allGroupNames((await api.config()).sources);
+  await write(text => writeTemplate(text, 'bypass', defined));
+  await page.goto('/#/rules');
+  await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
+  // A link to one rule, as search and Connections make, lands on the table with the rule selected.
+  const rule = (await api.rules()).rules[0].rule_id;
+  await page.goto(`/#/rules?tab=list&rule=${rule}`);
+  await expect(table).toBeVisible();
+  await expect(modes(page)).toHaveCount(0);
+  await page.goto('/#/rules?view=advanced');
+  await expect(table).toBeVisible();
+});
+
 test('the detected mode is selected, and the arrow keys move the selection through the visible modes', async ({page}) => {
   const {api, write} = await backend(page);
   const defined = allGroupNames((await api.config()).sources);
