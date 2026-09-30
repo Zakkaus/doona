@@ -21,6 +21,7 @@ import Download from '../../ui/icons/Download';
 import InfoCircle from '../../ui/icons/InfoCircle';
 import {tableLayout} from '../../ui/Table';
 import type {LimitGroup, LimitHelp} from '../shared/limits';
+import {ReloadConfirm} from '../shared/ReloadConfirm';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
 
@@ -103,6 +104,7 @@ export function Overview({query}: PageProps) {
         </div>
         <div className="rp-cluster">
           <ActionGroup actions={[{id: 'export', label: t('ov.export'), icon: <Download />, isDisabled: !vm.canExport, onAction: vm.export}, ...vm.actions]} />
+          <ReloadConfirm {...vm.confirmReload} />
         </div>
       </div>
       <div className="rp-g3">

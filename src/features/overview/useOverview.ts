@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
@@ -22,6 +22,7 @@ export function useOverview(query = '') {
   const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const version = useVersion();
   const lifecycle = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
+  const [asking, setAsking] = useState(false);
   const data = useMemo(
     () => ({capabilities: capabilities.data, runtime: runtime.data, version: version.data, memory: memory.data, datapath: datapath.data}),
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
@@ -58,7 +59,17 @@ export function useOverview(query = '') {
       memory: memory.refetch,
       datapath: datapath.refetch
     },
-    actions: lifecycle.actions,
+    // Reload asks first, as the top bar's does; suspend and resume run at once.
+    actions: lifecycle.actions.map(action => (action.id === 'reload' ? {...action, onAction: () => setAsking(true)} : action)),
+    confirmReload: {
+      isOpen: asking,
+      isPending: lifecycle.busy === 'reload',
+      onCancel: () => setAsking(false),
+      onConfirm: () => {
+        setAsking(false);
+        lifecycle.run('reload');
+      }
+    },
     export: () => downloadFile(exportName('doona-state', 'json'), overviewExport(data, new Date().toISOString()), 'application/json')
   };
 }

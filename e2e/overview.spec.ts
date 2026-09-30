@@ -39,6 +39,12 @@ test('overview exports runtime and reports a failed accepted reload without succ
   const polling = page.waitForRequest('**/api/v1/operations/reload-failed');
   const accepted = page.waitForResponse(response => response.url().endsWith('/operations/reload') && response.request().method() === 'POST');
   await reload.click();
+  // Reload asks first, as the top bar's does, and sends nothing until it is confirmed.
+  const dialog = page.getByRole('dialog', {name: 'Reload honk?'});
+  await expect(dialog).toContainText('Held rules are not written');
+  expect(requests.filter(request => request.method() === 'POST')).toEqual([]);
+  await dialog.getByRole('button', {name: 'Reload honk', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
   const response = await accepted;
   expect(response.status()).toBe(202);
   expect(response.headers()['retry-after']).toBe('2');
@@ -76,6 +82,7 @@ test('a reload the backend forgot while polling reports an unknown result and re
   const versionReads = () => requests.filter(request => new URL(request.url()).pathname === '/api/v1/version').length;
   await expect.poll(versionReads).toBe(1);
   await reload.click();
+  await page.getByRole('dialog', {name: 'Reload honk?'}).getByRole('button', {name: 'Reload honk', exact: true}).click();
   await expect(page.locator('.rp-toast.neutral')).toHaveText(/^Could not confirm the result of the operation; the data was reloaded/);
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   await expect.poll(versionReads).toBe(2);
