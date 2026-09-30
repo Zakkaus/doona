@@ -206,6 +206,7 @@ Each role has one kit component in `src/ui`. Variants are typed props, never cla
 | Menu, ActionMenu                | `ChoiceMenu`                           |
 | Picker                          | `LabeledSelect`, `InlineSelect`        |
 | SegmentedControl                | `Segmented`                            |
+| RadioGroup, Radio               | `RadioGroup`, `Radio`                  |
 | Card                            | `Card`                                 |
 | TableView                       | `DataTable`                            |
 | InlineAlert, IllustratedMessage | `InlineAlert`, `Empty`, `ErrorMessage` |

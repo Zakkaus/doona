@@ -17,6 +17,7 @@ export {exportName, downloadFile, csvLine} from './files';
 export {ActionHelp, Button, TextTooltip, Link, buttonClass, type ButtonStyle} from './Button';
 export {TextField, StaticField, Switch} from './Fields';
 export {Segmented} from './Segmented';
+export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
 export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
 export {ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, DisclosureGroup, Tabs, useTabShown} from './Dialog';
