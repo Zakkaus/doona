@@ -130,3 +130,32 @@
   font-variant-numeric: tabular-nums;
   color: var(--rp-subtle);
 }
+/* The Rules page's templates: a name over its one-line description, with the row's action at the end. */
+.rp-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-template {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.rp-templates > .rp-template + .rp-template {
+  border-top: 1px solid var(--rp-hl-low);
+}
+.rp-template-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-template-text > span {
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-sm);
+}
