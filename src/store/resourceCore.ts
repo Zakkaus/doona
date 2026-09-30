@@ -190,6 +190,8 @@ function createWatcher<T>(
   let recoveryDelay = 5000;
   // Whether `retryAt` is only the wait between retries of a failed read, not a delay the backend asked for.
   let recovering = false;
+  // When the backend's last Retry-After ends; a reconnect does not cut that short.
+  let retryAfterAt = 0;
   const clear = () => {
     clearTimeout(timer);
     timer = undefined;
@@ -253,7 +255,7 @@ function createWatcher<T>(
         request = undefined;
         const error = reason instanceof Error ? reason : new Error(String(reason));
         if (error instanceof ApiError && error.transient) {
-          retryAt = Date.now() + error.retryAfter! * 1000;
+          retryAt = retryAfterAt = Date.now() + error.retryAfter! * 1000;
           if (++refused <= 3) {
             phase = 'backoff';
             schedule(retryAt);
@@ -301,13 +303,15 @@ function createWatcher<T>(
     return followup;
   };
   const invalidate = (reconnected: boolean) => {
-    // A stream that connects again shows the backend is back, so a failed read does not wait out its retry delay.
+    // A stream that connects again shows the backend is back, so a failed read does not wait out its retry delay; a
+    // Retry-After the backend asked for still holds.
     if (reconnected && recovering) {
       recovering = false;
-      retryAt = 0;
+      retryAt = retryAfterAt > Date.now() ? retryAfterAt : 0;
       if (phase === 'backoff' && !document.hidden) {
         clear();
-        attempt();
+        if (retryAt) schedule(retryAt);
+        else attempt();
         return;
       }
     }
