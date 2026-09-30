@@ -7,7 +7,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {addNamesToGroup, addSubtagsToGroup, applyChanges, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
-import {readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
@@ -109,11 +109,14 @@ export function useNodesPage({go, query}: PageProps) {
   const editSource = editing?.length === 1 ? editing[0].source : null;
   const editAction = (item: ProviderRow) => {
     const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
-    if (place?.length !== 1) return null;
-    const [{source: origin, entry}] = place;
+    if (!place?.length) return null;
     // honk lets two subscriptions share a name, such as a tagged entry and an untagged one named after the same host;
-    // the entry found by that name may then declare the other one, so it only opens.
-    const unique = (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
+    // the entry found by that name may then declare the other one, so it only opens, at the entry on the row's host
+    // when one alone matches.
+    const own = place.length > 1 ? place.filter(({entry}) => urlHost(entry.url) === urlHost(item.url_redacted)) : place;
+    const {source: origin, entry} = own.length === 1 ? own[0] : place[0];
+    const unique =
+      place.length === 1 && (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
     // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
     if (daeText && unique && source.writable && origin.writable && isComplete(origin) === true)
       return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry})};
