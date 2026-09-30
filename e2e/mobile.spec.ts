@@ -129,19 +129,25 @@ test('language, theme, palette and wordmark are each two taps away in the overfl
   await expect(top.getByRole('button', {name: '更多选项'})).toBeVisible();
 });
 
-test('the overflow menu draws every row icon at the same size, whatever the scheme', async ({page}) => {
-  for (const scheme of ['light', 'dark'] as const) {
-    await page.emulateMedia({colorScheme: scheme});
-    await page.goto('/#/overview');
-    await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
-    const icons = page.locator('.rp-subitem .ic > *');
-    await expect(icons).toHaveCount(6);
-    // Read until every icon settles: one read right after the menu opened once caught an icon 10px wide in CI.
-    await expect
-      .poll(() => icons.evaluateAll(els => els.map(el => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])))
-      .toEqual(Array(6).fill([16, 16]));
-    await page.keyboard.press('Escape');
-  }
+// The fixtures store a light scheme; only the system setting follows the emulated one.
+test.describe('with the scheme left to the system', () => {
+  test.use({storage: {'doona-scheme': 'system'}});
+
+  test('the overflow menu draws every row icon at the same size, whatever the scheme', async ({page}) => {
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({colorScheme: scheme});
+      await page.goto('/#/overview');
+      await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
+      await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
+      const icons = page.locator('.rp-subitem .ic > *');
+      await expect(icons).toHaveCount(6);
+      // Read until every icon settles: one read right after the menu opened once caught an icon 10px wide in CI.
+      await expect
+        .poll(() => icons.evaluateAll(els => els.map(el => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])))
+        .toEqual(Array(6).fill([16, 16]));
+      await page.keyboard.press('Escape');
+    }
+  });
 });
 
 test('the overflow menu opens and leaves a submenu by keyboard', async ({page}) => {
