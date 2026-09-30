@@ -36,6 +36,39 @@ it('labels the dictionary caption with the generation id it received, untranslat
   expect(translate('zh-TW', 'ui.generation')).toBe('generation');
 });
 
+it('lists the first place and the end first in the position picker, and finds the others by their rule', async () => {
+  const api = createMockApi();
+  const [rules, config, groups] = await Promise.all([api.rules(), api.config(), api.groups()]);
+  const view = dictionaryView(rules.rules, rules.generation_id, undefined, config.sources, groups, t, 'en');
+  const [ends, others] = view.positionSections;
+  const [first, second] = rules.rules;
+  expect(ends.title).toBeUndefined();
+  expect(ends.items.map(item => [item.id, item.label])).toEqual([
+    [first.rule_id, t('conn.ruleTop')],
+    ['end', t('rule.positionEnd')]
+  ]);
+  expect(others.title).toBe(t('rule.positionOthers'));
+  expect(others.items[0]).toEqual({
+    id: second.rule_id,
+    label: t('rule.positionBefore', {n: 2}),
+    desc: second.expression,
+    keywords: second.expression
+  });
+  // The picker offers the same places as the list of positions, each once.
+  const ids = view.positionSections.flatMap(section => section.items.map(item => item.id));
+  expect(ids.sort()).toEqual(view.positions.map(position => position.id).sort());
+  const locked = dictionaryView(
+    rules.rules,
+    rules.generation_id,
+    undefined,
+    config.sources.map(source => ({...source, writable: false})),
+    groups,
+    t,
+    'en'
+  );
+  expect(locked.positionSections).toEqual([]);
+});
+
 it('offers edits only at writable sources and preserves source locations when paths are redacted', async () => {
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);

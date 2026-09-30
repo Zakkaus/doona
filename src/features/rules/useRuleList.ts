@@ -13,7 +13,7 @@ import {dictionaryView, distributionView, type DictionaryView, type Distribution
 import {offered} from '../../api/capabilities';
 import {useRuleEditor, type RuleEditorModel} from './useRuleEditor';
 
-const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], outbounds: [], outboundSections: null};
+const noDictionary: DictionaryView = {rows: [], caption: null, positions: [], positionSections: [], outbounds: [], outboundSections: null};
 const noDistribution: DistributionView = {
   rows: [],
   choices: [],

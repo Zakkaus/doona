@@ -1441,6 +1441,7 @@
   "rule.positionBefore": "Before rule {n}",
   "rule.positionEnd": "Last, before the fallback",
   "rule.positionLast": "Last",
+  "rule.positionOthers": "Other positions",
   "rule.queried": "Queried at",
   "rule.queryAgain": "Query again",
   "rule.queryDns": "Query DNS",
