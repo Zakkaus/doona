@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Button, Card, ConfirmDialog, Disclosure, InlineAlert} from '../../ui/ui';
+import {Badge, Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert} from '../../ui/ui';
 import type {TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
 
@@ -38,7 +38,51 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         onCancel={model.close}
         onConfirm={() => void model.confirm()}
       >
-        {dialog && <p>{t('rule.template.scope', {file: dialog.file})}</p>}
+        {dialog && (
+          <div className="rp-col">
+            <p>{t('rule.template.scope', {file: dialog.file})}</p>
+            <section className="rp-col" aria-label={t('rule.template.created')}>
+              <h3 className="rp-h3">{t('rule.template.created')}</h3>
+              {dialog.impact.created.length ? (
+                <ul className="rp-templates">
+                  {dialog.impact.created.map(group => (
+                    <li key={group.name} className="rp-template">
+                      <span className="rp-template-text">
+                        <code>{group.name}</code>
+                        {group.label && <span>{group.label}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="rp-label">{t('rule.template.createdNone')}</span>
+              )}
+            </section>
+            {dialog.impact.reused.length > 0 && (
+              <section className="rp-col" aria-label={t('rule.template.reused')}>
+                <h3 className="rp-h3">{t('rule.template.reused')}</h3>
+                <ul className="rp-templates">
+                  {dialog.impact.reused.map(group => (
+                    <li key={group.name} className="rp-template">
+                      <span className="rp-template-text">
+                        <code>{group.name}</code>
+                        {group.pinned && <span>{t('rule.template.pinnedHelp')}</span>}
+                      </span>
+                      {group.pinned && <Badge>{t('rule.template.pinned')}</Badge>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {dialog.impact.collisions.map(name => (
+              <InlineAlert key={name} tone="informative">
+                {t('rule.template.collision', {name})}
+              </InlineAlert>
+            ))}
+            <h3 className="rp-h3">{t('rule.template.changes', {file: dialog.file})}</h3>
+            <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
+          </div>
+        )}
       </ConfirmDialog>
     </div>
   );

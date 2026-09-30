@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {currentTemplate, refusalReason, routingSources, templatesView, templateTarget} from './template';
+import {currentTemplate, refusalReason, routingSources, templateImpact, templatesView, templateTarget} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -64,4 +64,23 @@ it('refuses routing split over files or pulling one in, and files it may not wri
   expect(refusalReason('secret', plain, t)).toBe(
     'main.dae holds API listener settings or secrets, which the backend does not write back. Edit it on the host.'
   );
+});
+
+it('lists the groups a template creates and the existing ones it routes to, flagging one pinned to a node', () => {
+  const main = source('main', 'group {\n  proxy { filter: name(hk-01) }\n}\nrouting { fallback: proxy }\n', 'main');
+  expect(templateImpact('bypass', main, [main], [])).toEqual({created: [], reused: [{name: 'proxy', pinned: true}], collisions: []});
+  expect(templateImpact('mini', main, [main], ['auto'])).toEqual({
+    created: [{name: 'auto', label: '自动选择'}],
+    reused: [{name: 'proxy', pinned: true}],
+    collisions: ['auto']
+  });
+  const open = source('main', 'group {\n  proxy { filter: subtag(sub) policy: min_moving_avg }\n}\n', 'main');
+  expect(templateImpact('gfw', open, [open], []).reused).toEqual([{name: 'proxy', pinned: false}]);
+});
+
+it('creates the default group only when no file declares one, and reuses one declared elsewhere', () => {
+  const empty = source('main', 'routing { fallback: direct }\n', 'main');
+  expect(templateImpact('global', empty, [empty], [])).toEqual({created: [{name: 'proxy', label: null}], reused: [], collisions: []});
+  const other = source('groups', 'group { proxy { policy: fixed(0) } }\n');
+  expect(templateImpact('standard', empty, [empty, other], []).reused).toEqual([{name: 'proxy', pinned: true}]);
 });

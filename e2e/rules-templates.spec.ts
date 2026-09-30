@@ -69,6 +69,13 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await page.getByRole('button', {name: 'Apply Bypass mainland China'}).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
   await expect(dialog).toContainText('Replaces the top-level routing in config.dae.');
+  // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
+  await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('No new groups.');
+  await expect(dialog.getByRole('region', {name: 'Existing groups kept'})).toContainText('proxy');
+  const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
+  await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
+  await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
+  await expect(diff).not.toContainText('tproxy_port');
   await dialog.getByRole('button', {name: 'Apply template', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Applied Bypass mainland China to config.dae');
   await expect(dialog).toHaveCount(0);

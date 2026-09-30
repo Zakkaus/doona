@@ -1,23 +1,33 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
+import {useCapabilities, useConfig, useConfigEditor, useNodes, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
 import {useT} from '../../i18n';
 import {ApiError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigSource} from '../../api/model';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast, toastFailure, type DiffRow} from '../../ui/ui';
 import {allGroupNames, fileName} from '../../dae/sources';
 import {writeTemplate} from '../../dae/setup';
 import type {RuleTemplate} from '../../dae/templates';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
-import {refusalReason, templateChoice, templatesView, templateTarget, type TemplateChoice, type TemplatesView} from './template';
+import {lineDiff} from './diff';
+import {
+  refusalReason,
+  templateChoice,
+  templateImpact,
+  templatesView,
+  templateTarget,
+  type TemplateChoice,
+  type TemplateImpact,
+  type TemplatesView
+} from './template';
 
 export type RuleViewMode = 'simple' | 'advanced';
 // A template being confirmed, over the file as it was read when the dialog opened: that text is what the write's
 // If-Match names, so a change on disk since is refused rather than overwritten.
-type Pending = {choice: TemplateChoice; source: ConfigSource; before: string; after: string};
+type Pending = {choice: TemplateChoice; source: ConfigSource; after: string; impact: TemplateImpact; diff: DiffRow[]};
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
   available: boolean;
@@ -44,6 +54,8 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const version = useVersion().data;
   const engine = useMemo(() => engineOf(version), [version]);
   const isComplete = useCompleteness(sources);
+  // A new group named like a node takes that name over, so the impact names the nodes it would shadow.
+  const nodes = useNodes(readable && offered(resources, 'nodes', {whileLoading: false}));
   const editor = useConfigEditor(config.refetch, {rethrow: true});
   const [denied, setDenied] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Pending | null>(null);
@@ -69,7 +81,19 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       const source = target.source;
       if (!canApply || !source) return;
       const before = source.content!;
-      setDialog({choice: templateChoice(id, t), source, before, after: writeTemplate(before, id, allGroupNames(sources))});
+      const after = writeTemplate(before, id, allGroupNames(sources));
+      setDialog({
+        choice: templateChoice(id, t),
+        source,
+        after,
+        impact: templateImpact(
+          id,
+          source,
+          sources,
+          (nodes.data ?? []).map(node => node.name)
+        ),
+        diff: lineDiff(before, after).map(line => (line.kind === 'gap' ? {kind: 'gap', text: t('rule.template.unchanged', {n: line.count})} : line))
+      });
     },
     dialog: dialog && {...dialog, file: fileName(dialog.source)},
     close: () => {
