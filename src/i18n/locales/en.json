@@ -983,6 +983,7 @@
   "nodes.node": "Node",
   "nodes.note": "Sources are subscriptions, files and the nodes in the configuration. When the backend allows it, subscriptions and share links are added here; changes are written to the main configuration and reloaded.",
   "nodes.of": "Nodes of {name}",
+  "nodes.openPolicies": "Open Policies",
   "nodes.probe": "Test {name}",
   "nodes.probeError": "Could not test {name}",
   "nodes.probeFailed": "{name}: unreachable",
@@ -992,6 +993,7 @@
   "nodes.protocol": "Protocol",
   "nodes.provider": "Source",
   "nodes.providers": "Sources",
+  "nodes.referenced": "Groups that filter on {name}: {groups}. Change their filters on the Policies page first.",
   "nodes.refresh": "Refresh {name}",
   "nodes.refreshFailed": "Could not refresh {name}",
   "nodes.refreshed": {
@@ -1005,7 +1007,6 @@
   "nodes.removeProviderHelp": "Deletes this source and its nodes from the main configuration and reloads.",
   "nodes.removeProviderTitle": "Remove source {name}",
   "nodes.removed": "{name} removed",
-  "nodes.renameBlocked": "Groups in {files} also filter on {name}. Edit them in their source file before renaming.",
   "nodes.renameGroups": "Also update the subscription filter in {groups}",
   "nodes.renameGroupsHelp": "Otherwise these groups lose the nodes of {name}.",
   "nodes.scope": "Showing nodes from {name}. Choose another source above to view its nodes.",

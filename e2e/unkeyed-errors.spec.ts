@@ -1,6 +1,6 @@
 import type {Page, Request} from '@playwright/test';
 import {ApiError} from '../src/api/error';
-import type {Node} from '../src/api/model';
+import type {Node, Provider} from '../src/api/model';
 import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 // These calls carry no idempotency key, so doona never retries them: a failure is shown, the control stays, and the
@@ -115,7 +115,8 @@ for (const how of Object.keys(failures) as Failure[])
 
     test('removing a subscription reports the failure and can be confirmed again', async ({page}) => {
       const {api, handlers} = await mockBackend(page);
-      const provider = (await api.providers({limit: 1000})).providers.find(item => item.kind !== 'inline')!;
+      // The demo's own subscription is named by a group filter, which keeps it from being removed.
+      const provider = (await api.createProvider({name: 'sub-d', kind: 'subscription', url: 'https://example.org/sub'})) as Provider;
       const counted = await failOnce(page, handlers, 'DELETE', `providers/${provider.id}`, how, () => api.deleteProvider(provider.id));
       await page.goto('/#/nodes?tab=list');
       await moreAction(page.locator('body'), `Remove ${provider.name}`, `More actions for ${provider.name}`);

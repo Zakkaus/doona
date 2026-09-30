@@ -5,14 +5,13 @@ import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {addNamesToGroup, addSubtagsToGroup, applyChanges, citingGroups, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
+import {addNamesToGroup, addSubtagsToGroup, applyChanges, citingGroups, groupsNamingTag, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
-import {fileName} from '../../dae/sources';
 import {
   isNodeLink,
   keptOptions,
@@ -32,7 +31,7 @@ import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {isSubscriptionUrl} from '../../dae/setup';
 import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
-import {pickTab, tabQuery, within} from '../../shell/route';
+import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
@@ -242,6 +241,7 @@ export function useNodesPage({go, query}: PageProps) {
         refetchProviders();
         toast('positive', t('nodes.edited', {name: tag}));
       } else if (dialog.kind === 'removeProvider') {
+        if (blockers.length || checkingRemoval) return;
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
       } else {
@@ -297,6 +297,19 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
       ? renameReferences(sources, editSource ?? dialog.source, dialog.entry.tag)
       : {here: [], elsewhere: []};
+  // Removing a subscription, or renaming it where the write cannot carry every filter along, would leave the groups
+  // whose filters name it matching nothing, or everything once a last filter goes, so both wait until those groups
+  // are changed on the Policies page.
+  const namingGroups = (tag: string) => [...new Set(sources.flatMap(item => groupsNamingTag(item.content ?? '', tag)))];
+  const blockedTag =
+    dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription'
+      ? dialog.item.name
+      : dialog?.kind === 'editProvider' && references.elsewhere.length
+        ? dialog.entry.tag
+        : null;
+  const blockers = blockedTag === null ? [] : namingGroups(blockedTag);
+  // A removal waits for the configuration that says whether any group names the subscription.
+  const checkingRemoval = dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription' && config.loading && !config.data;
   const formValid =
     dialog?.kind === 'editProvider'
       ? !!editName &&
@@ -418,9 +431,10 @@ export function useNodesPage({go, query}: PageProps) {
           : t('nodes.add'),
     editOptions: dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, writtenCache !== undefined) : [],
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
-    // unless another source names it too: a write across sources is not atomic, so those files block the rename.
+    // unless another source or an expression names it too: a write across sources is not atomic, so the rename waits.
     renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,
-    renameBlocked: references.elsewhere.length ? formatList(lang, references.elsewhere.map(fileName)) : null,
+    referenced: blockers.length && blockedTag !== null ? {groups: formatList(lang, blockers), name: blockedTag, href: href('policies')} : null,
+    checkingRemoval,
     renameFrom: dialog?.kind === 'editProvider' ? dialog.entry.tag : '',
     updateGroups,
     setUpdateGroups: (next: boolean) => {

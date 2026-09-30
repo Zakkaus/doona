@@ -77,11 +77,36 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(page).toHaveURL(/#\/nodes\?provider=[^&]+$/);
   await expect(page.getByText(/Showing nodes from sub-d\./)).toBeVisible();
   await expect(sources.filter({hasText: 'sub-d'})).toContainText('OK');
-  await moreAction(page.locator('body'), 'Remove sub-c', 'More actions for sub-c');
-  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-c removed'})).toBeVisible();
+  await moreAction(page.locator('body'), 'Remove sub-d', 'More actions for sub-d');
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove sub-d', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d removed'})).toBeVisible();
   await expect(sources).toHaveCount(2);
-  await expect(sources.first()).toContainText('config.dae');
+  await expect(sources.filter({hasText: 'sub-d'})).toHaveCount(0);
+});
+
+test('a subscription a group filters on cannot be removed until the group changes', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const main = config.sources.find(source => source.kind === 'main')!;
+    const content = 'group {\n  roaming { filter: subtag(sub-c) && !name(keyword: HK) policy: min_moving_avg }\n}\n';
+    config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
+    return config;
+  };
+  let deleted = false;
+  handlers['DELETE providers/sub-c'] = async () => {
+    deleted = true;
+    return api.deleteProvider('sub-c');
+  };
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Remove sub-c', 'More actions for sub-c');
+  const confirmation = page.getByRole('alertdialog');
+  await expect(confirmation).toContainText('Groups that filter on sub-c: skylink, roaming. Change their filters on the Policies page first.');
+  await expect(confirmation.getByRole('button', {name: 'Remove sub-c', exact: true})).toBeDisabled();
+  await confirmation.getByRole('link', {name: 'Open Policies', exact: true}).click();
+  await expect(page).toHaveURL(/#\/policies/);
+  await expect(confirmation).toHaveCount(0);
+  expect(deleted).toBe(false);
 });
 
 test('a new subscription is selected even when its first refresh fails', async ({page}) => {
@@ -723,7 +748,8 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
   await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('skylink-sub');
-  await expect(dialog.getByText('Groups in groups.dae also filter on sub-c. Edit them in their source file before renaming.', {exact: true})).toBeVisible();
+  await expect(dialog.getByText('Groups that filter on sub-c: skylink, roaming. Change their filters on the Policies page first.')).toBeVisible();
+  await expect(dialog.getByRole('link', {name: 'Open Policies', exact: true})).toHaveAttribute('href', '#/policies');
   await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   // Keeping the name leaves a URL edit free.

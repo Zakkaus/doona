@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ErrorMessage, InlineAlert, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -41,7 +41,8 @@ export function Nodes(props: PageProps) {
     editOptions,
     renameGroups,
     renameFrom,
-    renameBlocked,
+    referenced,
+    checkingRemoval,
     updateGroups,
     setUpdateGroups
   } = useNodesPage(props);
@@ -54,6 +55,14 @@ export function Nodes(props: PageProps) {
     </>
   );
   const content = {list, latency: <NodeLatency />};
+  const blocked = referenced && (
+    <span className="rp-label">
+      {t('nodes.referenced', {groups: referenced.groups, name: referenced.name})}{' '}
+      <Link appearance="link" href={referenced.href}>
+        {t('nodes.openPolicies')}
+      </Link>
+    </span>
+  );
   return (
     <div className="rp-page">
       {tabs.length > 0 ? (
@@ -103,7 +112,7 @@ export function Nodes(props: PageProps) {
                 {!updateGroups && <span className="rp-label">{t('nodes.renameGroupsHelp', {name: renameFrom})}</span>}
               </>
             )}
-            {renameBlocked && <span className="rp-label">{t('nodes.renameBlocked', {files: renameBlocked, name: renameFrom})}</span>}
+            {blocked}
             {editOptions.length > 0 && (
               <>
                 <span className="rp-label">{t('nodes.editOptions')}</span>
@@ -144,11 +153,11 @@ export function Nodes(props: PageProps) {
         onCancel={() => setDialog(null)}
         confirmLabel={submitLabel}
         isPending={pending}
-        isDisabled={submitting}
+        isDisabled={submitting || !!referenced || checkingRemoval}
         error={problem}
         onConfirm={() => void submit(() => setDialog(null))}
       >
-        <p className="rp-label">{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>
+        {blocked ?? <p className="rp-label">{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>}
       </ConfirmDialog>
     </div>
   );
