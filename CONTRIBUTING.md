@@ -223,7 +223,7 @@ Revisit this if S2 stops requiring the macro or the size budgets stop applying.
 ### Add a palette
 
 1. Add an entry to `src/shell/palettes.ts`. The id is `family/flavour`; a family with one flavour repeats its name, as in `nord/nord`.
-2. Add `src/ui/styles/palettes/<family>.css` and import it from `src/ui/styles/palettes.css`. It holds a light block keyed on `:root[data-family='<family>']`, a dark block that adds `[data-scheme='dark']`, and a `[data-flavour]` block for each extra flavour. Each block sets every token in the table below.
+2. Add `src/ui/styles/palettes/<family>.css` and import it from `src/ui/styles/palettes.css`. It holds a light block keyed on `:root[data-family='<family>']`, a dark block that adds `[data-scheme='dark']`, and a `[data-flavour]` block for each extra flavour. Each block sets every token in the table below, and `tools/palettes.test.mjs` checks that. Images a palette needs go in `src/ui/styles/palettes/<family>/`, referenced relatively from its stylesheet, with licence entries in `NOTICE` and `REUSE.toml`.
 3. Add its names under the `palette.*` keys in `en.json` and in every complete language's catalogue (see Translations). A palette may also reword a few statuses: its optional `words` map points a catalogue key at a `palette.*` key of its own, and every `useT` translator reads that key while the palette is on. Components need no palette check.
 4. Add it to the map in `e2e/contrast.spec.ts` and run that spec.
 
