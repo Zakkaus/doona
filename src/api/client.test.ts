@@ -287,6 +287,7 @@ describe('native transport', () => {
       'id: i:2\nevent: route.changed\ndata: {"resource_id":"r1","observed_at":"2026-09-15T14:00:01Z"}\n\n',
       'id: i:3\nevent: route.dropped\ndata: ["r2"]\n\n',
       'id: i:4\nevent: route.dropped\ndata: null\n\n',
+      'id: i:6\nevent: route.changed\ndata: {"resource_id":"r3","observed_at":{}}\n\n',
       'id: i:5\nevent: runtime.updated\ndata: {"instance_id":"i","observed_at":"2026-09-15T14:00:02Z","href":"/api/v1/runtime"}\n\n'
     ].join('');
     const controller = new AbortController();
@@ -305,9 +306,12 @@ describe('native transport', () => {
     expect(events.map(event => [event.id, event.event])).toEqual([
       ['i:1', 'stream.ready'],
       ['i:2', 'route.changed'],
+      ['i:6', 'route.changed'],
       ['i:5', 'runtime.updated']
     ]);
     expect(eventSummary(events[1])).toEqual({key: 'event.resource', params: {resource: 'r1'}});
+    expect(events[1].data.observed_at).toBe('2026-09-15T14:00:01Z');
+    expect(events[2].data.observed_at).toBe('');
   });
   it('keeps a caller abort before the deadline an abort', async () => {
     vi.useFakeTimers();
