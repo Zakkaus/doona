@@ -94,9 +94,7 @@ test('DNS logs load older pages and export only loaded records', async ({page}) 
   await expect(page.getByRole('button', {name: 'Load older records'})).toHaveCount(0);
   const download = page.waitForEvent('download');
   await page.getByRole('button', {name: 'Export CSV'}).click();
-  const stream = await (await download).createReadStream();
-  let body = '';
-  for await (const chunk of stream as AsyncIterable<Uint8Array>) body += new TextDecoder().decode(chunk);
+  const body = await downloadText(await download);
   expect(body.trim().split('\n')).toHaveLength(3);
   for (const record of records) expect(body).toContain(record.id);
 });

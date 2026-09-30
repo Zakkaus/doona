@@ -165,11 +165,13 @@ export const turn = (locator: Locator) =>
 
 export {expect};
 
+// One decoder across the whole stream, so a character split between chunks is not garbled.
 export async function downloadText(download: Download) {
   const stream = await download.createReadStream();
+  const decoder = new TextDecoder();
   let text = '';
-  for await (const chunk of stream!) text += chunk.toString();
-  return text;
+  for await (const chunk of stream as AsyncIterable<Uint8Array>) text += decoder.decode(chunk, {stream: true});
+  return text + decoder.decode();
 }
 
 export async function fulfillStream(route: Route, events: Array<{event: string; id: string; data: unknown}>) {
