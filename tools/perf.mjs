@@ -6,7 +6,23 @@ import {chromium} from '@playwright/test';
 import {signInDemo} from './demo-session.mjs';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:4177';
-const pages = ['activity', 'overview', 'connections', 'dns', 'policies', 'flows', 'nodes?provider=sub-c', 'config', 'events', 'logs', 'settings'];
+// Every page with what marks it ready; a page missing here is neither measured nor waited for.
+const content = {
+  activity: '.rp-donut path',
+  overview: '.rp-kv',
+  connections: '.rp-scatter circle',
+  dns: '[role=tabpanel]',
+  policies: '.rp-node',
+  flows: '.rp-tree-tile',
+  nodes: '[role=rowheader]',
+  rules: '[role=tabpanel]',
+  config: '[role=tabpanel]',
+  events: '[role=rowheader]',
+  logs: '[role=rowheader]',
+  settings: '.rp-form'
+};
+const pageQuery = {nodes: '?provider=sub-c'};
+const pages = Object.keys(content).map(route => `${route}${pageQuery[route] ?? ''}`);
 const runs = Number(process.env.PERF_RUNS) || 3;
 const only = process.env.PERF_ONLY ? new RegExp(process.env.PERF_ONLY) : null;
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
@@ -28,19 +44,6 @@ const delta = (a, b) => ({script: b.script - a.script, layout: b.layout - a.layo
 async function ready(page) {
   await page.locator('.rp-content').getByRole('heading').first().waitFor();
   const route = new URL(page.url()).hash.slice(2).split('?')[0];
-  const content = {
-    activity: '.rp-donut path',
-    overview: '.rp-kv',
-    connections: '.rp-scatter circle',
-    dns: '[role=tabpanel]',
-    policies: '.rp-node',
-    flows: '.rp-tree-tile',
-    nodes: '[role=rowheader]',
-    config: '[role=tabpanel]',
-    events: '[role=rowheader]',
-    logs: '[role=rowheader]',
-    settings: '.rp-form'
-  };
   await page.locator('.rp-content').locator(content[route]).first().waitFor();
   await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'), null, {timeout: 60_000});
 }

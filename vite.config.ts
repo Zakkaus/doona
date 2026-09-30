@@ -11,6 +11,7 @@ import {rtlScripts} from './src/i18n/direction';
 import {languages, REFERENCE_LANG} from './src/i18n/languages';
 import {languageFiles} from './src/i18n/offline';
 import {startupTextPlugin} from './tools/startup-text.mjs';
+import {stampScript} from './tools/stamp.mjs';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -46,12 +47,13 @@ export default defineConfig({
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
       name: 'first-paint-stamp',
       transformIndexHtml(html) {
-        const stamp = readFileSync(new URL('tools/stamp.js', import.meta.url), 'utf8')
-          .replace("'__PALETTES__'", JSON.stringify(palettes.map(palette => palette.id)))
-          .replace("'__DEFAULT_PALETTE__'", JSON.stringify(DEFAULT_PALETTE))
-          .replace("'__LOCALES__'", JSON.stringify(Object.fromEntries(languages.map(language => [language.id, language.locale]))))
-          .replace("'__REFERENCE_LOCALE__'", JSON.stringify(languages.find(language => language.id === REFERENCE_LANG)!.locale))
-          .replace("'__RTL_SCRIPTS__'", JSON.stringify(rtlScripts));
+        const stamp = stampScript({
+          palettes: palettes.map(palette => palette.id),
+          defaultPalette: DEFAULT_PALETTE,
+          locales: Object.fromEntries(languages.map(language => [language.id, language.locale])),
+          referenceLocale: languages.find(language => language.id === REFERENCE_LANG)!.locale,
+          rtlScripts
+        });
         const digest = createHash('sha256').update(stamp).digest('base64');
         return html
           .replace("default-src 'self';", `default-src 'self'; script-src 'self' 'sha256-${digest}';`)
