@@ -33,10 +33,16 @@ export type RuleTemplatesModel = TemplatesView & {
   available: boolean;
   mode: RuleViewMode;
   setMode: (mode: string) => void;
+  // The file a template would be written to.
+  file: string | null;
+  // The chosen template: the detected one until another is picked, and none for custom routing.
+  selected: RuleTemplate | null;
+  select: (id: RuleTemplate) => void;
   // Why no template can be applied, or null when one can; applying waits while the file's digest is checked.
   refusal: string | null;
+  // Whether the chosen template can be applied: it differs from the detected one and the file can be written.
   canApply: boolean;
-  open: (id: RuleTemplate) => void;
+  open: () => void;
   dialog: (Pending & {file: string}) | null;
   close: () => void;
   confirm: () => Promise<void>;
@@ -59,6 +65,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const editor = useConfigEditor(config.refetch, {rethrow: true});
   const [denied, setDenied] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Pending | null>(null);
+  const [picked, setPicked] = useState<RuleTemplate | null>(null);
   const target = templateTarget({
     sources,
     configWritable: resources?.config.writable === true,
@@ -69,25 +76,29 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   });
   const asked = new URLSearchParams(query).get('view');
   const setMode = (mode: string) => go('rules', within(query, {view: mode}));
-  const canApply = !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
+  const selected = picked ?? view.current?.id ?? null;
+  const canApply = !!selected && selected !== view.current?.id && !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
   return {
     ...view,
     available: readable && !!config.data,
     mode: asked === 'simple' || asked === 'advanced' ? asked : view.current ? 'simple' : 'advanced',
     setMode,
+    file: target.source && fileName(target.source),
+    selected,
+    select: setPicked,
     refusal: target.refusal && refusalReason(target.refusal, target.source, t),
     canApply,
-    open: id => {
+    open: () => {
       const source = target.source;
-      if (!canApply || !source) return;
+      if (!canApply || !source || !selected) return;
       const before = source.content!;
-      const after = writeTemplate(before, id, allGroupNames(sources));
+      const after = writeTemplate(before, selected, allGroupNames(sources));
       setDialog({
-        choice: templateChoice(id, t),
+        choice: templateChoice(selected, t),
         source,
         after,
         impact: templateImpact(
-          id,
+          selected,
           source,
           sources,
           (nodes.data ?? []).map(node => node.name)
@@ -111,6 +122,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         }
         toast('positive', t('rule.template.applied', {name: dialog.choice.name, file: fileName(dialog.source)}));
         setDialog(null);
+        setPicked(null);
         go('rules', within(query, {view: 'simple'}));
       } catch (error) {
         // honk answers 403 when the sign-in lacks control permission or the file sets API listener settings.

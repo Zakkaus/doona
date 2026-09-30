@@ -111,6 +111,11 @@
 .rp-radios > .rp-label:last-child {
   margin-top: 4px;
 }
+/* Radios under a Disclosure in the group keep the group's spacing. */
+.rp-radios .rp-disclosure-content {
+  gap: 4px;
+  padding: 4px 0 0;
+}
 .rp-field {
   display: flex;
   flex-direction: column;

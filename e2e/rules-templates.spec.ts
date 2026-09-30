@@ -1,6 +1,8 @@
 import {test, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
+import {allGroupNames} from '../src/dae/sources';
+import {writeTemplate} from '../src/dae/setup';
 import {expect} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -60,13 +62,24 @@ async function backend(page: Page) {
   return {api, main, write};
 }
 const oneFile = (text: string) => text.replace('  include rules.dae\n', '');
+const modes = (page: Page) => page.getByRole('radiogroup', {name: 'Routing mode'});
+// The input is visually hidden inside its label, as in S2, so a person presses the label.
+const choose = async (page: Page, name: string) => {
+  await modes(page).getByText(name, {exact: true}).click();
+  await expect(modes(page).getByRole('radio', {name})).toBeChecked();
+};
+const applyButton = (page: Page) => page.getByRole('region', {name: 'Routing mode'}).getByRole('button', {name: 'Apply', exact: true});
 
 test('a template replaces the routing of the one file that holds it', async ({page}) => {
   const {main, write} = await backend(page);
   await write(oneFile);
   await page.goto('/#/rules?tab=list&view=simple');
-  await expect(page.getByText('Custom rules', {exact: true})).toBeVisible();
-  await page.getByRole('button', {name: 'Apply Bypass mainland China'}).click();
+  // Custom routing selects no mode, and says what applying one replaces.
+  await expect(page.getByRole('status')).toContainText('The current rules are custom; applying a mode replaces the top-level routing in config.dae.');
+  await expect(modes(page).getByRole('radio', {checked: true})).toHaveCount(0);
+  await expect(applyButton(page)).toBeDisabled();
+  await choose(page, 'Bypass mainland China');
+  await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
   await expect(dialog).toContainText('Replaces the top-level routing in config.dae.');
   // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
@@ -76,7 +89,7 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
   await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
   await expect(diff).not.toContainText('tproxy_port');
-  await dialog.getByRole('button', {name: 'Apply template', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Applied Bypass mainland China to config.dae');
   await expect(dialog).toHaveCount(0);
   const saved = (await main()).content!;
@@ -85,7 +98,44 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   // DNS routing is nested and stays.
   expect(saved).toContain('qname(geosite: cn) -> alidns');
   expect(saved).not.toContain('domain(geosite: telegram) -> proxy');
-  await expect(page.getByRole('region', {name: 'Current routing'})).toContainText('Bypass mainland China');
+  // The applied mode is now the detected one: selected, with nothing left to apply.
+  await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+});
+
+test('the detected mode is selected, and the arrow keys move the selection through the visible modes', async ({page}) => {
+  const {api, write} = await backend(page);
+  const defined = allGroupNames((await api.config()).sources);
+  await write(text => writeTemplate(oneFile(text), 'mini', defined));
+  await page.goto('/#/rules?tab=list&view=simple');
+  // A detected preset under More templates opens it, so the selection is in view.
+  const mini = modes(page).getByRole('radio', {name: 'ACL4SSR Mini'});
+  await expect(mini).toBeChecked();
+  await expect(mini).toBeVisible();
+  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(applyButton(page)).toBeDisabled();
+  await page.getByRole('button', {name: 'More templates'}).click();
+  await expect(mini).toBeHidden();
+  // With More templates closed, the arrows cycle through the three plain modes only.
+  const bypass = modes(page).getByRole('radio', {name: 'Bypass mainland China'});
+  await bypass.focus();
+  await page.keyboard.press('Space');
+  await expect(bypass).toBeChecked();
+  await expect(applyButton(page)).toBeEnabled();
+  await page.keyboard.press('ArrowDown');
+  await expect(modes(page).getByRole('radio', {name: 'GFW list only'})).toBeChecked();
+  await page.keyboard.press('ArrowDown');
+  await expect(modes(page).getByRole('radio', {name: 'Global proxy'})).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(bypass).toBeChecked();
+  await page.keyboard.press('ArrowUp');
+  await expect(modes(page).getByRole('radio', {name: 'Global proxy'})).toBeChecked();
+  // Open, the presets under it join the same group.
+  await page.getByRole('button', {name: 'More templates'}).click();
+  await modes(page).getByRole('radio', {name: 'Global proxy'}).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(mini).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
 });
 
 test('routing that pulls in or spreads over other files is refused and nothing is written', async ({page}) => {
@@ -95,8 +145,10 @@ test('routing that pulls in or spreads over other files is refused and nothing i
     if (request.method() !== 'GET') writes++;
   });
   await page.goto('/#/rules?tab=list&view=simple');
-  await expect(page.getByRole('alert').or(page.locator('.rp-alert'))).toContainText('The routing in config.dae includes another file.');
-  await expect(page.getByRole('button', {name: /^Apply /})).toHaveCount(0);
+  // The reason is help text under Apply, which stays disabled whatever is chosen.
+  await expect(applyButton(page)).toHaveAccessibleDescription('The routing in config.dae includes another file. Remove the include to apply a template.');
+  await choose(page, 'Global proxy');
+  await expect(applyButton(page)).toBeDisabled();
   const config = await api.config();
   for (const source of config.sources) {
     if (source.kind === 'main') source.content = oneFile(source.content!);
@@ -104,8 +156,8 @@ test('routing that pulls in or spreads over other files is refused and nothing i
   }
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.reload();
-  await expect(page.locator('.rp-alert')).toContainText('Routing rules are spread over several files.');
-  await expect(page.getByRole('button', {name: /^Apply /})).toHaveCount(0);
+  await expect(applyButton(page)).toHaveAccessibleDescription(/^Routing rules are spread over several files\./);
+  await expect(applyButton(page)).toBeDisabled();
   expect(writes).toBe(0);
 });
 
@@ -113,12 +165,13 @@ test('a file changed on disk after the dialog opened is refused rather than over
   const {main, write} = await backend(page);
   await write(oneFile);
   await page.goto('/#/rules?tab=list&view=simple');
-  await page.getByRole('button', {name: 'Apply GFW list only'}).click();
+  await choose(page, 'GFW list only');
+  await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply GFW list only?'});
   await expect(dialog).toBeVisible();
   await write(text => '# concurrent edit\n' + text);
   const refused = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
-  await dialog.getByRole('button', {name: 'Apply template', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await refused;
   await expect(page.locator('.rp-toast.negative')).toBeVisible();
   const saved = (await main()).content!;
