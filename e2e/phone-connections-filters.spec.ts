@@ -7,7 +7,7 @@ test.describe('390px', () => {
 
   test('the filter field and the filters menu share one row', async ({page}) => {
     await page.goto('/#/connections?tab=list');
-    const field = page.getByRole('searchbox', {name: 'Filter'});
+    const field = page.getByRole('searchbox', {name: 'Filter', exact: true});
     const filters = page.getByRole('button', {name: 'Filters', exact: true});
     await expect(filters).toBeVisible();
     const [a, b] = [(await field.boundingBox())!, (await filters.boundingBox())!];
@@ -44,8 +44,7 @@ test.describe('390px', () => {
     await page.goto('/#/connections?tab=list');
     await page.getByRole('button', {name: 'Filters', exact: true}).click();
     await page.getByRole('menuitem', {name: /^Device/}).click();
-    // The toolbar's own filter field has the same name; the menu's is in its popover.
-    const search = page.getByRole('dialog', {name: 'Filters'}).getByRole('searchbox', {name: 'Filter'});
+    const search = page.getByRole('searchbox', {name: 'Filter devices'});
     await expect(search).toBeFocused();
     await search.fill('10.0.0.49');
     await expect(page.getByRole('menuitemradio')).toHaveCount(1);
@@ -75,7 +74,7 @@ test.describe('390px', () => {
 
   test('a filter that matches nothing keeps its query and a clear control', async ({page}) => {
     await page.goto('/#/connections?tab=list');
-    const field = page.getByRole('searchbox', {name: 'Filter'});
+    const field = page.getByRole('searchbox', {name: 'Filter', exact: true});
     await field.fill('no-such-host.invalid');
     await expect(page.getByText('No matching connections')).toBeVisible();
     await expect(field).toHaveValue('no-such-host.invalid');

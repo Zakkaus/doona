@@ -349,6 +349,7 @@ it('folds the secondary filters into one menu that counts the ones in force', ()
   expect(menu.active).toBe(2);
   expect(menu.submenus.map(submenu => submenu.label)).toEqual(['Network protocol', 'Outbound', 'Device', 'Rule']);
   expect(menu.submenus.map(submenu => submenu.filter)).toEqual(['network', 'out', 'src', 'rule']);
+  expect(menu.submenus.map(submenu => submenu.searchLabel)).toEqual([undefined, 'Filter outbounds', 'Filter devices', 'Filter rules']);
   const [network, , device, rule] = menu.submenus.map(submenu => submenu.sections[0]);
   expect(network.value).toBe('tcp');
   expect(device.items[0]).toEqual({id: 'src:', label: 'All devices'});

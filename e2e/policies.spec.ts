@@ -262,7 +262,7 @@ test('the Configuration list opens the edit dialog, where a node becomes the fin
     await scrollIntoList(option);
     await expect(option.locator('.desc')).toHaveClass(`desc ${tone}`);
   }
-  await page.getByRole('searchbox', {name: 'Filter', exact: true}).fill('SG-0');
+  await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('SG-0');
   await expect(list.getByRole('option')).toHaveText([/^sg-01/]);
   const node = list.getByRole('option', {name: /^sg-01/});
   await scrollIntoList(node);

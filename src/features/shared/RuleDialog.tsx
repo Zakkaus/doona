@@ -60,7 +60,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
               <SearchSelect
                 isDisabled={dialog.busy}
                 label={dialog.targetLabel}
-                searchLabel={t('ui.filter')}
+                searchLabel={t('ui.filterOutbounds')}
                 value={dialog.outbound}
                 onChange={dialog.setOutbound}
                 sections={dialog.outboundSections}

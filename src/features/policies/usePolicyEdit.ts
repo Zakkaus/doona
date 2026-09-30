@@ -156,7 +156,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
             id,
             label: t(routeLabels[id]),
             description: t(routeHelp[id]),
-            searchLabel: t('ui.filter'),
+            searchLabel: t(id === 'default_member_id' ? 'ui.filterMembers' : 'ui.filterOutbounds'),
             value: routeChoiceId(draft[key]),
             sections: id === 'default_member_id' ? memberSections(context.members, held, t) : finalSections(draft.name, context.outbounds, held, t),
             takeFocus: draft.focus === id,
