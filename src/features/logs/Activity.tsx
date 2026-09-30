@@ -7,7 +7,7 @@ import AlertTriangle from '../../ui/icons/AlertTriangle';
 import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';
 import {levelHeatmap} from './heatmap';
-import {logLevelLabels} from '../../api/selectors';
+import {logLevelLabels, logLevels} from '../../api/selectors';
 
 // When the feed was busy and with what: a row per level, a column per stretch of time. A row header sets the
 // minimum level the list shows, which is what the level control already means.
@@ -30,7 +30,7 @@ export function LogActivity({
   const span = useCallback((start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`, [clock, map.width]);
   // A row header per level: it changes with the minimum, not with every published batch.
   const heads = useMemo(() => {
-    const entries = (Object.keys(logLevelLabels) as LogLevel[]).map(level => {
+    const entries = logLevels.map(level => {
       const text = t(logLevelLabels[level]);
       return [
         level,

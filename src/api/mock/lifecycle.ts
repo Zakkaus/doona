@@ -15,7 +15,7 @@ import type {
 import {ApiError} from '../error';
 import {wait} from '../wait';
 import {found} from './common';
-import {eventKinds} from '../selectors';
+import {eventKinds, logLevels} from '../selectors';
 import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
 
@@ -134,7 +134,6 @@ export function createLifecycle(
     return structuredClone(found(operations.get(id), 'Operation'));
   };
   // Keep a bounded replay ring fed by mock activity and quiet background records.
-  const levels: LogRecord['level'][] = ['trace', 'debug', 'info', 'warn', 'error'];
   const logRing: Array<LogRecord & {id: string}> = [];
   const logListeners = new Set<(record: LogRecord & {id: string}) => void>();
   let logSequence = 0;
@@ -204,10 +203,10 @@ export function createLifecycle(
     if (signal?.aborted) return;
     if (!logsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Logs are unavailable');
     if (level && !logsCapability.levels?.includes(level)) throw new ApiError(400, 'invalid_request', `Level ${level} is not advertised`);
-    const floor = level ? levels.indexOf(level) : 0;
+    const floor = level ? logLevels.indexOf(level) : 0;
     const filter = JSON.stringify([level ?? null, target ?? null]);
     const emit = (record: LogRecord & {id: string}) => {
-      if (levels.indexOf(record.level) >= floor && (!target || record.target?.startsWith(target)))
+      if (logLevels.indexOf(record.level) >= floor && (!target || record.target?.startsWith(target)))
         onRecord({...structuredClone(record), id: issueCursor('logs', filter, Number(record.id.split(':')[2]))});
     };
     const cursor = resume(lastEventId, 'logs', filter, 0);

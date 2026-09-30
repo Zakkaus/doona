@@ -224,7 +224,7 @@ export function holdFlowDemand(api: Api) {
 export const wantsFlowDemand = (resources: Capabilities['resources'] | undefined) =>
   resources?.flows.available === true &&
   resources.events.available &&
-  (resources.events.kinds?.some(kind => kind === 'flow.updated' || kind === 'flow.gap') ?? true);
+  (resources.events.kinds?.some(kind => (FLOW_KINDS as readonly string[]).includes(kind)) ?? true);
 export function useFlowDemand(resources: Capabilities['resources'] | undefined) {
   const api = getApi();
   const enabled = wantsFlowDemand(resources);

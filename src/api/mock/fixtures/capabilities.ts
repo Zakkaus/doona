@@ -1,5 +1,6 @@
 import type {Capabilities} from '../../model';
 import {observedAt} from './clock';
+import {eventKinds, logLevels} from '../../selectors';
 export const capabilities: Capabilities = {
   observed_at: observedAt,
   profiles: ['base', 'full_transparency'],
@@ -46,7 +47,7 @@ export const capabilities: Capabilities = {
     config_validate: {available: true, modes: ['syntax', 'full'], max_bytes: 1048576, max_sources: 32},
     logs: {
       available: true,
-      levels: ['trace', 'debug', 'info', 'warn', 'error'],
+      levels: [...logLevels],
       filters: ['level', 'target'],
       retention_seconds: 86400,
       min_buffered_records: 64,
@@ -109,7 +110,7 @@ export const capabilities: Capabilities = {
     },
     events: {
       available: true,
-      kinds: ['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed'],
+      kinds: [...eventKinds],
       retention_seconds: 300,
       max_buffered_events: 1024,
       max_clients: 16,
