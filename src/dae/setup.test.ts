@@ -16,3 +16,12 @@ it('lists subscriptions, a bare URL included, but not the comments between them'
   const rest = writeState(commented, {...state, subscriptions: state.subscriptions.filter(item => item.name !== 'sub-a')});
   expect(rest).toBe("subscription {\n  # paid plan, renewed yearly\n  'https://b.example/sub'\n}\ngroup { proxy {} }\n");
 });
+
+it('removes the section with its last subscription unless comments remain in it', () => {
+  const text = "global {\n  log_level: info\n}\n\nsubscription {\n  sub-a: 'https://a.example/sub'\n}\n\ngroup { proxy {} }\n";
+  expect(writeState(text, {...readState(text), subscriptions: []})).toBe('global {\n  log_level: info\n}\n\ngroup { proxy {} }\n');
+  const state = readState(commented);
+  expect(writeState(commented, {...state, subscriptions: state.subscriptions.filter(item => !isSubscriptionRow(item))})).toBe(
+    'subscription {\n  # paid plan, renewed yearly\n}\ngroup { proxy {} }\n'
+  );
+});

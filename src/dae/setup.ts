@@ -1,4 +1,4 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig, uncomment} from './text';
+import {blockBody, blockEntries, blockFields, quote, scanConfig, uncomment, type TextBlock} from './text';
 import {readSubscriptionEntries} from './subscriptions';
 import {quoteName, readGroupEntries} from './groups';
 import {defaultTemplate, templates, type RuleTemplate} from './templates';
@@ -110,6 +110,18 @@ function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
   if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
   return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
+// The block's lines and one blank line that set it apart, so neither an empty section nor a double gap is left.
+function removal(text: string, block: TextBlock) {
+  let from = text.lastIndexOf('\n', block.from - 1) + 1;
+  const end = text.indexOf('\n', block.to);
+  let to = end === -1 ? text.length : end + 1;
+  if (text.slice(from, block.from).trim() || text.slice(block.to, to).trim()) return {from: block.from, to: block.to, text: ''};
+  const after = text.slice(to).match(/^[ \t]*\n/);
+  const before = text.slice(0, from).match(/\n[ \t]*\n$/);
+  if (after) to += after[0].length;
+  else if (before) from -= before[0].length - 1;
+  return {from, to, text: ''};
+}
 export function writeState(current: string, state: WizardState): string {
   if (current.trim() === '') {
     return [
@@ -133,9 +145,9 @@ export function writeState(current: string, state: WizardState): string {
   for (const [section, block] of subscriptionSections.entries()) {
     const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
     const body = subscriptions.map(subscriptionLine);
-    if (body.join('\n') !== blockBody(current, block).join('\n')) {
-      edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
-    }
+    if (body.join('\n') === blockBody(current, block).join('\n')) continue;
+    if (body.join('\n').trim()) edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
+    else edits.push(removal(current, block));
   }
   const appended: string[] = [];
   if (!subscriptionSections.length && state.subscriptions.length) appended.push(subscriptionBlock(state).join('\n'));
