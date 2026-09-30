@@ -38,6 +38,18 @@
 .rp-hubnav .rp-seg[data-fade~='end'] {
   --fade-end: 24px;
 }
+/* A tab row with controls at its end (Tabs' actions): they wrap under the tabs when the row is too narrow. */
+.rp-tabhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-width: 0;
+}
+.rp-tabhead > .rp-tabbar {
+  min-width: 0;
+}
 .rp-tablist {
   display: inline-flex;
   gap: 4px;

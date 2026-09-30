@@ -14,7 +14,7 @@ export {
   isMac
 } from './hooks';
 export {exportName, downloadFile, csvLine} from './files';
-export {ActionHelp, Button, TextTooltip, Link, buttonClass, type ButtonStyle} from './Button';
+export {ActionHelp, Button, IconTip, TextTooltip, Link, buttonClass, type ButtonStyle} from './Button';
 export {TextField, StaticField, Switch} from './Fields';
 export {Segmented} from './Segmented';
 export {RadioGroup, Radio} from './Radio';
