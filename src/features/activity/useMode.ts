@@ -16,7 +16,7 @@ export function useMode() {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
-  const {main, writable, busy, error, retry, apply: write} = useMainSourceEdit();
+  const {main, checking, writable, busy, error, retry, apply: write} = useMainSourceEdit();
   // The mode is a rule doona writes into dae text, so another engine's configuration neither shows nor takes one.
   // Until the version names the engine the card waits as it does for the configuration.
   const version = useVersion().data;
@@ -25,7 +25,9 @@ export function useMode() {
   const current = useMemo<OutboundMode>(() => (content == null ? {mode: 'rule'} : readMode(content)), [content]);
   const [staged, setStaged] = useState<OutboundMode | null>(null);
   const configAvailable = (daeText || !version) && !!resources?.config.available;
-  const view = modeView(current, staged, groups.data ?? [], daeText && writable && !!main, configAvailable, t, content != null);
+  // Each write changes the source, which is then checked again. The card keeps its controls meanwhile instead of
+  // flashing the read-only status, so the Apply button a screen reader was just told about stays in place.
+  const view = modeView(current, staged, groups.data ?? [], daeText && writable && (!!main || checking), configAvailable, t, content != null);
   const guard = useDraftGuard(view.dirty, () => setStaged(null));
   const apply = async () => {
     if (!staged || view.incomplete) return;

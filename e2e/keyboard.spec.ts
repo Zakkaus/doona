@@ -199,3 +199,28 @@ test('Tab leaves an empty resizable table in flat mode', async ({page}) => {
   await expect(tab).toHaveAttribute('aria-selected', 'true');
   await tabThroughEmptyTable(page, page.getByRole('grid'), tab);
 });
+
+test('Escape on a menu or dialog opened from a table row returns focus to its trigger', async ({page}) => {
+  const reach = async (row: import('@playwright/test').Locator, name: string) => {
+    await row.focus();
+    const trigger = row.getByRole('button', {name, exact: true});
+    for (let i = 0; i < 12 && !(await trigger.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+    await expect(trigger).toBeFocused();
+    return trigger;
+  };
+  await page.goto('/#/nodes');
+  const menu = await reach(page.getByRole('row', {name: /sub-c/}), 'More actions for sub-c');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(menu).toBeFocused();
+
+  await page.goto('/#/rules?tab=list');
+  const edit = await reach(page.getByRole('row', {name: /domain\(geosite: telegram\)/}), 'Edit outbound settings');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeHidden();
+  await expect(edit).toBeFocused();
+});

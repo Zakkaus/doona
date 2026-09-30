@@ -93,6 +93,23 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await expect(await routing()).not.toContainText('doona: outbound mode');
 });
 
+test('applying a mode keeps the Apply button that the pending announcement names', async ({page}) => {
+  await page.goto('/#/activity');
+  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
+  const id = await apply.getAttribute('id');
+  await apply.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
+  await expect(apply).toBeDisabled();
+  // React Aria announces the pending state by pointing at the button; a remounted button leaves it naming nothing.
+  await expect(apply).toHaveAttribute('id', id!);
+  const named = await page
+    .locator('[data-live-announcer] [role=img]')
+    .evaluateAll(els => els.map(el => document.getElementById(el.getAttribute('aria-labelledby') ?? '')?.textContent ?? ''));
+  expect(named.length).toBeGreaterThan(0);
+  expect(named.every(text => text === 'Apply')).toBe(true);
+});
+
 test('read-only main configuration keeps the current mode and explains the write restriction', async ({page}) => {
   const api = createMockApi();
   const capabilities = await api.capabilities();
