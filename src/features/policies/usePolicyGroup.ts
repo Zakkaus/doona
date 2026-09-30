@@ -6,7 +6,7 @@ import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
 import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
-import type {OutboundCatalogue} from './view';
+import type {OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {requestIdOf} from '../../api/error';

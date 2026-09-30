@@ -1,20 +1,4 @@
 import {groupConfigLabels} from '../shared/groupText';
-export {
-  groupConfigLabels,
-  routeFields,
-  routeFieldOrder,
-  routeChoiceId,
-  routeChoiceValue,
-  routeValue,
-  routeWritable,
-  outboundLinks,
-  finalExcluded,
-  finalSections,
-  memberSections,
-  groupOwners,
-  editBlocked
-} from '../shared/groupText';
-export type {RouteField, OutboundCatalogue, GroupOwner} from '../shared/groupText';
 import {compareNames, formatLatency} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
