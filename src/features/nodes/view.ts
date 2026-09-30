@@ -195,6 +195,8 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
   const statuses: Record<Provider['status'], Key> = {ok: 'nodes.status.ok', stale: 'nodes.status.stale', error: 'nodes.status.error'};
   const tones = {ok: 'ok', stale: 'warn', error: 'err'} as const;
   const pseudo = item.kind === 'builtin' || item.kind === 'unattributed';
+  // stale also covers a subscription that holds nothing yet: never loaded, and no failure to say why.
+  const never = item.kind === 'subscription' && item.status === 'stale' && item.updated_at === null && item.last_error === null;
   const used = item.traffic ? addU64(item.traffic.upload_bytes, item.traffic.download_bytes) : null;
   // undefined: no configuration entry to write; null: an entry without an interval, which can still get one.
   const interval = item.kind === 'subscription' ? seconds : undefined;
@@ -218,8 +220,9 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     hasInterval: interval !== undefined,
     intervalLabel: t('nodes.intervalOf', {name}),
     intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
-    status: pseudo ? null : enumLabel(statuses, item.status, t),
-    tone: tones[item.status],
+    status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
+    tone: never ? ('neutral' as const) : tones[item.status],
+    never,
     error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
     refreshLabel: t('nodes.refresh', {name}),
     removeLabel: t('nodes.remove', {name})

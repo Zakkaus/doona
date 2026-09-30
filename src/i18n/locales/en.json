@@ -926,6 +926,7 @@
     "other": "Every {n} hours"
   },
   "nodes.expires": "Expires",
+  "nodes.fetchNow": "Fetch now",
   "nodes.group": "Group",
   "nodes.groups": "Groups",
   "nodes.interval": "Auto-refresh",
@@ -1014,6 +1015,7 @@
   "nodes.search": "Search nodes",
   "nodes.searchAll": "Search covers all node sources.",
   "nodes.status.error": "Failed",
+  "nodes.status.never": "Not fetched",
   "nodes.status.ok": "OK",
   "nodes.status.stale": "Stale",
   "nodes.tab.latency": "Latency",

@@ -760,6 +760,21 @@ test('a subscription in a read-only source offers its source file instead of an 
   await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
 });
 
+test('a subscription never fetched says so and offers the fetch', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://example.org/sub'\n");
+  await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
+  await page.goto('/#/nodes?tab=list');
+  const row = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-d'});
+  await expect(row).toContainText('Not fetched');
+  await expect(rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'})).not.toContainText('Fetch now');
+  await row.getByRole('button', {name: 'Fetch now', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d refreshed'})).toBeVisible();
+  await expect(row).toContainText('OK');
+  await expect(row.getByRole('button', {name: 'Fetch now', exact: true})).toHaveCount(0);
+});
+
 test('a subscription not fetched yet is edited through its name', async ({page}) => {
   const {api} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
