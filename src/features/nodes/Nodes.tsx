@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, Empty, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -15,6 +15,9 @@ export function Nodes(props: PageProps) {
     setTab,
     providerTable,
     nodeTable,
+    noSources,
+    addProvider,
+    addNode,
     error,
     reload,
     dialog,
@@ -50,8 +53,26 @@ export function Nodes(props: PageProps) {
     <>
       <p className="rp-note">{t('nodes.note')}</p>
       <ErrorMessage error={error} onRetry={reload} />
-      <ProviderTable model={providerTable} />
-      <NodeTable model={nodeTable} />
+      {noSources ? (
+        <Empty>
+          {t('nodes.noSources')}
+          {(addProvider || addNode) && (
+            <span className="rp-cluster">
+              {addProvider && (
+                <Button accent onPress={addProvider}>
+                  {t('nodes.addProvider')}
+                </Button>
+              )}
+              {addNode && <Button onPress={addNode}>{t('nodes.addNode')}</Button>}
+            </span>
+          )}
+        </Empty>
+      ) : (
+        <>
+          <ProviderTable model={providerTable} />
+          <NodeTable model={nodeTable} />
+        </>
+      )}
     </>
   );
   const content = {list, latency: <NodeLatency />};

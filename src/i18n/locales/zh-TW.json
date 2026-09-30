@@ -784,6 +784,7 @@
   "nodes.newGroupHelp": "在 group 區段新增群組，使用 name 篩選納入 {name}；策略可於策略頁面修改。",
   "nodes.noMatch": "沒有符合的節點",
   "nodes.noProviders": "沒有節點來源",
+  "nodes.noSources": "尚無訂閱或節點。新增訂閱後即可取得節點。",
   "nodes.node": "節點",
   "nodes.note": "節點來源包括訂閱、檔案與組態內的節點。後端支援時，可在此新增訂閱或貼上節點連結；變更會寫入主組態並重載。",
   "nodes.of": "{name} 的節點",

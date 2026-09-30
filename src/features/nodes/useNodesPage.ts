@@ -31,6 +31,7 @@ import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
 import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
+import {noNodeSources} from '../../api/selectors';
 import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
@@ -408,6 +409,10 @@ export function useNodesPage({go, query}: PageProps) {
     setTab: (next: string) => go('nodes', tabQuery(query, next, 'list')),
     providerTable,
     nodeTable,
+    // No subscription and no node yet: the list gives way to a line saying so and Add subscription.
+    noSources: noNodeSources(providers.data?.providers, nodes.data),
+    addProvider: resources?.providers.can_manage ? () => open({kind: 'provider'}) : null,
+    addNode: resources?.nodes.can_manage ? addNode : null,
     error: providers.error ?? nodes.error,
     reload,
     dialog,

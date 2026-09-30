@@ -124,6 +124,11 @@
   margin: 16px auto 0;
   width: max-content;
 }
+/* Two actions under the message share a centred row. */
+.rp-empty > .rp-cluster {
+  justify-content: center;
+  margin-top: 16px;
+}
 .rp-btn[data-pending] {
   cursor: progress;
 }
