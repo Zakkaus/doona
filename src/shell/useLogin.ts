@@ -91,7 +91,7 @@ export async function signIn(
     return signInRefusal(error) ?? {error};
   }
   try {
-    saveSession(profileId, api, session.token, session.expires_at);
+    saveSession(profileId, api, session.token);
   } catch {
     // The sign-in succeeded; only the tab's storage refused the session.
     return {key: 'settings.saveError'};
