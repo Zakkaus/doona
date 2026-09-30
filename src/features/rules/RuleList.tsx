@@ -28,10 +28,31 @@ import type {RuleConditionKind} from '../../dae/groups';
 import {Coverage} from '../shared/Coverage';
 import type {PageProps} from '../../shell/routes';
 import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './useRuleList';
+import {useRuleTemplates} from './useRuleTemplates';
+import {RuleTemplates} from './RuleTemplates';
 
 export function RuleList(props: PageProps) {
+  const t = useT();
   const view = useRuleList(props);
-  return view.kind === 'dictionary' ? <RuleDictionary view={view} /> : <Distribution view={view} />;
+  const templates = useRuleTemplates(props);
+  if (view.kind !== 'dictionary') return <Distribution view={view} />;
+  if (!templates.available) return <RuleDictionary view={view} />;
+  return (
+    <div className="rp-col">
+      <div className="rp-toolbar">
+        <Segmented
+          label={t('rule.viewMode')}
+          items={[
+            ['simple', t('rule.viewSimple')],
+            ['advanced', t('rule.viewAdvanced')]
+          ]}
+          value={templates.mode}
+          onChange={templates.setMode}
+        />
+      </div>
+      {templates.mode === 'simple' ? <RuleTemplates model={templates} /> : <RuleDictionary view={view} />}
+    </div>
+  );
 }
 type Row = DictionaryModel['table']['rows'][number];
 // Routing rules count their hits in flow records; DNS rules have no such count.
