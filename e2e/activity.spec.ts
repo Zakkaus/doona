@@ -761,8 +761,8 @@ test('the notices card says what is missing to route through a proxy until it is
   const card = page.getByRole('region', {name: 'Notifications'});
   const subscriptions = card.getByRole('listitem').filter({hasText: 'No subscriptions yet'});
   const routing = card.getByRole('listitem').filter({hasText: 'No routing mode chosen'});
-  await expect(subscriptions.getByRole('link', {name: 'Nodes', exact: true})).toHaveAttribute('href', '#/nodes');
-  await routing.getByRole('link', {name: 'Routing mode', exact: true}).click();
+  await expect(subscriptions.getByRole('link', {name: 'Add subscription', exact: true})).toHaveAttribute('href', '#/nodes');
+  await routing.getByRole('link', {name: 'Choose a routing mode', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&view=simple$/);
   await expect(page.getByRole('radiogroup', {name: 'Routing mode'})).toBeVisible();
   // Once the backend has both, the notices are gone.

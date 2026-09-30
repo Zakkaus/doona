@@ -11,6 +11,7 @@
   "about.title": "About doona",
   "act.active": "Active connections",
   "act.cgroup": "cgroup used",
+  "act.chooseRoutingMode": "Choose a routing mode",
   "act.cpu": "CPU usage",
   "act.cpuHelp": "The share of one CPU core that the process uses. A value above 100% means it uses more than one core.",
   "act.d7": "7 d",
