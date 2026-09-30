@@ -255,18 +255,22 @@ export function connectionsView(
   // picker still shows it.
   const outbounds = new Set(rows.flatMap(c => (c.outbound ? [c.outbound] : [])));
   if (out !== 'all') outbounds.add(out);
-  // Equal counts keep one order across refreshes rather than the order the rows arrived in.
+  // Every device and rule is listed, most connections first, and a long list is filtered in the menu; equal counts
+  // keep one order across refreshes rather than the order the rows arrived in.
   const seen = (values: Array<string | null | undefined>) => {
     const present = values.flatMap(value => (value ? [value] : []));
-    return ranked(present, 12).top;
+    return ranked(present, Infinity).top;
   };
+  const outboundItems = [{id: 'all', label: t('conn.allOutbounds')}, ...[...outbounds].map(id => ({id, label: outboundLabel(id, t)}))];
   return {
     networks: [
       ['all', t('ui.allCount', {n: rows.length})],
       ['tcp', t('ui.tcp')],
       ['udp', t('ui.udp')]
     ] as Array<[string, string]>,
-    outbounds: [{id: 'all', label: t('conn.allOutbounds')}, ...[...outbounds].map(id => ({id, label: outboundLabel(id, t)}))],
+    outbounds: outboundItems,
+    // The same choices for the searchable picker, in one untitled section.
+    outboundSections: [{id: 'outbounds', items: outboundItems}],
     picks: [
       {
         title: t('ui.device'),
