@@ -329,6 +329,29 @@ it('reads a failed resource again when its stream reconnects instead of waiting 
   expect(resource.getSnapshot()).toMatchObject({data: 'capabilities', error: null});
 });
 
+it('keeps a backend’s Retry-After when a reconnect cuts the retry delay short', async () => {
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 3))
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 3))
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 3))
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 3))
+    .mockResolvedValue('capabilities');
+  const resource = watchResource(createMockApi(), {key: ['capabilities'], every: 0, retryErrors: true, fetch}, () => {});
+  disposers.push(resource.dispose);
+  await vi.advanceTimersByTimeAsync(9000);
+  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(resource.getSnapshot().error?.message).toBe('wait');
+  // The fourth refusal asked for three seconds; the retry delay behind it is five, and only those extra two go.
+  await vi.advanceTimersByTimeAsync(1000);
+  resource.invalidate(true);
+  await vi.advanceTimersByTimeAsync(1999);
+  expect(fetch).toHaveBeenCalledTimes(4);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(5);
+  expect(resource.getSnapshot()).toMatchObject({data: 'capabilities', error: null});
+});
+
 it('defers an initial automatic load and a held retry while hidden, resuming each once', async () => {
   Object.assign(document, {hidden: true});
   const fetch = vi
