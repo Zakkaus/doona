@@ -2,6 +2,20 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.11] - 2026-09-30
+
+### Changed
+
+- Name lists sort by the interface language: pinyin in Simplified Chinese, stroke order in Traditional Chinese, and Latin names before Chinese ones in English. (#226)
+- Events of a kind this version does not know appear on the Events page with their raw kind and the resource they name. (#225)
+
+### Fixed
+
+- The release attaches honk-core debug builds that start with a state database written by the builds attached to 0.1.0-beta.9, which the builds attached to 0.1.0-beta.10 refused ([Glassyiris/honk#85](https://github.com/Glassyiris/honk/pull/85)).
+- The new-version notice appears only when the service worker holds a different build from the open page, and a notice left by an earlier build is dropped. (#223)
+- The open-at label names the configuration source it opens. (#223)
+- The release packages install every licence file that NOTICE cites and a THIRD-PARTY-NOTICES.txt for the production dependencies, and the package metadata declares the image licences. (#224)
+
 ## [0.1.0-beta.10] - 2026-09-30
 
 ### Added
