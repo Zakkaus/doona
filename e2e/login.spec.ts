@@ -1,4 +1,5 @@
-import {expect, expectLoadFailures, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {ApiError} from '../src/api/error';
 
 // The public demo saves a profile on the mock; a saved demo profile signs in with the account it publishes.
 const demoProfile = {'doona-profiles': JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]), 'doona-profile': 'demo'};
@@ -174,6 +175,33 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   await login.getByLabel('Token', {exact: true}).fill('fresh-token');
   await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Connect', exact: true}).click()]);
   await expect.poll(() => authorization).toBe('Bearer fresh-token');
+});
+
+// A saved token is the backend's configured secret: signing out forgets it in this browser and revokes nothing.
+test('signing out with a saved token forgets it and returns to the sign-in page', async ({page}) => {
+  const backend = await mockBackend(page);
+  expectLoadFailures(page, /\/api(\/|$)/);
+  await page.addInitScript(() => {
+    if (localStorage.getItem('doona-profiles')) return;
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: 'saved-token'}]));
+    localStorage.setItem('doona-profile', 'home');
+  });
+  backend.handlers['GET capabilities'] = async request => {
+    if (request.headers()['authorization'] !== 'Bearer saved-token') throw new ApiError(401, 'authentication_required', 'Token required');
+    return backend.capabilities;
+  };
+  await page.goto('/#/settings');
+  const card = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'Backend', exact: true})});
+  await expect(card.getByText('Clears the token saved in this browser. The token stays valid on the backend.')).toBeVisible();
+  await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Sign out', exact: true}).click()]);
+  await expect(page).toHaveURL(/#\/activity$/);
+  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
+  expect(backend.requests.some(request => request.method() !== 'GET')).toBe(false);
+  await page.reload();
+  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)).toEqual([
+    {id: 'home', name: 'Home', api: 'http://127.0.0.1:4177', token: ''}
+  ]);
 });
 
 // A honk build before the native API keeps its Clash API: with a secret it refuses the sign-in probes, which carry no

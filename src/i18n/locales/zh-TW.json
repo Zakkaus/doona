@@ -1446,6 +1446,7 @@
   "settings.showToken": "顯示 Token",
   "settings.signOut": "登出",
   "settings.signOutFailed": "無法登出",
+  "settings.signOutTokenHelp": "僅清除此瀏覽器儲存的 Token；該 Token 在後端仍然有效。",
   "settings.sourceConfig": "組態值",
   "settings.sourceRuntime": "執行期覆寫",
   "settings.switchProfileHelp": "切換設定檔會放棄尚未儲存的後端網址與 Token 修改；已儲存的設定檔保持不變。",

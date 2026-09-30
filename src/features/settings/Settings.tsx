@@ -95,6 +95,7 @@ export function Settings({query}: PageProps) {
             )}
           </div>
         </ActionHelp>
+        {session?.tokenOnly && <span className="rp-label">{t('settings.signOutTokenHelp')}</span>}
         <form
           className="rp-form"
           noValidate
