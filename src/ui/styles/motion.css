@@ -71,6 +71,10 @@
   --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12);
   --rp-popover-border: transparent;
   --rp-on-accent: var(--rp-surface);
+  /* Text on a success or error fill, such as a toast. Where the on-accent colour is under 4.5:1 on that tone, the
+     palette points these at another of its own colours. */
+  --rp-on-positive: var(--rp-on-accent);
+  --rp-on-negative: var(--rp-on-accent);
   --rp-on-text: var(--rp-surface);
   --rp-accent: var(--rp-pine);
   /* The accent as text. Where a palette's accent is under 4.5:1 on its base or surface, the palette sets body text. */

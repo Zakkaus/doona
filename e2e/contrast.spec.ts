@@ -2,7 +2,7 @@ import {expect, test} from './fixtures';
 import type {PaletteId} from '../src/shell/preferences';
 
 // Every palette, both schemes: the accent, the status tones and secondary text as text on the base, the surface, a
-// tile (the overlay) and a selected tile, text on an accent fill, and body text.
+// tile (the overlay) and a selected tile, text on an accent, success and error fill, and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.
 // Glass is left out: its surfaces are translucent over a gradient.
 const palettes = {
@@ -39,7 +39,22 @@ const subtleFloors: Record<string, [number, number]> = {
 // its tones sit at the same level and its accent, info and tile secondary text fall back to that body text. Its
 // page-level subtle keeps the lower floors above.
 const karyFloors: Record<string, number> = {base: 4, surface: 4.2, tile: 3.8, 'selected tile': 3.4};
+// Toast text on a success or error fill where no colour of the palette reaches 4.5:1 on that tone; the fill keeps its
+// on-accent text.
+const fillFloors: Record<string, number> = {
+  'rose-pine/main light text on positive': 3.2,
+  'rose-pine/main light text on negative': 4,
+  'rose-pine/moon light text on positive': 3.2,
+  'rose-pine/moon light text on negative': 4,
+  'catppuccin/frappe light text on positive': 3.7,
+  'catppuccin/macchiato light text on positive': 3.7,
+  'catppuccin/mocha light text on positive': 3.7,
+  'nord/nord dark text on negative': 3,
+  'arco/arco light text on negative': 3.7,
+  'semi/semi light text on negative': 3.7
+};
 const known = new Map<string, number>([
+  ...Object.entries(fillFloors),
   ...Object.entries(karyFloors).flatMap(([ground, floor]) =>
     ['text', 'subtle text', ...roles.map(role => `${role} text`)].map(name => [`kary/kary light ${name} on ${ground}`, floor] as const)
   ),
@@ -116,6 +131,8 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
             'subtle text on tile': subtle.tile,
             'subtle text on selected tile': subtle['selected tile'],
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
+            'text on positive': ratio('var(--rp-on-positive, transparent)', 'var(--rp-positive)'),
+            'text on negative': ratio('var(--rp-on-negative, transparent)', 'var(--rp-negative)'),
             ...Object.fromEntries(each('text', on('var(--rp-text)')))
           };
           return {ratios, faded};

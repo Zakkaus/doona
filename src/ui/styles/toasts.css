@@ -177,12 +177,12 @@
 }
 .rp-toast.negative {
   background: var(--rp-negative);
-  color: var(--rp-on-accent);
+  color: var(--rp-on-negative);
 }
 /* Success takes the same tone as the ok light and a good latency; info the accent. */
 .rp-toast.positive {
   background: var(--rp-positive);
-  color: var(--rp-on-accent);
+  color: var(--rp-on-positive);
 }
 .rp-toast.info {
   background: var(--rp-info);
