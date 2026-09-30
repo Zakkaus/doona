@@ -691,7 +691,7 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
   await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('skylink-sub');
   await expect(dialog.getByText('Groups in groups.dae also filter on sub-c. Edit them in their source file before renaming.', {exact: true})).toBeVisible();
-  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   // Keeping the name leaves a URL edit free.
   await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('sub-c');
