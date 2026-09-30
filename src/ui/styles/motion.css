@@ -21,8 +21,8 @@
 /* Press feedback after S2 `pressScale`: a text button sinks to about 0.95 of its size; icon buttons, tabs, rows
    and navigation take the colour step only. */
 .rp-btn:not(.icon)[data-pressed],
-.rp-select[data-pressed],
-.rp-selectbtn[data-pressed] {
+.rp-select[data-pressed]:not([aria-expanded='true']),
+.rp-selectbtn[data-pressed]:not([aria-expanded='true']) {
   scale: 0.95;
 }
 /* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
