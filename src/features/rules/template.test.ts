@@ -21,14 +21,14 @@ it('names the template the one routing file holds, in plain words', () => {
   const main = source('main', writeTemplate('group { proxy {} }\n', 'bypass', []), 'main');
   const view = templatesView([main, source('extra', 'node { a: "vless://x" }\n')], t);
   expect(view.current?.name).toBe('Bypass mainland China');
-  expect(view.current?.help).toContain('Mainland China connects directly');
+  expect(view.current?.help).toContain('connects directly for Google China services');
   expect(view.primary.map(choice => choice.id)).toEqual(['bypass', 'gfw', 'global']);
 });
 
 it('says which groups each of the ACL4SSR templates creates', () => {
   const view = templatesView([], t);
   expect(view.more.map(choice => choice.id)).toEqual(['mini', 'standard', 'full']);
-  expect(view.more[0].help).toContain('Creates the groups proxy, auto.');
+  expect(view.more[0].help).toContain('Uses the groups proxy, auto, creating any that are missing.');
   expect(view.more[1].help).toContain('proxy, auto, telegram, media, apple');
 });
 
@@ -62,7 +62,7 @@ it('refuses routing split over files or pulling one in, and files it may not wri
   expect(input([plain], {denied: 'main'}).refusal).toBe('denied');
   expect(input([]).refusal).toBe('noSource');
   expect(refusalReason('secret', plain, t)).toBe(
-    'main.dae holds API listener settings or secrets, which the backend does not write back. Edit it on the host.'
+    'main.dae contains native_api or clash_api settings and cannot be rewritten through the backend. Edit the file on the host.'
   );
 });
 

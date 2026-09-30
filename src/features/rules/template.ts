@@ -22,7 +22,7 @@ const templateText: Record<RuleTemplate, [Key, Key]> = {
 export type TemplateChoice = {id: RuleTemplate; name: string; help: string};
 export function templateChoice(id: RuleTemplate, t: Translator): TemplateChoice {
   const [name, help] = templateText[id];
-  return {id, name: t(name), help: t(help, {groups: templates[id].groups.map(group => group.name).join(', ')})};
+  return {id, name: t(name), help: t(help, {groups: templates[id].groups.map(group => group.name).join(t('ui.listSeparator'))})};
 }
 
 export type TemplateWrite = {after: string; diff: DiffRow[]};

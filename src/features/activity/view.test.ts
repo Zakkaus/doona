@@ -143,7 +143,7 @@ it('lists what the backend lacks to route through a proxy, each with the page th
       id: 'setup:routing',
       tone: 'info',
       kindText: 'Notice',
-      summaryText: 'No routing mode chosen',
+      summaryText: 'No routing rules configured',
       action: {label: 'Choose a routing mode', href: '#/rules?tab=list&view=simple'}
     }
   ]);

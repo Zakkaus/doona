@@ -80,13 +80,15 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await write(oneFile);
   await page.goto('/#/rules?tab=list&view=simple');
   // Custom routing selects no mode, and says what applying one replaces.
-  await expect(page.getByRole('status')).toContainText('The current rules are custom; applying a mode replaces the top-level routing in config.dae.');
+  await expect(page.getByRole('status')).toContainText('The current rules match no mode. Applying a mode writes its top-level routing to config.dae.');
   await expect(modes(page).getByRole('radio', {checked: true})).toHaveCount(0);
   await expect(applyButton(page)).toBeDisabled();
   await choose(page, 'Bypass mainland China');
   await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
-  await expect(dialog).toContainText('Replaces the top-level routing in config.dae; DNS routing and the other files stay as they are.');
+  await expect(dialog).toContainText(
+    "Writes the mode's top-level routing to config.dae, replacing the existing top-level routing, and adds missing groups. Existing DNS routing and the other files stay as they are."
+  );
   // The configuration has a dns block, so the DNS split is not offered.
   await expect(dialog.getByRole('checkbox')).toHaveCount(0);
   // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
@@ -154,15 +156,15 @@ test('without a dns block the dialog offers the DNS split, checked, and writes i
   await choose(page, 'Bypass mainland China');
   await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
-  const split = dialog.getByRole('checkbox', {name: 'Also add DNS split'});
+  const split = dialog.getByRole('checkbox', {name: 'Also add DNS routing'});
   await expect(split).toBeChecked();
   await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
   const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
   await expect(diff.locator('[data-kind="add"]', {hasText: 'qname(geosite:cn) -> alidns'})).toHaveCount(1);
-  await dialog.getByText('Also add DNS split', {exact: true}).click();
+  await dialog.getByText('Also add DNS routing', {exact: true}).click();
   await expect(split).not.toBeChecked();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'alidns'})).toHaveCount(0);
-  await dialog.getByText('Also add DNS split', {exact: true}).click();
+  await dialog.getByText('Also add DNS routing', {exact: true}).click();
   // Validation is held, so the checkbox can be tried while the write runs: it keeps the choice the write holds.
   let release = () => {};
   const held = new Promise<void>(resolve => (release = resolve));
@@ -172,7 +174,7 @@ test('without a dns block the dialog offers the DNS split, checked, and writes i
   });
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(split).toBeDisabled();
-  await dialog.getByText('Also add DNS split', {exact: true}).click({force: true});
+  await dialog.getByText('Also add DNS routing', {exact: true}).click({force: true});
   await expect(split).toBeChecked();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'qname(geosite:cn) -> alidns'})).toHaveCount(1);
   release();
