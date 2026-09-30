@@ -1,7 +1,6 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert, Radio, RadioGroup} from '../../ui/ui';
-import AlertTriangle from '../../ui/icons/AlertTriangle';
+import {Button, Card, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import type {TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -25,7 +24,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
           onChange={id => model.select(id as RuleTemplate)}
         >
           {radios(model.primary)}
-          <Disclosure title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
+          <Disclosure flush title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
             {radios(model.more)}
           </Disclosure>
         </RadioGroup>
@@ -50,6 +49,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             <p>{t('rule.template.scope', {file: dialog.file})}</p>
             <ImpactList
               title={t('rule.template.created')}
+              columns
               empty={t('rule.template.createdNone')}
               rows={dialog.impact.created.map(group => ({
                 name: group.name,
@@ -63,7 +63,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
                 rows={dialog.impact.reused.map(group => ({name: group.name, label: null, warning: group.pinned ? t('rule.template.pinnedHelp') : null}))}
               />
             )}
-            <Disclosure title={t('rule.template.changes', {file: dialog.file})}>
+            <Disclosure flush title={t('rule.template.changes', {file: dialog.file})}>
               <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
             </Disclosure>
           </>
@@ -74,8 +74,9 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
 }
 
 type ImpactRow = {name: string; label: string | null; warning: string | null};
-// A titled list of groups in the apply dialog: each name with its label on one line, and a warning line under it.
-function ImpactList({title, empty, rows}: {title: string; empty?: string; rows: ImpactRow[]}) {
+// A titled list of groups in the apply dialog: each name with its label, and a warning light under it. `columns` lays
+// a long list out in as many columns as fit.
+function ImpactList({title, empty, columns, rows}: {title: string; empty?: string; columns?: boolean; rows: ImpactRow[]}) {
   const headingId = useId();
   return (
     <section className="rp-impact-section" aria-labelledby={headingId}>
@@ -83,24 +84,23 @@ function ImpactList({title, empty, rows}: {title: string; empty?: string; rows: 
         {title}
       </h3>
       {rows.length ? (
-        <ul className="rp-impact">
+        <ul className={columns ? 'rp-impact grid' : 'rp-impact'}>
           {rows.map(row => (
             <li key={row.name}>
-              <span>
-                <code>{row.name}</code>
-                {row.label && <span className="rp-impact-label">{row.label}</span>}
+              <span className="rp-cluster">
+                <code className="rp-code">{row.name}</code>
+                {row.label && <span className="rp-note">{row.label}</span>}
               </span>
               {row.warning && (
-                <span className="rp-impact-warning">
-                  <AlertTriangle />
+                <Light small tone="warn">
                   {row.warning}
-                </span>
+                </Light>
               )}
             </li>
           ))}
         </ul>
       ) : (
-        <span className="rp-label">{empty}</span>
+        <p className="rp-note">{empty}</p>
       )}
     </section>
   );

@@ -1,4 +1,4 @@
-import {useEffect, useId, useLayoutEffect, useMemo, useRef} from 'react';
+import {useEffect, useId, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
@@ -37,20 +37,27 @@ export function RuleList(props: PageProps) {
   const templates = useRuleTemplates(props);
   if (view.kind !== 'dictionary') return <Distribution view={view} />;
   if (!templates.available) return <RuleDictionary view={view} />;
+  // The view switch ends the list's toolbar row in both views, after the rule count and Add rule.
+  const viewSwitch = (
+    <Segmented
+      label={t('rule.viewMode')}
+      items={[
+        ['simple', t('rule.viewSimple')],
+        ['advanced', t('rule.viewAdvanced')]
+      ]}
+      value={templates.mode}
+      onChange={templates.setMode}
+    />
+  );
+  if (templates.mode === 'advanced') return <RuleDictionary view={view} viewSwitch={viewSwitch} />;
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
-        <Segmented
-          label={t('rule.viewMode')}
-          items={[
-            ['simple', t('rule.viewSimple')],
-            ['advanced', t('rule.viewAdvanced')]
-          ]}
-          value={templates.mode}
-          onChange={templates.setMode}
-        />
+        {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
+        <span className="rp-grow" />
+        {viewSwitch}
       </div>
-      {templates.mode === 'simple' ? <RuleTemplates model={templates} /> : <RuleDictionary view={view} />}
+      <RuleTemplates model={templates} />
     </div>
   );
 }
@@ -66,7 +73,7 @@ const hitsColumn = (t: Translator): TableColumn<Row> => ({
   render: row => row.hits
 });
 // One rule list with its add and remove dialogs; the routing list and each DNS list render through it.
-export function RuleDictionary({view}: {view: DictionaryModel}) {
+export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewSwitch?: ReactNode}) {
   const t = useT();
   const {form, setForm, pick, setPick, draft, dialog} = view;
   const mustHelpId = useId();
@@ -204,6 +211,7 @@ export function RuleDictionary({view}: {view: DictionaryModel}) {
               {t('rule.add')}
             </Button>
           )}
+          {viewSwitch}
         </div>
       </ActionHelp>
       {view.held && (

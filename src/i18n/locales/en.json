@@ -1500,7 +1500,7 @@
   "rule.template.gfw": "GFW list only",
   "rule.template.gfwHelp": "Only blocked sites on the GFW list and Telegram go through the proxy; everything else connects directly. Also blocks advertisements.",
   "rule.template.global": "Global proxy",
-  "rule.template.globalHelp": "Everything goes through the proxy except the direct traffic every mode keeps.",
+  "rule.template.globalHelp": "Apart from the direct traffic every mode keeps, all traffic goes through the proxy.",
   "rule.template.mini": "ACL4SSR Mini",
   "rule.template.miniHelp": "Mainland China connects directly; blocked sites, Telegram and overseas media go through the proxy. Creates the groups {groups}.",
   "rule.template.mode": "Routing mode",

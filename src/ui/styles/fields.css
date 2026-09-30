@@ -102,11 +102,6 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  line-height: 20px;
-}
-.rp-radio-text > span + span {
-  font-size: var(--rp-text-sm);
-  color: var(--rp-subtle);
 }
 .rp-radios > .rp-label:last-child {
   margin-top: 4px;
