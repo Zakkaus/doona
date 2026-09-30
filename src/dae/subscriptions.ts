@@ -1,5 +1,6 @@
 import {LocalError} from '../api/error';
-import {isBareName, quote, scanConfig, unquote, type TextBlock, type TextToken} from './text';
+import type {Key} from '../i18n';
+import {isBareName, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextToken} from './text';
 
 // The entry forms honk reads in a `subscription {}` section, one entry per physical line unless a block follows:
 // `tag: url` (bare), `tag: 'url'` (short), `tag: 'url'(UA)` (agent), the old block `tag: { url: … }` (block), and
@@ -58,6 +59,14 @@ export function urlHost(url: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+// Why a User-Agent cannot be used: past the contract's bound of 256 printable ASCII characters, or, for one written into
+// an entry, a value no quote can hold.
+export function agentProblem(agent: string, written: boolean): Key | null {
+  const value = agent.trim();
+  if (!/^[\x20-\x7E]{0,256}$/.test(value)) return 'nodes.agentInvalid';
+  return written && !isQuotable(value) ? 'config.unquotable' : null;
 }
 
 const raw = (text: string, token: TextToken | undefined) => (token ? text.slice(token.from, token.to) : '');

@@ -9,13 +9,12 @@ import {
   providerRows,
   nodeRowView,
   providerRowView,
-  intervalText,
-  intervalItems,
   keptOptions,
   providerCreate,
   renameReferences,
   selectedProvider
 } from './view';
+import {intervalItems, intervalText} from '../shared/subscription';
 import {translate, type Translator} from '../../i18n';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';

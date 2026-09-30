@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {parseInterval, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionChange} from './subscriptions';
+import {agentProblem, parseInterval, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionChange} from './subscriptions';
 import {addSubtagsToGroup, classifyFilters, readGroupEntries, removeSubtagsFromGroup} from './groups';
 import {LocalError} from '../api/error';
 
@@ -306,4 +306,13 @@ subscription {
   expect(writeSubscriptionEntry(source, 'second', {interval: 0})).toContain("second: 'https://two.example/#' {\n    interval: 0s\n  }");
   const url = 'https://example.org/{#}?token=a\\b';
   expect(writeSubscriptionEntry(`subscription {\n  paid: '${url}'\n}\n`, 'paid', {interval: 3600})).toContain(`paid: '${url}' {`);
+});
+
+it('judges a User-Agent against the contract bound, and one written into an entry against quoting too', () => {
+  expect(agentProblem('', false)).toBeNull();
+  expect(agentProblem('  clash.meta  ', true)).toBeNull();
+  expect(agentProblem('agent\u00e9', false)).toBe('nodes.agentInvalid');
+  expect(agentProblem('a'.repeat(257), false)).toBe('nodes.agentInvalid');
+  expect(agentProblem(`it's "x"`, false)).toBeNull();
+  expect(agentProblem(`it's "x"`, true)).toBe('config.unquotable');
 });

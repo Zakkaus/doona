@@ -30,9 +30,9 @@ const allowed = new Map(
     ['src/features/policies/PolicyEdit.tsx', 'placeholder', "name(keyword: 'HK')", 'sample dae condition'],
     ['src/features/dns/Dns.tsx', 'placeholder', 'example.com', 'sample domain'],
     ['src/features/rules/Rules.tsx', 'placeholder', 'example.com', 'sample domain'],
-    ['src/features/nodes/Nodes.tsx', 'placeholder', 'https://example.org/sub?token=…', 'sample subscription URL'],
+    ['src/features/shared/SubscriptionFields.tsx', 'placeholder', 'https://example.org/sub?token=…', 'sample subscription URL'],
     ['src/features/nodes/Nodes.tsx', 'placeholder', 'vless://…', 'sample share link'],
-    ['src/features/nodes/Nodes.tsx', 'placeholder', 'sub-a', 'sample subscription name'],
+    ['src/features/shared/SubscriptionFields.tsx', 'placeholder', 'sub-a', 'sample subscription name'],
     ['src/features/nodes/Nodes.tsx', 'placeholder', 'hk', 'sample node name'],
     ['src/features/nodes/Nodes.tsx', 'placeholder', 'hk-03', 'sample node name']
   ].map(([path, place, text, reason]) => [`${path} ${place} ${text}`, reason])

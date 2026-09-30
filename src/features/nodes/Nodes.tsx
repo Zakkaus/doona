@@ -1,11 +1,12 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ErrorMessage, InlineAlert, LabeledSelect, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, ErrorMessage, InlineAlert, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
 import {PolicyPicker} from '../shared/PolicyPicker';
+import {SubscriptionFields} from '../shared/SubscriptionFields';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {
@@ -31,15 +32,13 @@ export function Nodes(props: PageProps) {
     submitLabel,
     groupHelp,
     groupNameError,
-    agentError,
-    options,
+    subscription,
+    setSubscription,
+    subscriptionFields,
+    subscriptionErrors,
     policy,
     setPolicy,
-    editNameError,
     editOptions,
-    editAgentError,
-    editAgentDefault,
-    editCache,
     renameGroups,
     renameFrom,
     renameBlocked,
@@ -85,77 +84,17 @@ export function Nodes(props: PageProps) {
             {problem.text}
           </InlineAlert>
         )}
-        {dialog?.kind === 'provider' && (
+        {(dialog?.kind === 'provider' || dialog?.kind === 'editProvider') && (
           <div className="rp-list">
-            <span className="rp-label">{t('nodes.addProviderHelp')}</span>
-            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="sub-a" onChange={name => setForm({...form, name})} />
-            <TextField
+            <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>
+            <SubscriptionFields
+              value={subscription}
+              onChange={setSubscription}
+              fields={subscriptionFields}
               isDisabled={pending}
-              label={t('nodes.url')}
-              value={form.value}
-              placeholder="https://example.org/sub?token=…"
-              onChange={value => setForm({...form, value})}
+              nameError={subscriptionErrors.name}
+              agentError={subscriptionErrors.agent}
             />
-            {options?.intervals && (
-              <LabeledSelect
-                label={t('nodes.interval')}
-                items={options.intervals}
-                value={options.interval}
-                isDisabled={pending}
-                onChange={interval => setForm({...form, interval})}
-              />
-            )}
-            {options?.agent !== undefined && (
-              <TextField
-                isDisabled={pending}
-                label={t('nodes.agent')}
-                value={form.agent}
-                placeholder={options.agent}
-                error={agentError ?? undefined}
-                spellCheck={false}
-                onChange={agent => setForm({...form, agent})}
-              />
-            )}
-            {options?.cache != null && (
-              <>
-                <Switch isSelected={options.cache} isDisabled={pending} onChange={cache => setForm({...form, cache})}>
-                  {t('nodes.cache')}
-                </Switch>
-                <span className="rp-label">{t('nodes.cacheHelp')}</span>
-              </>
-            )}
-          </div>
-        )}
-        {dialog?.kind === 'editProvider' && (
-          <div className="rp-list">
-            <span className="rp-label">{t('nodes.editProviderHelp')}</span>
-            <TextField
-              isDisabled={pending}
-              label={t('nodes.name')}
-              value={form.name}
-              spellCheck={false}
-              error={editNameError ?? undefined}
-              onChange={name => setForm({...form, name})}
-            />
-            <TextField isDisabled={pending} label={t('nodes.url')} value={form.value} spellCheck={false} onChange={value => setForm({...form, value})} />
-            <TextField
-              isDisabled={pending}
-              label={t('nodes.agent')}
-              value={form.agent}
-              placeholder={editAgentDefault}
-              description={t('nodes.agentDefault')}
-              error={editAgentError ?? undefined}
-              spellCheck={false}
-              onChange={agent => setForm({...form, agent})}
-            />
-            {editCache !== null && (
-              <>
-                <Switch isSelected={editCache} isDisabled={pending} onChange={cache => setForm({...form, cache})}>
-                  {t('nodes.cache')}
-                </Switch>
-                <span className="rp-label">{t('nodes.cacheHelp')}</span>
-              </>
-            )}
             {renameGroups && (
               <>
                 <Switch isSelected={updateGroups} isDisabled={pending} onChange={setUpdateGroups}>
