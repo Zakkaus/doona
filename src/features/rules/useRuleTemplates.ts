@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {useCapabilities, useConfig, useConfigEditor, useNodes, useVersion} from '../../store';
+import {refetchAll, useCapabilities, useConfig, useConfigEditor, useNodes, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
 import {useT} from '../../i18n';
 import {ApiError} from '../../api/error';
@@ -53,6 +53,9 @@ export type RuleTemplatesModel = TemplatesView & {
   confirm: () => Promise<void>;
   applying: boolean;
 };
+// A write changes the rules, and the groups and DNS rules a template brings, besides the file: every resource on show is
+// read again, so the table the view switch opens holds the new rules and its generation even with no event stream.
+const reread = () => void refetchAll();
 // The routing list's simple view: the template the routing holds, in plain words, and the templates to replace it with.
 // It opens on the simple view, template or custom, and on the rule table for a link to a rule.
 export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
@@ -67,7 +70,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const isComplete = useCompleteness(sources);
   // A new group named like a node takes that name over, so the impact names the nodes it would shadow.
   const nodes = useNodes(readable && offered(resources, 'nodes', {whileLoading: false}));
-  const editor = useConfigEditor(config.refetch, {rethrow: true});
+  const editor = useConfigEditor(reread, {rethrow: true});
   const [denied, setDenied] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Pending | null>(null);
   const [picked, setPicked] = useState<RuleTemplate | null>(null);
@@ -82,6 +85,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   });
   const setMode = (mode: string) => go('rules', within(query, {view: mode}));
   const selected = picked ?? view.current?.id ?? null;
+  const applying = editor.busy === 'save';
   const canApply = !!selected && selected !== view.current?.id && !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
   return {
     ...view,
@@ -117,7 +121,10 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       file: fileName(dialog.source),
       dns: dialog.withDns ? addDns : null
     },
-    setDns: setAddDns,
+    // The write already holds the choice made before Apply, so the checkbox stays put until it settles.
+    setDns: add => {
+      if (!applying) setAddDns(add);
+    },
     close: () => {
       editor.cancel();
       setDialog(null);
@@ -143,6 +150,6 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         toastFailure(error, t, t('ui.writeFailed'));
       }
     },
-    applying: editor.busy === 'save'
+    applying
   };
 }
