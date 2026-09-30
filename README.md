@@ -62,15 +62,16 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 | Activity      | Outbound mode, traffic and memory, active connections, node latency, outbound usage, top clients, notifications                                                                   |
 | System status | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                           |
 | Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all |
+| Routing log   | The routing map and flow records                                                                                                                                                  |
 | DNS           | Queries with their answers, cache, resolution log and statistics; create a DNS rule for a logged domain when writable; flush the cache                                            |
 | Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                   |
-| Rules         | Routing and DNS request and response rules, editable in their source when writable; routing map, rule hits, flow records and trace simulation                                     |
+| Rules         | Routing and DNS request and response rules, editable in their source when writable; rule hits and trace simulation                                                                |
 | Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                                                                                    |
 | Configuration | Create source files and edit them in place, diagnostics, validation, quick setup and export                                                                                       |
 | Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                           |
 | Settings      | Backends, runtime settings and actions, geodata sources and SHA-256 verification when supported, language, appearance, palette and notification placement                         |
 
-A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections and Rules request flows while open, without setting Flow recording to Always.
+A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections, Routing log and Rules request flows while open, without setting Flow recording to Always.
 
 `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
 
@@ -108,7 +109,7 @@ Above the log list, a heatmap counts records per level over time. A level's row 
 
 ### Routing map
 
-The routing map on Rules follows traffic from rules, or from devices, through outbounds to nodes. Point at or select a rule, outbound or node to highlight the paths through it.
+The routing map on Routing log follows traffic from rules, or from devices, through outbounds to nodes. Point at or select a rule, outbound or node to highlight the paths through it.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
 
