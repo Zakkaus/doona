@@ -2,6 +2,17 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.12] - 2026-09-30
+
+### Changed
+
+- Latencies are coloured by speed again: green below 100 ms, yellow below 300 ms, and red from 300 ms or when the node did not answer. This applies to the nodes table and chart, the node menu, the Activity latency tile and the Policies member grid. (#231)
+- The release attaches honk-core debug builds rebased on daeuniverse/honk main. They add main's VLESS Vision uplink padding and splice handover ([honk#304](https://github.com/daeuniverse/honk/pull/304)), compare DNS upstream names without their quotes ([honk#305](https://github.com/daeuniverse/honk/pull/305)), and embed doona 0.1.0-beta.12.
+
+### Fixed
+
+- On a phone, the About dialog shows the doona version; only the top bar leaves it out for lack of room. (#228)
+
 ## [0.1.0-beta.11] - 2026-09-30
 
 ### Changed
