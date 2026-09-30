@@ -11,7 +11,6 @@ import {groupsNamingTag} from '../../dae/groups';
 import {type RuleTemplate} from '../../dae/templates';
 import {diagnosticRows, saveReason, sourceView, wizardInitial, wizardRows, wizardUnder} from './view';
 import {useDraftGuard} from '../../shell/draft';
-const templateIds: RuleTemplate[] = ['global', 'bypass', 'gfw', 'mini', 'standard', 'full'];
 const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   global: ['config.wizardGlobal', 'config.wizardGlobalHelp'],
   bypass: ['config.wizardBypass', 'config.wizardBypassHelp'],
@@ -20,6 +19,7 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
   standard: ['config.wizardStandard', 'config.wizardStandardHelp'],
   full: ['config.wizardFull', 'config.wizardFullHelp']
 };
+const templateIds = Object.keys(templateLabels) as RuleTemplate[];
 // Edits subscriptions and optional routing templates, keeping existing groups. Redacted text whose digest does not
 // match is never written back.
 export function useWizard({main, sources, editor, onDone}: {main: ConfigSource; sources: ConfigSource[]; editor: ConfigEditor; onDone: () => void}) {

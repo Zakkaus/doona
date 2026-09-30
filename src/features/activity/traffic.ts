@@ -1,10 +1,20 @@
 import type {Runtime, TrafficHistory} from '../../api/model';
 import {mean, useRings, window, type Fold, type Rings} from '../../api/rings';
 import {parseU64} from '../../api/u64';
+import type {Key} from '../../i18n';
 
 type TrafficSample = {time: number; up: number | null; down: number | null; connections: number | null};
 // Windows are seconds; live is two minutes at full resolution. Longer ranges use backend history when offered.
-export const trafficWindows: Record<string, number> = {live: 120, m10: 600, h1: 3600, h6: 21600, h24: 86400, d7: 604800};
+export const trafficRanges = {
+  live: {seconds: 120, label: 'act.live'},
+  m10: {seconds: 600, label: 'act.m10'},
+  h1: {seconds: 3600, label: 'act.h1'},
+  h6: {seconds: 21600, label: 'act.h6'},
+  h24: {seconds: 86400, label: 'act.h24'},
+  d7: {seconds: 604800, label: 'act.d7'}
+} as const satisfies Record<string, {seconds: number; label: Key}>;
+export type TrafficRange = keyof typeof trafficRanges;
+export const isTrafficRange = (value: string): value is TrafficRange => Object.hasOwn(trafficRanges, value);
 const rate = (value: string | null | undefined) => {
   const parsed = parseU64(value ?? null);
   return parsed === null ? null : Number(parsed) / 1000;

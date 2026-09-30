@@ -16,7 +16,7 @@ import {RankingCard} from './RankingCard';
 export function Activity() {
   const t = useT();
   const vm = useActivity();
-  const {p, locale, range, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
+  const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   if (!vm.ready) return alert || (vm.discoveryFailed ? null : <Loading>{t('ui.loading')}</Loading>);
@@ -88,24 +88,7 @@ export function Activity() {
       </div>
 
       <div className="rp-g21">
-        <Card
-          title={t('act.traffic')}
-          aside={
-            <Segmented
-              label={t('act.historyRange')}
-              value={range}
-              onChange={setRange}
-              items={[
-                ['live', t('act.live')],
-                ['m10', t('act.m10')],
-                ['h1', t('act.h1')],
-                ['h6', t('act.h6')],
-                ['h24', t('act.h24')],
-                ['d7', t('act.d7')]
-              ]}
-            />
-          }
-        >
+        <Card title={t('act.traffic')} aside={<Segmented label={t('act.historyRange')} value={range} onChange={setRange} items={ranges} />}>
           {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
           ) : vm.history.state === 'unavailable' ? (

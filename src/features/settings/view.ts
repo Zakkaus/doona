@@ -11,12 +11,12 @@ import type {Key} from '../../i18n';
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder | 'geodata'>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
-export const recorderFields: Recorder[] = ['record_flows', 'record_logs', 'record_dns_log'];
 export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {
   record_flows: {state: 'flows', label: 'settings.recordFlows'},
   record_logs: {state: 'logs', label: 'settings.recordLogs'},
   record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
 };
+export const recorderFields = Object.keys(recorderAccess) as Recorder[];
 const recorderChoiceLabel: Record<RecorderChoice, Key> = {auto: 'settings.record.auto', on: 'settings.record.on', off: 'settings.record.off'};
 // The wire form is the choice itself.
 export const recorderPatchValue = (choice: RecorderChoice): RecorderMode => choice;
@@ -48,7 +48,6 @@ export function recordingNote(recording: RuntimeSettings['recording'] | undefine
 const attachmentTailSeconds = 60;
 export const flowRecordingNote = (choice: RecorderChoice, t: Translator) =>
   choice === 'auto' ? t('settings.recordFlowsAuto', {n: attachmentTailSeconds}) : null;
-export const numericFields: Numeric[] = ['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds'];
 export const numericAccess: Record<
   Numeric,
   // read is undefined when the engine omits the section or member.
@@ -83,6 +82,7 @@ export const numericAccess: Record<
     label: 'settings.flowsRetention'
   }
 };
+export const numericFields = Object.keys(numericAccess) as Numeric[];
 export function numericFieldView(id: Numeric, value: string, floor: number, ceiling: number | undefined, locale: string, t: Translator) {
   const access = numericAccess[id];
   return {

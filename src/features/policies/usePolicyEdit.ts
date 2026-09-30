@@ -11,6 +11,7 @@ import type {SearchSection} from '../../ui/SearchSelect';
 import {
   editBlocked,
   finalSections,
+  groupConfigLabels,
   memberSections,
   routeChoiceId,
   routeChoiceValue,
@@ -56,7 +57,6 @@ export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolea
 // What the default member and final outbound pickers offer: the live group, its members as their tiles show them,
 // and every outbound a final can name.
 export type RouteContext = {g: Group | undefined; members: MemberView[]; outbounds: OutboundCatalogue};
-const routeLabels = {default_member_id: 'policy.cfg.defaultMember', final_outbound: 'policy.cfg.finalOutbound'} as const;
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
@@ -160,7 +160,7 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
           const held = [routeValue(entry?.[key] ?? null), draft[key]];
           return {
             id,
-            label: t(routeLabels[id]),
+            label: t(groupConfigLabels[id]),
             description: t(routeHelp[id]),
             searchLabel: t(id === 'default_member_id' ? 'ui.filterMembers' : 'ui.filterOutbounds'),
             value: routeChoiceId(draft[key]),

@@ -4,7 +4,7 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
 import {useMemorySeries} from './useMemorySeries';
-import {historyTrafficSamples, trafficWindow, trafficWindows, useTrafficSamples} from './traffic';
+import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow, useTrafficSamples, type TrafficRange} from './traffic';
 import {useNotices} from './useNotices';
 import {useMode} from './useMode';
 import {activityView, trafficState} from './view';
@@ -21,14 +21,14 @@ export function useActivity() {
   const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
   const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
-  const [range, setRange] = useState('live');
-  const windowSeconds = trafficWindows[range] ?? 120;
+  const [range, setRange] = useState<TrafficRange>('live');
+  const windowSeconds = trafficRanges[range].seconds;
   const memoryHistory = useMemorySeries(capabilities.data, memory.data);
   const history = useTrafficHistory(windowSeconds, capabilities.data);
   const polledTraffic = useTrafficSamples(runtime.data);
   const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
   const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
-  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficWindows.live, undefined, 24), [polledTraffic, historySamples]);
+  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, 24), [polledTraffic, historySamples]);
   const traffic = useMemo(
     () => [
       {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -43,6 +43,10 @@ export function useActivity() {
     ],
     [t, p, memoryHistory.rss, memoryHistory.cgroup]
   );
+  const ranges = useMemo(() => (Object.keys(trafficRanges) as TrafficRange[]).map((id): [string, string] => [id, t(trafficRanges[id].label)]), [t]);
+  const pickRange = useCallback((value: string) => {
+    if (isTrafficRange(value)) setRange(value);
+  }, []);
   const trafficBounds = useMemo(() => ({since: series.since, until: series.until}), [series.since, series.until]);
   const memoryBounds = useMemo(() => ({since: memoryHistory.since, until: memoryHistory.until}), [memoryHistory.since, memoryHistory.until]);
   // Traffic series are in KB/s.
@@ -67,7 +71,8 @@ export function useActivity() {
     mode,
     notices,
     range,
-    setRange,
+    ranges,
+    setRange: pickRange,
     locale,
     p,
     spark,

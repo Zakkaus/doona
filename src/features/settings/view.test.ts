@@ -9,11 +9,14 @@ import {
   geodataRows,
   geodataUpdateReason,
   numericAccess,
+  numericFields,
   numericFieldView,
   paletteLabel,
   probeFailure,
   profileReason,
   profileView,
+  recorderAccess,
+  recorderFields,
   recorderPatchValue,
   recorderView,
   flowRecordingNote,
@@ -53,6 +56,12 @@ it('distinguishes connection errors from successful status and falls back for un
   expect(paletteLabel([], 'custom')).toBe('custom');
 });
 
+it('offers a control for every setting its access table covers, in table order', () => {
+  expect(recorderFields).toEqual(['record_flows', 'record_logs', 'record_dns_log']);
+  expect(recorderFields).toEqual(Object.keys(recorderAccess));
+  expect(numericFields).toEqual(['log.buffered_records', 'dns_log.max_records', 'flows.max_flows', 'flows.retention_seconds']);
+  expect(numericFields).toEqual(Object.keys(numericAccess));
+});
 it('recorder controls follow the reported state and the wire form', () => {
   const t = ((key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key)) as unknown as Translator;
   const active = recorderView('record_flows', 'auto', {allowed: true, mode: 'auto', active: true}, t);
