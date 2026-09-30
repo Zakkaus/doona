@@ -103,6 +103,40 @@
   gap: 2px;
   min-width: 0;
 }
+/* S2 Checkbox: the radio's row with a 14px box of 2px radius; checked, it fills with the accent colour under a
+   checkmark in the colour text on the accent takes. */
+.rp-checkbox-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border: 2px solid var(--rp-subtle);
+  border-radius: 2px;
+  background: var(--rp-surface);
+  color: var(--rp-on-accent);
+}
+.rp-checkbox-mark .rp-icon {
+  width: 10px;
+  height: 10px;
+  visibility: hidden;
+}
+.rp-checkbox[data-hovered] .rp-checkbox-mark {
+  border-color: var(--rp-text);
+}
+.rp-checkbox[data-selected] .rp-checkbox-mark {
+  border-color: var(--rp-accent);
+  background: var(--rp-accent);
+}
+.rp-checkbox[data-selected] .rp-checkbox-mark .rp-icon {
+  visibility: visible;
+}
+.rp-checkbox[data-focus-visible] .rp-checkbox-mark {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
 .rp-radios > .rp-label:last-child {
   margin-top: 4px;
 }

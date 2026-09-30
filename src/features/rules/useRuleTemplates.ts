@@ -6,13 +6,11 @@ import {ApiError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigSource} from '../../api/model';
-import {toast, toastFailure, type DiffRow} from '../../ui/ui';
-import {allGroupNames, fileName} from '../../dae/sources';
-import {writeTemplate} from '../../dae/setup';
+import {toast, toastFailure} from '../../ui/ui';
+import {fileName} from '../../dae/sources';
 import type {RuleTemplate} from '../../dae/templates';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
-import {lineDiff} from './diff';
 import {
   refusalReason,
   ruleViewMode,
@@ -20,15 +18,19 @@ import {
   templateImpact,
   templatesView,
   templateTarget,
+  templateWrites,
   type RuleViewMode,
   type TemplateChoice,
   type TemplateImpact,
+  type TemplateWrite,
   type TemplatesView
 } from './template';
 
 // A template being confirmed, over the file as it was read when the dialog opened: that text is what the write's
-// If-Match names, so a change on disk since is refused rather than overwritten.
-type Pending = {choice: TemplateChoice; source: ConfigSource; after: string; impact: TemplateImpact; diff: DiffRow[]};
+// If-Match names, so a change on disk since is refused rather than overwritten. `withDns` is the same write with the
+// DNS split appended, offered while the configuration has no `dns` block.
+type Pending = {choice: TemplateChoice; source: ConfigSource; impact: TemplateImpact; plain: TemplateWrite; withDns: TemplateWrite | null};
+type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null};
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
   available: boolean;
@@ -44,7 +46,9 @@ export type RuleTemplatesModel = TemplatesView & {
   // Whether the chosen template can be applied: it differs from the detected one and the file can be written.
   canApply: boolean;
   open: () => void;
-  dialog: (Pending & {file: string}) | null;
+  // `dns` is whether the DNS split is added, or null when the configuration already has a `dns` block.
+  dialog: Dialog | null;
+  setDns: (add: boolean) => void;
   close: () => void;
   confirm: () => Promise<void>;
   applying: boolean;
@@ -67,6 +71,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const [denied, setDenied] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Pending | null>(null);
   const [picked, setPicked] = useState<RuleTemplate | null>(null);
+  const [addDns, setAddDns] = useState(true);
   const target = templateTarget({
     sources,
     configWritable: resources?.config.writable === true,
@@ -91,30 +96,37 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     open: () => {
       const source = target.source;
       if (!canApply || !source || !selected) return;
-      const before = source.content!;
-      const after = writeTemplate(before, selected, allGroupNames(sources));
+      setAddDns(true);
       setDialog({
         choice: templateChoice(selected, t),
         source,
-        after,
         impact: templateImpact(
           selected,
           source,
           sources,
           (nodes.data ?? []).map(node => node.name)
         ),
-        diff: lineDiff(before, after).map(line => (line.kind === 'gap' ? {kind: 'gap', text: t('rule.template.unchanged', {n: line.count})} : line))
+        ...templateWrites(selected, source, sources, t)
       });
     },
-    dialog: dialog && {...dialog, file: fileName(dialog.source)},
+    dialog: dialog && {
+      choice: dialog.choice,
+      source: dialog.source,
+      impact: dialog.impact,
+      ...(dialog.withDns && addDns ? dialog.withDns : dialog.plain),
+      file: fileName(dialog.source),
+      dns: dialog.withDns ? addDns : null
+    },
+    setDns: setAddDns,
     close: () => {
       editor.cancel();
       setDialog(null);
     },
     confirm: async () => {
       if (!dialog) return;
+      const {after} = dialog.withDns && addDns ? dialog.withDns : dialog.plain;
       try {
-        const outcome = await editor.apply(dialog.source, dialog.after);
+        const outcome = await editor.apply(dialog.source, after);
         if (!outcome) return;
         if (outcome.diagnostics) {
           toast('negative', t('ui.writeInvalid', {n: outcome.diagnostics.filter(item => item.level === 'error').length}));

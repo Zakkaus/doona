@@ -1447,6 +1447,8 @@
   "rule.sourceUserspace": "Userspace",
   "rule.srcPort": "Source port",
   "rule.stale": "The rule list and configuration are out of sync. The list has been refreshed; retry the operation.",
+  "rule.template.addDns": "Also add DNS split",
+  "rule.template.addDnsHelp": "Adds a dns block: names in geosite:cn resolve through alidns (223.5.5.5), the rest through cloudflare over DNS over TLS (1.1.1.1).",
   "rule.template.applied": "Applied {name} to {file}",
   "rule.template.apply": "Apply",
   "rule.template.bypass": "Bypass mainland China",

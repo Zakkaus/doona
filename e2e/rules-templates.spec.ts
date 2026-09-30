@@ -3,6 +3,7 @@ import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {allGroupNames} from '../src/dae/sources';
 import {writeTemplate} from '../src/dae/setup';
+import {scanConfig} from '../src/dae/text';
 import {box, expect} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
@@ -62,6 +63,10 @@ async function backend(page: Page) {
   return {api, main, write};
 }
 const oneFile = (text: string) => text.replace('  include rules.dae\n', '');
+const noDns = (text: string) => {
+  const block = scanConfig(text).blocks.find(item => item.name === 'dns')!;
+  return text.slice(0, block.from) + text.slice(block.to);
+};
 const modes = (page: Page) => page.getByRole('radiogroup', {name: 'Routing mode'});
 // The input is visually hidden inside its label, as in S2, so a person presses the label.
 const choose = async (page: Page, name: string) => {
@@ -82,6 +87,8 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await applyButton(page).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
   await expect(dialog).toContainText('Replaces the top-level routing in config.dae; DNS routing and the other files stay as they are.');
+  // The configuration has a dns block, so the DNS split is not offered.
+  await expect(dialog.getByRole('checkbox')).toHaveCount(0);
   // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
   await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('No new groups.');
   await expect(dialog.getByRole('region', {name: 'Existing groups used'})).toContainText('proxy');
@@ -122,7 +129,9 @@ test('the routing list opens on the simple view for template and custom routing,
   await expect(table).toHaveCount(0);
   const defined = allGroupNames((await api.config()).sources);
   await write(text => writeTemplate(text, 'bypass', defined));
+  // Only the hash changes, so a reload reads the file written behind the page's back.
   await page.goto('/#/rules');
+  await page.reload();
   await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
   // A link to one rule, as search and Connections make, lands on the table with the rule selected.
   const rule = (await api.rules()).rules[0].rule_id;
@@ -131,6 +140,29 @@ test('the routing list opens on the simple view for template and custom routing,
   await expect(modes(page)).toHaveCount(0);
   await page.goto('/#/rules?view=advanced');
   await expect(table).toBeVisible();
+});
+
+test('without a dns block the dialog offers the DNS split, checked, and writes it only while checked', async ({page}) => {
+  const {main, write} = await backend(page);
+  await write(text => noDns(oneFile(text)));
+  await page.goto('/#/rules?tab=list&view=simple');
+  await choose(page, 'Bypass mainland China');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
+  const split = dialog.getByRole('checkbox', {name: 'Also add DNS split'});
+  await expect(split).toBeChecked();
+  await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
+  const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
+  await expect(diff.locator('[data-kind="add"]', {hasText: 'qname(geosite:cn) -> alidns'})).toHaveCount(1);
+  await dialog.getByText('Also add DNS split', {exact: true}).click();
+  await expect(split).not.toBeChecked();
+  await expect(diff.locator('[data-kind="add"]', {hasText: 'alidns'})).toHaveCount(0);
+  await dialog.getByText('Also add DNS split', {exact: true}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  const saved = (await main()).content!;
+  expect(saved).toContain("alidns: 'udp://223.5.5.5:53'");
+  expect(saved).toContain('qname(geosite:cn) -> alidns');
 });
 
 test('the detected mode is selected, and the arrow keys move the selection through the visible modes', async ({page}) => {
