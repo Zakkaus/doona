@@ -12,15 +12,6 @@ import {
   checkInvalid,
   checkPatch,
   checkRebase,
-  editBlocked,
-  finalExcluded,
-  finalSections,
-  groupOwners,
-  memberSections,
-  outboundLinks,
-  routeChoiceValue,
-  routeFields,
-  routeWritable,
   groupConfigFields,
   groupActionsReason,
   groupKind,
@@ -34,6 +25,17 @@ import {
   selectionSummary,
   untestedHelp
 } from './view';
+import {
+  editBlocked,
+  finalExcluded,
+  finalSections,
+  groupOwners,
+  memberSections,
+  outboundLinks,
+  routeChoiceValue,
+  routeFields,
+  routeWritable
+} from '../shared/groupText';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
 it('writes the kind filter into the URL, clears a deep link and preserves other query state', () => {

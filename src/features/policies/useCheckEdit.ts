@@ -3,7 +3,8 @@ import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast, useLinked} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, groupConfigLabels, type CheckEditDraft, type CheckField} from './view';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, type CheckEditDraft, type CheckField} from './view';
+import {groupConfigLabels} from '../shared/groupText';
 export type CheckEditView = {
   title: string;
   open: boolean;
