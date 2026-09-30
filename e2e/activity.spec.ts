@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, setAppearance, test} from './fixtures';
+import {expect, faults, mockBackend, scrollIntoList, setAppearance, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -167,10 +167,14 @@ test('the latency tile names a node that is unavailable and keeps its size', asy
   await page.addInitScript(() => localStorage.setItem('doona-mock-scenario', 'faults'));
   await page.goto('/#/activity');
   const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
+  // The value link appears once the nodes have loaded; before that the tile shows its placeholder.
+  await expect(tile.getByRole('link')).toHaveAccessibleName(/^\S+: \d/);
   await expect(tile.locator('.rp-light')).toHaveCount(0);
   const height = (await tile.boundingBox())!.height;
   await page.getByRole('button', {name: 'Node', exact: true}).click();
-  await page.getByRole('menuitemradio').filter({hasText: 'jp-01'}).click();
+  const jp = page.getByRole('menuitemradio').filter({hasText: 'jp-01'});
+  await scrollIntoList(jp);
+  await jp.click();
   await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
   expect((await tile.boundingBox())!.height).toBe(height);
 });
