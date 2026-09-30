@@ -100,12 +100,15 @@ export function usePolicyGroup(input: PolicyGroupInput) {
             : t('policy.noneSelected');
       toast('positive', t('policy.backToAutomatic', {name: g.name, member}));
     });
-  const interrupt = (value: boolean) =>
-    void declared
-      .refreshOrigin(() => control.setInterrupt(value))
-      .then(saved => {
-        if (saved && g) toast('positive', t('policy.updated', {name: g.name}));
-      });
+  const interrupt = (value: boolean) => {
+    if (declared.editing) {
+      declared.setInterrupt(value);
+      return;
+    }
+    void control.setInterrupt(value).then(saved => {
+      if (saved && g) toast('positive', t('policy.updated', {name: g.name}));
+    });
+  };
   const select =
     card && (card.selectable || card.overridable)
       ? (memberId: string) => {
@@ -139,14 +142,19 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     expanded,
     setExpanded,
     // What the dialog shows beside the declaration, and alone when it opens read-only: the group's configuration as
-    // the backend reports it, and the interrupt switch, which writes to the group directly rather than to the file.
+    // the backend reports it. The interrupt switch edits the draft when present, otherwise the live group.
     details: card
       ? {
           fields: card.fields,
           heading: edit.editing ? t('policy.liveConfig') : null,
           reason: edit.editing ? null : (edit.tip ?? null),
           interrupt: card.interruptable
-            ? {selected: card.interrupt, unset: card.interruptUnset, isDisabled: !!control.busy || edit.busy, change: interrupt}
+            ? {
+                selected: edit.editing ? edit.interrupt === true : card.interrupt,
+                unset: edit.editing ? edit.interrupt === null : card.interruptUnset,
+                isDisabled: !!control.busy || edit.busy,
+                change: interrupt
+              }
             : null
         }
       : null,

@@ -122,7 +122,6 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
       ]}
     />
   );
-  // Whether the group runs automatically or on a pinned member; an automatic group shows it only while pinned.
   const pin = g?.pinned && (
     <Light small tone="neutral">
       {t('policy.overridden')}

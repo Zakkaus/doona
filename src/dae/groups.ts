@@ -10,6 +10,7 @@ export type GroupEntry = {
   // `default` and `final` as written, quotes included, or null when the entry sets none.
   default: string | null;
   final: string | null;
+  interrupt: string | null;
   from: number;
   to: number;
 };
@@ -30,6 +31,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
           policy: last('policy'),
           default: last('default'),
           final: last('final'),
+          interrupt: last('interrupt_connections'),
           from: entry.line,
           to: entry.endLine
         };
@@ -45,9 +47,8 @@ export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'inv
   return !isBareName(name) ? 'invalid' : taken.has(name) ? 'taken' : null;
 }
 
-// What writeGroupEntry sets. `default` and `final` are written as given, quotes included; undefined leaves the line
-// alone and null removes it.
-export type GroupEntryUpdate = {filters: string[]; policy: string | null; default?: string | null; final?: string | null};
+// Optional fields are written as given; undefined leaves the line alone and null removes it.
+export type GroupEntryUpdate = {filters: string[]; policy: string | null; default?: string | null; final?: string | null; interrupt?: string | null};
 export function writeGroupEntry(text: string, name: string, next: GroupEntryUpdate): string {
   const {blocks, tokens} = scanConfig(text);
   const sections = blocks.filter(block => block.name === 'group');
@@ -77,6 +78,7 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
     ...(next.policy ? [`${indent}${indent}policy: ${next.policy}`] : []),
     ...(next.default ? [`${indent}${indent}default: ${next.default}`] : []),
     ...(next.final ? [`${indent}${indent}final: ${next.final}`] : []),
+    ...(next.interrupt ? [`${indent}${indent}interrupt_connections: ${next.interrupt}`] : []),
     `${indent}}`
   ].join('\n');
   if (block) {
@@ -87,9 +89,10 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
   return `${text.replace(/\n+$/, '')}\n\ngroup {\n${body}\n}\n`;
 }
 
-// Changes the filter, policy, default and final fields where they stand, so comments and other fields keep their place.
+// Changes fields where they stand, so comments and other fields keep their place.
 // A new line goes after the last line of its own key or of a key listed before it, in the order a group is written.
-const singleKeys = ['policy', 'default', 'final'] as const;
+const singleKeys = ['policy', 'default', 'final', 'interrupt'] as const;
+const fieldName = (key: (typeof singleKeys)[number]) => (key === 'interrupt' ? 'interrupt_connections' : key);
 function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inner: string, next: GroupEntryUpdate): string {
   const filters = fields.filter(field => field.name === 'filter');
   const edits: Array<{from: number; to: number; text: string}> = [];
@@ -115,7 +118,7 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
   singleKeys.forEach((key, i) => {
     const value = next[key];
     if (value === undefined) return;
-    const own = fields.filter(field => field.name === key);
+    const own = fields.filter(field => field.name === fieldName(key));
     own.slice(0, -1).forEach(remove);
     if (own.length) {
       if (value) replace(own.at(-1)!, value);
@@ -124,8 +127,8 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
     }
     if (!value) return;
     if (key === 'policy') return add(filterAt, `${inner}policy: ${value}\n`);
-    const before = fields.filter(field => field.name === 'filter' || singleKeys.slice(0, i).includes(field.name as (typeof singleKeys)[number])).at(-1);
-    add(before ? lineEnd(before.to) : lineEnd(entry.open), `${inner}${key}: ${value}\n`);
+    const before = fields.filter(field => field.name === 'filter' || singleKeys.slice(0, i).some(key => field.name === fieldName(key))).at(-1);
+    add(before ? lineEnd(before.to) : lineEnd(entry.open), `${inner}${fieldName(key)}: ${value}\n`);
   });
   for (const [at, lines] of added) edits.push({from: at, to: at, text: lines});
   return edits.sort((a, b) => b.from - a.from || b.to - a.to).reduce((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), text);
