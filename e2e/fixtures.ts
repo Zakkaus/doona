@@ -99,6 +99,22 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
 // The default demo has none.
 export const faults = {'doona-mock-scenario': 'faults'};
 
+// A long menu is a virtual list, which turns pointer events off on its items until 300ms after its last scroll event.
+// Playwright's own scroll into view can land the click in that window, where the list swallows it and the menu stays
+// open. This scrolls the item into view and returns once the list takes pointer events again.
+export async function scrollIntoList(item: Locator) {
+  await item.evaluate(async el => {
+    let scroller = el.parentElement;
+    while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    if (!scroller) return;
+    const before = scroller.scrollTop;
+    const scrolled = new Promise<void>(resolve => scroller.addEventListener('scroll', () => resolve(), {once: true}));
+    el.scrollIntoView({block: 'nearest'});
+    if (scroller.scrollTop !== before) await scrolled;
+  });
+  await expect.poll(() => item.evaluate(el => getComputedStyle(el).pointerEvents)).not.toBe('none');
+}
+
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
 // A phone keeps every column and scrolls the table sideways, the container around a native table and the grid itself
 // once virtualised; this brings the trailing columns into view. A virtualised grid turns pointer events off on its
