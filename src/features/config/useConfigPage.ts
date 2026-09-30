@@ -7,9 +7,9 @@ import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
-import {href, pickTab, tabQuery, within} from '../../shell/route';
+import {pickTab, tabQuery, within} from '../../shell/route';
 import {configMetadata, saveReason, saveView, validateReason, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
-import {configTabs, setupAvailable} from './nav';
+import {configTabs} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
@@ -67,8 +67,7 @@ export function useConfigPage({go, query}: PageProps) {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
   }, [config.data]);
-  const setup = setupAvailable(resources, mainSource);
-  const tabs = configTabs(setup);
+  const tabs = configTabs();
   const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
   const configWritable = resources?.config.writable === true;
   const isComplete = useCompleteness(sources);
@@ -77,7 +76,7 @@ export function useConfigPage({go, query}: PageProps) {
   const engine = useMemo(() => engineOf(version), [version]);
   const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
   const canWrite = !!source && !readOnly;
-  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : !mainSource.content.trim() && setup ? 'setup' : 'modules';
+  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
   const tab = pickTab(
     query,
     tabs.map(item => item.id),
@@ -98,23 +97,6 @@ export function useConfigPage({go, query}: PageProps) {
         focusLine
       }
     : null;
-  // A saved setup stays on its tab, which an emptied file's default would otherwise move away from, and offers the pages
-  // that use what it wrote, and the file itself.
-  const wizardProps =
-    setup && mainSource
-      ? {
-          main: mainSource,
-          sources,
-          editor,
-          onDone: () => go('config', within(query, {tab: 'setup'}), {replace: true}),
-          next: [
-            {id: 'nodes', label: t('nav.nodes'), href: href('nodes')},
-            {id: 'policies', label: t('nav.policies'), href: href('policies')},
-            {id: 'rules', label: t('rule.listTitle'), href: href('rules', {tab: 'list'})},
-            {id: 'source', label: t('config.openSource'), href: href('config', {tab: 'source', source: mainSource.id})}
-          ]
-        }
-      : null;
   const newSourceProps: NewSourceProps | null =
     resources?.config.create === true && resources.config.writable === true ? {sources, refetch: config.refetch, open: id => openSource(id, null)} : null;
   const validateProps: ValidateTabProps | null = config.data
@@ -139,7 +121,6 @@ export function useConfigPage({go, query}: PageProps) {
     select,
     sourceProps,
     newSourceProps,
-    wizardProps,
     modulesProps: config.data
       ? {
           config: config.data,

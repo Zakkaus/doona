@@ -1,14 +1,9 @@
-import type {Capabilities, ConfigSource} from '../../api/model';
+import type {ConfigSource} from '../../api/model';
 import type {Key} from '../../i18n';
 
-// Quick setup needs a writable main source.
-export function setupAvailable(resources: Capabilities['resources'] | undefined, main: ConfigSource | null | undefined): boolean {
-  return !!main && resources?.config.writable === true && main.writable;
-}
-export function configTabs(setup: boolean): Array<{id: 'modules' | 'setup' | 'source' | 'validate'; titleKey: Key}> {
+export function configTabs(): Array<{id: 'modules' | 'source' | 'validate'; titleKey: Key}> {
   return [
     {id: 'modules', titleKey: 'config.tabModules'},
-    ...(setup ? [{id: 'setup' as const, titleKey: 'config.wizard' as const}] : []),
     {id: 'source', titleKey: 'config.tabSource'},
     {id: 'validate', titleKey: 'config.tabValidate'}
   ];

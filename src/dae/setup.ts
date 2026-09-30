@@ -1,90 +1,22 @@
-import {blockBody, blockEntries, blockFields, quote, scanConfig, uncomment, type TextBlock} from './text';
-import {readSubscriptionEntries} from './subscriptions';
-import {quoteName, readGroupEntries} from './groups';
-import {defaultTemplate, templates, type RuleTemplate} from './templates';
+import {scanConfig, quote, type TextBlock} from './text';
+import {readGroupEntries} from './groups';
+import {templates, type RuleTemplate} from './templates';
 
-// `suffix` is an option written after the quoted URL, such as the user agent in `'https://…'(clash)`.
-// `tag` is the name the file gives the entry, written or derived, which group filters cite as `subtag(...)`.
-type Subscription = {name: string; url: string; suffix?: string; raw?: string; section?: number; tag?: string};
-export type WizardState = {
-  subscriptions: Subscription[];
-  // The first group's header as written, which is how a rule names it.
-  group: string | null;
-  rules: 'keep' | RuleTemplate;
-  lanInterface: string;
-  listenerPort: string;
-  defaultDns: string;
-  chinaDns: string;
-};
-
-const networkDefaults = {listenerPort: '12345', defaultDns: 'tls://1.1.1.1:853', chinaDns: 'udp://223.5.5.5:53'};
-
-export const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
-export function validNetwork(state: WizardState): boolean {
-  return isPort(state.listenerPort) && !!state.defaultDns.trim() && !!state.chinaDns.trim();
-}
-
-// Blank and comment-only lines in the block are written back where they stand but are no subscription to list.
-export const isSubscriptionRow = (item: Subscription) => item.raw === undefined || !!uncomment(item.raw).trim();
-
-// An entry whose name was edited away from the tag the file gives it. When group filters cite that tag the rename is
-// refused, as a removal is: the filters would match nothing, and rewriting them can widen a group to every node.
-export const isRenamed = (item: Subscription) => item.raw === undefined && item.tag !== undefined && item.name.trim() !== item.tag;
-
-export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
-export function validSubscriptions(subscriptions: Subscription[]): boolean {
-  const names = subscriptions.map(item => item.name.trim() || item.tag).filter((name): name is string => !!name);
-  return new Set(names).size === names.length && subscriptions.every(item => item.raw !== undefined || (!!item.name.trim() && isSubscriptionUrl(item.url)));
-}
-
-// The first free `sub-N`: counting rows alone repeats a name once one was removed or already taken.
-export function nextSubscriptionName(subscriptions: Subscription[]): string {
-  const taken = new Set(subscriptions.map(item => item.name.trim() || item.tag));
-  let n = subscriptions.length + 1;
-  while (taken.has(`sub-${n}`)) n++;
-  return `sub-${n}`;
-}
-
-export function readState(text: string): WizardState {
-  const {blocks, tokens} = scanConfig(text);
-  const subscriptions: Subscription[] = [];
-  const entries = readSubscriptionEntries(text);
-  for (const [section, block] of blocks.filter(block => block.name === 'subscription').entries()) {
-    if (!text.slice(block.open + 1, block.close).trim()) continue;
-    for (const range of blockEntries(text, block)) {
-      const line = text.slice(range.from, range.to);
-      const entry = entries.find(entry => entry.from >= range.from && entry.from <= range.to);
-      // A one-line entry with its own tag and an http(s) link is edited here; any other line is kept as written.
-      const editable = entry && entry.naming === 'tag' && entry.form !== 'block' && entry.form !== 'options' && isSubscriptionUrl(entry.url);
-      if (editable) {
-        const suffix = entry.form === 'agent' ? text.slice(entry.urlAt.to, entry.to) : undefined;
-        subscriptions.push({name: entry.tag, url: entry.url, ...(suffix ? {suffix} : {}), raw: line, section, tag: entry.tag});
-      } else subscriptions.push({name: '', url: '', raw: line, section, ...(entry ? {tag: entry.tag} : {})});
-    }
-  }
-  const group = readGroupEntries(text)[0]?.written ?? null;
-  const global = blocks.find(block => block.name === 'global');
-  const lan = global ? blockFields(text, global, tokens).find(field => field.name === 'lan_interface')?.value : undefined;
-  return {subscriptions, group, rules: 'keep', lanInterface: lan && lan !== 'auto' ? lan : '', ...networkDefaults};
-}
-
-function subscriptionBlock(state: WizardState): string[] {
-  return ['subscription {', ...state.subscriptions.map(subscriptionLine), '}'];
-}
-const subscriptionLine = (s: Subscription) => s.raw ?? `  ${quoteName(s.name.trim())}: ${quote(s.url.trim())}${s.suffix ?? ''}`;
 export const defaultGroup = 'proxy';
-function routingBlock(state: Pick<WizardState, 'group'>, rules: RuleTemplate): string[] {
+function routingBlock(group: string | null, rules: RuleTemplate): string[] {
   // The header as written: the templates must route to the group the file already has.
-  const first = state.group ?? defaultGroup;
+  const first = group ?? defaultGroup;
   const fill = (line: string) => '  ' + line.replaceAll('{group}', first);
   return ['routing {', ...templates[rules].rules.map(fill), fill(`fallback: ${templates[rules].fallback}`), '}'];
 }
-function dnsBlock(state: WizardState): string[] {
+// The DNS split a template can bring along: mainland names resolved by a mainland resolver, the rest over DNS over TLS.
+const dnsUpstreams = {cloudflare: 'tls://1.1.1.1:853', alidns: 'udp://223.5.5.5:53'};
+function dnsBlock(): string[] {
   return [
     'dns {',
     '  upstream {',
-    `    cloudflare: ${quote(state.defaultDns.trim())}`,
-    `    alidns: ${quote(state.chinaDns.trim())}`,
+    `    cloudflare: ${quote(dnsUpstreams.cloudflare)}`,
+    `    alidns: ${quote(dnsUpstreams.alidns)}`,
     '  }',
     '  routing {',
     '    request {',
@@ -95,37 +27,17 @@ function dnsBlock(state: WizardState): string[] {
     '}'
   ];
 }
-function globalBlock(state: WizardState): string[] {
-  return [
-    'global {',
-    `  tproxy_port: ${state.listenerPort}`,
-    '  log_level: info',
-    `  lan_interface: ${state.lanInterface.trim() || 'auto'}`,
-    '  wan_interface: auto',
-    '  allow_insecure: false',
-    '  auto_config_kernel_parameter: true',
-    '}'
-  ];
+// Whether any of the texts holds a top-level `dns` block.
+export function holdsDns(texts: string[]): boolean {
+  return texts.some(text => scanConfig(text).blocks.some(block => block.name === 'dns'));
 }
 
-function groupLines(current: string[], rules: RuleTemplate | 'keep'): string[] {
+function groupLines(current: string[], rules: RuleTemplate): string[] {
   const have = new Set(current);
-  const wanted = rules === 'keep' ? [] : templates[rules].groups.filter(group => !have.has(group.name));
-  if (!wanted.length && (current.length || rules === 'keep')) return [];
+  const wanted = templates[rules].groups.filter(group => !have.has(group.name));
+  if (!wanted.length && current.length) return [];
   if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
   return wanted.flatMap(group => [`  # ${group.label}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
-}
-// The block's lines and one blank line that set it apart, so neither an empty section nor a double gap is left.
-function removal(text: string, block: TextBlock) {
-  let from = text.lastIndexOf('\n', block.from - 1) + 1;
-  const end = text.indexOf('\n', block.to);
-  let to = end === -1 ? text.length : end + 1;
-  if (text.slice(from, block.from).trim() || text.slice(block.to, to).trim()) return {from: block.from, to: block.to, text: ''};
-  const after = text.slice(to).match(/^[ \t]*\n/);
-  const before = text.slice(0, from).match(/\n[ \t]*\n$/);
-  if (after) to += after[0].length;
-  else if (before) from -= before[0].length - 1;
-  return {from, to, text: ''};
 }
 // The groups a template adds beside `defined`, the names already declared as written: its own that are missing, or, for a template
 // without groups, the default group when there is none at all.
@@ -157,48 +69,16 @@ function applyEdits(current: string, edits: Edit[], appended: string[]): string 
   if (appended.length) out = out.replace(/\n$/, '') + '\n\n' + appended.join('\n\n') + '\n';
   return out;
 }
-export function writeState(current: string, state: WizardState): string {
-  if (current.trim() === '') {
-    return [
-      ...globalBlock(state),
-      '',
-      ...subscriptionBlock(state),
-      '',
-      'group {',
-      ...groupLines([], state.rules === 'keep' ? defaultTemplate : state.rules),
-      '}',
-      '',
-      ...dnsBlock(state),
-      '',
-      ...routingBlock(state, state.rules === 'keep' ? defaultTemplate : state.rules),
-      ''
-    ].join('\n');
-  }
-  const {blocks} = scanConfig(current);
-  const edits: Edit[] = [];
-  const subscriptionSections = blocks.filter(block => block.name === 'subscription');
-  for (const [section, block] of subscriptionSections.entries()) {
-    const subscriptions = state.subscriptions.filter(item => (item.section ?? subscriptionSections.length - 1) === section);
-    const body = subscriptions.map(subscriptionLine);
-    if (body.join('\n') === blockBody(current, block).join('\n')) continue;
-    if (body.join('\n').trim()) edits.push({from: block.open + 1, to: block.close, text: '\n' + body.join('\n') + '\n'});
-    else edits.push(removal(current, block));
-  }
-  const appended: string[] = [];
-  if (!subscriptionSections.length && state.subscriptions.length) appended.push(subscriptionBlock(state).join('\n'));
-  const missing = groupLines(
-    readGroupEntries(current).map(entry => entry.written),
-    state.rules
-  );
-  addGroups(current, blocks, missing, edits, appended);
-  if (state.rules !== 'keep') replaceRouting(blocks, routingBlock(state, state.rules).join('\n'), edits, appended);
-  return applyEdits(current, edits, appended);
-}
 // Applies a template to one file and nothing else in it: the template's missing groups join its group section and its
 // rules replace the file's top-level routing. `defined` are the groups every loaded file declares, as written, so a
 // group another file declares is reused rather than declared twice; `{group}` names the file's first group, or the
-// first one declared anywhere.
-export function writeTemplate(current: string, rules: RuleTemplate, defined: Array<{name: string; written: string}>): string {
+// first one declared anywhere. `dns` also appends the DNS split, for a configuration that has no `dns` block.
+export function writeTemplate(
+  current: string,
+  rules: RuleTemplate,
+  defined: Array<{name: string; written: string}>,
+  {dns = false}: {dns?: boolean} = {}
+): string {
   const {blocks} = scanConfig(current);
   const own = readGroupEntries(current);
   // honk keeps the quotes in a group's name, so only a group written as the template writes it is the same group.
@@ -207,6 +87,7 @@ export function writeTemplate(current: string, rules: RuleTemplate, defined: Arr
   const appended: string[] = [];
   addGroups(current, blocks, groupLines(names, rules), edits, appended);
   const group = own[0]?.written ?? defined[0]?.written ?? null;
-  replaceRouting(blocks, routingBlock({group}, rules).join('\n'), edits, appended);
+  replaceRouting(blocks, routingBlock(group, rules).join('\n'), edits, appended);
+  if (dns) appended.push(dnsBlock().join('\n'));
   return applyEdits(current, edits, appended);
 }

@@ -314,17 +314,11 @@
   }
 }
 
-/* Configuration page: diagnostics and unmodelled subscription lines wrap instead of overflowing the card. */
+/* Configuration page: diagnostics wrap instead of overflowing the card. */
 .rp-config-diagnostics .rp-light {
   min-width: 0;
   max-width: 100%;
   white-space: normal;
-  overflow-wrap: anywhere;
-}
-.rp-config-raw {
-  min-width: 0;
-  max-width: 100%;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 /* The source toolbar and the card's note row keep one line layout for every source. The picker, read-only badge and

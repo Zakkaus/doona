@@ -61,80 +61,67 @@ test('a node probe with an unknown result says so and why in words, instead of u
   await expect(page.locator('.rp-toast')).not.toContainText('unreachable');
 });
 
-for (const tab of ['source', 'setup']) {
-  test(`${tab} drafts survive cancelled sidebar and hash navigation`, async ({page}) => {
-    await page.goto(`/#/config?tab=${tab}`);
-    if (tab === 'source') {
-      await page.locator('.cm-content').fill('draft that must survive');
-    } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/unsaved');
-    await page.locator('.rp-nav[href="#/connections"]').click();
-    const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
-    await expect(page).toHaveURL(new RegExp(`config\\?tab=${tab}$`));
-    if (tab === 'source') await expect(page.locator('.cm-content')).toContainText('draft that must survive');
-    else await expect(page.getByLabel('Subscription URL', {exact: true})).toHaveValue('https://example.org/unsaved');
-    await page.evaluate(() => {
-      location.hash = '#/settings';
-    });
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
-    await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
+test('source drafts survive cancelled sidebar and hash navigation', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+  await page.locator('.cm-content').fill('draft that must survive');
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page).toHaveURL(/config\?tab=source$/);
+  await expect(page.locator('.cm-content')).toContainText('draft that must survive');
+  await page.evaluate(() => {
+    location.hash = '#/settings';
   });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
+});
 
-  test(`${tab} editing stays frozen through validation and save`, async ({page}) => {
-    const api = await backend(page);
-    let releaseValidation!: () => void;
-    const validation = new Promise<void>(resolve => {
-      releaseValidation = resolve;
-    });
-    let releaseSave!: () => void;
-    const save = new Promise<void>(resolve => {
-      releaseSave = resolve;
-    });
-    await page.route('**/api/v1/config/validate', async route => {
-      await validation;
-      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-    });
-    await page.route('**/api/v1/config/sources/*', async route => {
-      await save;
-      const id = new URL(route.request().url()).pathname.split('/').pop()!;
-      const result = await api.replaceConfigSource(id, route.request().postDataJSON().content, route.request().headers()['if-match']);
-      await route.fulfill({json: result});
-    });
-    await page.route('**/api/v1/operations/*', async route => {
-      await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
-    });
-    await page.goto(`/#/config?tab=${tab}`);
-    if (tab === 'source') {
-      const editor = page.locator('.cm-content');
-      await expect(editor).toHaveAttribute('contenteditable', 'true');
-      await editor.click();
-      await page.keyboard.press('ControlOrMeta+End');
-      await page.keyboard.type('\n# retained edit\n');
-    } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/saved');
-    await page.getByRole('button', {name: 'Apply', exact: true}).click();
-    try {
-      if (tab === 'source') await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
-      else {
-        await expect(page.getByLabel('Subscription URL', {exact: true})).toBeDisabled();
-        await expect(page.getByRole('button', {name: /Rules$/})).toBeDisabled();
-        await expect(page.getByRole('button', {name: 'Add subscription', exact: true})).toBeDisabled();
-      }
-      const writing = page.waitForRequest(request => request.method() === 'PUT');
-      releaseValidation();
-      await writing;
-      if (tab === 'source') await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
-      else await expect(page.getByLabel('Subscription URL', {exact: true})).toBeDisabled();
-    } finally {
-      releaseValidation();
-      releaseSave();
-    }
-    await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-    await expect(page.getByRole('alertdialog')).toHaveCount(0);
-    await expect(page.locator('.cm-content')).toContainText(tab === 'source' ? '# retained edit' : 'https://example.org/saved');
+test('source editing stays frozen through validation and save', async ({page}) => {
+  const api = await backend(page);
+  let releaseValidation!: () => void;
+  const validation = new Promise<void>(resolve => {
+    releaseValidation = resolve;
   });
-}
+  let releaseSave!: () => void;
+  const save = new Promise<void>(resolve => {
+    releaseSave = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await validation;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+  });
+  await page.route('**/api/v1/config/sources/*', async route => {
+    await save;
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    const result = await api.replaceConfigSource(id, route.request().postDataJSON().content, route.request().headers()['if-match']);
+    await route.fulfill({json: result});
+  });
+  await page.route('**/api/v1/operations/*', async route => {
+    await route.fulfill({json: await api.operation(new URL(route.request().url()).pathname.split('/').pop()!)});
+  });
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await expect(editor).toHaveAttribute('contenteditable', 'true');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n# retained edit\n');
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  try {
+    await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+    const writing = page.waitForRequest(request => request.method() === 'PUT');
+    releaseValidation();
+    await writing;
+    await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+  } finally {
+    releaseValidation();
+    releaseSave();
+  }
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(page.locator('.cm-content')).toContainText('# retained edit');
+});
 
 for (const all of [false, true]) {
   test(`${all ? 'Cancel abandons bulk' : 'navigation cancels single'} close without announcing success`, async ({page}) => {
@@ -254,51 +241,45 @@ test('node probe announcements retain sub-ten-millisecond precision', async ({pa
   await expect(page.locator('.rp-toast.positive')).toContainText('hk-01: 5.4 ms');
 });
 
-for (const tab of ['source', 'setup']) {
-  test(`discarding ${tab} inside Config cancels its transaction and releases the next editor`, async ({page}) => {
-    const api = await backend(page);
-    let release!: () => void;
-    const gate = new Promise<void>(resolve => {
-      release = resolve;
-    });
-    let settled!: () => void;
-    const handled = new Promise<void>(resolve => {
-      settled = resolve;
-    });
-    await page.route('**/api/v1/config/validate', async route => {
-      await gate;
-      await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-      settled();
-    });
-    let writes = 0;
-    await page.route('**/api/v1/config/sources/*', async route => {
-      writes++;
-      await route.fulfill({status: 500, json: {code: 'unexpected_write', message: 'Discarded draft was written'}});
-    });
-    await page.goto(`/#/config?tab=${tab}`);
-    if (tab === 'source') {
-      await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
-    } else await page.getByLabel('Subscription URL', {exact: true}).fill('https://example.org/discarded');
-    const validating = page.waitForRequest('**/config/validate');
-    await page.getByRole('button', {name: 'Apply', exact: true}).click();
-    await validating;
-    if (tab === 'source') {
-      await page.getByRole('button', {name: / Source$/}).click();
-      await page.getByRole('option', {name: /rules\.dae/}).click();
-    } else await page.getByRole('tab', {name: 'Sources', exact: true}).click();
-    await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
-    try {
-      await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
-    } finally {
-      release();
-    }
-    await handled;
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    expect(writes).toBe(0);
-    await expect(page.locator('.rp-toast')).toHaveCount(0);
-    await expect(page).toHaveURL(tab === 'source' ? /source=src-rules/ : /tab=source/);
+test('discarding source inside Config cancels its transaction and releases the next editor', async ({page}) => {
+  const api = await backend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
   });
-}
+  let settled!: () => void;
+  const handled = new Promise<void>(resolve => {
+    settled = resolve;
+  });
+  await page.route('**/api/v1/config/validate', async route => {
+    await gate;
+    await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
+    settled();
+  });
+  let writes = 0;
+  await page.route('**/api/v1/config/sources/*', async route => {
+    writes++;
+    await route.fulfill({status: 500, json: {code: 'unexpected_write', message: 'Discarded draft was written'}});
+  });
+  await page.goto('/#/config?tab=source');
+  await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
+  const validating = page.waitForRequest('**/config/validate');
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await validating;
+  await page.getByRole('button', {name: / Source$/}).click();
+  await page.getByRole('option', {name: /rules\.dae/}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
+  try {
+    await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
+  } finally {
+    release();
+  }
+  await handled;
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(writes).toBe(0);
+  await expect(page.locator('.rp-toast')).toHaveCount(0);
+  await expect(page).toHaveURL(/source=src-rules/);
+});
 
 test('global target cannot change during a pending mode apply', async ({page}) => {
   const api = await backend(page);
