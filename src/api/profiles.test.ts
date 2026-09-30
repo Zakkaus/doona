@@ -77,3 +77,33 @@ it('gives up stored chart history to save the profiles when storage is full', as
     vi.unstubAllGlobals();
   }
 });
+
+it('clears only the saved token of the profile signing out', async () => {
+  vi.resetModules();
+  const {clearProfileToken} = await import('./profiles');
+  const values = new Map<string, string>([
+    [
+      'doona-profiles',
+      JSON.stringify([
+        {id: 'a', name: 'A', api: 'https://a.example', token: 'secret-a'},
+        {id: 'b', name: 'B', api: 'https://b.example', token: 'secret-b'}
+      ])
+    ],
+    ['doona-profile', 'a']
+  ]);
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => void values.set(key, value),
+    removeItem: (key: string) => void values.delete(key)
+  };
+  clearProfileToken('a', storage);
+  expect(JSON.parse(values.get('doona-profiles')!)).toEqual([
+    {id: 'a', name: 'A', api: 'https://a.example', token: ''},
+    {id: 'b', name: 'B', api: 'https://b.example', token: 'secret-b'}
+  ]);
+  expect(values.get('doona-profile')).toBe('a');
+  // Nothing to forget writes nothing, so a store that could not be read is never replaced by an empty list.
+  const unreadable = {...storage, getItem: () => '{', setItem: vi.fn()};
+  clearProfileToken('a', unreadable);
+  expect(unreadable.setItem).not.toHaveBeenCalled();
+});

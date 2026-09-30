@@ -122,6 +122,14 @@ export function writeProfiles({profiles, activeId}: Profiles, storage?: StorageP
   touchStorage();
 }
 
+// Forgets the token saved with a profile and keeps the rest of it. A profile that is gone or holds no token is left
+// alone, so an unreadable store is never written back empty.
+export function clearProfileToken(profileId: string, storage?: StoragePort): void {
+  const {profiles, activeId} = readProfiles(storage);
+  if (!profiles.some(profile => profile.id === profileId && profile.token)) return;
+  writeProfiles({profiles: profiles.map(profile => (profile.id === profileId ? {...profile, token: ''} : profile)), activeId}, storage);
+}
+
 function dropRings() {
   try {
     for (const key of Object.keys(localStorage)) if (key.startsWith(storageKeys.ringsPrefix)) localStorage.removeItem(key);
