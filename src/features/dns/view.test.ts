@@ -4,6 +4,7 @@ import type {DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
+const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
 const record: DnsLogRecord = {
   id: 'dns-1',
   observed_at: '2026-01-01T00:00:00Z',
@@ -48,13 +49,13 @@ it('disables unsupported query types and omits explicitly unavailable tabs', () 
 });
 
 it('filters cache rows case-insensitively without narrowing the flush scope or coverage', () => {
-  const view = dnsCacheView(dnsCache, capabilities.resources, 'TELEGRAM', 'c1', 'en-US', t);
+  const view = dnsCacheView(dnsCache, capabilities.resources, 'TELEGRAM', 'c1', 'en-US', t, contains);
   expect(view.rows.map(row => row.id)).toEqual(['c1']);
   expect(view.rows[0]).toMatchObject({pending: true, disabled: true, staleUntil: null});
   expect(view.rows[0].expiresAt).toBe(dnsCache.entries.find(entry => entry.entry_id === 'c1')!.expires_at);
   expect(view.coverage.map(badge => badge.id)).toEqual(['persistent']);
   expect(view.confirmationText).toBe(t('dns.flushConfirm', {n: dnsCache.total}));
-  expect(dnsCacheView(undefined, undefined, '', null, 'en-US', t).confirmationText).toBe(t('dns.flushConfirmAll'));
+  expect(dnsCacheView(undefined, undefined, '', null, 'en-US', t, contains).confirmationText).toBe(t('dns.flushConfirmAll'));
 });
 
 it('shows DNS failures instead of answer text and clears missing log selections', () => {
@@ -102,13 +103,13 @@ it('holds the loaded window when a poll advances the head after the final older 
 
 it('names the route source and the cache entry a delete button removes', () => {
   expect(dnsAnswerView({...record, route: {source: 'dns.routing', rule: 'r1'}}, t).fields).toContainEqual([t('dns.routeSource'), t('dns.route.rules')]);
-  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t).rows[0];
+  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t, contains).rows[0];
   expect(entry.deleteLabel).toBe(t('dns.deleteEntry', {domain: entry.domain, type: entry.type}));
   expect(entry.deleteLabel).not.toContain(entry.id);
 });
 
 it('says the persistent cache is memory only rather than not covered, and explains the kept log records', () => {
-  const view = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t);
+  const view = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t, contains);
   expect(view.coverage.find(badge => badge.id === 'persistent')?.text).toBe(t('ui.valuePair', {label: t('dns.persistent'), value: t('dns.chart.memoryOnly')}));
   const log = dnsLogView({observed_at: '2026-01-01T00:00:00Z', records: [], total: 3, next_cursor: null}, true, t);
   expect(log.totalHelp).toEqual({title: t('dns.logTotal', {n: 3}), text: t('dns.logTotalHelp')});
@@ -129,15 +130,15 @@ it('says why Query, Clear all cache and Delete are disabled when the backend doe
   const none = {...resources, dns_query: {...resources.dns_query, record_types: []}};
   expect(dnsQueryView(null, none, 'all', 'example.com', false, t).reason).toBe('This backend offers no record types to query');
 
-  const cache = dnsCacheView(dnsCache, resources, '', null, 'en-US', t);
+  const cache = dnsCacheView(dnsCache, resources, '', null, 'en-US', t, contains);
   expect([cache.flushReason, cache.deleteReason]).toEqual([null, null]);
   const readOnly = {...resources, dns_cache: {...resources.dns_cache, flush: false, delete_entry: false}};
-  const limited = dnsCacheView(dnsCache, readOnly, '', null, 'en-US', t);
+  const limited = dnsCacheView(dnsCache, readOnly, '', null, 'en-US', t, contains);
   expect(limited.flushReason).toBe('This backend does not support clearing the cache');
   expect(limited.deleteReason).toBe('This backend does not support deleting cache entries');
   // No row, no Delete to explain; a change in flight shows as pending.
-  expect(dnsCacheView(dnsCache, readOnly, 'nothing-matches', null, 'en-US', t).deleteReason).toBeNull();
-  expect(dnsCacheView(dnsCache, readOnly, '', 'flush', 'en-US', t).flushReason).toBeNull();
+  expect(dnsCacheView(dnsCache, readOnly, 'nothing-matches', null, 'en-US', t, contains).deleteReason).toBeNull();
+  expect(dnsCacheView(dnsCache, readOnly, '', 'flush', 'en-US', t, contains).flushReason).toBeNull();
 });
 
 it('seeds a new rule from the typed answer records, the client address and the upstream that answered', () => {
@@ -162,6 +163,6 @@ it('seeds a new rule from the typed answer records, the client address and the u
   // The CNAME carries a name, not an address, so only the A and AAAA answers start a rule of their own.
   expect(card.answerSeeds.map(answer => answer?.address ?? null)).toEqual([null, '192.0.2.1', '2001:db8::1']);
   expect(card.answerSeeds[2]!.seed).toMatchObject({domain: null, dip: '2001:db8::1', dns: {answers: ['2001:db8::1'], query: {name: 'example.com', type: 'A'}}});
-  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en', t).rows[0];
+  const entry = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en', t, contains).rows[0];
   expect(entry.seed).toMatchObject({domain: entry.domain, dns: {type: entry.type, answers: []}});
 });

@@ -91,11 +91,12 @@ export function dnsCacheView(
   domain: string,
   busy: string | null,
   locale: string,
-  t: LabelFn
+  t: LabelFn,
+  // Matches as the other filters do, ignoring case and accents.
+  contains: (value: string, query: string) => boolean
 ) {
-  const filter = domain.toLowerCase();
   const cache = resources?.dns_cache;
-  const rows = (data?.entries ?? []).filter(entry => !filter || entry.domain.toLowerCase().includes(filter));
+  const rows = (data?.entries ?? []).filter(entry => !domain || contains(entry.domain, domain));
   return {
     fields: [[t('dns.entries'), data ? formatNumber(data.total, locale) : '—']] as Array<[string, string]>,
     coverage: data
@@ -112,7 +113,7 @@ export function dnsCacheView(
             })
           }))
       : [],
-    filterText: filter ? t('dns.cacheFilter', {domain}) : '',
+    filterText: domain ? t('dns.cacheFilter', {domain}) : '',
     confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
     // Why Clear all cache and the rows' Delete are disabled, when the backend does not support them.
