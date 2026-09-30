@@ -219,25 +219,39 @@ test('the detected mode is selected, and the arrow keys move the selection throu
   await expect(applyButton(page)).toBeDisabled();
 });
 
-test('routing that pulls in or spreads over other files is refused and nothing is written', async ({page}) => {
+test('applying a template removes routing includes and keeps the included file', async ({page}) => {
+  const {api, main} = await backend(page);
+  const included = (await api.config()).sources.find(source => source.id === 'src-rules')!;
+  await page.goto('/#/rules?tab=list&view=simple');
+  await choose(page, 'Global proxy');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog', {name: 'Apply Global proxy?'});
+  const removed = dialog.getByRole('region', {name: 'Rule files no longer included'});
+  await expect(removed.locator('code')).toHaveText('rules.dae');
+  await expect(removed).toContainText('The files are kept on disk, but their rules no longer apply.');
+  await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
+  await expect(dialog.locator('[data-kind="del"]', {hasText: 'include rules.dae'})).toHaveCount(1);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Applied Global proxy to config.dae');
+  expect((await main()).content).not.toContain('include rules.dae');
+  expect((await api.config()).sources.find(source => source.id === included.id)?.content).toBe(included.content);
+});
+
+test('routing spread over several files is refused and nothing is written', async ({page}) => {
   const {api} = await backend(page);
   let writes = 0;
   page.on('request', request => {
     if (request.method() !== 'GET') writes++;
   });
-  await page.goto('/#/rules?tab=list&view=simple');
-  // The reason is help text under Apply, which stays disabled whatever is chosen.
-  await expect(applyButton(page)).toHaveAccessibleDescription('The routing in config.dae includes another file. Remove the include to apply a template.');
-  await choose(page, 'Global proxy');
-  await expect(applyButton(page)).toBeDisabled();
   const config = await api.config();
   for (const source of config.sources) {
     if (source.kind === 'main') source.content = oneFile(source.content!);
     if (source.id === 'src-rules') source.content = 'routing {\n  fallback: direct\n}\n';
   }
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-  await page.reload();
+  await page.goto('/#/rules?tab=list&view=simple');
   await expect(applyButton(page)).toHaveAccessibleDescription(/^Routing rules are spread over several files\./);
+  await choose(page, 'Global proxy');
   await expect(applyButton(page)).toBeDisabled();
   expect(writes).toBe(0);
 });

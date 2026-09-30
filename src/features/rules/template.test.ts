@@ -49,9 +49,8 @@ it('writes the one file that holds the routing, or the main file when none does'
   expect(input([main])).toEqual({source: main, refusal: null});
 });
 
-it('refuses routing split over files or pulling one in, and files it may not write', () => {
+it('refuses routing split over files and files it may not write', () => {
   const main = source('main', 'routing {\n  include rules.dae\n  fallback: proxy\n}\n', 'main');
-  expect(input([main]).refusal).toBe('include');
   expect(input([main, source('more', 'routing { fallback: direct }\n')]).refusal).toBe('split');
   const plain = source('main', 'routing { fallback: proxy }\n', 'main');
   expect(input([plain], {configWritable: false}).refusal).toBe('writesOff');
@@ -66,13 +65,37 @@ it('refuses routing split over files or pulling one in, and files it may not wri
   );
 });
 
+it('allows routing includes and lists the paths removed by applying a template', () => {
+  const main = source(
+    'main',
+    "include { groups.dae }\nrouting {\n  include rules.dae # kept on disk\n  include 'rules/more rules.dae'\n  include rules/*.dae\n  fallback: proxy\n}\n",
+    'main'
+  );
+  expect(input([main])).toEqual({source: main, refusal: null});
+  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual(['rules.dae', "'rules/more rules.dae'", 'rules/*.dae']);
+  const {plain} = templateWrites('global', main, [main], t);
+  expect(plain.after).not.toContain('include rules.dae');
+  expect(plain.after).toContain('include { groups.dae }');
+  expect(plain.diff).toContainEqual({kind: 'del', text: '  include rules.dae # kept on disk'});
+});
+
+it('counts parentheses inside routing independently of earlier unquoted paths', () => {
+  const main = source(
+    'main',
+    'global { log_file: /var/log/honk(.log }\nrouting {\n  domain(\n    include\n  ) -> direct\n  include rules.dae\n  fallback: include\n}\n',
+    'main'
+  );
+  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual(['rules.dae']);
+});
+
 it('lists the groups a template creates and the existing ones it routes to, flagging one pinned to a node', () => {
   const main = source('main', 'group {\n  proxy { filter: name(hk-01) }\n}\nrouting { fallback: proxy }\n', 'main');
-  expect(templateImpact('bypass', main, [main], [])).toEqual({created: [], reused: [{name: 'proxy', pinned: true}], collisions: []});
+  expect(templateImpact('bypass', main, [main], [])).toEqual({created: [], reused: [{name: 'proxy', pinned: true}], collisions: [], removedIncludes: []});
   expect(templateImpact('mini', main, [main], ['auto'])).toEqual({
     created: [{name: 'auto', label: '自动选择'}],
     reused: [{name: 'proxy', pinned: true}],
-    collisions: ['auto']
+    collisions: ['auto'],
+    removedIncludes: []
   });
   const open = source('main', 'group {\n  proxy { filter: subtag(sub) policy: min_moving_avg }\n}\n', 'main');
   expect(templateImpact('gfw', open, [open], []).reused).toEqual([{name: 'proxy', pinned: false}]);
@@ -80,7 +103,7 @@ it('lists the groups a template creates and the existing ones it routes to, flag
 
 it('creates the default group only when no file declares one, and reuses one declared elsewhere', () => {
   const empty = source('main', 'routing { fallback: direct }\n', 'main');
-  expect(templateImpact('global', empty, [empty], [])).toEqual({created: [{name: 'proxy', label: null}], reused: [], collisions: []});
+  expect(templateImpact('global', empty, [empty], [])).toEqual({created: [{name: 'proxy', label: null}], reused: [], collisions: [], removedIncludes: []});
   const other = source('groups', 'group { proxy { policy: fixed(0) } }\n');
   expect(templateImpact('standard', empty, [empty, other], []).reused).toEqual([{name: 'proxy', pinned: true}]);
 });
@@ -88,6 +111,7 @@ it('creates the default group only when no file declares one, and reuses one dec
 it('takes a group named include as a route target, not as an include', () => {
   const main = source('main', 'group { include {} }\nrouting {\n  domain(example.org) -> include\n  fallback: include\n}\n', 'main');
   expect(input([main]).refusal).toBeNull();
+  expect(templateImpact('global', main, [main], []).removedIncludes).toEqual([]);
 });
 
 it('reads a quoted group as its own group when listing what a template creates and keeps', () => {
@@ -98,7 +122,8 @@ it('reads a quoted group as its own group when listing what a template creates a
       {name: 'auto', label: '自动选择'}
     ],
     reused: [],
-    collisions: []
+    collisions: [],
+    removedIncludes: []
   });
   expect(templateImpact('bypass', main, [main], []).reused).toEqual([{name: "'proxy'", pinned: true}]);
 });
