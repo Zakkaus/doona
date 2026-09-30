@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, manyDevices, test} from './fixtures';
 
 // Below 600px the Connections toolbar keeps the filter field and folds the secondary filters into one menu beside it
 // (src/features/connections/Connections.tsx), badged with how many are in force.
@@ -37,6 +37,26 @@ test.describe('390px', () => {
     await expect(page).not.toHaveURL(/src=/);
     await page.getByRole('button', {name: 'Clear filters'}).click();
     await expect(page.getByRole('button', {name: 'Filters', exact: true})).toBeVisible();
+  });
+
+  test('a long device list in the filters menu has a filter field', async ({page}) => {
+    await manyDevices(page);
+    await page.goto('/#/connections?tab=list');
+    await page.getByRole('button', {name: 'Filters', exact: true}).click();
+    await page.getByRole('menuitem', {name: /^Device/}).click();
+    // The toolbar's own filter field has the same name; the menu's is in its popover.
+    const search = page.getByRole('dialog', {name: 'Filters'}).getByRole('searchbox', {name: 'Filter'});
+    await expect(search).toBeFocused();
+    await search.fill('10.0.0.49');
+    await expect(page.getByRole('menuitemradio')).toHaveCount(1);
+    await page.getByRole('menuitemradio', {name: /^10\.0\.0\.49/}).click();
+    await expect(page).toHaveURL(/src=10\.0\.0\.49/);
+    // The network list is short and stays plain.
+    await page.getByRole('button', {name: 'Filters, 1 applied'}).click();
+    await page.getByRole('menuitem', {name: /^Network protocol/}).click();
+    const menu = page.getByRole('dialog', {name: 'Filters, 1 applied'});
+    await expect(menu.getByRole('menuitemradio', {name: 'UDP', exact: true})).toBeVisible();
+    await expect(menu.getByRole('searchbox')).toHaveCount(0);
   });
 
   test('the menu works from the keyboard', async ({page}) => {

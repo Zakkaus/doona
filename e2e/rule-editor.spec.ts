@@ -25,6 +25,25 @@ test('the add-rule switch explains the must keyword in each locale', async ({pag
   }
 });
 
+test('the insert position is searchable by the rule it goes before', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/rules?tab=list');
+  await page.getByRole('button', {name: 'Add rule', exact: true}).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', {name: /Insert/}).click();
+  const listbox = page.getByRole('listbox');
+  // The first place and the end come first, without a heading.
+  await expect(listbox.getByRole('option').first()).toContainText('First');
+  await expect(listbox.getByRole('option').nth(1)).toContainText('Last, before the fallback');
+  const later = listbox.getByRole('option').nth(3);
+  const label = (await later.locator('.rp-il').innerText()).trim();
+  const expression = (await later.locator('.desc').innerText()).trim();
+  await page.getByRole('searchbox', {name: 'Filter'}).fill(expression);
+  await expect(listbox.getByRole('option', {name: new RegExp(`^${label}`)})).toBeVisible();
+  await listbox.getByRole('option', {name: new RegExp(`^${label}`)}).click();
+  await expect(dialog.getByRole('button', {name: /Insert/})).toContainText(label);
+});
+
 test('the rule list shows the dictionary in evaluation order with its source lines', async ({page}) => {
   await page.goto('/#/rules?tab=list');
   const list = rows(page);
