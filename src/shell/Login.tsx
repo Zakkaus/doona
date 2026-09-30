@@ -19,6 +19,7 @@ type LoginProps = {
   api: string;
   backend: string;
   rejected: boolean;
+  missingApi: boolean;
   lang: Lang;
   pickLang: (lang: Lang) => void;
   dark: boolean;
@@ -32,9 +33,24 @@ type LoginProps = {
 };
 
 // The whole page until the backend accepts the credentials: nothing behind it works before then.
-export function Login({profileId, api, backend, rejected, lang, pickLang, dark, themeLabel, toggleScheme, palette, wordmark, error, onRetry}: LoginProps) {
+export function Login({
+  profileId,
+  api,
+  backend,
+  rejected,
+  missingApi,
+  lang,
+  pickLang,
+  dark,
+  themeLabel,
+  toggleScheme,
+  palette,
+  wordmark,
+  error,
+  onRetry
+}: LoginProps) {
   const t = useT();
-  const view = useLogin(profileId, api, backend, rejected);
+  const view = useLogin(profileId, api, backend, rejected, missingApi);
   const wide = useMediaQuery('(min-width: 1024px)');
   const reveal = {shown: view.secretType === 'text', label: view.toggleText, onToggle: view.toggle};
   const links = (

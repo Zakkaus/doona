@@ -53,7 +53,8 @@ export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
-  content: {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
+  content:
+    {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean; missingApi: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
   error: Error | null;
   backend: BackendView;
@@ -98,10 +99,19 @@ export function shellView(
     })
   }));
   const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
-  const needsLogin = refused(capabilityError) || (capabilityError instanceof ApiError && capabilityError.status === 404);
+  // Capabilities that answer 404 even with the saved credential come from a backend without the native API.
+  const missingApi = capabilityError instanceof ApiError && capabilityError.status === 404;
+  const needsLogin = refused(capabilityError) || missingApi;
   const content: ShellView['content'] =
     needsLogin && !feature.offline
-      ? {kind: 'login', profileId: profile?.id ?? '', api: profile?.api ?? '', backend: profile?.name ?? profile?.api ?? '', rejected: !!profile?.token}
+      ? {
+          kind: 'login',
+          profileId: profile?.id ?? '',
+          api: profile?.api ?? '',
+          backend: profile?.name ?? profile?.api ?? '',
+          rejected: !!profile?.token,
+          missingApi
+        }
       : !capabilities && !capabilityError && !feature.offline
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)

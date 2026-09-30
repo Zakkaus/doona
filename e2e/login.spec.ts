@@ -176,6 +176,26 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   await expect.poll(() => authorization).toBe('Bearer fresh-token');
 });
 
+// A honk build before the native API keeps its Clash API: with a secret it refuses the sign-in probes, which carry no
+// credential, with a codeless 401, and answers the saved secret with a 404 for capabilities.
+test('a Clash API with a saved secret explains that the native API is missing', async ({page}) => {
+  expectLoadFailures(page, /\/api(\/|$)/);
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: 'clash-secret'}]));
+    localStorage.setItem('doona-profile', 'home');
+  });
+  await page.route(/\/api(\/.*)?$/, route =>
+    route.request().headers()['authorization']
+      ? route.fulfill({status: 404, body: '404 page not found'})
+      : route.fulfill({status: 401, json: {message: 'Unauthorized'}})
+  );
+  await page.goto('/#/activity');
+  const login = page.locator('.rp-login-page');
+  await expect(login.getByRole('heading', {level: 1})).toHaveText('This honk build has no native API');
+  await expect(login.locator('.rp-alert')).toHaveCount(0);
+  await expect(login.getByLabel('Token', {exact: true})).toHaveCount(0);
+});
+
 // Settings works without a backend, so the link leaves the sign-in page for the backend editor while signed out.
 test('changing the backend URL while signed out probes the new backend', async ({page}) => {
   expectLoadFailures(page, /\/(one|two)\/api/);

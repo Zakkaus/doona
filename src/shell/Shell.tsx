@@ -104,6 +104,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           api={view.content.api}
           backend={view.content.backend}
           rejected={view.content.rejected}
+          missingApi={view.content.missingApi}
           lang={lang}
           pickLang={pickLang}
           dark={ap.dark}
