@@ -1,5 +1,5 @@
 import {expect, loadCatalogues, test} from './fixtures';
-import type {Page} from '@playwright/test';
+import type {BrowserContext, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 
 test('manifest describes an installable app with relative URLs', async ({request}) => {
@@ -179,10 +179,15 @@ test('after an update the new build caches only the language in use and starts o
   expect(fetched.filter(path => unused.test(path))).toEqual([]);
 });
 
-test('a new build taking over offers Reload, which loads it', async ({context, page}) => {
+// Loads the app under a worker standing for an old build, then lets the real build take over. The page stands for the
+// old build too, unless it is current: an online load fetches the new build's page while the old worker controls it.
+async function takeOver(context: BrowserContext, page: Page, current: boolean) {
   // WebKit rechecks the worker a second after each navigation it serves, without the page's cookies. So the cookie's
   // changed worker is the old build here and the plain one the new build, which a late recheck cannot swap back.
-  await context.addCookies([{name: 'doona-pwa-update', value: '1', domain: '127.0.0.1', path: '/ui/sw.js'}]);
+  await context.addCookies([
+    {name: 'doona-pwa-update', value: '1', domain: '127.0.0.1', path: '/ui/sw.js'},
+    ...(current ? [] : [{name: 'doona-pwa-page', value: '1', domain: '127.0.0.1', path: '/ui/'}])
+  ]);
   await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   // Only a page the old build already controls announces the new one.
@@ -194,6 +199,7 @@ test('a new build taking over offers Reload, which loads it', async ({context, p
   // would wait minutes for it.
   await page.waitForLoadState('networkidle');
   await context.clearCookies({name: 'doona-pwa-update'});
+  await context.clearCookies({name: 'doona-pwa-page'});
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
     await registration.update();
@@ -201,6 +207,22 @@ test('a new build taking over offers Reload, which loads it', async ({context, p
     if (registration.installing || registration.waiting)
       await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true}));
   });
+}
+
+// The build the worker controlling the page installs, as the page asks it.
+function controllerBuild(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<unknown>(resolve => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = event => resolve(event.data);
+        navigator.serviceWorker.controller!.postMessage({build: true}, [channel.port2]);
+      })
+  );
+}
+
+test('a new build taking over offers Reload, which loads it', async ({context, page}) => {
+  await takeOver(context, page, false);
   const notice = page.locator('.rp-toast.info', {hasText: 'A new version is ready'});
   const reload = notice.getByRole('button', {name: 'Reload', exact: true});
   await expect(reload).toBeVisible();
@@ -211,8 +233,25 @@ test('a new build taking over offers Reload, which loads it', async ({context, p
   await expect(notice).toHaveCount(0);
 });
 
+test('a worker of the build the page already runs takes over without a notice', async ({context, page}) => {
+  await takeOver(context, page, true);
+  const build = await page.evaluate(() => document.querySelector<HTMLMetaElement>('meta[name="doona-build"]')!.content);
+  await expect.poll(() => controllerBuild(page)).toBe(build);
+  // The page asks the new worker once it has activated, so once this answer is back so is the page's; a notice would
+  // render by the next frame.
+  await page.evaluate(async () => {
+    const controller = navigator.serviceWorker.controller!;
+    if (controller.state !== 'activated') await new Promise(resolve => controller.addEventListener('statechange', resolve, {once: true}));
+  });
+  await controllerBuild(page);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.locator('.rp-toast.info')).toHaveCount(0);
+});
+
 test('a new build taking over before the catalogue loads is announced in the reader’s language', async ({context, page, browserName}) => {
   test.skip(browserName === 'webkit', 'WebKit request interception does not see what the service worker fetches');
+  // The page stands for an older build than the worker that controls it.
+  await context.addCookies([{name: 'doona-pwa-page', value: '1', domain: '127.0.0.1', path: '/ui/'}]);
   await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-TW'));
   await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));

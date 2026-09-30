@@ -1,5 +1,7 @@
 const PREFIX = `doona-shell:${self.registration.scope}:`;
-const CACHE = PREFIX + '__BUILD_HASH__';
+// The page reads the same build from index.html, to tell whether this worker taking it over is a new build.
+const BUILD = '__BUILD_HASH__';
+const CACHE = PREFIX + BUILD;
 const PRECACHE = '__PRECACHE__';
 // Each language's catalogue and stylesheets in this build, cached only for a language a reader uses. A partial
 // language's list holds the reference language's files too, since it loads them.
@@ -23,6 +25,10 @@ self.addEventListener('install', event => {
 // A page loads its catalogue and backend before this worker controls it, so it reports the language it shows and
 // whether it runs on the mock, to have them cached.
 self.addEventListener('message', event => {
+  if (event.data?.build === true) {
+    event.ports[0]?.postMessage(BUILD);
+    return;
+  }
   const lang = event.data?.language;
   const files = [...(typeof lang === 'string' && Object.hasOwn(LANGUAGES, lang) ? LANGUAGES[lang] : []), ...(event.data?.mock === true ? MOCK : [])];
   if (!files.length) return;
