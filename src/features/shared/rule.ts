@@ -4,6 +4,8 @@ import type {Key, Translator} from '../../i18n';
 import type {PendingRule} from '../../store';
 import {dnsListEnd, dnsRuleAnchor, dnsUpstreams, ruleAnchor, type DnsRuleListId, type RuleAnchor} from '../../dae/ruleText';
 import {unquote} from '../../dae/text';
+import {builtinOutboundNames, isBuiltinOutbound} from '../../dae/vocab';
+import type {SearchSection} from '../../ui/SearchSelect';
 
 // What an origin knows about the traffic a new rule is for: its domain, destination and source IP, the outbound it
 // took, and the rule it matched when the origin vouches for that match. Each page that offers the add-rule dialog turns
@@ -221,6 +223,15 @@ export function dnsUpstreamChoices(rules: DnsRoutingRule[], sources: ConfigSourc
   const known = new Set(defined.map(upstream => upstream.name.toLowerCase()));
   const named = [...new Set(rules.flatMap(rule => (rule.upstream && !known.has(rule.upstream.toLowerCase()) ? [rule.upstream] : [])))];
   return [...defined, ...named.map(name => ({name, address: null}))];
+}
+// What a routing rule can route to, in the sections of a group's final outbound picker: direct and block, then the
+// groups. A rule names a group or a built-in outbound, never a node, so the nodes are not offered.
+export function ruleOutbounds(groups: Array<{name: string}>, t: Translator): SearchSection[] {
+  const names = [...new Set(groups.map(group => group.name))].filter(name => !isBuiltinOutbound(name));
+  return [
+    {id: 'builtin', title: t('policy.pickBuiltin'), items: builtinOutboundNames.map(id => ({id, label: id}))},
+    {id: 'groups', title: t('policy.pickGroups'), items: names.map(id => ({id, label: id}))}
+  ].filter(section => section.items.length);
 }
 // The actions a new DNS rule can take, first the keywords and then the upstreams: a request rule sends the query to an
 // upstream, to its original destination or answers it empty; a response rule keeps or empties the answer, or resolves

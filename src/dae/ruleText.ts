@@ -1,6 +1,5 @@
 import type {ConfigSource, DnsRoutingRule, RoutingRule, RuleSource} from '../api/model';
 import {blockFields, scanConfig, uncomment, unquote, type TextBlock} from './text';
-import {builtinOutboundNames} from './vocab';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -139,8 +138,6 @@ export function dnsUpstreams(text: string, scan = scanConfig(text)): Array<{name
 export const dnsUpstreamNames = (text: string, scan = scanConfig(text)): string[] => dnsUpstreams(text, scan).map(upstream => upstream.name);
 
 export const ruleLine = (condition: string, outbound: string, must = false) => `${condition} -> ${outbound}${must ? '(must)' : ''}`;
-// What a new rule can route to: the groups the configuration defines, then the two built-in outbounds.
-export const ruleOutbounds = (groups: Array<{name: string}>) => [...groups.map(group => group.name), ...builtinOutboundNames].map(id => ({id, label: id}));
 
 export function addRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text
