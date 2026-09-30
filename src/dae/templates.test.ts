@@ -40,7 +40,7 @@ describe('detectTemplate', () => {
   });
 
   it('reads the group a template routes to by its first group', () => {
-    expect(detectTemplate(writeTemplate(existing, 'bypass', []))).toEqual({template: 'bypass', group: 'my proxy'});
+    expect(detectTemplate(writeTemplate(existing, 'bypass', []))).toEqual({template: 'bypass', group: "'my proxy'"});
   });
 
   it('ignores spacing, comments and line breaks inside parentheses', () => {
@@ -96,5 +96,23 @@ describe('writeTemplate', () => {
   it('writes the same text again when applied twice', () => {
     const once = writeTemplate(existing, 'full', []);
     expect(writeTemplate(once, 'full', [])).toBe(once);
+  });
+});
+
+describe('quoted group names', () => {
+  // honk keeps the quotes in a group's name, so `'proxy'` and `proxy` are two groups.
+  it('declares a template group whose name a quoted group only resembles', () => {
+    const text = "group {\n  'proxy' { policy: min_moving_avg }\n}\n";
+    const out = writeTemplate(text, 'mini', readGroupEntries(text));
+    expect(readGroupEntries(out).map(entry => entry.written)).toEqual(["'proxy'", 'proxy', 'auto']);
+    expect(templateGroups('mini', ["'proxy'"])).toEqual(['proxy', 'auto']);
+  });
+
+  it('keeps outbound names as written when reading a template back', () => {
+    const gfw = writeTemplate("group { a {} 'a' {} }\n", 'gfw', []);
+    expect(detectTemplate(gfw)).toEqual({template: 'gfw', group: 'a'});
+    expect(detectTemplate(gfw.replace('domain(geosite:gfw) -> a', "domain(geosite:gfw) -> 'a'"))).toBeNull();
+    const quoted = writeTemplate("group { 'direct' {} }\n", 'global', []);
+    expect(detectTemplate(quoted)).toEqual({template: 'global', group: "'direct'"});
   });
 });

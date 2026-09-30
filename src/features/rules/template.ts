@@ -60,17 +60,23 @@ const refusalText: Record<TemplateRefusal, Key> = {
   incomplete: 'rule.template.refused.incomplete',
   denied: 'rule.template.refused.denied'
 };
-// Whether a routing block of `text` pulls in another file with `include`, whose rules a replacement would drop.
+// Whether a routing block of `text` pulls in another file with an `include` statement, whose rules a replacement would
+// drop. Only a statement's first word is one: `fallback: include` and `-> include` name a group called include.
 function routingIncludes(text: string): boolean {
   const {blocks, tokens} = scanConfig(text);
   return blocks
     .filter(block => block.name === 'routing')
-    .some(block =>
-      tokens.some(
-        token =>
-          token.from > block.open && token.from < block.close && token.kind === 'text' && token.parens === 0 && text.slice(token.from, token.to) === 'include'
-      )
-    );
+    .some(block => {
+      const inside = tokens.filter(token => token.from > block.open && token.from < block.close && token.kind !== 'comment');
+      return inside.some(
+        (token, index) =>
+          token.kind === 'text' &&
+          token.parens === 0 &&
+          text.slice(token.from, token.to) === 'include' &&
+          (index === 0 || inside[index - 1].line !== token.line) &&
+          text.slice(inside[index + 1]?.from, inside[index + 1]?.to) !== ':'
+      );
+    });
 }
 export type TemplateTargetInput = {
   sources: ConfigSource[];
@@ -131,12 +137,13 @@ export type TemplateImpact = {
 // What applying `template` to `target` adds and relies on, given every loaded file and the node names.
 export function templateImpact(template: RuleTemplate, target: ConfigSource, sources: ConfigSource[], nodes: string[]): TemplateImpact {
   const entries = [target, ...sources.filter(source => source.id !== target.id)].flatMap(source => (source.content ? readGroupEntries(source.content) : []));
+  // Groups are compared as written: honk keeps the quotes in a group's name, so `'proxy'` is not the template's `proxy`.
   const byName = new Map<string, GroupEntry>();
-  for (const entry of entries) if (!byName.has(entry.name)) byName.set(entry.name, entry);
+  for (const entry of entries) if (!byName.has(entry.written)) byName.set(entry.written, entry);
   const created = templateGroups(template, [...byName.keys()]);
   const labels = new Map(templates[template].groups.map(group => [group.name, group.label]));
   // A template without groups routes to the file's first group, or the first one declared anywhere.
-  const named = templates[template].groups.length ? templates[template].groups.map(group => group.name) : [entries[0]?.name ?? defaultGroup];
+  const named = templates[template].groups.length ? templates[template].groups.map(group => group.name) : [entries[0]?.written ?? defaultGroup];
   const taken = new Set(nodes);
   return {
     created: created.map(name => ({name, label: labels.get(name) ?? null})),

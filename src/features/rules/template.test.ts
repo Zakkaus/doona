@@ -84,3 +84,21 @@ it('creates the default group only when no file declares one, and reuses one dec
   const other = source('groups', 'group { proxy { policy: fixed(0) } }\n');
   expect(templateImpact('standard', empty, [empty, other], []).reused).toEqual([{name: 'proxy', pinned: true}]);
 });
+
+it('takes a group named include as a route target, not as an include', () => {
+  const main = source('main', 'group { include {} }\nrouting {\n  domain(example.org) -> include\n  fallback: include\n}\n', 'main');
+  expect(input([main]).refusal).toBeNull();
+});
+
+it('reads a quoted group as its own group when listing what a template creates and keeps', () => {
+  const main = source('main', "group {\n  'proxy' { filter: name(hk-01) }\n}\n", 'main');
+  expect(templateImpact('mini', main, [main], [])).toEqual({
+    created: [
+      {name: 'proxy', label: '节点选择'},
+      {name: 'auto', label: '自动选择'}
+    ],
+    reused: [],
+    collisions: []
+  });
+  expect(templateImpact('bypass', main, [main], []).reused).toEqual([{name: "'proxy'", pinned: true}]);
+});
