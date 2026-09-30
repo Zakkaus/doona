@@ -37,7 +37,8 @@ function useTickSizes(labels: string[]) {
   const [sizes, setSizes] = useState<Array<{width: number; height: number}>>([]);
   useLayoutEffect(() => {
     const el = document.createElement('span');
-    Object.assign(el.style, {position: 'absolute', top: '-20000px', whiteSpace: 'pre', fontSize: '11px'});
+    el.className = 'rp-area-tick';
+    Object.assign(el.style, {position: 'absolute', top: '-20000px', whiteSpace: 'pre'});
     document.body.appendChild(el);
     const measure = () =>
       setSizes(
@@ -258,7 +259,7 @@ export function AreaPlot({
             {selected !== null &&
               series.map(s =>
                 s.values[selected] == null ? null : (
-                  <circle key={s.label} cx={x(timestamps[selected])} cy={y(s.values[selected]!)} r={4} fill={s.color} stroke="#fff" strokeWidth={2} />
+                  <circle key={s.label} cx={x(timestamps[selected])} cy={y(s.values[selected]!)} r={4} fill={s.color} stroke={p.base} strokeWidth={2} />
                 )
               )}
           </svg>
