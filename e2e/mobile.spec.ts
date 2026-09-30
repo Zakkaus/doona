@@ -74,6 +74,26 @@ test('another page opens at its top, while a change within the page keeps the sc
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
+test('Back and Forward return a page to where it was left, while a link still opens at the top', async ({page}) => {
+  await page.goto('/#/activity');
+  await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
+  await bar(page).getByRole('link', {name: 'Monitor'}).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight + 300)).toBe(true);
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  await page.evaluate(() => scrollTo(0, 300));
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/activity$/);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(400);
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(300);
+  await bar(page).getByRole('link', {name: 'Activity'}).click();
+  await expect(page).toHaveURL(/#\/activity$/);
+  await expect(page.locator('.rp-content > *').first()).toBeVisible();
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+});
+
 test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   await page.goto('/#/overview');
   await expect(page.locator('.rp-content > *').first()).toBeVisible();
