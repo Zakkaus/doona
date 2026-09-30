@@ -334,7 +334,7 @@ export const groupAdmits = (filters: string[], node: FilterNode) => compileFilte
 // An edit staged by the arrange view, applied to the source text in the order it was made.
 export type GroupChange =
   | {kind: 'addNode' | 'removeNode' | 'addSubscription' | 'removeSubscription'; group: string; value: string}
-  | {kind: 'createGroup'; group: string; policy: string};
+  | ({kind: 'createGroup'; group: string} & GroupEntryUpdate);
 function applyChange(text: string, change: GroupChange): string {
   switch (change.kind) {
     case 'addNode':
@@ -346,9 +346,7 @@ function applyChange(text: string, change: GroupChange): string {
     case 'removeSubscription':
       return removeSubtagsFromGroup(text, change.group, [change.value]);
     case 'createGroup':
-      return readGroupEntries(text).some(entry => entry.name === change.group)
-        ? text
-        : writeGroupEntry(text, change.group, {filters: [], policy: change.policy});
+      return readGroupEntries(text).some(entry => entry.name === change.group) ? text : writeGroupEntry(text, change.group, change);
   }
 }
 export const applyChanges = (text: string, changes: GroupChange[]) => changes.reduce(applyChange, text);

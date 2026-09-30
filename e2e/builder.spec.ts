@@ -10,10 +10,10 @@ test('a node joins an existing group or a new one through the name filter', asyn
   await page.getByRole('button', {name: 'Add sg-01 to a group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Name').fill('backup');
+  await dialog.getByLabel('Group name', {exact: true}).fill('backup');
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
-  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sg-01 added to backup'})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Create', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Configuration for backup written and reloaded'})).toBeVisible();
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText('resilient {\n    filter: name(hk-01, sg-01, us-01, jp-01)\n    policy: min_avg10\n  }');
   await expect(page.locator('.cm-content')).toContainText('backup {\n    filter: name(sg-01)\n    policy: min_moving_avg\n  }');

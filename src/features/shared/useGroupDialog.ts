@@ -1,17 +1,19 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {useT} from '../../i18n';
-import {nameText, writeGroupEntry} from '../../dae/groups';
+import {nameText, readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../../dae/groups';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource, Group} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
-import {noticeText} from '../../api/error';
-import {groupEditSafe} from '../shared/policyText';
+import {LocalError, noticeText} from '../../api/error';
+import {groupEditSafe, groupNameError} from './policyText';
+import {newGroupPolicies} from '../../dae/vocab';
 import type {SearchSection} from '../../ui/SearchSelect';
 import {
   editBlocked,
   finalSections,
+  finalExcluded,
   groupConfigLabels,
   memberSections,
   routeChoiceId,
@@ -20,12 +22,14 @@ import {
   routeValue,
   routeWritable,
   type GroupOwner,
-  type MemberView,
   type OutboundCatalogue,
   type RouteField
-} from './view';
-export type PolicyEditView = {
+} from './groupText';
+export type GroupDialogView = {
   title: string;
+  name: {value: string; error: string | null; change: (value: string) => void} | null;
+  help: string;
+  submitLabel: string;
   open: boolean;
   // Open on the file's declaration; false while the dialog only shows the group's configuration.
   editing: boolean;
@@ -49,7 +53,7 @@ export type PolicyEditView = {
     sections: SearchSection[];
     change: (id: string) => void;
   }>;
-  show: () => void;
+  show: (filters?: string[]) => void;
   // Opens the dialog read-only, on the group's configuration alone.
   view: () => void;
   close: () => void;
@@ -63,7 +67,7 @@ export type PolicyEditView = {
 export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolean | undefined; loaded: boolean; error: Error | null};
 // What the default member and final outbound pickers offer: the live group, its members as their tiles show them,
 // and every outbound a final can name.
-export type RouteContext = {g: Group | undefined; members: MemberView[]; outbounds: OutboundCatalogue};
+export type RouteContext = {g: Group | undefined; members: Parameters<typeof memberSections>[0]; outbounds: OutboundCatalogue};
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
@@ -71,7 +75,7 @@ const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as con
 // declared then, since the sources are read again after a refusal.
 type Draft = {
   name: string;
-  origin: ConfigSource;
+  origin: ConfigSource | null;
   refused: boolean;
   policy: string | null;
   filters: string[];
@@ -79,25 +83,45 @@ type Draft = {
   final: string | null;
   interrupt: string | null;
 };
-// Edits the group in the source that declares it; `source` carries the write and whether the backend takes one.
-export function usePolicyEdit(name: string, source: MainSourceEdit, declaration: PolicyDeclaration, context: RouteContext): PolicyEditView {
+type Input =
+  | {mode: 'edit'; name: string; source: MainSourceEdit; declaration: PolicyDeclaration; context: RouteContext}
+  | {
+      mode: 'create';
+      source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply'>;
+      taken: ReadonlySet<string>;
+      outbounds: OutboundCatalogue;
+      stage?: (name: string, entry: GroupEntryUpdate) => void;
+      onCreated?: (name: string) => void;
+    };
+export function useGroupDialog(input: Input): GroupDialogView {
   const t = useT();
-  const {owner} = declaration;
+  const {source} = input;
+  const creating = input.mode === 'create';
+  const name = creating ? '' : input.name;
+  const declaration = creating ? null : input.declaration;
+  const context = creating ? {g: undefined, members: [], outbounds: input.outbounds} : input.context;
+  const owner = declaration?.owner;
   const declared = owner === 'ambiguous' ? undefined : owner;
   const entry = declared?.entry;
-  const blocked = editBlocked(owner, declaration, t);
+  const blocked = declaration ? editBlocked(owner, declaration, t) : null;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
-  const routes = routeFields(context.g, draft?.policy ?? null);
+  const routes: RouteField[] = creating ? ['final_outbound'] : routeFields(context.g, draft?.policy ?? null);
+  const groupName = creating ? (draft?.name.trim() ?? '') : (draft?.name ?? '');
+  const excluded = finalExcluded(groupName, context.outbounds.links);
+  const [tried, setTried] = useState(false);
+  const saving = useRef(false);
+  const nameProblem = creating && draft ? groupNameError(draft.name.trim(), input.taken, t) : null;
   const session = useDialogSession();
-  const [problem, setProblem] = useState<PolicyEditView['problem']>(null);
+  const [problem, setProblem] = useState<GroupDialogView['problem']>(null);
   const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
   const guard = useDraftGuard(
     !!draft &&
-      (draft.interrupt !== entry?.interrupt ||
-        draft.policy !== entry?.policy ||
-        JSON.stringify(draft.filters) !== JSON.stringify(entry?.filters) ||
+      ((creating && !!draft.name) ||
+        (!creating && draft.interrupt !== entry?.interrupt) ||
+        draft.policy !== (creating ? newGroupPolicies[0].id : entry?.policy) ||
+        JSON.stringify(draft.filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
         routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null))),
     () => {
       session.next();
@@ -106,23 +130,36 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
     }
   );
   const save = (close: () => void) => {
-    if (!draft || busy) return;
+    if (!draft || source.busy || saving.current) return;
+    setTried(true);
+    if (nameProblem) return;
     const filters = draft.filters.map(f => f.trim()).filter(Boolean);
     const written = {default: entry?.default ?? null, final: entry?.final ?? null};
-    if (!groupEditSafe(filters, draft.policy, entry) || !routes.every(id => routeWritable(draft[routeKeys[id]], written[routeKeys[id]]))) {
+    if (
+      !groupEditSafe(filters, draft.policy, entry) ||
+      !routes.every(id => routeWritable(draft[routeKeys[id]], written[routeKeys[id]])) ||
+      (creating && draft.final !== null && excluded.has(draft.final))
+    ) {
       refuse(t('policy.editUnsafe'));
       return;
     }
+    const group = creating ? draft.name.trim() : draft.name;
+    const update: GroupEntryUpdate = {filters, policy: draft.policy, ...(!creating ? {interrupt: draft.interrupt} : {})};
+    for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
+    if (creating && input.stage) {
+      input.stage(group, update);
+      guard.clear();
+      close();
+      return;
+    }
+    saving.current = true;
     const current = session.start();
-    const origin = draft.refused ? (declared?.origin ?? draft.origin) : draft.origin;
+    const origin = draft.refused ? (creating ? source.main : declared?.origin) : draft.origin;
     void source
       .apply(text => {
-        const update = {filters, policy: draft.policy, interrupt: draft.interrupt};
-        // A field the dialog does not offer, such as the default member under an automatic policy, is left as the file
-        // has it.
-        for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
-        return writeGroupEntry(text, draft.name, update);
-      }, origin)
+        if (creating && readGroupEntries(text).some(entry => entry.name === group)) throw new LocalError('arrange.takenName');
+        return writeGroupEntry(text, group, update);
+      }, origin ?? undefined)
       .then(result => {
         const open = current();
         if (result.kind === 'ok') {
@@ -130,7 +167,8 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
             guard.clear();
             close();
           }
-          toast('positive', t('policy.updated', {name: draft.name}));
+          if (creating && input.onCreated) input.onCreated(group);
+          else toast('positive', t('policy.updated', {name: group}));
         }
         const problem = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
@@ -140,14 +178,23 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
             setDraft(prev => (prev ? {...prev, refused: true} : prev));
           } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
         }
+      })
+      .finally(() => {
+        saving.current = false;
       });
   };
   // Edits wait while a save is in flight; what was submitted is what the outcome describes.
   const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
-    if (!busy) setDraft(prev => (prev ? update(prev) : prev));
+    if (!source.busy && !saving.current) setDraft(prev => (prev ? update(prev) : prev));
   };
   return {
-    title: t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
+    title: creating ? t('arrange.newGroup') : t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
+    name:
+      creating && draft
+        ? {value: draft.name, error: tried || draft.name.trim() ? nameProblem : null, change: value => edit(prev => ({...prev, name: value}))}
+        : null,
+    help: creating ? '' : t('policy.editHelp'),
+    submitLabel: t(creating ? 'arrange.create' : 'policy.save'),
     open: !!draft || viewing,
     editing: !!draft,
     editable: !!draft || (source.writable && blocked === null),
@@ -174,15 +221,22 @@ export function usePolicyEdit(name: string, source: MainSourceEdit, declaration:
             description: t(routeHelp[id]),
             searchLabel: t(id === 'default_member_id' ? 'ui.filterMembers' : 'ui.filterOutbounds'),
             value: routeChoiceId(draft[key]),
-            sections: id === 'default_member_id' ? memberSections(context.members, held, t) : finalSections(draft.name, context.outbounds, held, t),
+            sections:
+              id === 'default_member_id'
+                ? memberSections(context.members, held, t)
+                : finalSections(groupName, context.outbounds, held, t)
+                    .map(section => (creating ? {...section, items: section.items.filter(item => !excluded.has(routeChoiceValue(item.id) ?? ''))} : section))
+                    .filter(section => section.items.length),
             change: (choice: string) => edit(prev => ({...prev, [key]: routeChoiceValue(choice)}))
           };
         })
       : [],
-    show: () => {
+    show: (filters = []) => {
       session.next();
       setProblem(null);
-      if (declared && !blocked)
+      setTried(false);
+      if (creating) setDraft({name: '', origin: source.main, refused: false, policy: newGroupPolicies[0].id, filters, default: null, final: null, interrupt: null});
+      else if (declared && !blocked)
         setDraft({
           name: declared.entry.name,
           origin: declared.origin,

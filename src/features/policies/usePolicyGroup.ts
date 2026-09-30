@@ -5,7 +5,7 @@ import type {GroupSummary, HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
-import {usePolicyEdit, type PolicyDeclaration} from './usePolicyEdit';
+import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
 import type {OutboundCatalogue} from './view';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
@@ -64,7 +64,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     setOpened(true);
     setExpanded(true);
   }
-  const declared = usePolicyEdit(g?.name ?? input.name, source, declaration, {g, members, outbounds});
+  const declared = useGroupDialog({mode: 'edit', name: g?.name ?? input.name, source, declaration, context: {g, members, outbounds}});
   // The dialog shows the group's configuration, so opening it reads the group again rather than waiting for its poll.
   const edit = {
     ...declared,

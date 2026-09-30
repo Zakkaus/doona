@@ -512,15 +512,15 @@ test('new group validation refusal retains the dialog and its name without a suc
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'New group…', exact: true});
-  await dialog.getByLabel('Name', {exact: true}).fill('retained-group');
+  const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
+  await dialog.getByLabel('Group name', {exact: true}).fill('retained-group');
   const validating = page.waitForRequest('**/api/v1/config/validate');
-  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await validating;
   await expect(dialog).toBeVisible();
   release();
   await expect(dialog.getByRole('alert')).toContainText('Validation');
-  await expect(dialog.getByLabel('Name', {exact: true})).toHaveValue('retained-group');
+  await expect(dialog.getByLabel('Group name', {exact: true})).toHaveValue('retained-group');
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
 });
 

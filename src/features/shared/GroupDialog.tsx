@@ -1,9 +1,10 @@
+import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import {Button, InlineAlert, Kv, ModalDialog, Switch, TextField} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
-import type {PolicyEditView} from './usePolicyEdit';
-import {PolicyPicker} from '../shared/PolicyPicker';
+import type {GroupDialogView} from './useGroupDialog';
+import {PolicyPicker} from './PolicyPicker';
 export type PolicyDetails = {
   fields: Array<[string, string]>;
   heading: string | null;
@@ -38,8 +39,9 @@ function Details({id, details: d}: {id: string; details: PolicyDetails}) {
     </>
   );
 }
-export function PolicyEdit({id, model: m, details}: {id: string; model: PolicyEditView; details: PolicyDetails | null}) {
+export function GroupDialog({id, model: m, details}: {id: string; model: GroupDialogView; details: PolicyDetails | null}) {
   const t = useT();
+  const form = useId();
   return (
     <ModalDialog
       title={m.title}
@@ -52,8 +54,8 @@ export function PolicyEdit({id, model: m, details}: {id: string; model: PolicyEd
         m.editing ? (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent isDisabled={!m.open} isPending={m.busy} onPress={() => m.save(close)}>
-              {t('policy.save')}
+            <Button accent type="submit" form={form} isDisabled={!m.open} isPending={m.busy}>
+              {m.submitLabel}
             </Button>
           </>
         ) : (
@@ -67,30 +69,49 @@ export function PolicyEdit({id, model: m, details}: {id: string; model: PolicyEd
         </div>
       )}
       {m.editing && (
-        <div className="rp-list">
-          <span className="rp-label">{t('policy.editHelp')}</span>
+        <form
+          id={form}
+          className="rp-list"
+          onSubmit={event => {
+            event.preventDefault();
+            m.save(m.close);
+          }}
+        >
+          {m.name && (
+            <TextField
+              label={t('arrange.groupName')}
+              value={m.name.value}
+              onChange={m.name.change}
+              description={t('arrange.groupNameHint')}
+              error={m.name.error ?? undefined}
+              spellCheck={false}
+              isDisabled={m.busy}
+            />
+          )}
+          {m.help && <span className="rp-label">{m.help}</span>}
           {m.problem && (
             <InlineAlert key={m.problem.id} takeFocus>
               {m.problem.text}
             </InlineAlert>
           )}
-          <PolicyPicker value={m.policy} onChange={m.setPolicy} />
+          <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
           {m.filters.map(field => (
             <TextField
               key={field.id}
               label={field.label}
               value={field.value}
               placeholder="name(keyword: 'HK')"
+              isDisabled={m.busy}
               spellCheck={false}
               onChange={field.change}
               action={
-                <Button quiet icon label={field.removeLabel} onPress={field.remove}>
+                <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
                   <Close />
                 </Button>
               }
             />
           ))}
-          <Button small quiet onPress={m.add}>
+          <Button small quiet isDisabled={m.busy} onPress={m.add}>
             {t('policy.addFilter')}
           </Button>
           {m.routes.map(field => (
@@ -105,8 +126,8 @@ export function PolicyEdit({id, model: m, details}: {id: string; model: PolicyEd
               onChange={field.change}
             />
           ))}
-          {details && <Details id={id} details={details} />}
-        </div>
+          {!m.name && details && <Details id={id} details={details} />}
+        </form>
       )}
     </ModalDialog>
   );

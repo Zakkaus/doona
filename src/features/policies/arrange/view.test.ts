@@ -20,7 +20,7 @@ it('stages an edit and its reverse as nothing, and drops a created group with wh
   const add = {kind: 'addNode' as const, group: 'pair', value: 'jp-01'};
   expect(stage(stage([], add), {...add, kind: 'removeNode'})).toEqual([]);
   expect(stage(stage([], add), add)).toEqual([add]);
-  const created = stage([], {kind: 'createGroup', group: 'new', policy: 'fallback'});
+  const created = stage([], {kind: 'createGroup', filters: [], group: 'new', policy: 'fallback'});
   const filled = stage(created, {kind: 'addNode', group: 'new', value: 'jp-01'});
   expect(unstage(filled, 0)).toEqual([]);
 });

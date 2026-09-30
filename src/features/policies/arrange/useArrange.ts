@@ -3,11 +3,12 @@ import {useFilter} from 'react-aria-components';
 import {useT} from '../../../i18n';
 import type {Key} from '../../../i18n';
 import {refetchAll, useCapabilities, useNodes, useProviders} from '../../../store';
-import {applyChanges, isWritableName, readGroupEntries, type GroupChange} from '../../../dae/groups';
+import {applyChanges, isWritableName, readGroupEntries, type GroupEntryUpdate, type GroupChange} from '../../../dae/groups';
 import {toast} from '../../../ui/ui';
 import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {groupNameError} from '../../shared/policyText';
+import {useGroupDialog} from '../../shared/useGroupDialog';
+import {groupOwners, outboundLinks, type OutboundCatalogue} from '../../shared/groupText';
 import {applyReason, arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
 import {offered} from '../../../api/capabilities';
@@ -15,7 +16,11 @@ import {offered} from '../../../api/capabilities';
 // What a dragged tray row carries.
 export const PLACEABLE = 'application/x-doona-placeable';
 
-export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>, viewGroup: (name: string | null) => void) {
+export function useArrange(
+  source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>,
+  viewGroup: (name: string | null) => void,
+  outbounds: OutboundCatalogue
+) {
   const t = useT();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
@@ -59,7 +64,17 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   const unplace = (group: string, item: Placeable) =>
     edit(current => stage(current, {kind: item.kind === 'node' ? 'removeNode' : 'removeSubscription', group, value: item.value}));
   const existing = new Set(view.groups.map(group => group.name));
-  const nameProblem = (name: string) => groupNameError(name, existing, t);
+  const create = useGroupDialog({
+    mode: 'create',
+    source: {...source, busy: source.busy || applying},
+    taken: new Set([...outbounds.groups, ...existing]),
+    outbounds: {
+      ...outbounds,
+      groups: [...new Set([...outbounds.groups, ...existing])],
+      links: new Map([...outbounds.links, ...outboundLinks(groupOwners(source.main ? [{...source.main, content: view.stagedText}] : []))])
+    },
+    stage: (group: string, entry: GroupEntryUpdate) => edit(current => stage(current, {kind: 'createGroup', group, ...entry}))
+  });
   const apply = async () => {
     setApplying(true);
     setFailure(null);
@@ -114,8 +129,7 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
     unplace,
     drop: (index: number) => edit(current => unstage(current, index)),
     discard: () => edit(() => []),
-    nameProblem,
-    create: (name: string, policy: string) => edit(current => stage(current, {kind: 'createGroup', group: name, policy})),
+    create,
     // With nothing left to review the sheet closes by itself.
     reviewing: reviewing && changes.length > 0,
     setReviewing: (open: boolean) => {
