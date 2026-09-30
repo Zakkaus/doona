@@ -2,7 +2,7 @@ import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '.
 import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
-import {urlHost, type SubscriptionText} from '../../dae/subscriptions';
+import {urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
@@ -186,6 +186,12 @@ export function intervalItems(current: number | null, locale: string, t: Transla
     id: String(value),
     label: intervalText(value, locale, t)
   }));
+}
+
+// The options an edit leaves as written. The User-Agent, the interval (the table's Auto-refresh picker) and the cache,
+// while its switch shows, have their own controls.
+export function keptOptions(options: SubscriptionOption[], cacheControl: boolean): SubscriptionOption[] {
+  return options.filter(option => option.name !== 'ua' && option.name !== 'interval' && !(option.name === 'cache' && cacheControl));
 }
 
 export type ProviderForm = {name: string; value: string; interval: string; agent: string; cache: boolean | null};

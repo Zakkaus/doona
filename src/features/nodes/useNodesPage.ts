@@ -17,6 +17,7 @@ import {
   citingGroups,
   intervalItems,
   isNodeLink,
+  keptOptions,
   nodeFormReason,
   nodeSource,
   ownedNodes,
@@ -406,11 +407,7 @@ export function useNodesPage({go, query}: PageProps) {
           ? t('policy.save')
           : t('nodes.add'),
     editNameError: editName ? editNameError : null,
-    // The User-Agent and the cache have their own fields; the rest is shown as written.
-    editOptions:
-      dialog?.kind === 'editProvider'
-        ? dialog.entry.options.filter(option => option.name !== 'ua' && !(option.name === 'cache' && writtenCache !== undefined))
-        : [],
+    editOptions: dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, writtenCache !== undefined) : [],
     editAgentError,
     editAgentDefault: createOptions?.user_agent,
     editCache: writtenCache === undefined ? null : editCache.value,

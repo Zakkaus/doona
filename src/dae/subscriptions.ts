@@ -28,7 +28,13 @@ export type SubscriptionText = {
   tagAt: Range | null;
   urlAt: Range;
 };
-type Entry = SubscriptionText & {block?: TextBlock; fields: Field[]; agentAt?: Range & {quoted: boolean; open: number; close: number}; comment?: Range};
+type Entry = SubscriptionText & {
+  block?: TextBlock;
+  container?: TextBlock;
+  fields: Field[];
+  agentAt?: Range & {quoted: boolean; open: number; close: number};
+  comment?: Range;
+};
 export type SubscriptionChange = {tag?: string; url?: string; ua?: string | null; interval?: number | null; cache?: boolean | null};
 
 // honk's duration grammar: an integer of seconds, minutes or hours, a bare number of seconds, or milliseconds
@@ -241,7 +247,7 @@ function readEntries(text: string): Entry[] {
     for (const segment of segments(text, container, tokens)) {
       const entry = readEntry(text, segment, tokens);
       if (entry === 'wrapper') visit(segment.block!);
-      else if (entry) entries.push(entry);
+      else if (entry) entries.push({...entry, container});
     }
   };
   for (const section of blocks.filter(block => block.name === 'subscription')) visit(section);
@@ -250,7 +256,7 @@ function readEntries(text: string): Entry[] {
 
 // Every entry honk reads as a subscription, in file order.
 export function readSubscriptionEntries(text: string): SubscriptionText[] {
-  return readEntries(text).map(({block: _block, fields: _fields, agentAt: _agentAt, comment: _comment, ...entry}) => entry);
+  return readEntries(text).map(({block: _block, container: _container, fields: _fields, agentAt: _agentAt, comment: _comment, ...entry}) => entry);
 }
 
 // A User-Agent in parentheses is written bare when honk reads it back unchanged, and quoted otherwise.
@@ -262,6 +268,21 @@ const applyEdits = (text: string, edits: Edit[]) =>
   edits.sort((a, b) => b.from - a.from).reduce((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), text);
 const lineStart = (text: string, at: number) => text.lastIndexOf('\n', at - 1) + 1;
 const indentAt = (text: string, at: number) => text.slice(lineStart(text, at), at).match(/^[ \t]*/)![0];
+const deeper = (outer: string, inner: string) => (inner.length > outer.length && inner.startsWith(outer) ? inner.slice(outer.length) : '');
+// One level of indentation as the file already writes it: from an entry to its options where an entry has them on
+// their own lines, else from the section to its entries, else the file's first indented line.
+function indentStep(text: string, entries: Entry[], entry: Entry): string {
+  for (const other of [entry, ...entries]) {
+    const field = other.block && other.block.line !== other.block.endLine ? other.fields[0] : undefined;
+    const step = field ? deeper(indentAt(text, other.from), indentAt(text, field.key.from)) : '';
+    if (step) return step;
+  }
+  const step = entry.container ? deeper(indentAt(text, entry.container.open), indentAt(text, entry.from)) : '';
+  return step || text.match(/\n([ \t]+)\S/)?.[1] || '    ';
+}
+// An interval in the largest unit that states it exactly, the integer forms honk reads back.
+const writeInterval = (seconds: number) =>
+  seconds && seconds % 3600 === 0 ? `${seconds / 3600}h` : seconds && seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`;
 
 /**
  * Changes one entry where it is written: only the fields given, each in place, so its form, its other options, its
@@ -296,10 +317,10 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     const header = `${named}: ${quote(next.url)}`;
     if ((changed.interval && next.interval !== null) || (changed.cache && next.cache !== null)) {
       const indent = indentAt(text, entry.from);
-      const inner = indent + (indent.includes('\t') ? '\t' : '  ');
+      const inner = indent + indentStep(text, entries, entry);
       const lines = [`${header} {${entry.comment ? ' ' + text.slice(entry.comment.from, entry.comment.to) : ''}`];
       if (next.ua !== null) lines.push(`${inner}ua: ${quote(next.ua)}`);
-      if (next.interval !== null) lines.push(`${inner}interval: ${next.interval}s`);
+      if (next.interval !== null) lines.push(`${inner}interval: ${writeInterval(next.interval)}`);
       if (next.cache !== null) lines.push(`${inner}cache: ${next.cache}`);
       lines.push(`${indent}}`);
       return applyEdits(text, [{from: entry.from, to: entry.comment?.to ?? entry.to, text: lines.join('\n')}]);
@@ -322,7 +343,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   // honk reads one option per line of a block, so a block written on one line is first opened onto several.
   if (block.line === block.endLine && entry.fields.length && (changed.ua || changed.interval || changed.cache)) {
     const indent = indentAt(text, entry.from);
-    const inner = indent + (indent.includes('\t') ? '\t' : '  ');
+    const inner = indent + indentStep(text, entries, entry);
     const body = text.slice(block.open + 1, block.close).trim();
     return writeSubscriptionEntry(applyEdits(text, [{from: block.open, to: block.to, text: `{\n${inner}${body}\n${indent}}`}]), tag, change);
   }
@@ -330,10 +351,11 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   if (changed.tag) edits.push({...entry.tagAt!, text: writeTag(next.tag, writtenTag)});
   if (changed.url) edits.push({...entry.urlAt, text: quote(next.url)});
   const firstField = entry.fields[0];
-  const inner = firstField ? indentAt(text, firstField.key.from) : indentAt(text, entry.from) + (indentAt(text, entry.from).includes('\t') ? '\t' : '  ');
+  const inner = firstField ? indentAt(text, firstField.key.from) : indentAt(text, entry.from) + indentStep(text, entries, entry);
   const closeLine = lineStart(text, block.close);
   const closeOwnLine = /^[ \t]*$/.test(text.slice(closeLine, block.close));
   const removed: Field[] = [];
+  let kept = false;
   const set = (name: 'ua' | 'interval' | 'cache', value: string | number | boolean | null) => {
     const fields = entry.fields.filter(field => field.name === name);
     const last = fields.at(-1);
@@ -346,8 +368,10 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
       }
       return;
     }
+    kept = true;
     const quoted = !!last && /^['"]/.test(last.value);
-    const written = name === 'ua' ? quote(String(value)) : name === 'interval' ? (quoted ? `'${value}s'` : `${value}s`) : quoted ? `'${value}'` : String(value);
+    const plain = name === 'interval' ? writeInterval(Number(value)) : String(value);
+    const written = name === 'ua' ? quote(plain) : quoted ? `'${plain}'` : plain;
     if (last) edits.push({...last.at, text: written});
     else if (closeOwnLine) edits.push({from: closeLine, to: closeLine, text: `${inner}${name}: ${written}\n`});
     else edits.push({from: block.close, to: block.close, text: `\n${inner}${name}: ${written}\n${indentAt(text, entry.from)}`});
@@ -356,7 +380,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   if (changed.interval) set('interval', next.interval);
   if (changed.cache) set('cache', next.cache);
   // `tag: 'url' { }` left with nothing in it goes back to `tag: 'url'`.
-  if (entry.form === 'options' && removed.length === entry.fields.length) {
+  if (entry.form === 'options' && !kept && removed.length === entry.fields.length) {
     const rest = removed.reduce(
       (body, field) => body.replace(text.slice(lineStart(text, field.key.from), text.indexOf('\n', field.at.to) + 1), ''),
       text.slice(block.open + 1, block.close)
