@@ -2,6 +2,8 @@ import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
 import {pathLatency} from './latency';
 
+const locale = 'en-US';
+
 const tcp = (latency_ms: number | null, patch: Partial<HealthObservation> = {}) =>
   ({
     transport: 'tcp',
@@ -36,7 +38,8 @@ it('plots every node with a latency and marks the ones current connections use',
       node('us', [tcp(null)]),
       node('sg', [tcp(30)]),
       node('idle', [])
-    ]
+    ],
+    locale
   )!;
   // Fastest first; a node nothing goes through is still plotted, with no connections.
   expect(view.samples).toEqual([
@@ -59,7 +62,7 @@ it('plots every node with a latency and marks the ones current connections use',
 
 it('weights only its own median by connections', () => {
   const rows = [...Array.from({length: 8}, (_, i) => row('s' + i, 'proxy', ['slow'])), row('f', 'proxy', ['fast']), row('m', 'proxy', ['mid'])];
-  const view = pathLatency(rows, [node('slow', [tcp(200)]), node('fast', [tcp(10)]), node('mid', [tcp(50)])])!;
+  const view = pathLatency(rows, [node('slow', [tcp(200)]), node('fast', [tcp(10)]), node('mid', [tcp(50)])], locale)!;
   expect(view.p50).toBe(50);
   expect(view.weightedP50).toBe(200);
 });
@@ -67,7 +70,7 @@ it('weights only its own median by connections', () => {
 it('plots every node without highlight when the connections carry no chains', () => {
   // Today's honk without flow recording sends empty chains; an older backend sends none.
   for (const chain of [[], undefined]) {
-    const view = pathLatency([row('a', 'proxy', chain), row('b', 'direct', [])], [node('hk', [tcp(40)]), node('jp', [tcp(90)])])!;
+    const view = pathLatency([row('a', 'proxy', chain), row('b', 'direct', [])], [node('hk', [tcp(40)]), node('jp', [tcp(90)])], locale)!;
     expect(view.chains).toBe(false);
     expect(view.samples.map(s => [s.node, s.connections])).toEqual([
       ['hk', 0],
@@ -81,10 +84,10 @@ it('plots every node without highlight when the connections carry no chains', ()
 });
 
 it('has no samples while every node has failed, and nothing to say without nodes or health samples', () => {
-  const view = pathLatency([row('a', 'proxy', ['hk'])], [node('hk', [tcp(null)])])!;
+  const view = pathLatency([row('a', 'proxy', ['hk'])], [node('hk', [tcp(null)])], locale)!;
   expect(view.samples).toEqual([]);
   expect([view.p50, view.p90, view.weightedP50]).toEqual([null, null, null]);
   expect(view.missing).toBe(1);
-  expect(pathLatency([row('a', 'proxy', ['hk'])], [])).toBeNull();
-  expect(pathLatency([], [node('hk', []), node('jp', undefined)])).toBeNull();
+  expect(pathLatency([row('a', 'proxy', ['hk'])], [], locale)).toBeNull();
+  expect(pathLatency([], [node('hk', []), node('jp', undefined)], locale)).toBeNull();
 });

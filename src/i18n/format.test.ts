@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
 import {compareNames, formatBytes, formatDuration, formatRate} from './format';
+import {LANGS, LOCALE} from './index';
 
 it('keeps duration units, truncation and compound spacing in every language', () => {
   const cases = {
@@ -50,7 +51,11 @@ it('writes every byte and byte-rate unit the same in English and Chinese', () =>
   }
 });
 
-it('sorts Chinese names first by pinyin, then numbers by value, whatever the case', () => {
-  expect(['上海 02', 'node10', '北京', 'Node2', '上海 01'].sort(compareNames)).toEqual(['北京', '上海 01', '上海 02', 'Node2', 'node10']);
-  expect(compareNames('Alpha', 'alpha')).toBe(0);
+it('sorts names by the interface language, numbers by value, whatever the case', () => {
+  const list = ['上海 02', 'node10', '北京', 'Node2', '上海 01'];
+  expect([...list].sort(compareNames(LOCALE['zh-CN']))).toEqual(['北京', '上海 01', '上海 02', 'Node2', 'node10']);
+  expect([...list].sort(compareNames(LOCALE['zh-TW']))).toEqual(['上海 01', '上海 02', '北京', 'Node2', 'node10']);
+  expect([...list].sort(compareNames(LOCALE.en))).toEqual(['Node2', 'node10', '上海 01', '上海 02', '北京']);
+  for (const [lang] of LANGS) expect(compareNames(LOCALE[lang])('Alpha', 'alpha')).toBe(0);
+  expect(compareNames(LOCALE.en)).toBe(compareNames(LOCALE.en));
 });

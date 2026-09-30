@@ -98,10 +98,10 @@ export function useConnectionsPage({go, query}: PageProps) {
   // The node list the names above already read; a backend without it gets no latency card.
   const nodesListed = offered(capabilities.data?.resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesListed);
-  const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data) : null), [nodesListed, nodes.data, rows]);
+  const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data, locale) : null), [nodesListed, nodes.data, rows, locale]);
   // A failed read keeps the card, with the reason, so it does not pass for a backend without health samples.
   const latencyError = nodesListed && !nodes.data ? nodes.error : null;
-  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => compareNames(a ?? '', b ?? '')), [rows]);
+  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => compareNames(locale)(a ?? '', b ?? '')), [rows, locale]);
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>

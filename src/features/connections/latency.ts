@@ -10,7 +10,7 @@ export type NodeSample = {node: string; name: string; value: number; connections
 // without flow recording sends empty chains, and then no node is marked. P50 and P90 count each node once; the
 // weighted median counts each connection through a plotted node at its node's latency, and `unplaced` counts the
 // connections whose node has none or is not listed. Null when the backend lists no nodes or no health samples.
-export function pathLatency(rows: Array<Pick<Connection, 'chain'>>, nodes: Array<Pick<Node, 'id' | 'name' | 'health'>>) {
+export function pathLatency(rows: Array<Pick<Connection, 'chain'>>, nodes: Array<Pick<Node, 'id' | 'name' | 'health'>>, locale: string) {
   if (!nodes.some(node => node.health?.length)) return null;
   const samples: NodeSample[] = [];
   let missing = 0;
@@ -19,7 +19,7 @@ export function pathLatency(rows: Array<Pick<Connection, 'chain'>>, nodes: Array
     if (value === undefined) missing++;
     else samples.push({node: node.id, name: node.name, value, connections: 0});
   }
-  samples.sort((a, b) => a.value - b.value || compareNames(a.name, b.name));
+  samples.sort((a, b) => a.value - b.value || compareNames(locale)(a.name, b.name));
   const byId = new Map(samples.map(sample => [sample.node, sample]));
   const chains = rows.some(row => row.chain?.length);
   let unplaced = 0;

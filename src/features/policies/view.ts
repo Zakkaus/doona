@@ -217,7 +217,7 @@ export function nodeGridView(
       )
     : nodes;
   if (big && filter.sort === 'latency') shown.sort((a, b) => compareLatency(a.tcp, b.tcp));
-  else if (big && filter.sort === 'name') shown.sort((a, b) => compareNames(a.name, b.name));
+  else if (big && filter.sort === 'name') shown.sort((a, b) => compareNames(locale)(a.name, b.name));
   const down = shown.filter(node => node.unavailable).length;
   return {
     big,

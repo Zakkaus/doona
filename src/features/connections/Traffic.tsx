@@ -37,7 +37,7 @@ export const Traffic = memo(function Traffic({
   const p = usePalette();
   const locale = LOCALE[useLang()];
   const bytes = useCallback((value: number) => formatBytes(value, locale), [locale]);
-  const view = useMemo(() => trafficSeries(records), [records]);
+  const view = useMemo(() => trafficSeries(records, locale), [records, locale]);
   const series = useMemo(() => {
     // As on the activity page, block takes the negative colour; the others take category colours by their place
     // among all outbounds, ordered so neighbouring hues differ (some palettes start with two blue-greens).

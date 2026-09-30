@@ -6,7 +6,7 @@ export type TrafficSeries = {outbound: string | null; points: TrafficPoint[]};
 
 // Upload against download per connection, one series per outbound in name order so colours stay put between
 // polls. Connections without byte totals cannot be placed and are counted instead; zero is a real value.
-export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | 'upload_bytes' | 'download_bytes' | 'domain' | 'dst'>>) {
+export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | 'upload_bytes' | 'download_bytes' | 'domain' | 'dst'>>, locale: string) {
   const byOutbound = new Map<string | null, TrafficPoint[]>();
   let unknown = 0;
   for (const row of rows) {
@@ -21,7 +21,7 @@ export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | '
   }
   const series: TrafficSeries[] = [...byOutbound]
     .map(([outbound, points]) => ({outbound, points}))
-    .sort((a, b) => compareNames(a.outbound ?? '', b.outbound ?? ''));
+    .sort((a, b) => compareNames(locale)(a.outbound ?? '', b.outbound ?? ''));
   // Totals are compared exactly: past 2^53 bytes two different totals can be the same Number.
   let heaviest: (TrafficPoint & {outbound: string | null}) | undefined;
   let most = -1n;

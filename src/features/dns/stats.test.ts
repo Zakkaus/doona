@@ -2,6 +2,8 @@ import {expect, it} from 'vitest';
 import type {DnsLogRecord} from '../../api/model';
 import {clientAddress, dnsAnalysis, shortPage} from './stats';
 
+const locale = 'en-US';
+
 let n = 0;
 const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): DnsLogRecord => {
   const {name = 'example.com.', type = 'A', ...rest} = patch;
@@ -21,13 +23,16 @@ const record = (patch: Partial<DnsLogRecord> & {name?: string; type?: string}): 
 };
 
 it('counts each record once, a cached negative answer as a cache hit', () => {
-  const a = dnsAnalysis([
-    record({cached: true, status: 'NXDOMAIN', upstream: null, elapsed_ms: 0}),
-    record({status: 'NXDOMAIN'}),
-    record({status: 'SERVFAIL'}),
-    record({status: 'TIMEOUT', upstream: null, elapsed_ms: 5000}),
-    record({})
-  ]);
+  const a = dnsAnalysis(
+    [
+      record({cached: true, status: 'NXDOMAIN', upstream: null, elapsed_ms: 0}),
+      record({status: 'NXDOMAIN'}),
+      record({status: 'SERVFAIL'}),
+      record({status: 'TIMEOUT', upstream: null, elapsed_ms: 5000}),
+      record({})
+    ],
+    locale
+  );
   expect(a.counts).toEqual({cached: 1, answered: 1, nxdomain: 1, failed: 2});
   expect(a.uncached).toBe(4);
   expect(a.failureRate).toBe(0.5);
@@ -35,14 +40,17 @@ it('counts each record once, a cached negative answer as a cache hit', () => {
 });
 
 it('measures latency only on uncached lookups that reached an upstream', () => {
-  const a = dnsAnalysis([
-    record({cached: true, upstream: null, elapsed_ms: 0}),
-    record({status: 'TIMEOUT', upstream: null, elapsed_ms: 5000}),
-    record({elapsed_ms: 10}),
-    record({elapsed_ms: 20, upstream: 'tls://9.9.9.9'}),
-    record({elapsed_ms: 30}),
-    record({elapsed_ms: 40})
-  ]);
+  const a = dnsAnalysis(
+    [
+      record({cached: true, upstream: null, elapsed_ms: 0}),
+      record({status: 'TIMEOUT', upstream: null, elapsed_ms: 5000}),
+      record({elapsed_ms: 10}),
+      record({elapsed_ms: 20, upstream: 'tls://9.9.9.9'}),
+      record({elapsed_ms: 30}),
+      record({elapsed_ms: 40})
+    ],
+    locale
+  );
   expect(a.samples.map(sample => sample.value)).toEqual([10, 20, 30, 40]);
   expect(a.typical).toBe(20);
   expect(a.slowest).toBe(40);
@@ -53,17 +61,17 @@ it('measures latency only on uncached lookups that reached an upstream', () => {
 });
 
 it('has no latency figures and no rates for no records', () => {
-  const a = dnsAnalysis([]);
+  const a = dnsAnalysis([], locale);
   expect([a.typical, a.slowest, a.failureRate, a.cacheRate]).toEqual([null, null, null, null]);
 });
 
 it('ranks domains without their trailing dot, and totals the rest', () => {
-  const a = dnsAnalysis([record({name: 'a.org.'}), record({name: 'a.org.'}), record({name: 'b.org.'})]);
+  const a = dnsAnalysis([record({name: 'a.org.'}), record({name: 'a.org.'}), record({name: 'b.org.'})], locale);
   expect(a.domains.top).toEqual([
     {key: 'a.org', count: 2},
     {key: 'b.org', count: 1}
   ]);
-  const devices = dnsAnalysis([record({src: '10.0.0.2:5353'}), record({src: '[fd00::1]:40000'}), record({src: null})]).devices.top;
+  const devices = dnsAnalysis([record({src: '10.0.0.2:5353'}), record({src: '[fd00::1]:40000'}), record({src: null})], locale).devices.top;
   expect(devices.map(item => item.key)).toEqual(['10.0.0.2', '[fd00::1]', null]);
   expect(clientAddress('10.0.0.2:5353')).toBe('10.0.0.2');
 });

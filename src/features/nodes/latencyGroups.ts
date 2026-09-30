@@ -10,7 +10,8 @@ export type LatencyGroup = {id: string; label: string | null; rows: LatencyRow[]
 
 // Each node's latest latency and its two averages, from the same preferred observation the node table shows,
 // grouped by policy group (a node in several groups appears in each) or by protocol; fastest first.
-export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined, by: LatencyBy): LatencyGroup[] {
+export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined, by: LatencyBy, locale: string): LatencyGroup[] {
+  const byName = compareNames(locale);
   const names = new Map((groups ?? []).map(group => [group.id, group.name]));
   const buckets = new Map<string, LatencyGroup>();
   const bucket = (id: string, label: string | null) => {
@@ -35,11 +36,11 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   }
   const list = [...buckets.values()];
   for (const group of list) {
-    group.rows.sort((a, b) => a.latest - b.latest || compareNames(a.name, b.name));
-    group.missing.sort((a, b) => compareNames(a.name, b.name));
+    group.rows.sort((a, b) => a.latest - b.latest || byName(a.name, b.name));
+    group.missing.sort((a, b) => byName(a.name, b.name));
   }
   // Named groups in name order; the unnamed bucket (no group, unknown protocol) last.
-  return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || compareNames(a.label ?? '', b.label ?? ''));
+  return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || byName(a.label ?? '', b.label ?? ''));
 }
 
 // Which averages the backend reports. honk sends neither, so a chart names only the ones some row has.

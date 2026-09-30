@@ -1,6 +1,6 @@
 import {formatLatency} from '../../i18n/format';
 import {useMemo, useState, type ReactNode} from 'react';
-import {useT} from '../../i18n';
+import {LOCALE, useLang, useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
 import {Card, Bar, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
 import type {DnsLogRecord} from '../../api/model';
@@ -57,7 +57,8 @@ function DnsAnalysis({
 }) {
   const t = useT();
   const p = usePalette();
-  const a = useMemo(() => dnsAnalysis(records), [records]);
+  const locale = LOCALE[useLang()];
+  const a = useMemo(() => dnsAnalysis(records, locale), [records, locale]);
   // Answered takes a category colour, since info and positive are both blue-green in some palettes.
   const colors: Record<DnsOutcome, string> = {cached: p.positive, answered: p.cat[2], nxdomain: p.notice, failed: p.negative};
   const percent = (share: number | null) => t('ui.percent', {n: share === null ? 0 : Math.round(share * 100)});
