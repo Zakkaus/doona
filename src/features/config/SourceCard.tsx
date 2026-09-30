@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Badge, Button, Card, Light} from '../../ui/ui';
+import {Badge, Button, Card, Light, type Action} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
@@ -30,41 +30,53 @@ export function SourceCard(props: SourceCardProps) {
     validateDisabled,
     reason
   } = useSourceCard(props);
+  const actions: Action[] = [
+    ...(canValidate
+      ? [
+          {
+            id: 'validate',
+            label: t('config.validate'),
+            isPending: validating,
+            isDisabled: validateDisabled,
+            reason: reason ?? undefined,
+            onAction: () => void validate()
+          }
+        ]
+      : []),
+    ...(dirty
+      ? [
+          {id: 'cancel', label: t('ui.cancel'), isDisabled: busy, onAction: cancel},
+          {
+            id: 'save',
+            label: t('config.save'),
+            accent: true,
+            isPending: saving,
+            isDisabled: saveButton.disabled,
+            reason: saveButton.tip ?? reason ?? undefined,
+            onAction: () => void save()
+          }
+        ]
+      : [])
+  ];
   return (
-    <Card aria-label={view.label}>
-      <ActionHelp reason={reason}>
-        <div className="rp-row rp-source-note">
-          <span className="rp-cluster">
-            {dirty ? (
-              <>
-                <Badge tone="warn">{t('config.unsaved')}</Badge>
-                <span className="rp-label">{t('config.unsavedHint')}</span>
-              </>
-            ) : (
-              <span className="rp-label">{note}</span>
-            )}
-          </span>
-          {(canValidate || dirty) && (
-            <span className="rp-cluster nowrap">
-              {canValidate && (
-                <Button isPending={validating} isDisabled={validateDisabled} onPress={() => void validate()}>
-                  {t('config.validate')}
-                </Button>
-              )}
-              {dirty && (
-                <>
-                  <Button isDisabled={busy} onPress={cancel}>
-                    {t('ui.cancel')}
-                  </Button>
-                  <Button accent isPending={saving} isDisabled={saveButton.disabled} tip={saveButton.tip} onPress={() => void save()}>
-                    {t('config.save')}
-                  </Button>
-                </>
-              )}
-            </span>
+    <Card
+      title={t('config.editor')}
+      aria-label={view.label}
+      help={writable ? {title: t('config.editor'), text: t('config.writeHelp')} : undefined}
+      reason={reason}
+    >
+      <div className="rp-row rp-source-note">
+        <span className="rp-cluster">
+          {dirty ? (
+            <>
+              <Badge tone="warn">{t('config.unsaved')}</Badge>
+              <span className="rp-label">{t('config.unsavedHint')}</span>
+            </>
+          ) : (
+            <span className="rp-label">{note}</span>
           )}
-        </div>
-      </ActionHelp>
+        </span>
+      </div>
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
       {shown.length > 0 && (
         <div className="rp-list rp-config-diagnostics" role="list" aria-label={t('config.diagnostics')}>
@@ -81,6 +93,7 @@ export function SourceCard(props: SourceCardProps) {
         </div>
       )}
       <CodeEditor
+        actions={actions}
         label={view.label}
         value={text}
         readOnly={!writable || busy}

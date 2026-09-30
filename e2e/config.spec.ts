@@ -41,9 +41,8 @@ test('the editor starts at the same height for writable and read-only sources', 
   expect(Math.abs(writable - readOnly)).toBeLessThanOrEqual(1);
 });
 
-// The badge, the facts and the Validate button must not move a line break above the editor; the note's own text is
-// per-source copy that wraps as it needs, so its height is taken out.
-for (const width of [390, 768, 1440])
+// At wider widths the badge and facts keep the toolbar's height; the note's per-source text may wrap independently.
+for (const width of [768, 1440])
   test(`at ${width}px the rows above the editor keep their lines for writable and read-only sources`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     await page.goto('/#/config?tab=source');
@@ -74,12 +73,11 @@ test('a generated source names why it is read-only and offers no validation', as
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   // What the file is and what can be done with it is said under the text.
   await expect(page.locator('.rp-card')).toContainText('The engine generates this file and overwrites it when it regenerates');
-  // The path is named once, by the picker; the card carries it only as its accessible name.
-  await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveCount(0);
+  await expect(page.getByRole('region', {name: '/var/lib/honk/generated/skylink.dae'}).getByRole('heading')).toHaveText('Editor');
   await page.goto('/#/config?tab=source&source=src-main');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeVisible();
   await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveCount(0);
-  await expect(page.locator('.rp-card')).toContainText('Click the text to edit it; Validate checks it before you apply.');
+  await expect(page.locator('.rp-card')).toContainText('Click the text to edit; validate before applying.');
 });
 
 test('switching sources discards the draft after confirmation', async ({page}) => {

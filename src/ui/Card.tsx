@@ -89,7 +89,7 @@ export function Card({
       id={id}
       tabIndex={tabIndex}
       className={cardClass(titled && 'rp-titled', className)}
-      aria-labelledby={titled ? headingId : undefined}
+      aria-labelledby={titled && !label ? headingId : undefined}
       aria-label={label}
     >
       <ActionHelp reason={reason}>

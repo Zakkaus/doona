@@ -17,10 +17,11 @@ export type Action = {
   reason?: string;
   // A destructive action, which the caller puts last.
   negative?: boolean;
+  accent?: boolean;
 };
 
 const ActionButton = ({action}: {action: Action}) => (
-  <Button isDisabled={action.isDisabled} isPending={action.isPending} tip={action.reason} onPress={action.onAction}>
+  <Button accent={action.accent} isDisabled={action.isDisabled} isPending={action.isPending} tip={action.reason} onPress={action.onAction}>
     {action.icon}
     {action.label}
   </Button>
