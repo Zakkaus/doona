@@ -405,6 +405,10 @@ test.describe('many outbounds', () => {
     // Request interception does not see what a service worker fetches.
     test.use({serviceWorkers: 'block'});
     test('the node search loads on intent and keeps the menu size while it arrives', async ({page}) => {
+      // The idle warm-up loads other pages that import the search list, which would fetch it before the hover.
+      await page.addInitScript(() => {
+        window.requestIdleCallback = () => 0;
+      });
       const chunk = /\/SearchList-[\w-]+\.js$/;
       let fetched = 0;
       let release = () => {};
