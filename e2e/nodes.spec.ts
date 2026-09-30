@@ -568,12 +568,58 @@ test("a subscription's URL is edited where its entry is written", async ({page})
   await expect(dialog.getByRole('textbox', {name: 'Name', exact: true})).toHaveValue('sub-c');
   await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub?token=new');
   // The URL alone changed, so the groups citing the tag are not offered.
-  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText('Saved sub-c');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText("sub-c: 'https://updated.example.net/sub?token=new'");
+});
+
+test("a subscription's User-Agent is set and removed where its entry is written", async ({page}) => {
+  const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  let dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  const agent = dialog.getByRole('textbox', {name: 'User-Agent', exact: true});
+  await expect(agent).toHaveValue('');
+  await expect(dialog.getByText('Leave empty to use the engine default.', {exact: true})).toBeVisible();
+  await agent.fill('clash.meta');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'(clash.meta)`);
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
+  // The User-Agent has its own field, so it is not listed again among the options kept as written.
+  await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
+  await dialog.getByRole('textbox', {name: 'User-Agent', exact: true}).fill('');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'`);
+  await expect(page.locator('.cm-content')).not.toContainText('clash.meta');
+});
+
+test('changing the interval of a block-form subscription keeps its User-Agent', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const block = main.content!.replace(`sub-c: '${url}'`, `sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
+  await api.pollOperation(await api.replaceConfigSource(main.id, block, `"${main.content_sha256}"`));
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
+  await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await expect(editor).toContainText(`sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 21600s\n  }`);
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
 });
 
 test('renaming a subscription carries the groups whose subtag filter names it', async ({page}) => {

@@ -37,6 +37,9 @@ export function Nodes(props: PageProps) {
     setPolicy,
     editNameError,
     editOptions,
+    editAgentError,
+    editAgentDefault,
+    editCache,
     renameGroups,
     renameFrom,
     renameBlocked,
@@ -135,6 +138,24 @@ export function Nodes(props: PageProps) {
               onChange={name => setForm({...form, name})}
             />
             <TextField isDisabled={pending} label={t('nodes.url')} value={form.value} spellCheck={false} onChange={value => setForm({...form, value})} />
+            <TextField
+              isDisabled={pending}
+              label={t('nodes.agent')}
+              value={form.agent}
+              placeholder={editAgentDefault}
+              description={t('nodes.agentDefault')}
+              error={editAgentError ?? undefined}
+              spellCheck={false}
+              onChange={agent => setForm({...form, agent})}
+            />
+            {editCache !== null && (
+              <>
+                <Switch isSelected={editCache} isDisabled={pending} onChange={cache => setForm({...form, cache})}>
+                  {t('nodes.cache')}
+                </Switch>
+                <span className="rp-label">{t('nodes.cacheHelp')}</span>
+              </>
+            )}
             {renameGroups && (
               <>
                 <Switch isSelected={updateGroups} isDisabled={pending} onChange={setUpdateGroups}>

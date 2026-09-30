@@ -59,7 +59,10 @@ export function useNodesPage({go, query}: PageProps) {
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
-  const edited = dialog?.kind === 'editProvider' ? form.name !== dialog.entry.tag || form.value !== dialog.entry.url : !!(form.name || form.value);
+  const edited =
+    dialog?.kind === 'editProvider'
+      ? form.name !== dialog.entry.tag || form.value !== dialog.entry.url || form.agent !== (dialog.entry.ua ?? '') || form.cache !== null
+      : !!(form.name || form.value);
   const guard = useDraftGuard(!!dialog && edited, () => {
     session.current++;
     setDialog(null);
@@ -70,7 +73,7 @@ export function useNodesPage({go, query}: PageProps) {
     setPolicy(newGroupPolicies[0].id);
     setUpdateGroups(true);
     setProblem(null);
-    if (next.kind === 'editProvider') setForm({...blank, name: next.entry.tag, value: next.entry.url});
+    if (next.kind === 'editProvider') setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? ''});
     setDialog(next);
   }, []);
   const lang = useLang();
@@ -222,7 +225,12 @@ export function useNodesPage({go, query}: PageProps) {
         }
         // Filters are read from the text being written, so a group changed meanwhile is still found.
         const result = await apply(text => {
-          const written = writeSubscriptionEntry(text, from, {tag, url});
+          const written = writeSubscriptionEntry(text, from, {
+            tag,
+            url,
+            ...(form.agent !== (dialog.entry.ua ?? '') ? {ua: form.agent.trim() || null} : {}),
+            ...(editCache.changed ? {cache: editCache.value} : {})
+          });
           if (!follow) return written;
           return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
         }, editSource);
@@ -266,6 +274,11 @@ export function useNodesPage({go, query}: PageProps) {
   const createOptions = resources?.providers.create_options;
   // The contract's User-Agent bound: up to 256 printable ASCII characters.
   const agentError = /^[\x20-\x7E]{0,256}$/.test(form.agent.trim()) ? null : t('nodes.agentInvalid');
+  // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
+  const editAgentError = agentError ?? (isQuotable(form.agent.trim()) ? null : t('config.unquotable'));
+  // The switch shows the entry's cache, or the default a new subscription gets when the entry sets none.
+  const writtenCache = dialog?.kind === 'editProvider' ? (dialog.entry.cache ?? createOptions?.cache) : undefined;
+  const editCache = {value: form.cache ?? writtenCache ?? null, changed: form.cache !== null && form.cache !== writtenCache};
   // A kept name is valid as written; a new one is bare, as doona writes names, and free among the subscriptions.
   const editName = form.name.trim();
   const editNameError =
@@ -286,8 +299,12 @@ export function useNodesPage({go, query}: PageProps) {
       ? !!editName &&
         editNameError === null &&
         editUrlValid &&
+        editAgentError === null &&
         !references.elsewhere.length &&
-        (editName !== dialog.entry.tag || form.value.trim() !== dialog.entry.url)
+        (editName !== dialog.entry.tag ||
+          form.value.trim() !== dialog.entry.url ||
+          (form.agent !== (dialog.entry.ua ?? '') && (form.agent.trim() || null) !== dialog.entry.ua) ||
+          editCache.changed)
       : dialog?.kind === 'provider'
         ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
         : dialog?.kind === 'node'
@@ -386,7 +403,14 @@ export function useNodesPage({go, query}: PageProps) {
           ? t('policy.save')
           : t('nodes.add'),
     editNameError: editName ? editNameError : null,
-    editOptions: dialog?.kind === 'editProvider' ? dialog.entry.options : [],
+    // The User-Agent and the cache have their own fields; the rest is shown as written.
+    editOptions:
+      dialog?.kind === 'editProvider'
+        ? dialog.entry.options.filter(option => option.name !== 'ua' && !(option.name === 'cache' && writtenCache !== undefined))
+        : [],
+    editAgentError,
+    editAgentDefault: createOptions?.user_agent,
+    editCache: writtenCache === undefined ? null : editCache.value,
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
     // unless another source names it too: a write across sources is not atomic, so those files block the rename.
     renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,
