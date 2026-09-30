@@ -10,7 +10,6 @@ import {
   numericFieldView,
   recorderFields,
   recorderAccess,
-  recorderPatchValue,
   recorderView,
   recordingNote,
   runtimeApplyReason,
@@ -76,7 +75,7 @@ export function useRuntimeSettingsForm() {
     }));
   const patch: RuntimeSettingsPatch = {};
   if (baseline) {
-    for (const recorder of recorders) if (recorder.value !== modeOf(recorder.id)) patch[recorder.id] = recorderPatchValue(recorder.value);
+    for (const recorder of recorders) if (recorder.value !== modeOf(recorder.id)) patch[recorder.id] = recorder.value;
     if (hasLevel && level !== baseline.log?.level) patch.log = {level: level as NonNullable<RuntimeSettings['log']>['level']};
     for (const field of numeric)
       if (!field.invalid && Number(field.value) !== numericAccess[field.id].read(baseline)) numericAccess[field.id].write(patch, Number(field.value));

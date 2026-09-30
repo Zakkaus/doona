@@ -443,45 +443,6 @@
   padding-block: 4px;
 }
 
-/* ---- Share bar ---- */
-.rp-sharebar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.rp-sharebar .bar {
-  display: flex;
-  gap: 2px;
-  height: 16px;
-  border-radius: var(--rp-r-md);
-  overflow: hidden;
-}
-.rp-sharebar .bar > i {
-  flex-basis: 0;
-  min-width: 4px;
-}
-.rp-sharebar .legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--rp-text-sm);
-}
-.rp-sharebar .legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.rp-sharebar .legend .sw {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-}
-.rp-sharebar .legend b {
-  font-variant-numeric: tabular-nums;
-}
 /* On a phone a lead tile takes the first row alone and the rest pair up below it, so the odd last tile no longer fills
    its row. */
 @media (max-width: 599.98px) {

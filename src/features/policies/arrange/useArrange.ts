@@ -94,7 +94,6 @@ export function useArrange(source: Pick<MainSourceEdit, 'main' | 'writable' | 'b
   return {
     groups: view.groups,
     unknown: view.unknown,
-    byGroup,
     subscriptions: traySubs,
     nodes: trayNodes,
     search,
