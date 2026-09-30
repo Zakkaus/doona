@@ -71,7 +71,8 @@ export function ModalDialog({
   onOpenChange,
   hideTitle,
   locked,
-  reason
+  reason,
+  scrollBody
 }: {
   trigger?: ReactElement;
   title: string;
@@ -86,15 +87,26 @@ export function ModalDialog({
   locked?: boolean;
   // Why the footer's actions cannot run, as an ActionHelp line under them.
   reason?: string | null;
+  // S2's dialog anatomy for long content: only the content scrolls, between a title and a footer that stay in view.
+  scrollBody?: boolean;
 }) {
   const modal = (
     <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
-        <Dialog className="rp-dialog" role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
+        <Dialog className={cx('rp-dialog', scrollBody && 'split')} role={alert ? 'alertdialog' : 'dialog'} aria-label={hideTitle ? title : undefined}>
           {({close}) => (
             <ActionHelp reason={footer ? reason : null}>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
-              {typeof children === 'function' ? children(close) : children}
+              {scrollBody ? (
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrolling content needs keyboard focus to scroll.
+                <div className="rp-dialog-body" tabIndex={0}>
+                  {typeof children === 'function' ? children(close) : children}
+                </div>
+              ) : typeof children === 'function' ? (
+                children(close)
+              ) : (
+                children
+              )}
               {footer && <div className="foot">{footer(close)}</div>}
             </ActionHelp>
           )}
@@ -189,6 +201,7 @@ export function ConfirmDialog({
   dismissOnly,
   reason,
   error,
+  scrollBody,
   children
 }: {
   title: string;
@@ -204,6 +217,7 @@ export function ConfirmDialog({
   // Why Confirm is disabled, under the footer.
   reason?: string | null;
   error?: {id: number; text: string} | null;
+  scrollBody?: boolean;
   children: ReactNode;
 }) {
   const t = useT();
@@ -211,6 +225,7 @@ export function ConfirmDialog({
     <ModalDialog
       title={title}
       narrow
+      scrollBody={scrollBody}
       alert={tone === 'negative'}
       isOpen={isOpen}
       reason={reason}

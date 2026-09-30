@@ -159,6 +159,46 @@
   color: var(--rp-subtle);
   font-size: var(--rp-text-sm);
 }
+/* The apply dialog's group lists: a name and its label on one line, and any warning under it in the notice colour. */
+.rp-impact-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-impact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-impact > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rp-impact-label {
+  margin-inline-start: 8px;
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-sm);
+}
+.rp-impact-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--rp-notice-text);
+  font-size: var(--rp-text-sm);
+}
+.rp-impact-warning > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
 /* A unified line diff: added and removed lines take a quiet highlight and their mark the positive or negative text
    colour; a gap between hunks is secondary text. */
 .rp-diff {
