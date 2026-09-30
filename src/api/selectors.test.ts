@@ -14,7 +14,7 @@ import {
   routineGap,
   shortId
 } from './selectors';
-import {formatNumber, LOCALE, readLang, translate} from '../i18n';
+import {translate} from '../i18n';
 import {createMockApi} from './mock';
 
 const gap = (reason: string, resource_id: string | null): ApiEvent =>
@@ -62,8 +62,16 @@ it('groups dropped counts in gap summaries without rounding a large UInt64', () 
     return eventSummary({...event, data: {...event.data, dropped_records}} as ApiEvent);
   };
   expect(translate('en', 'event.gap', dropped('12345').params)).toContain('12,345');
-  expect(dropped('18446744073709551615').params?.n).toBe(formatNumber(18446744073709551615n, LOCALE[readLang()]));
+  const summary = dropped('18446744073709551615');
+  expect(summary.params?.n).toBe(18446744073709551615n);
+  for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) expect(translate(lang, summary.key, summary.params)).toContain('18,446,744,073,709,551,615');
   expect(dropped(null).params?.n).toBe('—');
+});
+
+it('lets the translator group flow revisions', () => {
+  const summary = eventSummary({id: 'x', event: 'flow.updated', data: {resource_id: 'flow-1', revision: 1000}} as ApiEvent);
+  expect(summary.params?.revision).toBe(1000);
+  for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) expect(translate(lang, summary.key, summary.params)).toContain('1,000');
 });
 
 it('starts a gap summary at its reason when the gap names no record', () => {
