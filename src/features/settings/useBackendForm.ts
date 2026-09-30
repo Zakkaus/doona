@@ -9,7 +9,7 @@ import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
-import {buildHash} from '../../shell/route';
+import {replaceRoute} from '../../shell/route';
 import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
 
@@ -53,7 +53,7 @@ export function useBackendForm(query: string) {
     if (params.has('api')) {
       params.delete('api');
       params.delete('token');
-      history.replaceState(history.state, '', location.pathname + location.search + buildHash('settings', params.toString()));
+      replaceRoute('settings', params.toString());
     }
     const card = params.get('card');
     if (card) document.getElementById(cardHeadingId(card))?.scrollIntoView({block: 'start'});

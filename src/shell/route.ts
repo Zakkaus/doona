@@ -88,6 +88,15 @@ function currentHash(api: string | null): string {
   return location.hash;
 }
 
+// Rewrites the current address in place without asking about unsaved drafts, for a page that corrects its own
+// address, such as dropping a pairing token. The shell's route follows, so a later draft restore cannot write the old
+// address back.
+let replaceShellRoute: ((next: Route) => void) | null = null;
+export function replaceRoute(route: RoutePath, query = '') {
+  if (replaceShellRoute) replaceShellRoute({route, query});
+  else history.replaceState(history.state, '', buildHash(route, query));
+}
+
 export function useRoute(api: string | null) {
   const [loc, setLoc] = useState(() => {
     const hash = currentHash(api);
@@ -112,6 +121,13 @@ export function useRoute(api: string | null) {
   useLayoutEffect(() => {
     current.current = loc;
   }, [loc]);
+  // A layout effect, so it is in place before a page's own effects run on the first render.
+  useLayoutEffect(() => {
+    replaceShellRoute = next => push(updateRoute(current.current, buildHash(next.route, next.query)), true);
+    return () => {
+      replaceShellRoute = null;
+    };
+  }, [push]);
   const go = useCallback<Go>(
     (route, query = '', options) => {
       const next = updateRoute(current.current, buildHash(route, query));

@@ -31,6 +31,20 @@ test('a pairing link fills the backend draft and removes credentials from the ad
   await expect(page.locator('[name=token]')).toHaveCount(0);
 });
 
+test('leaving a paired draft and staying does not write the token back into the address bar', async ({page}) => {
+  await page.goto('/#/settings?api=http://router:9527&token=secret-token');
+  await expect(page.locator('[name=token]')).toHaveValue('secret-token');
+  await expect(page).toHaveURL(/#\/settings$/);
+  await page.evaluate(() => {
+    location.hash = '#/activity';
+  });
+  const dialog = page.getByRole('alertdialog', {name: t('config.discardTitle')});
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/settings$/);
+  expect(page.url()).not.toContain('secret-token');
+});
+
 browserTest('paints a frame during discovery, then selects the hosted backend and asks for its token', async ({page}) => {
   const challenge = {
     status: 401,
