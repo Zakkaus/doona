@@ -58,7 +58,7 @@ SPDX-License-Identifier = "GPL-2.0-only"
 
 # j4p4n's Openclipart drawing is in the public domain; the crop and tint are dedicated to it as well.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-wall-*.webp"]
+path = ["src/ui/styles/palettes/qiangguo/wall-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC0-1.0"
@@ -66,14 +66,14 @@ SPDX-License-Identifier = "CC0-1.0"
 # Stéphane Passet's 1913 autochrome of Mount Tai's South Gate of Heaven is released under CC0 by the Musée
 # Albert-Kahn; the strokes and tint are dedicated to it as well.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-taishan-*.webp"]
+path = ["src/ui/styles/palettes/qiangguo/taishan-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC0-1.0"
 
 # Kuimen is cut from Tan Wei Liang Byorn's CC BY 3.0 photograph. Sources are listed in NOTICE.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-gorges-*.webp"]
+path = ["src/ui/styles/palettes/qiangguo/gorges-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = ["Tan Wei Liang Byorn", "doona contributors"]
 SPDX-License-Identifier = "CC-BY-3.0"
@@ -81,7 +81,7 @@ SPDX-License-Identifier = "CC-BY-3.0"
 # Sun Moon Lake is cut from two of Bernard Gagnon's CC BY-SA 3.0 photographs; CC BY-SA 3.0 allows adaptations under
 # a later version, so the combined images carry CC BY-SA 4.0. Sources are listed in NOTICE.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-lake-*.webp"]
+path = ["src/ui/styles/palettes/qiangguo/lake-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = ["Bernard Gagnon", "doona contributors"]
 SPDX-License-Identifier = "CC-BY-SA-4.0"
@@ -89,14 +89,14 @@ SPDX-License-Identifier = "CC-BY-SA-4.0"
 # The square is cut from Balon Greyjoy's CC0 photographs and Another Believer's CC BY-SA 4.0 photograph, so the
 # combined images carry CC BY-SA 4.0. Sources are listed in NOTICE.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-square-*.webp"]
+path = ["src/ui/styles/palettes/qiangguo/square-*.webp"]
 precedence = "override"
 SPDX-FileCopyrightText = ["Balon Greyjoy", "Another Believer", "doona contributors"]
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
 # The five stars follow the public-domain flag geometry.
 [[annotations]]
-path = ["src/ui/styles/palettes/qiangguo-flag-*.svg"]
+path = ["src/ui/styles/palettes/qiangguo/flag-*.svg"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC0-1.0"
