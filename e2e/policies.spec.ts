@@ -374,3 +374,22 @@ test('a group edit refused over a file changed on disk saves on retry', async ({
   expect(saved).toContain('# concurrent edit');
   expect(saved).toContain('filter: name(hk-01, sg-01)');
 });
+
+test('a long group name truncates with a tooltip and keeps the More menu on its title row', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const long = 'G'.repeat(150);
+  const id = (await api.groups()).find(group => group.name === 'skylink')!.id;
+  handlers[`GET groups/${id}`] = async () => ({...(await api.group(id)), name: long});
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/policies');
+  const title = page.getByRole('heading', {name: long, exact: true});
+  const card = page.getByRole('region').filter({has: title});
+  await expect(title).toBeVisible();
+  const cut = title.locator('.rp-truncate');
+  expect(await cut.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  const more = card.getByRole('button', {name: 'More actions', exact: true});
+  const [titleBox, moreBox] = [await title.boundingBox(), await more.boundingBox()];
+  expect(moreBox!.y).toBeLessThan(titleBox!.y + titleBox!.height);
+  await cut.focus();
+  await expect(page.getByRole('tooltip')).toHaveText(long);
+});
