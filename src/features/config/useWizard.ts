@@ -7,6 +7,7 @@ import {useSourceComplete} from '../../store/config';
 import {toast, toastErrorDetail, useLinked} from '../../ui/ui';
 import {nextSubscriptionName, validNetwork, validSubscriptions, writeState, type WizardState} from '../../dae/setup';
 import {isQuotable} from '../../dae/text';
+import {groupsNamingTag} from '../../dae/groups';
 import {type RuleTemplate} from '../../dae/templates';
 import {diagnosticRows, saveReason, sourceView, wizardInitial, wizardRows, wizardUnder} from './view';
 import {useDraftGuard} from '../../shell/draft';
@@ -21,7 +22,7 @@ const templateLabels: Record<RuleTemplate, [Key, Key]> = {
 };
 // Edits subscriptions and optional routing templates, keeping existing groups. Redacted text whose digest does not
 // match is never written back.
-export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: ConfigEditor; onDone: () => void}) {
+export function useWizard({main, sources, editor, onDone}: {main: ConfigSource; sources: ConfigSource[]; editor: ConfigEditor; onDone: () => void}) {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -63,7 +64,13 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
   useLinked(under === 'follow' ? main : null, next => {
     if (next) reset();
   });
-  const subscriptionsValid = validSubscriptions(state.subscriptions);
+  const label = sourceView(main, locale, t).label;
+  // Groups in any source, included files as well, may cite a subscription of the main file.
+  const cited = (tag: string) => [
+    ...new Set([current, ...sources.filter(source => source.id !== origin.id).map(source => source.content ?? '')].flatMap(text => groupsNamingTag(text, tag)))
+  ];
+  const rows = wizardRows(state, lang, t, cited);
+  const subscriptionsValid = validSubscriptions(state.subscriptions) && !rows.renameBlocked;
   const networkValid = !!current.trim() || validNetwork(state);
   const valid = subscriptionsValid && networkValid;
   const patch = (next: Partial<WizardState>) => {
@@ -92,8 +99,6 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
     setSaved(true);
     onDone();
   };
-  const label = sourceView(main, locale, t).label;
-  const rows = wizardRows(state, lang, t);
   // A save refused with 422 carries the same diagnostics as a validation refusal.
   const diagnostics = (editor.errorSource === origin.id ? editor.diagnostics : null) ?? found ?? [];
   const dnsError = (value: string) => (isQuotable(value.trim()) ? undefined : t('config.unquotable'));
@@ -122,7 +127,7 @@ export function useWizard({main, editor, onDone}: {main: ConfigSource; editor: C
         busy,
         complete,
         conflict,
-        invalid: !subscriptionsValid ? t('config.wizardSubsInvalid') : !networkValid ? t('config.wizardNetworkError') : null
+        invalid: rows.renameBlocked ?? (!subscriptionsValid ? t('config.wizardSubsInvalid') : !networkValid ? t('config.wizardNetworkError') : null)
       },
       t
     ),

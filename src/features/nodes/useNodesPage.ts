@@ -5,7 +5,7 @@ import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {addNamesToGroup, addSubtagsToGroup, applyChanges, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
+import {addNamesToGroup, addSubtagsToGroup, applyChanges, citingGroups, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
 import {readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
@@ -14,7 +14,6 @@ import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
 import {fileName} from '../../dae/sources';
 import {
-  citingGroups,
   intervalItems,
   isNodeLink,
   keptOptions,

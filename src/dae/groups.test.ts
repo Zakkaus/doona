@@ -3,6 +3,7 @@ import {
   addNamesToGroup,
   addSubtagsToGroup,
   groupAdmits,
+  groupsNamingTag,
   groupNameProblem,
   applyChanges,
   classifyFilters,
@@ -330,4 +331,17 @@ it('edits a group in place and keeps its comments, other fields and the rest of 
   const source = `${head}name(a)${tail}`;
   expect(writeGroupEntry(source, 'hk', {filters: ['name(b)', 'name(c)'], policy: 'select'})).toBe(`${head}name(b)\n    filter: name(c)${tail}`);
   expect(writeGroupEntry(source, 'hk', {filters: ['name(a)'], policy: 'min'})).toBe(source.replace('policy: select', 'policy: min'));
+});
+
+it('names the groups whose filters cite a subscription tag, exactly or inside an expression', () => {
+  const text = `group {
+  exact { filter: subtag(sub-x) policy: min }
+  quoted { filter: subtag('sub-x', other) }
+  compound { filter: subtag(sub-x) && !name(keyword: HK) }
+  negated { filter: !subtag(sub-x) }
+  unrelated { filter: subtag(sub-y) filter: name(hk-01) }
+}
+`;
+  expect(groupsNamingTag(text, 'sub-x')).toEqual(['exact', 'quoted', 'compound', 'negated']);
+  expect(groupsNamingTag(text, 'sub-z')).toEqual([]);
 });

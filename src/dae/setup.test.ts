@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {isSubscriptionRow, readState, writeState} from './setup';
+import {isRenamed, isSubscriptionRow, readState, writeState} from './setup';
 
 const commented = `subscription {
   # paid plan, renewed yearly
@@ -24,4 +24,13 @@ it('removes the section with its last subscription unless comments remain in it'
   expect(writeState(commented, {...state, subscriptions: state.subscriptions.filter(item => !isSubscriptionRow(item))})).toBe(
     'subscription {\n  # paid plan, renewed yearly\n}\ngroup { proxy {} }\n'
   );
+});
+
+it('tells a renamed entry from one whose URL alone changed', () => {
+  const [, entry, bare] = readState(commented).subscriptions;
+  expect([entry.tag, bare.tag]).toEqual(['sub-a', 'b.example']);
+  expect(isRenamed({...entry, url: 'https://c.example/sub', raw: undefined})).toBe(false);
+  expect(isRenamed({...entry, name: ' sub-a ', raw: undefined})).toBe(false);
+  expect(isRenamed({...entry, name: 'sub-b', raw: undefined})).toBe(true);
+  expect(isRenamed({name: 'sub-b', url: 'https://c.example/sub'})).toBe(false);
 });

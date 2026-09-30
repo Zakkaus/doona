@@ -13,6 +13,7 @@ export function Wizard({
   ...props
 }: {
   main: ConfigSource;
+  sources: ConfigSource[];
   editor: ConfigEditor;
   onDone: () => void;
   next: Array<{id: string; label: string; href: string}>;
@@ -80,7 +81,7 @@ export function Wizard({
               </>
             )}
             <span className={item.raw === null ? 'rp-field-row rp-sub-remove' : undefined}>
-              <Button isDisabled={busy} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
+              <Button isDisabled={busy || !!item.inUse} tip={item.inUse ?? undefined} quiet small label={item.removeLabel} onPress={() => remove(item.index)}>
                 <Close />
               </Button>
             </span>
