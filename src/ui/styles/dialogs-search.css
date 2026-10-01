@@ -155,3 +155,30 @@
   /* Search results have no check column to align with. */
   padding: 8px 12px 4px;
 }
+
+.group-dialog-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.group-dialog-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.group-dialog-filter-list:empty {
+  display: none;
+}
+.group-dialog-filter-help {
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-xs);
+  line-height: 16px;
+}
+.group-dialog-filters > button {
+  align-self: flex-start;
+}
+.group-dialog-filter-help + button {
+  margin-block-start: 4px;
+}

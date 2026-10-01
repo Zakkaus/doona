@@ -27,6 +27,16 @@
 .rp-btn.quiet[data-hovered] {
   background: var(--rp-fill);
 }
+.rp-btn.secondary {
+  background: transparent;
+  border-color: var(--rp-subtle);
+}
+.rp-btn.secondary[data-hovered] {
+  background: var(--rp-fill);
+}
+.rp-btn.secondary[data-pressed] {
+  background: var(--rp-hl-med);
+}
 .rp-btn:not(.icon) > .rp-icon {
   width: 16px;
   height: 16px;

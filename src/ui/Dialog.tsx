@@ -94,6 +94,11 @@ export function ModalDialog({
   scrollBody?: boolean;
 }) {
   const descriptionId = useId();
+  const help = description && (
+    <Text slot="description" id={descriptionId} className="rp-label">
+      {description}
+    </Text>
+  );
   const modal = (
     <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal className={cx('rp-modal', narrow && 'narrow')}>
@@ -106,13 +111,12 @@ export function ModalDialog({
           {({close}) => (
             <ActionHelp reason={footer ? reason : null}>
               {!hideTitle && <Heading slot="title">{title}</Heading>}
-              {description && (
-                <Text slot="description" id={descriptionId} className="rp-label">
-                  {description}
-                </Text>
-              )}
+              {!scrollBody && help}
               {scrollBody ? (
-                <ScrollBody>{typeof children === 'function' ? children(close) : children}</ScrollBody>
+                <ScrollBody>
+                  {help}
+                  {typeof children === 'function' ? children(close) : children}
+                </ScrollBody>
               ) : typeof children === 'function' ? (
                 children(close)
               ) : (

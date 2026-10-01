@@ -214,7 +214,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,
-      label: t('policy.filterN', {n: id + 1}),
+      label: draft?.filters.length === 1 ? t('ui.filter') : t('policy.filterN', {n: id + 1}),
       removeLabel: t('policy.removeFilter', {n: id + 1}),
       change: (value: string) => edit(prev => ({...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))})),
       remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))

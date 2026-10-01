@@ -91,7 +91,7 @@ test('toggling interruption stages it with unsaved filters in one conditional so
   await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
+  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
   await expect(dialog.getByRole('switch')).toBeChecked();
   expect(requests.filter(request => request.method() === 'PATCH')).toHaveLength(0);

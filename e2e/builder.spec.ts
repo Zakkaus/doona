@@ -24,7 +24,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   const card = page.getByRole('region', {name: 'gaming'});
   await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
-  await expect(dialog.getByRole('textbox', {name: 'Filter 1'})).toHaveValue('name(jp-01, hk-02)');
+  await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveValue('name(jp-01, hk-02)');
   const policy = dialog.getByRole('button', {name: /Selection policy/});
   // A policy the picker does not offer stays selected as written.
   await expect(policy).toContainText('min_last_delay');
@@ -44,7 +44,7 @@ test('editing only filters preserves the native policy spelling', async ({page})
   await moreAction(page.getByRole('region', {name: 'resilient'}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('min_avg10');
-  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
+  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for resilient written and reloaded');
   await page.goto('/#/config?tab=source');
