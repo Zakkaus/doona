@@ -6,6 +6,7 @@ import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch,
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
+import {FilterSummary} from '../policies/FilterSummary';
 export type PolicyDetails = {
   fields: Array<[string, string]>;
   heading: string | null;
@@ -61,6 +62,7 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
         )
       }
     >
+      {m.open && m.membershipFilters && <FilterSummary filters={m.membershipFilters} showRules={!m.editing} />}
       {m.open && !m.editing && details && <Details details={details} />}
       {m.editing && (
         <DialogForm

@@ -7,6 +7,7 @@ import {
   groupNameProblem,
   applyChanges,
   classifyFilters,
+  describeFilters,
   readGroupEntries,
   removalWidens,
   removeNamesFromGroup,
@@ -372,4 +373,21 @@ it.each([
   const next = applyChanges('group {\n}\n', [{kind: 'createGroup', group, filters: ['name(hk-01)'], policy: 'select', final}]);
   expect(next).toBe(`group {\n    ${header} {\n        filter: name(hk-01)\n        policy: select\n${finalLine}    }\n}\n`);
   expect(readGroupEntries(next)[0]).toMatchObject({name: group, filters: ['name(hk-01)'], policy: 'select', final: final ?? null});
+});
+
+it('describes complete template filters and preserves other filter expressions', () => {
+  expect(describeFilters(["group('auto', 'hk|jp')", "!name('direct', 'block')"])).toEqual({everyNode: true, groups: ['auto', 'hk', 'jp'], rules: []});
+  expect(describeFilters([' ! name( block , direct ) ']).everyNode).toBe(true);
+  for (const filter of [
+    "!name('direct')",
+    "!name('direct', 'block', 'hk-01')",
+    "!name('direct', 'direct')",
+    "!name(keyword: 'direct', 'block')",
+    "!name('direct', 'block') && subtag(harbor)",
+    "group('hk') && name(keyword: 'hk')",
+    "name(regex: '^jp')"
+  ]) {
+    expect(describeFilters([filter])).toEqual({everyNode: false, groups: [], rules: [filter]});
+  }
+  expect(describeFilters([])).toEqual({everyNode: false, groups: [], rules: []});
 });

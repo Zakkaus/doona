@@ -47,3 +47,8 @@ export function groupNameError(name: string, taken: ReadonlySet<string>, t: Tran
 export function groupEditSafe(filters: string[], policy: string | null, entry: Pick<GroupEntry, 'filters' | 'policy'> | undefined): boolean {
   return filters.every(filter => entry?.filters.includes(filter) || isFragment(filter)) && (policy === (entry?.policy ?? null) || isFragment(policy ?? ''));
 }
+
+export function memberCountText(total: number, groups: number, t: Translator): string {
+  const nodes = t('arrange.memberCount', {n: total - groups});
+  return groups ? t('arrange.mixedCount', {nodes, groups: t('arrange.groupCount', {n: groups})}) : nodes;
+}

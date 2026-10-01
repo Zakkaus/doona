@@ -160,7 +160,7 @@ export function nestedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
 // lines combine with OR, so adding a value to `name(a, b)` admits one more node and nothing else, while a line
 // with `&&`, `!`, `keyword:` or `regex:` would change meaning.
 export type ExactCall = 'name' | 'subtag';
-function exactTokens(filter: string, call: ExactCall): string[] | null {
+function exactTokens(filter: string, call: ExactCall | 'group'): string[] | null {
   const tokens = scanConfig(filter).tokens;
   const raw = tokens.map(token => filter.slice(token.from, token.to));
   if (tokens[0]?.kind !== 'text' || raw[0] !== call || raw[1] !== '(' || raw.at(-1) !== ')' || tokens.at(-1)?.parens !== 1) return null;
@@ -192,6 +192,23 @@ export function classifyFilters(entry: Pick<GroupEntry, 'filters'>) {
     subtags: exactIn(entry.filters, 'subtag'),
     rules: entry.filters.filter(filter => exactTokens(filter, 'name') === null && exactTokens(filter, 'subtag') === null)
   };
+}
+
+// Describe only complete calls; compound or unknown filters retain their source syntax.
+export function describeFilters(filters: string[]) {
+  let everyNode = false;
+  const groups: string[] = [];
+  const rules: string[] = [];
+  for (const filter of filters) {
+    const trimmed = filter.trim();
+    const excluded = trimmed.startsWith('!') ? exactTokens(trimmed.slice(1).trim(), 'name')?.map(unquote) : null;
+    if (excluded?.length === 2 && new Set(excluded).size === 2 && excluded.includes('direct') && excluded.includes('block')) {
+      everyNode = true;
+    } else if (exactTokens(trimmed, 'group') !== null) {
+      groups.push(...nestedIn({filters: [trimmed]}));
+    } else rules.push(filter);
+  }
+  return {everyNode, groups: [...new Set(groups)], rules};
 }
 
 // Whether removing `value` would leave the group without any filter line, which honk reads as every node.

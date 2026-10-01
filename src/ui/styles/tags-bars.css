@@ -5,6 +5,9 @@
   align-items: center;
   gap: 6px;
 }
+.rp-tags-title {
+  flex-basis: 100%;
+}
 .rp-tag {
   display: inline-flex;
   align-items: center;

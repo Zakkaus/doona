@@ -44,9 +44,10 @@ import Close from '../../../ui/icons/Close';
 import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
-import {groupPolicyText} from '../../shared/policyText';
+import {groupPolicyText, memberCountText} from '../../shared/policyText';
 import {GroupDialog} from '../../shared/GroupDialog';
 import type {OutboundCatalogue} from '../../shared/groupText';
+import {FilterSummary} from '../FilterSummary';
 import {holds, parsePlaceable, removeReason, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
 
@@ -88,7 +89,15 @@ export function Arrange({
       <div className="rp-arrange-grid">
         <div className="rp-col">
           {m.groups.length ? (
-            m.groups.map(group => <GroupCard key={group.name} group={group} live={live.get(group.name)} m={m} />)
+            m.groups.map(group => (
+              <GroupCard
+                key={group.name}
+                group={group}
+                live={live.get(group.name)}
+                groupCount={group.liveNestedGroups.filter(name => live.has(name)).length}
+                m={m}
+              />
+            ))
           ) : (
             <Empty>{t('policy.empty')}</Empty>
           )}
@@ -113,7 +122,7 @@ export function Arrange({
 
 // A group as the Groups tab heads it, with its members as tags: exact members carry a remove action, staged
 // removals an undo, and rule members are described by the rule and what it selects.
-function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | undefined; m: Model}) {
+function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: GroupSummary | undefined; groupCount: number; m: Model}) {
   const t = useT();
   const lang = useLang();
   const heading = useId();
@@ -166,7 +175,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
               {policy && <Badge tip={policy.id}>{policy.label}</Badge>}
               {live && (
                 <Light small tone="neutral">
-                  {t('arrange.memberCount', {n: live.member_count})}
+                  {memberCountText(live.member_count, groupCount, t)}
                 </Light>
               )}
               {group.isNew && <Badge>{t('arrange.new')}</Badge>}
@@ -207,10 +216,7 @@ function GroupCard({group, live, m}: {group: ArrangeGroup; live: GroupSummary | 
           </ActionHelp>
           {group.rules.length > 0 && (
             <div className="rp-arrange-rules">
-              <span className="rp-label">{t('arrange.byRule')}</span>
-              {group.rules.map(rule => (
-                <DaeCode key={rule} as="code" text={rule} />
-              ))}
+              <FilterSummary filters={group.rules} />
               {group.ruleNodes.length > 0 && (
                 <span>
                   {group.ruleMore
