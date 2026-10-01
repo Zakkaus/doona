@@ -1778,6 +1778,7 @@
   "shell.shortcutSequence": "Press G, then the page letter within 800 ms. Shortcuts are inactive while typing.",
   "shell.shortcutTables": "Tables and lists",
   "shell.shortcuts": "Keyboard shortcuts",
+  "shell.theme": "Theme: {theme}",
   "shell.toActivity": "Back to activity",
   "theme.dark": "Dark",
   "theme.light": "Light",

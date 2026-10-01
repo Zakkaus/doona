@@ -74,6 +74,8 @@ export function shouldOpenSettings(api: string | null, hash: string): boolean {
 
 type Appearance = {
   scheme: Scheme;
+  dark: boolean;
+  toggle: () => void;
   pickScheme: (value: Scheme) => void;
   palette: PaletteId;
   pickPalette: (value: PaletteId) => void;

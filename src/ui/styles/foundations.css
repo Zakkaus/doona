@@ -10,6 +10,31 @@
     height: 25px;
   }
 }
+.rp-icon-stack {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.rp-icon-stack > svg {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--rp-duration-panel) var(--rp-ease-out),
+    transform var(--rp-duration-panel) var(--rp-ease-out);
+}
+.rp-icon-stack > .sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+.rp-icon-stack[data-dark] > .sun {
+  opacity: 1;
+  transform: none;
+}
+.rp-icon-stack[data-dark] > .moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
 .rp-empty {
   padding: 24px;
   text-align: center;

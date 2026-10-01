@@ -14,9 +14,12 @@ import {ReloadConfirm} from '../features/shared/ReloadConfirm';
 import type {BackendView, TopBarCommands} from './view';
 import Settings from '../ui/icons/Settings';
 import {appearanceSettingsHref} from '../features/shared/link';
+import {SchemeToggle} from './AppearanceControls';
+import type {SettingsContext} from './preferences';
 import {preloadSearch} from './search/load';
 
 type TopBarProps = {
+  ap: NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
   openAppearance: () => void;
   mac: boolean;
   openSearch: () => void;
@@ -34,6 +37,7 @@ type TopBarProps = {
 // The top bar depends on appearance, language and the backend's version and state, not on the open page or its query,
 // so it is memoised: moving between pages or tabs leaves it alone.
 export const TopBar = memo(function TopBar({
+  ap,
   openAppearance,
   mac,
   openSearch,
@@ -106,6 +110,11 @@ export const TopBar = memo(function TopBar({
           <Link appearance="button" quiet icon label={t('settings.appearance')} href={appearanceSettingsHref}>
             <Settings />
           </Link>
+          <SchemeToggle
+            dark={ap.dark}
+            label={t('shell.theme', {theme: t(ap.scheme === 'system' ? 'theme.system' : ap.dark ? 'theme.dark' : 'theme.light')})}
+            toggle={ap.toggle}
+          />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>
           <ChoiceMenu

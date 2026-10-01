@@ -1577,6 +1577,7 @@
   "shell.shortcutSequence": "先按 G，再於 800 毫秒內按下頁面字母。輸入文字時不啟用快捷鍵。",
   "shell.shortcutTables": "表格與清單",
   "shell.shortcuts": "鍵盤快捷鍵",
+  "shell.theme": "主題：{theme}",
   "shell.toActivity": "回到活動",
   "theme.dark": "暗色",
   "theme.light": "亮色",

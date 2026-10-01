@@ -27,6 +27,8 @@ export function useAppearance(stored: Settings) {
     withCrossfade(() => setScheme(next));
     writeSetting('scheme', next);
   }, []);
+  // A system preference toggles to its opposite; an override toggles back to system.
+  const toggle = useCallback(() => pickScheme(scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'), [pickScheme, scheme, sysDark]);
   const pickPalette = useCallback((next: PaletteId) => {
     withCrossfade(() => setPalette(next));
     writeSetting('palette', next);
@@ -62,6 +64,8 @@ export function useAppearance(stored: Settings) {
   return useMemo(
     () => ({
       scheme,
+      dark,
+      toggle,
       pickScheme,
       palette,
       pickPalette,
@@ -80,6 +84,8 @@ export function useAppearance(stored: Settings) {
     }),
     [
       scheme,
+      dark,
+      toggle,
       pickScheme,
       palette,
       pickPalette,

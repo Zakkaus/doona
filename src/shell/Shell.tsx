@@ -150,6 +150,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   return (
     <div className="rp-shell">
       <TopBar
+        ap={ap}
         openAppearance={openAppearance}
         mac={mac}
         openSearch={openSearch}
