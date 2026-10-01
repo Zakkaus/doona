@@ -1195,3 +1195,18 @@ test('without a pattern to fill, the whole relative path is typed', async ({page
   await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
   expect(created).toEqual([{path: 'config.d/work.dae', content: ''}]);
 });
+
+test('kit pickers keep symmetric insets', async ({page}) => {
+  await page.goto('/#/config?tab=source');
+
+  const pickers = page.locator('.rp-selectbtn');
+  await expect(pickers.first()).toBeVisible();
+  expect(
+    await pickers.evaluateAll(elements =>
+      elements.every(el => {
+        const style = getComputedStyle(el);
+        return style.paddingInlineStart === style.paddingInlineEnd;
+      })
+    )
+  ).toBe(true);
+});
