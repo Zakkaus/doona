@@ -81,8 +81,8 @@ test.describe('right to left at 1280px', () => {
     await page.goto('/#/overview');
     await expect(page.locator('.rp-content > *').first()).toBeVisible();
     await expectRtlLayout(page);
-    await expectTechnicalCell(page.locator('.rp-kv .v'));
-    await expectValueAtRight(page.locator('.rp-kv .v').filter({hasText: technical}).first());
+    await expectTechnicalCell(page.locator('main .rp-kv .v'));
+    await expectValueAtRight(page.locator('main .rp-kv .v').filter({hasText: technical}).first());
     await expectMirroredChevron(page);
   });
 

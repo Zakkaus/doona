@@ -107,6 +107,7 @@ it('offers a group only the actions the backend offers for groups as a whole', a
   expect(groupActions(group, caps)).toBe(group);
   expect(offered({selection: false})).toMatchObject({can_select: false, can_override: false, mutable_config: group.capabilities.mutable_config});
   expect(offered({config_patch: false})).toMatchObject({can_select: true, can_override: true, mutable_config: []});
+  expect(offered({available: false, selection: true, config_patch: true})).toMatchObject({can_select: false, can_override: false, mutable_config: []});
   expect(offered(null)).toMatchObject({can_select: false, can_override: false, mutable_config: []});
   // A discovery without the flags leaves the group's own in charge.
   expect(offered({selection: undefined, config_patch: undefined})).toEqual(group.capabilities);

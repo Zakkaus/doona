@@ -416,3 +416,104 @@ it("records a 401 on any read as the backend refusing this tab's credentials", a
   await vi.advanceTimersByTimeAsync(0);
   expect(credentialRefusal(api)).toBe(refused);
 });
+
+it.each([
+  [30000, 5000],
+  [5000, 30000]
+])('uses the fastest live cadence in mount order %s, %s', async (first, second) => {
+  const api = createMockApi();
+  const fetch = vi.fn(async () => 1);
+  const a = watchResource(api, {key: ['groups'], every: first, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const b = watchResource(api, {key: ['groups'], every: second, fetch}, () => {});
+  disposers.push(a.dispose, b.dispose);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  (first === 5000 ? a : b).dispose();
+  await vi.advanceTimersByTimeAsync(29999);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it('keeps event-only subscribers without retaining a departed polling cadence', async () => {
+  const api = createMockApi();
+  const fetch = vi.fn(async () => 1);
+  const eventsOnly = watchResource(api, {key: ['groups'], every: 0, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const live = watchResource(api, {key: ['groups'], every: 5000, fetch}, () => {});
+  disposers.push(eventsOnly.dispose, live.dispose);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  live.dispose();
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('changing subscribers preserves an in-flight Retry-After deadline', async () => {
+  const api = createMockApi();
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(503, 'temporarily_unavailable', 'wait', null, null, 10))
+    .mockResolvedValue(1);
+  const slow = watchResource(api, {key: ['groups'], every: 30000, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const fast = watchResource(api, {key: ['groups'], every: 1000, fetch}, () => {});
+  disposers.push(slow.dispose, fast.dispose);
+  await vi.advanceTimersByTimeAsync(2000);
+  fast.dispose();
+  await vi.advanceTimersByTimeAsync(7999);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it('brings an overdue faster lease ahead of an already scheduled event', async () => {
+  const api = createMockApi();
+  vi.mocked(subscribeEvents).mockClear();
+  const fetch = vi.fn().mockResolvedValue('value');
+  const descriptor = {
+    key: ['runtime'] as ResourceKey,
+    every: 30000,
+    fetch,
+    events: (listener: Parameters<typeof subscribeEvents>[1], baseline: () => void) => {
+      baseline();
+      return subscribeEvents(api, listener);
+    }
+  };
+  const slow = watchResource(api, descriptor, () => {});
+  disposers.push(slow.dispose);
+  await vi.advanceTimersByTimeAsync(20000);
+  vi.mocked(subscribeEvents).mock.calls[0][1](
+    {id: 'event', event: 'runtime.updated', data: {instance_id: 'engine', href: '/api/v1/runtime', observed_at: ''}},
+    false
+  );
+  await vi.advanceTimersByTimeAsync(500);
+  const fast = watchResource(api, {...descriptor, every: 5000}, () => {});
+  disposers.push(fast.dispose);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('negotiates the fastest cadence and applies changes received during retry backoff', async () => {
+  const api = createMockApi();
+  const fetch = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(503, 'busy', 'busy', null, null, 1))
+    .mockResolvedValue('ok');
+  const slow = watchResource(api, {key: ['version'], every: 10000, fetch}, () => {});
+  disposers.push(slow.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  const fast = watchResource(api, {key: ['version'], every: 2000, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(fetch).toHaveBeenCalledTimes(3);
+  fast.dispose();
+  await vi.advanceTimersByTimeAsync(9999);
+  expect(fetch).toHaveBeenCalledTimes(3);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(4);
+});

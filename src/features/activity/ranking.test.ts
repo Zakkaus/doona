@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {connectionRanking} from './ranking';
+import {connectionRanking} from '../shared/ranking';
 
 it('groups both transports by source IP or domain, falling back to the destination', async () => {
   const snapshot = await createMockApi().connections();

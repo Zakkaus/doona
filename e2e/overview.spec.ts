@@ -188,6 +188,7 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
   }
 });
 
+// Activity's dashboard sections pack like masonry, so there the rule is that every column ends level.
 test('Activity and Overview keep cards in each grid row equal height', async ({page}) => {
   for (const scheme of ['light', 'dark']) {
     await page.addInitScript(value => localStorage.setItem('doona-scheme', value), scheme);
@@ -197,9 +198,14 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
         await page.goto('/#/' + route);
         await expect(page.locator('.rp-card').first()).toBeVisible();
         if (route === 'overview') await expect(page.locator('.rp-capability').first()).toBeVisible();
-        const rows = await page.locator('.rp-quick, .rp-strip, .rp-g21, .rp-g3').evaluateAll(grids =>
+        const rows = await page.locator('.rp-strip, .rp-g21, .rp-g3, .rp-dash-section').evaluateAll(grids =>
           grids.flatMap(grid => {
-            const cards = [...grid.children].filter(child => child.classList.contains('rp-card'));
+            const cards = [...grid.children].filter(child => child.classList.contains('rp-card') || child.classList.contains('rp-dashboard-cell'));
+            if (grid.classList.contains('rp-dash-section')) {
+              const boxes = cards.map(card => card.getBoundingClientRect());
+              const last = boxes.filter(box => !boxes.some(other => other.top >= box.bottom && other.left < box.right - 1 && other.right > box.left + 1));
+              return [last.map(box => box.bottom)];
+            }
             const byTop = new Map<number, number[]>();
             for (const card of cards) {
               const rect = card.getBoundingClientRect();
@@ -290,7 +296,7 @@ test.describe('with the base profile', () => {
     await expect(features.locator('.rp-capability').filter({hasText: 'Logs'})).toHaveCount(0);
     await expect(features.locator('.rp-capability').filter({hasText: 'Connections'})).toHaveCount(1);
     await page.goto('/#/activity');
-    const count = page.locator('.rp-quick').getByRole('link', {name: '15 features are off', exact: true});
+    const count = page.locator("[data-profile='quick']").getByRole('link', {name: '15 features are off', exact: true});
     await count.click();
     await expect(page).toHaveURL(/#\/overview\?card=limits$/);
     await expect(page.getByRole('heading', {name: 'Features that are off', exact: true})).toBeInViewport();

@@ -121,7 +121,7 @@ test.describe('first-release backend', () => {
 
   test('the shell marks what the backend lacks and every offered page loads clean', async ({page}) => {
     await page.goto('/#/activity');
-    await expect(page.locator('.rp-strip')).toBeVisible();
+    await expect(page.locator("[data-profile='metrics']")).toBeVisible();
     await expect(page.locator('.rp-nav')).toHaveCount(routes.length);
     await expect(page.locator('.rp-nav:not([data-unavailable])')).toHaveText(['Activity', 'System status', 'Connections', 'Settings']);
     // Every page loads, the offered ones as the current navigation entry and the rest in their unavailable state.

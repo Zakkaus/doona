@@ -22,7 +22,9 @@ export default defineConfig({
   projects: [
     {name: 'chromium', testIgnore: 'subpath.spec.ts', use: {...devices['Desktop Chrome']}},
     {name: 'subpath', testMatch: 'subpath.spec.ts', use: {...devices['Desktop Chrome'], baseURL: 'http://127.0.0.1:4186'}},
-    ...(process.env.DOONA_E2E_FIREFOX === '1' ? [{name: 'firefox', testMatch: 'connections.spec.ts', use: {...devices['Desktop Firefox']}}] : []),
+    ...(process.env.DOONA_E2E_FIREFOX === '1'
+      ? [{name: 'firefox', testMatch: ['connections.spec.ts', 'dashboard.spec.ts'], use: {...devices['Desktop Firefox']}}]
+      : []),
     ...(webkit
       ? [
           // Safari carries the installed iOS app: a smoke pass over navigation, drag and drop, dialogs and the keyboard.
@@ -30,7 +32,15 @@ export default defineConfig({
           // blocked; the PWA spec, which is about the worker, runs with it.
           {
             name: 'webkit',
-            testMatch: ['routes.spec.ts', 'group-includes.spec.ts', 'keyboard.spec.ts', 'mobile.spec.ts', 'charts.spec.ts', 'segmented.spec.ts'],
+            testMatch: [
+              'routes.spec.ts',
+              'group-includes.spec.ts',
+              'keyboard.spec.ts',
+              'mobile.spec.ts',
+              'charts.spec.ts',
+              'segmented.spec.ts',
+              'dashboard.spec.ts'
+            ],
             use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
           },
           {name: 'webkit-pwa', testMatch: 'pwa.spec.ts', use: {...devices['Desktop Safari']}}

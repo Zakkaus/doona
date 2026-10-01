@@ -225,3 +225,19 @@ it('keeps one notice feed per backend, so a page opened again lists its notices 
   expect(shown()).toEqual(['c', 'b', 'a']);
   off();
 });
+
+it('does not republish one shared event delivered by multiple notice consumers', () => {
+  const feed = createFeed<{id: string}, Record<string, never>>(200, {}, 'replace');
+  const notify = vi.fn();
+  const stop = feed.subscribe(notify);
+  const event = {id: 'shared'};
+  feed.append(event);
+  vi.advanceTimersByTime(100);
+  const first = feed.getSnapshot();
+  feed.append(event);
+  feed.append(event);
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot()).toBe(first);
+  expect(notify).toHaveBeenCalledOnce();
+  stop();
+});

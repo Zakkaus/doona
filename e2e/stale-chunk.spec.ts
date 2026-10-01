@@ -20,7 +20,7 @@ test('a lazy page whose chunk is gone reloads once and loads the new build', asy
     return requests === 1 ? route.fulfill({status: 404}) : route.continue();
   });
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await page.evaluate(() => {
     (window as unknown as {survivesReload: boolean}).survivesReload = true;
     location.hash = '#/config';
@@ -36,7 +36,7 @@ test('a reload that just happened is not repeated: the page says doona was updat
   let missing = true;
   await page.route(CONFIG_CHUNK, route => (missing ? route.fulfill({status: 404}) : route.continue()));
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await page.evaluate(() => {
     location.hash = '#/config';
   });

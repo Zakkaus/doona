@@ -22,6 +22,7 @@ async function backend(page: Page, lang = 'en') {
   await page.addInitScript(language => {
     localStorage.setItem('doona-api', location.origin);
     localStorage.setItem('doona-lang', language);
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 2, items: [], visible: false}));
   }, lang);
   const reads: Record<string, () => Promise<unknown>> = {
     capabilities: async () => capabilities,

@@ -79,7 +79,7 @@ test('the shortcut help fits a 1280x720 window, and g d and g v open DNS and Eve
 
 test('g r opens Rules instead of refreshing, while a lone r still refreshes', async ({page}) => {
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await page.keyboard.press('g');
   await page.keyboard.press('r');
   await expect(page).toHaveURL(/#\/rules$/);
@@ -91,7 +91,7 @@ test('g r opens Rules instead of refreshing, while a lone r still refreshes', as
 
 test('/ on a page without a filter field cancels a pending g', async ({page}) => {
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await expect(page.locator('.rp-content input[type="search"]')).toHaveCount(0);
   await page.keyboard.press('g');
   await page.keyboard.press('/');
@@ -111,7 +111,7 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await expect(traffic.locator('.rp-charttip-bounded')).toBeVisible();
   await expect(traffic.locator('.rp-charttip-bounded li').first()).toContainText(/\d/);
   // A live backend that has carried no traffic since it started has no donut to step through.
-  const donut = page.locator('.rp-donut');
+  const donut = page.locator('[data-module=outbounds] .rp-donut');
   if (isLive && !(await donut.count())) return;
   await donut.getByRole('application').focus();
   await page.keyboard.press('ArrowRight');
@@ -163,8 +163,9 @@ test('charts are named and icon buttons show their tooltip on keyboard focus', a
   await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
   // Live, the donut exists only once the backend has carried traffic.
   if (isLive && !(await page.locator('.rp-donut').count())) names.pop();
+  await page.locator('[data-module=memory]').scrollIntoViewIfNeeded();
   for (const name of names) await expect(page.getByRole('application', {name, exact: true})).toBeVisible();
-  await expect(page.getByRole('application')).toHaveCount(names.length);
+  await expect(page.locator(".rp-dash-section:not([data-profile='extensions'])").getByRole('application')).toHaveCount(names.length);
   await page.locator('.rp-search').focus();
   await page.keyboard.press('Tab');
   await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);

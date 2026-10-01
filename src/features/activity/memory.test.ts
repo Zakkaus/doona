@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {RuntimeMemory} from '../../api/model';
-import {historySamples, memorySample, memoryWindow} from './memory';
+import {historySamples, memorySample, memoryWindow} from '../shared/memory';
 
 it('reads a memory observation, keeping unknown metrics null', () => {
   const memory: RuntimeMemory = {observed_at: '2026-08-15T10:00:00Z', process: {rss_bytes: '1000000'}, cgroup: null, kernel: null};

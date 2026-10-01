@@ -1,6 +1,6 @@
 import {afterEach, expect, it} from 'vitest';
 import {createServerClock, selectServerClock} from '../../api/serverClock';
-import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow} from './traffic';
+import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow} from '../shared/traffic';
 
 afterEach(() => selectServerClock(createServerClock()));
 

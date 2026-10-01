@@ -4,7 +4,7 @@ import {createMockApi} from '../src/api/mock';
 
 test('Disclosure toggles with Enter and Space and keeps focus on its trigger', async ({page}) => {
   await page.goto('/#/rules?tab=trace');
-  const disclosure = page.locator('.rp-disclosure').first();
+  const disclosure = page.locator('main .rp-disclosure').first();
   const trigger = disclosure.getByRole('button', {name: 'Advanced', exact: true});
   const panel = disclosure.getByRole('group', {includeHidden: true});
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -151,8 +151,11 @@ test('the backend indicator is a styled control, not a bare button', async ({pag
   await page.goto('/#/activity');
   const indicator = page.locator('.rp-version');
   await expect(indicator).toBeVisible();
-  // A bare button is inline-block with the UA's border; the indicator lays out its dot and name in a row.
-  expect(await indicator.evaluate(el => [getComputedStyle(el).display, getComputedStyle(el).borderStyle])).toEqual(['flex', 'none']);
+  await expect(indicator).toHaveCSS('cursor', 'pointer');
+  expect(await indicator.evaluate(el => getComputedStyle(el).display)).toBe('flex');
+  await expect(indicator.locator('.rp-light')).toBeVisible();
+  await indicator.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
 });
 
 test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {

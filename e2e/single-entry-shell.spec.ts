@@ -97,12 +97,24 @@ test('a managed outbound rule opens Activity with separate mode and target cards
   await expect(card).toBeFocused();
   await expect(card.getByRole('radiogroup', {name: 'Outbound mode'})).toBeVisible();
   await expect(card.getByRole('button', {name: 'Global mode outbound', exact: true})).toHaveCount(0);
-  const target = page.locator('.rp-quick > section').nth(1);
+  const target = page.locator('[data-profile=quick] [data-module=global] > section');
   await expect(target.getByRole('button', {name: 'Global mode outbound', exact: true})).toBeVisible();
-  await expect(page.locator('.rp-quick > section')).toHaveCount(3);
+  await expect(page.locator('[data-profile=quick] > .rp-dashboard-cell')).toHaveCount(3);
   await page.goto(`/#/rules?tab=list&view=advanced&edit=${encodeURIComponent(managed.rule_id)}`);
   await expect(page).toHaveURL(/#\/activity\?card=mode$/);
   await expect(page.getByRole('dialog', {name: 'Edit rule'})).toHaveCount(0);
+});
+
+test('the outbound mode jump restores a removed card without changing the saved dashboard', async ({page}) => {
+  const saved = JSON.stringify({version: 2, sections: []});
+  await page.goto('/#/activity');
+  await page.evaluate(value => localStorage.setItem('doona-dashboard', value), saved);
+  await page.goto('/#/rules');
+  await page.goto('/#/activity?card=mode');
+  const card = page.getByRole('region', {name: 'Outbound mode', exact: true});
+  await expect(card).toBeFocused();
+  await expect(card.getByRole('radiogroup', {name: 'Outbound mode'})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('doona-dashboard'))).toBe(saved);
 });
 
 test('a stale token profile link cannot save a different profile', async ({page}) => {

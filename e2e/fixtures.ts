@@ -44,10 +44,12 @@ export const offered = async (page: Page, route: string) => {
 export const demoSession = (profileId: string) =>
   JSON.stringify({profileId, api: 'mock', token: 'demo-session-e2e', expiresAt: new Date(Date.now() + 3600_000).toISOString()});
 
-export const test = base.extend<{storage: Record<string, string>; signedIn: string | null}>({
+export const test = base.extend<{storage: Record<string, string>; signedIn: string | null; widgets: boolean}>({
   storage: [{}, {option: true}],
   signedIn: [null, {option: true}],
-  page: async ({page, storage, signedIn}, use) => {
+  // Page specs keep their content unobscured; widget specs opt into the floating default.
+  widgets: [false, {option: true}],
+  page: async ({page, storage, signedIn, widgets}, use) => {
     const errors: string[] = [];
     const controls: string[] = [];
     if (isLive) {
@@ -82,7 +84,13 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
       values => {
         for (const [key, value] of Object.entries(values)) if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
       },
-      {'doona-scheme': 'light', 'doona-lang': 'en', ...live, ...storage}
+      {
+        'doona-scheme': 'light',
+        'doona-lang': 'en',
+        ...(!widgets ? {'doona-widgets': JSON.stringify({version: 2, items: [], visible: false})} : {}),
+        ...live,
+        ...storage
+      }
     );
     if (signedIn !== null)
       await page.addInitScript(session => {

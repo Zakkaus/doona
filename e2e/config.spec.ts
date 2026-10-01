@@ -278,6 +278,7 @@ async function configBackend(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('doona-api', location.origin);
     localStorage.setItem('doona-lang', 'en');
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 2, items: [], visible: false}));
   });
   const reads: Record<string, () => Promise<unknown>> = {
     capabilities: async () => capabilities,
@@ -291,6 +292,8 @@ async function configBackend(page: Page) {
     flows: () => api.flows({detail: 'full', limit: 1000}),
     connections: () => api.connections({detail: 'full', limit: 1000}),
     runtime: () => api.runtime(),
+    'runtime/memory': () => api.runtimeMemory(),
+    'runtime/traffic/history': () => api.trafficHistory(),
     geodata: () => api.geodata(),
     'runtime/settings': () => api.runtimeSettings(),
     'runtime/outbounds': () => api.runtimeOutbounds()
