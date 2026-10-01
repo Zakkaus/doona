@@ -1690,6 +1690,7 @@
   "ui.errNoJson": "后端响应没有 JSON 内容。",
   "ui.errNoStream": "后端响应没有事件流。",
   "ui.errOtherOrigin": "操作地址属于其他来源，已拒绝读取。",
+  "ui.errStreamFrame": "后端发送的事件超过 {size}，已关闭事件流。",
   "ui.errTimeout": "后端未在 {seconds} 秒内响应。",
   "ui.errTimeoutWrite": "后端未在 {seconds} 秒内响应，更改可能已应用。请先重新加载，再重试。",
   "ui.error": "错误",

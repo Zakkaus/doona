@@ -1690,6 +1690,7 @@
   "ui.errNoJson": "後端回應沒有 JSON 內容。",
   "ui.errNoStream": "後端回應沒有事件串流。",
   "ui.errOtherOrigin": "操作位址屬於其他來源，已拒絕讀取。",
+  "ui.errStreamFrame": "後端送出的事件超過 {size}，已關閉事件串流。",
   "ui.errTimeout": "後端未在 {seconds} 秒內回應。",
   "ui.errTimeoutWrite": "後端未在 {seconds} 秒內回應，變更可能已套用。請先重新載入，再重試。",
   "ui.error": "錯誤",

@@ -1891,6 +1891,7 @@
   "ui.errNoJson": "The backend response has no JSON body.",
   "ui.errNoStream": "The backend response has no event stream.",
   "ui.errOtherOrigin": "The operation address belongs to another origin and was not read.",
+  "ui.errStreamFrame": "An event from the backend exceeds {size}; the stream was closed.",
   "ui.errTimeout": "The backend did not answer within {seconds} seconds.",
   "ui.errTimeoutWrite": "The backend did not answer within {seconds} seconds; the change may still have been applied. Reload before trying again.",
   "ui.error": "Error",
