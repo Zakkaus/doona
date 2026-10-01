@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
@@ -12,6 +16,7 @@ jobs:
   # Static checks, unit tests and the bundle budget: a few minutes, independent of the browsers.
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,6 +42,7 @@ jobs:
   # The browser suite is most of the run's time, so it is split over parallel runners; each builds its own dist.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # The image ships the browsers and their OS packages; installing those per run took up to 21 minutes on some runners.
     # Bump the tag together with @playwright/test (the step below fails on a mismatch).
     container:
@@ -78,6 +84,7 @@ jobs:
     if: ${{ !cancelled() }}
     needs: [e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
