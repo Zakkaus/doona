@@ -6,7 +6,7 @@
 .rp-tree {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -72,9 +72,9 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   height: 36px;
-  padding: 0 10px;
+  padding: 0 var(--rp-space-2h);
   border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   background: var(--rp-overlay);
@@ -114,7 +114,7 @@
   font-variant-ligatures: none;
 }
 .rp-tree-tile .s {
-  margin-inline-start: 8px;
+  margin-inline-start: var(--rp-space-2);
   font-size: var(--rp-text-xs);
   color: var(--rp-subtle);
 }
@@ -138,13 +138,13 @@
 .rp-impact-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
 }
 .rp-impact {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -152,15 +152,15 @@
 .rp-impact.grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr));
-  gap: 8px 24px;
+  gap: var(--rp-space-2) var(--rp-space-6);
 }
 .rp-impact > li {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: var(--rp-space-1);
   min-width: 0;
 }
 .rp-impact > li > .rp-cluster {
-  gap: 8px;
+  gap: var(--rp-space-2);
 }

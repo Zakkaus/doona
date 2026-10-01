@@ -51,7 +51,7 @@
   }
 }
 .rp-table table {
-  --rp-cell-padding: 8px;
+  --rp-cell-padding: var(--rp-space-2);
 }
 .rp-table table,
 .rp-table [role='grid'] {
@@ -68,7 +68,7 @@
   line-height: 20px;
   font-weight: 700;
   color: var(--rp-text);
-  padding: 8px var(--rp-cell-padding, 16px);
+  padding: var(--rp-space-2) var(--rp-cell-padding, var(--rp-space-4));
   background: var(--rp-base);
   border-bottom: 1px solid var(--rp-hl-med);
   white-space: nowrap;
@@ -87,7 +87,7 @@
 .rp-th > .rp-sort {
   width: 14px;
   height: 14px;
-  margin-inline-start: 2px;
+  margin-inline-start: var(--rp-space-half);
   rotate: 180deg;
   transition: rotate var(--rp-duration-panel) var(--rp-ease-out);
 }
@@ -133,7 +133,7 @@
 }
 .rp-table [role='rowheader'],
 .rp-table [role='gridcell'] {
-  padding: 0 var(--rp-cell-padding, 16px);
+  padding: 0 var(--rp-cell-padding, var(--rp-space-4));
   height: 40px;
   border-bottom: 1px solid var(--rp-line);
   white-space: nowrap;
@@ -186,7 +186,6 @@
 /* A group row's chevron points along the row while folded and down while open. */
 .rp-table .rp-expand {
   flex: none;
-  margin-inline-start: -8px;
   color: var(--rp-muted);
 }
 .rp-table .rp-expand > svg {
@@ -206,8 +205,8 @@
 .rp-dialog .foot {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--rp-space-2);
+  padding-top: var(--rp-space-2);
 }
 /* An ActionHelp line under the footer says why its actions are disabled, aligned with them. */
 .rp-dialog > .foot + .rp-label {
@@ -231,14 +230,15 @@
   gap: 0;
   overflow: hidden;
 }
-.rp-dialog.split > h2 {
+.rp-dialog.split > h2,
+.rp-dialog.split > .rp-help-row {
   flex: none;
-  padding: 24px 32px 12px;
+  padding: var(--rp-space-6) var(--rp-space-8) var(--rp-space-3);
 }
 .rp-dialog-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 12px 32px;
+  padding: var(--rp-space-3) var(--rp-space-8);
   overflow: hidden auto;
   border-block: 1px solid transparent;
   outline: none;
@@ -254,16 +254,16 @@
 .rp-dialog-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--rp-space-4);
   min-width: 0;
 }
 .rp-dialog.split > .foot {
   flex: none;
-  padding: 12px 32px 24px;
+  padding: var(--rp-space-3) var(--rp-space-8) var(--rp-space-6);
 }
 .rp-dialog.split > .foot + .rp-label {
   margin: -16px 0 0;
-  padding: 0 32px 24px;
+  padding: 0 var(--rp-space-8) var(--rp-space-6);
 }
 /* The diff in a scrolling dialog grows with its lines: the dialog is the only vertical scroller. */
 .rp-dialog-body .rp-diff {
@@ -275,13 +275,13 @@
 .rp-shortcuts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 32px;
+  gap: var(--rp-space-5) var(--rp-space-8);
   align-items: start;
 }
 .rp-shortcuts > div {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--rp-space-5);
   min-width: 0;
 }
 .rp-shortcuts section {
@@ -290,13 +290,13 @@
   min-width: 0;
 }
 .rp-shortcuts h3 {
-  margin: 0 0 4px;
+  margin: 0 0 var(--rp-space-1);
   font-size: var(--rp-text-md);
   line-height: 20px;
   font-weight: 700;
 }
 .rp-shortcuts section > .rp-label {
-  margin: 0 0 4px;
+  margin: 0 0 var(--rp-space-1);
 }
 .rp-shortcuts .rp-row {
   min-height: 28px;
@@ -305,7 +305,7 @@
 .rp-shortcuts .keys {
   display: flex;
   flex: none;
-  gap: 4px;
+  gap: var(--rp-space-1);
 }
 @media (max-width: 599px) {
   .rp-shortcuts {
@@ -315,7 +315,7 @@
 .rp-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--rp-space-3);
 }
 
 /* The row a table discloses (DataTable `detail`). Empty, it leaves no box, so the page's gap is as before, yet it stays
@@ -331,16 +331,17 @@
 }
 .rp-kv.inline {
   display: flex;
-  gap: 24px;
+  gap: var(--rp-space-6);
   flex-wrap: wrap;
 }
 .rp-kv.row {
-  gap: 16px;
+  align-items: center;
+  gap: var(--rp-space-4);
 }
 .rp-kv.row > div {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: var(--rp-space-1h);
 }
 .rp-kv.row .k {
   line-height: 20px;
@@ -354,14 +355,14 @@
 .rp-diff {
   max-height: 320px;
   margin: 0;
-  padding: 8px 0;
+  padding: var(--rp-space-2) 0;
   overflow: auto;
   border-radius: var(--rp-r-md);
   background: var(--rp-base);
 }
 .rp-diff-line {
   display: block;
-  padding-inline: calc(8px + 6ch) 8px;
+  padding-inline: calc(var(--rp-space-2) + 6ch) var(--rp-space-2);
   text-indent: -6ch;
   white-space: pre-wrap;
 }
@@ -427,4 +428,21 @@
   .rp-table[data-flow] :is([role='row'][data-key], [role='rowheader'], [role='gridcell']) {
     scroll-margin-block-start: 37px;
   }
+}
+
+.rp-table .rp-cell-wrap {
+  height: auto;
+  min-height: var(--rp-space-10);
+  padding-block: var(--rp-space-2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-overflow: clip;
+}
+.rp-table[data-multiline] div[role='row'] {
+  height: auto;
+  min-height: var(--rp-space-10);
+}
+.rp-cell-wrap .rp-code > span {
+  white-space: normal;
 }

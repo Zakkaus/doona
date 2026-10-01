@@ -1,0 +1,110 @@
+import {GridLayout, GridList, GridListItem, Size, ToggleButton, Virtualizer} from 'react-aria-components';
+import {useState, type ReactNode} from 'react';
+import {NodeTile, type NodeStatus} from './Tile';
+import {Empty} from './Feedback';
+import {cx} from './cx';
+import {useContentWidth} from './hooks';
+
+export function nodeGridSize(width: number, gap: number) {
+  const columns = Math.max(1, Math.floor((width - gap) / (228 + gap)));
+  return {columns, width: Math.max(228, (width - gap * (columns + 1)) / columns)};
+}
+
+export type GridNode = {id: string; name: string; nodeName: boolean; status: NodeStatus; description: string};
+type NodeGridProps = {
+  nodes: GridNode[];
+  label: string;
+  empty: string;
+  virtual?: boolean;
+  selected?: string;
+  current?: string;
+  marks?: Record<string, string>;
+  onSelect?: (id: string) => void;
+  isDisabled?: boolean;
+};
+
+export function NodeGrid({nodes, label, empty, virtual, selected, current, marks = {}, onSelect, isDisabled}: NodeGridProps) {
+  const tile = (n: GridNode) => (
+    <NodeTile nodeName={n.nodeName} name={n.name} status={n.status} description={n.description} current={!onSelect && current === n.id} mark={marks[n.id]} />
+  );
+  if (!virtual)
+    return (
+      <div className="rp-nodes">
+        {nodes.map(n =>
+          onSelect ? (
+            <ToggleButton
+              key={n.id}
+              className={cx('rp-node', marks[n.id] && 'cur')}
+              isSelected={selected === n.id}
+              isDisabled={isDisabled}
+              onChange={() => onSelect(n.id)}
+            >
+              {tile(n)}
+            </ToggleButton>
+          ) : (
+            <div key={n.id} className={cx('rp-node', current === n.id && 'cur')}>
+              {tile(n)}
+            </div>
+          )
+        )}
+      </div>
+    );
+  return (
+    <VirtualNodeGrid
+      nodes={nodes}
+      label={label}
+      empty={empty}
+      selected={selected}
+      current={current}
+      marks={marks}
+      onSelect={onSelect}
+      isDisabled={isDisabled}
+      renderTile={tile}
+    />
+  );
+}
+
+function VirtualNodeGrid({
+  nodes,
+  label,
+  empty,
+  selected,
+  current,
+  marks = {},
+  onSelect,
+  isDisabled,
+  renderTile
+}: Omit<NodeGridProps, 'virtual'> & {renderTile: (node: GridNode) => ReactNode}) {
+  const [gap] = useState(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-space-2')));
+  const [gridRef, width] = useContentWidth<HTMLDivElement>();
+  const size = nodeGridSize(width ?? 228 + gap * 2, gap);
+  return (
+    <Virtualizer
+      layout={GridLayout}
+      layoutOptions={{minItemSize: new Size(228, 56), maxItemSize: new Size(size.width, 56), minSpace: new Size(gap, gap), maxColumns: size.columns}}
+    >
+      <GridList
+        ref={gridRef}
+        className="rp-nodegrid"
+        aria-label={label}
+        items={nodes}
+        selectionMode={onSelect ? 'single' : 'none'}
+        disabledKeys={isDisabled ? nodes.map(node => node.id) : []}
+        disallowEmptySelection
+        selectedKeys={onSelect && selected ? [selected] : []}
+        onSelectionChange={keys => {
+          if (!onSelect || isDisabled || keys === 'all') return;
+          const id = [...keys][0];
+          if (id != null) onSelect(String(id));
+        }}
+        renderEmptyState={() => <Empty>{empty}</Empty>}
+      >
+        {n => (
+          <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', ((!onSelect && current === n.id) || marks[n.id]) && 'cur')}>
+            {renderTile(n)}
+          </GridListItem>
+        )}
+      </GridList>
+    </Virtualizer>
+  );
+}

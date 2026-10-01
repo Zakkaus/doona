@@ -64,6 +64,7 @@ export function Disclosure({
 export function ModalDialog({
   trigger,
   title,
+  titleHelp,
   description,
   children,
   footer,
@@ -78,6 +79,7 @@ export function ModalDialog({
 }: {
   trigger?: ReactElement;
   title: string;
+  titleHelp?: ReactNode;
   description?: string;
   children: ReactNode | ((close: () => void) => ReactNode);
   footer?: (close: () => void) => ReactNode;
@@ -110,7 +112,15 @@ export function ModalDialog({
         >
           {({close}) => (
             <ActionHelp reason={footer ? reason : null}>
-              {!hideTitle && <Heading slot="title">{title}</Heading>}
+              {!hideTitle &&
+                (titleHelp ? (
+                  <div className="rp-help-row">
+                    <Heading slot="title">{title}</Heading>
+                    {titleHelp}
+                  </div>
+                ) : (
+                  <Heading slot="title">{title}</Heading>
+                ))}
               {!scrollBody && help}
               {scrollBody ? (
                 <ScrollBody>

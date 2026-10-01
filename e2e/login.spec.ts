@@ -260,3 +260,24 @@ test('changing the backend URL while signed out probes the new backend', async (
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Create the administrator');
   expect(probed.at(-1)).toBe('two');
 });
+
+test.describe('secret field geometry', () => {
+  test.use({storage: demoProfile});
+  for (const width of [1440, 390]) {
+    test(`the reveal control stays inside its field at ${width}px`, async ({page}) => {
+      await page.setViewportSize({width, height: 1000});
+      await page.goto('/#/activity');
+      const reveal = page.locator('.rp-input .reveal');
+      await expect(reveal).toBeVisible();
+      const geometry = await reveal.evaluate(el => {
+        const r = el.getBoundingClientRect(),
+          outer = el.closest('.rp-input')!.getBoundingClientRect(),
+          style = getComputedStyle(el);
+        return {left: r.left - outer.left, right: outer.right - r.right, margin: style.marginInlineEnd};
+      });
+      expect(geometry.left).toBeGreaterThanOrEqual(0);
+      expect(geometry.right).toBeGreaterThanOrEqual(0);
+      expect(geometry.margin).toBe('0px');
+    });
+  }
+});

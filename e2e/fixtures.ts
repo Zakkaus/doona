@@ -322,3 +322,20 @@ export async function manyDevices(page: Page) {
   };
   return backend;
 }
+
+export async function expectTextInside(cell: Locator) {
+  await expect(cell).toBeVisible();
+  expect(
+    await cell.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects())
+          if (rect.left < box.left - 1 || rect.right > box.right + 1 || rect.top < box.top - 1 || rect.bottom > box.bottom + 1) return false;
+      }
+      return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1;
+    })
+  ).toBe(true);
+}

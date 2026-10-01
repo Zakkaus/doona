@@ -2,9 +2,9 @@
 .rp-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   height: var(--rp-control);
-  padding: 0 12px;
+  padding: 0 var(--rp-space-3);
   border-radius: var(--rp-r-md);
   border: 1px solid transparent;
   background: var(--rp-overlay);
@@ -42,7 +42,7 @@
   height: 16px;
 }
 .rp-btn.sm {
-  padding: 0 8px;
+  padding: 0 var(--rp-space-2);
   font-size: var(--rp-text-xs);
   line-height: 16px;
 }
@@ -76,8 +76,8 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
-  padding-block: 8px 2px;
-  padding-inline: 32px 8px;
+  padding-block: var(--rp-space-2) var(--rp-space-half);
+  padding-inline: var(--rp-space-8) var(--rp-space-2);
 }
 .rp-popover [role='menu'],
 .rp-popover [role='listbox'],
@@ -94,14 +94,14 @@
 }
 .rp-popover::-webkit-scrollbar-track {
   background: transparent;
-  margin: 8px 0;
+  margin: var(--rp-space-2) 0;
 }
 /* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
 .rp-popover {
   background: var(--rp-surface);
   border: 1px solid var(--rp-popover-border);
   border-radius: var(--rp-r-lg);
-  padding: 8px;
+  padding: var(--rp-space-2);
   overflow: hidden auto;
   scrollbar-color: var(--rp-hl-high) transparent;
   box-shadow: var(--rp-elevated);
@@ -118,14 +118,14 @@
 .rp-popover-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 8px;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-2);
   outline: none;
 }
 .rp-popover-head {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--rp-space-half);
 }
 /* An untitled note in a popover: running text at the popover's own inset. */
 .rp-popover-note {
@@ -134,14 +134,13 @@
   line-height: 1.5;
 }
 .rp-popover-note p {
-  margin: 0 0 8px;
+  margin: 0 0 var(--rp-space-2);
 }
 /* A help button, after S2's ContextualHelp: an icon beside the label it explains, kept within the label's line. */
 .rp-btn.rp-help {
   width: 24px;
   height: 24px;
-  margin-block: -4px;
-  margin-inline-start: 2px;
+  margin-inline-start: var(--rp-space-half);
   vertical-align: middle;
   color: var(--rp-subtle);
 }
@@ -184,9 +183,9 @@
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 8px;
+  column-gap: var(--rp-space-2);
   min-height: var(--rp-control);
-  padding: 4px 8px;
+  padding: var(--rp-space-1) var(--rp-space-2);
   border-radius: var(--rp-r-md);
   cursor: default;
   outline: none;
@@ -213,24 +212,19 @@
 }
 .rp-item.plain {
   grid-template-columns: minmax(0, 1fr) auto;
-  padding-inline-start: 12px;
+  padding-inline-start: var(--rp-space-3);
 }
-/* A narrow menu keeps the whole title: a description that no longer fits beside it wraps onto the lines below it. */
+/* Descriptions take a second row, as in S2 menu items. */
 .rp-item-text {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  column-gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  row-gap: var(--rp-space-1);
   min-width: 0;
 }
 .rp-item-text > .desc {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-/* Why a disabled action cannot run takes its own line under the name. */
-.rp-item-text > .desc.reason {
-  flex-basis: 100%;
 }
 .rp-item.negative {
   color: var(--rp-negative-text);
@@ -251,8 +245,8 @@
 .rp-subitem > .desc {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-inline-start: 16px;
+  gap: var(--rp-space-1);
+  margin-inline-start: var(--rp-space-4);
 }
 /* The down chevron turned to point at the inline end or start; --rp-dir turns it the other way right to left. */
 .rp-chev-end.rp-icon,

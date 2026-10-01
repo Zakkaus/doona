@@ -253,6 +253,11 @@ h3.rp-label {
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
+.rp-tab[data-focus-visible],
+.rp-seg .rp-btn[data-focus-visible] {
+  outline: var(--rp-focus-width) solid var(--rp-accent);
+  outline-offset: calc(-1 * var(--rp-focus-width));
+}
 /* These roots carry descendant focus state; only the focused control draws the ring. */
 :is(.rp-picker, .rp-tabs)[data-focus-visible] {
   outline: none;

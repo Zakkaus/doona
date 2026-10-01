@@ -17,7 +17,13 @@ export type SearchSection = {id: string; title?: string; items: SearchItem[]};
 const choice = (item: SearchItem) => (
   <ListBoxItem key={item.id} id={item.id} className="rp-item" textValue={item.keywords ? `${item.label} ${item.keywords}` : item.label}>
     <Check />
-    <ItemText i={item}>{item.desc && <span className={cx('desc', item.tone)}>{item.desc}</span>}</ItemText>
+    <ItemText i={item}>
+      {item.desc && (
+        <Text slot="description" className={cx('desc', item.tone)}>
+          {item.desc}
+        </Text>
+      )}
+    </ItemText>
   </ListBoxItem>
 );
 export function SearchSelect({

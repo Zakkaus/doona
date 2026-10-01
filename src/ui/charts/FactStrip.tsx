@@ -8,6 +8,7 @@ export type ChartFact = {
   value: string;
   nodeName?: boolean;
   caption?: string;
+  valueRole?: 'name';
   tone?: 'negative' | 'notice';
   icon?: ReactNode;
   tint?: 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
@@ -25,14 +26,16 @@ export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
       style={{['--facts' as string]: facts.length, ['--facts-rest' as string]: facts.length - 1}}
     >
       {facts.map((fact, i) => (
-        <div key={fact.label} className={'rp-card' + (fact.tone ? ' ' + fact.tone : '')}>
+        <div key={fact.label} className={'rp-card' + (fact.tone ? ' ' + fact.tone : '') + (fact.valueRole === 'name' ? ' rp-fact-name' : '')}>
           <dt className={'rp-tile-head' + (fact.tint ? ' rp-tint-' + fact.tint : '')}>
             {fact.icon}
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
             {fact.nodeName ? (
-              <NodeName name={fact.value} className="rp-big" cut={lead && i === 0 ? 'start' : undefined} />
+              <NodeName name={fact.value} className="rp-big" cut={fact.valueRole === 'name' ? undefined : lead && i === 0 ? 'start' : undefined} />
+            ) : fact.valueRole === 'name' ? (
+              <span className="rp-big">{fact.value}</span>
             ) : (
               <TextTooltip className="rp-big" cut={lead && i === 0 ? 'start' : undefined}>
                 {fact.value}
