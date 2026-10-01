@@ -68,7 +68,7 @@ test('the traffic figures stay while the runtime read fails, muted until it reco
   const runtime = /\/api\/v1\/runtime$/;
   expectLoadFailures(page, runtime);
   await page.goto('/#/activity');
-  const tiles = page.locator('.rp-strip .rp-card').filter({hasNot: page.getByRole('button', {name: 'Groups', exact: true})});
+  const tiles = page.locator('.rp-strip .rp-card').filter({hasNot: page.getByRole('button', {name: /^Groups: /})});
   const figures = tiles.locator('.rp-big');
   await expect(figures).toHaveCount(4);
   await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
@@ -177,7 +177,7 @@ test('read-only main configuration keeps the current mode and explains the write
 test('the compact group menu selects by keyboard and returns focus to its trigger', async ({page}) => {
   await page.addInitScript(() => localStorage.setItem('doona-mock-big', '7'));
   await page.goto('/#/activity');
-  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  const trigger = page.getByRole('button', {name: /^Groups: /});
   await trigger.focus();
   await page.keyboard.press('ArrowDown');
   const menu = page.getByRole('menu', {name: 'Groups', exact: true});
@@ -189,7 +189,7 @@ test('the compact group menu selects by keyboard and returns focus to its trigge
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await expect(menu).toHaveCount(0);
-  await expect(trigger).toContainText(name!);
+  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe(name);
   await expect(trigger).toBeFocused();
 });
 
@@ -210,49 +210,56 @@ test('the latency card follows the busiest group, remembers a choice and resolve
   await page.addInitScript(() => localStorage.setItem('doona-activity-node', 'jp-01'));
   await page.clock.install();
   await page.goto('/#/activity');
-  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  const trigger = page.getByRole('button', {name: /^Groups: /});
   const menu = page.getByRole('menu', {name: 'Groups', exact: true});
   const tile = page.locator('.rp-card', {hasText: 'Latency'}).first();
-  await expect(trigger).toHaveText('proxy');
-  await expect(tile.locator('.rp-tile-val')).toHaveText('sg-0163 ms');
+  await expect(trigger).toHaveText('sg-01');
+  await expect(trigger).toHaveAccessibleName('Groups: sg-01');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('63 ms');
   expect(reads).toBe(1);
   busiest = 'gaming';
   await page.clock.fastForward(20100);
-  await expect(trigger).toHaveText('gaming');
-  await expect(tile.locator('.rp-tile-val')).toHaveText('hk-0291 ms');
+  await expect(trigger).toHaveText('hk-02');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('91 ms');
   expect(reads).toBe(2);
   await trigger.click();
-  const follow = menu.getByRole('menuitemradio', {name: 'Follow the busiest group', exact: true});
-  await expect(menu.getByRole('menuitemradio').first()).toHaveText('Follow the busiest group');
+  const follow = menu.getByRole('menuitemradio', {name: 'Automatic', exact: true});
+  await expect(menu.getByRole('menuitemradio').first()).toHaveText('Automatic');
   await expect(follow).toHaveAttribute('aria-checked', 'true');
-  await expect(menu.locator('[data-key="proxy"] .desc')).toHaveText('sg-01');
+  await expect(menu.locator('p, .rp-menu-note, .desc')).toHaveCount(0);
+  await expect(menu.getByRole('menuitemradio')).toHaveText(['Automatic', ...groups.map(group => group.name)]);
+  await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
   await menu.locator('[data-key="proxy"]').click();
-  await expect(trigger).toHaveText('proxy');
+  await expect(trigger).toHaveText('sg-01');
+  await expect(trigger).toHaveAccessibleName('Groups: sg-01');
   expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe('proxy');
   groups[1].selection.tcp_member_id = 'hk-01';
   await page.clock.fastForward(30100);
-  await expect(trigger).toHaveText('proxy');
-  await expect(tile.locator('.rp-tile-val')).toHaveText('hk-0184 ms');
+  await expect(trigger).toHaveText('hk-01');
+  await expect(trigger).toHaveAccessibleName('Groups: hk-01');
+  await expect(tile.locator('.rp-tile-val')).toHaveText('84 ms');
   await page.reload();
-  await expect(trigger).toHaveText('proxy');
+  await expect(trigger).toHaveText('hk-01');
+  await expect(trigger).toHaveAccessibleName('Groups: hk-01');
   await trigger.click();
   await expect(menu.locator('[data-key="proxy"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
   await follow.click();
-  await expect(trigger).toHaveText('gaming');
+  await expect(trigger).toHaveText('hk-02');
   expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
   await trigger.click();
   await menu.locator('[data-key="proxy"]').click();
   const originalGroups = groups;
   groups = groups.filter(group => group.name !== 'proxy');
   await page.reload();
-  await expect(trigger).toHaveText('gaming');
+  await expect(trigger).toHaveText('hk-02');
   await trigger.click();
   await expect(follow).toHaveAttribute('aria-checked', 'true');
   expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
   await follow.click();
   groups = originalGroups;
   await page.clock.fastForward(30100);
-  await expect(trigger).toHaveText('gaming');
+  await expect(trigger).toHaveText('hk-02');
   expect(backend.requests.every(request => request.method() === 'GET')).toBe(true);
 });
 
@@ -273,7 +280,7 @@ test('group latency preserves the ranking poll pause with follow and manual choi
   await page.clock.runFor(100);
   await page.clock.fastForward(20100);
   await expect.poll(() => reads).toBe(2);
-  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  const trigger = page.getByRole('button', {name: /^Groups: /});
   await page.getByRole('heading', {name: 'Activity', exact: true}).evaluate(el => el.scrollIntoView({block: 'start'}));
   await expect.poll(async () => (await ranking.boundingBox())!.y).toBeGreaterThan(1000);
   await page.clock.runFor(100);
@@ -310,7 +317,7 @@ test('the latency tile names an active node that is unavailable and keeps its si
   await expect(tile.getByRole('link')).toHaveAccessibleName(/^[^→]+: \d/);
   await expect(tile.locator('.rp-light')).toHaveCount(0);
   const height = (await tile.boundingBox())!.height;
-  await page.getByRole('button', {name: 'Groups', exact: true}).click();
+  await page.getByRole('button', {name: /^Groups: /}).click();
   const jp = page.getByRole('menuitemradio').filter({hasText: 'gaming'});
   await scrollIntoList(jp);
   await jp.click();
@@ -318,19 +325,16 @@ test('the latency tile names an active node that is unavailable and keeps its si
   expect((await tile.boundingBox())!.height).toBe(height);
 });
 
-test('the latency group menu says it only changes the latency shown', async ({page}) => {
+test('the latency card explains automatic selection from its info button', async ({page}) => {
   await page.goto('/#/activity');
-  await page.getByRole('button', {name: 'Groups', exact: true}).click();
-  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
-  await expect(menu).toHaveAccessibleDescription(
-    'By default, this card shows the active node of the policy group with the most connections. Choosing a group changes only this card and does not change routing.'
-  );
-  await expect(
-    page.getByText(
-      'By default, this card shows the active node of the policy group with the most connections. Choosing a group changes only this card and does not change routing.',
-      {exact: true}
-    )
-  ).toBeVisible();
+  const help = page.locator('.rp-latency').getByRole('button', {name: 'About Latency', exact: true});
+  await help.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {name: 'Latency', exact: true});
+  await expect(dialog).toContainText('By default, this card follows the group with the most connections; choosing a group changes only this card.');
+  await page.keyboard.press('Escape');
+  await expect(help).toBeFocused();
+  await expect(dialog).toHaveCount(0);
 });
 
 test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
@@ -494,7 +498,7 @@ for (const width of [390, 1440]) {
   });
 }
 
-// The picker stays inside the tile; phones keep two tiles per row and truncate long group names.
+// The picker stays inside the tile; phones keep two tiles per row and truncate long node names.
 for (const [width, lang] of [
   [320, 'en'],
   [320, 'zh-TW'],
@@ -507,11 +511,13 @@ for (const [width, lang] of [
     test.use({viewport: {width, height: 800}, storage: {'doona-lang': lang}});
     test('keeps two tiles to a row and the group picker inside its tile', async ({page}) => {
       const backend = await mockBackend(page);
-      backend.handlers['GET groups'] = async () =>
-        (await backend.api.groups()).map(group => ({...group, name: `${group.name}-relay-through-a-long-provider-name`}));
+      backend.handlers['GET nodes'] = async () => {
+        const result = await backend.api.nodes({limit: 1000});
+        return {...result, nodes: result.nodes.map(node => ({...node, name: `${node.name}-relay-through-a-long-provider-name`}))};
+      };
       await page.goto('/#/activity');
-      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-selectbtn')});
-      const picker = tile.locator('.rp-tile-head .rp-selectbtn');
+      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-select')});
+      const picker = tile.locator('.rp-tile-head .rp-select');
       await expect(picker).toContainText('-relay-through-a-long-provider-name');
       const tops = await page.locator('.rp-strip > *').evaluateAll(tiles => tiles.map(el => Math.round(el.getBoundingClientRect().top)));
       const rows = [...new Set(tops)].map(top => tops.filter(other => other === top).length);
@@ -519,7 +525,7 @@ for (const [width, lang] of [
       const {edge, left, start, parts, name, gap, height, chevron, control} = await tile.evaluate(el => {
         const box = el.getBoundingClientRect();
         const style = getComputedStyle(el);
-        const button = el.querySelector('.rp-tile-head .rp-selectbtn')!;
+        const button = el.querySelector('.rp-tile-head .rp-select')!;
         const text = button.querySelector<HTMLElement>('.rp-truncate:last-child');
         return {
           edge: box.right - parseFloat(style.paddingInlineEnd),
@@ -538,18 +544,19 @@ for (const [width, lang] of [
       expect(name, 'the name is ellipsised').not.toBeNull();
       expect(name!.full).toBeGreaterThan(name!.shown);
       expect(name!.overflow).toBe('ellipsis');
-      expect(gap).toBe('8px');
+      expect(gap).toBe(width < 600 ? '2px' : '4px');
       expect(height).toBe(control);
-      expect(chevron).toBe(20);
+      expect(chevron).toBe(width < 600 ? 14 : 20);
       if (width === 1440) {
         await expect(picker.locator('.rp-truncate')).toHaveAttribute('data-tip');
         await picker.focus();
         await page.keyboard.press('Tab');
         await page.keyboard.press('Shift+Tab');
-        await expect(page.getByRole('tooltip')).toHaveText((await picker.textContent())!);
+        await expect(page.getByRole('tooltip').filter({hasText: (await picker.textContent())!})).toBeVisible();
       }
       await picker.click();
-      await expect(page.getByRole('menuitemradio', {name: /-relay-through-a-long-provider-name/}).first()).toBeVisible();
+      await expect(page.getByRole('menuitemradio', {name: 'proxy', exact: true})).toBeVisible();
+      await expect(page.getByRole('menu')).not.toContainText('-relay-through-a-long-provider-name');
     });
   });
 
@@ -587,7 +594,7 @@ test.describe('many outbounds', () => {
         await route.continue();
       });
       await page.goto('/#/activity');
-      const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+      const trigger = page.getByRole('button', {name: /^Groups: /});
       await expect(trigger).toBeVisible();
       expect(fetched).toBe(0);
       await trigger.hover();
@@ -607,12 +614,12 @@ test.describe('many outbounds', () => {
   test('the group menu searches and selects the filtered group by keyboard', async ({page}) => {
     await mockManyGroups(page);
     await page.goto('/#/activity');
-    const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+    const trigger = page.getByRole('button', {name: /^Groups: /});
     await trigger.click();
     const menu = page.getByRole('menu', {name: 'Groups', exact: true});
     const search = page.getByRole('searchbox', {name: 'Groups'});
     await expect(search).toBeFocused();
-    await expect(menu.getByRole('menuitemradio').first()).toHaveText('Follow the busiest group');
+    await expect(menu.getByRole('menuitemradio').first()).toHaveText('Automatic');
     expect(await menu.getByRole('menuitemradio').count()).toBeLessThan(41);
     await menu.evaluate(el => el.scrollTo(0, el.scrollHeight));
     const target = menu.getByRole('menuitemradio').last();
@@ -620,17 +627,20 @@ test.describe('many outbounds', () => {
     expect(name).not.toBeNull();
     await search.fill(name!);
     await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
-    const activeNode = await menu.locator('.desc').innerText();
+    await expect(menu.locator('.desc')).toHaveCount(0);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(menu).toHaveCount(0);
-    await expect(trigger).toContainText(name!);
+    expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe(name);
     await expect(trigger).toBeFocused();
     await trigger.click();
     // The virtual list renders the selected row only once the filter narrows it into view.
     await search.fill(name!);
     await expect(menu.getByRole('menuitemradio', {name: new RegExp(name!)})).toHaveAttribute('aria-checked', 'true');
-    await expect(menu.locator('.desc')).toHaveText(activeNode);
+    await expect(menu.locator('.desc')).toHaveCount(0);
+    await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
+    await expect(trigger).toHaveText('hk-01');
+    await expect(trigger).toHaveAccessibleName('Groups: hk-01');
     await page.keyboard.press('Escape');
     await expect(search).toHaveValue('');
     await page.keyboard.press('Escape');
@@ -717,13 +727,13 @@ test('local traffic renders without history and latency falls back to a node wit
   });
   await page.goto('/#/activity');
   await expect(page.getByRole('region', {name: 'Traffic', exact: true}).locator('.rp-activity-surface')).toBeVisible();
-  const trigger = page.getByRole('button', {name: 'Groups', exact: true});
+  const trigger = page.getByRole('button', {name: /^Groups: /});
   const card = trigger.locator('xpath=ancestor::*[contains(@class,"rp-card")][1]');
   await expect(trigger).toHaveText('HK');
   await expect(card.locator('.rp-big')).toContainText('ms');
   await trigger.click();
   await expect(page.getByRole('menuitemradio')).toHaveCount(1);
-  await expect(page.getByRole('menuitemradio')).toHaveText('Follow the busiest group');
+  await expect(page.getByRole('menuitemradio')).toHaveText('Automatic');
 });
 
 browserTest('configuration read failures are shown instead of write restrictions', async ({page}) => {
@@ -754,7 +764,7 @@ test('optional runtime does not block independent activity sections or poll an u
   capabilities.resources.runtime.available = false;
   await page.clock.install();
   await page.goto('/#/activity');
-  await expect(page.getByRole('button', {name: 'Groups', exact: true})).toBeVisible();
+  await expect(page.getByRole('button', {name: /^Groups: /})).toBeVisible();
   await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.rp-activity-surface')).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
   await expect(page.getByText('Not provided by this backend', {exact: true})).toBeVisible();
@@ -901,13 +911,75 @@ test('the notices card says what is missing to route through a proxy until it is
   await expect(card.getByText('No routing rules configured')).toHaveCount(0);
 });
 
-test('the latency picker shows the whole group name on a phone', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+test('the latency picker shows the resolved node on a phone', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-CN'));
   await page.setViewportSize({width: 390, height: 900});
   await page.goto('/#/activity');
-  const picker = page.locator('.rp-latency .rp-selectbtn');
-  await expect(picker).toContainText('proxy');
-  // The caption is visually hidden on a phone tile, so the group name is not cut.
+  const picker = page.locator('.rp-latency .rp-select');
+  await expect(picker).toContainText('hk-01');
+  await expect(picker).toHaveAccessibleName('组：hk-01');
   const cut = await picker.evaluate(button => [...button.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1));
   expect(cut).toBe(false);
+});
+
+// Relative boxes measured at 6bb91def, immediately before #261.
+for (const [lang, scheme, width, title, trigger, valueColor] of [
+  ['en', 'light', 1440, [45, 26, 45, 14], [98, 17, 71, 32], 'rgb(70, 66, 97)'],
+  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)'],
+  ['zh-CN', 'light', 390, [45, 26, 24, 14], [77, 15, 53, 36], 'rgb(70, 66, 97)']
+] as const)
+  test.describe(`${lang} ${scheme} original latency geometry`, () => {
+    test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang, 'doona-scheme': scheme}});
+    test('preserves the title, node picker and large value boxes', async ({page}) => {
+      await page.goto('/#/activity');
+      const card = page.locator('.rp-latency');
+      await expect(card.locator('.rp-select')).toHaveText('hk-01');
+      await expect(card.locator('.rp-tile-val')).toHaveText('84 ms');
+      await card.evaluate(async el => {
+        const targets = [el.querySelector('.rp-tile-head')!, el.querySelector('.rp-big')!];
+        await Promise.all(targets.map(target => document.fonts.load(getComputedStyle(target).font, target.textContent ?? '')));
+        await document.fonts.ready;
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      });
+      const actual = await card.evaluate(el => {
+        const root = el.getBoundingClientRect();
+        const box = (r: DOMRect) => [r.x - root.x, r.y - root.y, r.width, r.height];
+        const head = el.querySelector('.rp-tile-head')!;
+        const range = document.createRange();
+        const caption = head.querySelector('.rp-tile-caption');
+        if (caption) range.selectNodeContents(caption);
+        else range.selectNode([...head.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())!);
+        const picker = el.querySelector('.rp-select')!;
+        const value = el.querySelector('.rp-big')!;
+        const ps = getComputedStyle(picker);
+        const vs = getComputedStyle(value);
+        return {
+          title: box(range.getBoundingClientRect()),
+          trigger: box(picker.getBoundingClientRect()),
+          value: box(value.getBoundingClientRect()),
+          pickerStyle: [ps.backgroundColor, ps.fontSize, ps.lineHeight, ps.fontWeight],
+          valueStyle: [vs.fontSize, vs.lineHeight, vs.fontWeight, vs.color]
+        };
+      });
+      for (const [key, expected] of [
+        ['title', title],
+        ['trigger', trigger],
+        ['value', [17, width < 600 ? 61 : 63, 77, 28]]
+      ] as const)
+        actual[key].forEach((coordinate, i) => expect(Math.abs(coordinate - expected[i]), `${key}[${i}]`).toBeLessThanOrEqual(1));
+      expect(actual.pickerStyle).toEqual(['rgba(0, 0, 0, 0)', '12px', '16px', '400']);
+      expect(actual.valueStyle).toEqual(['22px', '28px', '700', valueColor]);
+    });
+  });
+
+test('the latency menu contains only Automatic and group names with one checked choice', async ({page}) => {
+  await page.goto('/#/activity');
+  await page.getByRole('button', {name: /^Groups: /}).click();
+  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
+  await expect(page.locator('.rp-latency .rp-select')).toHaveAccessibleName('Groups: hk-01');
+  await expect(menu).toHaveAccessibleName('Groups');
+  await expect(menu.getByRole('menuitemradio')).toHaveText(['Automatic', 'proxy', 'resilient', 'gaming', 'skylink']);
+  await expect(menu.locator('p, .rp-menu-note, .desc')).toHaveCount(0);
+  await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
+  await expect(menu.getByRole('menuitemradio', {name: 'Automatic', exact: true})).toHaveAttribute('aria-checked', 'true');
 });

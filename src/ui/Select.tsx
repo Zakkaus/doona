@@ -137,7 +137,7 @@ export function MenuButton({
   return (
     <MenuTrigger>
       <RButton
-        className={appearance ? 'rp-selectbtn' : buttonClass({quiet, small, icon: !chevron})}
+        className={appearance ? 'rp-select' : buttonClass({quiet, small, icon: !chevron})}
         aria-label={label}
         aria-describedby={reasonId}
         isDisabled={isDisabled}
@@ -184,7 +184,7 @@ function SectionMenu({
   const menu = (
     <Menu
       aria-label={label}
-      aria-labelledby={labelledBy}
+      aria-labelledby={labelledBy ?? ''}
       className={long ? 'rp-menu-scroll' : undefined}
       // eslint-disable-next-line jsx-a11y/no-autofocus -- false only: the caller places focus instead of the trigger
       autoFocus={focusedByCaller ? false : undefined}
@@ -273,7 +273,7 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
   }, [open, left]);
   if (!inline)
     return (
-      <Menu aria-label={label}>
+      <Menu aria-label={label} aria-labelledby="">
         {submenus.map(submenu => (
           <SubmenuTrigger key={submenu.label}>
             <SubmenuItem {...submenu} />
@@ -326,6 +326,7 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
     <div ref={root} className="rp-drill" tabIndex={-1} onKeyDownCapture={onKey}>
       <Menu
         aria-label={label}
+        aria-labelledby=""
         // eslint-disable-next-line jsx-a11y/no-autofocus -- false only, on return: focus goes back to the row just left
         autoFocus={left == null ? undefined : false}
         shouldCloseOnSelect={false}
@@ -354,8 +355,7 @@ function FlatMenu({
   value,
   onChange,
   onAction,
-  searchLabel,
-  description
+  searchLabel
 }: {
   label: string;
   items: Items;
@@ -364,15 +364,13 @@ function FlatMenu({
   onChange?: (key: string) => void;
   onAction?: (key: string) => void;
   searchLabel?: string;
-  description?: string;
 }) {
-  const descriptionId = useId();
   const list = typeof items === 'function' ? items() : items;
   const long = !!searchLabel && longList(list.length);
   const menu = (
     <Menu
       aria-label={label}
-      aria-describedby={description ? descriptionId : undefined}
+      aria-labelledby=""
       className={long ? 'rp-menu-scroll' : undefined}
       selectionMode={selectionMode}
       disallowEmptySelection={selectionMode === 'single'}
@@ -382,23 +380,17 @@ function FlatMenu({
       shouldCloseOnSelect={selectionMode === 'multiple' ? false : undefined}
       onAction={onAction && (key => onAction(String(key)))}
     >
-      <MenuSection aria-label={label}>
-        {description && (
-          <Header className="rp-sec-h rp-menu-note">
-            <span id={descriptionId}>{description}</span>
-          </Header>
-        )}
-        {list.map(item => (
-          <MenuChoice key={item.id} item={item} />
-        ))}
-      </MenuSection>
+      {list.map(item => (
+        <MenuChoice key={item.id} item={item} />
+      ))}
     </Menu>
   );
   return long ? <LazySearchList label={searchLabel}>{menu}</LazySearchList> : menu;
 }
 
-type NotFlat = {description?: never; items?: never; selectionMode?: never; value?: never; onChange?: never};
+type NotFlat = {items?: never; selectionMode?: never; value?: never; onChange?: never};
 type NoActions = {actions?: never};
+// Explicit menu names clear MenuTrigger's inherited aria-labelledby, so they can differ from the trigger.
 // A menu of choices: flat, in titled sections each with its own selection, or as rows that each open a submenu of
 // sections. A flat menu marks one choice (`selectionMode` single, the default) or several (`multiple`, each pick
 // toggling one through `onAction`); with neither `value` nor `selectionMode` it is an action menu that only runs
@@ -415,9 +407,9 @@ export function ChoiceMenu({
   actions,
   onAction,
   searchLabel,
-  description,
+  triggerLabel,
   ...props
-}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string; description?: string} & (
+}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string; triggerLabel?: string} & (
     | {
         items: Items;
         selectionMode?: 'single';
@@ -450,26 +442,24 @@ export function ChoiceMenu({
   return (
     <MenuButton
       {...props}
+      label={triggerLabel ?? props.label}
       onIntent={searchLabel && long ? preloadSearchList : undefined}
       content={
-        <>
-          {submenus ? (
-            <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
-          ) : sections ? (
-            <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
-          ) : (
-            <FlatMenu
-              label={props.label}
-              items={items}
-              selectionMode={selectionMode ?? (value == null ? 'none' : 'single')}
-              value={value}
-              onChange={onChange}
-              onAction={onAction}
-              searchLabel={searchLabel}
-              description={description}
-            />
-          )}
-        </>
+        submenus ? (
+          <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
+        ) : sections ? (
+          <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
+        ) : (
+          <FlatMenu
+            label={props.label}
+            items={items}
+            selectionMode={selectionMode ?? (value == null ? 'none' : 'single')}
+            value={value}
+            onChange={onChange}
+            onAction={onAction}
+            searchLabel={searchLabel}
+          />
+        )
       }
     />
   );

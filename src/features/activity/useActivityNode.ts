@@ -19,7 +19,12 @@ export function useActivityNode(connections: ConnectionList | undefined) {
       return '';
     }
   });
-  if (chosen && groups.data && !groups.loading && !groups.error && !groups.data.some(group => group.id === chosen)) choose('');
+  useEffect(() => {
+    if (chosen && groups.data && !groups.loading && !groups.error && !groups.data.some(group => group.id === chosen)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reconcile the persisted choice after the group snapshot commits.
+      choose('');
+    }
+  }, [chosen, groups.data, groups.loading, groups.error]);
   useEffect(() => {
     try {
       if (chosen) localStorage.setItem(storageKeys.activityGroup, chosen);

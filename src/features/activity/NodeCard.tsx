@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Card, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
+import {Card, HelpRow, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode} from './useActivityNode';
 import {GroupMenu} from './GroupMenu';
@@ -13,7 +13,11 @@ export function NodeCard({connections}: {connections: ConnectionList | undefined
       className="rp-latency"
       title={t('act.latency')}
       tile={{icon: <Clock />, tint: 5, kind: 'metric'}}
-      aside={<GroupMenu label={t('policy.pickGroups')} model={vm} />}
+      aside={
+        <HelpRow help={{title: t('act.latency'), text: t('act.groupPickHelp')}}>
+          <GroupMenu label={t('policy.pickGroups')} model={vm} />
+        </HelpRow>
+      }
     >
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-tile-body">
@@ -22,7 +26,6 @@ export function NodeCard({connections}: {connections: ConnectionList | undefined
         ) : (
           <>
             <span className="rp-tile-val">
-              <TextTooltip>{vm.name || '—'}</TextTooltip>
               {/* The value opens the node on the nodes page, as the connections tile opens the list it counts. */}
               {vm.href ? (
                 <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>

@@ -68,21 +68,21 @@ const connection = (outbound: string | null, state: Connection['state'] = 'activ
 it('counts active TCP and UDP connections by outbound name and keeps group list order on ties', () => {
   const {nodes, groups} = groupFixtures();
   const snapshot: ConnectionList = {...connections, tcp: [connection('resilient'), connection('proxy')], udp: [connection('resilient')]};
-  expect(activityGroupView(groups, nodes, '', t, snapshot).groupName).toBe('resilient');
+  expect(activityGroupView(groups, nodes, '', t, snapshot)).toMatchObject({id: 'sg-01', name: 'sg-01', latency: '63 ms'});
   const ignored = ['closed', 'blocked', 'failed', 'dialing'].map(state => connection('resilient', state as Connection['state']));
   expect(
-    activityGroupView(groups, nodes, '', t, {...snapshot, tcp: [...snapshot.tcp, ...ignored, connection(null), connection('missing')], udp: []}).groupName
-  ).toBe('proxy');
+    activityGroupView(groups, nodes, '', t, {...snapshot, tcp: [...snapshot.tcp, ...ignored, connection(null), connection('missing')], udp: []})
+  ).toMatchObject({id: 'hk-01', name: 'hk-01', latency: '84 ms'});
   const renamed = groups.map(group => ({...group, id: `id-${group.id}`}));
-  expect(activityGroupView(renamed, nodes, '', t, snapshot).groupName).toBe('resilient');
+  expect(activityGroupView(renamed, nodes, '', t, snapshot)).toMatchObject({id: 'sg-01', name: 'sg-01', latency: '63 ms'});
 });
 
 it('resolves nested groups by member ID, keeps one transport and handles missing or cyclic selections', () => {
   const {nodes, groups} = groupFixtures();
   groups[0].selection.tcp_member_id = groups[1].id;
-  expect(activityGroupView(groups, nodes, groups[0].id, t)).toMatchObject({id: 'sg-01', name: 'sg-01', groupName: 'proxy', latency: '63 ms'});
+  expect(activityGroupView(groups, nodes, groups[0].id, t)).toMatchObject({id: 'sg-01', name: 'sg-01', latency: '63 ms'});
   groups[1].selection.tcp_member_id = null;
-  expect(activityGroupView(groups, nodes, groups[0].id, t)).toMatchObject({id: '', name: '', groupName: 'proxy', latency: '—'});
+  expect(activityGroupView(groups, nodes, groups[0].id, t)).toMatchObject({id: '', name: '', latency: '—'});
   groups[0].selection.tcp_member_id = null;
   groups[0].selection.udp_member_id = groups[1].id;
   expect(activityGroupView(groups, nodes, groups[0].id, t).id).toBe('sg-01');
@@ -97,7 +97,7 @@ it('uses the first measured active group without connections and the node fallba
   const {nodes, groups} = groupFixtures();
   groups[0].selection.tcp_member_id = 'jp-01';
   for (const snapshot of [undefined, {...connections, tcp: [], udp: []}, {...connections, tcp: [connection('missing')], udp: []}]) {
-    expect(activityGroupView(groups, nodes, '', t, snapshot).groupName).toBe('resilient');
+    expect(activityGroupView(groups, nodes, '', t, snapshot)).toMatchObject({id: 'sg-01', name: 'sg-01', latency: '63 ms'});
   }
   expect(activityGroupView([], nodes, '', t)).toMatchObject({id: 'hk-01', name: 'hk-01', chosen: '', options: []});
   expect(activityGroupView([], [], '', t).latency).toBe('—');

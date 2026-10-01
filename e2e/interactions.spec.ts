@@ -231,7 +231,7 @@ test('a segmented marker inside a hidden tab panel keeps its place', async ({pag
 test('a tile whose value links to its source answers hover as a linked card', async ({page}) => {
   await page.goto('/#/activity');
   // The latency tile: it also holds a group menu, which must stay a control of its own.
-  const card = page.locator('.rp-card', {has: page.getByRole('button', {name: 'Groups', exact: true})});
+  const card = page.locator('.rp-card', {has: page.getByRole('button', {name: /^Groups: /})});
   const link = card.locator('.rp-tile-val > .rp-link');
   await expect(link).toBeVisible();
   const box = (await card.boundingBox())!;
