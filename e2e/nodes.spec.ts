@@ -465,7 +465,7 @@ test('an unspecified subscription interval claims neither manual-only nor an eng
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
-  await expect(subscription.getByRole('link', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('—');
+  await expect(subscription.getByRole('link', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('Edit');
 });
 
 test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {

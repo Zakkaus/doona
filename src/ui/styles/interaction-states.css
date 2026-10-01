@@ -300,6 +300,15 @@ h3.rp-label {
   color: var(--rp-accent-text);
   text-decoration: none;
 }
+.rp-link[data-layout] {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+.rp-link[data-layout='inline'] {
+  min-height: 0;
+  padding: 0;
+  vertical-align: baseline;
+}
 /* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
 .rp-card > .rp-link {
   margin-inline-start: -8px;

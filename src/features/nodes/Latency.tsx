@@ -28,14 +28,14 @@ export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator, 
   const names = rows.slice(0, named).map((row, index) => (
     <Fragment key={row.id}>
       {index > 0 && separator}
-      <Link appearance="link" href={hrefs.get(row.id) ?? nodeSetHref([row.id])}>
+      <Link appearance="link" layout="inline" href={hrefs.get(row.id) ?? nodeSetHref([row.id])}>
         <NodeName name={row.name} />
       </Link>
     </Fragment>
   ));
   if (rows.length <= named) return names;
   const more = (
-    <Link appearance="link" href={nodeSetHref(rows.map(row => row.id))}>
+    <Link appearance="link" layout="inline" href={nodeSetHref(rows.map(row => row.id))}>
       {t('nodes.latency.more', {n: rows.length - named})}
     </Link>
   );
