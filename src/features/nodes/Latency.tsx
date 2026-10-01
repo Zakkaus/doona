@@ -137,12 +137,6 @@ export function NodeLatency() {
             label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
             rows: group.rows.map(row => {
               const slower = isSlowerThanUsual(row);
-              const details = [
-                t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
-                ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
-                ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
-                ...(slower ? [t('nodes.latency.slower')] : [])
-              ];
               return {
                 id: row.id,
                 label: row.name,
@@ -153,8 +147,12 @@ export function NodeLatency() {
                 range: latencyRange(row),
                 text: formatLatency(row.latest, t),
                 tone: slower ? p.notice : undefined,
-                description: details.join(t('ui.separator')),
-                details
+                details: () => [
+                  t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
+                  ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
+                  ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
+                  ...(slower ? [t('nodes.latency.slower')] : [])
+                ]
               };
             }),
             notes: notes(group.missing)
