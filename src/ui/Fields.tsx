@@ -76,10 +76,11 @@ export function TextField({
   suffix,
   autoComplete,
   spellCheck,
+  'aria-describedby': describedBy,
   ...props
 }: Pick<
   ComponentProps<typeof RTextField>,
-  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled' | 'isRequired'
+  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled' | 'isRequired' | 'aria-describedby'
 > &
   Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> & {
     label: string;
@@ -106,7 +107,14 @@ export function TextField({
   // so the input keeps focus while an error comes and goes.
   if (search) {
     return (
-      <RSearchField {...validity} {...props} aria-label={label} className={cx('rp-search-field', className)} style={width ? {width} : undefined}>
+      <RSearchField
+        {...validity}
+        {...props}
+        aria-label={label}
+        aria-describedby={describedBy}
+        className={cx('rp-search-field', className)}
+        style={width ? {width} : undefined}
+      >
         <span className={cx('rp-input', large && 'lg')}>
           <Search />
           <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
@@ -148,7 +156,7 @@ export function TextField({
       {...validity}
       {...props}
       // The fixed text is read with the field, so a screen reader hears the whole path, not only the value.
-      aria-describedby={[prefix && `${affixId}-prefix`, suffix && `${affixId}-suffix`].filter(Boolean).join(' ') || undefined}
+      aria-describedby={[describedBy, prefix && `${affixId}-prefix`, suffix && `${affixId}-suffix`].filter(Boolean).join(' ') || undefined}
       className={cx(side ? 'rp-cluster' : 'rp-field', className)}
       style={width ? {width} : undefined}
     >

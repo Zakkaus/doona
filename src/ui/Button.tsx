@@ -4,13 +4,12 @@ import {VisuallyHidden} from 'react-aria';
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
 
-// The looks a button, or a link dressed as one, can take. accent / negative are the coloured variants; every neutral
-// button shares one look.
-export type ButtonStyle = {quiet?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
+// Button and LinkButton treatments: secondary is outlined, accent / negative use colour, and the default is filled.
+export type ButtonStyle = {quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
 
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
-export function buttonClass({quiet, small, icon, accent, negative}: ButtonStyle, base = 'rp-btn') {
-  return cx(base, quiet && 'quiet', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
+export function buttonClass({quiet, secondary, small, icon, accent, negative}: ButtonStyle, base = 'rp-btn') {
+  return cx(base, quiet && 'quiet', secondary && 'secondary', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
 }
 
 // The id of the ActionHelp line around a button, which its disabled buttons name as their description.
@@ -295,6 +294,7 @@ export function Link({
   label,
   className,
   quiet,
+  secondary,
   small,
   icon,
   accent,
@@ -306,7 +306,7 @@ export function Link({
     appearance?: 'button' | 'version' | 'link';
     label?: string;
   }) {
-  const base = appearance === 'button' ? buttonClass({quiet, small, icon, accent, negative}) : `rp-${appearance}`;
+  const base = appearance === 'button' ? buttonClass({quiet, secondary, small, icon, accent, negative}) : `rp-${appearance}`;
   return (
     <RLink
       target={external ? '_blank' : undefined}

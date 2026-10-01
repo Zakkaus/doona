@@ -268,7 +268,7 @@ test('the edit dialog makes a node the final outbound and None clears it', async
   // The demo's proxy group names hk-01 as its default, as its running configuration shows.
   await expect(member).toContainText('hk-01');
   await expect(final).toContainText('None');
-  await expect(final).toHaveAccessibleDescription('Used when the group has no eligible member. None sets no fallback.');
+  await expect(final).toHaveAccessibleDescription('Fallback when no member is available. None leaves it unset.');
   await final.click();
   const list = page.getByRole('listbox');
   // The group itself is not offered; the built-ins and the other groups come before the nodes.
@@ -371,7 +371,7 @@ test('a group edit refused over a file changed on disk saves on retry', async ({
   await page.goto('/#/policies');
   await moreAction(page.getByRole('region', {name: 'resilient', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group resilient'});
-  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01, sg-01)');
+  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
   await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
@@ -395,7 +395,7 @@ test('a group edit retried after a refusal writes against the declaration read a
   const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
   await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter 1'}).fill('name(hk-01)');
+  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01)');
   // The concurrent edit quotes the default member: the same member, written differently.
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, main.content!.replace('default: hk-01', "default: 'hk-01'"), `"${main.content_sha256}"`);

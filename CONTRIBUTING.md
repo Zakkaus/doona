@@ -199,20 +199,20 @@ doona does not depend on `@react-spectrum/s2`. Version 1.7.1 unpacks to about 54
 
 Each role has one kit component in `src/ui`. Variants are typed props, never class strings, and styling uses tokens only. Features compose kit components and do not use React Aria components or kit class names directly; a composition with a single consumer may stay in its feature until a second one needs it.
 
-| Role (S2 name)                  | Kit component                                |
-| ------------------------------- | -------------------------------------------- |
-| Button, LinkButton              | `Button`, `Link`                             |
-| ActionGroup                     | `ActionGroup`                                |
-| Menu, ActionMenu                | `ChoiceMenu`                                 |
-| Picker                          | `LabeledSelect`, `InlineSelect`              |
-| SegmentedControl                | `Segmented`                                  |
-| RadioGroup, Radio               | `RadioGroup`, `Radio`                        |
-| Card                            | `Card`                                       |
-| Dialog and form sections        | `ModalDialog`, `DialogForm`, `DialogSection` |
-| TextField, Switch               | `TextField`, `Switch`                        |
-| TableView                       | `DataTable`                                  |
-| InlineAlert, IllustratedMessage | `InlineAlert`, `Empty`, `ErrorMessage`       |
-| TagGroup                        | `Tags`, `Tag`                                |
+| Role (S2 name)                  | Kit component                                     |
+| ------------------------------- | ------------------------------------------------- |
+| Button, LinkButton              | `Button` (secondary outline, accent fill), `Link` |
+| ActionGroup                     | `ActionGroup`                                     |
+| Menu, ActionMenu                | `ChoiceMenu`                                      |
+| Picker                          | `LabeledSelect`, `InlineSelect`                   |
+| SegmentedControl                | `Segmented`                                       |
+| RadioGroup, Radio               | `RadioGroup`, `Radio`                             |
+| Card                            | `Card`                                            |
+| Dialog and form sections        | `ModalDialog`, `DialogForm`, `DialogSection`      |
+| TextField, Switch               | `TextField`, `Switch`                             |
+| TableView                       | `DataTable`                                       |
+| InlineAlert, IllustratedMessage | `InlineAlert`, `Empty`, `ErrorMessage`            |
+| TagGroup                        | `Tags`, `Tag`                                     |
 
 What this leaves out, on purpose:
 

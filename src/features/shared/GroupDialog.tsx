@@ -1,6 +1,7 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
+import AddCircle from '../../ui/icons/AddCircle';
 import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
@@ -34,11 +35,13 @@ function Details({details: d}: {details: PolicyDetails}) {
 export function GroupDialog({model: m, details}: {id: string; model: GroupDialogView; details: PolicyDetails | null}) {
   const t = useT();
   const form = useId();
+  const filterHelp = useId();
   return (
     <ModalDialog
       title={m.title}
-      description={m.editing ? m.help : undefined}
+      description={m.editing && !m.name ? m.help : undefined}
       narrow
+      scrollBody
       isOpen={m.open}
       onOpenChange={open => {
         if (!open) m.close();
@@ -46,7 +49,9 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
       footer={close =>
         m.editing ? (
           <>
-            <Button onPress={close}>{t('ui.cancel')}</Button>
+            <Button secondary onPress={close}>
+              {t('ui.cancel')}
+            </Button>
             <Button accent type="submit" form={form} isDisabled={!m.open} isPending={m.busy}>
               {m.submitLabel}
             </Button>
@@ -85,26 +90,47 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
               </InlineAlert>
             )}
             <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
-            {m.filters.map(field => (
-              <TextField
-                key={field.id}
-                label={field.label}
-                value={field.value}
-                placeholder="name(keyword: 'HK')"
-                description={field.id === 0 ? t('policy.filterHelp') : undefined}
-                isDisabled={m.busy}
-                spellCheck={false}
-                onChange={field.change}
-                action={
-                  <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
-                    <Close />
-                  </Button>
-                }
-              />
-            ))}
-            <Button small quiet isDisabled={m.busy} onPress={m.add}>
-              {t('policy.addFilter')}
-            </Button>
+            <div
+              className="group-dialog-filters"
+              role="group"
+              aria-label={t('ui.filter')}
+              aria-describedby={m.name || m.filters.length > 0 ? filterHelp : undefined}
+            >
+              <div className="group-dialog-filter-list">
+                {m.filters.map(field => (
+                  <TextField
+                    key={field.id}
+                    label={field.label}
+                    value={field.value}
+                    placeholder="name(keyword: 'HK')"
+                    aria-describedby={filterHelp}
+                    isDisabled={m.busy}
+                    spellCheck={false}
+                    onChange={field.change}
+                    action={
+                      <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
+                        <Close />
+                      </Button>
+                    }
+                  />
+                ))}
+              </div>
+              {m.filters.length > 0 && (
+                <span id={filterHelp} className="group-dialog-filter-help">
+                  {t('policy.filterHelp')}
+                  {m.name ? ` ${m.help}` : ''}
+                </span>
+              )}
+              <Button secondary isDisabled={m.busy} onPress={m.add}>
+                <AddCircle />
+                {t('policy.addFilter')}
+              </Button>
+              {m.filters.length === 0 && m.name && (
+                <span id={filterHelp} className="group-dialog-filter-help">
+                  {m.help}
+                </span>
+              )}
+            </div>
             {m.routes.map(field => (
               <SearchSelect
                 key={field.id}

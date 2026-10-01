@@ -398,7 +398,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
   await page.goto('/#/policies');
   await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
-  const filter = dialog.getByRole('textbox', {name: 'Filter 1', exact: true});
+  const filter = dialog.getByRole('textbox', {name: 'Filter', exact: true});
   await filter.fill('name(hk-01)');
   await api.replaceConfigSource(main.id, main.content + '\n# concurrent edit\n', `"${main.content_sha256}"`);
   const refreshed = page.waitForResponse('**/api/v1/config');
