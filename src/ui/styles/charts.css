@@ -250,6 +250,15 @@
   font-size: var(--rp-text-sm);
   font-variant-numeric: tabular-nums;
 }
+/* The range line and the average ring take the muted token, so the solid dot stays the row's one strong mark. */
+.rp-markerplot .track .line {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  translate: 0 -50%;
+  border-radius: 1px;
+  background: var(--rp-muted);
+}
 .rp-markerplot .track .at.over .rp-marker.dot {
   border-radius: 50%;
   border-start-start-radius: 2px;
@@ -296,6 +305,20 @@
   border-radius: 50%;
   background: currentColor;
   color: var(--rp-accent);
+}
+.rp-marker.ring {
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--rp-muted);
+  border-radius: 50%;
+  background: var(--rp-base);
+}
+.rp-marker.line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--rp-muted);
 }
 
 /* ---- Heatmap ---- */

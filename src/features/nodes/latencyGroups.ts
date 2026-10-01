@@ -52,6 +52,18 @@ export function usualRange(row: LatencyRow): [number, number] | null {
   return averages.length ? [Math.min(...averages), Math.max(...averages)] : null;
 }
 
+// The ring: the 10-sample average, or the moving one when only that is reported.
+export function latencyAverage(row: LatencyRow): number | null {
+  return row.avg10 ?? row.moving;
+}
+
+// The line: from the least to the greatest of the latest value and the averages, null without an average to join.
+export function latencyRange(row: LatencyRow): [number, number] | null {
+  if (row.moving === null && row.avg10 === null) return null;
+  const values = [row.latest, row.moving, row.avg10].filter((value): value is number => value !== null);
+  return [Math.min(...values), Math.max(...values)];
+}
+
 export function isSlowerThanUsual(row: LatencyRow): boolean {
   const range = usualRange(row);
   return range !== null && row.latest > range[1] * slowerThanUsual.ratio && row.latest - range[1] >= slowerThanUsual.ms;
@@ -67,7 +79,7 @@ export function latencyAverages(groups: LatencyGroup[]) {
 // The axis end: past most of the values rather than the single slowest, so one outlier does not push every other
 // node to the left edge; values beyond it are drawn on the edge with their number.
 export function latencyMax(groups: LatencyGroup[]): number {
-  const values = groups.flatMap(group => group.rows.map(row => row.latest)).sort((a, b) => a - b);
+  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? row.latest, row.avg10 ?? row.latest])).sort((a, b) => a - b);
   const top = Math.max(10, (percentile(values, 90) ?? 0) * 1.25);
   const step = top <= 100 ? 20 : top <= 500 ? 100 : top <= 2000 ? 500 : 1000;
   return Math.ceil(top / step) * step;

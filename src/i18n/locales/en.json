@@ -910,6 +910,7 @@
   "nodes.kindLabel": "Kind",
   "nodes.latency": "Latency",
   "nodes.latency.andMore": "{names} and {more}",
+  "nodes.latency.average": "Average",
   "nodes.latency.avg10": "Average of the last 10",
   "nodes.latency.by": "Group by",
   "nodes.latency.byGroup": "Group",
@@ -925,6 +926,7 @@
   "nodes.latency.moving": "Moving average",
   "nodes.latency.noGroup": "No group",
   "nodes.latency.noProtocol": "Unknown protocol",
+  "nodes.latency.range": "Range",
   "nodes.latency.sample": {
     "one": "From the latest measurement of {n} node",
     "other": "From the latest measurement of {n} nodes"
