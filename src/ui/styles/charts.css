@@ -127,21 +127,35 @@
 }
 
 /* ---- Waffle ---- */
+/* The waffle takes its card's width. Narrow, the legend runs under the grid; from 480px it shares the row with it.
+   Square cells grow to 24px (10 cells and nine 3px gaps: 267px) in a column, so a card beside a taller chart is not
+   pushed past it, and to 32px (347px) beside the legend. The legend's counts align at the far edge. */
 .rp-waffle {
-  display: flex;
-  flex-wrap: wrap;
+  container: rp-waffle / inline-size;
+}
+.rp-waffle .body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: var(--rp-space-4) var(--rp-space-6);
 }
 .rp-waffle .grid {
   display: grid;
-  grid-template-columns: repeat(10, 14px);
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 3px;
+  width: min(100%, 267px);
 }
 .rp-waffle .grid > span {
-  width: 14px;
-  height: 14px;
+  aspect-ratio: 1;
   border-radius: 3px;
+}
+@container rp-waffle (width >= 480px) {
+  .rp-waffle .body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-waffle .grid {
+    width: min(100%, 347px);
+  }
 }
 .rp-waffle .legend,
 .rp-markerplot .legend {
