@@ -100,7 +100,7 @@ for (const width of [320, 360, 390])
             await table.locator('[role=grid]').evaluate(el => {
               (el.tagName === 'TABLE' ? el.parentElement! : el).scrollLeft = 0;
             });
-          const source = tables.first().getByRole('row').filter({hasText: 'sub-c'});
+          const source = tables.first().getByRole('row').filter({hasText: 'harbor'});
           await source.getByRole('gridcell').nth(1).getByRole('button').last().click();
           const positions = () =>
             tables.evaluateAll(els =>

@@ -67,6 +67,8 @@ test('returning to a deep-linked group reopens it while a collapse within the vi
   await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'true');
   await expect(summary).toHaveAttribute('aria-expanded', 'false');
   await page.goBack();
+  await expect(page).toHaveURL(/policies\?group=auto$/);
+  await page.getByRole('region', {name: 'auto', exact: true}).scrollIntoViewIfNeeded();
   await expect(summary).toHaveAttribute('aria-expanded', 'true');
 });
 
@@ -90,14 +92,14 @@ test('releasing a collapsed automatic group clears overrides on both networks', 
 test('toggling interruption stages it with unsaved filters in one conditional source write', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
-  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'Edit group');
+  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
   await expect(dialog.getByRole('switch')).toBeChecked();
   expect(requests.filter(request => request.method() === 'PATCH')).toHaveLength(0);
-  expect((await api.group('proxy')).config.interrupt_connections).toBe(false);
+  expect((await api.group('office')).config.interrupt_connections).toBe(false);
   const origin = (await api.config()).sources.find(source => source.kind === 'main')!;
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeEnabled();
@@ -105,7 +107,7 @@ test('toggling interruption stages it with unsaved filters in one conditional so
   await expect(dialog).toHaveCount(0);
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(saved).toContain('filter: name(hk-01, sg-01)');
-  expect((await api.group('proxy')).config.interrupt_connections).toBe(true);
+  expect((await api.group('office')).config.interrupt_connections).toBe(true);
   const writes = requests.filter(request => request.method() === 'PUT' && new URL(request.url()).pathname.includes('/config/sources/'));
   expect(writes).toHaveLength(1);
   expect(writes[0].headers()['if-match']).toBe(`"${origin.content_sha256}"`);
