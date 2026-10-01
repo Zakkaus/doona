@@ -1,4 +1,14 @@
-import {applyChanges, classifyFilters, compileFilters, isWritableName, readGroupEntries, removalWidens, type GroupChange} from '../../../dae/groups';
+import {
+  applyChanges,
+  classifyFilters,
+  compileFilters,
+  describeFilters,
+  nestedIn,
+  isWritableName,
+  readGroupEntries,
+  removalWidens,
+  type GroupChange
+} from '../../../dae/groups';
 import type {Node, Provider} from '../../../api/model';
 import type {Translator} from '../../../i18n';
 
@@ -24,6 +34,7 @@ export type ArrangeGroup = {
   names: Array<{name: string; isNew: boolean; blocked: string | null}>;
   subscriptions: Array<{tag: string; label: string; count: number | null; isNew: boolean; blocked: string | null}>;
   rules: string[];
+  liveNestedGroups: string[];
   ruleNote: string | null;
   // What the rule lines select today, as names; `ruleMore` counts the rest.
   ruleNodes: string[];
@@ -39,7 +50,9 @@ const RULE_SHOWN = 6;
 // The groups as they will be once the staged changes are applied: exact members from the staged text, the rest
 // described by the lines that select them. Runtime membership is not predicted; honk decides it after the reload.
 export function arrangeView(text: string, changes: GroupChange[], subscriptions: TraySubscription[], nodes: Node[], t: Translator) {
-  const before = new Map(readGroupEntries(text).map(entry => [entry.name, classifyFilters(entry)]));
+  const original = readGroupEntries(text);
+  const before = new Map(original.map(entry => [entry.name, classifyFilters(entry)]));
+  const liveNestedGroups = new Map(original.map(entry => [entry.name, nestedIn(entry)]));
   const stagedText = applyChanges(text, changes);
   const staged = readGroupEntries(stagedText);
   const labels = new Map(subscriptions.map(item => [item.tag, item]));
@@ -48,7 +61,8 @@ export function arrangeView(text: string, changes: GroupChange[], subscriptions:
     const now = classifyFilters(entry);
     const was = before.get(entry.name);
     const admits = compileFilters(entry.filters);
-    const ruleAdmits = now.rules.length ? compileFilters(now.rules) : null;
+    const description = describeFilters(now.rules);
+    const ruleAdmits = !description.everyNode && description.rules.length ? compileFilters(description.rules) : null;
     const mine = changes.filter(change => change.group === entry.name);
     const removed = new Set(
       mine.flatMap(change =>
@@ -73,7 +87,12 @@ export function arrangeView(text: string, changes: GroupChange[], subscriptions:
         blocked: removalWidens(entry, 'subtag', tag) ? blocked : null
       })),
       rules: now.rules,
-      ruleNote: now.rules.length ? t('arrange.ruleNote', {n: now.rules.length}) : null,
+      liveNestedGroups: liveNestedGroups.get(entry.name) ?? [],
+      ruleNote: now.rules.length
+        ? description.everyNode || description.groups.length
+          ? t('arrange.filterNote')
+          : t('arrange.ruleNote', {n: now.rules.length})
+        : null,
       ruleNodes: selected.slice(0, RULE_SHOWN),
       ruleMore: Math.max(0, selected.length - RULE_SHOWN),
       stillIn: [...removed].filter(admits).map(node => node.name),

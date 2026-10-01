@@ -43,6 +43,7 @@ export type GroupDialogView = {
   // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
   problem: {id: number; text: string} | null;
   policy: string | null;
+  membershipFilters: string[] | null;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
   // The default member and final outbound pickers under the filters, each only when the group offers it.
   routes: Array<{
@@ -211,6 +212,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     busy,
     problem,
     policy: draft?.policy ?? null,
+    membershipFilters: draft?.filters ?? entry?.filters ?? null,
     filters: (draft?.filters ?? []).map((value, id) => ({
       id,
       value,

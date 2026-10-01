@@ -107,7 +107,13 @@
   "arrange.dropInto": "Drop into group {group}",
   "arrange.editSource": "Change them in the config file",
   "arrange.emptyNew": "Group {group} has no members yet; a group without members holds every node, so add a node or subscription first.",
+  "arrange.everyNode": "Includes every node",
   "arrange.failed": "Could not apply: {error}",
+  "arrange.filterNote": "Members selected by these filters cannot be removed here.",
+  "arrange.groupCount": {
+    "one": "{n} group",
+    "other": "{n} groups"
+  },
   "arrange.groupName": "Group name",
   "arrange.groupNameHint": "Letters, digits, underscores, periods and hyphens only.",
   "arrange.holdsAll": "This group has no filter, so it holds every node.",
@@ -116,6 +122,8 @@
     "one": "{n} node",
     "other": "{n} nodes"
   },
+  "arrange.mixedCount": "{nodes}, {groups}",
+  "arrange.nestedGroups": "Groups",
   "arrange.new": "New",
   "arrange.newGroup": "New group",
   "arrange.newGroupNote": "Include at least one node or subscription.",

@@ -63,3 +63,17 @@ it("says why the review's Apply is disabled: the page cannot write first, then a
   expect(applyReason(null, ['fresh', 'other'], t)).toBe(t('arrange.emptyNew', {group: 'fresh'}));
   expect(applyReason(t('arrange.readOnly'), ['fresh'], t)).toBe(t('arrange.readOnly'));
 });
+
+it('summarizes template membership without redundant node previews and retains live group counts while staging', () => {
+  const text =
+    "group { proxy { filter: group(auto) filter: !name('direct', 'block') } auto { filter: !name('direct', 'block') } gaming { filter: name(jp-01, hk-02) } }";
+  const view = arrangeView(text, [{kind: 'addNode', group: 'proxy', value: 'us-01'}], [], nodes, t);
+  const [proxy, auto, gaming] = view.groups;
+  expect(proxy.liveNestedGroups).toEqual(['auto']);
+  expect(proxy.ruleNote).toBe(t('arrange.filterNote'));
+  expect(proxy.ruleNodes).toEqual([]);
+  expect(auto.names).toEqual([]);
+  expect(auto.ruleNodes).toEqual([]);
+  expect(gaming.names.map(item => item.name)).toEqual(['jp-01', 'hk-02']);
+  expect(gaming.rules).toEqual([]);
+});
