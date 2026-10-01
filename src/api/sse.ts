@@ -11,30 +11,44 @@ const utf8 = (code: number) => (code < 0x80 ? 1 : code < 0x800 ? 2 : code >= 0xd
 
 /**
  * Dispatch complete frames only; CRLF and UTF-8 may cross fetch chunks. `onChunk` sees every read, comments included.
- * Each read is scanned once. A frame whose data lines and unfinished line exceed `MAX_FRAME_BYTES` cancels the stream
- * with a terminal `frame_too_large` error rather than being truncated.
+ * Each read is scanned once. Every line, finished or not and whatever its field, counts against `limit`
+ * together with the data, id and event its frame already holds, so how the bytes are split into reads never changes the
+ * outcome. Past the ceiling the stream ends with a terminal `frame_too_large` error rather than a truncated frame.
  */
-export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame: SseFrame) => void, signal?: AbortSignal, onChunk?: () => void): Promise<void> {
+export async function readSse(
+  body: ReadableStream<Uint8Array>,
+  onFrame: (frame: SseFrame) => void,
+  signal?: AbortSignal,
+  onChunk?: () => void,
+  limit = MAX_FRAME_BYTES
+): Promise<void> {
   signal?.throwIfAborted();
   const reader = body.getReader();
   const decoder = new TextDecoder();
   // The unfinished line as the reads that carried it, joined once it ends.
   let partial: string[] = [];
+  // UTF-8 bytes of the current line, and of the lines the current frame holds by field.
   let lineBytes = 0,
-    frameBytes = 0,
+    dataBytes = 0,
+    idBytes = 0,
+    eventBytes = 0,
     skipLf = false,
     event = '',
     id: string | undefined;
   let data: string[] = [];
   const tooLarge = () =>
-    clientError(0, 'frame_too_large', `Event stream frame exceeds ${MAX_FRAME_BYTES} bytes`, 'ui.errStreamFrame', {size: `${MAX_FRAME_BYTES >> 20} MiB`});
+    clientError(0, 'frame_too_large', `Event stream frame exceeds ${limit} bytes`, 'ui.errStreamFrame', {
+      size: limit % 1048576 ? `${limit} B` : `${limit / 1048576} MiB`
+    });
+  const over = () => dataBytes + idBytes + eventBytes + lineBytes > limit;
   const line = (text: string) => {
+    if (over()) throw tooLarge();
     if (text === '') {
       onFrame({id, event: event || 'message', data: data.join('\n')});
       event = '';
       id = undefined;
       data = [];
-      frameBytes = 0;
+      dataBytes = idBytes = eventBytes = 0;
       return;
     }
     if (text.startsWith(':')) return;
@@ -42,13 +56,18 @@ export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame:
     const key = colon < 0 ? text : text.slice(0, colon);
     let value = colon < 0 ? '' : text.slice(colon + 1);
     if (value.startsWith(' ')) value = value.slice(1);
-    if (key === 'event') event = value;
-    if (key === 'data') {
-      frameBytes += lineBytes + 1;
-      if (frameBytes > MAX_FRAME_BYTES) throw tooLarge();
-      data.push(value);
+    if (key === 'event') {
+      event = value;
+      eventBytes = lineBytes;
     }
-    if (key === 'id' && !value.includes('\0')) id = value;
+    if (key === 'data') {
+      data.push(value);
+      dataBytes += lineBytes;
+    }
+    if (key === 'id' && !value.includes('\0')) {
+      id = value;
+      idBytes = lineBytes;
+    }
   };
   const abort = () => {
     void reader.cancel(signal?.reason).catch(() => {});
@@ -82,7 +101,7 @@ export async function readSse(body: ReadableStream<Uint8Array>, onFrame: (frame:
         start = i + 1;
       }
       if (start < text.length) {
-        if (frameBytes + lineBytes > MAX_FRAME_BYTES) throw tooLarge();
+        if (over()) throw tooLarge();
         partial.push(text.slice(start));
       }
       if (done) break;
