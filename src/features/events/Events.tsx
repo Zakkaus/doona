@@ -84,7 +84,7 @@ export function Events() {
         </Button>
       </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <DataTable label={t('nav.events')} stream fit height={442} loading={vm.loading} rows={vm.rows} empty={t('event.empty')} cols={columns} detail={detail} />
+      <DataTable label={t('nav.events')} stream flow loading={vm.loading} rows={vm.rows} empty={t('event.empty')} cols={columns} detail={detail} />
     </div>
   );
 }
