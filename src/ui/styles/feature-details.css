@@ -29,6 +29,12 @@
   min-width: 0;
   max-width: 100%;
 }
+/* The toolbar and any banner under it. */
+.rp-editor-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+}
 .rp-editor-toolbar,
 .rp-editor-actions > .rp-toolbar {
   flex-wrap: nowrap;

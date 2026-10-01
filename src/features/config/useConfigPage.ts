@@ -1,6 +1,6 @@
 import {sourceForms} from './sourceForms';
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {useT, useLang, LOCALE} from '../../i18n';
+import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor, useVersion, useRules, useDnsRules, useGroups} from '../../store';
 import {readGroupEntries} from '../../dae/groups';
 import {groupQuery} from '../shared/link';
@@ -10,7 +10,20 @@ import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {buildHash, href, pickTab, tabQuery, within} from '../../shell/route';
-import {configMetadata, saveReason, saveView, validateReason, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
+import {
+  configMetadata,
+  saveReason,
+  saveView,
+  validateReason,
+  sourceView,
+  diagnosticRows,
+  diagnosticSummary,
+  diagnosticsOpen,
+  sourceMarks,
+  readOnlyBadge,
+  type DiagnosticRow,
+  type DiagnosticsChoice
+} from './view';
 import {configTabs} from './nav';
 import {useDraftGuard} from '../../shell/draft';
 import {useValidationSources} from './useValidationSources';
@@ -78,6 +91,11 @@ export function useConfigPage({go, query}: PageProps) {
   const tabs = configTabs(!!engine.globalSettings);
   const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
   const canWrite = !!source && !readOnly;
+  // Each source keeps the person's last open or collapse of its diagnostics, and the card reports the errors it shows
+  // for the tab, a draft's included; away from the card the tab counts the accepted configuration's.
+  const [choices, setChoices] = useState<Record<string, DiagnosticsChoice>>({});
+  const [shownErrors, setShownErrors] = useState<number | null>(null);
+  const tabErrors = shownErrors ?? counts.error;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
   const tab = pickTab(
     params.get('tab') === 'validate' ? within(query, {tab: 'source'}) : query,
@@ -97,7 +115,10 @@ export function useConfigPage({go, query}: PageProps) {
         editor,
         focusLine,
         generation: config.data?.generation_id ?? '',
-        focusDiagnostics: params.get('tab') === 'validate'
+        focusDiagnostics: params.get('tab') === 'validate',
+        diagnosticsChoice: choices[source.id] ?? null,
+        chooseDiagnostics: choice => setChoices(previous => ({...previous, [source.id]: choice})),
+        reportErrors: setShownErrors
       }
     : null;
   const newSourceProps: NewSourceProps | null =
@@ -109,7 +130,10 @@ export function useConfigPage({go, query}: PageProps) {
     ready: !!config.data,
     metadata: config.data ? configMetadata(config.data.revision, t) : [],
     redacted: !!config.data?.secrets_redacted,
-    tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
+    tabs: tabs.map(item => ({
+      id: item.id,
+      label: item.id === 'source' && tabErrors ? t('ui.aside', {text: t(item.titleKey), note: formatNumber(tabErrors, locale)}) : t(item.titleKey)
+    })),
     tab,
     setTab: (tab: string) => go('config', within(tabQuery(query, tab, null), {field: null})),
     selectedId: selectedId ?? '',
@@ -142,9 +166,27 @@ export type SourceCardProps = {
   focusLine: number | null;
   generation: string;
   focusDiagnostics: boolean;
+  diagnosticsChoice: DiagnosticsChoice | null;
+  chooseDiagnostics: (choice: DiagnosticsChoice) => void;
+  reportErrors: (errors: number | null) => void;
 };
 
-export function useSourceCard({source, sources, diagnostics, canValidate, canWrite, readOnly, isComplete, editor, focusLine, generation}: SourceCardProps) {
+export function useSourceCard({
+  source,
+  sources,
+  diagnostics,
+  canValidate,
+  canWrite,
+  readOnly,
+  isComplete,
+  editor,
+  focusLine,
+  generation,
+  open,
+  diagnosticsChoice,
+  chooseDiagnostics,
+  reportErrors
+}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const engine = engineOf(useVersion().data);
@@ -173,8 +215,11 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   const text = draft?.text ?? source.content ?? '';
   // Names to complete after "->": the groups of every source, this one as edited.
   const outbounds = () => allGroupNames(sources, {id: source.id, content: text});
-  const [jump, setJump] = useState<number | null>(null);
-  // A line asked for through the address (a diagnostic's "open source") wins over the last validation's first error.
+  // A line the card moves the editor to; the key makes a second request for the same line move it again.
+  const [jump, setJump] = useState<{line: number; key: number} | null>(null);
+  const jumps = useRef(0);
+  const jumpTo = (line: number | null) => setJump(line === null ? null : {line, key: ++jumps.current});
+  // A line asked for through the address (a diagnostic in another source) wins over the last validation's first error.
   useLinked(focusLine, () => setJump(null));
   const dirty = draft !== null && draft.text !== source.content;
   // The file changed on disk under the draft, whether a refetch or a refused save showed it. Saving waits until the
@@ -192,7 +237,7 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     setFound(result.diagnostics);
     // Put the cursor on the first error so the problem is on screen, not below a long file.
     const first = result.diagnostics.find(d => d.source_id === source.id && d.level === 'error' && d.line !== null);
-    setJump(first ? first.line : null);
+    jumpTo(first ? first.line : null);
     if (!result.valid) toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
     else if (announce) toast('positive', t('config.valid'));
     return result.valid;
@@ -237,6 +282,12 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
       }
     : undefined;
   const view = sourceView(source, locale, t);
+  const checkedDraft = found !== null || saveErrors !== null;
+  const rows = useMemo(() => diagnosticRows(shown, sources, locale, t, source.id), [shown, sources, locale, t, source.id]);
+  const summary = diagnosticSummary(rows);
+  const pending = dirty && !checkedDraft;
+  useEffect(() => reportErrors(pending ? null : summary.errors), [reportErrors, pending, summary.errors]);
+  useEffect(() => () => reportErrors(null), [reportErrors]);
   return {
     writable,
     links: groupLink
@@ -259,12 +310,26 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
         : sourceForms(text, source.id, engine, source.kind),
     note: readOnly?.note ?? t(canValidate ? 'config.editNoteValidate' : 'config.editNote'),
     refused,
-    shown: diagnosticRows(shown, sources, locale, t),
-    checkedDraft: found !== null || saveErrors !== null,
+    diagnostics: {
+      rows,
+      errors: summary.errors,
+      warnings: summary.warnings,
+      scope: dirty ? t('config.draftDiagnostics') : checkedDraft ? t('config.fileDiagnostics') : t('config.acceptedDiagnostics', {generation}),
+      // One quiet line instead of the bar: a draft not checked yet, or nothing to report.
+      quiet: pending ? t('config.draftPending') : rows.length ? null : t('config.clean'),
+      open: diagnosticsOpen(summary.errorKeys, diagnosticsChoice),
+      setOpen: (open: boolean) => chooseDiagnostics({open, errorKeys: summary.errorKeys}),
+      go: (row: DiagnosticRow) => {
+        if (row.action === 'jump') jumpTo(row.line);
+        else if (row.action === 'open') open(row.sourceId, row.line);
+      }
+    },
+    checkedDraft,
     marks,
     text,
     outbounds,
-    focus: jump ?? focusLine,
+    focus: jump?.line ?? focusLine,
+    focusKey: jump?.key ?? 0,
     dirty,
     conflict: conflict ? t('config.changedOnDisk') : null,
     keep: () => setDraft(current => current && {...current, origin: source}),

@@ -368,12 +368,17 @@ for (const [scheme, palette] of [
       const cache = await backend.api.dnsCache();
       backend.handlers['GET dns/cache'] = async () => ({...cache, total: 0, entries: []});
       await page.goto('/#/config?tab=source');
-      const light = page.locator('.rp-light', {hasText: message}).first();
-      await expect(light).toBeVisible();
-      const prose = await light.evaluate(el => {
-        const text = el.querySelector('span')!;
+      await page
+        .getByRole('region', {name: 'Diagnostics', exact: true})
+        .getByRole('button', {name: /Warnings 1/})
+        .click();
+      const list = page.getByRole('list', {name: 'Diagnostics'});
+      await list.getByRole('button', {name: 'Backend message', exact: true}).click();
+      const backendText = list.getByText(message, {exact: true});
+      await expect(backendText).toBeVisible();
+      const prose = await backendText.evaluate(el => {
         const range = document.createRange();
-        range.selectNodeContents(text);
+        range.selectNodeContents(el);
         const box = el.closest('.rp-card')!.getBoundingClientRect();
         return {lines: range.getClientRects().length, contained: [...range.getClientRects()].every(rect => rect.left >= box.left && rect.right <= box.right)};
       });
