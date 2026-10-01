@@ -180,7 +180,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
               <h1 className="rp-h1">{view.current.title}</h1>
               {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
             </div>
-            {hub && <HubPages key={hub.id} hub={hub} route={route} />}
+            {hub && <HubPages key={hub.id} hub={hub} />}
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />

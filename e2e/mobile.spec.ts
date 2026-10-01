@@ -409,8 +409,8 @@ for (const [scheme, palette] of [
   });
 }
 
-// A common phone width: every hub's pages are reachable in every language. A set wider than the phone scrolls inside
-// its strip, never the page, and the current page is scrolled into view.
+// A common phone width: every hub's pages are reachable in every language. A wide set wraps inside
+// the navigation, never the page, and every page name stays complete.
 test.describe('360px', () => {
   test.use({viewport: {width: 360, height: 780}});
   for (const lang of ['en', 'zh-TW', 'zh-CN'])
@@ -424,11 +424,11 @@ test.describe('360px', () => {
             const strip = () =>
               page.locator('.rp-hubnav').evaluate(nav => {
                 const box = nav.getBoundingClientRect();
-                const seg = nav.querySelector<HTMLElement>('.rp-seg')!;
+                const seg = nav.querySelector<HTMLElement>('.rp-page-links')!;
                 const current = nav.querySelector('[aria-current="page"]')!.getBoundingClientRect();
                 return {
                   visible: current.left >= box.left - 1 && current.right <= box.right + 1,
-                  contained: seg.scrollWidth <= seg.clientWidth || getComputedStyle(seg).overflowX === 'auto',
+                  contained: seg.scrollWidth <= seg.clientWidth && [...seg.children].every(el => el.scrollWidth <= el.clientWidth),
                   pageScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth
                 };
               });
