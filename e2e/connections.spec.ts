@@ -268,7 +268,8 @@ test('group slots take focus but never the selection across virtual keyboard nav
   });
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
   await expectRowInView(selected);
-  await selected.getByRole('rowheader').click();
+  await selected.focus();
+  await expect(selected).toBeFocused();
   await page.keyboard.press('ArrowUp');
   await expect(grid.locator('[role=row][aria-level="1"]:focus-within')).toHaveCount(1);
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
