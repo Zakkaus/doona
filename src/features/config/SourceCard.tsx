@@ -11,7 +11,6 @@ export function SourceCard(props: SourceCardProps) {
   const {
     writable,
     links,
-    acceptChange,
     checkedDraft,
     note,
     refused,
@@ -104,7 +103,6 @@ export function SourceCard(props: SourceCardProps) {
           </span>
         </div>
         {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
-        <p className="rp-label">{t('config.formOwned')}</p>
         {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
         <CodeEditor
           actions={actions}
@@ -112,7 +110,6 @@ export function SourceCard(props: SourceCardProps) {
           value={text}
           readOnly={!writable || busy}
           onChange={change}
-          acceptChange={acceptChange}
           onReadOnlyAttempt={refused}
           marks={marks}
           focusLine={focus}

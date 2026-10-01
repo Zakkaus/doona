@@ -119,3 +119,26 @@ it('restores accepted provenance after cancel and after a generation change', as
   read();
   expect(read().checkedDraft).toBe(false);
 });
+
+it.each([true, false])('validates and saves a raw edit of a form-owned value (accepted: %s)', async accepted => {
+  const text = props.source.content.replace('tproxy_port: 12345', 'tproxy_port: 23456');
+  const rejection = {...config.diagnostics[0], level: 'error' as const, source_id: props.source.id};
+  if (!accepted) {
+    vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [rejection]});
+    vi.mocked(editor.apply).mockResolvedValue({diagnostics: [rejection]});
+  }
+  read().change(text);
+  expect(read().links.some(link => link.label === 'tproxy_port')).toBe(true);
+  expect(read().text).toBe(text);
+  expect(read().checkedDraft).toBe(false);
+  expect(await read().validate()).toBe(accepted);
+  expect(editor.validate).toHaveBeenCalledWith({
+    sources: expect.arrayContaining([expect.objectContaining({id: props.source.id, content: text})]),
+    mode: 'full'
+  });
+  expect(read().checkedDraft).toBe(true);
+  await read().save();
+  expect(editor.apply).toHaveBeenCalledWith(props.source, text);
+  expect(read().dirty).toBe(!accepted);
+  expect(read().checkedDraft).toBe(!accepted);
+});

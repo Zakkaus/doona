@@ -1,7 +1,5 @@
 import type {ConfigSource, DnsRoutingRule, RoutingRule, RuleSource} from '../api/model';
 import {blockFields, scanConfig, unquote, type TextBlock} from './text';
-import {parseConditions} from './conditions';
-import type {RuleConditionKind} from './groups';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -208,39 +206,4 @@ export function addFallback(text: string, anchor: RuleAnchor, target: string): s
   return text.slice(anchor.from, anchor.to) === anchor.text
     ? text.slice(0, anchor.from) + (anchor.open ?? '') + `${anchor.indent}fallback: ${target}\n` + (anchor.close ?? '') + text.slice(anchor.from)
     : null;
-}
-
-// Protect targets and conditions the visual editor can represent; include directives remain raw.
-export function ruleFormValues(text: string, kinds: readonly RuleConditionKind[]) {
-  const tokens = scanConfig(text).tokens.filter(token => token.kind !== 'comment');
-  const raw = (index: number) => text.slice(tokens[index].from, tokens[index].to);
-  const values: string[][] = [];
-  for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index];
-    const target = token.parens === 0 && (raw(index) === '->' || (raw(index) === ':' && index > 0 && ['fallback', 'default'].includes(raw(index - 1))));
-    if (!target) continue;
-    const parts: string[] = [];
-    if (raw(index) === '->') {
-      let start = index;
-      while (
-        start > 0 &&
-        tokens[start - 1].depth === token.depth &&
-        (tokens[start - 1].line === tokens[start].line || tokens[start - 1].parens > 0 || tokens[start].parens > 0)
-      )
-        start--;
-      const condition = tokens
-        .slice(start, index)
-        .map(part => text.slice(part.from, part.to))
-        .join('');
-      if (parseConditions(condition, kinds)) parts.push(condition);
-    }
-    while (++index < tokens.length) {
-      const next = tokens[index];
-      if (next.depth < token.depth || (next.kind === 'symbol' && raw(index) === '}') || (next.line > token.line && next.parens === 0)) break;
-      parts.push(raw(index));
-    }
-    values.push(parts);
-    index--;
-  }
-  return values;
 }
