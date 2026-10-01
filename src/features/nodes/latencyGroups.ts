@@ -43,6 +43,20 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || byName(a.label ?? '', b.label ?? ''));
 }
 
+// A node is slower than usual when its latest latency passes the higher average by this ratio and these milliseconds.
+export const slowerThanUsual = {ratio: 1.3, ms: 20};
+
+// The usual range: from the lower average to the higher, a single value when only one is reported, null with none.
+export function usualRange(row: LatencyRow): [number, number] | null {
+  const averages = [row.moving, row.avg10].filter((value): value is number => value !== null);
+  return averages.length ? [Math.min(...averages), Math.max(...averages)] : null;
+}
+
+export function isSlowerThanUsual(row: LatencyRow): boolean {
+  const range = usualRange(row);
+  return range !== null && row.latest > range[1] * slowerThanUsual.ratio && row.latest - range[1] >= slowerThanUsual.ms;
+}
+
 // Which averages the backend reports. honk leaves both null on an unavailable row and on a backend without them,
 // so a chart names only the ones some row has.
 export function latencyAverages(groups: LatencyGroup[]) {

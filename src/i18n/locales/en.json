@@ -930,6 +930,7 @@
     "other": "From the latest measurement of {n} nodes"
   },
   "nodes.latency.showAll": "Show all {n}",
+  "nodes.latency.slower": "Slower than usual",
   "nodes.latency.unavailable": "Unavailable",
   "nodes.latency.unavailableList": {
     "one": "{n} unavailable: {names}",
@@ -939,6 +940,7 @@
     "one": "{n} not measured: {names}",
     "other": "{n} not measured: {names}"
   },
+  "nodes.latency.usual": "Usual range",
   "nodes.link": "Node link",
   "nodes.linkInvalid": "The node link must look like vless://…",
   "nodes.manualOnly": "Manual only",

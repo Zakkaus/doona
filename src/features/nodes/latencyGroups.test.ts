@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
-import {latencyAverages, latencyGroups, latencyMax} from './latencyGroups';
+import {isSlowerThanUsual, latencyAverages, latencyGroups, latencyMax, usualRange, type LatencyRow} from './latencyGroups';
 
 const locale = 'en-US';
 
@@ -95,4 +95,21 @@ it('names only the averages some node reports', () => {
     locale
   );
   expect(latencyAverages(some)).toEqual({moving: true, avg10: false});
+});
+
+// The band spans both averages; the dot turns to a warning only well past the higher one, by ratio and by milliseconds.
+it.each([
+  {name: 'inside the band', latest: 50, moving: 40, avg10: 60, range: [40, 60], slower: false},
+  {name: 'below the band', latest: 20, moving: 40, avg10: 60, range: [40, 60], slower: false},
+  {name: 'at the ratio edge', latest: 130, moving: 100, avg10: 90, range: [90, 100], slower: false},
+  {name: 'just past the ratio edge', latest: 130.1, moving: 100, avg10: 90, range: [90, 100], slower: true},
+  {name: 'at the millisecond edge', latest: 60, moving: 40, avg10: 30, range: [30, 40], slower: true},
+  {name: 'short of the millisecond edge', latest: 59.9, moving: 40, avg10: 30, range: [30, 40], slower: false},
+  {name: 'past the ratio on a fast node', latest: 29, moving: 10, avg10: 9, range: [9, 10], slower: false},
+  {name: 'one average', latest: 71, moving: null, avg10: 50, range: [50, 50], slower: true},
+  {name: 'no averages', latest: 900, moving: null, avg10: null, range: null, slower: false}
+])('reads a latest latency $name', ({latest, moving, avg10, range, slower}) => {
+  const row: LatencyRow = {id: 'a', name: 'a', latest, moving, avg10};
+  expect(usualRange(row)).toEqual(range);
+  expect(isSlowerThanUsual(row)).toBe(slower);
 });
