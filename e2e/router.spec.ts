@@ -74,10 +74,13 @@ test('discard resets a source draft even when the destination selects the same e
 
 test('cancelled Back and Forward restore the cursor without replacing history entries', async ({page}) => {
   await page.goto('/#/settings');
+  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
   await page.evaluate(() => {
     location.hash = '#/config?tab=source';
   });
+  await expect(page.locator('.cm-content')).toBeVisible();
   await page.locator('.rp-nav[href="#/connections"]').click();
+  await expect(page).toHaveURL(/#\/connections$/);
   await page.goBack();
   await appendDraft(page, 'keep until discarded');
   const dialog = page.getByRole('alertdialog');

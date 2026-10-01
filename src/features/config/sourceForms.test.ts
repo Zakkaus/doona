@@ -12,6 +12,7 @@ it('routes located globals to their sole form and protects them from raw changes
   expect(sameFormValues(before, before.replace('keep', 'other'), 'include', engine)).toBe(true);
   expect(sameFormValues(before, before.replace(':53', ':54'), 'include', engine)).toBe(true);
   expect(sameFormValues(before, before + '\n# comment', 'include', engine)).toBe(true);
+  expect(sameFormValues(before, before + '\nrouting { include rules.dae }', 'include', engine)).toBe(true);
   expect(sameFormValues(before, before + '\nglobal { mptcp: true }', 'include', engine)).toBe(false);
 });
 
