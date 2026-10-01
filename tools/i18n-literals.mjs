@@ -12,7 +12,7 @@ const visibleAttributes = new Set([
 // Files whose strings are data rather than doona's own text.
 const dataFiles = new Map([
   ['src/i18n/languages.ts', 'each language named in itself'],
-  ['src/features/shared/geo.ts', 'place names matched in node names'],
+  ['src/dae/regions.ts', 'shared region names and node-name detection aliases'],
   ['src/dae/templates.ts', 'generated routing comments and bilingual node-name match patterns'],
   ['src/api/mock/fixtures/configuration.ts', 'demo backend data, as honk would send it'],
   ['src/api/mock/fixtures/inventory.ts', 'demo backend data, as honk would send it']

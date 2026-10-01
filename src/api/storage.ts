@@ -7,6 +7,7 @@ export const storageKeys = {
   wordmark: 'doona-wordmark',
   mirror: 'doona-mirror',
   countryFlags: 'doona-country-flags',
+  flagOverrides: 'doona-flag-overrides',
   toastPlacement: 'doona-toast-placement',
   startPage: 'doona-start-page',
   profiles: 'doona-profiles',

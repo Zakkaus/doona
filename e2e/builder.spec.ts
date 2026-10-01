@@ -2,12 +2,20 @@ import {expect, test, moreAction, editorText} from './fixtures';
 
 test('a node joins an existing group or a new one through the name filter', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Add sg-01 to a group', exact: true}).click();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'sg-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
   const menu = page.getByRole('menu');
   await expect(menu.getByRole('menuitem', {name: /^auto/})).toHaveCount(0);
   await menu.getByRole('menuitem', {name: /^gaming/}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('sg-01 added to gaming');
-  await page.getByRole('button', {name: 'Add us-01 to a group', exact: true}).click();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'us-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('travel');

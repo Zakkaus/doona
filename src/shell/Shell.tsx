@@ -1,12 +1,13 @@
 import './install';
-import {lazy, Suspense, type ContextType} from 'react';
+import {lazy, Suspense, useCallback, useState, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
 import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
-import {CountryFlagsContext} from '../ui/NodeName';
-import {flagForName} from '../features/shared/countryFlags';
+import {CountryFlagsContext, FlagEditingContext} from '../ui/NodeName';
+import {flagKey} from '../dae/flags';
+import {resolvedFlag} from '../features/shared/countryFlags';
 import {readSettings, SettingsContext} from './preferences';
 import type {Settings, ToastPlacement} from './preferences';
 import {Shortcuts} from './Shortcuts';
@@ -20,6 +21,8 @@ import {useShellController, useShellFrame, useStartupToasts} from './useShellCon
 import {LoadBoundary} from '../ui/LoadBoundary';
 import type {PageProps} from './routes';
 import {RefusalWait} from './RefusalWait';
+const FlagPicker = lazy(() => import('../ui/FlagPicker').then(module => ({default: module.FlagPicker})));
+
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
 const Login = lazy(() => import('./Login').then(module => ({default: module.Login})));
 
@@ -33,28 +36,56 @@ export function stampAppearance() {
 export function Shell({lang: initial}: {lang: Lang}) {
   const {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac} =
     useShellController(initial);
+  const [flagTarget, setFlagTarget] = useState<{name: string} | null>(null);
+  const editFlag = useCallback((name: string) => setFlagTarget({name}), []);
+  const lookupFlag = useCallback((name: string) => resolvedFlag(name, ap.flagOverrides, ap.countryFlags), [ap.flagOverrides, ap.countryFlags]);
   return (
     <LangContext.Provider value={lang}>
-      <CountryFlagsContext.Provider value={ap.countryFlags ? flagForName : null}>
-        <RewordingContext.Provider value={paletteWords(ap.palette)}>
-          {/* The mirrored layout turns React Aria right to left too; the locale keeps its strings and formats. */}
-          <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
-            <RouterProvider navigate={navigate}>
-              <DraftContext.Provider value={draft}>
-                <ShellFrame settings={settings} lang={lang} pickLang={pickLang} ap={ap} route={route} query={query} go={go} openSearch={openSearch} mac={mac} />
-              </DraftContext.Provider>
-              <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
-              {searchOpen && (
-                <LoadBoundary>
-                  <Suspense fallback={null}>
-                    <searchDialog.Component onClose={closeSearch} go={go} />
-                  </Suspense>
-                </LoadBoundary>
-              )}
-              <ToastHost placement={ap.toastPlacement} route={route} />
-            </RouterProvider>
-          </I18nProvider>
-        </RewordingContext.Provider>
+      <CountryFlagsContext.Provider value={lookupFlag}>
+        <FlagEditingContext.Provider value={editFlag}>
+          <RewordingContext.Provider value={paletteWords(ap.palette)}>
+            {/* The mirrored layout turns React Aria right to left too; the locale keeps its strings and formats. */}
+            <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
+              <RouterProvider navigate={navigate}>
+                <DraftContext.Provider value={draft}>
+                  <ShellFrame
+                    settings={settings}
+                    lang={lang}
+                    pickLang={pickLang}
+                    ap={ap}
+                    route={route}
+                    query={query}
+                    go={go}
+                    openSearch={openSearch}
+                    mac={mac}
+                  />
+                </DraftContext.Provider>
+                <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
+                {searchOpen && (
+                  <LoadBoundary>
+                    <Suspense fallback={null}>
+                      <searchDialog.Component onClose={closeSearch} go={go} />
+                    </Suspense>
+                  </LoadBoundary>
+                )}
+                {flagTarget && (
+                  <LoadBoundary>
+                    <Suspense fallback={null}>
+                      <FlagPicker
+                        name={flagTarget.name}
+                        automaticFlag={resolvedFlag(flagTarget.name, {}, true)}
+                        value={ap.flagOverrides[flagKey(flagTarget.name)] ?? 'automatic'}
+                        onChange={value => ap.pickFlag(flagTarget.name, value)}
+                        onClose={() => setFlagTarget(null)}
+                      />
+                    </Suspense>
+                  </LoadBoundary>
+                )}
+                <ToastHost placement={ap.toastPlacement} route={route} />
+              </RouterProvider>
+            </I18nProvider>
+          </RewordingContext.Provider>
+        </FlagEditingContext.Provider>
       </CountryFlagsContext.Provider>
     </LangContext.Provider>
   );

@@ -116,7 +116,11 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
       : []
   });
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await dialog.getByRole('textbox', {name: 'Group name'}).fill('nodegroup');
@@ -143,7 +147,11 @@ for (const entry of ['Nodes', 'Policies'])
     const {api} = await mockBackend(page);
     await page.goto(entry === 'Nodes' ? '/#/nodes?provider=inline' : '/#/policies?tab=arrange');
     if (entry === 'Nodes') {
-      await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+      await page
+        .getByRole('row')
+        .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+        .getByRole('button', {name: 'Node actions', exact: true})
+        .click();
       await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
     } else await page.getByRole('button', {name: 'New group', exact: true}).click();
     const dialog = page.getByRole('dialog', {name: 'New group'});
@@ -193,7 +201,11 @@ for (const lang of ['en', 'zh-CN'])
         return {...list, nodes: list.nodes.map(node => (node.id === 'hk-01' ? {...node, name: "O'Hare"} : node))};
       };
       await page.goto('/#/nodes?provider=inline');
-      await page.getByRole('button', {name: labels['nodes.joinGroup'].replace('{name}', "O'Hare"), exact: true}).click();
+      await page
+        .getByRole('row')
+        .filter({has: page.getByRole('rowheader', {name: "O'Hare", exact: true})})
+        .getByRole('button', {name: labels['nodes.actions'], exact: true})
+        .click();
       await page.getByRole('menuitem', {name: labels['nodes.newGroup'], exact: true}).click();
       await expect(page.locator('.rp-toast.negative')).toContainText(labels['config.unquotable']);
       await expect(page.getByRole('dialog')).toHaveCount(0);

@@ -150,7 +150,6 @@ export type NodeTableView = {
     latencyClass: string;
     groups: string;
     probeLabel: string;
-    joinLabel: string;
     removeLabel: string;
     canProbe: boolean;
     probe: () => void;

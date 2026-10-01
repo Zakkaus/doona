@@ -1,6 +1,7 @@
 import {createContext} from 'react';
 import {readLang, type Lang} from '../i18n';
 import {readProfiles, type Profile, type StoragePort} from '../api/profiles';
+import {FLAG_OVERRIDE_LIMIT, flagKey, validFlagChoice, validFlagName, type FlagOverrides} from '../dae/flags';
 import {storageKeys} from '../api/storage';
 import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 import type {ToastPlacement} from '../ui/ui';
@@ -21,13 +22,14 @@ export type Settings = {
   wordmark: Wordmark;
   mirrored: boolean;
   countryFlags: boolean;
+  flagOverrides: FlagOverrides;
   toastPlacement: ToastPlacement;
   startPage: RoutePath;
 };
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
 export function writeSetting(
-  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'toastPlacement' | 'startPage',
+  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'flagOverrides' | 'toastPlacement' | 'startPage',
   value: string,
   storage?: StoragePort
 ) {
@@ -61,6 +63,7 @@ export function readSettings(storage?: StoragePort): Settings {
     mirrored: read(storageKeys.mirror) === 'on',
     startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
     countryFlags: read(storageKeys.countryFlags) !== 'off',
+    flagOverrides: readFlagOverrides(storage),
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
   };
 }
@@ -80,8 +83,10 @@ type Appearance = {
   pickWordmark: (value: Wordmark) => void;
   mirrored: boolean;
   countryFlags: boolean;
+  flagOverrides: FlagOverrides;
   pickMirrored: (value: boolean) => void;
   pickCountryFlags: (value: boolean) => void;
+  pickFlag: (name: string, value: string) => void;
   toastPlacement: ToastPlacement;
   pickToastPlacement: (value: ToastPlacement) => void;
   startPage: RoutePath;
@@ -94,3 +99,25 @@ export const SettingsContext = createContext<{
   paletteSections: Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}>;
   startPageItems: Array<{id: RoutePath; label: string}>;
 } | null>(null);
+
+export function readFlagOverrides(storage?: StoragePort): FlagOverrides {
+  try {
+    const value: unknown = JSON.parse((storage ?? localStorage).getItem(storageKeys.flagOverrides) ?? '{}');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key, choice]) => key.startsWith('node:') && validFlagName(key.slice(5)) && validFlagChoice(choice))
+        .slice(-FLAG_OVERRIDE_LIMIT)
+    );
+  } catch {
+    return {};
+  }
+}
+
+export function updateFlagOverride(overrides: FlagOverrides, name: string, value: string): FlagOverrides {
+  if (!validFlagName(name) || (value !== 'automatic' && !validFlagChoice(value))) return overrides;
+  const key = flagKey(name);
+  const entries = Object.entries(overrides).filter(([id]) => id !== key);
+  if (value !== 'automatic') entries.push([key, value]);
+  return Object.fromEntries(entries.slice(-FLAG_OVERRIDE_LIMIT));
+}

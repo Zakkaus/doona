@@ -546,8 +546,12 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
 test('the node list names its source, groups a node by a labelled menu, and refreshes every subscription', async ({page}) => {
   await page.goto('/#/nodes?tab=list&provider=inline');
   await expect(page.getByText('Showing nodes from config.dae. Choose another node source above to view its nodes.', {exact: true})).toBeVisible();
-  const join = page.getByRole('button', {name: 'Add hk-01 to a group', exact: true});
-  await expect(join).toHaveText('Add to group');
+  const join = page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true});
+  await expect(join).toHaveAccessibleName('Node actions');
+  await expect(join).toHaveText('');
   await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
 });
@@ -573,7 +577,11 @@ test('a latency row opens its node in the list', async ({page}) => {
 
 test('adding a node to a group offers the group on the policies page', async ({page}) => {
   await page.goto('/#/nodes?tab=list&provider=inline');
-  await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
   await page.getByRole('menuitem', {name: /^gaming/}).click();
   const joined = page.locator('.rp-toast.positive', {hasText: 'gaming'});
   await joined.getByRole('button', {name: 'View group', exact: true}).click();
