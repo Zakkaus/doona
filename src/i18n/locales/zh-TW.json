@@ -790,7 +790,6 @@
   "nodes.latency.unavailable": "無法使用",
   "nodes.latency.unavailableList": "無法使用（{n} 個）：{names}",
   "nodes.latency.unmeasuredList": "尚未測量（{n} 個）：{names}",
-  "nodes.latency.usual": "平均範圍",
   "nodes.link": "節點連結",
   "nodes.linkInvalid": "節點連結須為 vless://… 這類格式",
   "nodes.manualOnly": "僅手動",

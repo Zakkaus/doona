@@ -61,7 +61,7 @@ it.each([
   expect(group.missing).toEqual(row ? [] : [{id: 'a', name: 'a', state: 'unavailable'}]);
 });
 
-// Each row adds its latest value and both averages; a missing average counts as the latest value.
+// Only the latest values are drawn, so the averages leave the axis end alone.
 it.each([
   {
     name: 'latest values alone',
@@ -71,10 +71,9 @@ it.each([
     ],
     max: 200
   },
-  {name: 'a moving average past the latest', rows: [[40, 70, null]], max: 100},
-  {name: 'a 10-sample average past the latest', rows: [[40, null, 70]], max: 100},
-  {name: 'floating averages', rows: [[12, 13.5, 14.25]], max: 20}
-])('ends the axis past $name', ({rows, max}) => {
+  {name: 'averages past the latest', rows: [[40, 70, 90]], max: 60},
+  {name: 'a fractional latest value', rows: [[12.5, 13.5, 14.25]], max: 20}
+])('ends the axis for $name', ({rows, max}) => {
   const nodes = rows.map(([latency_ms, moving_avg_ms, avg10_ms], i) => node('n' + i, [], [observation({latency_ms, moving_avg_ms, avg10_ms})]));
   expect(latencyMax(latencyGroups(nodes, [], 'protocol', locale))).toBe(max);
 });
@@ -97,7 +96,7 @@ it('names only the averages some node reports', () => {
   expect(latencyAverages(some)).toEqual({moving: true, avg10: false});
 });
 
-// The band spans both averages; the dot turns to a warning only well past the higher one, by ratio and by milliseconds.
+// The dot turns to the warning colour only well past the higher average, by ratio and by milliseconds.
 it.each([
   {name: 'inside the band', latest: 50, moving: 40, avg10: 60, range: [40, 60], slower: false},
   {name: 'below the band', latest: 20, moving: 40, avg10: 60, range: [40, 60], slower: false},

@@ -4,10 +4,9 @@ import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
-import {bandSpan} from './layout';
 
-// `value` is the row's dot and `range` its band, a thin line when both ends meet. `description` is what the row says
-// to a screen reader: every value it stands for, in words. `details` are the hover tip's lines under the row's name.
+// `value` is the row's dot, coloured by `tone`. `description` is what the row says to a screen reader: every value it
+// stands for, in words. `details` are the hover tip's lines under the row's name.
 // With `href` the name opens what it names.
 export type MarkerRow = {
   id: string;
@@ -15,7 +14,6 @@ export type MarkerRow = {
   nodeName?: boolean;
   href?: string;
   value: number;
-  range: [number, number] | null;
   text: string;
   description: string;
   details: string[];
@@ -23,13 +21,14 @@ export type MarkerRow = {
 };
 // `notes` are the rows that have no value to draw, summed up in a sentence each (say, which nodes are unavailable).
 export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
-export type MarkerLegend = {kind: 'dot' | 'band'; label: string; color?: string};
+// Each legend entry names one dot colour.
+export type MarkerLegend = {label: string; color?: string};
 
-function Marker({kind, color}: {kind: MarkerLegend['kind']; color?: string}) {
-  return <i className={'rp-marker ' + kind} style={color ? {color} : undefined} aria-hidden="true" />;
+function Dot({color}: {color?: string}) {
+  return <i className="rp-marker dot" style={color ? {color} : undefined} aria-hidden="true" />;
 }
 
-// Rows on one shared axis: a dot for each row's value over a band for its range, so a dot past its band stands out.
+// Rows on one shared axis, a dot for each row's value whose colour carries its state.
 // Values past the axis end sit on the edge, and the row's number still says what they are.
 export function MarkerPlot({
   label,
@@ -60,7 +59,7 @@ export function MarkerPlot({
       <ul className="legend">
         {legend.map(item => (
           <li key={item.label}>
-            <Marker kind={item.kind} color={item.color} />
+            <Dot color={item.color} />
             {item.label}
           </li>
         ))}
@@ -79,39 +78,30 @@ export function MarkerPlot({
       {groups.map(group => (
         <section key={group.id} aria-label={group.label}>
           {groups.length > 1 && <h4 className="rp-label">{group.label}</h4>}
-          {(expanded.has(group.id) ? group.rows : group.rows.slice(0, limit)).map(row => {
-            const band = row.range && bandSpan(row.range, max);
-            return (
-              <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details], row.nodeName)}>
-                <span className="name">
-                  {row.href ? (
-                    <Link appearance="link" href={row.href}>
-                      {row.nodeName ? <NodeName name={row.label} /> : row.label}
-                    </Link>
-                  ) : row.nodeName ? (
-                    <NodeName name={row.label} />
-                  ) : (
-                    row.label
-                  )}
+          {(expanded.has(group.id) ? group.rows : group.rows.slice(0, limit)).map(row => (
+            <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details], row.nodeName)}>
+              <span className="name">
+                {row.href ? (
+                  <Link appearance="link" href={row.href}>
+                    {row.nodeName ? <NodeName name={row.label} /> : row.label}
+                  </Link>
+                ) : row.nodeName ? (
+                  <NodeName name={row.label} />
+                ) : (
+                  row.label
+                )}
+              </span>
+              <div className="track" role="img" aria-label={row.label + t('ui.separator') + row.description}>
+                {ticks.map(tick => (
+                  <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />
+                ))}
+                <span className={'at' + (row.value > max ? ' over' : '')} style={{insetInlineStart: `${at(row.value)}%`}}>
+                  <Dot color={row.tone} />
                 </span>
-                <div className="track" role="img" aria-label={row.label + t('ui.separator') + row.description}>
-                  {ticks.map(tick => (
-                    <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />
-                  ))}
-                  {band && (
-                    <i
-                      className={band.width ? 'band' : 'band line'}
-                      style={band.width ? {insetInlineStart: `${band.start}%`, width: `${band.width}%`} : {insetInlineStart: `${band.start}%`}}
-                    />
-                  )}
-                  <span className={'at' + (row.value > max ? ' over' : '')} style={{insetInlineStart: `${at(row.value)}%`}}>
-                    <Marker kind="dot" color={row.tone} />
-                  </span>
-                </div>
-                <span className="value">{row.text}</span>
               </div>
-            );
-          })}
+              <span className="value">{row.text}</span>
+            </div>
+          ))}
           {!expanded.has(group.id) && group.rows.length > limit && (
             <div className="row more">
               <Button quiet small onPress={() => setExpanded(current => new Set([...current, group.id]))}>
