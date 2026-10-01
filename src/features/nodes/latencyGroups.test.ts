@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
-import {isSlowerThanUsual, latencyAverages, latencyGroups, latencyMax, usualRange, type LatencyRow} from './latencyGroups';
+import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyGroups, latencyMax, latencyRange, usualRange, type LatencyRow} from './latencyGroups';
 
 const locale = 'en-US';
 
@@ -61,7 +61,7 @@ it.each([
   expect(group.missing).toEqual(row ? [] : [{id: 'a', name: 'a', state: 'unavailable'}]);
 });
 
-// Only the latest values are drawn, so the averages leave the axis end alone.
+// Each row adds its latest value and both averages; a missing average counts as the latest value.
 it.each([
   {
     name: 'latest values alone',
@@ -71,9 +71,10 @@ it.each([
     ],
     max: 200
   },
-  {name: 'averages past the latest', rows: [[40, 70, 90]], max: 60},
-  {name: 'a fractional latest value', rows: [[12.5, 13.5, 14.25]], max: 20}
-])('ends the axis for $name', ({rows, max}) => {
+  {name: 'a moving average past the latest', rows: [[40, 70, null]], max: 100},
+  {name: 'a 10-sample average past the latest', rows: [[40, null, 70]], max: 100},
+  {name: 'fractional averages', rows: [[12, 13.5, 14.25]], max: 20}
+])('ends the axis past $name', ({rows, max}) => {
   const nodes = rows.map(([latency_ms, moving_avg_ms, avg10_ms], i) => node('n' + i, [], [observation({latency_ms, moving_avg_ms, avg10_ms})]));
   expect(latencyMax(latencyGroups(nodes, [], 'protocol', locale))).toBe(max);
 });
@@ -111,4 +112,17 @@ it.each([
   const row: LatencyRow = {id: 'a', name: 'a', latest, moving, avg10};
   expect(usualRange(row)).toEqual(range);
   expect(isSlowerThanUsual(row)).toBe(slower);
+});
+
+// The ring sits on the 10-sample average, else the moving one; the line spans every value the row has.
+it.each([
+  {name: 'both averages', latest: 50, moving: 40, avg10: 70, average: 70, range: [40, 70]},
+  {name: 'only a moving average', latest: 50, moving: 40, avg10: null, average: 40, range: [40, 50]},
+  {name: 'only a 10-sample average', latest: 50, moving: null, avg10: 60, average: 60, range: [50, 60]},
+  {name: 'values on one point', latest: 50, moving: 50, avg10: 50, average: 50, range: [50, 50]},
+  {name: 'no averages', latest: 50, moving: null, avg10: null, average: null, range: null}
+])('draws a row with $name', ({latest, moving, avg10, average, range}) => {
+  const row: LatencyRow = {id: 'a', name: 'a', latest, moving, avg10};
+  expect(latencyAverage(row)).toBe(average);
+  expect(latencyRange(row)).toEqual(range);
 });

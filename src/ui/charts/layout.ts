@@ -125,6 +125,12 @@ export function symlogAxis(max: number): {end: number; ticks: number[]} {
   return {end, ticks};
 }
 
+// A range's line in percent of the axis [0, max], both ends held inside the axis; zero wide when the ends meet.
+export function lineSpan([low, high]: [number, number], max: number): {start: number; width: number} {
+  const at = (value: number) => Math.min(100, Math.max(0, (value / max) * 100));
+  return {start: at(low), width: at(high) - at(low)};
+}
+
 export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {
   const fraction = hi === lo ? 0.5 : (value - lo) / (hi - lo);
   return start * (1 - fraction) + end * fraction;
