@@ -2,25 +2,31 @@ import {memo, useRef, useState} from 'react';
 import {About} from './About';
 import {BackendMenuPopover} from './Backend';
 import Checkmark from '../ui/icons/Checkmark';
+import Color from '../ui/icons/Color';
+import Contrast from '../ui/icons/Contrast';
 import MoreVertical from '../ui/icons/MoreVertical';
 import Data from '../ui/icons/Data';
 import DataRefresh from '../ui/icons/DataRefresh';
 import Refresh from '../ui/icons/Refresh';
 import Search from '../ui/icons/Search';
+import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
-import {useT} from '../i18n';
-import {Button, ChoiceMenu, Divider, Link} from '../ui/ui';
+import {useT, type Lang} from '../i18n';
+import {Button, ChoiceMenu, Divider} from '../ui/ui';
 import {ReloadConfirm} from '../features/shared/ReloadConfirm';
-import type {BackendView, TopBarCommands} from './view';
-import Settings from '../ui/icons/Settings';
-import {appearanceSettingsHref} from '../features/shared/link';
-import {SchemeToggle} from './AppearanceControls';
 import type {SettingsContext} from './preferences';
+import type {Scheme} from './preferences';
+import type {AppearanceMenu, BackendView, PaletteSection, TopBarCommands} from './view';
+import {languageItems} from './view';
 import {preloadSearch} from './search/load';
+import {LanguageMenu, PaletteMenu, SchemeToggle, usePaletteChoices} from './AppearanceControls';
+
+type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
 
 type TopBarProps = {
-  ap: NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
-  openAppearance: () => void;
+  lang: Lang;
+  pickLang: (lang: Lang) => void;
+  ap: Appearance;
   mac: boolean;
   openSearch: () => void;
   refresh: () => void;
@@ -32,13 +38,16 @@ type TopBarProps = {
   backend: BackendView;
   wordmark: string;
   versionText: string;
+  paletteSections: PaletteSection[];
+  menu: AppearanceMenu;
 };
 
 // The top bar depends on appearance, language and the backend's version and state, not on the open page or its query,
 // so it is memoised: moving between pages or tabs leaves it alone.
 export const TopBar = memo(function TopBar({
+  lang,
+  pickLang,
   ap,
-  openAppearance,
   mac,
   openSearch,
   refresh,
@@ -49,9 +58,12 @@ export const TopBar = memo(function TopBar({
   honk,
   backend,
   wordmark,
-  versionText
+  versionText,
+  paletteSections,
+  menu
 }: TopBarProps) {
   const t = useT();
+  const {palettes, wordmarks} = usePaletteChoices({ap, paletteSections, wordmarks: menu.wordmarks});
   const narrowMenu = useRef<HTMLSpanElement>(null);
   const [backendOpen, setBackendOpen] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
@@ -100,6 +112,7 @@ export const TopBar = memo(function TopBar({
             <span className="rp-held-count">{commands.apply.count}</span>
           </Button>
         )}
+        {/* Below the side navigation's breakpoint, reload, language and appearance share one overflow menu. */}
         <span className="rp-wide-only">
           {commands.reload && (
             <Button quiet icon label={commands.reload.label} isPending={commands.reload.busy} isDisabled={commands.reload.blocked} onPress={askReload}>
@@ -107,23 +120,30 @@ export const TopBar = memo(function TopBar({
             </Button>
           )}
           <Divider />
-          <Link appearance="button" quiet icon label={t('settings.appearance')} href={appearanceSettingsHref}>
-            <Settings />
-          </Link>
-          <SchemeToggle
-            dark={ap.dark}
-            label={t('shell.theme', {theme: t(ap.scheme === 'system' ? 'theme.system' : ap.dark ? 'theme.dark' : 'theme.light')})}
-            toggle={ap.toggle}
-          />
+          <LanguageMenu lang={lang} pickLang={pickLang} />
+          <PaletteMenu ap={ap} paletteSections={paletteSections} wordmarks={menu.wordmarks} />
+          <SchemeToggle dark={ap.dark} label={menu.themeLabel} toggle={ap.toggle} />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>
           <ChoiceMenu
             quiet
             chevron={false}
             label={t('ui.moreOptions')}
-            submenus={[]}
+            submenus={[
+              {
+                label: t('ui.lang'),
+                icon: <Translate />,
+                sections: [{title: t('ui.lang'), items: languageItems, value: lang, onChange: k => pickLang(k as Lang)}]
+              },
+              {
+                label: t('ui.theme'),
+                icon: <Contrast />,
+                sections: [{title: t('ui.theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
+              },
+              {label: t('ui.palette'), icon: <Color />, sections: palettes},
+              {label: t('ui.wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
+            ]}
             actions={[
-              {label: t('settings.appearance'), icon: <Settings />, onAction: openAppearance},
               ...(commands.reload ? [{label: commands.reload.label, icon: <Refresh />, onAction: askReload}] : []),
               {label: backend.title, icon: <Data />, onAction: () => setBackendOpen(true)}
             ]}

@@ -5,9 +5,10 @@ test('the desktop theme shortcut stays in sync with the appearance editor', asyn
   await page.emulateMedia({colorScheme: 'light'});
   await page.goto('/#/activity');
   const top = page.locator('.rp-top');
-  await expect(top.getByRole('button', {name: 'Language', exact: true})).toHaveCount(0);
-  await expect(top.getByRole('button', {name: 'Palette', exact: true})).toHaveCount(0);
-  await top.getByRole('link', {name: 'Appearance'}).click();
+  await expect(top.getByRole('button', {name: 'Language', exact: true})).toBeVisible();
+  await expect(top.getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
+  await expect(top.getByRole('link', {name: 'Appearance'})).toHaveCount(0);
+  await page.goto('/#/settings?card=appearance');
   await expect(page).toHaveURL(/#\/settings\?card=appearance$/);
   const card = page.getByRole('region', {name: 'Appearance'});
   await expect(card).toBeFocused();
