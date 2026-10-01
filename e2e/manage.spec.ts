@@ -14,8 +14,8 @@ test('the backend actions card links to reload, DNS, subscriptions and connectio
   // Geodata has its own card where the sources are configurable.
   await expect(card).not.toContainText('geosite');
   await card.getByRole('link', {name: 'Open subscriptions', exact: true}).click();
-  await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
+  await page.getByRole('button', {name: 'Update subscription (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions updated: 1 of 1'})).toBeVisible();
   await page.goto('/#/settings');
   await card.getByRole('link', {name: 'Open DNS cache', exact: true}).click();
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();

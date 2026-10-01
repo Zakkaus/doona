@@ -60,7 +60,7 @@ for (const failed of [false, true]) {
     await dialog.getByLabel('Subscription URL').fill('https://example.org/sub');
     await dialog.getByRole('button', {name: 'Add', exact: true}).click();
     await expect(dialog).toHaveCount(0);
-    if (failed) await expect(page.locator('.rp-toast.negative')).toContainText('could not be refreshed');
+    if (failed) await expect(page.locator('.rp-toast.negative')).toContainText('could not be updated');
     expect((await backend.api.nodes()).nodes).toHaveLength(0);
     await page.goto('/#/activity');
     await expect(step(page, 'Add a subscription or nodes')).toHaveAttribute('data-complete', 'true');
