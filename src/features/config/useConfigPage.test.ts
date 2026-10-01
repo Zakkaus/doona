@@ -58,7 +58,10 @@ beforeEach(async () => {
     editor,
     focusLine: null,
     generation: config.generation_id,
-    focusDiagnostics: false
+    focusDiagnostics: false,
+    diagnosticsChoice: null,
+    chooseDiagnostics: vi.fn(),
+    reportErrors: vi.fn()
   };
 });
 
@@ -84,7 +87,7 @@ it('keeps cross-source rejection rows without marking or jumping the edited file
   const other = {...config.diagnostics[0], level: 'error' as const, source_id: config.sources[1].id, line: 2};
   editor.errorSource = props.source.id;
   editor.diagnostics = [other];
-  expect(read().shown[0]).toMatchObject({sourceId: other.source_id, where: 'rules.dae:2'});
+  expect(read().diagnostics.rows[0]).toMatchObject({sourceId: other.source_id, where: 'rules.dae:2'});
   expect(read().marks).toEqual([]);
   vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [other]});
   await read().validate();
@@ -100,20 +103,20 @@ it('retains accepted diagnostics and a legacy focus request before redacted text
   hookHarness.reset();
   props = page.sourceProps!;
   expect(read().checkedDraft).toBe(false);
-  expect(read().shown).toHaveLength(config.diagnostics.length);
+  expect(read().diagnostics.rows).toHaveLength(config.diagnostics.length);
 });
 
 it('restores accepted provenance after cancel and after a generation change', async () => {
   const draftError = {...config.diagnostics[0], level: 'error' as const};
   read().change(props.source.content + '\n# draft');
-  expect(read().shown).toEqual([]);
+  expect(read().diagnostics.rows).toEqual([]);
   vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [draftError]});
   await read().validate();
   expect(read().checkedDraft).toBe(true);
   read().cancel();
   expect(read().dirty).toBe(false);
   expect(read().checkedDraft).toBe(false);
-  expect(read().shown).toHaveLength(config.diagnostics.length);
+  expect(read().diagnostics.rows).toHaveLength(config.diagnostics.length);
   await read().validate();
   props.generation = 'next';
   read();
@@ -141,4 +144,32 @@ it.each([true, false])('validates and saves a raw edit of a form-owned value (ac
   expect(editor.apply).toHaveBeenCalledWith(props.source, text);
   expect(read().dirty).toBe(!accepted);
   expect(read().checkedDraft).toBe(!accepted);
+});
+
+it('summarises the shown diagnostics, opens on errors and jumps within the source', async () => {
+  expect(read().diagnostics).toMatchObject({errors: 0, quiet: 'No diagnostics', open: false});
+  read().change(props.source.content + '\n# draft');
+  expect(read().diagnostics.quiet).toBe('Current draft has not been validated.');
+  const error = {level: 'error' as const, source_id: props.source.id, line: 3, column: 1, span: null, code: 'invalid', message: 'Bad'};
+  const other = {...error, source_id: config.sources[1].id, line: 2};
+  vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [error, other, {...error, level: 'warning', line: 4}]});
+  await read().validate();
+  const d = read().diagnostics;
+  expect(d).toMatchObject({errors: 2, warnings: 1, open: true, scope: 'Current draft diagnostics'});
+  d.setOpen(false);
+  expect(props.chooseDiagnostics).toHaveBeenCalledWith({open: false, errorKeys: expect.any(Array)});
+  props.diagnosticsChoice = vi.mocked(props.chooseDiagnostics).mock.calls[0][0];
+  expect(read().diagnostics.open).toBe(false);
+  const before = read().focusKey;
+  read().diagnostics.go(read().diagnostics.rows.find(row => row.action === 'jump')!);
+  expect(read()).toMatchObject({focus: 3});
+  expect(read().focusKey).not.toBe(before);
+  read().diagnostics.go(read().diagnostics.rows.find(row => row.action === 'open')!);
+  expect(props.open).toHaveBeenCalledWith(other.source_id, 2);
+});
+
+it('counts the accepted errors on the source tab', () => {
+  config.diagnostics = [{level: 'error', source_id: 'src-main', line: 1, column: 1, span: null, code: 'invalid', message: 'Bad'}];
+  const page = hookHarness.render(() => useConfigPage({query: 'tab=modules', go: vi.fn()}));
+  expect(page.tabs.find(item => item.id === 'source')?.label).toBe('Config files (1)');
 });

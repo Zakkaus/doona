@@ -1,6 +1,6 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, Disclosure, Light, Link, Segmented, type Action} from '../../ui/ui';
+import {Badge, Button, Card, Disclosure, Light, Link, VisuallyHidden, type Action} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
@@ -11,14 +11,14 @@ export function SourceCard(props: SourceCardProps) {
   const {
     writable,
     links,
-    checkedDraft,
+    diagnostics: d,
     note,
     refused,
-    shown,
     marks,
     text,
     outbounds,
     focus,
+    focusKey,
     dirty,
     conflict,
     keep,
@@ -34,8 +34,7 @@ export function SourceCard(props: SourceCardProps) {
     validateDisabled,
     reason
   } = useSourceCard(props);
-  const panel = useRef<HTMLElement>(null);
-  const [level, setLevel] = useState('all');
+  const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (props.focusDiagnostics) {
       panel.current?.focus();
@@ -53,7 +52,58 @@ export function SourceCard(props: SourceCardProps) {
       ))}
     </div>
   );
-  const filtered = shown.filter(item => level === 'all' || item.level === level);
+  // Pinned under the editor's toolbar: the counts, opened into the list on errors.
+  const banner = (
+    <div ref={panel} tabIndex={-1} role="region" aria-label={t('config.diagnostics')} className="rp-config-diagnostics">
+      {d.quiet ? (
+        <span className="rp-label">{d.quiet}</span>
+      ) : (
+        <Disclosure
+          flush
+          isExpanded={d.open}
+          onExpandedChange={d.setOpen}
+          title={
+            <>
+              <Light small tone={d.errors ? 'err' : 'muted'}>
+                {t('config.levelErrors', {n: d.errors})}
+              </Light>
+              <Light small tone={d.warnings ? 'warn' : 'muted'}>
+                {t('config.levelWarnings', {n: d.warnings})}
+              </Light>
+            </>
+          }
+          aside={<span className="rp-label">{d.scope}</span>}
+        >
+          <div className="rp-config-diagnostic-list" role="list" aria-label={t('config.diagnostics')}>
+            {d.rows.map(item => (
+              <div className="rp-config-diagnostic" role="listitem" key={item.id}>
+                <div className="rp-col">
+                  <Light small tone={item.tone}>
+                    <VisuallyHidden>{`${item.levelText} `}</VisuallyHidden>
+                    {item.text}
+                  </Light>
+                  {item.backend && (
+                    <Disclosure flush title={t('config.backendText')}>
+                      <span className="rp-label">{item.backend}</span>
+                    </Disclosure>
+                  )}
+                </div>
+                {item.action && (
+                  <Button
+                    small
+                    label={item.action === 'jump' ? t('config.jumpToLine', {line: item.line!}) : t('config.openSourceAt', {where: item.where})}
+                    onPress={() => d.go(item)}
+                  >
+                    {t(item.action === 'jump' ? 'cm.go' : 'config.openSource')}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </Disclosure>
+      )}
+    </div>
+  );
   const actions: Action[] = [
     ...(canValidate
       ? [
@@ -83,73 +133,40 @@ export function SourceCard(props: SourceCardProps) {
       : [])
   ];
   return (
-    <div className="rp-config-workspace">
-      <Card
-        title={t('config.editor')}
-        aria-label={view.label}
-        help={writable ? {title: t('config.editor'), text: t('config.writeHelp')} : undefined}
-        reason={reason}
-      >
-        <div className="rp-row rp-source-note">
-          <span className="rp-cluster">
-            {dirty ? (
-              <>
-                <Badge tone="warn">{t('config.unsaved')}</Badge>
-                <span className="rp-label">{t('config.unsavedHint')}</span>
-              </>
-            ) : (
-              <span className="rp-label">{note}</span>
-            )}
-          </span>
-        </div>
-        {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
-        {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
-        <CodeEditor
-          actions={actions}
-          label={view.label}
-          value={text}
-          readOnly={!writable || busy}
-          onChange={change}
-          onReadOnlyAttempt={refused}
-          marks={marks}
-          focusLine={focus}
-          outbounds={outbounds}
-          onSave={dirty && !busy ? () => void save() : undefined}
-        />
-      </Card>
-      <Card ref={panel} tabIndex={-1} className="rp-config-diagnostics" title={t('config.diagnostics')}>
-        <span className="rp-label">
-          {dirty
-            ? t(checkedDraft ? 'config.draftDiagnostics' : 'config.draftPending')
-            : checkedDraft
-              ? t('config.fileDiagnostics')
-              : t('config.acceptedDiagnostics', {generation: props.generation})}
+    <Card
+      title={t('config.editor')}
+      aria-label={view.label}
+      help={writable ? {title: t('config.editor'), text: t('config.writeHelp')} : undefined}
+      reason={reason}
+    >
+      <div className="rp-row rp-source-note">
+        <span className="rp-cluster">
+          {dirty ? (
+            <>
+              <Badge tone="warn">{t('config.unsaved')}</Badge>
+              <span className="rp-label">{t('config.unsavedHint')}</span>
+            </>
+          ) : (
+            <span className="rp-label">{note}</span>
+          )}
         </span>
-        <Segmented
-          label={t('config.level')}
-          value={level}
-          onChange={setLevel}
-          items={[
-            ['all', t('config.levelAll', {n: shown.reduce((sum, item) => sum + item.count, 0)})],
-            ['error', t('config.levelErrors', {n: shown.filter(item => item.level === 'error').reduce((sum, item) => sum + item.count, 0)})],
-            ['warning', t('config.levelWarnings', {n: shown.filter(item => item.level === 'warning').reduce((sum, item) => sum + item.count, 0)})],
-            ['info', t('config.levelInfo', {n: shown.filter(item => item.level === 'info').reduce((sum, item) => sum + item.count, 0)})]
-          ]}
-        />
-        <div className="rp-list" role="list" aria-label={t('config.diagnostics')}>
-          {filtered.map(item => (
-            <div className="rp-col" role="listitem" key={item.id}>
-              <Light small tone={item.tone}>
-                {item.detail}
-              </Light>
-              <Button small onPress={() => props.open(item.sourceId, item.line)}>
-                {t('config.openSourceAt', {where: item.where})}
-              </Button>
-            </div>
-          ))}
-        </div>
-        {!filtered.length && <p className="rp-label">{dirty && !checkedDraft ? t('config.draftPending') : t('config.noDiagnostics')}</p>}
-      </Card>
-    </div>
+      </div>
+      {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
+      {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
+      <CodeEditor
+        actions={actions}
+        label={view.label}
+        value={text}
+        readOnly={!writable || busy}
+        onChange={change}
+        onReadOnlyAttempt={refused}
+        marks={marks}
+        focusLine={focus}
+        focusKey={focusKey}
+        banner={banner}
+        outbounds={outbounds}
+        onSave={dirty && !busy ? () => void save() : undefined}
+      />
+    </Card>
   );
 }

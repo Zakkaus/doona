@@ -37,10 +37,10 @@ export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string, t
     .map(d => ({line: d.line!, column: d.column, level: d.level, message: diagnosticText(diagnosticMessage(d, t), t)}));
 }
 
-// A diagnostic's words, the same in its row and its editor mark. A translated code keeps the backend's own words, which
-// name the entry the code cannot.
-function diagnosticText({summary, detail}: BackendMessage, t: Translator, text = summary): string {
-  return detail ? t('config.backendDetail', {text, message: detail}) : text;
+// A diagnostic's words in its editor mark, where the row's backend disclosure has no room. A translated code keeps the
+// backend's own words, which name the entry the code cannot.
+function diagnosticText({summary, detail}: BackendMessage, t: Translator): string {
+  return detail ? t('config.backendDetail', {text: summary, message: detail}) : summary;
 }
 
 function ruleCount(text: string, block: TextBlock, tokens: TextToken[]): number {
@@ -224,7 +224,7 @@ export function readOnlyBadge(
   const label = t(text.label);
   return {reason, label, note: t(text.note), ...(text.help && {help: {title: label, text: t(text.help)}})};
 }
-type DiagnosticRow = {
+export type DiagnosticRow = {
   id: string;
   level: ConfigDiagnostic['level'];
   tone: 'err' | 'warn' | 'info';
@@ -234,13 +234,26 @@ type DiagnosticRow = {
   where: string;
   message: string;
   code: string;
-  detail: string;
+  // What the diagnostic says, without where: the same error moved by an edit above it keeps it.
+  identity: string;
+  // The row as listed: its line (with the file when it is another source) and its message.
+  text: string;
+  // The backend's own words when the message is a translation that leaves something out.
+  backend: string | null;
+  // A line in the source on show moves its editor; another source opens there.
+  action: 'jump' | 'open' | null;
   count: number;
 };
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
 const levels: Record<ConfigDiagnostic['level'], Key> = {error: 'config.level.error', warning: 'config.level.warning', info: 'config.level.info'};
 // Identical diagnostics, such as one warning per duplicate entry at the same place, share one row with their count.
-export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigSource[], locale: string, t: Translator): DiagnosticRow[] {
+export function diagnosticRows(
+  diagnostics: ConfigDiagnostic[],
+  sources: ConfigSource[],
+  locale: string,
+  t: Translator,
+  current: string | null = null
+): DiagnosticRow[] {
   const paths = new Map(sources.map(source => [source.id, fileName(source)]));
   // The key is also the row id, so a selection follows its diagnostic when the polled list changes around it.
   const groups = new Map<string, {item: ConfigDiagnostic; count: number}>();
@@ -255,7 +268,8 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
     const presented = diagnosticMessage(item, t);
     const text = presented.summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
-    const described = diagnosticText(presented, t, message);
+    const own = item.source_id === current;
+    const line = item.line === null ? null : formatNumber(item.line, locale);
     return {
       id: key,
       level: item.level,
@@ -266,11 +280,38 @@ export function diagnosticRows(diagnostics: ConfigDiagnostic[], sources: ConfigS
       where: item.line === null ? path : `${path}:${item.line}`,
       message,
       code: item.code,
-      detail: item.line === null ? described : t('config.atFile', {file: path, line: formatNumber(item.line, locale), message: described}),
+      identity: JSON.stringify([item.source_id, item.code, item.message, item.params]),
+      text:
+        line === null
+          ? own
+            ? message
+            : t('ui.valuePair', {label: path, value: message})
+          : own
+            ? t('config.atLine', {line, message})
+            : t('config.atFile', {file: path, line, message}),
+      backend: presented.detail ?? null,
+      action: !own ? 'open' : item.line === null ? null : 'jump',
       count
     };
   });
 }
+
+// The diagnostics bar's counts, and its errors by what they say, so editing above one does not make it new.
+export function diagnosticSummary(rows: DiagnosticRow[]) {
+  const total = (level: ConfigDiagnostic['level']) => rows.filter(row => row.level === level).reduce((sum, row) => sum + row.count, 0);
+  const errorKeys = [...new Set(rows.filter(row => row.level === 'error').map(row => row.identity))];
+  return {errors: total('error'), warnings: total('warning'), errorKeys};
+}
+
+// The person's last open or collapse of the diagnostics bar, with the errors it listed then.
+export type DiagnosticsChoice = {open: boolean; errorKeys: string[]};
+// Errors open the list and anything less leaves it shut. A collapse holds until an error appears that it did not list;
+// an open holds until the person collapses it.
+export function diagnosticsOpen(errorKeys: string[], choice: DiagnosticsChoice | null): boolean {
+  if (choice && (choice.open || errorKeys.every(key => choice.errorKeys.includes(key)))) return choice.open;
+  return errorKeys.length > 0;
+}
+
 // The save button, shown only with unsaved changes. A refetch can make the source read-only while a draft is open;
 // then Save is refused and its tip gives the reason. While a validation runs the disabled button says so; otherwise,
 // saving included, it names the shortcut.

@@ -3,7 +3,19 @@ import {configNotes, version} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
-import {configMetadata, saveReason, saveView, validateReason, sourceView, readOnlyBadge, diagnosticRows, sectionSummaries, sourceMarks} from './view';
+import {
+  configMetadata,
+  saveReason,
+  saveView,
+  validateReason,
+  sourceView,
+  readOnlyBadge,
+  diagnosticRows,
+  diagnosticSummary,
+  diagnosticsOpen,
+  sectionSummaries,
+  sourceMarks
+} from './view';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
 import {diagnose} from '../../api/mock/config';
@@ -98,14 +110,41 @@ it('projects source locations without inventing a line for source-wide diagnosti
   expect(rows[0].where).toBe('config.dae:5');
   expect(rows[0].tone).toBe('warn');
   expect(rows[1].where).toBe('missing');
-  expect(rows[1].detail).toBe(t('ui.backendMessage', {message: configNotes[0].message}));
+  expect(rows[1].text).toBe(t('ui.valuePair', {label: 'missing', value: t('ui.backendMessage', {message: configNotes[0].message})}));
+  expect(rows[1].backend).toBeNull();
 });
 it('shows the backend words of a reused code once, in the detail', async () => {
   const configSources = (await createMockApi().config()).sources;
   const [row] = diagnosticRows([{...configNotes[0], code: 'unsupported_value', line: null}], configSources, 'en-US', t);
   expect(row.message).toBe(t('ui.backend.unsupportedValue'));
-  expect(row.detail).toBe(t('config.backendDetail', {text: t('ui.backend.unsupportedValue'), message: configNotes[0].message}));
-  expect(row.detail.split(configNotes[0].message)).toHaveLength(2);
+  expect(row.backend).toBe(configNotes[0].message);
+  expect(row.text).not.toContain(configNotes[0].message);
+});
+it.each([
+  ['a line in the source on show', 'main', 5, 'Line 5: No group named "alpha"', 'jump'],
+  ['the source on show as a whole', 'main', null, 'No group named "alpha"', null],
+  ['a line in another source', 'include', 8, 'rules.dae line 8: No group named "alpha"', 'open'],
+  ['another source as a whole', 'include', null, 'rules.dae: No group named "alpha"', 'open']
+] as const)('lists %s with its place and action', (_, sourceId, line, text, action) => {
+  const item = {...configNotes[0], source_id: sourceId, line, code: 'unknown_outbound', message: '', params: {name: 'alpha'}};
+  expect(diagnosticRows([item], [source(''), source('', 'include')], 'en-US', t, 'main')[0]).toMatchObject({text, action});
+});
+it('counts repeated diagnostics and keys errors by what they say, not where', () => {
+  const error = {...configNotes[0], level: 'error' as const, code: 'other', message: 'Bad'};
+  const rows = diagnosticRows([error, error, {...error, line: 9}, configNotes[0]], [], 'en-US', t);
+  const summary = diagnosticSummary(rows);
+  expect(summary).toMatchObject({errors: 3, warnings: 1});
+  expect(summary.errorKeys).toHaveLength(1);
+  expect(diagnosticSummary(diagnosticRows([{...error, message: 'Other'}], [], 'en-US', t)).errorKeys).not.toEqual(summary.errorKeys);
+});
+it.each([
+  ['errors open the list', ['a'], null, true],
+  ['warnings alone leave it shut', [], null, false],
+  ['a collapse holds while the errors are the same', ['a'], {open: false, errorKeys: ['a', 'b']}, false],
+  ['a new error opens it again', ['a', 'c'], {open: false, errorKeys: ['a']}, true],
+  ['an open holds without errors', [], {open: true, errorKeys: []}, true]
+] as const)('%s', (_, errorKeys, choice, open) => {
+  expect(diagnosticsOpen([...errorKeys], choice && {...choice, errorKeys: [...choice.errorKeys]})).toBe(open);
 });
 it('keeps a diagnostic row id when the diagnostics before it go away', async () => {
   const configSources = (await createMockApi().config()).sources;
@@ -172,7 +211,7 @@ it('shows the same localized diagnostic in rows and both editor marks', () => {
   const described = translateTW('config.backendDetail', {text: summary, message: 'No group named "nowhere"'});
   const rows = diagnosticRows([item], [source(text)], 'zh-TW', translateTW);
   expect(rows[0].message).toBe(summary);
-  expect(rows[0].detail).toContain(described);
+  expect(rows[0].backend).toBe('No group named "nowhere"');
   expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(described);
   // The page's own words already are the backend's in English.
   expect(sourceMarks([item], 'main', t)[0].message).toBe('No group named "nowhere"');
@@ -184,7 +223,7 @@ it('keeps backend detail separate in rows and editor marks', () => {
   const row = diagnosticRows([item], [], 'zh-TW', translateTW)[0];
   const mark = sourceMarks([item], item.source_id, translateTW)[0];
   expect(row.message).toBe(translateTW('ui.backend.duplicateSubscriptionEntry'));
-  expect(row.detail).toContain('Original backend detail');
+  expect(row.backend).toBe('Original backend detail');
   expect(mark.message).toContain(row.message);
   expect(mark.message).toContain('Original backend detail');
 });
@@ -194,7 +233,7 @@ it('shows a backend diagnostic that lacks the demo parameters in its own words',
   const summary = t('ui.backendMessage', {message: 'No include-resolution base'});
   const row = diagnosticRows([item], [], 'en-US', t)[0];
   expect(row.message).toBe(summary);
-  expect(row.detail).not.toContain('{path}');
+  expect(row.text).not.toContain('{path}');
   expect(sourceMarks([item], item.source_id, t)[0].message).toBe(summary);
 });
 

@@ -83,6 +83,9 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(diagnostics.getByRole('listitem')).toHaveCount(1);
   await expect(diagnostics).toContainText('Unknown section "unknown_section"');
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
+  await page.keyboard.press('ControlOrMeta+Home');
+  await diagnostics.getByRole('button', {name: /^Go to line/}).click();
+  await expect(page.locator('.cm-activeLine')).toContainText('unknown_section');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('ArrowUp');
@@ -182,18 +185,21 @@ test('paste into a read-only source is refused with the read-only notice', async
 
 test.describe(() => {
   test.use({storage: faults});
-  test('the diagnostics panel lists accepted diagnostics and opens the source at the line', async ({page}) => {
+  test('the diagnostics summary lists accepted diagnostics and opens the source at the line', async ({page}) => {
     await page.goto('/#/config?tab=validate');
-    await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeFocused();
+    const panel = page.getByRole('region', {name: 'Diagnostics', exact: true});
+    await expect(panel).toBeFocused();
+    await expect(panel).toContainText('Diagnostics kept for the accepted configuration');
     const rows = page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem');
+    // Without errors the summary stays shut until opened.
+    await expect(rows).toHaveCount(0);
+    await panel.getByRole('button', {name: /Errors 0/}).click();
     await expect(rows).toHaveCount(3);
-    await page.getByRole('radio', {name: 'Info 1', exact: true}).click();
-    await expect(rows).toHaveCount(1);
-    await page.getByRole('radio', {name: 'All 3', exact: true}).click();
     await page.getByRole('button', {name: 'Validate', exact: true}).click();
-    await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('Current config file diagnostics');
+    await expect(panel).toContainText('No diagnostics');
     await expect(rows).toHaveCount(0);
     await page.reload();
+    await panel.getByRole('button', {name: /Errors 0/}).click();
 
     await page.getByRole('button', {name: 'Open config file: rules.dae:3', exact: true}).click();
     await expect(page).toHaveURL(/tab=source&source=src-rules&line=3$/);
@@ -219,14 +225,17 @@ test('identical diagnostics share one row with their count, and a known code kee
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=validate');
 
-  await expect(page.getByRole('radio', {name: 'All 3', exact: true})).toBeVisible();
+  await page
+    .getByRole('region', {name: 'Diagnostics', exact: true})
+    .getByRole('button', {name: /Warnings 3/})
+    .click();
   const rows = page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem');
   await expect(rows).toHaveCount(1);
   await expect(rows).toContainText('Duplicate node in the subscription; the first usable entry is kept (3 times)');
-
-  await expect(page.locator('.rp-config-diagnostics')).toContainText(
-    'kept (3 times). Backend message: duplicate endpoint identity; retaining the first usable entry'
-  );
+  const backend = rows.getByText('duplicate endpoint identity; retaining the first usable entry', {exact: true});
+  await expect(backend).toBeHidden();
+  await rows.getByRole('button', {name: 'Backend message', exact: true}).click();
+  await expect(backend).toBeVisible();
   await page.goto('/#/config?tab=source&source=src-main');
   await expect(page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem')).toHaveCount(1);
 });
@@ -583,7 +592,11 @@ test('configuration diagnostics wrap on phones', async ({page}) => {
   config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/config?tab=source');
-  const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`, {exact: true});
+  await page
+    .getByRole('region', {name: 'Diagnostics', exact: true})
+    .getByRole('button', {name: /Warnings 1/})
+    .click();
+  const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`);
   await expect(diagnostic).toBeVisible();
   expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
@@ -599,6 +612,12 @@ test('a validation run gives way to the accepted diagnostics after a reload', as
     await generation;
     await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
   });
+  // A validation that finds something, so the summary names what it checked.
+  await page.route('**/api/v1/config/validate', async route => {
+    const result = await api.validateConfig(route.request().postDataJSON());
+    const warning = {level: 'warning', source_id: 'src-main', line: null, column: null, span: null, code: 'duplicate', message: 'Checked'} as const;
+    await route.fulfill({json: {...result, diagnostics: [warning]}});
+  });
   await page.goto('/#/config?tab=validate');
   const panel = page.getByRole('region', {name: 'Diagnostics', exact: true});
   await page.getByRole('button', {name: 'Validate', exact: true}).click();
@@ -609,7 +628,7 @@ test('a validation run gives way to the accepted diagnostics after a reload', as
   await api.replaceConfigSource(source.id, source.content + '\n# elsewhere\n', `"${source.content_sha256}"`);
   await expect.poll(async () => (await api.config()).generation_id).not.toBe(before.generation_id);
   changed();
-  await expect(panel).toContainText('Diagnostics kept for the accepted configuration');
+  await expect(panel).toContainText('No diagnostics');
   await expect(panel).not.toContainText('Current config file diagnostics');
 });
 
@@ -650,7 +669,7 @@ httpTest('a restart-only change is refused with the setting named, and the next 
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('global.log_level');
   await expect(editor).toContainText('# restart draft');
   await editor.fill((await editor.innerText()) + '\n# revised draft\n');
-  await expect(page.getByRole('list', {name: 'Diagnostics'})).not.toContainText('global.log_level');
+  await expect(page.getByRole('list', {name: 'Diagnostics'})).toHaveCount(0);
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
 });
@@ -929,7 +948,7 @@ test('source editing writes form-owned values in full', async ({page}) => {
   expect((await api.config()).sources[0].content).toContain('tproxy_port: 23456');
 });
 
-test('legacy validation links focus diagnostics beside the source at its line', async ({page}) => {
+test('legacy validation links focus diagnostics above the source at its line', async ({page}) => {
   const {api} = await mockBackend(page);
   const file = (await api.config()).sources.find(source => source.kind === 'main')!;
   const line = file.content.slice(0, file.content.indexOf('tproxy_port:')).split('\n').length;
@@ -939,7 +958,7 @@ test('legacy validation links focus diagnostics beside the source at its line', 
   await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeFocused();
   await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeInViewport();
   await expect(page.locator('.cm-activeLine')).toContainText('tproxy_port:');
-  await expect(page.getByRole('list', {name: 'Diagnostics'})).toHaveCount(1);
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toHaveCount(1);
 });
 
 test('located routing and DNS rules open their exact edit dialogs', async ({page}) => {

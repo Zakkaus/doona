@@ -18,7 +18,7 @@ test('the editor toolbar opens find and replace and goes to a line', async ({pag
   await line.fill('3');
   await page.keyboard.press('Enter');
   await expect(page.locator('.cm-goto-line')).toHaveCount(0);
-  await expect(page.locator('.cm-activeLineGutter')).toHaveText('3');
+  await expect(page.locator('.cm-lineNumbers .cm-activeLineGutter')).toHaveText('3');
 });
 
 test('a read-only source keeps Find and Go to line, and its editing commands are disabled', async ({page}) => {

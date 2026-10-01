@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef} from 'react';
+import {useEffect, useLayoutEffect, useRef, type ReactNode} from 'react';
 import {Menu, MenuItem} from 'react-aria-components';
 import {useT, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -18,7 +18,7 @@ import {
 } from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap, indentWithTab, redo, toggleComment, undo} from '@codemirror/commands';
 import {bracketMatching, syntaxHighlighting, HighlightStyle, indentUnit, indentOnInput, indentService} from '@codemirror/language';
-import {setDiagnostics} from '@codemirror/lint';
+import {lintGutter, setDiagnostics} from '@codemirror/lint';
 import {highlightSelectionMatches, searchKeymap, gotoLine, openSearchPanel} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
 import {dae} from './dae';
@@ -88,7 +88,13 @@ const theme = EditorView.theme({
   '.cm-cursor': {borderLeftColor: 'var(--rp-text)'},
   '.cm-matchingBracket': {backgroundColor: 'color-mix(in srgb, var(--rp-accent) 20%, transparent)', outline: 'none'},
   '.cm-selectionMatch': {backgroundColor: 'color-mix(in srgb, var(--rp-notice) 25%, transparent)'},
-  // Diagnostics show as underlines and the list above the editor, not gutter icons; the hover tooltip is the kit's.
+  // Diagnostics show as gutter markers, underlines and the list above the editor; the hover tooltip is the kit's.
+  '.cm-gutter-lint': {width: '12px'},
+  '.cm-gutter-lint .cm-gutterElement': {padding: '0'},
+  '.cm-lint-marker': {width: '8px', height: '8px', margin: '6px 2px', borderRadius: '50%'},
+  '.cm-lint-marker-error': {content: 'none', backgroundColor: 'var(--rp-negative)'},
+  '.cm-lint-marker-warning': {content: 'none', backgroundColor: 'var(--rp-notice)'},
+  '.cm-lint-marker-info': {content: 'none', backgroundColor: 'var(--rp-foam)'},
   '.cm-tooltip.cm-tooltip-lint': {
     backgroundColor: 'var(--rp-text)',
     color: 'var(--rp-on-text)',
@@ -225,7 +231,9 @@ export function CodeEditor({
   onSave,
   onReadOnlyAttempt,
   compact,
-  actions = []
+  actions = [],
+  focusKey,
+  banner
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -241,6 +249,10 @@ export function CodeEditor({
   onReadOnlyAttempt?: () => void;
   compact?: boolean;
   actions?: Action[];
+  // Changes to move to focusLine again when it is the line already asked for.
+  focusKey?: number;
+  // What shows under the toolbar, above the text, such as a diagnostics summary.
+  banner?: ReactNode;
 }) {
   const toolbar = useRef<HTMLDivElement>(null);
   const collapsed = useOverflow(toolbar, actions.map(action => action.label).join('\n') + readOnly + label);
@@ -274,6 +286,7 @@ export function CodeEditor({
         doc: value,
         extensions: [
           lineNumbers(),
+          lintGutter(),
           highlightSpecialChars(),
           undoable.current.of(history()),
           rectangularSelection(),
@@ -360,7 +373,7 @@ export function CodeEditor({
     const line = instance.state.doc.line(focusLine);
     instance.dispatch({selection: {anchor: line.from}, effects: [setFocusLine.of(focusLine), EditorView.scrollIntoView(line.from, {y: 'center'})]});
     instance.focus();
-  }, [focusLine]);
+  }, [focusLine, focusKey]);
   // The toolbar runs the keymap's own commands. Find and Go to line only move and select, so they stay in a read-only
   // source; the editing menu is disabled there, and a preview without onChange, which never becomes editable, has none.
   // A compact preview keeps its reduced height and has no toolbar.
@@ -370,57 +383,60 @@ export function CodeEditor({
   return (
     <>
       {!compact && (
-        <div className="rp-toolbar rp-editor-toolbar">
-          <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
-          <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
-            <div className="rp-toolbar" ref={toolbar}>
-              <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
-              <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
-              <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
-              {onChange && (
-                <MenuButton
-                  label={t('cm.commands')}
-                  isDisabled={readOnly}
-                  content={
-                    <Menu
-                      aria-label={t('cm.commands')}
-                      onAction={key => {
-                        const command = editCommands.find(command => command.id === key);
-                        if (command) run(command.run);
-                      }}
-                    >
-                      {editCommands.map(command => (
-                        <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
-                          {t(command.label)}
-                        </MenuItem>
-                      ))}
-                    </Menu>
-                  }
-                >
-                  {t('cm.commands')}
-                </MenuButton>
+        <div className="rp-editor-head">
+          <div className="rp-toolbar rp-editor-toolbar">
+            <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
+            <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
+              <div className="rp-toolbar" ref={toolbar}>
+                <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
+                <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
+                <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
+                {onChange && (
+                  <MenuButton
+                    label={t('cm.commands')}
+                    isDisabled={readOnly}
+                    content={
+                      <Menu
+                        aria-label={t('cm.commands')}
+                        onAction={key => {
+                          const command = editCommands.find(command => command.id === key);
+                          if (command) run(command.run);
+                        }}
+                      >
+                        {editCommands.map(command => (
+                          <MenuItem key={command.id} id={command.id} className="rp-item plain" textValue={t(command.label)}>
+                            {t(command.label)}
+                          </MenuItem>
+                        ))}
+                      </Menu>
+                    }
+                  >
+                    {t('cm.commands')}
+                  </MenuButton>
+                )}
+              </div>
+              {collapsed && (
+                <div className="rp-editor-overflow" ref={overflow}>
+                  <MoreMenu
+                    actions={[
+                      ...actions.slice(1),
+                      {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
+                      {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
+                      ...(onChange
+                        ? editCommands.map(command => ({
+                            id: command.id,
+                            label: t(command.label),
+                            isDisabled: readOnly,
+                            onAction: () => requestAnimationFrame(() => run(command.run))
+                          }))
+                        : [])
+                    ]}
+                  />
+                </div>
               )}
             </div>
-            {collapsed && (
-              <div className="rp-editor-overflow" ref={overflow}>
-                <MoreMenu
-                  actions={[
-                    ...actions.slice(1),
-                    {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
-                    {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
-                    ...(onChange
-                      ? editCommands.map(command => ({
-                          id: command.id,
-                          label: t(command.label),
-                          isDisabled: readOnly,
-                          onAction: () => requestAnimationFrame(() => run(command.run))
-                        }))
-                      : [])
-                  ]}
-                />
-              </div>
-            )}
           </div>
+          {banner}
         </div>
       )}
       <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />
