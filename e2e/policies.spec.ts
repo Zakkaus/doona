@@ -369,14 +369,22 @@ test('the default member is offered only while the dialog selects manual selecti
   await expect(member).toHaveCount(0);
   await policy.focus();
   await expect(policy).toBeFocused();
-  // Choose by typing on the closed picker: no popover opens, so the check below sees only what the new field does to
-  // focus, not React Aria's focus restore after a popover closes, which runs a frame later and lost focus on CI.
-  await policy.press('m');
-  await expect(policy).toContainText('Manual');
-  await expect(page.getByRole('listbox')).toHaveCount(0);
-  await expect(member).toBeVisible();
-  // Appearing later, the picker leaves focus where it was.
+  // Keyboard only, so focus stays where the person put it: open, type to Manual, Enter. Focusing the option from the
+  // test (as locator.press does) moved focus behind React Aria's back, and its restore after the list closed then
+  // missed on CI.
+  await page.keyboard.press('ArrowDown');
+  const listbox = page.getByRole('listbox');
+  await page.keyboard.type('m');
+  await expect(listbox.getByRole('option', {name: /^Manual/})).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(listbox).toHaveCount(0);
   await expect(policy).toBeFocused();
+  await expect(policy).toContainText('Manual');
+  // The draft now selects manually, so the default member is offered; appearing later, it leaves focus where it was.
+  await expect(member).toBeVisible();
+  await expect(policy).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(policy).not.toBeFocused();
   await policy.click();
   await page.getByRole('option', {name: /^First available/}).click();
   await expect(member).toHaveCount(0);
