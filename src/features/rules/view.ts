@@ -15,6 +15,7 @@ import type {
   RuleSource
 } from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
+import {modeRuleLines} from '../../dae/outboundMode';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {formatList, formatNumber, LOCALE, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -80,6 +81,7 @@ type DictionaryRow = {
   position: string;
   hits: string;
   removable: boolean;
+  modeManaged?: boolean;
   // Why the rule's target cannot be edited here, or null when it can.
   editReason: string | null;
   // Why a rule that is not removable cannot be removed here; null when it is, or for a fallback.
@@ -144,7 +146,7 @@ function listedRows<R extends Listed>(
   config: ConfigSource[],
   anchor: (source: ConfigSource, rule: R, scan: ReturnType<typeof scanConfig>) => RuleAnchor | null,
   // The target, hits and, when it differs from the listed text, the expression a row shows.
-  fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string},
+  fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string; modeManaged?: boolean},
   t: Translator,
   lang: Lang,
   kinds: readonly RuleConditionKind[],
@@ -225,6 +227,7 @@ export function dictionaryView(
     if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
   }
   const sections = ruleOutbounds(groups, t);
+  const managed = new Map(config.filter(source => source.kind === 'main').map(source => [source.id, new Set(modeRuleLines(source.content))]));
   return {
     ...listedRows(
       rules,
@@ -233,6 +236,7 @@ export function dictionaryView(
       rule => ({
         outbound: rule.outbound ?? '',
         must: rule.must,
+        modeManaged: !!rule.source && managed.get(rule.source.source_id)?.has(rule.source.line) === true,
         hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—'
       }),
       t,

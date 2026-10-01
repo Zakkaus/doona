@@ -5,7 +5,7 @@ import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {useDraftGuard} from '../../shell/draft';
-import {readMode, writeMode, type OutboundMode} from './mode';
+import {readMode, writeMode, type OutboundMode} from '../../dae/outboundMode';
 import {modeLabels, modeReasons, modeView} from './view';
 import {offered} from '../../api/capabilities';
 import {LocalError} from '../../api/error';

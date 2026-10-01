@@ -1180,6 +1180,7 @@
   "rule.editExpressionHelp": "修改表达式与目标后，验证、保存并重新加载。",
   "rule.editFallbackHelp": "修改 fallback 目标；验证通过后保存并重新加载。",
   "rule.editHelp": "修改条件与目标后，验证、保存并重新加载。所有条件行必须同时匹配。",
+  "rule.editOutboundMode": "编辑出站模式",
   "rule.edited": "规则更改已生效",
   "rule.evaluation": "规则评估 {n}",
   "rule.expression": "表达式",

@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useFlows, useGroups, usePendingRules, useRules, useRuntimeSettings} from '../../store';
 import {pendingView} from '../shared/pending';
 import {useApplyHeld} from '../shared/usePendingApply';
@@ -100,7 +100,11 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
   // `add` prefills a new rule's condition; `edit`, which Connections links to, opens an existing rule.
   const seed = params.get('add');
   const edit = params.get('edit');
-  const edited = edit ? rules.data?.rules.find(rule => rule.rule_id === edit) : undefined;
+  const managedEdit = !!edit && table.rows.some(row => row.id === edit && row.modeManaged);
+  useEffect(() => {
+    if (managedEdit) go('activity', 'card=mode');
+  }, [managedEdit, go]);
+  const edited = edit && !managedEdit ? rules.data?.rules.find(rule => rule.rule_id === edit) : undefined;
   const parsedSeed = useMemo(() => parseRuleSeed(seed), [seed]);
   const editor = useRuleEditor<RoutingRule>({
     canWrite,
@@ -152,6 +156,10 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     openSource: (query: string) => go('config', query),
     openEdit: (id: string) => {
       const rule = rules.data?.rules.find(rule => rule.rule_id === id);
+      if (table.rows.some(row => row.id === id && row.modeManaged)) {
+        go('activity', 'card=mode');
+        return;
+      }
       if (rule) editor.open({kind: 'edit', rule, outbound: rule.outbound ?? '', must: rule.must});
     }
   };

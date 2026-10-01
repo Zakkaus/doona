@@ -1,3 +1,4 @@
+import {outboundModeHref} from '../shared/link';
 import {useEffect, useId, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
@@ -6,6 +7,7 @@ import {
   ActionHelp,
   Badge,
   Button,
+  Link,
   Card,
   HelpRow,
   DataTable,
@@ -135,7 +137,12 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
               )}
             </span>
             <span className="rp-action-slot">
-              {editable && (
+              {row.modeManaged && (
+                <Link appearance="button" small quiet icon label={t('rule.editOutboundMode')} href={outboundModeHref}>
+                  <Edit />
+                </Link>
+              )}
+              {editable && !row.modeManaged && (
                 <Button
                   small
                   quiet
@@ -150,7 +157,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
               )}
             </span>
             <span className="rp-action-slot">
-              {canWrite && (row.removable || row.removeReason) && (
+              {canWrite && !row.modeManaged && (row.removable || row.removeReason) && (
                 <Button
                   small
                   quiet

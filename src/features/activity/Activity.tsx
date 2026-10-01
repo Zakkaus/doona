@@ -1,3 +1,4 @@
+import type {PageProps} from '../../shell/routes';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
@@ -16,7 +17,7 @@ import {useRankingCard} from './useRankingCard';
 import {GettingStarted} from './GettingStarted';
 import {useGettingStarted} from './useGettingStarted';
 
-export function Activity() {
+export function Activity({query}: PageProps) {
   const t = useT();
   const vm = useActivity();
   const setup = useGettingStarted();
@@ -32,7 +33,7 @@ export function Activity() {
       {alert}
       <GettingStarted model={setup} />
       <div className="rp-quick">
-        <ModeCards model={vm.mode} />
+        <ModeCards model={vm.mode} query={query} />
         <Card>
           <div className="rp-row">
             <div className="rp-cluster">

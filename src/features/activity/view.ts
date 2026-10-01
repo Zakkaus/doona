@@ -18,7 +18,7 @@ import {
 import {localTime, formatBytes, formatRate, formatLatency, formatCpu} from '../../i18n/format';
 import {formatNumber, type Key, type Translator as LabelFn} from '../../i18n';
 import {connectionRanking} from './ranking';
-import {sameMode, type OutboundMode} from './mode';
+import {sameMode, type OutboundMode} from '../../dae/outboundMode';
 import {engineStatus} from '../shared/engineStatus';
 import {href} from '../../shell/route';
 
