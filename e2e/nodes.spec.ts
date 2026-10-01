@@ -70,7 +70,7 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await dialog.getByLabel('Name').fill('sub-d');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  const added = page.locator('.rp-toast.positive', {hasText: 'sub-d added and refreshed, 0 nodes'});
+  const added = page.locator('.rp-toast.positive', {hasText: 'sub-d added and updated, 0 nodes'});
   await expect(added).toBeVisible();
   await expect(sources).toHaveCount(3);
   // The new row is selected without the toast's help.
@@ -131,7 +131,7 @@ test('a new subscription is selected even when its first refresh fails', async (
   await dialog.getByLabel('Name').fill('sub-f');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'sub-f was written to the configuration, but could not be refreshed'})).toBeVisible();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'sub-f was written to the configuration, but could not be updated'})).toBeVisible();
   await expect(page).toHaveURL(/#\/nodes\?tab=list&provider=[^&]+$/);
   await expect(page.getByText(/Showing nodes from sub-f\./)).toBeVisible();
 });
@@ -156,10 +156,10 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('sub-o');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
-  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toContainText('Every 24 hours');
+  await expect(dialog.getByRole('button', {name: 'Auto-update'})).toContainText('Every 24 hours');
   await expect(dialog.getByLabel('User-Agent')).toHaveAttribute('placeholder', 'honk/0.0.1-alpha');
   await expect(dialog.getByRole('switch', {name: 'Cache the subscription'})).toBeChecked();
-  await dialog.getByRole('button', {name: 'Auto-refresh'}).click();
+  await dialog.getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await dialog.getByLabel('User-Agent').fill('agent\u00e9');
   await expect(dialog.getByText('Up to 256 printable ASCII characters')).toBeVisible();
@@ -167,7 +167,7 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
   await dialog.getByLabel('User-Agent').fill('clash.meta');
   await dialog.getByText('Cache the subscription').click();
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-o added and refreshed'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-o added and updated'})).toBeVisible();
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
     "sub-o: {\n    url: 'https://example.org/sub?token=abc'\n    ua: 'clash.meta'\n    interval: '21600s'\n    cache: false\n  }"
@@ -210,7 +210,7 @@ test('a cold Nodes page finishes the first refresh after selecting a new subscri
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page).toHaveURL(/provider=sub-cold$/);
   finish();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-cold added and refreshed'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-cold added and updated'})).toBeVisible();
   showVersion();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("  sub-cold: 'https://example.org/plain'\n");
 });
@@ -222,12 +222,12 @@ test('an untouched option is left to the backend and an unadvertised one is not 
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('User-Agent')).toBeVisible();
-  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toHaveCount(0);
+  await expect(dialog.getByRole('button', {name: 'Auto-update'})).toHaveCount(0);
   await expect(dialog.getByRole('switch')).toHaveCount(0);
   await dialog.getByLabel('Name').fill('sub-p');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/plain');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-p added and refreshed'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-p added and updated'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("  sub-p: 'https://example.org/plain'\n");
 });
 
@@ -364,8 +364,8 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await sources.nth(1).click();
   await expect(page).toHaveURL(/provider=inline$/);
   await expect(nodes).toHaveCount(5);
-  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('harbor refreshed, 120 nodes');
+  await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('harbor updated, 120 nodes');
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
@@ -384,9 +384,9 @@ test('a subscription refresh interval is written into the configuration', async 
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
-  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'})).toBeFocused();
-  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
+  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-update'})).toBeFocused();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -396,8 +396,8 @@ test('a subscription refresh interval is written into the configuration', async 
     "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
   );
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Manual only', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
@@ -450,7 +450,7 @@ test('an unspecified subscription interval claims neither manual-only nor an eng
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
-  await expect(subscription.getByRole('link', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('Edit');
+  await expect(subscription.getByRole('link', {name: 'Auto-update of harbor', exact: true})).toHaveText('Edit');
 });
 
 test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
@@ -590,7 +590,7 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
     error: {code: 'publication_degraded', message: 'Provider nodes were committed but the runtime is degraded.', details: {committed: true}}
   });
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
+  await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
   await expect(page.locator('.rp-toast.info')).toContainText('harbor: nodes applied, but the datapath did not recover');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
 });
@@ -604,8 +604,8 @@ test('the node list names its source, groups a node by a labelled menu, and refr
     .getByRole('button', {name: 'Node actions', exact: true});
   await expect(join).toHaveAccessibleName('Node actions');
   await expect(join).toHaveText('');
-  await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
+  await page.getByRole('button', {name: 'Update subscription (1)', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions updated: 1 of 1'})).toBeVisible();
 });
 
 test('a latency row opens its node in the list', async ({page}) => {
@@ -781,9 +781,9 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   const block = main.content!.replace(`harbor: '${url}'`, `harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
   await api.pollOperation(await api.replaceConfigSource(main.id, block, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'})).toBeFocused();
-  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
+  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-update'})).toBeFocused();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -794,7 +794,7 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
-  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toContainText('Every 6 hours');
+  await expect(dialog.getByRole('button', {name: 'Auto-update'})).toContainText('Every 6 hours');
   await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
 });
 
@@ -847,8 +847,8 @@ test('a subscription never fetched says so and refreshes from its row', async ({
   const row = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-d'});
   await expect(row).toContainText('Not fetched');
   await expect(row.getByRole('button', {name: 'Fetch now'})).toHaveCount(0);
-  await row.getByRole('button', {name: 'Refresh sub-d', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d refreshed'})).toBeVisible();
+  await row.getByRole('button', {name: 'Update sub-d', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d updated'})).toBeVisible();
   await expect(row).toContainText('OK');
 });
 
@@ -1144,11 +1144,11 @@ test('the interval jump edits the declaring include while the main file is read-
     return api.replaceConfigSource(main.id, main.content, `"${main.content_sha256}"`);
   };
   await page.goto('/#/nodes');
-  const jump = page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true});
+  const jump = page.getByRole('link', {name: 'Auto-update of harbor', exact: true});
   await expect(jump).toHaveText('Edit');
   await jump.click();
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
-  const interval = dialog.getByRole('button', {name: 'Auto-refresh'});
+  const interval = dialog.getByRole('button', {name: 'Auto-update'});
   await expect(interval).toBeFocused();
   await expect(page).not.toHaveURL(/editSubscription|focus=/);
   await page.keyboard.press('Enter');

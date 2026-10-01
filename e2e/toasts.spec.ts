@@ -39,7 +39,7 @@ test('a failed first fetch of a new subscription offers Retry, which stays until
   const backend = await failingFirstFetch(page, 1);
   await page.goto('/#/nodes?tab=list');
   await addSubscription(page, 'sub-t');
-  const failure = page.locator('.rp-toast.negative', {hasText: 'sub-t was written to the configuration, but could not be refreshed'});
+  const failure = page.locator('.rp-toast.negative', {hasText: 'sub-t was written to the configuration, but could not be updated'});
   const retry = failure.getByRole('button', {name: 'Retry', exact: true});
   await expect(retry).toBeVisible();
   // A plain toast leaves after five seconds; one with an action waits for the person.
@@ -51,7 +51,7 @@ test('a failed first fetch of a new subscription offers Retry, which stays until
   for (let i = 0; i < 4 && !(await retry.evaluate(button => button === document.activeElement)); i++) await page.keyboard.press('Tab');
   await expect(retry).toBeFocused();
   await page.keyboard.press('Enter');
-  const success = page.locator('.rp-toast.positive', {hasText: 'sub-t added and refreshed'});
+  const success = page.locator('.rp-toast.positive', {hasText: 'sub-t added and updated'});
   await expect(success).toBeVisible();
   await expect(failure).toHaveCount(0);
   expect(backend.fetches()).toBe(2);
@@ -87,7 +87,7 @@ for (const width of [1280, 390])
     await page.goto('/#/nodes?tab=list');
     await addSubscription(page, 'sub-w');
     const failure = page.locator('.rp-toast.negative');
-    await expect(failure.locator('[slot="title"]')).toHaveText('sub-w was written to the configuration, but could not be refreshed');
+    await expect(failure.locator('[slot="title"]')).toHaveText('sub-w was written to the configuration, but could not be updated');
     await expect(failure.locator('[slot="description"]')).toContainText('Subscription server unreachable');
     const boxes = await parts(failure);
     expect(boxes.detail!.top).toBeGreaterThanOrEqual(boxes.summary.bottom);
@@ -152,7 +152,7 @@ test('a repeated actionable toast replaces its earlier copy', async ({page}) => 
   await failingFirstFetch(page, 2);
   await page.goto('/#/nodes?tab=list');
   await addSubscription(page, 'sub-r');
-  const failure = page.locator('.rp-toast.negative', {hasText: 'sub-r was written to the configuration, but could not be refreshed'});
+  const failure = page.locator('.rp-toast.negative', {hasText: 'sub-r was written to the configuration, but could not be updated'});
   await expect(failure).toHaveCount(1);
   await addSubscription(page, 'sub-r');
   await expect(page.locator('.rp-toast')).toHaveCount(1);
@@ -199,7 +199,7 @@ test('a failure toast leaves the request id out of its text and logs it', async 
     throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable', '0f8c2a4e-5b1d-4c3e-9a7f-2d6b8e1c4f90');
   };
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
+  await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
   const failure = page.locator('.rp-toast.negative');
   await expect(failure).toBeVisible();
   await expect(failure).not.toContainText('request_id');

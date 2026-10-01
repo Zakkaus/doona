@@ -20,8 +20,8 @@ test('a subscription whose host fails keeps its cached nodes and says why the re
   await page.goto('/#/nodes?tab=list');
   const source = page.locator('.rp-table').first().locator('[role=row]', {hasText: 'harbor'});
   await expect(source).toContainText('Stale');
-  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'Could not refresh harbor'})).toContainText(
+  await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'Could not update harbor'})).toContainText(
     'Could not fetch the subscription; the active nodes are kept'
   );
   await expect(source).toContainText('Stale');

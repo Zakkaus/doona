@@ -264,7 +264,7 @@ test.describe('with the base profile', () => {
       'The configuration cannot be read',
       'The configuration turns off 4 recorders',
       'Geodata is unavailable',
-      'Subscriptions cannot be refreshed for now',
+      'Subscriptions cannot be updated for now',
       'This honk build lacks 6 features'
     ]);
     await expect(rows.nth(0).locator('.rp-note')).toHaveText('Configuration, Validation, Nodes and node sources');

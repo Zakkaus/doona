@@ -580,7 +580,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
   await node.getByLabel('Name', {exact: true}).fill('new-draft');
   await node.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.org:443');
   release();
-  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added and refreshed');
+  await expect(page.locator('.rp-toast.positive')).toContainText('slow-provider added and updated');
   await expect(node.getByLabel('Name', {exact: true})).toHaveValue('new-draft');
   await page.evaluate(() => {
     location.hash = '#/settings';
@@ -608,7 +608,7 @@ test('provider host labels cannot enable interval writes without node tag metada
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
   await page.goto('/#/nodes?tab=list');
   await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
-  await expect(page.getByRole('button', {name: /^Auto-refresh of/})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: /^Auto-update of/})).toHaveCount(0);
 });
 
 httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
@@ -630,11 +630,11 @@ httpTest('backend inventory failures expose independent retries without claiming
   await card.getByRole('link', {name: 'Open subscriptions', exact: true}).click();
   const providers = page.getByRole('alert').filter({hasText: 'Provider inventory unavailable'});
   await expect(providers).toBeVisible();
-  await expect(page.getByRole('button', {name: /^Refresh .*subscription/})).toBeDisabled();
-  await expect(page.getByRole('button', {name: /^Refresh .*subscription/})).not.toContainText('(0)');
+  await expect(page.getByRole('button', {name: /^Update .*subscription/})).toBeDisabled();
+  await expect(page.getByRole('button', {name: /^Update .*subscription/})).not.toContainText('(0)');
   failProviders = false;
   await providers.getByRole('button', {name: 'Retry', exact: true}).click();
-  await expect(page.getByRole('button', {name: 'Refresh subscription (1)', exact: true})).toBeEnabled();
+  await expect(page.getByRole('button', {name: 'Update subscription (1)', exact: true})).toBeEnabled();
   await page.goto('/#/settings');
   await card.getByRole('link', {name: 'Open connections', exact: true}).click();
   const connections = page.getByRole('alert').filter({hasText: 'Connection inventory unavailable'});

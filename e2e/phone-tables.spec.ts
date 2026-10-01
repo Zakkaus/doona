@@ -18,8 +18,8 @@ const columnNames = (grid: Locator) =>
 // ProviderTable prioritises the source, count and actions before optional columns. It sits inside the Nodes page's
 // "Nodes" tab, above the node list, so its own `.rp-table` is the first one there.
 for (const [width, url, heading, columns] of [
-  [320, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-refresh', 'Expires', 'State', 'Actions']],
-  [360, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-refresh', 'Expires', 'State', 'Actions']],
+  [320, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-update', 'Expires', 'State', 'Actions']],
+  [360, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-update', 'Expires', 'State', 'Actions']],
   [320, '/#/rules?tab=list&view=advanced', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']],
   [360, '/#/rules?by=client&tab=list&view=advanced', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']]
 ] as const) {
