@@ -61,8 +61,8 @@ importers:
         specifier: 1.63.0
         version: 1.63.0
       '@react-aria/optimize-locales-plugin':
-        specifier: ^1.1.4
-        version: 1.2.1
+        specifier: ^2.0.2
+        version: 2.0.2
       '@types/d3-shape':
         specifier: ^3.2.0
         version: 3.2.0
@@ -587,8 +587,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@react-aria/optimize-locales-plugin@1.2.1':
-    resolution: {integrity: sha512-cozjylSJNotHobYx1D4qZLLhcO00HZxI+XO1+MXP4Hv7y8gKzcH1QTJ4iqgzxywJcKkQLV6B21cBFHP6faWd0A==}
+  '@react-aria/optimize-locales-plugin@2.0.2':
+    resolution: {integrity: sha512-YxRwGC76G/aOozUEzl93irjhGuLsC63clF5abOX+lNAlg7EGns7250Ud8Ice6dy5oLv9mSXQx8LEf0b+56Cclg==}
 
   '@react-types/shared@3.36.1':
     resolution: {integrity: sha512-AzsuD9OfxTOZMMvTRhlN3oHBwOmFN7tDh27LzqmHt4+uOgPhJT7ZM7/kVs/8/o0WxayMUIk3hBmCFRHv1FUoag==}
@@ -2398,9 +2398,9 @@ packages:
     resolution: {integrity: sha512-lzlXPoVB0Uy/FvTaUgX39RbixYiSKoc3JSoSf01+0c2B6FR3qdYIPN7Qjo/AV7n6sqLCk0509cT3LRj1oSZ1+A==}
     engines: {node: '>=20'}
 
-  unplugin@1.16.1:
-    resolution: {integrity: sha512-4/u/j4FrCKdi17jaxuJA0jClGxB1AvU2hw/IuayPc4ay1XGaJs/rbb4v5WKwAjNifjmXK9PIFyuPiaK8azyR9w==}
-    engines: {node: '>=14.0.0'}
+  unplugin@2.3.11:
+    resolution: {integrity: sha512-5uKD0nqiYVzlmCRs01Fhs2BdkEgBS3SAVP6ndrBsuK42iC2+JHyxM05Rm9G8+5mkmRtzMZGY8Ct5+mliZxU/Ww==}
+    engines: {node: '>=18.12.0'}
 
   unrs-resolver@1.12.2:
     resolution: {integrity: sha512-dmlRxBJJayXjqTwC+JtF1HhJmgf3ftQ3YejFcZrf4+KKtJv0qDsK1pjqaaVjG7wJ5NJ6UVP1OqRMQ71Z4C3rxQ==}
@@ -3002,9 +3002,9 @@ snapshots:
     dependencies:
       playwright: 1.63.0
 
-  '@react-aria/optimize-locales-plugin@1.2.1':
+  '@react-aria/optimize-locales-plugin@2.0.2':
     dependencies:
-      unplugin: 1.16.1
+      unplugin: 2.3.11
 
   '@react-types/shared@3.36.1(react@19.3.0)':
     dependencies:
@@ -4934,9 +4934,11 @@ snapshots:
 
   unicorn-magic@0.4.1: {}
 
-  unplugin@1.16.1:
+  unplugin@2.3.11:
     dependencies:
+      '@jridgewell/remapping': 2.3.5
       acorn: 8.18.0
+      picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
 
   unrs-resolver@1.12.2:
