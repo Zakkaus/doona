@@ -54,6 +54,7 @@ test.describe('with more connections than one bulk close admits', () => {
     expect(closed).toBeGreaterThan(0);
     expect(closed + skipped).toBe(live);
     // What is left is what the backend could not close.
+    await expect(dialog).toHaveCount(0);
     await page.getByRole('button', {name: 'Close all', exact: true}).click();
     await expect(dialog).toContainText(`(${skipped.toLocaleString('en')} right now)`);
   });
