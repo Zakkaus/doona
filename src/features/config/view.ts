@@ -238,7 +238,7 @@ export type DiagnosticRow = {
   identity: string;
   // The row as listed: its line (with the file when it is another source) and its message.
   text: string;
-  // The backend's own words when the message is a translation that leaves something out.
+  // The backend's own words, kept under every row that has them, even where the message repeats them.
   backend: string | null;
   // A line in the source on show moves its editor; another source opens there.
   action: 'jump' | 'open' | null;
@@ -265,8 +265,7 @@ export function diagnosticRows(
   }
   return [...groups].map(([key, {item, count}]) => {
     const path = paths.get(item.source_id) ?? item.source_id;
-    const presented = diagnosticMessage(item, t);
-    const text = presented.summary;
+    const text = diagnosticMessage(item, t).summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
     const own = item.source_id === current;
     const line = item.line === null ? null : formatNumber(item.line, locale);
@@ -289,7 +288,7 @@ export function diagnosticRows(
           : own
             ? t('config.atLine', {line, message})
             : t('config.atFile', {file: path, line, message}),
-      backend: presented.detail ?? null,
+      backend: item.message || null,
       action: !own ? 'open' : item.line === null ? null : 'jump',
       count
     };

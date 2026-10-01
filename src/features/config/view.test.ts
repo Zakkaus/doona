@@ -111,7 +111,7 @@ it('projects source locations without inventing a line for source-wide diagnosti
   expect(rows[0].tone).toBe('warn');
   expect(rows[1].where).toBe('missing');
   expect(rows[1].text).toBe(t('ui.valuePair', {label: 'missing', value: t('ui.backendMessage', {message: configNotes[0].message})}));
-  expect(rows[1].backend).toBeNull();
+  expect(rows[1].backend).toBe(configNotes[0].message);
 });
 it('shows the backend words of a reused code once, in the detail', async () => {
   const configSources = (await createMockApi().config()).sources;
@@ -208,11 +208,11 @@ it('shows the same localized diagnostic in rows and both editor marks', () => {
   const [item] = diagnose('main', text, new Set(), 'full');
   const translateTW: Translator = (key, params) => translate('zh-TW', key, params);
   const summary = translateTW('config.diagnostic.unknownOutbound', {name: 'nowhere'});
+  const described = translateTW('config.backendDetail', {text: summary, message: 'No group named "nowhere"'});
   const rows = diagnosticRows([item], [source(text)], 'zh-TW', translateTW);
   expect(rows[0].message).toBe(summary);
-  // The backend's sentence names nothing the translation leaves out, so it is not repeated.
-  expect(rows[0].backend).toBeNull();
-  expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(summary);
+  expect(rows[0].backend).toBe('No group named "nowhere"');
+  expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(described);
   // The page's own words already are the backend's in English.
   expect(sourceMarks([item], 'main', t)[0].message).toBe('No group named "nowhere"');
 });
@@ -226,6 +226,17 @@ it('keeps backend detail separate in rows and editor marks', () => {
   expect(row.backend).toBe('Original backend detail');
   expect(mark.message).toContain(row.message);
   expect(mark.message).toContain('Original backend detail');
+});
+
+it.each([
+  ['a translated demo code', 'zh-TW', 'unknown_section', 'Unknown section "oops"', {name: 'oops'}, 'Unknown section "oops"'],
+  ['words the translation repeats', 'en', 'unknown_section', 'Unknown section "oops"', {name: 'oops'}, 'Unknown section "oops"'],
+  ['a known code', 'zh-TW', 'legacy-config-warning', 'setting was removed', undefined, 'setting was removed'],
+  ['an unknown code', 'en', 'something_new', 'Something new', undefined, 'Something new'],
+  ['no backend words', 'en', 'something_new', '', undefined, null]
+] as const)('keeps the backend words under the row for %s', (_, lang, code, message, params, backend) => {
+  const tr: Translator = (key, values) => translate(lang, key, values);
+  expect(diagnosticRows([{...configNotes[0], code, message, params}], [], lang, tr)[0].backend).toBe(backend);
 });
 
 it('shows a backend diagnostic that lacks the demo parameters in its own words', () => {
