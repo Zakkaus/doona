@@ -113,6 +113,7 @@ it('filters large grids by region and observed health without mutating member or
     tcp: 20 - index,
     unavailable: index === 0,
     healthy: index > 0,
+    nodeName: true,
     status: {text: ''},
     description: '',
     region: index < 3 ? 'HK' : '?'
@@ -395,6 +396,7 @@ it('offers the direct members as default members, and only the fields the group 
   expect(none.items.map(item => item.label)).toEqual(['None']);
   expect(list.title).toBe('Members');
   expect(list.items.map(item => item.label)).toEqual(members.map(member => member.name));
+  expect(list.items.map(item => item.nodeName)).toEqual(members.map(member => member.nodeName));
   expect(list.items.find(item => item.label === 'jp-01')).toMatchObject({desc: t('ui.unavailable'), tone: 'err'});
   expect(routeFields(undefined, null)).toEqual([]);
   expect(routeFields({...groups[0], capabilities: {...groups[0].capabilities, mutable_config: ['final_outbound']}}, null)).toEqual(['final_outbound']);
@@ -453,4 +455,17 @@ it('sums an automatic group up in one line: the member in place, per network whe
   expect(selectionSummary(same, members, t)).toBe(`Current: ${name('hk-01')}, ${available} available`);
   expect(selectionSummary({runtime: {...g.runtime, selection: {tcp: null, udp: null}}}, [], t)).toBe('Current: no member selected yet, 0 available');
   expect(policyCardView(g, members, 'both', t)).toMatchObject({automatic: g.policy.kind !== 'selector', summary: selectionSummary(g, members, t)});
+});
+
+it('marks node names by member kind even when badge presentation changes', () => {
+  const {groups} = nodeFixtures(0, true);
+  const members = memberViews(memberHealth(groups[0], new Map()), t);
+  for (const member of members) member.status.badge = !member.status.badge;
+  const sections = memberSections(members, [], t);
+  expect(
+    sections
+      .flatMap(section => section.items)
+      .map(item => item.nodeName)
+      .filter(value => value !== undefined)
+  ).toEqual(groups[0].members.map(member => member.kind === 'node'));
 });

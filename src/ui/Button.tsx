@@ -180,7 +180,19 @@ const REVEALS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemr
 const STOPS = REVEALS + ', [role="row"]';
 
 // `cut="start"` drops the start of a value whose end matters more, as a host name's registrable domain.
-export function TextTooltip({children, text, className, cut}: {children: ReactNode; text?: string; className?: string; cut?: 'start'}) {
+export function TextTooltip({
+  children,
+  text,
+  tooltipText,
+  className,
+  cut
+}: {
+  children: ReactNode;
+  text?: string;
+  tooltipText?: string;
+  className?: string;
+  cut?: 'start';
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(false);
   // Not a tab stop until measured: a focusable span inside a row would swallow the row's own press.
@@ -281,7 +293,7 @@ export function TextTooltip({children, text, className, cut}: {children: ReactNo
   return (
     <TooltipTrigger delay={400} isOpen={open} onOpenChange={next => (tapped.current && !next ? undefined : setOpen(next))}>
       <Focusable>{span}</Focusable>
-      <Tip>{text ?? children}</Tip>
+      <Tip>{text ?? tooltipText ?? children}</Tip>
     </TooltipTrigger>
   );
 }

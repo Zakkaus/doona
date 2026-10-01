@@ -8,6 +8,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-palette',
     'doona-wordmark',
     'doona-mirror',
+    'doona-country-flags',
     'doona-toast-placement',
     'doona-start-page',
     'doona-profiles',

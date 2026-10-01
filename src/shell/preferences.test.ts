@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {consumeProfileReadError, detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../api/profiles';
-import {readSettings, shouldOpenSettings} from './preferences';
+import {writeSetting, readSettings, shouldOpenSettings} from './preferences';
 import {routePaths} from './routes';
 
 describe('backend URL normalization', () => {
@@ -184,4 +184,13 @@ it.each(routePaths)('reads the startup page %s from preferences', route => {
 
 it.each([null, '', 'last', 'login', 'unknown', 'rules?tab=dns'])('defaults an invalid startup page %j to Activity', value => {
   expect(readSettings(storageFrom(value === null ? [] : [['doona-start-page', value]])).startPage).toBe('activity');
+});
+
+it('defaults country flags on and preserves an explicit off preference', () => {
+  expect(readSettings(storageFrom()).countryFlags).toBe(true);
+  expect(readSettings(storageFrom([['doona-country-flags', 'on']])).countryFlags).toBe(true);
+  expect(readSettings(storageFrom([['doona-country-flags', 'true']])).countryFlags).toBe(true);
+  const storage = storageFrom();
+  writeSetting('countryFlags', 'off', storage);
+  expect(readSettings(storage).countryFlags).toBe(false);
 });

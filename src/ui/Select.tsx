@@ -25,14 +25,17 @@ import {LazySearchList, preloadSearchList} from './LazySearchList';
 import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
 import {cx} from './cx';
+import {NodeName} from './NodeName';
 
-export type Item = {id: string; label: string; desc?: string; icon?: ReactNode};
+export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean};
 export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start' | 'path'}) => {
   const split = cut === 'path' ? i.label.lastIndexOf('/') + 1 : 0;
   return (
     <span className="rp-il">
       {i.icon && <span className="ic">{i.icon}</span>}
-      {split ? (
+      {i.nodeName ? (
+        <NodeName name={i.label} cut={cut === 'start' ? cut : undefined} />
+      ) : split ? (
         <TextTooltip className="rp-path" text={i.label}>
           <span className="rp-truncate rp-truncate-start">
             <bdi>{i.label.slice(0, split)}</bdi>

@@ -7,9 +7,9 @@ import {cx} from '../../ui/cx';
 
 // GridLayout spreads its column spacing over the outer edges too, so its tiles sat inset from the small grid's. Instead
 // each cell is a tile plus the grid's 8px gap after it, with no column spacing of its own: the columns then follow the
-// small grid's `minmax(204px, 1fr)` rule (page-layout.css), and the last column's gap keeps the tiles clear of the
+// small grid's `minmax(228px, 1fr)` rule (page-layout.css), and the last column's gap keeps the tiles clear of the
 // scrollbar (nodes.css). Rows keep the layout's own spacing.
-const cells = {minItemSize: new Size(204 + 8, 56), maxItemSize: new Size(Infinity, 56), minSpace: new Size(0, 8)};
+const cells = {minItemSize: new Size(228 + 8, 56), maxItemSize: new Size(Infinity, 56), minSpace: new Size(0, 8)};
 
 export function NodeGrid({
   nodes,
@@ -42,11 +42,11 @@ export function NodeGrid({
               isDisabled={isDisabled}
               onChange={() => onSelect(n.id)}
             >
-              <NodeTile name={n.name} status={n.status} description={n.description} mark={marks[n.id]} />
+              <NodeTile nodeName={n.nodeName} name={n.name} status={n.status} description={n.description} mark={marks[n.id]} />
             </ToggleButton>
           ) : (
             <div key={n.id} className={cx('rp-node', cur === n.id && 'cur')}>
-              <NodeTile name={n.name} status={n.status} description={n.description} current={cur === n.id} />
+              <NodeTile nodeName={n.nodeName} name={n.name} status={n.status} description={n.description} current={cur === n.id} />
             </div>
           )
         )}
@@ -93,7 +93,14 @@ export function NodeGrid({
         >
           {n => (
             <GridListItem id={n.id} textValue={n.name} className={cx('rp-node', ((cur === n.id && !onSelect) || marks[n.id]) && 'cur')}>
-              <NodeTile name={n.name} status={n.status} description={n.description} current={!onSelect && cur === n.id} mark={marks[n.id]} />
+              <NodeTile
+                nodeName={n.nodeName}
+                name={n.name}
+                status={n.status}
+                description={n.description}
+                current={!onSelect && cur === n.id}
+                mark={marks[n.id]}
+              />
             </GridListItem>
           )}
         </GridList>

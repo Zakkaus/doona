@@ -2,6 +2,7 @@ import {createContext, useContext, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
 import {phoneQuery, useMediaQuery} from '../../ui/hooks';
+import {NodeName} from '../../ui/NodeName';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
 import {SearchSelect} from '../../ui/SearchSelect';
@@ -35,7 +36,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         sortable: true,
         render: row => (
           <span className="rp-chain">
-            <TextTooltip>{row.name}</TextTooltip>
+            <NodeName name={row.name} />
           </span>
         )
       },

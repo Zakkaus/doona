@@ -1,3 +1,5 @@
+import {Fragment, type ReactNode} from 'react';
+import {NodeName} from '../../ui/NodeName';
 import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT, type Lang, type Translator} from '../../i18n';
 import {Card, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
@@ -11,12 +13,24 @@ import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;
 
-export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator) {
-  const names = formatList(
-    lang,
-    rows.slice(0, named).map(row => row.name)
-  );
-  return rows.length > named ? t('nodes.latency.andMore', {names, n: rows.length - named}) : names;
+function nameSlot(message: string, names: ReactNode) {
+  return message.split('{names}').map((part, index) => (
+    <Fragment key={index}>
+      {index > 0 && names}
+      {part}
+    </Fragment>
+  ));
+}
+
+export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator): ReactNode {
+  const separator = formatList(lang, ['', '']);
+  const names = rows.slice(0, named).map((row, index) => (
+    <Fragment key={row.id}>
+      {index > 0 && separator}
+      <NodeName name={row.name} />
+    </Fragment>
+  ));
+  return rows.length > named ? nameSlot(t('nodes.latency.andMore', {names: '{names}', n: rows.length - named}), names) : names;
 }
 
 // Every measured node on one axis, its latest latency beside the averages the backend reports, so a node that is slow
@@ -41,6 +55,7 @@ export function NodeLatency() {
           icon: <SpeedFast />,
           tint: 'c2',
           value: measured[0].name,
+          nodeName: true,
           caption: formatLatency(measured[0].latest, t)
         },
         {
@@ -48,6 +63,7 @@ export function NodeLatency() {
           icon: <Clock />,
           tint: 'c4',
           value: measured[measured.length - 1].name,
+          nodeName: true,
           caption: formatLatency(measured[measured.length - 1].latest, t)
         },
         {
@@ -64,8 +80,10 @@ export function NodeLatency() {
     const unavailable = missing.filter(row => row.state === 'unavailable');
     const unmeasured = missing.filter(row => row.state === 'unmeasured');
     return [
-      ...(unavailable.length ? [t('nodes.latency.unavailableList', {n: unavailable.length, names: missingNames(unavailable, lang, t)})] : []),
-      ...(unmeasured.length ? [t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: missingNames(unmeasured, lang, t)})] : [])
+      ...(unavailable.length
+        ? [nameSlot(t('nodes.latency.unavailableList', {n: unavailable.length, names: '{names}'}), missingNames(unavailable, lang, t))]
+        : []),
+      ...(unmeasured.length ? [nameSlot(t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: '{names}'}), missingNames(unmeasured, lang, t))] : [])
     ];
   };
   return (
@@ -108,6 +126,7 @@ export function NodeLatency() {
               return {
                 id: row.id,
                 label: row.name,
+                nodeName: true,
                 href: hrefs.get(row.id),
                 values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
                 text: formatLatency(row.latest, t),

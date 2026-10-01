@@ -1,3 +1,4 @@
+import {isBuiltinOutbound} from '../../dae/vocab';
 import type {Capabilities, FlowDetail, FlowList, FlowStep, FlowSummary} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import type {Key} from '../../i18n';
@@ -190,6 +191,7 @@ type FlowRow = {
   id: string;
   target: string;
   node: string;
+  nodeName: boolean;
   path: string | null;
   expression: string | null;
   ruleId: string | null;
@@ -224,6 +226,7 @@ export function flowRecordsView(
       id: flow.id,
       target: flow.input?.domain || flow.input?.dst || flow.id,
       node: nodeLabel(flow, t, names),
+      nodeName: !isBuiltinOutbound(flow.outbound) && flow.chain.length > 0,
       path: chainPath(flow, t, names),
       expression: flow.rule_expression,
       ruleId: flow.rule_generation_id !== null && flow.rule_generation_id === generation ? flow.rule_id : null,

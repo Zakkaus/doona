@@ -1,10 +1,12 @@
 import type {ReactNode} from 'react';
+import {NodeName} from '../NodeName';
 import {TextTooltip} from '../Button';
 
 // `icon` and `tint` as on the activity page's tiles: the icon takes a palette role colour, or the tone's.
 export type ChartFact = {
   label: string;
   value: string;
+  nodeName?: boolean;
   caption?: string;
   tone?: 'negative' | 'notice';
   icon?: ReactNode;
@@ -29,9 +31,13 @@ export function FactStrip({facts, lead}: {facts: ChartFact[]; lead?: boolean}) {
             {fact.label}
           </dt>
           <dd className="rp-tile-body">
-            <TextTooltip className="rp-big" cut={lead && i === 0 ? 'start' : undefined}>
-              {fact.value}
-            </TextTooltip>
+            {fact.nodeName ? (
+              <NodeName name={fact.value} className="rp-big" cut={lead && i === 0 ? 'start' : undefined} />
+            ) : (
+              <TextTooltip className="rp-big" cut={lead && i === 0 ? 'start' : undefined}>
+                {fact.value}
+              </TextTooltip>
+            )}
             {fact.caption && <TextTooltip className="rp-fact-caption">{fact.caption}</TextTooltip>}
           </dd>
         </div>

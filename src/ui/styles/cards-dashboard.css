@@ -240,9 +240,7 @@
   grid-template-columns: 1fr;
   gap: 12px;
 }
-/* A phone fits two tiles side by side; an odd last tile fills its row. A tile head's picker gives way to the tile:
-   it shrinks past its content width, and its chrome (padding, gap, chevron) shrinks with it so the chevron stays on
-   screen; the name ellipsises first via .rp-truncate, down to nothing before the chevron is touched. */
+/* A phone fits two tiles per row; an odd last tile fills its row. The header controls wrap below the caption. */
 @media (max-width: 599.98px) {
   .rp-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -379,12 +377,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
+  min-height: var(--rp-control);
+  flex-wrap: wrap;
   font-size: var(--rp-text-xs);
   line-height: 16px;
   min-width: 0;
   color: var(--rp-subtle);
   white-space: nowrap;
+}
+.rp-tile-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  min-width: 0;
+}
+@media (max-width: 639px) {
+  .rp-tile-head > .rp-tile-controls {
+    flex-basis: 100%;
+  }
 }
 .rp-latency .rp-select {
   min-width: 0;

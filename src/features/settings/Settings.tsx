@@ -67,6 +67,7 @@ export function Settings({query}: PageProps) {
     deleteHelp
   } = useSettingsPage(query);
   const mirrorHelpId = useId();
+  const countryFlagsHelpId = useId();
 
   const content: Record<SettingsCardId, ReactNode> = {
     backend: (
@@ -194,6 +195,14 @@ export function Settings({query}: PageProps) {
             ]}
           />
           <LabeledSelect label={t('settings.startPage')} value={ap.startPage} onChange={value => ap.pickStartPage(value as RoutePath)} items={startPageItems} />
+        </div>
+        <div className="rp-field">
+          <Switch isSelected={ap.countryFlags} onChange={ap.pickCountryFlags} aria-describedby={countryFlagsHelpId}>
+            {t('settings.countryFlags')}
+          </Switch>
+          <span id={countryFlagsHelpId} className="rp-label">
+            {t('settings.countryFlagsHelp')}
+          </span>
         </div>
         <div className="rp-field">
           <Switch isSelected={ap.mirrored} onChange={ap.pickMirrored} aria-describedby={mirrorHelpId}>

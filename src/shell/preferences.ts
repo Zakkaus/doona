@@ -20,13 +20,14 @@ export type Settings = {
   palette: PaletteId;
   wordmark: Wordmark;
   mirrored: boolean;
+  countryFlags: boolean;
   toastPlacement: ToastPlacement;
   startPage: RoutePath;
 };
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
 export function writeSetting(
-  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'toastPlacement' | 'startPage',
+  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'toastPlacement' | 'startPage',
   value: string,
   storage?: StoragePort
 ) {
@@ -59,6 +60,7 @@ export function readSettings(storage?: StoragePort): Settings {
     wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient',
     mirrored: read(storageKeys.mirror) === 'on',
     startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
+    countryFlags: read(storageKeys.countryFlags) !== 'off',
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
   };
 }
@@ -77,7 +79,9 @@ type Appearance = {
   wordmark: Wordmark;
   pickWordmark: (value: Wordmark) => void;
   mirrored: boolean;
+  countryFlags: boolean;
   pickMirrored: (value: boolean) => void;
+  pickCountryFlags: (value: boolean) => void;
   toastPlacement: ToastPlacement;
   pickToastPlacement: (value: ToastPlacement) => void;
   startPage: RoutePath;

@@ -930,7 +930,10 @@ test('the notices card says what is missing to route through a proxy until it is
 });
 
 test('the latency picker shows the resolved node on a phone', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-CN'));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-lang', 'zh-CN');
+    localStorage.setItem('doona-country-flags', 'off');
+  });
   await page.setViewportSize({width: 390, height: 900});
   await page.goto('/#/activity');
   const picker = page.locator('.rp-latency .rp-select');
@@ -938,16 +941,18 @@ test('the latency picker shows the resolved node on a phone', async ({page}) => 
   await expect(picker).toHaveAccessibleName('组：hk-01');
   const cut = await picker.evaluate(button => [...button.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1));
   expect(cut).toBe(false);
+  const caption = await page.locator('.rp-latency .rp-tile-caption').boundingBox();
+  const controls = await page.locator('.rp-latency .rp-tile-controls').boundingBox();
+  expect(controls!.y).toBeGreaterThanOrEqual(caption!.y + caption!.height);
 });
 
-// Relative boxes measured at 6bb91def, immediately before #261.
+// Relative boxes measured at 6bb91def, immediately before #261, without optional flag decoration.
 for (const [lang, scheme, width, title, trigger, valueColor] of [
   ['en', 'light', 1440, [45, 26, 45, 14], [98, 17, 71, 32], 'rgb(70, 66, 97)'],
-  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)'],
-  ['zh-CN', 'light', 390, [45, 26, 24, 14], [77, 15, 53, 36], 'rgb(70, 66, 97)']
+  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)']
 ] as const)
   test.describe(`${lang} ${scheme} original latency geometry`, () => {
-    test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang, 'doona-scheme': scheme}});
+    test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang, 'doona-scheme': scheme, 'doona-country-flags': 'off'}});
     test('preserves the title, node picker and large value boxes', async ({page}) => {
       await page.goto('/#/activity');
       const card = page.locator('.rp-latency');

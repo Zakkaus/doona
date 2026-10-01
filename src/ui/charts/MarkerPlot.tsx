@@ -1,4 +1,5 @@
 import {useState, type ReactNode} from 'react';
+import {NodeName} from '../NodeName';
 import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
@@ -10,6 +11,7 @@ export type MarkerKind = 'dot' | 'diamond' | 'tick';
 export type MarkerRow = {
   id: string;
   label: string;
+  nodeName?: boolean;
   href?: string;
   values: Partial<Record<MarkerKind, number>>;
   text: string;
@@ -18,7 +20,7 @@ export type MarkerRow = {
   tone?: string;
 };
 // `notes` are the rows that have no value to draw, summed up in a sentence each (say, which nodes are unavailable).
-export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: string[]};
+export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
 
 function Marker({kind, color}: {kind: MarkerKind; color?: string}) {
   return <i className={'rp-marker ' + kind} style={color ? {color} : undefined} aria-hidden="true" />;
@@ -80,12 +82,14 @@ export function MarkerPlot({
             const low = at(Math.min(...values));
             const high = at(Math.max(...values));
             return (
-              <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details])}>
+              <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details], row.nodeName)}>
                 <span className="name">
                   {row.href ? (
                     <Link appearance="link" href={row.href}>
-                      {row.label}
+                      {row.nodeName ? <NodeName name={row.label} /> : row.label}
                     </Link>
+                  ) : row.nodeName ? (
+                    <NodeName name={row.label} />
                   ) : (
                     row.label
                   )}
@@ -118,8 +122,8 @@ export function MarkerPlot({
               </Button>
             </div>
           )}
-          {group.notes.map(note => (
-            <p key={note} className="rp-note note">
+          {group.notes.map((note, index) => (
+            <p key={index} className="rp-note note">
               {note}
             </p>
           ))}

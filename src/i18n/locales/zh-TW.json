@@ -1387,6 +1387,8 @@
   "settings.backend": "後端",
   "settings.closeAllHelp": "關閉後端持有的全部連線（目前 {n} 條），包含此對話框開啟後建立的連線；核心直連的連線會略過。",
   "settings.cors": "網路或跨網域請求失敗：請確認後端可連線並允許此來源。",
+  "settings.countryFlags": "顯示國旗",
+  "settings.countryFlagsHelp": "為沒有國旗的節點名稱加上國旗，僅供顯示。",
   "settings.deleteProfile": "刪除設定檔",
   "settings.deleteProfileHelp": "刪除 {name}？此設定檔的後端網址與 Token 將從此瀏覽器移除。",
   "settings.demo": "目前使用內建示範資料，未連線至外部後端。",

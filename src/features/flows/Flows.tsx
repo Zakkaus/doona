@@ -1,6 +1,7 @@
 import '../../ui/styles/routing.css';
 import {useMemo} from 'react';
 import Tree from './Tree';
+import {NodeName} from '../../ui/NodeName';
 import {
   Badge,
   Button,
@@ -103,11 +104,14 @@ function FlowRecords(props: PageProps) {
         label: t('conn.node'),
         minWidth: 96,
         drop: 2,
-        render: row => (
-          <TextTooltip className="rp-chain" text={row.path ?? undefined}>
-            {row.node}
-          </TextTooltip>
-        )
+        render: row =>
+          row.nodeName ? (
+            <NodeName name={row.node} className="rp-chain" text={row.path ?? undefined} />
+          ) : (
+            <TextTooltip className="rp-chain" text={row.path ?? undefined}>
+              {row.node}
+            </TextTooltip>
+          )
       },
       {
         id: 'rule',
