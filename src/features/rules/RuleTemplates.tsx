@@ -1,6 +1,6 @@
 import {useId} from 'react';
-import {useT} from '../../i18n';
-import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup, Switch} from '../../ui/ui';
+import {useT, type Key} from '../../i18n';
+import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, HelpRow, Radio, RadioGroup, Switch} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -10,10 +10,22 @@ import type {RuleTemplatesModel} from './useRuleTemplates';
 export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
   const t = useT();
   const headingId = useId();
-  const optionHelpId = useId();
   const {current, dialog} = model;
+  const summaries: Partial<Record<RuleTemplate, Key>> = {
+    single: 'rule.template.singleSummary',
+    services: 'rule.template.servicesSummary',
+    regions: 'rule.template.regionsSummary',
+    homebound: 'rule.template.homeboundSummary'
+  };
   const radios = (choices: TemplateChoice[]) =>
-    choices.map(choice => <Radio key={choice.id} value={choice.id} label={choice.name} description={choice.help} />);
+    choices.map(choice => {
+      const summary = summaries[choice.id];
+      return (
+        <HelpRow key={choice.id} help={summary ? {title: choice.name, text: choice.help} : undefined}>
+          <Radio value={choice.id} label={choice.name} description={summary ? t(summary) : choice.help} />
+        </HelpRow>
+      );
+    });
   return (
     <div className="rp-col">
       <Card title={t('rule.template.mode')} titleId={headingId} reason={model.refusal}>
@@ -31,19 +43,15 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         </RadioGroup>
         <div className="rp-col">
           {templateOptionKeys.map(option => (
-            <div className="rp-field" key={option}>
-              <Switch
-                isSelected={model[option]}
-                onChange={enabled => model.setOption(option, enabled)}
-                isDisabled={model.applying}
-                aria-describedby={`${optionHelpId}-${option}`}
-              >
-                {t(templateOptionText[option].label)}
-              </Switch>
-              <span id={`${optionHelpId}-${option}`} className="rp-label">
-                {t(templateOptionText[option].help)}
-              </span>
-            </div>
+            <Switch
+              key={option}
+              isSelected={model[option]}
+              onChange={enabled => model.setOption(option, enabled)}
+              isDisabled={model.applying}
+              description={t(templateOptionText[option].help)}
+            >
+              {t(templateOptionText[option].label)}
+            </Switch>
           ))}
         </div>
         <div className="rp-toolbar">

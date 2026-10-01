@@ -1,16 +1,27 @@
 import type {Page} from '@playwright/test';
-import {detail, expect, test} from './fixtures';
+import {detail, expect, mockBackend, test} from './fixtures';
 
 // A finger cannot hover and a tap is not :focus-visible, so a truncated cell in a table whose rows open nothing shows
 // its full text on a tap (TextTooltip in src/ui/Button.tsx). Where a row press opens a detail, the press wins.
 const firstCut = (page: Page) => page.locator('.rp-table [role="row"]:not([data-disabled]) .rp-truncate[data-tip]').first();
 
+async function openLongRuleSource(page: Page) {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    return {...config, sources: config.sources.map(source => ({...source, path: '/etc/dae/production-routing-configuration.dae'}))};
+  };
+  await page.goto('/#/rules?tab=list&view=advanced');
+  const cell = firstCut(page);
+  await cell.scrollIntoViewIfNeeded();
+  return cell;
+}
+
 test.describe('on a phone', () => {
   test.use({viewport: {width: 360, height: 780}, hasTouch: true, isMobile: true});
 
   test('a tap on a truncated rule cell shows it whole until a tap elsewhere', async ({page}) => {
-    await page.goto('/#/rules?tab=list&view=advanced');
-    const cell = firstCut(page);
+    const cell = await openLongRuleSource(page);
     const full = (await cell.textContent())!.trim();
     await expect(page.getByRole('tooltip')).toHaveCount(0);
     await cell.tap();
@@ -43,8 +54,7 @@ test.describe('on a phone', () => {
   });
 
   test('a tap in a table whose row press does something else shows the tip and still presses the row', async ({page}) => {
-    await page.goto('/#/rules?tab=list&view=advanced');
-    const cell = firstCut(page);
+    const cell = await openLongRuleSource(page);
     const row = cell.locator('xpath=ancestor::*[@role="row"][1]');
     await cell.tap();
     await expect(page.getByRole('tooltip')).toBeVisible();
@@ -59,9 +69,8 @@ test.describe('on a phone', () => {
     });
 
     test('the tip opens over the cell and stays on screen', async ({page}) => {
-      await page.goto('/#/dns?tab=cache');
+      const cell = await openLongRuleSource(page);
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-      const cell = firstCut(page);
       await cell.tap();
       const tip = page.getByRole('tooltip');
       await expect(tip).toBeVisible();
