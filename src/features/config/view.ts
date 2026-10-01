@@ -149,7 +149,7 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
         source: main,
         block: null,
         href,
-        range: main ? fileName(main) : 'config.dae',
+        range: main ? fileName(main) : '',
         // Only a writable main file is offered as the place to add the section.
         summary: main?.writable ? t('config.moduleAbsent', {file: fileName(main)}) : t('config.moduleAbsentReadOnly'),
         note: null

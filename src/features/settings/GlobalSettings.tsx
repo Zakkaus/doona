@@ -46,7 +46,6 @@ export function GlobalSettings(props: PageProps) {
                 <TextField
                   label={field.key}
                   name={field.key}
-                  width={240}
                   value={field.value}
                   onChange={field.change}
                   isDisabled={!m.writable || m.busy || field.duplicate}

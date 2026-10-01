@@ -19,6 +19,7 @@ test('modules are summaries with one link to each editor', async ({page}) => {
   ]) {
     const card = modules.getByRole('region', {name: section, exact: true});
     await expect(card.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
+    await expect(card.locator('.rp-light.info')).toHaveCount(0);
     await card.getByRole('link', {name: 'Open page'}).click();
     await expect(page).toHaveURL(new RegExp('#/' + path));
     if (section === 'global') await expect(page.getByRole('region', {name: 'Persistent global settings'})).toBeInViewport();
@@ -68,6 +69,7 @@ test('legacy validation links focus diagnostics beside the source at its line', 
   await expect(page.getByRole('tab', {name: 'Config files', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', {name: 'Validation', exact: true})).toHaveCount(0);
   await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeFocused();
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeInViewport();
   await expect(page.locator('.cm-activeLine')).toContainText('tproxy_port:');
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toHaveCount(1);
 });
@@ -179,9 +181,20 @@ test('global controls share widths and align beneath wrapped labels', async ({pa
       elements.map(element => {
         const outer = element.getBoundingClientRect();
         const control = element.querySelector('.rp-input, .rp-selectbtn')!.getBoundingClientRect();
-        return {row: outer.top, top: control.top, width: control.width, height: control.height};
+        const label = element.querySelector('label')!;
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        return {row: outer.top, top: control.top, width: control.width, height: control.height, labelLines: range.getClientRects().length};
       })
     );
+    if (width === 390) expect.soft(fields.every(field => field.labelLines === 1)).toBe(true);
+    await expect.soft(page.locator('[data-setting] > .rp-field[style*="width"]')).toHaveCount(0);
+    const notes = page.getByRole('region', {name: 'Temporary runtime overrides'}).locator('.rp-fieldgrid > .rp-label');
+    await expect(notes).toHaveCount(2);
+    for (const note of await notes.all())
+      expect
+        .soft(await note.evaluate(element => element.getBoundingClientRect().width / element.parentElement!.getBoundingClientRect().width))
+        .toBeGreaterThan(0.99);
     expect(Math.max(...fields.map(field => field.width)) - Math.min(...fields.map(field => field.width))).toBeLessThanOrEqual(1);
     for (const row of new Set(fields.map(field => field.row))) {
       const controls = fields.filter(field => field.row === row);
@@ -268,6 +281,36 @@ for (const mode of ['validation', 'restart'] as const) {
     await card.getByRole('textbox', {name: 'tproxy_port', exact: true}).fill('23456');
     await card.getByRole('button', {name: 'Write and reload'}).click();
     await expect(card).toContainText(mode === 'restart' ? '1 setting takes effect only after a restart; nothing written' : 'Validation found 1 error');
+  });
+}
+test('diagnostic source actions show a button and open the named file', async ({page}) => {
+  await mockBackend(page, {faults: true});
+  await page.goto('/#/config?tab=validate');
+  const action = page
+    .getByRole('region', {name: 'Diagnostics', exact: true})
+    .getByRole('button', {name: /Open.*rules.dae/})
+    .first();
+  await expect(action).toBeVisible();
+  await expect(action).not.toHaveClass(/quiet/);
+  await expect(action).toContainText('Open');
+  await action.click();
+  await expect(page).toHaveURL(/source=src-rules/);
+});
+
+for (const width of [390, 1440]) {
+  test(`accepted diagnostics retain focus and provenance with redacted sources at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    const {api, handlers} = await mockBackend(page, {faults: true});
+    const config = await api.config();
+    config.sources[0].content = '<redacted>';
+    handlers['GET config'] = async () => config;
+    await page.goto('/#/config?tab=validate');
+    const panel = page.getByRole('region', {name: 'Diagnostics', exact: true});
+    await expect(panel).toBeFocused();
+    await expect(panel).toBeInViewport();
+    await expect(panel).toContainText('accepted configuration');
+    await expect(panel.getByRole('listitem').first()).toBeVisible();
+    await expect(panel).not.toContainText('Current config file diagnostics');
   });
 }
 

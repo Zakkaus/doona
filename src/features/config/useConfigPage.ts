@@ -97,7 +97,7 @@ export function useConfigPage({go, query}: PageProps) {
         editor,
         focusLine,
         generation: config.data?.generation_id ?? '',
-        focusDiagnostics: params.get('tab') === 'validate' || params.get('panel') === 'diagnostics'
+        focusDiagnostics: params.get('tab') === 'validate'
       }
     : null;
   const newSourceProps: NewSourceProps | null =
