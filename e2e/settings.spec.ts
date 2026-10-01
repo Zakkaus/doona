@@ -356,3 +356,33 @@ test('the About card opens the keyboard shortcuts and links the guide', async ({
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('main').getByRole('link', {name: /^Guide/})).toHaveAttribute('href', /^https:\/\/zakkaus\.github\.io\/doona-docs\//);
 });
+
+test('appearance uses labeled pickers with balanced insets and matching type', async ({page}) => {
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Appearance', exact: true});
+  const palette = card.getByRole('button', {name: /Palette/});
+  await expect(palette).toBeVisible();
+  const controls = await card.locator('.rp-selectbtn').evaluateAll(elements =>
+    elements.map(el => {
+      const s = getComputedStyle(el);
+      return {height: el.getBoundingClientRect().height, left: s.paddingLeft, right: s.paddingRight, font: s.fontSize, weight: s.fontWeight};
+    })
+  );
+  expect(controls.length).toBeGreaterThan(3);
+  for (const control of controls) {
+    expect(control.left).toBe(control.right);
+    expect(control.height).toBe(controls[0].height);
+    expect(control.font).toBe(controls[0].font);
+    expect(control.weight).toBe(controls[0].weight);
+  }
+  await card
+    .locator('.lbl')
+    .filter({hasText: /^Palette$/})
+    .click();
+  await expect(palette).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Backend', exact: true})).toHaveCount(0);
+});

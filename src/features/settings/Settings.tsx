@@ -1,6 +1,7 @@
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {ActionHelp, Button, Card, ChoiceMenu, ErrorMessage, LabeledSelect, Light, Link, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {SearchSelect} from '../../ui/SearchSelect';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -51,7 +52,6 @@ export function Settings({query}: PageProps) {
     paletteSections,
     startPageItems,
     profile,
-    palette,
     tokenType,
     tokenToggleText,
     toggleToken,
@@ -71,7 +71,7 @@ export function Settings({query}: PageProps) {
 
   const content: Record<SettingsCardId, ReactNode> = {
     backend: (
-      <Card level={2} title={t(cards.backend.titleKey)} titleId={cards.backend.headingId}>
+      <Card aria-label={t(cards.backend.titleKey)} id={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
         <ActionHelp reason={profileReason}>
           <div className="rp-toolbar">
@@ -155,15 +155,13 @@ export function Settings({query}: PageProps) {
       <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
         <div className="rp-toolbar">
           <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
-          <div className="rp-field">
-            <span className="lbl">{t('ui.palette')}</span>
-            <ChoiceMenu
-              label={t('ui.palette')}
-              sections={paletteSections.map(section => ({...section, value: ap.palette, onChange: (value: string) => ap.pickPalette(value as PaletteId)}))}
-            >
-              {palette}
-            </ChoiceMenu>
-          </div>
+          <SearchSelect
+            label={t('ui.palette')}
+            searchLabel={t('shell.shortcutSearch')}
+            sections={paletteSections.map(section => ({...section, id: section.title}))}
+            value={ap.palette}
+            onChange={value => ap.pickPalette(value as PaletteId)}
+          />
           <LabeledSelect
             label={t('settings.scheme')}
             value={ap.scheme}
