@@ -390,7 +390,7 @@ test('activity draws all six charts without loading a chart vendor', async ({pag
   await page.goto('/#/activity');
   await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
   expect(requests.filter(url => /vendor-charts/.test(url))).toEqual([]);
-  await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
+  await expect(page.locator('main .rp-activity-surface')).toHaveCount(6);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   const chart = traffic.getByRole('application');
   await chart.focus();
@@ -418,8 +418,10 @@ for (const lang of ['zh-TW', 'zh-CN']) {
     test.use({storage: {'doona-lang': lang}});
     test('sorts translated series names consistently', async ({page}) => {
       await page.goto('/#/activity');
-      await page.getByRole('application').nth(2).focus();
-      await expect(page.locator('.rp-charttip-bounded li').first()).toContainText(/^cgroup/);
+      const memory = page.locator('[data-module=memory]');
+      await memory.scrollIntoViewIfNeeded();
+      await memory.getByRole('application').focus();
+      await expect(memory.locator('.rp-charttip-bounded li').first()).toContainText(/^cgroup/);
     });
   });
 }
@@ -451,6 +453,7 @@ for (const [name, storage] of [
       await page.goto('/#/activity');
       const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
       const spark = tile.locator('.rp-spark svg');
+      await tile.scrollIntoViewIfNeeded();
       await expect(spark).toBeVisible();
       await spark.scrollIntoViewIfNeeded();
       const card = (await tile.boundingBox())!;
@@ -475,6 +478,7 @@ for (const [name, storage] of [
       await page.addStyleTag({content: '.rp-charttip-bounded [role=status] { padding-inline: 48px !important; }'});
       const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
       const spark = tile.locator('.rp-spark svg');
+      await tile.scrollIntoViewIfNeeded();
       await expect(spark).toBeVisible();
       await spark.scrollIntoViewIfNeeded();
       const card = (await tile.boundingBox())!;
@@ -501,7 +505,7 @@ test('the donut keeps stepping after a refresh leaves fewer slices than the one 
     return shrink ? {...outbounds, outbounds: idle} : outbounds;
   };
   await page.goto('/#/activity');
-  const donut = page.locator('.rp-donut');
+  const donut = page.locator('[data-module=outbounds] .rp-donut');
   const chart = donut.getByRole('application');
   await expect(chart).toBeVisible();
   const slices = await donut.locator('path').count();
@@ -518,7 +522,7 @@ test('the donut keeps stepping after a refresh leaves fewer slices than the one 
 
 test('the donut tooltip paints above the total in the middle of the ring', async ({page}) => {
   await page.goto('/#/activity');
-  const donut = page.locator('.rp-donut');
+  const donut = page.locator('[data-module=outbounds] .rp-donut');
   await donut.getByRole('application').focus();
   const tip = donut.locator('.rp-charttip-bounded');
   await expect(tip).toBeVisible();

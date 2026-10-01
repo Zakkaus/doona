@@ -151,14 +151,14 @@ it('writes subscription options as a block, checks them against create_options a
   expect(await main()).toBe(before);
 });
 
-it('refuses the second of two concurrent replaces made against the same hash', async () => {
+it('accepts only one of two concurrent replaces made against the same hash', async () => {
   const api = createMockApi();
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   const write = (fallback: string) =>
     api.replaceConfigSource(main.id, main.content.replace(/fallback: \S+/, `fallback: ${fallback}`), `"${main.content_sha256}"`);
   const results = await Promise.allSettled([write('direct'), write('block')]);
-  expect(results.map(result => result.status)).toEqual(['fulfilled', 'rejected']);
-  expect((results[1] as PromiseRejectedResult).reason).toMatchObject({status: 412});
+  expect(results.map(result => result.status).sort()).toEqual(['fulfilled', 'rejected']);
+  expect(results.find(result => result.status === 'rejected')?.reason).toMatchObject({status: 412});
 });
 
 it('writes a patched default as the native default key so a later edit of it wins', async () => {

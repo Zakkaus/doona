@@ -42,7 +42,8 @@ test('home charts collect memory polls and change the traffic history range', as
     await route.fulfill({json: responses[path]});
   });
   await page.goto('/#/activity');
-  const memory = page.getByRole('region', {name: 'Memory', exact: true});
+  const memory = page.locator('main').getByRole('region', {name: 'Memory', exact: true});
+  await memory.scrollIntoViewIfNeeded();
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   await expect(traffic.locator('.rp-activity-surface')).toBeVisible();
   releaseNodes();
@@ -69,17 +70,17 @@ test('the traffic figures stay while the runtime read fails, muted until it reco
   const runtime = /\/api\/v1\/runtime$/;
   expectLoadFailures(page, runtime);
   await page.goto('/#/activity');
-  const tiles = page.locator('.rp-strip .rp-card').filter({hasNot: page.getByRole('button', {name: /^Groups: /})});
+  const tiles = page.locator("[data-profile='metrics'] .rp-card").filter({hasNot: page.getByRole('button', {name: /^Groups: /})});
   const figures = tiles.locator('.rp-big');
   await expect(figures).toHaveCount(4);
   await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
   // The runtime is polled every five seconds.
   await page.route(runtime, route => route.abort('failed'));
-  await expect(page.locator('.rp-content > .rp-alert')).toContainText('The backend could not be reached', {timeout: 10_000});
+  await expect(page.locator('.rp-dashboard-cell > .rp-alert')).toContainText('The backend could not be reached', {timeout: 10_000});
   await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(4);
   await expect(figures.first()).not.toBeEmpty();
   await page.unroute(runtime);
-  await expect(page.locator('.rp-content > .rp-alert')).toHaveCount(0, {timeout: 10_000});
+  await expect(page.locator('.rp-dashboard-cell > .rp-alert')).toHaveCount(0, {timeout: 10_000});
   await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
 });
 
@@ -192,7 +193,9 @@ test('the compact group menu selects by keyboard and returns focus to its trigge
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await expect(menu).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe(name);
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('doona-dashboard')!).sections[1].items.find((item: {id: string}) => item.id === 'latency').group)
+  ).toBe(name);
   await expect(trigger).toBeFocused();
 });
 
@@ -226,7 +229,8 @@ test('the latency card follows the busiest group, remembers a choice and resolve
   busiest = 'gaming';
   await page.clock.fastForward(20100);
   await expect(trigger).toHaveText('hk-02');
-  await expect(tile.locator('.rp-tile-val')).toHaveText('91 ms');
+  await expect(tile).toContainText('hk-02');
+  await expect(tile.locator('.rp-big')).toHaveText('91 ms');
   expect(reads).toBe(2);
   await trigger.click();
   const follow = menu.getByRole('menuitemradio', {name: 'Automatic', exact: true});
@@ -238,7 +242,9 @@ test('the latency card follows the busiest group, remembers a choice and resolve
   await menu.locator('[data-key="proxy"]').click();
   await expect(trigger).toHaveText('sg-01');
   await expect(trigger).toHaveAccessibleName('Groups: sg-01');
-  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe('proxy');
+  const latencyGroup = () =>
+    page.evaluate(() => JSON.parse(localStorage.getItem('doona-dashboard')!).sections[1].items.find((item: {id: string}) => item.id === 'latency').group);
+  expect(await latencyGroup()).toBe('proxy');
   groups[1].selection.tcp_member_id = 'hk-01';
   await page.clock.fastForward(30100);
   await expect(trigger).toHaveText('hk-01');
@@ -252,24 +258,31 @@ test('the latency card follows the busiest group, remembers a choice and resolve
   await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
   await follow.click();
   await expect(trigger).toHaveText('hk-02');
-  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
+  await expect(tile).toContainText('hk-02');
+  // Following traffic is saved as the card's choice and survives a reload.
+  await expect.poll(latencyGroup).toBeFalsy();
+  await page.reload();
+  await expect(trigger).toHaveText('hk-02');
   await trigger.click();
   await menu.locator('[data-key="proxy"]').click();
   const originalGroups = groups;
   groups = groups.filter(group => group.name !== 'proxy');
   await page.reload();
   await expect(trigger).toHaveText('hk-02');
+  await expect(tile).toContainText('hk-02');
   await trigger.click();
   await expect(follow).toHaveAttribute('aria-checked', 'true');
-  expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBeNull();
+  // A saved group that no longer exists is cleared from the layout.
+  await expect.poll(latencyGroup).toBeFalsy();
   await follow.click();
   groups = originalGroups;
   await page.clock.fastForward(30100);
   await expect(trigger).toHaveText('hk-02');
+  await expect(tile).toContainText('hk-02');
   expect(backend.requests.every(request => request.method() === 'GET')).toBe(true);
 });
 
-test('group latency preserves the ranking poll pause with follow and manual choices', async ({page}) => {
+test('group latency shares connection demand and manual choices stop following traffic', async ({page}) => {
   const backend = await mockBackend(page);
   backend.capabilities.resources.events.available = false;
   let reads = 0;
@@ -281,17 +294,27 @@ test('group latency preserves the ranking poll pause with follow and manual choi
   await page.clock.install();
   await page.goto('/#/activity');
   const ranking = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Top traffic', exact: true})});
+  await ranking.scrollIntoViewIfNeeded();
+  await page.clock.runFor(100);
   await expect(ranking.getByRole('link').first()).toBeVisible();
   await page.clock.runFor(100);
   // Returning from off screen can refresh the list before the timed poll.
   const initialReads = reads;
   await ranking.scrollIntoViewIfNeeded();
   await page.clock.runFor(100);
+  await expect(ranking.getByRole('link').first()).toBeVisible();
+  await page.clock.runFor(100);
   await page.clock.fastForward(20100);
   await expect.poll(() => reads).toBeGreaterThan(initialReads);
   const trigger = page.getByRole('button', {name: /^Groups: /});
+  await page.setViewportSize({width: 390, height: 480});
   await page.getByRole('heading', {name: 'Activity', exact: true}).evaluate(el => el.scrollIntoView({block: 'start'}));
   await expect.poll(async () => (await ranking.boundingBox())!.y).toBeGreaterThan(1000);
+  await page.clock.runFor(100);
+  await page.clock.fastForward(1000);
+  for (const id of ['ranking', 'latency', 'connectionOutbounds']) {
+    await expect(page.locator(`.rp-dashboard-cell[data-module="${id}"]`)).toHaveAttribute('data-visible', 'false');
+  }
   await page.clock.runFor(100);
   const pausedReads = reads;
   await page.clock.fastForward(40100);
@@ -299,9 +322,11 @@ test('group latency preserves the ranking poll pause with follow and manual choi
   expect(reads).toBe(pausedReads);
   await trigger.click();
   await page.getByRole('menuitemradio').filter({hasText: 'proxy'}).click();
+  await page.clock.runFor(100);
+  const manuallyChosenReads = reads;
   await page.clock.fastForward(40100);
   await page.clock.runFor(100);
-  expect(reads).toBe(pausedReads);
+  expect(reads).toBe(manuallyChosenReads);
   await ranking.scrollIntoViewIfNeeded();
   await page.clock.runFor(100);
   await page.clock.fastForward(20100);
@@ -351,6 +376,7 @@ test('notices hide housekeeping events while the Events page retains them', asyn
   await page.clock.install();
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+  await notices.scrollIntoViewIfNeeded();
   await expect(notices.getByRole('listitem').filter({hasText: 'Stream ready'})).toHaveCount(1);
   await page.clock.fastForward(10100);
   await expect(notices.getByRole('listitem').filter({hasText: /runtime\.updated|flow\.updated/})).toHaveCount(0);
@@ -372,6 +398,7 @@ test.describe(() => {
         await setAppearance(page, lang, scheme);
         await page.reload();
         const notices = page.locator('.rp-feed');
+        await notices.scrollIntoViewIfNeeded();
         await expect(notices.getByRole('listitem')).toHaveCount(5);
         await expect(notices.locator('.rp-light.warn')).toHaveCount(1);
         if (lang === 'en') {
@@ -394,6 +421,7 @@ test.describe(() => {
       await page.setViewportSize({width, height: 900});
       await page.goto('/#/activity');
       const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+      await notices.scrollIntoViewIfNeeded();
       await expect(notices.locator('.rp-light.warn')).toHaveText('Warning');
       const edges = await notices.locator('[role=listitem] .rp-note').evaluateAll(notes => notes.map(note => note.getBoundingClientRect().left));
       expect(edges.length).toBeGreaterThan(1);
@@ -416,6 +444,7 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
   await page.clock.install();
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications', exact: true});
+  await notices.scrollIntoViewIfNeeded();
   const ready = notices.getByRole('listitem').filter({hasText: 'Stream ready'});
   await expect(ready).toHaveCount(1);
   await page.evaluate(() => {
@@ -478,8 +507,8 @@ for (const width of [390, 1440]) {
     test.use({viewport: {width, height: 900}});
     test('keep a readable sparkline and equal heights in each row', async ({page}) => {
       await page.goto('/#/activity');
-      await expect(page.locator('.rp-strip .rp-spark')).toHaveCount(3);
-      const tiles = await page.locator('.rp-strip > *').evaluateAll(elements =>
+      await expect(page.locator("[data-profile='metrics'] .rp-spark")).toHaveCount(3);
+      const tiles = await page.locator("[data-profile='metrics'] > *").evaluateAll(elements =>
         elements.map(tile => {
           const box = tile.getBoundingClientRect();
           const style = getComputedStyle(tile);
@@ -525,11 +554,16 @@ for (const [width, lang] of [
         const result = await backend.api.nodes({limit: 1000});
         return {...result, nodes: result.nodes.map(node => ({...node, name: `${node.name}-relay-through-a-long-provider-name`}))};
       };
+      const groups = await backend.api.groups();
+      backend.handlers['GET groups'] = async () => groups.map(group => ({...group, name: `${group.name}-a-long-policy-group-name`}));
       await page.goto('/#/activity');
-      const tile = page.locator('.rp-strip > *').filter({has: page.locator('.rp-tile-head .rp-select')});
+      const trigger = page.locator('.rp-latency .rp-select');
+      await trigger.click();
+      await page.getByRole('menuitemradio', {name: 'proxy-a-long-policy-group-name', exact: true}).click();
+      const tile = page.locator("[data-profile='metrics'] .rp-card").filter({has: page.locator('.rp-tile-head .rp-select')});
       const picker = tile.locator('.rp-tile-head .rp-select');
       await expect(picker).toContainText('-relay-through-a-long-provider-name');
-      const tops = await page.locator('.rp-strip > *').evaluateAll(tiles => tiles.map(el => Math.round(el.getBoundingClientRect().top)));
+      const tops = await page.locator("[data-profile='metrics'] > *").evaluateAll(tiles => tiles.map(el => Math.round(el.getBoundingClientRect().top)));
       const rows = [...new Set(tops)].map(top => tops.filter(other => other === top).length);
       if (width < 600) expect(rows.slice(0, -1).every(count => count === 2) && rows.at(-1)! <= 2, `tiles per row: ${rows.join(', ')}`).toBe(true);
       const {edge, left, start, parts, name, gap, height, chevron, control} = await tile.evaluate(el => {
@@ -565,7 +599,7 @@ for (const [width, lang] of [
         await expect(page.getByRole('tooltip').filter({hasText: (await picker.textContent())!})).toBeVisible();
       }
       await picker.click();
-      await expect(page.getByRole('menuitemradio', {name: 'proxy', exact: true})).toBeVisible();
+      await expect(page.getByRole('menuitemradio', {name: 'proxy-a-long-policy-group-name', exact: true})).toBeVisible();
       await expect(page.getByRole('menu')).not.toContainText('-relay-through-a-long-provider-name');
     });
   });
@@ -580,7 +614,7 @@ test.describe('many outbounds', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('the outbound usage legend scrolls instead of growing the card', async ({page}) => {
     await page.goto('/#/activity');
-    const legend = page.locator('.rp-donut .lst');
+    const legend = page.locator('[data-module=outbounds] .rp-donut .lst');
     await expect(legend.locator('.r')).toHaveCount(29);
     expect(await legend.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight <= 170)).toBe(true);
   });
@@ -641,7 +675,11 @@ test.describe('many outbounds', () => {
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(menu).toHaveCount(0);
-    expect(await page.evaluate(() => localStorage.getItem('doona-activity-group'))).toBe(name);
+    expect(
+      await page.evaluate(
+        () => JSON.parse(localStorage.getItem('doona-dashboard')!).sections[1].items.find((item: {id: string}) => item.id === 'latency').group
+      )
+    ).toBe(name);
     await expect(trigger).toBeFocused();
     await trigger.click();
     // The virtual list renders the selected row only once the filter narrows it into view.
@@ -764,7 +802,7 @@ browserTest('configuration read failures are shown instead of write restrictions
     return route.fulfill({json: responses[path]});
   });
   await page.goto('/#/activity');
-  await expect(page.getByRole('alert').filter({hasText: 'Configuration storage failed'})).toBeVisible();
+  await expect(page.locator('main').getByRole('alert').filter({hasText: 'Configuration storage failed'})).toBeVisible();
   await expect(page.getByText('Needs a writable main configuration', {exact: true})).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -775,7 +813,9 @@ test('optional runtime does not block independent activity sections or poll an u
   await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.getByRole('button', {name: /^Groups: /})).toBeVisible();
-  await expect(page.getByRole('region', {name: 'Memory', exact: true}).locator('.rp-activity-surface')).toBeVisible();
+  await page.locator('main').getByRole('region', {name: 'Memory', exact: true}).scrollIntoViewIfNeeded();
+  await page.clock.runFor(100);
+  await expect(page.locator('main').getByRole('region', {name: 'Memory', exact: true}).locator('.rp-activity-surface')).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Outbound downloads', exact: true})).toBeVisible();
   await expect(page.getByText('Not provided by this backend', {exact: true})).toBeVisible();
   await page.clock.fastForward(10100);
@@ -834,7 +874,7 @@ test.describe(() => {
   test.use({storage: faults});
   test('the status card reports a degraded datapath as the Overview header does', async ({page}) => {
     await page.goto('/#/activity');
-    const status = page.locator('.rp-quick .rp-cluster > .rp-light');
+    const status = page.locator("[data-profile='quick'] .rp-control-card > .rp-row > .rp-light");
     await expect(status).toHaveText('Running, datapath degraded');
     await expect(status).toHaveClass(/\bwarn\b/);
   });
@@ -863,6 +903,7 @@ test('the rankings, outbound usage and latency tile open the connections and nod
   // The list groups rows by default, so it is a tree grid.
   const list = page.getByRole('treegrid', {name: 'Connections'}).or(page.getByRole('grid', {name: 'Connections'}));
   const ranking = page.locator('.rp-card', {has: page.getByRole('heading', {name: 'Top traffic', exact: true})});
+  await ranking.scrollIntoViewIfNeeded();
   const device = ranking.getByRole('link').first();
   const address = (await device.innerText()).trim();
   await device.click();
@@ -916,6 +957,7 @@ test('the notices card says what is missing to route through a proxy until it is
   backend.handlers['GET nodes'] = async () => ({observed_at: new Date().toISOString(), nodes: [], next_cursor: null});
   await page.goto('/#/activity');
   const card = page.getByRole('region', {name: 'Notifications'});
+  await card.scrollIntoViewIfNeeded();
   const subscriptions = card.getByRole('listitem').filter({hasText: 'No subscriptions yet'});
   const routing = card.getByRole('listitem').filter({hasText: 'No routing rules configured'});
   await expect(subscriptions.getByRole('link', {name: 'Add subscription', exact: true})).toHaveAttribute('href', '#/nodes');

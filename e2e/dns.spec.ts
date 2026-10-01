@@ -86,6 +86,10 @@ test('DNS logs load older pages and export only loaded records', async ({page}) 
   await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/version', async route => route.fulfill({json: await api.version()}));
+  await page.route('**/api/v1/runtime/memory', async route => route.fulfill({json: await api.runtimeMemory()}));
+  await page.route('**/api/v1/runtime/traffic/history?*', async route => route.fulfill({json: await api.trafficHistory()}));
+  await page.route('**/api/v1/config', async route => route.fulfill({json: await api.config()}));
+  await page.route('**/api/v1/groups', async route => route.fulfill({json: await api.groups()}));
   await page.route('**/api/v1/runtime', async route => route.fulfill({json: await api.runtime()}));
   await page.route('**/api/v1/dns/log?*', async route => {
     const params = new URL(route.request().url()).searchParams;

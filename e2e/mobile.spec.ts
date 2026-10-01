@@ -302,7 +302,7 @@ test.describe('desktop', () => {
     await page.goto('/#/overview');
     const sections = page.locator('.rp-side [data-group]');
     await expect(sections).toHaveCount(4);
-    expect(await sections.locator('.rp-group').allTextContents()).toEqual(['Activity', 'Monitor', 'Routing', 'Settings']);
+    expect(await sections.getByRole('heading', {level: 3}).allTextContents()).toEqual(['Activity', 'Monitor', 'Routing', 'Settings']);
     for (const [index, hub] of hubs.entries())
       expect(
         await sections
@@ -538,7 +538,7 @@ for (const [width, columns] of [
     test.use({viewport: {width, height: 800}});
     test(`the overview traffic counters use ${columns} columns`, async ({page}) => {
       await page.goto('/#/overview');
-      const kv = page.locator('.rp-kv:not(.inline)').nth(1);
+      const kv = page.locator('main .rp-kv:not(.inline)').nth(1);
       await expect(kv.locator('.v').first()).toBeVisible();
       const tops = await kv.locator(':scope > div').evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
       expect(tops.filter(top => top === tops[0])).toHaveLength(columns);

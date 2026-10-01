@@ -2,7 +2,7 @@ import {expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import type {OperationAccepted, OperationState} from '../api/model';
 import {ApiError} from '../api/error';
-import {activationError, finished, settle} from './action';
+import {actionCell, activationError, finished, settle} from './action';
 import {refetchAll} from './resourceCore';
 
 vi.mock('./resourceCore', () => ({refetchAll: vi.fn(async () => [])}));
@@ -99,4 +99,22 @@ it.each([
   const error = new ApiError(503, 'temporarily_unavailable', 'Activation', null, {stage, ...details});
   expect(activationError(error)).toMatchObject({key, detail: 'Activation', code: 'temporarily_unavailable', details: {stage, ...details}});
   expect(refetchAll).toHaveBeenCalledOnce();
+});
+
+it('publishes a failed action with its busy state cleared', async () => {
+  const cell = actionCell({} as Api, 'failure');
+  const states: ReturnType<typeof cell.snapshot>[] = [];
+  cell.subscribe(() => states.push(cell.snapshot()));
+  const error = new Error('failed');
+  await cell.run(
+    'save',
+    async () => {
+      throw error;
+    },
+    false
+  );
+  expect(states).toEqual([
+    {busy: 'save', error: null},
+    {busy: null, error}
+  ]);
 });

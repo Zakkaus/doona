@@ -7,6 +7,7 @@ test('native activity shows the API version and follows runtime events', async (
   await page.goto('/#/activity');
   await expect(page.locator('.rp-version')).toHaveText(`${version.engine.name} ${version.engine.version}`);
   const notifications = page.getByRole('region', {name: 'Notifications', exact: true});
+  await notifications.scrollIntoViewIfNeeded();
   await page.clock.fastForward(5100);
   await expect(notifications.getByRole('listitem').filter({hasText: 'runtime.updated'})).toHaveCount(0);
   await page.goto('/#/events');
@@ -22,6 +23,7 @@ test('native activity shows the API version and follows runtime events', async (
 });
 
 test('refresh remains pending until completion, refetches non-polling resources, and reports errors', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 1000});
   const api = createMockApi();
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
@@ -108,6 +110,7 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(actionError).toContainText('Could not run the query');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   const actionFailure = await actionError.textContent();
+  brokenRuntime = false;
   await refresh.click();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.positive')).toContainText('Data refreshed.');

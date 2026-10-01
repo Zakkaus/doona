@@ -372,7 +372,10 @@ test('search keeps the keyboard target when an earlier connection disappears', a
 });
 
 httpTest('policy drafts survive a completeness recheck and reject a changed original digest', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-lang', 'en');
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
+  });
   const api = await backend(page);
   const capabilities = await api.capabilities();
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
@@ -624,7 +627,10 @@ test('provider host labels cannot enable interval writes without node tag metada
 
 httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
   const api = await backend(page);
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-lang', 'en');
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
+  });
   let failProviders = true;
   let failConnections = true;
   const failure = (message: string) => ({status: 503, json: {request_id: 'inventory', error: {code: 'service_unavailable', message, details: null}}});
@@ -658,7 +664,10 @@ httpTest('backend inventory failures expose independent retries without claiming
 
 httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
   const api = await backend(page);
-  await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-lang', 'en');
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
+  });
   let fail = true;
   const failure = (message: string) => ({status: 503, json: {request_id: 'retry', error: {code: 'service_unavailable', message, details: null}}});
   await page.route('**/api/v1/runtime/outbounds', async route => route.fulfill(fail ? failure('Outbounds unavailable') : {json: await api.runtimeOutbounds()}));

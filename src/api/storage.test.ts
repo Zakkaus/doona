@@ -4,6 +4,9 @@ import {storageKeys} from './storage';
 it('keeps the keys browsers already hold', () => {
   expect(Object.values(storageKeys)).toEqual([
     'doona-lang',
+    'doona-widgets',
+    'doona-dashboard',
+    'doona-nav-groups',
     'doona-scheme',
     'doona-palette',
     'doona-wordmark',

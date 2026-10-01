@@ -17,7 +17,7 @@ for (const route of routes) {
     page.on('requestfailed', request => failedRequests.push(request.url()));
 
     await page.goto('/#/activity');
-    await expect(page.locator('.rp-strip')).toBeVisible();
+    await expect(page.locator("[data-profile='metrics']")).toBeVisible();
     await page.waitForLoadState('networkidle');
 
     await page.evaluate(route => {
@@ -25,7 +25,7 @@ for (const route of routes) {
     }, route);
     await expect(page.locator('.rp-content')).toBeVisible();
     await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
-    const content = route === 'activity' ? '.rp-strip' : route === 'settings' ? '#settings-backend' : '.rp-content > .rp-page';
+    const content = route === 'activity' ? "[data-profile='metrics']" : route === 'settings' ? '#settings-backend' : '.rp-content > .rp-page';
     await expect(page.locator(content)).toBeVisible();
     await page.waitForLoadState('networkidle');
 
@@ -52,7 +52,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
   });
   const requested = page.waitForRequest('**/assets/Policies-*.js');
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await requested;
   await page.clock.install();
   await page.clock.pauseAt(Date.now() + 1000);
@@ -80,6 +80,7 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
 });
 
 test('activity keeps card geometry while its charts load', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 1100});
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
   await page.route('**/assets/{AreaChart,Sparkline,Donut}-*.js', async route => {
@@ -88,13 +89,13 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
   });
   try {
     await page.goto('/#/activity', {waitUntil: 'domcontentloaded'});
-    await expect(page.locator('.rp-donut .center')).toBeVisible();
+    await expect(page.locator('[data-module=outbounds] .rp-donut .center')).toBeVisible();
     await expect(page.locator('.rp-legend').first()).toBeVisible();
-    const cards = page.locator('.rp-content .rp-card');
+    const cards = page.locator(".rp-dash-section:not([data-profile='extensions']) .rp-card");
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
-    await expect(page.locator('.rp-activity-surface')).toHaveCount(0);
+    await expect(page.locator('main .rp-activity-surface')).toHaveCount(0);
     release();
-    await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
+    await expect(page.locator(".rp-dash-section:not([data-profile='extensions']) .rp-activity-surface")).toHaveCount(6);
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();
@@ -103,7 +104,7 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
 
 for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
   test(`a rejected ${chunk} import preserves navigation and recovers after retry`, async ({browser}) => {
-    const context = await browser.newContext({serviceWorkers: 'block'});
+    const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1440, height: 1100}});
     const page = await context.newPage();
     const uncaught: string[] = [];
     page.on('pageerror', error => uncaught.push(error.message));
@@ -127,9 +128,9 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
       await expect(alert).toBeVisible();
       reject = false;
       await alert.getByRole('button', {name: 'Reload'}).click();
-      await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : '.rp-strip')).toBeVisible();
+      await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : "[data-profile='metrics']")).toBeVisible();
       await expect(page.locator('.rp-content .rp-alert')).toHaveCount(0);
-      if (chunk !== 'Policies') await expect(page.locator('.rp-activity-surface')).toHaveCount(6);
+      if (chunk !== 'Policies') await expect(page.locator(".rp-dash-section:not([data-profile='extensions']) .rp-activity-surface")).toHaveCount(6);
       expect(uncaught).toEqual([]);
     } finally {
       await context.close();
@@ -165,7 +166,7 @@ test('a rejected showcase import leaves its panel empty and the sign-in form wor
 });
 
 test('a stale chunk whose reload is cancelled says doona was updated, and so does the next one', async ({browser}) => {
-  const context = await browser.newContext({serviceWorkers: 'block'});
+  const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1440, height: 1100}});
   const page = await context.newPage();
   await page.addInitScript(session => {
     localStorage.setItem('doona-api', 'mock');
@@ -245,7 +246,7 @@ for (const intent of ['hover', 'Control'] as const) {
       if (/\/assets\/[^/]+\.js$/.test(new URL(request.url()).pathname)) scripts.push(request.url());
     });
     await page.goto('/#/activity');
-    await expect(page.locator('.rp-strip')).toBeVisible();
+    await expect(page.locator("[data-profile='metrics']")).toBeVisible();
     await page.waitForLoadState('networkidle');
     const search = /\/SearchDialog-[^/]+\.js$/;
     expect(scripts.some(url => search.test(url))).toBe(false);
@@ -266,7 +267,7 @@ test('a search dialog that fails to load leaves nothing open and says so', async
   });
   await page.route('**/assets/SearchDialog-*.js', route => route.abort());
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   await page.keyboard.press('Control+K');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not open search');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -296,7 +297,7 @@ test('Escape while the search dialog loads keeps it from opening late', async ({
     await route.fallback();
   });
   await page.goto('/#/activity');
-  await expect(page.locator('.rp-strip')).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
   const loaded = page.waitForResponse(/\/SearchDialog-[^/]+\.js$/);
   await page.keyboard.press('Control+K');
   await page.keyboard.press('Escape');
