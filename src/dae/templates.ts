@@ -21,7 +21,7 @@ const gfw = (target: string) => ['# GFW list', `domain(geosite:gfw) -> ${target}
 // Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an
 // unfiltered honk group would select them too.
 type GroupSpec = {name: string; label: Key; flag?: string; lines: string[]};
-const everyNode = "filter: !name('direct', 'block')";
+export const everyNode = "filter: !name('direct', 'block')";
 const selectGroup = (name: string, label: Key, nested: string[], fallback = nested[0]): GroupSpec => ({
   name,
   label,

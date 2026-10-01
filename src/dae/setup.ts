@@ -1,7 +1,7 @@
 import type {Translator} from '../i18n';
 import {blockBody, scanConfig, quote, uncomment, type TextBlock} from './text';
 import {readGroupEntries} from './groups';
-import {templates, templateRules, templateGroupLabel, type TemplateOptions, type RuleTemplate} from './templates';
+import {everyNode, templates, templateRules, templateGroupLabel, type TemplateOptions, type RuleTemplate} from './templates';
 
 export const defaultGroup = 'proxy';
 function routingBlock(group: string | null, rules: RuleTemplate, options: Partial<TemplateOptions>): string[] {
@@ -42,7 +42,8 @@ function groupLines(current: string[], rules: RuleTemplate, t: Translator): stri
   const have = new Set(current);
   const wanted = templates[rules].groups.filter(group => !have.has(group.name));
   if (!wanted.length && current.length) return [];
-  if (!wanted.length) return [`  ${defaultGroup} { filter: !name('direct', 'block') policy: min_moving_avg }`];
+  // One setting per line: honk reads a filter to the end of its line, so a one-line block would swallow the policy.
+  if (!wanted.length) return [`  ${defaultGroup} {`, `    ${everyNode}`, '    policy: min_moving_avg', '  }'];
   return wanted.flatMap(group => [`  # ${templateGroupLabel(group, t)}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
 // The groups a template adds beside `defined`, the names already declared as written: its own that are missing, or, for a template
