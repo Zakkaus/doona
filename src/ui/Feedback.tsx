@@ -113,7 +113,7 @@ export function Bar({label, value, pct, color}: {label: ReactNode; value: string
   );
 }
 
-export function Badge({children, tone, className, tip}: {children: ReactNode; tone?: 'warn'; className?: string; tip?: string}) {
+export function Badge({children, tone, className, tip}: {children: ReactNode; tone?: 'warn' | 'negative'; className?: string; tip?: string}) {
   return (
     <TextTooltip className={cx('rp-badge', tone, className)} text={tip}>
       {children}
