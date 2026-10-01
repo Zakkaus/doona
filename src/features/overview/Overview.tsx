@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Card,
+  HelpRow,
   Bar,
   DataTable,
   Kv,
@@ -27,7 +28,7 @@ import type {PageProps} from '../../shell/routes';
 
 // While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
 // card keeps its height when the values arrive; `extra` holds the lines below the grid.
-function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
+function BodyWait({cells, extra}: {cells: number; extra?: 'caption' | 'body' | number}) {
   return (
     <div className="rp-body-wait">
       <div className="rp-kv" aria-hidden="true">
@@ -38,7 +39,7 @@ function BodyWait({cells, extra = 0}: {cells: number; extra?: number}) {
           </div>
         ))}
       </div>
-      {extra > 0 && <div aria-hidden="true" style={{height: extra}} />}
+      {extra && <div aria-hidden="true" style={{height: extra === 'caption' ? 'var(--rp-line-caption)' : extra === 'body' ? 'var(--rp-line-body)' : extra}} />}
       <Loading />
     </div>
   );
@@ -122,7 +123,7 @@ export function Overview({query}: PageProps) {
               )}
             </>
           ) : vm.engine.state === 'loading' ? (
-            <BodyWait cells={6} extra={vm.engine.profiles.length > 0 ? 20 : 0} />
+            <BodyWait cells={6} extra={vm.engine.profiles.length > 0 ? 'body' : undefined} />
           ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -135,7 +136,7 @@ export function Overview({query}: PageProps) {
               <span className="rp-label">{vm.counters.since}</span>
             </>
           ) : vm.counters.state === 'loading' ? (
-            <BodyWait cells={6} extra={16} />
+            <BodyWait cells={6} extra="caption" />
           ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -196,11 +197,11 @@ export function Overview({query}: PageProps) {
                 </Light>
               )}
               {vm.datapath.degradations.map(d => (
-                <TextTooltip key={d.id} text={d.tooltip}>
+                <HelpRow key={d.id} help={d.tooltip ? {title: d.text, text: d.tooltip} : undefined}>
                   <Light small tone="warn">
                     {d.text}
                   </Light>
-                </TextTooltip>
+                </HelpRow>
               ))}
             </div>
           )}

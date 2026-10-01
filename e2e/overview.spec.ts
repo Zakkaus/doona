@@ -318,3 +318,25 @@ test('a backend feature that is on opens where it is used', async ({page}) => {
   await card.getByRole('link', {name: 'Connections', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
 });
+
+test('QUIC degradation wraps within the phone content column', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 1000});
+  await page.goto('/#/overview');
+  const warning = page.locator('.rp-light').filter({hasText: /QUIC/}).last();
+  await expect(warning).toBeVisible();
+  const bounds = await warning.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return {
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+      text: range.getBoundingClientRect().right,
+      edge: r.right,
+      whiteSpace: getComputedStyle(el).whiteSpace
+    };
+  });
+  expect(bounds.scroll).toBeLessThanOrEqual(bounds.client + 1);
+  expect(bounds.text).toBeLessThanOrEqual(bounds.edge + 1);
+  expect(bounds.whiteSpace).not.toBe('nowrap');
+});
