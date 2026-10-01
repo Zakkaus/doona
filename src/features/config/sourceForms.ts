@@ -2,10 +2,10 @@ import type {ConfigSource} from '../../api/model';
 import type {Engine} from '../../api/engines';
 import {blockFields, scanConfig} from '../../dae/text';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
-import {readGroupEntries} from '../../dae/groups';
+import {conditionKinds, dnsConditionKinds, readGroupEntries} from '../../dae/groups';
 import {href} from '../../shell/route';
 import {sectionPages} from './view';
-import {ruleTargetValues} from '../../dae/ruleText';
+import {ruleFormValues} from '../../dae/ruleText';
 
 export function locatedForms<T extends {line: number; to: number}>(links: T[], focus: number | null, text: string): T[] {
   return links.filter(link => link.line === focus || (focus && link.line <= focus && text.slice(0, link.to).split('\n').length >= focus));
@@ -85,7 +85,8 @@ export function sameFormValues(before: string, after: string, source: string, en
             route
           }));
         if (item.kind === 'group') return readGroupEntries(value).map(({from: _from, to: _to, ...entry}) => entry);
-        if (item.kind === 'routing' || item.kind === 'dns') return ruleTargetValues(value);
+        if (item.kind === 'routing' || item.kind === 'dns')
+          return ruleFormValues(value, item.kind === 'dns' ? dnsConditionKinds[item.label as 'request' | 'response'] : conditionKinds);
         return scanConfig(value)
           .tokens.filter(token => token.kind !== 'comment')
           .map(token => value.slice(token.from, token.to));
@@ -95,7 +96,7 @@ export function sameFormValues(before: string, after: string, source: string, en
     const {blocks} = scanConfig(text);
     let outside = text;
     for (const block of [...blocks].reverse()) outside = outside.slice(0, block.from) + '\n' + outside.slice(block.to);
-    return ruleTargetValues(outside);
+    return ruleFormValues(outside, conditionKinds);
   };
   return JSON.stringify([values(before), includedTargets(before)]) === JSON.stringify([values(after), includedTargets(after)]);
 }
