@@ -123,6 +123,7 @@ export function Nodes(props: PageProps) {
               isDisabled={pending}
               nameError={subscriptionErrors.name}
               agentError={subscriptionErrors.agent}
+              intervalError={subscriptionErrors.interval}
             />
             {renameGroups && (
               <>

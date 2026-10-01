@@ -31,6 +31,7 @@ import {
   type ProviderRow
 } from './view';
 import {useProviderTable} from './useProviderTable';
+import {draftInterval, intervalProblem} from '../shared/subscription';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useDraftGuard} from '../../shell/draft';
@@ -316,7 +317,7 @@ export function useNodesPage({go, query}: PageProps) {
           const written = writeSubscriptionEntry(text, from, {
             tag,
             url,
-            ...(intervalChanged ? {interval: Number(form.interval)} : {}),
+            ...(intervalChanged ? {interval: draftInterval(form.interval)!} : {}),
             ...(form.agent !== (dialog.entry.ua ?? '') ? {ua: form.agent.trim() || null} : {}),
             ...(editCache.changed ? {cache: editCache.value} : {}),
             // Following the routing rules is honk's default, so choosing it removes the route.
@@ -383,7 +384,10 @@ export function useNodesPage({go, query}: PageProps) {
           : null;
   const editRoute = form.route || 'routing';
   const routeChanged = dialog?.kind === 'editProvider' && editRoute !== (dialog.entry.route || 'routing');
-  const intervalChanged = dialog?.kind === 'editProvider' && form.interval !== '' && Number(form.interval) !== dialog.entry.interval;
+  const intervalSeconds = draftInterval(form.interval);
+  const intervalKey = intervalProblem(form.interval);
+  const intervalError = intervalKey && t(intervalKey);
+  const intervalChanged = dialog?.kind === 'editProvider' && intervalSeconds != null && intervalSeconds !== dialog.entry.interval;
   const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
   const references =
     dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
@@ -413,6 +417,7 @@ export function useNodesPage({go, query}: PageProps) {
       : dialog?.kind === 'editProvider'
         ? !!editName &&
           editNameError === null &&
+          intervalSeconds !== null &&
           editUrlValid &&
           editAgentError === null &&
           !references.elsewhere.length &&
@@ -423,7 +428,7 @@ export function useNodesPage({go, query}: PageProps) {
             intervalChanged ||
             routeChanged)
         : dialog?.kind === 'provider'
-          ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
+          ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
             ? form.name.trim() !== '' && isNodeLink(form.value)
             : true;
@@ -573,6 +578,9 @@ export function useNodesPage({go, query}: PageProps) {
       if (submitting.current !== dialog) setForm({...form, ...next, value: next.url});
     },
     subscriptionFields,
-    subscriptionErrors: dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError}
+    subscriptionErrors: {
+      ...(dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError}),
+      interval: intervalError
+    }
   };
 }

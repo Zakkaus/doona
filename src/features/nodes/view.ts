@@ -15,7 +15,7 @@ import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
 import {groupsNamingNode, readNodeEntries, type NodeEntry} from '../../dae/nodes';
 import {citingGroups, groupsNamingTag, namedInExpression} from '../../dae/groups';
-import {intervalText} from '../shared/subscription';
+import {draftInterval, intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -215,8 +215,8 @@ type CreateOptions = Capabilities['resources']['providers']['create_options'];
 // An option left at the backend's default is not sent, so the entry stays a one-line scalar.
 export function providerCreate(form: ProviderForm, options: CreateOptions): ProviderCreate {
   const request: ProviderCreate = {name: form.name.trim(), kind: 'subscription', url: form.value.trim()};
-  const seconds = Number(form.interval);
-  if (options?.update_interval !== undefined && form.interval && seconds !== options.update_interval) request.update_interval = seconds;
+  const seconds = draftInterval(form.interval);
+  if (options?.update_interval !== undefined && seconds != null && seconds !== options.update_interval) request.update_interval = seconds;
   const agent = form.agent.trim();
   if (options?.user_agent !== undefined && agent && agent !== options.user_agent) request.user_agent = agent;
   if (options?.cache !== undefined && form.cache !== null && form.cache !== options.cache) request.cache = form.cache;
