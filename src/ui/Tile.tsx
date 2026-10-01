@@ -4,6 +4,7 @@ import ListBulleted from './icons/ListBulleted';
 import {useT} from '../i18n';
 import {cx} from './cx';
 import {TextTooltip} from './Button';
+import {NodeName} from './NodeName';
 import {Badge} from './Feedback';
 import {TileHead, type TileHeader} from './Card';
 
@@ -39,17 +40,15 @@ export function RuleRef({expression, href, tooltip, className}: {expression: str
 // The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
 export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
 // `mark` tags a member in place that is not the one selection, such as the member one network uses.
-type NodeTileProps = {name: string; status: NodeStatus; description: string; current?: boolean; mark?: string};
+type NodeTileProps = {name: string; nodeName: boolean; status: NodeStatus; description: string; current?: boolean; mark?: string};
 // A measured latency is green below 100 ms, yellow below 300 ms and red from there; a node that did not answer is red too.
 export const latencyTone = (ms: number): 'ok' | 'warn' | 'err' => (ms < 100 ? 'ok' : ms < 300 ? 'warn' : 'err');
-export function NodeTile({name, status, description, current, mark}: NodeTileProps) {
+export function NodeTile({name, nodeName, status, description, current, mark}: NodeTileProps) {
   const t = useT();
   return (
     <>
       <span className="top">
-        <span className="n">
-          <TextTooltip>{name}</TextTooltip>
-        </span>
+        <span className="n">{nodeName ? <NodeName name={name} /> : <TextTooltip>{name}</TextTooltip>}</span>
         {status.badge ? <Badge>{status.text}</Badge> : <span className={cx('ms', status.tone)}>{status.text}</span>}
       </span>
       <span className="s">

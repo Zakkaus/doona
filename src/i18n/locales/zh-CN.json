@@ -1387,6 +1387,8 @@
   "settings.backend": "后端",
   "settings.closeAllHelp": "关闭后端持有的全部连接（当前 {n} 条），包括此对话框打开后建立的连接；内核直连的连接会跳过。",
   "settings.cors": "网络或跨域请求失败：请确认后端可连接并允许此来源。",
+  "settings.countryFlags": "显示国旗",
+  "settings.countryFlagsHelp": "为没有国旗的节点名称添加国旗，仅用于显示。",
   "settings.deleteProfile": "删除连接方案",
   "settings.deleteProfileHelp": "删除 {name}？此连接方案的后端网址与 Token 将从此浏览器移除。",
   "settings.demo": "当前使用内置演示数据，未连接外部后端。",

@@ -622,7 +622,7 @@ test('the route trace says what it lacks until a destination and port are given'
 for (const [width, columns] of [
   [390, 1],
   [440, 1],
-  [1440, 5]
+  [1440, 4]
 ]) {
   test.describe(`${width}px node grids`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});

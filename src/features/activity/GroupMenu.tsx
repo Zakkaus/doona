@@ -18,7 +18,7 @@ export function GroupMenu({model: vm, label}: {model: Model; label: string}) {
       onChange={vm.setChosen}
       onAction={vm.setChosen}
     >
-      <ItemLabel i={{id: vm.chosen, label: vm.name || '—'}} />
+      <ItemLabel i={{id: vm.chosen, label: vm.name || '—', nodeName: true}} />
     </ChoiceMenu>
   );
 }

@@ -1,5 +1,6 @@
 import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
+import {NodeName} from '../../ui/NodeName';
 import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef} from '../../ui/ui';
 import {
   columns,
@@ -27,11 +28,14 @@ export function ConnectionTable({collection, view, collapse, onToggleGroup, load
     const renderers: Record<string, (c: ConnectionRowView) => ReactNode> = {
       dst: c => <TextTooltip>{c.target}</TextTooltip>,
       src: c => <TextTooltip className="rp-code">{c.source}</TextTooltip>,
-      node: c => (
-        <TextTooltip className="rp-chain" text={c.path ?? undefined}>
-          {c.node}
-        </TextTooltip>
-      ),
+      node: c =>
+        c.nodeName ? (
+          <NodeName name={c.node} className="rp-chain" text={c.path ?? undefined} />
+        ) : (
+          <TextTooltip className="rp-chain" text={c.path ?? undefined}>
+            {c.node}
+          </TextTooltip>
+        ),
       rule: c => (
         <span className="rp-rule">
           <RuleRef {...c.rule} />

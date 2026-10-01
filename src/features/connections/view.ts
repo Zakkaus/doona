@@ -1,3 +1,4 @@
+import {isBuiltinOutbound} from '../../dae/vocab';
 import type {BulkCloseQuery, Connection, ConnectionList} from '../../api/model';
 import {tagId} from '../shared/taggedId';
 import {ranked} from '../shared/ranked';
@@ -187,6 +188,7 @@ export type ConnectionRowView = {
   target: string;
   source: string;
   node: string;
+  nodeName: boolean;
   path: string | null;
   rule: {expression: string | null; href: string | undefined};
   recomputed: string | null;
@@ -216,6 +218,7 @@ export function connectionTableView(
       target: c.domain || c.dst || '—',
       source: c.src ?? '—',
       node: nodeLabel(c, t, names),
+      nodeName: !isBuiltinOutbound(c.outbound) && c.chain.length > 0,
       path: chainPath(c, t, names),
       rule: {expression: c.rule_expression, href: ruleHref(c.rule_id, rulesListed)},
       recomputed: c.rule_source === 'recomputed' ? t('conn.recomputed') : null,

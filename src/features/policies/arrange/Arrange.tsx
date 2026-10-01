@@ -14,6 +14,7 @@ import {
 } from 'react-aria-components';
 import {formatList, useLang, useT} from '../../../i18n';
 import {href} from '../../../shell/route';
+import {NodeName} from '../../../ui/NodeName';
 import {DaeCode} from '../../../ui/DaeCode';
 import {
   ActionBar,
@@ -188,12 +189,12 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
                 <span className="rp-label rp-tags-title">{t('arrange.byName')}</span>
                 {group.names.map(item => (
                   <Tag key={item.name} tone={item.isNew ? 'new' : undefined} action={remove(item.name, {kind: 'node', value: item.name}, item.blocked)}>
-                    {item.name}
+                    <NodeName name={item.name} />
                   </Tag>
                 ))}
                 {group.removedNames.map(name => (
                   <Tag key={name} tone="removed" action={undo(name, {kind: 'node', value: name})}>
-                    {name}
+                    <NodeName name={name} />
                   </Tag>
                 ))}
               </Tags>
@@ -320,7 +321,7 @@ function Tray({m}: {m: Model}) {
               </RButton>
               <Check />
               <span className="rp-grow">
-                <TextTooltip>{row.label}</TextTooltip>
+                {row.item.kind === 'node' ? <NodeName name={row.label} /> : <TextTooltip>{row.label}</TextTooltip>}
                 <span className="desc">{row.meta}</span>
               </span>
             </GridListItem>

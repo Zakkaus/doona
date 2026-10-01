@@ -92,6 +92,7 @@ export function finalSections(name: string, catalogue: OutboundCatalogue, held: 
   const nodes = firstOfEach(catalogue.nodes, node => node.name, taken).map(node => ({
     id: routeChoiceId(node.name),
     label: node.name,
+    nodeName: true,
     desc: node.alive === false ? t('ui.unavailable') : node.tcp === undefined ? '—' : formatLatency(node.tcp, t),
     tone: nodeTone(node)
   }));
@@ -104,10 +105,15 @@ export function finalSections(name: string, catalogue: OutboundCatalogue, held: 
   ].filter(section => section.items.length);
 }
 // The default member's choices: None, then the group's direct members with the status their tiles show.
-export function memberSections(members: Array<{name: string; status: NodeStatus}>, held: Array<string | null>, t: Translator): SearchSection[] {
+export function memberSections(
+  members: Array<{name: string; nodeName?: boolean; status: NodeStatus}>,
+  held: Array<string | null>,
+  t: Translator
+): SearchSection[] {
   const items = firstOfEach(members, member => member.name).map(member => ({
     id: routeChoiceId(member.name),
     label: member.name,
+    nodeName: member.nodeName,
     desc: member.status.text,
     tone: member.status.tone
   }));
@@ -115,10 +121,10 @@ export function memberSections(members: Array<{name: string; status: NodeStatus}
 }
 
 // A new group's direct members follow its draft filters, before it exists on the backend.
-export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; status: NodeStatus}> {
+export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
   const admits = compileFilters(filters);
   return [
-    ...nestedIn({filters}).map(name => ({name, status: {text: t('ui.group'), badge: true}})),
+    ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: t('ui.group'), badge: true}})),
     ...nodes.filter(admits).map(node => {
       const health = preferredHealth(node);
       const tcp = healthMillis(health);
@@ -128,7 +134,7 @@ export function draftMembers(filters: string[], nodes: Node[], t: Translator): A
           : health?.state === 'unavailable'
             ? {text: t('ui.unavailable'), tone: 'err'}
             : {text: '—'};
-      return {name: node.name, status};
+      return {name: node.name, nodeName: true, status};
     })
   ];
 }

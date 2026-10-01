@@ -6,7 +6,7 @@ import {ChartTip, useChartTip} from './tip';
 import {logDomain, logPosition, logTicks, swarm} from './layout';
 
 // `lines` is what the hover tip shows for the point, first line in bold.
-export type SwarmPoint = {id: string; value: number; color: string; lines: string[]};
+export type SwarmPoint = {id: string; value: number; color: string; lines: string[]; nodeName?: boolean};
 export type SwarmMark = {value: number; label: string};
 export type SwarmRow = {id: string; label: string; detail: string; points: SwarmPoint[]; mark?: number};
 
@@ -82,7 +82,7 @@ export function Beeswarm({
                   cy={16 + band / 2 + ys[i]}
                   r={radius}
                   fill={point.color}
-                  onPointerMove={event => showTip(event, point.lines)}
+                  onPointerMove={event => showTip(event, point.lines, point.nodeName)}
                 />
               )
             )}
@@ -120,7 +120,14 @@ export function Beeswarm({
                 <svg width={width} height={20} role="img" aria-label={t('ui.valuePair', {label: row.label, value: row.detail})}>
                   <line className="grid" x1={inset} x2={inset + track} y1={10} y2={10} />
                   {row.points.map(point => (
-                    <circle key={point.id} cx={x(point.value)} cy={10} r={4} fill={point.color} onPointerMove={event => showTip(event, point.lines)} />
+                    <circle
+                      key={point.id}
+                      cx={x(point.value)}
+                      cy={10}
+                      r={4}
+                      fill={point.color}
+                      onPointerMove={event => showTip(event, point.lines, point.nodeName)}
+                    />
                   ))}
                   {row.mark !== undefined && <line className="median" x1={x(row.mark)} x2={x(row.mark)} y1={-2} y2={22} />}
                 </svg>

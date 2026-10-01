@@ -1597,6 +1597,8 @@
   "settings.backend": "Backend",
   "settings.closeAllHelp": "Closes every connection the backend owns ({n} right now), including ones opened after this dialog; kernel-direct connections are skipped.",
   "settings.cors": "Network or CORS request failed. Check that the backend is reachable and allows this origin.",
+  "settings.countryFlags": "Show country flags",
+  "settings.countryFlagsHelp": "Adds a flag before node names that have none. Display only.",
   "settings.deleteProfile": "Delete profile",
   "settings.deleteProfileHelp": "Delete {name}? Its backend URL and token will be removed from this browser.",
   "settings.demo": "Using built-in demo data; no external backend was contacted.",

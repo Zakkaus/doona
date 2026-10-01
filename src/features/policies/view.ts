@@ -112,6 +112,7 @@ export function probeSummary(result: ProbeResult): MessageRef {
 }
 
 export type MemberView = {
+  nodeName: boolean;
   id: string;
   name: string;
   tcp?: number;
@@ -133,6 +134,7 @@ export function memberViews(members: Array<Group['members'][number] & {health?: 
   return members.map(member => ({
     id: member.id,
     name: member.name,
+    nodeName: member.kind === 'node',
     tcp: healthMillis(member.health),
     unavailable: member.health?.state === 'unavailable',
     healthy: member.health?.state === 'healthy',

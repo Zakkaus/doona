@@ -4,3 +4,31 @@
   font-display: swap;
   unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0061-E007A, U+E007F;
 }
+
+:root {
+  --rp-node-flag-edge: drop-shadow(0 0 0.5px rgb(0 0 0 / 35%));
+}
+:root[data-scheme='dark'] {
+  --rp-node-flag-edge: none;
+}
+.rp-truncate.rp-node-name {
+  display: inline-block;
+}
+.rp-node-flag {
+  display: inline-block;
+  margin-inline-end: var(--rp-space-1);
+  filter: var(--rp-node-flag-edge);
+  user-select: none;
+}
+.rp-node-flag::before {
+  content: attr(data-flag);
+}
+
+.rp-il:has(> .rp-node-flag) {
+  gap: var(--rp-space-1);
+}
+.rp-il > .rp-node-flag {
+  margin-inline-end: 0;
+  inline-size: 1.25em;
+  flex-shrink: 0;
+}

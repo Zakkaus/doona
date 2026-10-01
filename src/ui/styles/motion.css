@@ -111,6 +111,7 @@
   --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
   --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
   --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
+  --rp-space-1: 4px;
   --rp-r-sm: 6px;
   --rp-r-md: 8px;
   --rp-r-lg: 10px;

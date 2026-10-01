@@ -1,10 +1,12 @@
+import {boundedMemo} from './boundedMemo';
+
 // Name-based region guesses are only for grouping and filtering, not geolocation.
 const TABLE: Array<[string, string[]]> = [
   ['HK', ['hk', 'hkg', 'hongkong', 'hong kong', '香港', '港']],
   ['TW', ['tw', 'tpe', 'taiwan', 'taipei', '台灣', '台湾', '臺灣', '台北']],
   ['JP', ['jp', 'jpn', 'japan', 'tokyo', 'osaka', 'nrt', 'hnd', 'kix', '日本', '東京', '东京', '大阪']],
   ['SG', ['sg', 'sgp', 'singapore', 'sin', '新加坡', '獅城', '狮城']],
-  ['KR', ['kr', 'kor', 'korea', 'seoul', 'icn', '韓國', '韩国', '首爾', '首尔']],
+  ['KR', ['kr', 'kor', 'korea', 'seoul', 'icn', 'south korea', '南韩', '南韓', '韓國', '韩国', '首爾', '首尔']],
   [
     'US',
     [
@@ -44,8 +46,8 @@ const TABLE: Array<[string, string[]]> = [
   ['TH', ['th', 'tha', 'thailand', 'bangkok', 'bkk', '泰國', '泰国']],
   ['VN', ['vn', 'vnm', 'vietnam', '越南']],
   ['PH', ['ph', 'phl', 'philippines', 'manila', '菲律賓', '菲律宾']],
-  ['ID', ['id', 'idn', 'indonesia', 'jakarta', '印尼']],
-  ['AE', ['ae', 'are', 'uae', 'dubai', 'dxb', '阿聯', '阿联', '杜拜', '迪拜']],
+  ['ID', ['id', 'idn', 'indonesia', 'jakarta', '印度尼西亚', '印度尼西亞', '印尼']],
+  ['AE', ['ae', 'are', 'uae', 'united arab emirates', '阿联酋', '阿聯酋', 'dubai', 'dxb', '阿聯', '阿联', '杜拜', '迪拜']],
   ['CH', ['ch', 'che', 'switzerland', 'zurich', '瑞士']],
   ['SE', ['se', 'swe', 'sweden', 'stockholm', '瑞典']],
   ['FI', ['fi', 'fin', 'finland', 'helsinki', '芬蘭', '芬兰']],
@@ -53,18 +55,33 @@ const TABLE: Array<[string, string[]]> = [
   ['ES', ['es', 'esp', 'spain', 'madrid', '西班牙']],
   ['PL', ['pl', 'pol', 'poland', 'warsaw', '波蘭', '波兰']],
   ['MO', ['mo', 'mac', 'macau', 'macao', '澳門', '澳门']],
+  ['NZ', ['new zealand', '新西兰', '紐西蘭']],
+  ['MX', ['mexico', '墨西哥']],
+  ['NO', ['norway', '挪威']],
+  ['DK', ['denmark', '丹麦', '丹麥']],
+  ['IE', ['ireland', '爱尔兰', '愛爾蘭']],
+  ['ZA', ['south africa', '南非']],
+  ['IL', ['israel', '以色列']],
+  ['UA', ['ukraine', '乌克兰', '烏克蘭']],
+  ['PT', ['portugal', '葡萄牙']],
   ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
 ];
-const ASCII = /[a-z0-9]+/g;
-// Latin keys match whole tokens (or a spaced phrase); CJK keys match anywhere in the name.
-const LATIN = /^[a-z0-9 ]+$/;
-const KEYS = TABLE.map(([iso, keys]) => ({iso, latin: keys.filter(k => LATIN.test(k)), other: keys.filter(k => !LATIN.test(k))}));
-
-export function regionOf(name: string): string | null {
-  const lower = name.toLowerCase();
-  const tokens = new Set(lower.match(ASCII) ?? []);
-  for (const {iso, latin, other} of KEYS) {
-    if (latin.some(k => tokens.has(k) || (k.includes(' ') && lower.includes(k))) || other.some(k => name.includes(k))) return iso;
+const aliases = TABLE.flatMap(([iso, keys]) =>
+  [...new Set([iso, ...keys].map(key => (key.toUpperCase() === iso ? iso : key)))].map(key => ({
+    iso,
+    pattern: new RegExp(
+      /\p{Script=Han}/u.test(key) ? key : `(?<![\\p{L}\\p{M}])${key}(?![\\p{L}\\p{M}])`,
+      key.toUpperCase() === iso && ['IN', 'IT', 'MY', 'NO', 'ID'].includes(iso) ? 'u' : 'iu'
+    )
+  }))
+);
+export const regionOf = boundedMemo((name: string): string | null => {
+  // Prefer the first location, then the longest alias (Indonesia before India).
+  let chosen: {iso: string; index: number; length: number} | undefined;
+  for (const {iso, pattern} of aliases) {
+    const match = pattern.exec(name);
+    if (match && (!chosen || match.index < chosen.index || (match.index === chosen.index && match[0].length > chosen.length)))
+      chosen = {iso, index: match.index, length: match[0].length};
   }
-  return null;
-}
+  return chosen?.iso ?? null;
+});

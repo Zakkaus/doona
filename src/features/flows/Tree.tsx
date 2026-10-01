@@ -1,5 +1,6 @@
 import {memo} from 'react';
 import {ToggleButton} from 'react-aria-components';
+import {NodeName} from '../../ui/NodeName';
 import {Badge, Button, cx} from '../../ui/ui';
 import type {RoutingTree} from './map';
 import type {TreePlacement, TileView} from './view';
@@ -37,7 +38,15 @@ const TreeTile = memo(function TreeTile({
       onBlur={() => hover(null)}
     >
       <span className="l">
-        {view.stage === 'rule' || view.stage === 'client' ? view.name : <b>{view.name}</b>}
+        {view.stage === 'node' ? (
+          <b>
+            <NodeName name={view.name} />
+          </b>
+        ) : view.stage === 'rule' || view.stage === 'client' ? (
+          view.name
+        ) : (
+          <b>{view.name}</b>
+        )}
         {view.notes.map((note, i) => (
           <span className={cx('s', note.tone)} key={i}>
             {note.text}

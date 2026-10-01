@@ -16,6 +16,7 @@ export function useAppearance(stored: Settings) {
   const [palette, setPalette] = useState<PaletteId>(stored.palette);
   const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
   const [mirrored, setMirrored] = useState(stored.mirrored);
+  const [countryFlags, setCountryFlags] = useState(stored.countryFlags);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
@@ -39,6 +40,10 @@ export function useAppearance(stored: Settings) {
     setMirrored(next);
     writeSetting('mirror', next ? 'on' : 'off');
   }, []);
+  const pickCountryFlags = useCallback((next: boolean) => {
+    setCountryFlags(next);
+    writeSetting('countryFlags', next ? 'on' : 'off');
+  }, []);
   const pickToastPlacement = useCallback((next: ToastPlacement) => {
     setToastPlacement(next);
     writeSetting('toastPlacement', next);
@@ -59,6 +64,8 @@ export function useAppearance(stored: Settings) {
       pickWordmark,
       mirrored,
       pickMirrored,
+      countryFlags,
+      pickCountryFlags,
       toastPlacement,
       pickToastPlacement,
       startPage,
@@ -75,6 +82,8 @@ export function useAppearance(stored: Settings) {
       pickWordmark,
       mirrored,
       pickMirrored,
+      countryFlags,
+      pickCountryFlags,
       toastPlacement,
       pickToastPlacement,
       startPage,

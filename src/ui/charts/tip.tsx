@@ -1,8 +1,17 @@
 import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent} from 'react';
 import {pointerPosition} from './interaction';
 import {useContentSize} from '../hooks';
+import {NodeName} from '../NodeName';
 
-type Tip = {x: number; y: number; width: number; lines: string[]; label?: string; bounds?: {x: number; y: number; width: number; height: number}};
+type Tip = {
+  x: number;
+  y: number;
+  width: number;
+  lines: string[];
+  nodeName?: boolean;
+  label?: string;
+  bounds?: {x: number; y: number; width: number; height: number};
+};
 
 const same = (a: Tip | null, b: Tip | null) =>
   a === b ||
@@ -12,6 +21,7 @@ const same = (a: Tip | null, b: Tip | null) =>
     a.y === b.y &&
     a.width === b.width &&
     a.label === b.label &&
+    a.nodeName === b.nodeName &&
     a.bounds?.x === b.bounds?.x &&
     a.bounds?.y === b.bounds?.y &&
     a.bounds?.height === b.bounds?.height &&
@@ -46,8 +56,8 @@ export function useChartTip<E extends HTMLElement = HTMLDivElement>() {
   const ref = useRef<E>(null);
   const [tip] = useState(tipStore);
   const show = useCallback(
-    (event: PointerEvent, lines: string[]) => {
-      if (ref.current) tip.set({...pointerPosition(event, ref.current), lines});
+    (event: PointerEvent, lines: string[], nodeName?: boolean) => {
+      if (ref.current) tip.set({...pointerPosition(event, ref.current), lines, nodeName});
     },
     [tip]
   );
@@ -63,7 +73,7 @@ export function ChartTip({tip: store}: {tip: TipStore}) {
   const side = tip.x > tip.width - 120 ? 'end' : tip.x < 120 ? 'start' : 'middle';
   return (
     <div className={'rp-charttip ' + side} style={{left: tip.x, top: tip.y}} aria-hidden="true">
-      {tip.lines.map((line, i) => (i === 0 ? <b key={i}>{line}</b> : <span key={i}>{line}</span>))}
+      {tip.lines.map((line, i) => (i === 0 ? <b key={i}>{tip.nodeName ? <NodeName name={line} /> : line}</b> : <span key={i}>{line}</span>))}
     </div>
   );
 }

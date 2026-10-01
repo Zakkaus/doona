@@ -16,8 +16,8 @@ export function TileHead({icon, tint, kind, label, children}: TileHeader & {labe
   return (
     <span className={`${kind === 'metric' ? 'rp-tile-head' : 'rp-qlabel'} rp-tint-c${tint}`}>
       {icon}
-      {label}
-      {children}
+      <span className="rp-tile-caption">{label}</span>
+      {children && <span className="rp-tile-controls">{children}</span>}
     </span>
   );
 }

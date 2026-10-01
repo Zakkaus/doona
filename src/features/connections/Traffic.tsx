@@ -126,6 +126,7 @@ function LatencyCard({latency}: {latency: PathLatency}) {
             label={t('ui.nodeLatency')}
             points={latency.samples.map(sample => ({
               id: sample.node,
+              nodeName: true,
               value: sample.value,
               color: colour(sample.connections > 0),
               lines: [sample.name, fmt(sample.value), ...(sample.connections ? [t('conn.chart.sample', {n: sample.connections})] : [])]

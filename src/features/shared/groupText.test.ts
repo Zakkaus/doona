@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {translate, type Translator} from '../../i18n';
-import {draftMembers} from './groupText';
+import {draftMembers, memberSections} from './groupText';
 
 const t: Translator = (key, params) => translate('en', key, params);
 it('offers draft members from name, subscription and nested group filters', () => {
@@ -13,6 +13,8 @@ it('offers draft members from name, subscription and nested group filters', () =
     {...sg, subscription_tag: 'other'}
   ];
   expect(draftMembers(["subtag(asia) && name(keyword: 'hk')", 'group(relay)'], input, t).map(member => member.name)).toEqual(['relay', 'hk-01']);
+  const members = draftMembers(["subtag(asia) && name(keyword: 'hk')", 'group(relay)'], input, t);
+  expect(memberSections(members, [], t)[1].items.map(member => member.nodeName)).toEqual([false, true]);
   expect(draftMembers(['name(sg-01)'], input, t).map(member => member.name)).toEqual(['sg-01']);
-  expect(draftMembers(['group(relay)'], input, t)).toEqual([{name: 'relay', status: {text: t('ui.group'), badge: true}}]);
+  expect(draftMembers(['group(relay)'], input, t)).toEqual([{name: 'relay', nodeName: false, status: {text: t('ui.group'), badge: true}}]);
 });
