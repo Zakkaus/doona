@@ -12,8 +12,9 @@ import {addU64} from '../../api/u64';
 import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
-import {isBareName} from '../../dae/text';
-import {citingGroups, namedInExpression} from '../../dae/groups';
+import {isBareName, isQuotable} from '../../dae/text';
+import {groupsNamingNode, readNodeEntries, type NodeEntry} from '../../dae/nodes';
+import {citingGroups, groupsNamingTag, namedInExpression} from '../../dae/groups';
 import {intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
@@ -42,6 +43,44 @@ export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin'
   configTag?: string;
 };
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
+
+export const editableSource = (daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | null | undefined) =>
+  daeText && canWrite && source.writable && complete === true;
+
+export function subscriptionPlace(places: Array<{source: ConfigSource; entry: SubscriptionText}>, item: ProviderRow, providers: Provider[]) {
+  if (!places.length) return null;
+  // Duplicate tags only open the source, preferring the one on this provider's host.
+  const own = places.length > 1 ? places.filter(({entry}) => urlHost(entry.url) === urlHost(item.url_redacted)) : places;
+  return {
+    ...(own.length === 1 ? own[0] : places[0]),
+    unique: places.length === 1 && providers.filter(other => other.kind === 'subscription' && other.name === item.name).length === 1
+  };
+}
+
+export function nodeEditState(sources: ConfigSource[], source: ConfigSource, entry: NodeEntry, nodes: Node[], form: ProviderForm, t: Translator) {
+  const name = form.name.trim();
+  const renamed = name !== entry.name;
+  const blocked = renamed && sources.some(item => item.id !== source.id && groupsNamingNode(item.content, entry.name).length > 0);
+  const taken =
+    renamed &&
+    (nodes.some(node => node.name === name) ||
+      sources.some(item => (item.kind === 'main' || item.kind === 'include') && readNodeEntries(item.content).some(entry => entry.name === name)));
+  const nameError = taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null;
+  const error = blocked ? t('nodes.renameElsewhere') : !isQuotable(form.value.trim()) ? t('config.unquotable') : null;
+  return {
+    nameError,
+    error,
+    valid: !!name && isNodeLink(form.value) && !error && !nameError && (form.name !== entry.name || form.value !== entry.link)
+  };
+}
+
+export function subscriptionRemoval(sources: ConfigSource[] | undefined, loading: boolean, item: Provider | null) {
+  const subscription = item?.kind === 'subscription';
+  return {
+    blockers: subscription ? [...new Set((sources ?? []).flatMap(source => groupsNamingTag(source.content, item.name)))] : [],
+    checking: subscription && loading && !sources
+  };
+}
 
 // A rename rewrites only exact subtag filters in the declaring source, so groups elsewhere that name the tag, and any
 // expression naming it, are left for the person to edit.
