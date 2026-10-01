@@ -5,9 +5,16 @@ import {Empty} from './Feedback';
 import {cx} from './cx';
 import {useContentWidth} from './hooks';
 
-export function nodeGridSize(width: number, gap: number) {
-  const columns = Math.max(1, Math.floor((width - gap) / (228 + gap)));
-  return {columns, width: Math.max(228, (width - gap * (columns + 1)) / columns)};
+// The tallest the scroll panel grows, as `.rp-nodegrid` sets it in nodes.css.
+const panelHeight = 376;
+
+// Columns for the tiles a filter leaves, never more than there are tiles, so a short result fills the row; the panel
+// keeps its scroll height only when the rows overflow it.
+export function nodeGridSize(width: number, gap: number, count: number) {
+  const fit = Math.max(1, Math.floor((width - gap) / (228 + gap)));
+  const columns = Math.max(1, Math.min(fit, count));
+  const rows = Math.ceil(count / columns);
+  return {columns, width: Math.max(228, (width - gap * (columns + 1)) / columns), overflows: gap + rows * (56 + gap) > panelHeight};
 }
 
 export type GridNode = {id: string; name: string; nodeName: boolean; status: NodeStatus; description: string};
@@ -77,7 +84,7 @@ function VirtualNodeGrid({
 }: Omit<NodeGridProps, 'virtual'> & {renderTile: (node: GridNode) => ReactNode}) {
   const [gap] = useState(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-space-2')));
   const [gridRef, width] = useContentWidth<HTMLDivElement>();
-  const size = nodeGridSize(width ?? 228 + gap * 2, gap);
+  const size = nodeGridSize(width ?? 228 + gap * 2, gap, nodes.length);
   return (
     <Virtualizer
       layout={GridLayout}
@@ -86,6 +93,7 @@ function VirtualNodeGrid({
       <GridList
         ref={gridRef}
         className="rp-nodegrid"
+        data-fit={size.overflows ? undefined : true}
         aria-label={label}
         items={nodes}
         selectionMode={onSelect ? 'single' : 'none'}

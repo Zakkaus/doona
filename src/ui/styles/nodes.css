@@ -70,6 +70,12 @@ button.rp-node {
   padding-bottom: var(--rp-space-6);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
+/* Rows that fit (NodeGrid.tsx) take only their own height, with nothing to scroll or fade. */
+.rp-nodegrid[data-fit] {
+  height: auto;
+  padding-bottom: 0;
+  mask-image: none;
+}
 .rp-nodegrid .rp-node {
   width: auto;
   cursor: default;
