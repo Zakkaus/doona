@@ -371,3 +371,70 @@ test('node details and row actions share live overrides, aligned flag rows and i
   await expect(row.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
 });
 
+test('Policies member lists, folded selection, default members and member pickers show only node flags', async ({page}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('doona-flag-overrides', JSON.stringify({'node:hk-01': 'TW', 'group:proxy': 'JP', 'group:resilient': 'US'}))
+  );
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET groups/proxy'] = async () => {
+    const group = await api.group('proxy');
+    return {...group, config: {...group.config, default_member_id: 'hk-01', final_outbound: 'hk-01'}};
+  };
+  await page.goto('/#/policies?tab=arrange');
+  const resilient = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'resilient', exact: true})});
+  await expect(resilient.getByRole('heading').locator('.rp-node-flag')).toHaveCount(0);
+  await expect(
+    resilient
+      .locator('.rp-tag')
+      .filter({hasText: /^hk-01$/})
+      .locator('.rp-node-flag')
+  ).toHaveAttribute('data-flag', '🇹🇼');
+  const gaps = await resilient.locator('.rp-node-name').evaluateAll(elements =>
+    elements.map(element => {
+      const flag = element.querySelector('.rp-node-flag')!;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.setStartAfter(flag);
+      return range.getBoundingClientRect().left - flag.getBoundingClientRect().right;
+    })
+  );
+  expect(gaps.length).toBeGreaterThan(0);
+  for (const gap of gaps) expect(gap).toBeCloseTo(4, 0);
+  await page.goto('/#/policies');
+  const automatic = page.getByRole('region', {name: 'resilient', exact: true});
+  await automatic.scrollIntoViewIfNeeded();
+  await expect(automatic.locator('.rp-disclosure-trigger .rp-node-flag').first()).toHaveAttribute('data-flag', '🇸🇬');
+  await expect(automatic.getByRole('heading', {name: 'resilient', exact: true}).locator('.rp-node-flag')).toHaveCount(0);
+  const proxy = page.getByRole('region', {name: 'proxy', exact: true});
+  await moreAction(proxy, 'Edit group');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('.rp-kv .rp-node-flag')).toHaveCount(2);
+  for (const flag of await dialog.locator('.rp-kv .rp-node-flag').all()) await expect(flag).toHaveAttribute('data-flag', '🇹🇼');
+  await dialog.getByRole('button', {name: /Default member/}).click();
+  await expect(page.getByRole('option', {name: /^hk-01/}).locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
+  await expect(page.getByRole('option', {name: /^resilient/}).locator('.rp-node-flag')).toHaveCount(0);
+});
+
+for (const lang of ['en', 'zh-TW'] as const)
+  test(`Activity keeps the flag and node name visible on a phone in ${lang}`, async ({page}) => {
+    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
+    await page.setViewportSize({width: 390, height: 844});
+    await mockBackend(page);
+    await page.goto('/#/activity');
+    const card = page.locator('.rp-latency');
+    const picker = card.locator('.rp-select');
+    await expect(picker).toContainText('hk-01');
+    await expect(picker.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
+    const geometry = await card.evaluate(card => {
+      const caption = card.querySelector('.rp-tile-caption')!.getBoundingClientRect();
+      const controls = card.querySelector('.rp-tile-controls')!.getBoundingClientRect();
+      const picker = card.querySelector('.rp-select')!;
+      const box = card.getBoundingClientRect();
+      return {
+        nextLine: controls.top >= caption.bottom,
+        inside: controls.left >= box.left && controls.right <= box.right,
+        clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1)
+      };
+    });
+    expect(geometry).toEqual({nextLine: true, inside: true, clipped: false});
+  });

@@ -93,3 +93,140 @@ for (const [variant, lang, scheme, width] of [
       expect(alignment).toEqual({trackLeft: true, trackWidth: true, trackHeight: true, helpLeft: true});
       await page.screenshot({path: `${directory}/settings-${shot}-${variant}-${enabled ? 'on' : 'off'}.png`});
     });
+
+for (const [width, scheme] of [
+  [1440, 'light'],
+  [1440, 'dark'],
+  [390, 'light'],
+  [390, 'dark']
+] as const)
+  test(`owner flag review ${width} ${scheme}`, async ({page}) => {
+    test.skip(!env.DOONA_FLAGS_REVIEW || !directory, 'Opt-in owner screenshot review');
+    await page.setViewportSize({width, height: width === 390 ? 844 : 1000});
+    await page.addInitScript(
+      ({scheme}) => {
+        localStorage.setItem('doona-lang', 'zh-TW');
+        localStorage.setItem('doona-scheme', scheme);
+      },
+      {scheme}
+    );
+    await mockBackend(page);
+    await page.goto('/#/nodes?provider=inline');
+    await expect(page.getByRole('rowheader', {name: 'hk-01', exact: true})).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator('.rp-table').last().scrollIntoViewIfNeeded();
+    const prefix = env.DOONA_FLAGS_BASELINE ? 'main' : 'after';
+    await page.screenshot({path: `${directory}/${prefix}-nodes-${width}-${scheme}.png`});
+    console.log(
+      JSON.stringify(
+        await page
+          .locator('.rp-table')
+          .last()
+          .evaluate(table => {
+            const row = [...table.querySelectorAll('[role="row"]')].find(row => row.querySelector('[role="rowheader"]')?.textContent === 'hk-01')!;
+            const buttons = [...row.querySelectorAll('button')].map(button => ({
+              label: button.getAttribute('aria-label') ?? button.textContent,
+              width: button.getBoundingClientRect().width,
+              height: button.getBoundingClientRect().height,
+              text: button.textContent
+            }));
+            return {viewport: innerWidth, tableWidth: table.clientWidth, tableScrollWidth: table.scrollWidth, buttons};
+          })
+      )
+    );
+
+    if (env.DOONA_FLAGS_BASELINE) return;
+    await page.goto('/#/policies?tab=arrange');
+    await expect(page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'resilient', exact: true})})).toContainText('hk-01');
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({path: `${directory}/after-group-${width}-${scheme}.png`, fullPage: true});
+    await page.goto('/#/policies');
+    await expect(page.getByRole('region', {name: 'proxy', exact: true})).toContainText('hk-01');
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({path: `${directory}/after-policies-${width}-${scheme}.png`, fullPage: true});
+    await page.goto('/#/nodes?provider=inline&q=hk-01');
+    if (width === 1440 && scheme === 'light') {
+      const row = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})});
+      await row.click();
+      const details = page.getByRole('region', {name: '節點詳細資料', exact: true});
+      await details.scrollIntoViewIfNeeded();
+      await page.screenshot({path: `${directory}/node-details.png`});
+      await row.click();
+    }
+    await page.getByRole('button', {name: '節點操作', exact: true}).click();
+    if (width === 390 && scheme === 'light') await page.screenshot({path: `${directory}/node-actions.png`});
+    await page.getByRole('menuitem', {name: '更換國旗…', exact: true}).click();
+    await page.getByRole('dialog').getByRole('button', {name: /國旗/}).click();
+    await expect(page.getByRole('option', {name: '不顯示國旗', exact: true})).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({path: `${directory}/after-picker-${width}-${scheme}.png`});
+  });
+
+for (const [width, scheme] of [
+  [1440, 'light'],
+  [1440, 'dark'],
+  [390, 'light'],
+  [390, 'dark']
+] as const)
+  test(`closing flag review ${width} ${scheme}`, async ({page}) => {
+    test.skip(!env.DOONA_FLAGS_REVIEW || !directory, 'Opt-in closing screenshot review');
+    await page.setViewportSize({width, height: width === 390 ? 844 : 1000});
+    await page.addInitScript(scheme => {
+      localStorage.setItem('doona-lang', 'zh-TW');
+      localStorage.setItem('doona-scheme', scheme);
+    }, scheme);
+    const {api, handlers} = await mockBackend(page);
+    handlers['GET nodes'] = async () => {
+      const list = await api.nodes({limit: 1000});
+      return {...list, nodes: list.nodes.map(node => (node.id === 'jp-01' ? {...node, name: '🇯🇵 jp-01'} : node))};
+    };
+    handlers['GET groups/proxy'] = async () => {
+      const group = await api.group('proxy');
+      return {...group, config: {...group.config, default_member_id: 'hk-01', final_outbound: 'hk-01'}};
+    };
+    const snap = async (name: string, target: typeof page | ReturnType<typeof page.locator>) => {
+      if (name !== 'actions') {
+        await page.mouse.move(width - 4, 80);
+      }
+      await page.evaluate(() => document.fonts.ready);
+      await target.screenshot({path: `${directory}/closing-${name}-${width}-${scheme}.png`});
+    };
+    await page.goto('/#/nodes?provider=inline&q=hk-01');
+    const row = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})});
+    const actions = row.getByRole('button', {name: '節點操作', exact: true});
+    await actions.scrollIntoViewIfNeeded();
+    await row.focus();
+    for (let i = 0; i < 12 && !(await actions.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+    await expect(actions).toBeFocused();
+    await expect(page.getByRole('tooltip', {name: '節點操作', exact: true})).toBeVisible();
+    await snap('actions', width === 390 ? page : row);
+    await row.click();
+    const details = page.getByRole('region', {name: '節點詳細資料', exact: true});
+    await details.scrollIntoViewIfNeeded();
+    await snap('details', details);
+    await row.click();
+    await row.getByRole('button', {name: '節點操作', exact: true}).click();
+    await snap('menu', page.getByRole('menu'));
+    await page.getByRole('menuitem', {name: '更換國旗…', exact: true}).click();
+    await snap('help', page.getByRole('dialog', {name: '更換國旗…', exact: true}));
+    await page.getByRole('dialog', {name: '更換國旗…', exact: true}).getByRole('button', {name: /國旗/}).click();
+    await expect(page.getByRole('option', {name: '不顯示國旗', exact: true})).toBeVisible();
+    await snap('picker', page.locator('.rp-search-popover'));
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', {name: '更換國旗…', exact: true}).getByText('關閉', {exact: true}).click();
+    await page.goto('/#/nodes?provider=inline&q=jp-01');
+    const embedded = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: '🇯🇵 jp-01', exact: true})});
+    await embedded.getByRole('button', {name: '節點操作', exact: true}).click();
+    await page.getByRole('menuitem', {name: '更換國旗…', exact: true}).click();
+    await expect(page.getByRole('dialog', {name: '更換國旗…', exact: true}).getByRole('button', {name: /國旗/})).toBeDisabled();
+    await snap('embedded', page.getByRole('dialog', {name: '更換國旗…', exact: true}));
+    await page.getByRole('dialog', {name: '更換國旗…', exact: true}).getByText('關閉', {exact: true}).click();
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-latency .rp-select')).toContainText('hk-01');
+    await snap('activity', page.locator('.rp-latency'));
+    await page.goto('/#/policies');
+    await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), '編輯群組', '更多操作');
+    const policyDialog = page.getByRole('dialog', {name: '編輯群組 proxy', exact: true});
+    await expect(policyDialog.locator('.rp-kv .rp-node-flag')).toHaveCount(2);
+    await snap('outbound', policyDialog);
+  });

@@ -2,13 +2,13 @@ import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
-import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField} from '../../ui/ui';
+import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
 import {FilterSummary} from '../policies/FilterSummary';
 export type PolicyDetails = {
-  fields: Array<[string, string]>;
+  fields: KvItem[];
   heading: string | null;
   reason: string | null;
   interrupt: {selected: boolean; unset: boolean; isDisabled: boolean; change: (value: boolean) => void} | null;

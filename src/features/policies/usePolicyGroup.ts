@@ -4,7 +4,7 @@ import {groupConflict, useGroupControl} from '../../store';
 import type {GroupSummary, HealthObservation} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
-import {actionErrorText, groupActionsReason, memberViews, policyCardView, probeSummary, untestedHelp} from './view';
+import {actionErrorText, groupActionsReason, memberViews, policyCardView, selectionSummary, probeSummary, untestedHelp} from './view';
 import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
@@ -51,7 +51,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (behind) refetch();
   }, [behind, selection, refetch]);
   const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
-  const card = g ? policyCardView(g, members, control.network, t) : null;
+  const card = g ? policyCardView(g, members, control.network, t, outbounds) : null;
   // Pinning opens members once; each new visit from a link opens them again.
   const [expanded, setExpanded] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -128,6 +128,12 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       : undefined;
   return {
     card,
+    summaryText: g
+      ? selectionSummary(g, members, t, id => {
+          const index = members.findIndex(member => member.id === id);
+          return index < 0 ? id : `{${index}}`;
+        })
+      : '',
     edit,
     check,
     members,

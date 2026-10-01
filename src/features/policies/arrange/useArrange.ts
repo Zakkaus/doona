@@ -9,7 +9,7 @@ import {useDraftGuard} from '../../../shell/draft';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {useGroupDialog} from '../../shared/useGroupDialog';
 import {groupOwners, outboundLinks, type OutboundCatalogue} from '../../shared/groupText';
-import {applyReason, arrangeView, changeText, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
+import {applyReason, arrangeView, changeText, changePresentation, holds, stage, traySubscriptions, unstage, type Placeable} from './view';
 import {errorText} from '../../../api/error';
 import {offered} from '../../../api/capabilities';
 
@@ -124,6 +124,7 @@ export function useArrange(
     applying,
     failure,
     changes,
+    changePresentations: changes.map(change => changePresentation(change, subscriptions, t)),
     changeLines: changes.map(change => changeText(change, subscriptions, t)),
     pendingText: t('arrange.pending', {n: changes.length}),
     place,
