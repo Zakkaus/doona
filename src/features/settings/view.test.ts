@@ -11,7 +11,6 @@ import {
   numericAccess,
   numericFields,
   numericFieldView,
-  paletteLabel,
   probeFailure,
   profileReason,
   profileView,
@@ -44,15 +43,13 @@ it('keeps full geodata digests in tooltips and handles absent provenance', () =>
   const rows = geodataRows([{...geodata.assets[0], modified_at: null, source_redacted: null}], 'en');
   expect(rows[0]).toMatchObject({sha: geodata.assets[0].sha256.slice(0, 12), shaTitle: geodata.assets[0].sha256, source: '—', modifiedAt: null});
 });
-it('distinguishes connection errors from successful status and falls back for unknown palettes', () => {
+it('distinguishes connection errors from successful status', () => {
   const view = profileView([{id: 'a', name: 'Home'}], {key: 'settings.httpError', params: {status: 503}, error: true, requestId: 'req-1'}, t);
   expect(view.choices).toEqual([{id: 'a', label: 'Home'}]);
   expect(view.result).toMatchObject({role: 'alert', error: true});
   expect(view.result?.text).toContain('503');
   expect(view.result?.request).toContain('req-1');
   expect(profileView([], null, t).result).toBeNull();
-  expect(paletteLabel([{items: [{id: 'a', label: 'Amber'}]}], 'a')).toBe('Amber');
-  expect(paletteLabel([], 'custom')).toBe('custom');
 });
 
 it('offers a control for every setting its access table covers, in table order', () => {

@@ -163,9 +163,6 @@ export function geodataFromConfig(
   };
 }
 
-export function paletteLabel(sections: Array<{items: Array<{id: string; label: string}>}>, id: string) {
-  return sections.flatMap(section => section.items).find(item => item.id === id)?.label ?? id;
-}
 // Why a connection test failed, in the page language; null when the test was cancelled rather than timed out.
 export function probeFailure(
   error: unknown,

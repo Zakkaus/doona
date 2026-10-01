@@ -4,7 +4,7 @@ import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {SettingsContext} from '../../shell/preferences';
 import {useBackendForm} from './useBackendForm';
-import {profileView, profileReason, paletteLabel} from './view';
+import {profileView, profileReason} from './view';
 import {installHint, useInstallOffer} from '../../shell/install';
 import {docsHref} from '../shared/docs';
 export function useSettingsPage(query: string) {
@@ -34,7 +34,6 @@ export function useSettingsPage(query: string) {
     paletteSections,
     startPageItems,
     profile,
-    palette: paletteLabel(paletteSections, ap.palette),
     error: capabilities.error,
     retry: capabilities.refetch,
     firstRun: form.saved.api === null,

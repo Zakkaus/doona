@@ -191,7 +191,7 @@ test('signing out with a saved token forgets it and returns to the sign-in page'
     return backend.capabilities;
   };
   await page.goto('/#/settings');
-  const card = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'Backend', exact: true})});
+  const card = page.getByRole('region', {name: 'Backend', exact: true});
   await expect(card.getByText('Clears the token saved in this browser. The token stays valid on the backend.')).toBeVisible();
   await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Sign out', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/activity$/);
