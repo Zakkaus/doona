@@ -31,6 +31,8 @@ type NodeTableInput = {
   multiple: boolean;
   query: string | null;
   groupQuery: string | null;
+  nodeIds: string[];
+  clearNodes: () => void;
   source: MainSourceEdit;
   canManage: boolean;
   busy: boolean;
@@ -39,9 +41,10 @@ type NodeTableInput = {
   onAdd: () => void;
   onNewGroup: (node: Node) => void;
   onRemove: (node: Node) => void;
+  edit: (node: Node) => (() => void) | null;
 };
 export function useNodeTable(input: NodeTableInput) {
-  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf} = input;
+  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf, edit} = input;
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -51,9 +54,14 @@ export function useNodeTable(input: NodeTableInput) {
   const [group, setGroup] = useState(input.groupQuery ?? '');
   useLinked(input.groupQuery, value => setGroup(value ?? ''));
   const [protocol, setProtocol] = useState('');
+  useLinked(JSON.stringify(input.nodeIds), () => {
+    setGroup('');
+    setProtocol('');
+  });
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
-  const across = !!input.groupQuery || (input.multiple && search.trim() !== '');
-  const nodes = across ? input.all : input.nodes;
+  const selectedNodes = input.nodeIds.length > 0;
+  const across = (!!input.groupQuery || (input.multiple && search.trim() !== '')) && !selectedNodes;
+  const nodes = selectedNodes ? input.all.filter(node => input.nodeIds.includes(node.id)) : across ? input.all : input.nodes;
   const groups = useMemo(
     () =>
       [...new Set(nodes.flatMap(node => node.group_ids))]
@@ -114,9 +122,10 @@ export function useNodeTable(input: NodeTableInput) {
       ],
       join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
-      remove: () => onRemove(node)
+      remove: () => onRemove(node),
+      edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove]
+    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -136,15 +145,23 @@ export function useNodeTable(input: NodeTableInput) {
     protocols: [{id: '', label: t('nodes.anyProtocol')}, ...protocols],
     shown: t('ui.fraction', {part: formatNumber(rows.length, locale), whole: formatNumber(nodes.length, locale)}),
     loading: input.loading,
-    label: across ? t('nav.nodes') : input.label,
-    scope: across ? t('nodes.searchAll') : input.scope,
-    across,
+    label: across || selectedNodes ? t('nav.nodes') : input.label,
+    scope: selectedNodes ? t('nodes.selectedNodes', {n: input.nodeIds.length}) : across ? t('nodes.searchAll') : input.scope,
+    across: across || selectedNodes,
     empty: t(across ? 'nodes.noMatch' : 'nodes.empty'),
     canManage,
     busy: input.busy,
     writable: source.writable,
     sourceBusy: source.busy || !source.main,
     sourceTip: source.error ? errorText(source.error, t) : undefined,
+    clearNodes: selectedNodes
+      ? () => {
+          setSearch('');
+          setGroup('');
+          setProtocol('');
+          input.clearNodes();
+        }
+      : null,
     onAdd: input.onAdd
   };
 }
@@ -166,6 +183,7 @@ export type NodeTableView = {
     join: (key: string) => void;
     removable: boolean;
     remove: () => void;
+    edit: (() => void) | null;
   }>;
   // The node whose probe is running; while one runs, every probe button waits.
   probeBusy: string | null;
@@ -194,4 +212,5 @@ export type NodeTableView = {
   sourceBusy: boolean;
   sourceTip?: string;
   onAdd: () => void;
+  clearNodes: (() => void) | null;
 };

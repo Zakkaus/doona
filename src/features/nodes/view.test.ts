@@ -62,7 +62,6 @@ describe('providerRows', () => {
     const nodes = [node('tagged', {provider_id: 'a', subscription_tag: 'primary'})];
     const rows = providerRows(providers, nodes, entries, t).list;
     expect(rows.map(item => item.displayName)).toEqual(['primary', 'secondary', 'spare', 'opaque-file']);
-    expect(rows.map(item => item.configTag)).toEqual(['primary', undefined, undefined, undefined]);
     expect(providers.map(item => item.name)).toEqual(['opaque-a', 'opaque-b', 'opaque-c', 'opaque-file']);
   });
 
@@ -179,13 +178,12 @@ it('projects node protocol, membership, measured zero and unavailable health', (
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {
   const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
   expect(row.usage).toBe(formatBytes(1024n, 'en'));
-  expect(row.intervals.at(-1)).toEqual({id: '90', label: intervalText(90, 'en-US', t)});
+  expect(row.interval).toBe(intervalText(90, 'en-US', t));
   expect(intervalText(0, 'en-US', t)).toBe(t('nodes.manualOnly'));
   expect(intervalText(3600, 'en-US', t)).toBe(t('nodes.everyHours', {n: '1'}));
   expect(providerRowView({...provider('unattributed'), kind: 'unattributed'}, undefined, 'en-US', t)).toMatchObject({
     usage: '—',
     status: null,
-    hasInterval: false,
     expires: '—'
   });
 });
@@ -215,18 +213,9 @@ it('separates built-in outbounds from unattributed nodes and avoids provider id 
   });
 });
 
-it('does not authorize writes from shared-host guesses or conflicting node tags', () => {
-  const providers = [
-    provider('main', {url_redacted: 'https://primary.example/redacted'}),
-    provider('include', {url_redacted: 'https://primary.example/redacted'})
-  ];
-  expect(providerRows(providers, [], entries, t).list.every(row => row.configTag === undefined)).toBe(true);
-  const nodes = [node('one', {provider_id: 'main', subscription_tag: 'primary'}), node('two', {provider_id: 'main', subscription_tag: 'secondary'})];
-  expect(providerRows(providers, nodes, entries, t).list.every(row => row.configTag === undefined)).toBe(true);
-  expect(providerRowView(provider('a'), undefined, 'en-US', t)).toMatchObject({interval: '—', hasInterval: false, intervals: []});
-  const unspecified = providerRowView(provider('a'), null, 'en-US', t);
-  expect(unspecified).toMatchObject({interval: '—', intervalValue: '', hasInterval: true});
-  expect(unspecified.intervals.map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+it('shows an unspecified interval without claiming a default', () => {
+  expect(providerRowView(provider('a'), undefined, 'en-US', t).interval).toBe('—');
+  expect(providerRowView(provider('a'), null, 'en-US', t).interval).toBe('—');
 });
 
 it('lists as written only the options without their own control', () => {

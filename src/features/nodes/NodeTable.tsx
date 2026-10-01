@@ -95,19 +95,30 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         render: row => (
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
-            {(writable || editFlag) && (
+            {(writable || editFlag || row.edit) && (
               <ChoiceMenu
                 quiet
                 small
                 chevron={false}
                 label={t('nodes.actions')}
                 sections={() => [
+                  ...(row.edit
+                    ? [
+                        {
+                          title: t('ui.actions'),
+                          hideHeader: true,
+                          selectionMode: 'none' as const,
+                          value: '',
+                          items: [{id: '/edit', label: t('nodes.edit', {name: row.name})}]
+                        }
+                      ]
+                    : []),
                   ...(writable && !sourceBusy ? [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}] : []),
                   ...(editFlag
                     ? [{title: t('flags.region'), hideHeader: true, selectionMode: 'none' as const, value: '', items: [{id: '/flag', label: t('flags.edit')}]}]
                     : [])
                 ]}
-                onAction={key => (key === '/flag' ? editFlag?.(row.name) : row.join(key))}
+                onAction={key => (key === '/edit' ? row.edit?.() : key === '/flag' ? editFlag?.(row.name) : row.join(key))}
                 searchLabel={t('ui.filterGroups')}
               >
                 <MoreHorizontal />
@@ -138,6 +149,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )}
         <LabeledSelect label={t('nodes.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
         <span className="rp-label">{m.shown}</span>
+        {m.clearNodes && <Button onPress={m.clearNodes}>{t('ui.clearFilters')}</Button>}
         <span className="rp-grow" />
         {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
       </div>

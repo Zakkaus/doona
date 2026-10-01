@@ -1,3 +1,5 @@
+import {isNodeLink} from '../../dae/nodes';
+export {isNodeLink} from '../../dae/nodes';
 import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
@@ -12,7 +14,7 @@ import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName} from '../../dae/text';
 import {citingGroups, namedInExpression} from '../../dae/groups';
-import {intervalItems, intervalText} from '../shared/subscription';
+import {intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const health = preferredHealth(node);
@@ -36,7 +38,6 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
 
 export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {
   displayName?: string;
-  configTag?: string;
   sourceTag?: string;
 };
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
@@ -81,11 +82,9 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
   const unclaimed = entries.filter(entry => !claimed.has(entry.tag));
   if (unnamed.length === 1 && unclaimed.length === 1) named.set(unnamed[0].id, unclaimed[0].tag);
   const rows: ProviderRow[] = providers.map(item => {
-    const tag = verifiedTag(item.id);
     return {
       ...item,
       displayName: named.get(item.id) ?? item.name,
-      configTag: item.kind === 'subscription' && tag && entries.filter(entry => entry.tag === tag).length === 1 ? tag : undefined,
       // A subscription provider is named by its tag, so an entry is found before any fetch has tagged a node.
       sourceTag: item.kind === 'subscription' ? item.name : undefined
     };
@@ -157,7 +156,7 @@ export function nodeRows(
   return kept.sort((a, b) => sign * (by[sort.column] ?? by.name)(a, b));
 }
 
-// The options an edit leaves as written. The User-Agent, the interval (the table's Auto-refresh picker), and the cache
+// The options an edit leaves as written. The User-Agent, interval, cache
 // and the download route while their controls show, have their own controls.
 export function keptOptions(options: SubscriptionOption[], controls: {cache: boolean; route: boolean}): SubscriptionOption[] {
   return options.filter(
@@ -214,10 +213,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     interval: interval == null ? '—' : intervalText(interval, locale, t),
-    intervalValue: interval == null ? '' : String(interval),
-    hasInterval: interval !== undefined,
     intervalLabel: t('nodes.intervalOf', {name}),
-    intervals: interval === undefined ? [] : intervalItems(interval, locale, t),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],
     error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
@@ -225,9 +221,6 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     removeLabel: t('nodes.remove', {name})
   };
 }
-
-// A node link as the add dialog accepts it: a URL scheme, then the rest without spaces.
-export const isNodeLink = (value: string) => /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(value.trim());
 
 // Why the add dialog's submit is disabled, first applicable. Null while every required field is still empty, which
 // speaks for itself, and for a problem its own field already shows (the User-Agent, a group name).

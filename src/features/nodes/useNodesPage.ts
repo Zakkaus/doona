@@ -9,6 +9,8 @@ import {isWritableName, addSubtagsToGroup, citingGroups, groupsNamingTag, readGr
 import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
+import {groupsNamingNode, readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {nodeOwner} from '../../api/selectors';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -40,9 +42,10 @@ const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache
 type NodeDialog =
   | {kind: 'provider'}
   | {kind: 'node'}
+  | {kind: 'editNode'; source: ConfigSource; entry: NodeEntry}
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
-  | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText};
+  | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
@@ -58,10 +61,13 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'editProvider'
       ? form.name !== dialog.entry.tag ||
         form.value !== dialog.entry.url ||
+        form.interval !== '' ||
         form.agent !== (dialog.entry.ua ?? '') ||
         form.cache !== null ||
         form.route !== (dialog.entry.route ?? '')
-      : !!(form.name || form.value);
+      : dialog?.kind === 'editNode'
+        ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
+        : !!(form.name || form.value);
   const guard = useDraftGuard(!!dialog && edited, () => {
     session.current++;
     setDialog(null);
@@ -73,6 +79,7 @@ export function useNodesPage({go, query}: PageProps) {
     setProblem(null);
     if (next.kind === 'editProvider')
       setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
+    if (next.kind === 'editNode') setForm({...blank, name: next.entry.name, value: next.entry.link});
     setDialog(next);
   }, []);
   const lang = useLang();
@@ -105,22 +112,41 @@ export function useNodesPage({go, query}: PageProps) {
   // no source, or more than one, declares it.
   const editing = dialog?.kind === 'editProvider' ? declared.get(dialog.entry.tag) : undefined;
   const editSource = editing?.length === 1 ? editing[0].source : null;
-  const editAction = (item: ProviderRow) => {
-    const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
-    if (!place?.length) return null;
-    // honk lets two subscriptions share a name, such as a tagged entry and an untagged one named after the same host;
-    // the entry found by that name may then declare the other one, so it only opens, at the entry on the row's host
-    // when one alone matches.
-    const own = place.length > 1 ? place.filter(({entry}) => urlHost(entry.url) === urlHost(item.url_redacted)) : place;
-    const {source: origin, entry} = own.length === 1 ? own[0] : place[0];
-    const unique =
-      place.length === 1 && (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
-    // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
-    if (daeText && unique && source.writable && origin.writable && isComplete(origin) === true)
-      return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry})};
-    return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
-  };
-  const entries = useMemo(() => readSubscriptionEntries(source.main?.content ?? ''), [source.main?.content]);
+  const editAction = useCallback(
+    (item: ProviderRow, focus?: 'interval') => {
+      const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
+      if (!place?.length) return null;
+      // honk lets two subscriptions share a name, such as a tagged entry and an untagged one named after the same host;
+      // the entry found by that name may then declare the other one, so it only opens, at the entry on the row's host
+      // when one alone matches.
+      const own = place.length > 1 ? place.filter(({entry}) => urlHost(entry.url) === urlHost(item.url_redacted)) : place;
+      const {source: origin, entry} = own.length === 1 ? own[0] : place[0];
+      const unique =
+        place.length === 1 && (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
+      // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
+      if (daeText && unique && source.writable && origin.writable && isComplete(origin) === true)
+        return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry, focus})};
+      return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
+    },
+    [declared, providers.data, daeText, source.writable, isComplete, open, go]
+  );
+  const authored = useMemo(
+    () =>
+      sources
+        .filter(item => item.kind === 'main' || item.kind === 'include')
+        .flatMap(source => readNodeEntries(source.content).map(entry => ({source, entry}))),
+    [sources]
+  );
+  const nodeEdit = useCallback(
+    (node: Node) => {
+      const own = authored.filter(item => item.entry.name === node.name);
+      const inline = providers.data?.providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline');
+      if (!inline || own.length !== 1 || !daeText || !source.writable || !own[0].source.writable || isComplete(own[0].source) !== true) return null;
+      return () => open({kind: 'editNode', ...own[0]});
+    },
+    [authored, providers.data, daeText, source.writable, isComplete, open]
+  );
+  const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const canAddProvider = resources?.providers.can_manage === true;
@@ -134,6 +160,42 @@ export function useNodesPage({go, query}: PageProps) {
     });
     return () => cancelAnimationFrame(frame);
   }, [params, resources, canAddProvider, open]);
+  useLayoutEffect(() => {
+    const id = params.get('editSubscription');
+    if (!id || !providers.data || !config.data) return;
+    const item = list.find(item => item.id === id);
+    const action = item ? editAction(item, params.get('focus') === 'interval' ? 'interval' : undefined) : null;
+    if (action?.kind !== 'edit') return;
+    const frame = requestAnimationFrame(() => {
+      replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
+      action.run();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [params, providers.data, config.data, list, editAction, query]);
+  useLayoutEffect(() => {
+    const sourceId = params.get('editNodeSource');
+    const line = params.get('line');
+    if (!sourceId || !config.data || !nodes.data) return;
+    const own = authored.find(item => item.source.id === sourceId && String(item.entry.line) === line);
+    if (!own || isComplete(own.source) !== true || !own.source.writable || !daeText || !source.writable) return;
+    if (authored.filter(item => item.entry.name === own.entry.name).length !== 1) return;
+    const frame = requestAnimationFrame(() => {
+      const node = nodes.data!.find(
+        node => node.name === own.entry.name && providers.data?.providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline')
+      );
+      replaceRoute(
+        'nodes',
+        within(query, {
+          editNodeSource: null,
+          line: null,
+          provider: node ? nodeOwner(node, providers.data?.providers ?? []) : params.get('provider'),
+          node: node?.id ?? null
+        })
+      );
+      open({kind: 'editNode', ...own});
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [params, config.data, nodes.data, providers.data, authored, isComplete, daeText, source.writable, query, open]);
   const selectedId = selectedProvider(list, params.get('provider'));
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
@@ -217,6 +279,21 @@ export function useNodesPage({go, query}: PageProps) {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
         toast('positive', t('nodes.added', {name: created.name}));
+      } else if (dialog.kind === 'editNode') {
+        if (!formValid) return;
+        const current = sources.find(item => item.id === dialog.source.id);
+        if (!current || !current.writable || isComplete(current) !== true) {
+          refuse(t('nodes.editNodeMissing'));
+          return;
+        }
+        const result = await apply(text => writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link: form.value.trim()}), current);
+        const problem = editProblem(result, t);
+        if (problem) refuseNotice(problem);
+        if (result.kind !== 'ok') return;
+        reload();
+        if (at !== null && shown.current === at && (params.has('node') || params.has('nodes') || params.get('q') === dialog.entry.name))
+          go('nodes', within(at, {q: form.name.trim(), node: null, nodes: null}), {replace: true});
+        toast('positive', t('nodes.edited', {name: form.name.trim()}));
       } else if (dialog.kind === 'editProvider') {
         const from = dialog.entry.tag;
         const tag = form.name.trim();
@@ -231,6 +308,7 @@ export function useNodesPage({go, query}: PageProps) {
           const written = writeSubscriptionEntry(text, from, {
             tag,
             url,
+            ...(intervalChanged ? {interval: Number(form.interval)} : {}),
             ...(form.agent !== (dialog.entry.ua ?? '') ? {ua: form.agent.trim() || null} : {}),
             ...(editCache.changed ? {cache: editCache.value} : {}),
             // Following the routing rules is honk's default, so choosing it removes the route.
@@ -271,9 +349,11 @@ export function useNodesPage({go, query}: PageProps) {
         ? t('nodes.addProvider')
         : dialog.kind === 'node'
           ? t('nodes.addNode')
-          : dialog.kind === 'editProvider'
-            ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
-            : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+          : dialog.kind === 'editNode'
+            ? t('nodes.editNodeTitle', {name: dialog.entry.name})
+            : dialog.kind === 'editProvider'
+              ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
+              : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const createOptions = resources?.providers.create_options;
   const agentKey = agentProblem(form.agent, false);
   const agentError = agentKey && t(agentKey);
@@ -295,6 +375,7 @@ export function useNodesPage({go, query}: PageProps) {
           : null;
   const editRoute = form.route || 'routing';
   const routeChanged = dialog?.kind === 'editProvider' && editRoute !== (dialog.entry.route || 'routing');
+  const intervalChanged = dialog?.kind === 'editProvider' && form.interval !== '' && Number(form.interval) !== dialog.entry.interval;
   const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
   const references =
     dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
@@ -313,30 +394,49 @@ export function useNodesPage({go, query}: PageProps) {
   const blockers = blockedTag === null ? [] : namingGroups(blockedTag);
   // A removal waits for the configuration that says whether any group names the subscription.
   const checkingRemoval = dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription' && config.loading && !config.data;
+  const nodeRenameBlocked =
+    dialog?.kind === 'editNode' &&
+    form.name.trim() !== dialog.entry.name &&
+    sources.some(item => item.id !== dialog.source.id && groupsNamingNode(item.content, dialog.entry.name).length > 0);
+  const nodeNameTaken =
+    dialog?.kind === 'editNode' &&
+    form.name.trim() !== dialog.entry.name &&
+    ((nodes.data ?? []).some(node => node.name === form.name.trim()) || authored.some(item => item.entry.name === form.name.trim()));
+  const nodeEditError = nodeRenameBlocked
+    ? t('nodes.renameElsewhere')
+    : nodeNameTaken
+      ? t('nodes.nameTaken')
+      : dialog?.kind === 'editNode' && (!isQuotable(form.name.trim()) || !isQuotable(form.value.trim()))
+        ? t('config.unquotable')
+        : null;
   const formValid =
-    dialog?.kind === 'editProvider'
-      ? !!editName &&
-        editNameError === null &&
-        editUrlValid &&
-        editAgentError === null &&
-        !references.elsewhere.length &&
-        (editName !== dialog.entry.tag ||
-          form.value.trim() !== dialog.entry.url ||
-          (form.agent !== (dialog.entry.ua ?? '') && (form.agent.trim() || null) !== dialog.entry.ua) ||
-          editCache.changed ||
-          routeChanged)
-      : dialog?.kind === 'provider'
-        ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
-        : dialog?.kind === 'node'
-          ? form.name.trim() !== '' && isNodeLink(form.value)
-          : true;
+    dialog?.kind === 'editNode'
+      ? !!form.name.trim() && isNodeLink(form.value) && !nodeEditError && edited
+      : dialog?.kind === 'editProvider'
+        ? !!editName &&
+          editNameError === null &&
+          editUrlValid &&
+          editAgentError === null &&
+          !references.elsewhere.length &&
+          (editName !== dialog.entry.tag ||
+            form.value.trim() !== dialog.entry.url ||
+            (form.agent !== (dialog.entry.ua ?? '') && (form.agent.trim() || null) !== dialog.entry.ua) ||
+            editCache.changed ||
+            intervalChanged ||
+            routeChanged)
+        : dialog?.kind === 'provider'
+          ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError
+          : dialog?.kind === 'node'
+            ? form.name.trim() !== '' && isNodeLink(form.value)
+            : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   const groupsEverywhere = [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))];
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
-  // edit writes the entry's own User-Agent and cache, and leaves the interval to the table's picker.
+  // edit writes the options in the declaring source.
   const subscriptionFields: SubscriptionFieldSet =
     dialog?.kind === 'editProvider'
       ? {
+          interval: dialog.entry.interval,
           agent: {fallback: createOptions?.user_agent, description: t('nodes.agentDefault')},
           cache: writtenCache,
           // An engine that fetches subscriptions only directly leaves the route out of its providers.
@@ -355,6 +455,11 @@ export function useNodesPage({go, query}: PageProps) {
       if (!id) return;
       const next = new URLSearchParams(query);
       next.set('provider', id);
+      if (next.has('node') || next.has('nodes')) {
+        next.delete('node');
+        next.delete('nodes');
+        next.delete('q');
+      }
       // A source is always selected, so switching it rewrites the entry rather than stacking one per row.
       go('nodes', next.toString(), {replace: true});
     },
@@ -363,7 +468,7 @@ export function useNodesPage({go, query}: PageProps) {
     busy: !!manage.busy,
     source,
     entries,
-    reload,
+    query,
     refresh: refreshing,
     refreshAll,
     onAdd: () => open({kind: 'provider'}),
@@ -382,6 +487,15 @@ export function useNodesPage({go, query}: PageProps) {
     multiple: list.length > 1,
     query: params.get('q'),
     groupQuery: params.get('group'),
+    clearNodes: () => go('nodes', within(query, {node: null, nodes: null, q: null}), {replace: true}),
+    nodeIds: (() => {
+      try {
+        const ids: unknown = JSON.parse(params.get('nodes') ?? '[]');
+        return params.get('node') ? [params.get('node')!] : Array.isArray(ids) && ids.every(id => typeof id === 'string') ? ids : [];
+      } catch {
+        return [];
+      }
+    })(),
     source,
     canManage: !!resources?.nodes.can_manage,
     busy: !!manage.busy,
@@ -389,7 +503,8 @@ export function useNodesPage({go, query}: PageProps) {
     joinGroup: joinExistingGroup,
     onAdd: addNode,
     onNewGroup: newGroup,
-    onRemove: removeNode
+    onRemove: removeNode,
+    edit: nodeEdit
   });
   const tabs = nodesTabs(resources);
   return {
@@ -423,19 +538,25 @@ export function useNodesPage({go, query}: PageProps) {
     dialogTitle,
     formValid,
     formReason:
-      dialog?.kind === 'editProvider'
-        ? !editName
-          ? t('nodes.nameMissing')
-          : // A name error is shown on its field alone.
-            editUrlValid
-            ? null
-            : t('nodes.urlInvalid')
-        : nodeFormReason(dialog?.kind, form.name, form.value, t),
+      dialog?.kind === 'editNode'
+        ? (nodeEditError ?? nodeFormReason('node', form.name, form.value, t))
+        : dialog?.kind === 'editProvider'
+          ? !editName
+            ? t('nodes.nameMissing')
+            : // A name error is shown on its field alone.
+              editUrlValid
+              ? null
+              : t('nodes.urlInvalid')
+          : nodeFormReason(dialog?.kind, form.name, form.value, t),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.
     submitting: pendingDialog !== null,
-    submitLabel: removing ? t('nodes.remove', {name: dialog.item.name}) : dialog?.kind === 'editProvider' ? t('policy.save') : t('nodes.add'),
+    submitLabel: removing
+      ? t('nodes.remove', {name: dialog.item.name})
+      : dialog?.kind === 'editProvider' || dialog?.kind === 'editNode'
+        ? t('policy.save')
+        : t('nodes.add'),
     editOptions:
       dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, {cache: writtenCache !== undefined, route: !!subscriptionFields.routes}) : [],
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,

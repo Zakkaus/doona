@@ -115,6 +115,7 @@ export function Nodes(props: PageProps) {
           <div className="rp-list">
             <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>
             <SubscriptionFields
+              focusInterval={dialog.kind === 'editProvider' && dialog.focus === 'interval'}
               value={subscription}
               onChange={setSubscription}
               fields={subscriptionFields}
@@ -141,9 +142,9 @@ export function Nodes(props: PageProps) {
             )}
           </div>
         )}
-        {dialog?.kind === 'node' && (
+        {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
           <div className="rp-list">
-            <span className="rp-label">{t('nodes.addNodeHelp')}</span>
+            <span className="rp-label">{t(dialog.kind === 'editNode' ? 'nodes.editNodeHelp' : 'nodes.addNodeHelp')}</span>
             <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk-03" onChange={name => setForm({...form, name})} />
             <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
           </div>

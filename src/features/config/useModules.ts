@@ -9,6 +9,9 @@ import {useDraftGuard} from '../../shell/draft';
 import type {ConfigEditor} from './useConfigPage';
 import {diagnosticRows, moduleEditTip, saveReason, sectionMarks, sectionSummaries, sectionUnder, sourceView, splice, type SectionDraft} from './view';
 import {useValidationSources} from './useValidationSources';
+import {blockEntries, uncomment} from '../../dae/text';
+import {readNodeEntries} from '../../dae/nodes';
+import {href} from '../../shell/route';
 import {useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
@@ -94,13 +97,37 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
   };
   // A section removed on disk while being edited keeps its card, so the draft is not stranded out of sight.
   const cards = draft && !sections.some(section => section.id === draft.section.id) ? [...sections, draft.section] : sections;
+  const authoredNodes = useMemo(() => {
+    const bySource = new Map(config.sources.map(source => [source.id, readNodeEntries(source.content)]));
+    const counts = new Map<string, number>();
+    for (const entries of bySource.values()) for (const entry of entries) counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1);
+    return {bySource, counts};
+  }, [config.sources]);
   return {
     cards: cards.map(section => {
       const editing = draft?.section.id === section.id;
-      const canEdit = canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true;
+      const nodeSection = engine.daeText && section.kind === 'node';
+      const nodeEntries =
+        nodeSection && section.source && section.block
+          ? (authoredNodes.bySource.get(section.source.id) ?? []).filter(entry => entry.from > section.block!.open && entry.to < section.block!.close)
+          : [];
+      const nodeLinks = nodeEntries
+        .filter(entry => authoredNodes.counts.get(entry.name) === 1)
+        .map(entry => ({name: entry.name, href: href('nodes', {editNodeSource: section.source!.id, line: String(entry.line), q: entry.name})}));
+      const represented =
+        nodeSection &&
+        canWrite &&
+        section.source?.writable &&
+        isComplete(section.source) === true &&
+        section.block &&
+        nodeLinks.length > 0 &&
+        blockEntries(section.source.content, section.block).filter(entry => uncomment(section.source!.content.slice(entry.from, entry.to)).trim()).length ===
+          nodeLinks.length;
+      const canEdit = !nodeSection && canWrite && !!section.source?.writable && !!section.block && isComplete(section.source) === true;
       return {
         ...section,
         editing,
+        nodeLinks: canWrite && section.source?.writable && isComplete(section.source) === true ? nodeLinks : [],
         canEdit,
         editDisabled: dirty || !!editor.busy,
         editTip: moduleEditTip(dirty, !!editor.busy, t),
@@ -109,7 +136,7 @@ export function useModules({config, editor, canWrite, canValidate, open}: Module
         note: section.note ?? (section.source && section.block && isComplete(section.source) === false ? t('config.incomplete') : null),
         muted: !section.block,
         // The whole file in the Sources tab, at this section's first line; a missing section opens the main file.
-        manual: section.source ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
+        manual: section.source && !represented ? () => open(section.source!.id, section.block ? section.block.line + 1 : null) : null,
         edit: () => {
           if (dirty || editor.busy || !canWrite || !section.source?.writable || !section.block || isComplete(section.source) !== true) return;
           setFound(null);

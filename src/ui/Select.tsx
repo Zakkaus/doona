@@ -81,8 +81,9 @@ function SelectBody({
   isDisabled,
   className,
   layout,
-  cut
-}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start' | 'path'}) {
+  cut,
+  takeFocus
+}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start' | 'path'; takeFocus?: boolean}) {
   return (
     <Select
       aria-label={layout ? undefined : label}
@@ -94,7 +95,8 @@ function SelectBody({
       isDisabled={isDisabled}
     >
       {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
-      <RButton className={className}>
+      {/* eslint-disable-next-line jsx-a11y/no-autofocus -- An explicit jump focuses the requested field. */}
+      <RButton className={className} autoFocus={takeFocus}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} cut={cut} /> : value)}</SelectValue>
         <ChevronDown />
       </RButton>
@@ -526,7 +528,8 @@ export function LabeledSelect({
   isDisabled,
   side,
   bare,
-  cut
+  cut,
+  takeFocus
 }: {
   label: string;
   items: Item[];
@@ -537,6 +540,7 @@ export function LabeledSelect({
   bare?: boolean;
   // Path values truncate the directory while reserving the basename and revealing the full path.
   cut?: 'start' | 'path';
+  takeFocus?: boolean;
 }) {
   return (
     <SelectBody
@@ -548,6 +552,7 @@ export function LabeledSelect({
       className="rp-selectbtn"
       layout={bare ? undefined : side ? 'side' : 'field'}
       cut={cut}
+      takeFocus={takeFocus}
     />
   );
 }

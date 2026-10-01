@@ -9,7 +9,7 @@ export type SubscriptionDraft = {name: string; url: string; interval: string; ag
 // The optional fields to show, each with the value that applies while the draft leaves it empty; a field left out
 // is not shown.
 export type SubscriptionFieldSet = {
-  interval?: number;
+  interval?: number | null;
   agent?: {fallback?: string; description?: string};
   cache?: boolean;
   // The groups a fetch can be sent through, for the download route.
@@ -23,7 +23,8 @@ export function SubscriptionFields({
   fields,
   isDisabled,
   nameError,
-  agentError
+  agentError,
+  focusInterval
 }: {
   value: SubscriptionDraft;
   onChange: (next: SubscriptionDraft) => void;
@@ -31,6 +32,7 @@ export function SubscriptionFields({
   isDisabled?: boolean;
   nameError?: string | null;
   agentError?: string | null;
+  focusInterval?: boolean;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -57,9 +59,10 @@ export function SubscriptionFields({
       />
       {fields.interval !== undefined && (
         <LabeledSelect
+          takeFocus={focusInterval}
           label={t('nodes.interval')}
-          items={intervalItems(fields.interval, locale, t)}
-          value={value.interval || String(fields.interval)}
+          items={[...(fields.interval === null ? [{id: '', label: '—'}] : []), ...intervalItems(fields.interval, locale, t)]}
+          value={value.interval || (fields.interval === null ? '' : String(fields.interval))}
           isDisabled={isDisabled}
           onChange={interval => set({interval})}
         />
