@@ -12,7 +12,9 @@ async function openLongRuleSource(page: Page) {
     return {...config, sources: config.sources.map(source => ({...source, path: '/etc/dae/production-routing-configuration.dae'}))};
   };
   await page.goto('/#/rules?tab=list&view=advanced');
+  // Rows can render before the configuration read with the long path lands; wait for the path.
   const cell = firstCut(page);
+  await expect(cell).toContainText('production-routing-configuration.dae');
   await cell.scrollIntoViewIfNeeded();
   return cell;
 }
