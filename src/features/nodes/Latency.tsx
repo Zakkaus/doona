@@ -7,7 +7,7 @@ import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {isSlowerThanUsual, latencyAverages, latencyMax, usualRange, type LatencyBy, type LatencyMissing} from './latencyGroups';
+import {isSlowerThanUsual, latencyAverages, latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
 import {nodeSetHref} from '../shared/link';
 import {useLatencyTab} from './useLatencyTab';
 
@@ -43,8 +43,8 @@ export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator, 
     .map((part, index) => <Fragment key={index}>{part === '{names}' ? names : part === '{more}' ? more : part}</Fragment>);
 }
 
-// Every measured node on one axis, its latest latency over the usual range its two averages span, so a node slower now
-// than usual stands out; failed and unmeasured nodes are listed, not left out.
+// Every measured node's latest latency on one axis, in the warning colour when it is well past its averages, so a node
+// slower now than usual stands out; failed and unmeasured nodes are listed, not left out.
 export function NodeLatency() {
   const t = useT();
   const lang = useLang();
@@ -122,15 +122,7 @@ export function NodeLatency() {
           max={latencyMax(view)}
           fmt={value => formatLatency(value, t)}
           showAll={n => t('nodes.latency.showAll', {n})}
-          legend={[
-            {kind: 'dot', label: t('nodes.latency.latest')},
-            ...(averages.moving || averages.avg10
-              ? [
-                  {kind: 'band' as const, label: t('nodes.latency.usual')},
-                  {kind: 'dot' as const, label: t('nodes.latency.slower'), color: p.notice}
-                ]
-              : [])
-          ]}
+          legend={[{label: t('nodes.latency.latest')}, ...(averages.moving || averages.avg10 ? [{label: t('nodes.latency.slower'), color: p.notice}] : [])]}
           groups={view.map(group => ({
             id: group.id,
             label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
@@ -148,7 +140,6 @@ export function NodeLatency() {
                 nodeName: true,
                 href: hrefs.get(row.id),
                 value: row.latest,
-                range: usualRange(row),
                 text: formatLatency(row.latest, t),
                 tone: slower ? p.notice : undefined,
                 description: details.join(t('ui.separator')),

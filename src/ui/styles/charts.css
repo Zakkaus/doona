@@ -250,26 +250,6 @@
   font-size: var(--rp-text-sm);
   font-variant-numeric: tabular-nums;
 }
-/* The band takes a stronger token than the grid lines it crosses, so it reads in a light theme too. */
-.rp-markerplot .track .band {
-  position: absolute;
-  top: 50%;
-  min-width: 3px;
-  height: 8px;
-  translate: 0 -50%;
-  border-radius: 4px;
-  background: var(--rp-muted);
-}
-/* A ring in the card colour keeps the dot apart from the band beneath it. */
-.rp-markerplot .track .rp-marker.dot {
-  box-shadow: 0 0 0 2px var(--rp-base);
-}
-.rp-markerplot .track .band.line {
-  width: 3px;
-  height: 14px;
-  translate: calc(-50% * var(--rp-dir)) -50%;
-  border-radius: 1px;
-}
 .rp-markerplot .track .at.over .rp-marker.dot {
   border-radius: 50%;
   border-start-start-radius: 2px;
@@ -316,12 +296,6 @@
   border-radius: 50%;
   background: currentColor;
   color: var(--rp-accent);
-}
-.rp-marker.band {
-  width: 16px;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--rp-muted);
 }
 
 /* ---- Heatmap ---- */

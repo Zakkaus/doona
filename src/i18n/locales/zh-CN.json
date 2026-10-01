@@ -790,7 +790,6 @@
   "nodes.latency.unavailable": "不可用",
   "nodes.latency.unavailableList": "不可用（{n} 个）：{names}",
   "nodes.latency.unmeasuredList": "尚未测量（{n} 个）：{names}",
-  "nodes.latency.usual": "平均范围",
   "nodes.link": "节点链接",
   "nodes.linkInvalid": "节点链接须为 vless://… 这类格式",
   "nodes.manualOnly": "仅手动",

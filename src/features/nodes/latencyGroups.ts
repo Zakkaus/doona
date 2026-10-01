@@ -46,7 +46,7 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
 // A node is slower than usual when its latest latency passes the higher average by this ratio and these milliseconds.
 export const slowerThanUsual = {ratio: 1.3, ms: 20};
 
-// The usual range: from the lower average to the higher, a single value when only one is reported, null with none.
+// The range a node's two averages span, a single value when only one is reported, null with none.
 export function usualRange(row: LatencyRow): [number, number] | null {
   const averages = [row.moving, row.avg10].filter((value): value is number => value !== null);
   return averages.length ? [Math.min(...averages), Math.max(...averages)] : null;
@@ -67,7 +67,7 @@ export function latencyAverages(groups: LatencyGroup[]) {
 // The axis end: past most of the values rather than the single slowest, so one outlier does not push every other
 // node to the left edge; values beyond it are drawn on the edge with their number.
 export function latencyMax(groups: LatencyGroup[]): number {
-  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? row.latest, row.avg10 ?? row.latest])).sort((a, b) => a - b);
+  const values = groups.flatMap(group => group.rows.map(row => row.latest)).sort((a, b) => a - b);
   const top = Math.max(10, (percentile(values, 90) ?? 0) * 1.25);
   const step = top <= 100 ? 20 : top <= 500 ? 100 : top <= 2000 ? 500 : 1000;
   return Math.ceil(top / step) * step;
