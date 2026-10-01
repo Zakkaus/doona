@@ -15,19 +15,23 @@ const list = (usage?: DnsCacheList['usage']) =>
     usage
   }) as DnsCacheList;
 
-it('fills the bar by the entry count, its only limit, and states it as a fraction per locale', async () => {
+it('fills the bar by the entry count, its only limit, and states entries and capacity apart', async () => {
   const card = cacheCard(list({entries: '4096', entry_capacity: '100000'}), 'en-US', t)!;
   expect(card.usage?.pct).toBe(4.1);
-  expect(card.usage?.facts).toBe('Entries: 4,096 / 100,000');
+  expect(card.usage?.facts).toEqual([
+    {label: 'Entries', value: '4,096'},
+    {label: 'Capacity', value: '100,000'}
+  ]);
   expect(card.note).toBeUndefined();
   expect(card.coverage).toBe('Caches Positive answers; held in memory only, cleared on restart');
   expect(cacheCard(list({entries: '5', entry_capacity: '100000'}), 'en-US', t)!.usage?.value).toBe('<1%');
-  // Chinese writes the fraction with a full-width slash and no spaces.
-  await Promise.all([loadLanguage('zh-TW'), loadLanguage('zh-CN')]);
-  for (const lang of ['zh-TW', 'zh-CN'] as const)
-    expect(cacheCard(list({entries: '322', entry_capacity: '100000'}), lang, (key, params) => translate(lang, key, params))!.usage?.facts).toMatch(
-      /322\uFF0F100,000$/
-    );
+  // A capacity past Number's exact range keeps every digit.
+  expect(cacheCard(list({entries: '1', entry_capacity: '18446744073709551615'}), 'en-US', t)!.usage?.facts[1].value).toBe('18,446,744,073,709,551,615');
+  await loadLanguage('zh-TW');
+  expect(cacheCard(list({entries: '322', entry_capacity: '100000'}), 'zh-TW', (key, params) => translate('zh-TW', key, params))!.usage?.facts).toEqual([
+    {label: '條目', value: '322'},
+    {label: '容量', value: '100,000'}
+  ]);
 });
 
 it('claims no capacity when the backend does not report usage', () => {

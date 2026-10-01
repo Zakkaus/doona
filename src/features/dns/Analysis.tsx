@@ -183,7 +183,7 @@ function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
           {vm.card.usage && (
             <div className="rp-form">
               <Bar label={t('dns.chart.usage')} value={vm.card.usage.value} pct={vm.card.usage.pct} color={p.accent} />
-              <span className="rp-label">{vm.card.usage.facts}</span>
+              <FactStrip facts={vm.card.usage.facts} />
             </div>
           )}
           <p className="rp-note">{vm.card.coverage}</p>

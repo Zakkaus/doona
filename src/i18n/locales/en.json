@@ -387,11 +387,13 @@
   "dns.chart.cache": "Cache",
   "dns.chart.cacheNote": "Entries: {n}, capacity limit: not reported",
   "dns.chart.cacheRate": "Cache hit rate",
+  "dns.chart.capacity": "Capacity",
   "dns.chart.count": {
     "one": "{n} lookup",
     "other": "{n} lookups"
   },
   "dns.chart.coverage": "Caches {kinds}; {persistent}",
+  "dns.chart.entries": "Entries",
   "dns.chart.failureRate": "Failure rate",
   "dns.chart.median": "Median",
   "dns.chart.medianKey": "Median per upstream",
