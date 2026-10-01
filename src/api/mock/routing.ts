@@ -56,12 +56,11 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
     });
   } else if (kind === 'dip' || kind === 'sip') {
     const ip = String(value).toLowerCase();
-    matched =
-      arg === 'geoip: private'
-        ? ip.includes(':')
-          ? /^(f[cd]|fe[89ab])/.test(ip) || ip === '::1'
-          : ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '169.254.0.0/16'].some(range => subnet(ip, range))
-        : arg.split(',').some(range => subnet(ip, range.trim()));
+    matched = /^geoip:\s*private$/.test(arg)
+      ? ip.includes(':')
+        ? /^(f[cd]|fe[89ab])/.test(ip) || ip === '::1'
+        : ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '169.254.0.0/16'].some(range => subnet(ip, range))
+      : arg.split(',').some(range => subnet(ip, range.trim()));
   } else if (kind === 'ipversion') matched = arg === (String(value).includes(':') ? '6' : '4');
   else matched = arg.split(',').some(item => item.trim() === String(value));
   return {result: matched !== Boolean(negated) ? 'matched' : 'not_matched', missing_inputs: []};

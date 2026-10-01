@@ -67,9 +67,9 @@ const connection = (outbound: string | null, state: Connection['state'] = 'activ
 
 it('counts active TCP and UDP connections by outbound name and keeps group list order on ties', () => {
   const {nodes, groups} = groupFixtures();
-  const snapshot: ConnectionList = {...connections, tcp: [connection('resilient'), connection('proxy')], udp: [connection('resilient')]};
+  const snapshot: ConnectionList = {...connections, tcp: [connection('auto'), connection('proxy')], udp: [connection('auto')]};
   expect(activityGroupView(groups, nodes, '', t, snapshot)).toMatchObject({id: 'sg-01', name: 'sg-01', latency: '63 ms'});
-  const ignored = ['closed', 'blocked', 'failed', 'dialing'].map(state => connection('resilient', state as Connection['state']));
+  const ignored = ['closed', 'blocked', 'failed', 'dialing'].map(state => connection('auto', state as Connection['state']));
   expect(
     activityGroupView(groups, nodes, '', t, {...snapshot, tcp: [...snapshot.tcp, ...ignored, connection(null), connection('missing')], udp: []})
   ).toMatchObject({id: 'hk-01', name: 'hk-01', latency: '84 ms'});
@@ -115,7 +115,7 @@ it('shows an em dash for an unmeasured active node even when its group is busies
 
 it('remembers a group, follows its current member and defaults when a stored group disappears or follow is chosen', () => {
   const {nodes, groups} = groupFixtures();
-  const snapshot = {...connections, tcp: [connection('resilient')], udp: []};
+  const snapshot = {...connections, tcp: [connection('auto')], udp: []};
   expect(activityGroupView(groups, nodes, 'proxy', t, snapshot)).toMatchObject({id: 'hk-01', chosen: 'proxy'});
   groups[0].selection.tcp_member_id = 'jp-01';
   expect(activityGroupView(groups, nodes, 'proxy', t, snapshot)).toMatchObject({id: 'jp-01', chosen: 'proxy', latency: '—'});
@@ -138,8 +138,8 @@ it('tones the latency tile like the nodes table, by speed', () => {
 
 it('stages global targets without changing the current mode and detects an unchanged selection', () => {
   const {groups} = nodeFixtures(0);
-  const staged = modeView({mode: 'rule'}, {mode: 'global', target: 'resilient'}, groups, true, true, t);
-  expect(staged).toMatchObject({mode: 'global', target: 'resilient', dirty: true});
+  const staged = modeView({mode: 'rule'}, {mode: 'global', target: 'auto'}, groups, true, true, t);
+  expect(staged).toMatchObject({mode: 'global', target: 'auto', dirty: true});
   expect(modeView({mode: 'global', target: 'proxy'}, {mode: 'global', target: 'proxy'}, groups, true, true, t).dirty).toBe(false);
   expect(modeView({mode: 'rule'}, null, [], false, false, t).targetText).toBe('—');
   expect(modeView({mode: 'global', target: 'proxy'}, {mode: 'direct'}, groups, false, true, t)).toMatchObject({mode: 'global', target: 'proxy', dirty: false});

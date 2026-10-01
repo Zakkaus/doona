@@ -5,7 +5,7 @@ import {addU64} from './u64';
 import type {ApiEvent} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
 import {faultMemoryLimit, runtimeMemory} from './mock/fixtures/runtime';
-import {liteCategories} from '../dae/geodata';
+import {geodataPresets} from '../dae/geodata';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -96,7 +96,7 @@ it('serves a healthy honk by default and the seeded faults only in the faults sc
     const stream = api.subscribeLogs({level: 'trace', signal: controller.signal, onRecord: record => levels.add(record.level)});
     controller.abort();
     await stream;
-    const lite = liteCategories.geosite;
+    const preset = geodataPresets.find(preset => preset.urls.geosite.includes(geodata.assets.find(asset => asset.kind === 'geosite')!.source_redacted ?? ''));
     return {
       datapath: datapath.state === 'active' && datapath.errors.length === 0,
       nodes: nodes.nodes.every(node => node.health.every(sample => sample.state === 'healthy')),
@@ -104,7 +104,7 @@ it('serves a healthy honk by default and the seeded faults only in the faults sc
       config: config.diagnostics.length === 0,
       logs: !levels.has('warn') && !levels.has('error'),
       dns: dns.records.every(record => record.status === 'NOERROR' || record.status === 'NXDOMAIN'),
-      geodata: geodata.required_codes!.geosite.every(code => lite.includes(code))
+      geodata: geodata.last_error === null && geodata.required_codes!.geosite.every(code => !preset?.categories || preset.categories.geosite.includes(code))
     };
   };
   const all = {datapath: true, nodes: true, flows: true, config: true, logs: true, dns: true, geodata: true};
@@ -375,8 +375,8 @@ it('ranks the latency column by warmth, measurement and IPv4 before IPv6', async
 it('pages the airport override without losing members', async () => {
   vi.stubGlobal('localStorage', {getItem: () => '12'});
   const api = createMockApi();
-  const first = await api.nodes({group_id: 'skylink', limit: 7});
-  const second = await api.nodes({group_id: 'skylink', cursor: first.next_cursor!, limit: 7});
+  const first = await api.nodes({group_id: 'backup', limit: 7});
+  const second = await api.nodes({group_id: 'backup', cursor: first.next_cursor!, limit: 7});
   expect(new Set([...first.nodes, ...second.nodes].map(n => n.id)).size).toBe(12);
   expect(second.next_cursor).toBeNull();
 });
@@ -438,7 +438,7 @@ it('completes probes with fixture failures and publishes fresh health', async ()
     warmth: 'warm',
     transport: ['tcp'],
     ip_version: 'ipv4',
-    members: 'direct'
+    members: ['jp-01', 'hk-01', 'auto']
   });
   const terminal = api.pollOperation(accepted);
   await vi.advanceTimersByTimeAsync(999);
@@ -448,7 +448,7 @@ it('completes probes with fixture failures and publishes fresh health', async ()
   if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error('Probe did not succeed');
   expect(result.result.results.find(r => r.member_id === 'jp-01')).toMatchObject({state: 'unavailable', latency_ms: null, error: 'probe_failed'});
   expect(result.result.results.find(r => r.member_id === 'hk-01')).toMatchObject({state: 'healthy', latency_ms: 84, health_updated: true});
-  expect(result.result.results.find(r => r.member_id === 'resilient')).toMatchObject({resolved_leaf_node_id: 'sg-01', state: 'healthy', latency_ms: 63});
+  expect(result.result.results.find(r => r.member_id === 'auto')).toMatchObject({resolved_leaf_node_id: '日本 03 解鎖', state: 'healthy', latency_ms: 31});
   const health = preferredHealth((await api.nodes()).nodes.find(n => n.id === 'hk-01')!)!;
   expect(Date.parse(health.observed_at)).toBeGreaterThan(Date.parse(before.observed_at));
   expect(health.latency_ms).toBe(84);
@@ -545,21 +545,15 @@ it('deletes entries idempotently and flushes exactly the remaining cache', async
 
 it('traces a geosite domain and resolves each cached address in live mode', async () => {
   const api = createMockApi();
-  const request = {input: {network: 'tcp' as const, domain: 'api.telegram.org', dst_port: 443}, resolve: 'live' as const};
+  const request = {input: {network: 'tcp' as const, domain: 'api.telegram.org', dst_port: 443, pname: 'curl'}, resolve: 'live' as const};
   const result = await api.routingTrace(request);
   expect(result.dns).toMatchObject([{source: 'cache', addresses: ['149.154.167.220']}]);
-  expect(result.evaluations).toMatchObject([{dst_ip: '149.154.167.220', decision: 'determinate', outbound: 'proxy', missing_inputs: []}]);
-  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual([
-    ['r1', 'not_matched'],
-    ['r2', 'not_matched'],
-    ['r3', 'not_matched'],
-    ['r4', 'not_matched'],
-    ['r5', 'matched'],
-    ['r6', 'skipped'],
-    ['r7', 'skipped'],
-    ['r8', 'skipped'],
-    ['fallback', 'skipped']
-  ]);
+  expect(result.evaluations).toMatchObject([{dst_ip: '149.154.167.220', decision: 'determinate', outbound: 'telegram', missing_inputs: []}]);
+  const routeRules = (await api.rules()).rules;
+  const matchedAt = routeRules.findIndex(rule => rule.rule_id === 'r5');
+  expect(result.evaluations[0].rules.map(r => [r.rule_id, r.result])).toEqual(
+    routeRules.map((rule, index) => [rule.rule_id, index < matchedAt ? 'not_matched' : index === matchedAt ? 'matched' : 'skipped'])
+  );
   const unresolved = await api.routingTrace({...request, resolve: 'none'});
   expect(unresolved.dns).toEqual([]);
   expect(unresolved.evaluations[0]).toMatchObject({dst_ip: null, decision: 'indeterminate', outbound: null, missing_inputs: ['dst_ip']});
@@ -570,14 +564,17 @@ it('keeps domain rules indeterminate for destination-IP-only input', async () =>
   const evaluation = result.evaluations[0];
   expect(evaluation).toMatchObject({decision: 'indeterminate', outbound: null});
   expect(evaluation.missing_inputs).toContain('domain');
-  expect(evaluation.rules.find(r => r.rule_id === 'r3')).toMatchObject({result: 'indeterminate', missing_inputs: ['domain']});
+  expect(evaluation.rules.find(r => r.rule_id === 'r4')).toMatchObject({result: 'indeterminate', missing_inputs: ['domain']});
   expect(evaluation.rules.find(r => r.rule_id === 'r2')).toMatchObject({result: 'not_matched', missing_inputs: []});
 });
 
 it('uses fallback when every earlier predicate is false', async () => {
-  const result = await createMockApi().routingTrace({input: {network: 'tcp', domain: 'example.org', dst_ip: '2001:db8::1', dst_port: 443}, resolve: 'none'});
+  const result = await createMockApi().routingTrace({
+    input: {network: 'tcp', domain: 'example.org', dst_ip: '2001:db8::1', pname: 'curl', dst_port: 443},
+    resolve: 'none'
+  });
   const evaluation = result.evaluations[0];
-  expect(evaluation).toMatchObject({decision: 'determinate', outbound: 'resilient', missing_inputs: []});
+  expect(evaluation).toMatchObject({decision: 'determinate', outbound: 'proxy', missing_inputs: []});
   expect(evaluation.rules.slice(0, -1).every(r => r.result === 'not_matched')).toBe(true);
   expect(evaluation.rules.at(-1)).toMatchObject({rule_id: 'fallback', result: 'matched'});
 });

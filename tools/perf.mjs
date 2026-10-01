@@ -21,7 +21,7 @@ const content = {
   logs: '[role=rowheader]',
   settings: '.rp-form'
 };
-const pageQuery = {nodes: '?provider=sub-c'};
+const pageQuery = {nodes: '?provider=harbor'};
 const pages = Object.keys(content).map(route => `${route}${pageQuery[route] ?? ''}`);
 const runs = Number(process.env.PERF_RUNS) || 3;
 const only = process.env.PERF_ONLY ? new RegExp(process.env.PERF_ONLY) : null;
@@ -104,7 +104,7 @@ await measure('activity: one minute of polling', async (page, session) => {
 await measure(
   'nodes: scroll 3,000 rows',
   async (page, session) => {
-    await page.goto(`${base}/#/nodes?provider=sub-c`);
+    await page.goto(`${base}/#/nodes?provider=harbor`);
     const table = page.locator('.rp-table').nth(1);
     await table.locator('[role=row][data-key]').first().waitFor();
     const before = await metrics(session);
@@ -123,7 +123,7 @@ await measure(
 await measure(
   'nodes: type and clear a search',
   async (page, session) => {
-    await page.goto(`${base}/#/nodes?provider=sub-c`);
+    await page.goto(`${base}/#/nodes?provider=harbor`);
     await page.locator('.rp-table').nth(1).locator('[role=row][data-key]').first().waitFor();
     const field = page.getByRole('searchbox', {name: 'Search nodes'});
     await field.click();
@@ -141,7 +141,7 @@ await measure(
 await measure(
   'nodes: probe 5 nodes',
   async (page, session) => {
-    await page.goto(`${base}/#/nodes?provider=sub-c`);
+    await page.goto(`${base}/#/nodes?provider=harbor`);
     const table = page.locator('.rp-table').nth(1);
     await table.locator('[role=row][data-key]').first().waitFor();
     const buttons = table.getByRole('button', {name: /^Test /});

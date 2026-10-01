@@ -2,6 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource, GroupSummary, Node} from '../../api/model';
 import {configSources} from '../../api/mock/fixtures/configuration';
 import {nodeFixtures, providers as providerFixtures} from '../../api/mock/fixtures/inventory';
+import {demoRouting, demoRoutingInclude} from '../../dae/startingRouting';
 import {templates, templateRules, type RuleTemplate, type TemplateOptions} from '../../dae/templates';
 import {setupCompletion} from './gettingStarted';
 
@@ -106,8 +107,10 @@ it('checks UDP when the TCP node has no successful measurement', () => {
   expect(setupCompletion([unmeasured[0], nodes[1]], [], [group], []).connection).toBe(true);
 });
 
-it('keeps the demo starting routing pending and detects an edited include', () => {
-  expect(setupCompletion(nodes, configSources, summaries, []).rules).toBe(false);
-  const edited = configSources.map(source => (source.kind === 'include' ? {...source, content: source.content + '\ndomain(example.org) -> proxy\n'} : source));
+it('keeps starting routing pending, detects an edited include and completes the demo template', () => {
+  expect(setupCompletion(nodes, configSources, summaries, []).rules).toBe(true);
+  const starting = [source(demoRouting), {...source(demoRoutingInclude), kind: 'include' as const}];
+  expect(setupCompletion(nodes, starting, summaries, []).rules).toBe(false);
+  const edited = starting.map(source => (source.kind === 'include' ? {...source, content: source.content + '\ndomain(example.org) -> proxy\n'} : source));
   expect(setupCompletion(nodes, edited, summaries, []).rules).toBe(true);
 });

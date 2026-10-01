@@ -1,7 +1,7 @@
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../model';
 import {ago, now, observedAt} from './clock';
-import {groupDefaultMembers, groupPolicies} from './configuration';
-import {groupCapabilities, groupConfig} from '../groupDefaults';
+import {configMain} from './configuration';
+import {activateInventory} from '../activation';
 import {defaultGeodataPreset} from '../../../dae/geodata';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
@@ -37,34 +37,6 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-function group(name: keyof typeof groupPolicies, members: string[], leaf: string, nodes: Node[]): Group {
-  const policy = groupPolicies[name];
-  const {kind} = policy;
-  const memberIds = new Set(members);
-  const nodeIds = new Set(nodes.map(node => node.id));
-  for (const n of nodes) if (memberIds.has(n.id)) n.group_ids.push(name);
-  const selection = {member_id: leaf, resolved_leaf_node_id: leaf, source: kind === 'selector' ? 'runtime' : 'policy'};
-  return {
-    id: name,
-    name,
-    icon: null,
-    config_revision: '40',
-    policy: {...policy},
-    members: members.map(id => ({id, name: id, kind: nodeIds.has(id) ? 'node' : 'group'})),
-    config: {...groupConfig(kind), default_member_id: groupDefaultMembers[name] ?? null},
-    runtime: {
-      // The proxy group selects different members per network so the TCP/UDP switch has something to show.
-      selection: {
-        tcp: selection,
-        udp: name === 'proxy' && memberIds.has('hk-02') ? {...selection, member_id: 'hk-02', resolved_leaf_node_id: 'hk-02'} : {...selection}
-      },
-      health: nodes
-        .filter(n => memberIds.has(n.id))
-        .flatMap(n => n.health.map(h => ({...h, member_id: n.id, resolved_leaf_node_id: n.id, sorting_latency_ms: h.latency_ms, ranking: null})))
-    },
-    capabilities: groupCapabilities(kind)
-  };
-}
 // Every node answers its probes unless the faults scenario takes jp-01 and about one subscription node in sixteen down.
 export function nodeFixtures(count: number, faults = false): {nodes: Node[]; groups: Group[]} {
   const nodes = [
@@ -74,11 +46,6 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     node('sg-01', 63, 70, false, 'inline', 'trojan'),
     node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless'),
     node('us-01', 188, 201, true, 'inline', 'anytls')
-  ];
-  const groups = [
-    group('proxy', ['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'resilient'], 'hk-01', nodes),
-    group('resilient', ['hk-01', 'sg-01', 'us-01'], 'sg-01', nodes),
-    group('gaming', ['jp-01', 'hk-02'], 'hk-02', nodes)
   ];
   const regions: Array<[string, number]> = [
     ['香港', 60],
@@ -106,25 +73,23 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     const alive = rnd() > 0.06 || !faults;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'sub-c'));
+    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'harbor'));
   }
-  if (airport.length) {
-    nodes.push(...airport);
-    groups.push(
-      group(
-        'skylink',
-        airport.map(n => n.id),
-        airport[0].id,
-        nodes
-      )
-    );
+  nodes.push(...airport);
+  const groups: Group[] = [];
+  activateInventory(configMain, '40', nodes, groups, structuredClone(providers));
+  // A manual runtime choice differs by transport, independently of its configured default.
+  for (const name of ['proxy', 'office']) {
+    const selected = groups.find(group => group.name === name)!;
+    selected.runtime.selection.tcp = {member_id: 'hk-01', resolved_leaf_node_id: 'hk-01', source: 'runtime'};
+    selected.runtime.selection.udp = {member_id: 'hk-02', resolved_leaf_node_id: 'hk-02', source: 'runtime'};
   }
   return {nodes, groups};
 }
 export const providers: Provider[] = [
   {
-    id: 'sub-c',
-    name: 'sub-c',
+    id: 'harbor',
+    name: 'harbor',
     kind: 'subscription',
     url_redacted: 'https://sub.example.net/api/v1/client/subscribe?token=<redacted>',
     node_count: 120,

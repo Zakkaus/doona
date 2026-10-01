@@ -73,10 +73,10 @@ it('offers edits only at writable sources and preserves source locations when pa
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);
   const first = rules.rules[0];
-  expect(first.source).toMatchObject({source_id: 'src-main', line: 51, column: 3});
+  expect(first.source).toMatchObject({source_id: 'src-main', line: 149, column: 3});
   const view = dictionaryView(rules.rules, rules.generation_id, flows, config.sources, groups, t, 'en');
-  expect(view.rows[0].position).toBe('config.dae:51');
-  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=51');
+  expect(view.rows[0].position).toBe('config.dae:149');
+  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=149');
   expect(view.positions[0].id).toBe('end');
   expect(view.rows.at(-1)?.number).toBe('—');
   expect(view.rows.at(-1)?.removable).toBe(false);
@@ -243,7 +243,7 @@ it('does not infer a source from its display name when the ID is unknown', async
   const explicit = {...rule, rule_id: 'explicit', source: {...rule.source!, file: 'config.dae', source_id: 'b'}};
   const view = dictionaryView([unknown, explicit], undefined, undefined, sources, [], t, 'en');
   expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
-  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=51', removable: true});
+  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=149', removable: true});
 });
 
 it('tips why a rule cannot be added: no writable place first, then a change still being applied', () => {
@@ -325,7 +325,7 @@ it('lists DNS request and response rules with their actions, locations and inser
     'qname(geosite: cn)',
     'fallback: cloudflare'
   ]);
-  expect(request.rows[0]).toMatchObject({number: '1', position: 'config.dae:36', removable: true, hits: '—', must: false});
+  expect(request.rows[0]).toMatchObject({number: '1', position: 'config.dae:29', removable: true, hits: '—', must: false});
   expect(request.rows.at(-1)).toMatchObject({number: '—', removable: false});
   expect(request.positions.map(position => position.id)).toEqual(['end', ...dns.request.slice(0, -1).map(rule => rule.rule_id)]);
   // A request rule sends the query to an upstream or answers it itself; a response rule never sends it as is.
@@ -392,14 +392,14 @@ it('appends DNS rules inside the list block when the fallback is not written, an
 it('seeds the add-rule dialog from the evaluated target and only a decided match', async () => {
   const input = {network: 'tcp' as const, domain: 'a.example.', dst_port: 443, src_ip: '10.0.0.2'};
   const result = await createMockApi().routingTrace({input, resolve: 'none'});
-  const matched = {rule_id: 'r5', expression: 'domain(geosite: telegram)', result: 'matched' as const, missing_inputs: [], conditions: []};
+  const matched = {rule_id: 'r5', expression: 'domain(geosite:telegram)', result: 'matched' as const, missing_inputs: [], conditions: []};
   const evaluation = {...result.evaluations[0], dst_ip: '1.1.1.1', decision: 'determinate' as const, outbound: 'proxy', rules: [matched]};
   expect(traceSeed(input, evaluation)).toEqual({
     domain: 'a.example.',
     dip: '1.1.1.1',
     sip: '10.0.0.2',
     outbound: 'proxy',
-    matched: {id: 'r5', expression: 'domain(geosite: telegram)'}
+    matched: {id: 'r5', expression: 'domain(geosite:telegram)'}
   });
   // The traced address stands in when the evaluation resolved none; an undecided match is not vouched for.
   const undecided = traceSeed({...input, dst_ip: '2001:db8::5'}, {...evaluation, dst_ip: null, decision: 'indeterminate', outbound: null});

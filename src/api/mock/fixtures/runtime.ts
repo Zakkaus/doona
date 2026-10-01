@@ -35,7 +35,7 @@ const downloadTotal = historyBytes('download_bytes_per_second'),
   uploadTotal = historyBytes('upload_bytes_per_second');
 const averageConnectionSeconds = 420;
 const historyConnections = Math.round(counterSamples.reduce((sum, sample) => sum + sample.connections! * 600, 0) / averageConnectionSeconds);
-const outboundShares = (['direct', 'proxy', 'resilient', 'gaming', 'block'] as const).map(name => ({
+const outboundShares = (['direct', 'proxy', 'auto', 'gaming', 'block'] as const).map(name => ({
   name,
   kind: name === 'direct' || name === 'block' ? ('builtin' as const) : ('group' as const),
   active: live.filter(row => row.outbound === name).length,

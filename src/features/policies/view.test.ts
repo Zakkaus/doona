@@ -48,7 +48,7 @@ it('projects nested, failed and unmeasured members without inventing latency', (
   const {groups} = nodeFixtures(0, true);
   const members = memberViews(memberHealth(groups[0], new Map()), t);
   expect(members.find(member => member.id === 'jp-01')).toMatchObject({unavailable: true, tcp: undefined, status: {text: t('ui.unavailable'), tone: 'err'}});
-  expect(members.find(member => member.id === 'resilient')).toMatchObject({
+  expect(members.find(member => member.id === 'auto')).toMatchObject({
     healthy: false,
     description: ' ',
     status: {text: t('ui.group'), badge: true}
@@ -192,13 +192,13 @@ const withInterval = <G extends ReturnType<typeof nodeFixtures>['groups'][number
   capabilities: {...g.capabilities, mutable_config: [...g.capabilities.mutable_config, 'check_interval']}
 });
 it('offers the check fields a group lists as writable, whatever its policy', () => {
-  const [proxy, resilient] = nodeFixtures(0).groups;
+  const [proxy, auto] = nodeFixtures(0).groups;
   // The mock lists no check_url or idle_timeout for a selector group; a backend that probes one lists them and gets them.
   expect(checkFields(proxy)).toEqual(['tolerance']);
   expect(checkFields(withInterval(proxy))).toEqual(['check_interval', 'tolerance']);
   // honk lists no check_interval; a backend that also lists it gets every field, in the dialog's order.
-  expect(checkFields(resilient)).toEqual(['check_url', 'tolerance', 'idle_timeout']);
-  expect(checkFields(withInterval(resilient))).toEqual(['check_url', 'check_interval', 'tolerance', 'idle_timeout']);
+  expect(checkFields(auto)).toEqual(['check_url', 'tolerance', 'idle_timeout']);
+  expect(checkFields(withInterval(auto))).toEqual(['check_url', 'check_interval', 'tolerance', 'idle_timeout']);
 });
 it('captions an unset tolerance as the engine default while its field stays empty', () => {
   const g = nodeFixtures(0).groups[1];

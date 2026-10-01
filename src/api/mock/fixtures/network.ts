@@ -97,7 +97,7 @@ export const connections: ConnectionList = {
     connection('3', '52.84.19.3:443', '10.0.0.7', 'proxy', '58000000', '12000'),
     connection('4', '142.250.66.46:443', '10.0.0.31', 'block', '0', '0', 'doubleclick.net'),
     connection('6', '104.16.132.229:443', '10.0.0.31', 'proxy', '3400000', '210000', 'chatgpt.com'),
-    connection('7', '203.0.113.9:8443', '10.0.0.20', 'resilient', '96000', '40000')
+    connection('7', '203.0.113.9:8443', '10.0.0.20', 'auto', '96000', '40000')
   ],
   udp: [
     connection('5', '1.1.1.1:53', '10.0.0.12', 'direct', '2000', '2000', null, 'udp'),
@@ -130,7 +130,7 @@ function traffic(domain: string, i: number): [download: string, upload: string] 
 }
 const extra = demoDomains.map((domain, i) => {
   const id = String(i + 9);
-  const outbound = i >= 15 && i <= 22 ? 'direct' : [6, 23, 31].includes(i) ? 'gaming' : i % 9 === 0 ? 'resilient' : i % 4 === 0 ? 'direct' : 'proxy';
+  const outbound = i >= 15 && i <= 22 ? 'direct' : [6, 23, 31].includes(i) ? 'gaming' : i % 9 === 0 ? 'auto' : i % 4 === 0 ? 'direct' : 'proxy';
   const network = i % 6 === 0 ? 'udp' : 'tcp';
   const src = devices[i % devices.length];
   const dst = `203.0.113.${10 + i}:443`;

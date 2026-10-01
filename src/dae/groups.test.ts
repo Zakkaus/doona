@@ -172,13 +172,13 @@ describe('group entries', () => {
 });
 
 it('reads and expands the one-line form', () => {
-  const text = 'group {\n  proxy { policy: fixed(0) }\n  resilient { filter: name(hk-01, sg-01) policy: min_avg10 }\n}\n';
+  const text = 'group {\n  proxy { policy: fixed(0) }\n  auto { filter: name(hk-01, sg-01) policy: min_avg10 }\n}\n';
   expect(readGroupEntries(text).map(e => [e.name, e.filters, e.policy])).toEqual([
     ['proxy', [], 'fixed(0)'],
-    ['resilient', ['name(hk-01, sg-01)'], 'min_avg10']
+    ['auto', ['name(hk-01, sg-01)'], 'min_avg10']
   ]);
-  expect(addNamesToGroup(text, 'resilient', ['jp-01'])).toBe(
-    'group {\n  proxy { policy: fixed(0) }\n  resilient {\n    filter: name(hk-01, sg-01, jp-01)\n    policy: min_avg10\n  }\n}\n'
+  expect(addNamesToGroup(text, 'auto', ['jp-01'])).toBe(
+    'group {\n  proxy { policy: fixed(0) }\n  auto {\n    filter: name(hk-01, sg-01, jp-01)\n    policy: min_avg10\n  }\n}\n'
   );
 });
 

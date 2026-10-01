@@ -27,7 +27,7 @@ it('shares accepted routing rules and the mutable DNS cache with tracing', async
   vi.useFakeTimers();
   const api = createMockApi();
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const content = `group { 'edited-group': { policy: fixed(0) } proxy { policy: fixed(0) } resilient { policy: fixed(0) } }
+  const content = `group { 'edited-group': { policy: fixed(0) } proxy { policy: fixed(0) } auto { policy: fixed(0) } }
 dns { routing { request { fallback: unused } } }
 routing { domain(suffix: telegram.org) -> edited-group
   fallback: block
@@ -78,14 +78,14 @@ it('activates node membership and group policy with the accepted source, includi
     .replace('group {', 'group {\n  fresh { filter: name(new-node) policy: min_last_delay }');
   const reload = await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
   expect((await api.nodes()).nodes.some(node => node.name === 'new-node')).toBe(false);
-  expect((await api.providers()).providers.find(provider => provider.id === 'sub-c')?.url_redacted).toContain('sub.example.net');
+  expect((await api.providers()).providers.find(provider => provider.id === 'harbor')?.url_redacted).toContain('sub.example.net');
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.operation(reload.operation_id)).status).toBe('succeeded');
   const fresh = await api.group('fresh');
   expect(fresh.policy).toEqual({kind: 'urltest', native: 'min_last_delay'});
   expect(fresh.members.map(member => member.name)).toEqual(['new-node']);
   expect((await api.nodes({group_id: fresh.id})).nodes.map(node => node.name)).toEqual(['new-node']);
-  expect((await api.providers()).providers.find(provider => provider.id === 'sub-c')?.url_redacted).toContain('updated.example.net');
+  expect((await api.providers()).providers.find(provider => provider.id === 'harbor')?.url_redacted).toContain('updated.example.net');
   const before = await api.config();
   const patch = await api.patchGroup(fresh.id, [{op: 'replace', path: '/policy', value: {kind: 'selector', native: 'fixed(0)'}}], `"${fresh.config_revision}"`);
   if (!('operation_id' in patch)) throw new Error('Expected asynchronous group patch');
@@ -105,12 +105,12 @@ it('preserves group policies across an unchanged reload', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
   const before = (await api.groups()).map(group => ({id: group.id, policy: group.policy}));
-  const controls = (await api.group('skylink')).capabilities;
+  const controls = (await api.group('backup')).capabilities;
   const operation = await api.startReload();
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.operation(operation.operation_id)).status).toBe('succeeded');
   expect((await api.groups()).map(group => ({id: group.id, policy: group.policy}))).toEqual(before);
-  expect((await api.group('skylink')).capabilities).toEqual(controls);
+  expect((await api.group('backup')).capabilities).toEqual(controls);
 });
 
 it('admits AnyTLS share links and retains their protocol through reload', async () => {
@@ -164,7 +164,7 @@ it('writes a patched default as the native default key so a later edit of it win
   vi.useFakeTimers();
   const api = createMockApi();
   const before = await api.group('proxy');
-  const [first, second] = before.members;
+  const [first, second] = before.members.filter(member => member.kind === 'node');
   const accepted = await api.patchGroup('proxy', [{op: 'replace', path: '/config/default_member_id', value: first.id}], `"${before.config_revision}"`);
   if (!('operation_id' in accepted)) throw new Error('Expected asynchronous patch');
   await vi.advanceTimersByTimeAsync(1000);
@@ -233,10 +233,10 @@ it('reports the categories the active configuration uses once an edit activates'
   const api = createMockApi();
   expect((await api.geodata()).required_codes?.geosite).not.toContain('category-ads-all');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const content = `group { proxy { policy: fixed(0) } resilient { policy: fixed(0) } }
+  const content = `group { proxy { policy: fixed(0) } auto { policy: fixed(0) } }
 dns { routing { request { fallback: unused } } }
 routing { domain(geosite: category-ads-all@ads) -> block
-  dip(geoip: private) -> direct
+  dip(geoip:private) -> direct
   fallback: block
 }`;
   await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
@@ -253,8 +253,12 @@ it('fails a geodata update whose file lacks a used category the way honk does, k
     await vi.advanceTimersByTimeAsync(1000);
     return api.operation(accepted.operation_id);
   };
-  // The default demo's rules use only categories the lite files carry.
-  expect((await update(createMockApi())).status).toBe('succeeded');
+  // The regions template needs the full files, so both scenarios refuse the lite preset.
+  const healthy = createMockApi();
+  const full = await healthy.updateGeodata();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await healthy.operation(full.operation_id)).status).toBe('succeeded');
+  expect((await update(healthy)).status).toBe('failed');
   // The faults scenario adds a rule on geosite:category-ads-all, which they lack.
   const api = createMockApi({faults: true});
   const before = (await api.geodata()).assets;

@@ -63,7 +63,7 @@ describe('detectTemplate', () => {
       pname( NetworkManager )->direct
       dip(224.0.0.0/3,
           "ff00::/8") -> direct   # multicast
-      dip(geoip: private) -> direct
+      dip(geoip:private) -> direct
       l4proto(udp)&&dport(443) -> block
       fallback:   proxy
     }`;

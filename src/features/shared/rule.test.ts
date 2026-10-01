@@ -65,7 +65,7 @@ it('inserts before a vouched-for matched rule, else before the fallback, and onl
     ['fallback', 'Last, before the fallback'],
     ['r1', 'First']
   ]);
-  expect(rulePositions(rules, sources, hit('r5'), t)[0]).toMatchObject({desc: 'domain(geosite: telegram)', matched: true, first: false});
+  expect(rulePositions(rules, sources, hit('r5'), t)[0]).toMatchObject({desc: 'domain(geosite:telegram)', matched: true, first: false});
   expect(ids(hit('r1'))).toEqual([
     ['r1', 'Before the matched rule'],
     ['fallback', 'Last, before the fallback']
@@ -82,6 +82,7 @@ it('inserts before a vouched-for matched rule, else before the fallback, and onl
     ['r1', 'First']
   ]);
   // A rule in a read-only include is not offered; the others still are.
+  rules.find(rule => rule.rule_id === 'r7')!.source!.source_id = 'src-rules';
   const readOnly = sources.map(source => (source.id === 'src-rules' ? {...source, writable: false} : source));
   expect(ids(hit('r7'), readOnly)).toEqual(ids(null));
   expect(
