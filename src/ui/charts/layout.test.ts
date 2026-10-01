@@ -14,6 +14,7 @@ import {
   symlogAxis,
   symlogPosition,
   timeBuckets,
+  visibleRows,
   waffleCells
 } from './layout';
 
@@ -132,4 +133,16 @@ it.each([
   {name: 'wholly past the axis end', range: [250, 400], max: 200, line: {start: 100, width: 0}}
 ] as Array<{name: string; range: [number, number]; max: number; line: {start: number; width: number}}>)('places a line $name', ({range, max, line}) => {
   expect(lineSpan(range, max)).toEqual(line);
+});
+
+// A long expanded group mounts the rows that meet the viewport plus the overscan, never past either end of the list.
+it.each([
+  {name: 'a list starting below the viewport', count: 3000, top: 2000, end: 0},
+  {name: 'a list starting in the viewport', count: 3000, top: 300, start: 0, end: 32},
+  {name: 'a list scrolled into its middle', count: 3000, top: -28000, start: 990, end: 1043},
+  {name: 'a list scrolled to its end', count: 3000, top: -83500, start: 2972, end: 3000},
+  {name: 'a list scrolled past', count: 3000, top: -90000, start: 3000, end: 3000},
+  {name: 'a short list', count: 12, top: 0, start: 0, end: 12}
+])('mounts the visible rows of $name', ({count, top, start = 0, end}) => {
+  expect(visibleRows(count, top, 28, 900, 10)).toEqual({start, end});
 });

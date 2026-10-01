@@ -131,6 +131,14 @@ export function lineSpan([low, high]: [number, number], max: number): {start: nu
   return {start: at(low), width: at(high) - at(low)};
 }
 
+// Rows [start, end) of a list of `count` rows, each `height` tall from `top` (relative to the viewport), that meet a
+// viewport `viewport` tall, widened by `overscan` rows each way and kept inside the list.
+export function visibleRows(count: number, top: number, height: number, viewport: number, overscan: number): {start: number; end: number} {
+  const start = Math.max(0, Math.min(count, Math.floor(-top / height) - overscan));
+  const end = Math.max(start, Math.min(count, Math.ceil((viewport - top) / height) + overscan));
+  return {start, end};
+}
+
 export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {
   const fraction = hi === lo ? 0.5 : (value - lo) / (hi - lo);
   return start * (1 - fraction) + end * fraction;
