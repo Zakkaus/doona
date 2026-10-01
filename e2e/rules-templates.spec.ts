@@ -68,7 +68,10 @@ async function backend(page: Page, lang = 'en') {
   };
   return {api, main, write};
 }
-const oneFile = (text: string) => text.replace('  include rules.dae\n', '');
+const oneFile = (text: string) => {
+  const block = scanConfig(text).blocks.find(block => block.name === 'routing')!;
+  return text.slice(0, block.from) + 'routing {\n  domain(geosite:telegram) -> proxy\n  fallback: proxy\n}' + text.slice(block.to);
+};
 const noDns = (text: string) => {
   const block = scanConfig(text).blocks.find(item => item.name === 'dns')!;
   return text.slice(0, block.from) + text.slice(block.to);
@@ -87,6 +90,16 @@ const optionImpacts = (page: Page) =>
     .filter({
       hasText: /^(?:Ad blocking is (?:on|off)\.|QUIC blocking is (?:on|off)\.|NetworkManager traffic (?:stays direct|follows the routing rules)\.)$/
     });
+
+test('the demo detects the regions template and its default options without applying it', async ({page}) => {
+  await backend(page);
+  await page.goto('/#/rules');
+  await expect(modes(page).getByRole('radio', {name: 'Groups by service and region', exact: true})).toBeChecked();
+  await expect(page.getByRole('switch', {name: 'Block ads', exact: true})).not.toBeChecked();
+  await expect(page.getByRole('switch', {name: 'Block QUIC', exact: true})).toBeChecked();
+  await expect(page.getByRole('switch', {name: 'Keep NetworkManager direct', exact: true})).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+});
 
 test('ads are off by default and switching them alone can be applied in both directions', async ({page}) => {
   const {main, write} = await backend(page);
@@ -259,7 +272,7 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await expect(dialog.locator('.rp-dialog-body')).not.toHaveAttribute('data-overflow');
   await dialog.getByRole('button', {name: 'Changes to config.dae'}).click();
   await expect(diff.locator('[data-kind="add"]', {hasText: 'dip(geoip:cn) -> direct'})).toHaveCount(1);
-  await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite: telegram) -> proxy'})).toHaveCount(1);
+  await expect(diff.locator('[data-kind="del"]', {hasText: 'domain(geosite:telegram) -> proxy'})).toHaveCount(1);
   await expect(diff).not.toContainText('tproxy_port');
   // At phone width a long line wraps inside the panel rather than scrolling it sideways.
   await page.setViewportSize({width: 320, height: 800});
@@ -273,7 +286,7 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   expect(saved).toContain('fallback: proxy');
   // DNS routing is nested and stays.
   expect(saved).toContain('qname(geosite: cn) -> alidns');
-  expect(saved).not.toContain('domain(geosite: telegram) -> proxy');
+  expect(saved).not.toContain('domain(geosite:telegram) -> proxy');
   // The applied mode is now the detected one: selected, with nothing left to apply.
   await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
   await expect(applyButton(page)).toBeDisabled();
@@ -281,7 +294,7 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   await page.getByRole('radiogroup', {name: 'Rules view'}).getByText('Advanced', {exact: true}).click();
   const table = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('.rp-table');
   await expect(table).toContainText('dip(geoip:cn)');
-  await expect(table).not.toContainText('geosite: telegram');
+  await expect(table).not.toContainText('geosite:telegram');
 });
 
 test('the routing list opens on the simple view for template and custom routing, and a link to a rule on the table', async ({page}) => {
@@ -378,7 +391,10 @@ test('the detected mode is selected, and the arrow keys move the selection throu
 });
 
 test('applying a template removes routing includes and keeps the included file', async ({page}) => {
-  const {api, main} = await backend(page);
+  const {api, main, write} = await backend(page);
+  await write(text =>
+    oneFile(text).replace('  rules.dae\n', '').replace('routing {\n  domain(geosite:telegram)', 'routing {\n  include rules.dae\n  domain(geosite:telegram)')
+  );
   const included = (await api.config()).sources.find(source => source.id === 'src-rules')!;
   await page.goto('/#/rules?tab=list&view=simple');
   await choose(page, 'Global proxy');

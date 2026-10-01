@@ -18,10 +18,10 @@ test('a file saved on disk after the last reload refuses writes until honk reloa
 
 test('a subscription whose host fails keeps its cached nodes and says why the refresh failed', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const source = page.locator('.rp-table').first().locator('[role=row]', {hasText: 'sub-c'});
+  const source = page.locator('.rp-table').first().locator('[role=row]', {hasText: 'harbor'});
   await expect(source).toContainText('Stale');
-  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'Could not refresh sub-c'})).toContainText(
+  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
+  await expect(page.locator('.rp-toast.negative', {hasText: 'Could not refresh harbor'})).toContainText(
     'Could not fetch the subscription; the active nodes are kept'
   );
   await expect(source).toContainText('Stale');

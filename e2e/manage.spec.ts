@@ -1,3 +1,4 @@
+import {scanConfig} from '../src/dae/text';
 import {expect, mockBackend, test, moreAction, moreItem} from './fixtures';
 
 test('close all closes what the backend owns and skips the rest', async ({page}) => {
@@ -62,7 +63,10 @@ test('a group declared in an include is edited there while the main source is re
   const before = await api.config();
   const main = before.sources.find(source => source.kind === 'main')!;
   const include = before.sources.find(source => source.id === 'src-rules')!;
-  const gaming = main.content!.split('\n').find(line => line.trim().startsWith('gaming {'))!;
+  const block = scanConfig(main.content!)
+    .blocks.find(block => block.name === 'group')!
+    .children.find(block => block.name === 'gaming')!;
+  const gaming = main.content!.slice(block.from, block.to);
   await api.pollOperation(await api.replaceConfigSource(include.id, include.content + `\ngroup {\n${gaming}\n}\n`, `"${include.content_sha256}"`));
   await api.pollOperation(await api.replaceConfigSource(main.id, main.content!.replace(gaming + '\n', ''), `"${main.content_sha256}"`));
   handlers['GET config'] = async () => {

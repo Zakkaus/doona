@@ -12,8 +12,8 @@ const pick = async (page: Page, field: RegExp, option: string | RegExp) => {
   await page.getByRole('option', {name: option, exact: typeof option === 'string'}).click();
 };
 // The mock backend, answering the DNS queries the query tab sends as the demo does.
-async function backend(page: Page) {
-  const mocked = await mockBackend(page);
+async function backend(page: Page, includedRule = false) {
+  const mocked = await mockBackend(page, {includedRule});
   mocked.handlers['POST dns/query'] = async request => {
     const body = request.postDataJSON();
     return mocked.api.dnsQuery(body.domain, body.type);
@@ -280,7 +280,7 @@ test('a DNS rule written whose reload failed closes the dialog without offering 
 });
 
 test('an apply that fails in a later file keeps the rule it could not write and says the DNS rule was written', async ({page}) => {
-  const {api, handlers, requests} = await backend(page);
+  const {api, handlers, requests} = await backend(page, true);
   // The mock's include holds bare rules, which doona cannot place; give it a routing section so it takes a rule.
   const wrap = (text: string) => 'routing {\n' + text + '}\n';
   handlers['GET config'] = async () => {

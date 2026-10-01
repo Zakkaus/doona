@@ -23,9 +23,9 @@ for (const {name, lang, viewport} of [
     ] as Array<{status: number; code: string; reason?: string}>) {
       test(`a group PATCH ${code} refusal (${reason ?? 'no reason'}) shows one message and keeps the edit`, async ({page}) => {
         await mockBackend(page);
-        expectLoadFailures(page, /\/groups\/resilient\/config$/);
+        expectLoadFailures(page, /\/groups\/auto\/config$/);
         let patches = 0;
-        await page.route('**/api/v1/groups/resilient/config', route => {
+        await page.route('**/api/v1/groups/auto/config', route => {
           if (route.request().method() !== 'PATCH') return route.fallback();
           patches += 1;
           return route.fulfill({
@@ -34,8 +34,8 @@ for (const {name, lang, viewport} of [
           });
         });
         await page.goto('/#/policies');
-        await moreAction(page.getByRole('region', {name: 'resilient', exact: true}), t('policy.checkEdit'), t('ui.moreActions'));
-        const dialog = page.getByRole('dialog', {name: t('policy.checkEditTitle', {name: 'resilient'})});
+        await moreAction(page.getByRole('region', {name: 'auto', exact: true}), t('policy.checkEdit'), t('ui.moreActions'));
+        const dialog = page.getByRole('dialog', {name: t('policy.checkEditTitle', {name: 'auto'})});
         const url = dialog.getByRole('textbox', {name: t('policy.cfg.checkUrl')});
         await url.fill('https://cp.cloudflare.com/generate_204');
         const refused = page.waitForResponse(response => response.request().method() === 'PATCH' && response.status() === status);
@@ -45,7 +45,7 @@ for (const {name, lang, viewport} of [
         await expect(toast).toHaveCount(1);
         expect(patches).toBe(1);
         const message = reason === 'listener_secret_in_content' ? t('ui.refusal.listenerSecretInContent') : 'A specific configuration refusal';
-        await expect(toast.locator('.msg')).toHaveText(t('policy.actionFailed', {name: 'resilient', error: message}));
+        await expect(toast.locator('.msg')).toHaveText(t('policy.actionFailed', {name: 'auto', error: message}));
         await expect(url).toHaveValue('https://cp.cloudflare.com/generate_204');
         if (shots && reason === 'listener_secret_in_content') await page.screenshot({path: `shots/toast-${name}.png`});
       });

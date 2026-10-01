@@ -138,6 +138,7 @@ export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
 // A panel's secondary actions sit in its trailing More menu. Opens it and returns the item; the menu itself is
 // portalled out of the panel.
 export async function moreItem(scope: Locator, name: string | RegExp, menu = 'More actions') {
+  await scope.scrollIntoViewIfNeeded();
   await scope.getByRole('button', {name: menu, exact: true}).click();
   return scope
     .page()
@@ -146,6 +147,13 @@ export async function moreItem(scope: Locator, name: string | RegExp, menu = 'Mo
 }
 // Opens a panel's More menu and chooses an item.
 export const moreAction = async (scope: Locator, name: string | RegExp, menu?: string) => (await moreItem(scope, name, menu)).click();
+export async function editorText(page: Page) {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+C');
+  return page.evaluate(() => navigator.clipboard.readText());
+}
 // The language and scheme the page takes from its next load.
 export const setAppearance = (page: Page, lang: string, scheme: string) =>
   page.evaluate(
@@ -198,8 +206,16 @@ export const query = (request: Request) => {
   return params as never;
 };
 
-export async function mockBackend(page: Page, options: {faults?: boolean} = {}) {
+export async function mockBackend(page: Page, options: {faults?: boolean; includedRule?: boolean} = {}) {
   const api = createMockApi(options);
+  if (options.includedRule) {
+    const sources = (await api.config()).sources;
+    const main = sources.find(source => source.kind === 'main')!;
+    const include = sources.find(source => source.id === 'src-rules')!;
+    await api.pollOperation(await api.replaceConfigSource(main.id, main.content!.replace('  domain(geosite:openai) -> ai\n', ''), `"${main.content_sha256}"`));
+    const content = '# Household exceptions.\n# Kept in a separate source.\n\n# AI\n# Service routing\ndomain(geosite:openai) -> ai\n';
+    await api.pollOperation(await api.replaceConfigSource(include.id, content, `"${include.content_sha256}"`));
+  }
   const capabilities = await api.capabilities();
   capabilities.resources.events.available = false;
   const requests: Request[] = [];

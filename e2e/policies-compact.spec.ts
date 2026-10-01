@@ -7,24 +7,24 @@ test('the kind filter counts manual and automatic groups, and the address keeps 
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const filter = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
-  await expect(filter.getByRole('radio')).toHaveText(['All 4', 'Manual 1', 'Automatic 3']);
-  await expect(filter.getByRole('radio', {name: 'All 4'})).toBeChecked();
+  await expect(filter.getByRole('radio')).toHaveText(['All 17', 'Manual 8', 'Automatic 9']);
+  await expect(filter.getByRole('radio', {name: 'All 17'})).toBeChecked();
   // It sits on the tab row, at its end.
   const [tabs, box] = [await page.getByRole('tablist', {name: 'Policies'}).boundingBox(), await filter.boundingBox()];
   expect(Math.abs(tabs!.y + tabs!.height / 2 - (box!.y + box!.height / 2))).toBeLessThan(4);
-  await filter.getByRole('radio', {name: 'Manual 1'}).click();
+  await filter.getByRole('radio', {name: 'Manual 8'}).click();
   await expect(page).toHaveURL(/kind=manual/);
-  await expect(regions(page)).toHaveCount(1);
+  await expect(regions(page)).toHaveCount(8);
   await expect(page.getByRole('region', {name: 'proxy', exact: true})).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 1'})).toBeChecked();
-  await expect(regions(page)).toHaveCount(1);
-  await page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Automatic 3'}).click();
-  await expect(regions(page)).toHaveCount(3);
+  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 8'})).toBeChecked();
+  await expect(regions(page)).toHaveCount(8);
+  await page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Automatic 9'}).click();
+  await expect(regions(page)).toHaveCount(9);
   await expect(page.getByRole('region', {name: 'proxy', exact: true})).toHaveCount(0);
   await page.goBack();
-  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 1'})).toBeChecked();
-  await expect(regions(page)).toHaveCount(1);
+  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 8'})).toBeChecked();
+  await expect(regions(page)).toHaveCount(8);
   // The arrange tab has no use for it.
   await page.getByRole('tab', {name: 'Group membership'}).click();
   await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'})).toHaveCount(0);
@@ -41,27 +41,29 @@ test('a filter that leaves no group says so in one line', async ({page}) => {
 
 test('a link to a group the filter hides shows every group and opens the linked one', async ({page}) => {
   await mockBackend(page);
-  await page.goto('/#/policies?kind=manual&group=resilient');
-  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'All 4'})).toBeChecked();
-  await expect(page).toHaveURL(/policies\?group=resilient$/);
-  const card = page.getByRole('region', {name: 'resilient', exact: true});
+  await page.goto('/#/policies?kind=manual&group=auto');
+  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'All 17'})).toBeChecked();
+  await expect(page).toHaveURL(/policies\?group=auto$/);
+  const card = page.getByRole('region', {name: 'auto', exact: true});
   await expect(card).toBeInViewport();
   // The linked automatic group opens with its members shown.
   await expect(card.getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'true');
-  await expect(card.getByRole('button', {name: /^us-01\b/})).toBeVisible();
+  await expect(card.getByRole('row', {name: '日本 01 2x', exact: true})).toBeVisible();
   // An automatic group nobody linked stays folded.
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
   await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('returning to a deep-linked group reopens it while a collapse within the visit stays closed', async ({page}) => {
   await mockBackend(page);
   await page.setViewportSize({width: 1440, height: 1000});
-  await page.goto('/#/policies?group=resilient');
-  const summary = page.getByRole('region', {name: 'resilient', exact: true}).getByRole('button', {name: /^Current/});
+  await page.goto('/#/policies?group=auto');
+  const summary = page.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: /^Current/});
   await expect(summary).toHaveAttribute('aria-expanded', 'true');
   await summary.click();
   await expect(summary).toHaveAttribute('aria-expanded', 'false');
   await page.evaluate(() => (location.hash = '#/policies?group=gaming'));
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
   await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'true');
   await expect(summary).toHaveAttribute('aria-expanded', 'false');
   await page.goBack();

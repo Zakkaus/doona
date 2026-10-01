@@ -22,8 +22,8 @@ test('the editor toolbar opens find and replace and goes to a line', async ({pag
 });
 
 test('a read-only source keeps Find and Go to line, and its editing commands are disabled', async ({page}) => {
-  await page.goto('/#/config?source=src-sub-c');
-  await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/sub-c.dae"]')).toHaveAttribute('contenteditable', 'false');
+  await page.goto('/#/config?source=src-harbor');
+  await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/harbor.dae"]')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Editing commands', exact: true})).toBeDisabled();
   await page.getByRole('button', {name: 'Find', exact: true}).click();
   const search = page.locator('.cm-search');

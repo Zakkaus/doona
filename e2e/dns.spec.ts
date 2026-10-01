@@ -453,7 +453,7 @@ test('the statistics lead to the DNS configuration, the cache and the log filter
   await page.goto('/#/dns');
   await page.getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
   // The link opens the dns section's first line in the main file.
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=22$/);
   await expect(page.locator('.cm-activeLine')).toContainText('dns {');
   await page.goBack();
   await page.getByRole('region', {name: 'Cache', exact: true}).getByRole('link', {name: 'View cache', exact: true}).click();

@@ -24,7 +24,7 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(request).toHaveCount(5);
   await expect(request.first()).toContainText('qname(geosite: category-ads-all)');
   await expect(request.first()).toContainText('reject');
-  await expect(request.first()).toContainText('config.dae:36');
+  await expect(request.first()).toContainText('config.dae:29');
   await expect(request.nth(3)).toContainText('alidns');
   await expect(request.last()).toContainText('fallback: cloudflare');
   const response = rows(page, 'Response rules');
@@ -34,7 +34,7 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(response.last()).toContainText('fallback: accept');
   await expect(section(page, 'Response rules')).toContainText('3 rules, generation 40');
   await request.first().getByRole('button', {name: 'Open config file', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=36$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
 });
 
 test('the DNS rules lead to the resolution log and to the dns section of the configuration', async ({page}) => {
@@ -45,7 +45,7 @@ test('the DNS rules lead to the resolution log and to the dns section of the con
   await page.goBack();
   await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
   await section(page, 'Request rules').getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=22$/);
 });
 
 test('a DNS request rule is added through the source splice and removed again', async ({page}) => {

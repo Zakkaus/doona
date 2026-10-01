@@ -195,11 +195,11 @@ test('a failure toast leaves the request id out of its text and logs it', async 
     if (message.type() === 'warning') warnings.push(message.text());
   });
   const backend = await mockBackend(page);
-  backend.handlers['POST providers/sub-c/refresh'] = async () => {
+  backend.handlers['POST providers/harbor/refresh'] = async () => {
     throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable', '0f8c2a4e-5b1d-4c3e-9a7f-2d6b8e1c4f90');
   };
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
+  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
   const failure = page.locator('.rp-toast.negative');
   await expect(failure).toBeVisible();
   await expect(failure).not.toContainText('request_id');

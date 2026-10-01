@@ -86,7 +86,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   const {api} = await mockBackend(page);
   const source = (await api.config()).sources.find(source => source.kind === 'main')!;
   const ordinary = '  domain(suffix: doubleclick.net) -> block\n';
-  const content = source.content!.replace(ordinary, '').replace('  domain(geosite: cn)', ordinary + '  domain(geosite: cn)');
+  const content = source.content!.replace(ordinary, '').replace('  domain(geosite:cn)', ordinary + '  domain(geosite:cn)');
   await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
@@ -175,7 +175,8 @@ test('read-only main configuration keeps the current mode and explains the write
 });
 
 test('the compact group menu selects by keyboard and returns focus to its trigger', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-mock-big', '7'));
+  const backend = await mockBackend(page);
+  backend.handlers['GET groups'] = async () => (await backend.api.groups()).slice(0, 4);
   await page.goto('/#/activity');
   const trigger = page.getByRole('button', {name: /^Groups: /});
   await trigger.focus();
@@ -197,7 +198,8 @@ test('the latency card follows the busiest group, remembers a choice and resolve
   const backend = await mockBackend(page);
   backend.capabilities.resources.events.available = false;
   const snapshot = await backend.api.connections({detail: 'full', limit: 1000});
-  let groups = await backend.api.groups();
+  let groups = (await backend.api.groups()).filter(group => ['proxy', 'auto', 'gaming', 'backup'].includes(group.name));
+  groups[1].selection.tcp_member_id = 'sg-01';
   groups[0].selection.tcp_member_id = groups[1].id;
   let busiest = 'proxy';
   let reads = 0;
@@ -321,6 +323,7 @@ test('the latency tile names an active node that is unavailable and keeps its si
   await expect(tile.locator('.rp-light')).toHaveCount(0);
   const height = (await tile.boundingBox())!.height;
   await page.getByRole('button', {name: /^Groups: /}).click();
+  await page.getByRole('searchbox', {name: 'Groups', exact: true}).fill('gaming');
   const jp = page.getByRole('menuitemradio').filter({hasText: 'gaming'});
   await scrollIntoList(jp);
   await jp.click();
@@ -802,8 +805,8 @@ test('the demo switches the outbound mode and back through its own configuration
   // The catch-all is a real rule of the new generation, right after the must rules.
   await page.goto('/#/rules?tab=list&view=advanced');
   const rules = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rules.nth(2)).toContainText('l4proto(tcp, udp)');
-  await expect(rules.nth(2)).toContainText('direct');
+  await expect(rules.filter({hasText: 'l4proto(tcp, udp)'})).toContainText('l4proto(tcp, udp)');
+  await expect(rules.filter({hasText: 'l4proto(tcp, udp)'})).toContainText('direct');
   await page.goto('/#/activity');
   await expect(modes.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   await modes.getByRole('radio', {name: 'Rule', exact: true}).click();
@@ -976,12 +979,14 @@ for (const [lang, scheme, width, title, trigger, valueColor] of [
   });
 
 test('the latency menu contains only Automatic and group names with one checked choice', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET groups'] = async () => (await backend.api.groups()).filter(group => ['proxy', 'auto', 'gaming', 'backup'].includes(group.name));
   await page.goto('/#/activity');
   await page.getByRole('button', {name: /^Groups: /}).click();
   const menu = page.getByRole('menu', {name: 'Groups', exact: true});
   await expect(page.locator('.rp-latency .rp-select')).toHaveAccessibleName('Groups: hk-01');
   await expect(menu).toHaveAccessibleName('Groups');
-  await expect(menu.getByRole('menuitemradio')).toHaveText(['Automatic', 'proxy', 'resilient', 'gaming', 'skylink']);
+  await expect(menu.getByRole('menuitemradio')).toHaveText(['Automatic', 'proxy', 'auto', 'gaming', 'backup']);
   await expect(menu.locator('p, .rp-menu-note, .desc')).toHaveCount(0);
   await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
   await expect(menu.getByRole('menuitemradio', {name: 'Automatic', exact: true})).toHaveAttribute('aria-checked', 'true');
