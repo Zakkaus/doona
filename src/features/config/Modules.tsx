@@ -36,6 +36,15 @@ export function Modules(props: ModulesProps) {
               </span>
             </div>
           </ActionHelp>
+          {card.nodeLinks.length > 0 && (
+            <div className="rp-cluster">
+              {card.nodeLinks.map(node => (
+                <Link key={node.name} appearance="link" href={node.href}>
+                  {t('nodes.edit', {name: node.name})}
+                </Link>
+              ))}
+            </div>
+          )}
           {card.summary && (
             <Light small tone={card.muted ? 'muted' : 'info'}>
               {card.summary}

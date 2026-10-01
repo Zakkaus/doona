@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, ChoiceMenu, MoreMenu, TextTooltip, TimeCell, type TableColumn} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, Link, MoreMenu, TextTooltip, TimeCell, type TableColumn} from '../../ui/ui';
 import {phoneQuery, useMediaQuery} from '../../ui/hooks';
 import Refresh from '../../ui/icons/Refresh';
 import {primaryFirst} from './tableColumns';
@@ -9,7 +9,7 @@ import type {ProviderTableView} from './useProviderTable';
 export function ProviderTable({model: m}: {model: ProviderTableView}) {
   const t = useT();
   const phone = useMediaQuery(phoneQuery);
-  const {writable, sourceTip, sourceBusy, canManage, editing, busy, editBusy} = m;
+  const {canManage, editing, busy, editBusy} = m;
   const columns = useMemo<TableColumn<ProviderTableView['rows'][number]>[]>(
     () => [
       {
@@ -35,12 +35,10 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
         grow: 0,
         drop: 4,
         render: row =>
-          row.hasInterval && writable ? (
-            <TextTooltip text={sourceTip}>
-              <ChoiceMenu quiet label={row.intervalLabel} value={row.intervalValue} isDisabled={sourceBusy} onChange={row.setInterval} items={row.intervals}>
-                {row.interval}
-              </ChoiceMenu>
-            </TextTooltip>
+          row.intervalHref ? (
+            <Link appearance="link" href={row.intervalHref} label={row.intervalLabel}>
+              {row.interval}
+            </Link>
           ) : (
             row.interval
           )
@@ -93,7 +91,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
         )
       }
     ],
-    [t, writable, sourceTip, sourceBusy, canManage, editing, busy, editBusy, phone]
+    [t, canManage, editing, busy, editBusy, phone]
   );
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'count') : columns), [columns, phone]);
   return (

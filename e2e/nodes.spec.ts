@@ -382,19 +382,22 @@ test('a subscription refresh interval is written into the configuration', async 
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
-  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(
-    page.getByRole('alertdialog', {name: 'harbor auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})
-  ).toBeVisible();
+  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
+  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'})).toBeFocused();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(sources.first()).toContainText('Every 6 hours');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
     "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
   );
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
+  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('option', {name: 'Manual only', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
 });
 
@@ -445,7 +448,7 @@ test('an unspecified subscription interval claims neither manual-only nor an eng
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
-  await expect(subscription.getByRole('button', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('—');
+  await expect(subscription.getByRole('link', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('—');
 });
 
 test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
@@ -741,7 +744,7 @@ test("a subscription's download route is written into its entry and removed agai
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}' {\n    route: direct\n  }`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: {\n    url: '${url}'\n    route: direct\n  }`);
   await page.goto('/#/nodes?tab=list');
   await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
@@ -752,7 +755,7 @@ test("a subscription's download route is written into its entry and removed agai
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}'`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: {\n    url: '${url}'\n  }`);
   await expect(page.locator('.cm-content')).not.toContainText('route: direct');
 });
 
@@ -776,11 +779,12 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   const block = main.content!.replace(`harbor: '${url}'`, `harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
   await api.pollOperation(await api.replaceConfigSource(main.id, block, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
-  await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(
-    page.getByRole('alertdialog', {name: 'harbor auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})
-  ).toBeVisible();
+  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
+  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'})).toBeFocused();
+  await page.getByRole('dialog').getByRole('button', {name: 'Auto-refresh'}).click();
+  await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
+  await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
   await expect(editor).toContainText(`harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 6h\n  }`);
@@ -788,7 +792,7 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
-  // The interval belongs to the Auto-refresh picker, so it is not listed among the options kept as written either.
+  await expect(dialog.getByRole('button', {name: 'Auto-refresh'})).toContainText('Every 6 hours');
   await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
 });
 

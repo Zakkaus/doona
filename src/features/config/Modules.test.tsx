@@ -7,6 +7,7 @@ vi.mock('./useModules', () => ({
   useModules: () => ({
     cards: [
       {
+        nodeLinks: [],
         id: 'locked',
         kind: 'experimental.native_api',
         range: 'api.dae:1-1',
@@ -14,7 +15,7 @@ vi.mock('./useModules', () => ({
         note: 'Contents are incomplete or redacted',
         muted: true
       },
-      {id: 'routing', kind: 'routing', range: 'rules.dae:1-1', summary: '1 rule', note: null}
+      {nodeLinks: [], id: 'routing', kind: 'routing', range: 'rules.dae:1-1', summary: '1 rule', note: null}
     ]
   })
 }));

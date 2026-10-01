@@ -2,11 +2,10 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import type {Provider} from '../../api/model';
 import {useProviderRefresh} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
-import {editProblem, type MainSourceEdit} from '../../store/mainSource';
-import {writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {type MainSourceEdit} from '../../store/mainSource';
+import {type SubscriptionText} from '../../dae/subscriptions';
 import {providerRowView, type ProviderRow} from './view';
-import {intervalText} from '../shared/subscription';
-import {errorText} from '../../api/error';
+import {href, within} from '../../shell/route';
 import type {useRefreshAll} from '../shared/useRefreshAll';
 
 type ProviderTableInput = {
@@ -19,7 +18,7 @@ type ProviderTableInput = {
   busy: boolean;
   source: MainSourceEdit;
   entries: SubscriptionText[];
-  reload: () => void;
+  query: string;
   refresh: ReturnType<typeof useProviderRefresh>;
   refreshAll: ReturnType<typeof useRefreshAll>;
   onAdd: () => void;
@@ -33,7 +32,7 @@ export function useProviderTable(input: ProviderTableInput) {
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const rows = input.rows.map(item => ({
-    ...providerRowView(item, item.configTag ? intervals.get(item.configTag) : undefined, locale, t),
+    ...providerRowView(item, item.sourceTag ? intervals.get(item.sourceTag) : undefined, locale, t),
     action: input.editAction(item),
     editLabel: t('nodes.edit', {name: item.displayName ?? item.name}),
     refreshable: item.kind === 'subscription' && input.canRefresh,
@@ -52,17 +51,7 @@ export function useProviderTable(input: ProviderTableInput) {
     remove: () => {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
     },
-    setInterval: (key: string) => {
-      if (!item.configTag) return;
-      const seconds = Number(key);
-      void input.source
-        .apply(text => writeSubscriptionEntry(text, item.configTag!, {interval: seconds}))
-        .then(result => {
-          if (result.kind === 'ok') toast('positive', t('nodes.intervalSet', {name: item.name, interval: intervalText(seconds, locale, t)}));
-          const problem = editProblem(result, t);
-          if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
-        });
-    }
+    intervalHref: input.editAction(item)?.kind === 'edit' ? href('nodes') + '?' + within(input.query, {editSubscription: item.id, focus: 'interval'}) : null
   }));
   return {
     rows,
@@ -71,12 +60,9 @@ export function useProviderTable(input: ProviderTableInput) {
     onSelect: input.onSelect,
     canManage: input.canManage,
     busy: input.busy,
-    writable: input.source.writable,
     editing: rows.some(row => row.action !== null),
-    sourceBusy: input.source.busy || !input.source.main,
     // An edit writes the file that declares the entry, which need not be the main source.
     editBusy: input.source.busy,
-    sourceTip: input.source.error ? errorText(input.source.error, t) : undefined,
     // Refreshing every subscription, as Settings offers it, where the backend can refresh them.
     refreshAll: input.canRefresh ? input.refreshAll : null,
     onAdd: input.onAdd
@@ -94,10 +80,7 @@ export type ProviderTableView = {
     updatedAt: string | null;
     expires: string;
     interval: string;
-    intervalValue: string;
-    hasInterval: boolean;
     intervalLabel: string;
-    intervals: Array<{id: string; label: string}>;
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
     error?: string;
@@ -111,18 +94,15 @@ export type ProviderTableView = {
     refresh: () => void;
     removable: boolean;
     remove: () => void;
-    setInterval: (key: string) => void;
+    intervalHref: string | null;
   }>;
   loading: boolean;
   selected: string | null;
   onSelect: (id: string | null) => void;
   canManage: boolean;
   busy: boolean;
-  writable: boolean;
   editing: boolean;
-  sourceBusy: boolean;
   editBusy: boolean;
-  sourceTip?: string;
   refreshAll: ReturnType<typeof useRefreshAll> | null;
   onAdd: () => void;
 };
