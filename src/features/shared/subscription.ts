@@ -1,3 +1,4 @@
+import {parseInterval} from '../../dae/subscriptions';
 import type {Key, Translator} from '../../i18n';
 import {formatDuration} from '../../i18n/format';
 
@@ -13,7 +14,6 @@ export function intervalText(seconds: number, locale: string, t: Translator) {
 // A draft interval is '' while untouched, a preset's seconds, or a typed whole number and its unit ("90m", "2h"), as
 // the controls hold it until it is saved.
 export type IntervalUnit = 'm' | 'h';
-const unitSeconds = {m: 60, h: 3600};
 function typedInterval(text: string): {count: string; unit: IntervalUnit} | null {
   const unit = text.at(-1);
   return unit === 'm' || unit === 'h' ? {count: text.slice(0, -1), unit} : null;
@@ -34,17 +34,21 @@ export function startTyping(text: string) {
   return seconds > 0 && seconds % 3600 === 0 ? `${seconds / 3600}h` : 'h';
 }
 // The seconds a draft stands for: undefined while untouched, null while a typed value cannot be saved. honk takes any
-// whole number of seconds; 0 is the manual preset, so a typed one starts at a minute.
+// whole number of seconds, including 0 for manual updates.
 export function draftInterval(text: string): number | null | undefined {
   if (text === '') return undefined;
-  const typed = typedInterval(text);
-  if (!typed) return Number(text);
-  const seconds = /^\d+$/.test(typed.count) ? Number(typed.count) * unitSeconds[typed.unit] : 0;
-  return seconds > 0 && Number.isSafeInteger(seconds) ? seconds : null;
+  const seconds = parseInterval(text);
+  return seconds !== null && Number.isSafeInteger(seconds) ? seconds : null;
 }
 // The error under a typed count; an empty one only waits for input.
 export function intervalProblem(text: string): Key | null {
-  return typedInterval(text)?.count && draftInterval(text) === null ? 'nodes.intervalInvalid' : null;
+  if (text === '' || typedInterval(text)?.count === '') return null;
+  const seconds = parseInterval(text);
+  return seconds === null ? 'nodes.intervalInvalid' : !Number.isSafeInteger(seconds) ? 'nodes.intervalTooLarge' : null;
+}
+export function changeTypedInterval(count: string, unit: IntervalUnit) {
+  const text = count + unit;
+  return draftInterval(text) === 0 ? '0' : text;
 }
 // The presets, a value outside them that is not whole minutes kept so the select can show it, and typing.
 export function intervalItems(current: number | null, locale: string, t: Translator) {

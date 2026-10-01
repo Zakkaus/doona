@@ -1,6 +1,6 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {LabeledSelect, Switch, TextField} from '../../ui/ui';
-import {intervalItems, intervalTyped, startTyping} from './subscription';
+import {changeTypedInterval, intervalItems, intervalTyped, startTyping} from './subscription';
 
 // A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
 // without it, so a caller writes only what the person changed.
@@ -80,7 +80,7 @@ export function SubscriptionFields({
                 width={120}
                 value={typed.count}
                 error={intervalError ?? undefined}
-                onChange={count => set({interval: count + typed.unit})}
+                onChange={count => set({interval: changeTypedInterval(count, typed.unit)})}
               />
               <LabeledSelect
                 label={t('nodes.intervalUnit')}
@@ -90,7 +90,7 @@ export function SubscriptionFields({
                 ]}
                 value={typed.unit}
                 isDisabled={isDisabled}
-                onChange={unit => set({interval: typed.count + unit})}
+                onChange={unit => set({interval: changeTypedInterval(typed.count, unit as 'm' | 'h')})}
               />
             </div>
           )}
