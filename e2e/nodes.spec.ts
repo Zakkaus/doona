@@ -1,3 +1,4 @@
+import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
@@ -902,7 +903,42 @@ test('with no subscription and no node the page says so and offers Add subscript
   const empty = page.locator('.rp-empty', {hasText: 'No subscriptions or proxy nodes are available.'});
   await expect(empty).toBeVisible();
   await expect(page.locator('.rp-table')).toHaveCount(0);
+  await expect(page.getByRole('searchbox', {name: 'Search nodes'})).toHaveCount(0);
+  await expect(page.getByRole('columnheader')).toHaveCount(0);
   await expect(empty.getByRole('button', {name: 'Paste node link', exact: true})).toBeVisible();
   await empty.getByRole('button', {name: 'Add subscription', exact: true}).click();
   await expect(page.getByRole('dialog', {name: 'Add subscription'})).toBeVisible();
+});
+
+test('the add-subscription parameter is consumed when subscriptions cannot be managed', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.capabilities.resources.providers.can_manage = false;
+  await page.goto('/#/nodes?add=subscription&tab=list&q=first&provider=inline');
+  await expect(page.getByRole('heading', {name: 'Nodes', exact: true})).toBeVisible();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&q=first&provider=inline$/);
+  await expect(page.getByRole('dialog', {name: 'Add subscription', exact: true})).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', {name: 'Nodes', exact: true})).toBeVisible();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&q=first&provider=inline$/);
+});
+
+test('the add-subscription address is consumed across history and reload', async ({page}) => {
+  await freshBackend(page);
+  await page.goto('/#/activity');
+  await expect(page.getByRole('region', {name: 'Getting started'})).toBeVisible();
+  await page.evaluate(() => {
+    location.hash = '/nodes?add=subscription&tab=list&q=first&provider=inline';
+  });
+  const dialog = page.getByRole('dialog', {name: 'Add subscription', exact: true});
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&q=first&provider=inline$/);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.goBack();
+  await expect(page.getByRole('region', {name: 'Getting started'})).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/nodes\?tab=list&q=first&provider=inline$/);
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', {name: 'Nodes', exact: true})).toBeVisible();
+  await expect(dialog).toHaveCount(0);
 });
