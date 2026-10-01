@@ -3,17 +3,17 @@ import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
 
-const fact = (page: import('@playwright/test').Page, label: string) =>
-  page
+const fact = (scope: import('@playwright/test').Page | import('@playwright/test').Locator, label: string) =>
+  scope
     .locator('.rp-facts > div')
-    .filter({has: page.locator('dt', {hasText: new RegExp(`^${label}$`)})})
+    .filter({has: ('page' in scope ? scope.page() : scope).locator('dt', {hasText: new RegExp(`^${label}$`)})})
     .locator('dd');
 
 test('DNS opens on its statistics, with each figure labelled and its sample counted', async ({page}) => {
   await page.goto('/#/dns');
   await expect(page.getByRole('tab', {name: 'Statistics'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', {name: 'Cache', exact: true})).toBeVisible();
-  await expect(page.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+  await expect(fact(page, 'Capacity')).toHaveText('256');
   await expect(fact(page, 'Median')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'P95')).toHaveText(/^[\d,]+ ms$/);
   await expect(fact(page, 'Cache hit rate')).toHaveText(/^\d+%$/);
@@ -169,7 +169,7 @@ test('the DNS cache card reads usage from one entry and says only what the backe
   const backend = await mockBackend(page);
   const card = page.getByRole('region', {name: 'Cache', exact: true});
   await page.goto('/#/dns');
-  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+  await expect(fact(page, 'Capacity')).toHaveText('256');
   await expect(card.getByText('Usage', {exact: true})).toBeVisible();
   // The entry count is the cache's only limit, so no size is stated.
   await expect(card.getByText(/\bsize\b|\bMB\b|\bKB\b/)).toHaveCount(0);
@@ -209,7 +209,7 @@ test('the DNS cache card reuses the listing the cache tab just walked', async ({
   await expect.poll(() => listings().length).toBeGreaterThan(0);
   await page.getByRole('tab', {name: 'Statistics', exact: true}).click();
   const card = page.getByRole('region', {name: 'Cache', exact: true});
-  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+  await expect(fact(card, 'Capacity')).toHaveText('256');
   expect(listings().map(request => new URL(request.url()).searchParams.get('limit'))).not.toContain('1');
 });
 
@@ -220,9 +220,9 @@ for (const count of [0, 4]) {
     backend.handlers['GET dns/log'] = async () => ({...seed, records: seed.records.slice(0, count), next_cursor: null});
     await page.goto('/#/dns');
     const card = page.getByRole('region', {name: 'Cache', exact: true});
-    await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+    await expect(fact(card, 'Capacity')).toHaveText('256');
     await expect(page.getByText('Too few records to chart yet', {exact: true})).toHaveCount(3);
-    await expect(page.locator('.rp-facts')).toHaveCount(0);
+    await expect(page.locator('.rp-chart-page > .rp-facts')).toHaveCount(0);
   });
 }
 
@@ -233,7 +233,7 @@ test('a failed first log read shows once above the charts it feeds while the cac
   };
   await page.goto('/#/dns');
   const card = page.getByRole('region', {name: 'Cache', exact: true});
-  await expect(card.getByText(/^Entries: \d+ \/ 256$/)).toBeVisible();
+  await expect(fact(card, 'Capacity')).toHaveText('256');
   await expect(card.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('alert').filter({hasText: 'Log unavailable'})).toHaveCount(1);
   await expect(page.getByText('Resolution log not loaded', {exact: true})).toHaveCount(3);
@@ -254,7 +254,7 @@ for (const [served, note] of [
       return {...seed, records: seed.records.slice(0, served), next_cursor: 'older'};
     };
     await page.goto('/#/dns');
-    await expect(page.locator('.rp-facts')).toBeVisible();
+    await expect(page.locator('.rp-chart-page > .rp-facts')).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     expect(limits.slice(0, 2)).toEqual(['100', '25']);
     // Measured against the 25 asked for when the page was served, not the 100 that was refused.
@@ -314,6 +314,36 @@ test('DNS summaries use their card height at 1024 px', async ({page}) => {
     }
   }
 });
+
+// Cards that once left half their width, or a third of their height, empty: the outcomes waffle, the cache card beside
+// the taller ranking, a two-node group, and a large group filtered to one node.
+const filledCards: Array<[string, string, string, (card: import('@playwright/test').Locator) => Promise<unknown>]> = [
+  ['dns', 'Outcomes', '.rp-waffle .grid > span, .rp-waffle li', async () => {}],
+  ['dns', 'Cache', '.rp-form > *', async () => {}],
+  ['policies?group=gaming', 'gaming', '.rp-node', async () => {}],
+  ['policies', 'proxy', '.rp-node', card => card.getByRole('searchbox', {name: 'Filter nodes'}).fill('hk-01')]
+];
+for (const width of [1440, 390]) {
+  test(`cards fill their width and height at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    for (const [route, name, content, prepare] of filledCards) {
+      await page.goto(`/#/${route}`);
+      const card = page.getByRole('region', {name, exact: true});
+      await card.scrollIntoViewIfNeeded();
+      await prepare(card);
+      await expect(card.locator(content).first()).toBeVisible();
+      await expect(card.locator('.rp-node')).toHaveCount(name === 'gaming' ? 2 : name === 'proxy' ? 1 : 0);
+      const fill = await card.evaluate((el, content) => {
+        const c = el.getBoundingClientRect();
+        const boxes = [...el.querySelectorAll(content)].map(x => x.getBoundingClientRect()).filter(b => b.width);
+        const ends = [...el.querySelectorAll('*')].filter(x => !x.children.length).map(x => x.getBoundingClientRect().bottom);
+        return {width: (Math.max(...boxes.map(b => b.right)) - Math.min(...boxes.map(b => b.left))) / c.width, bottom: c.bottom - Math.max(...ends)};
+      }, content);
+      expect(fill.width, `${name} width`).toBeGreaterThan(0.85);
+      expect(fill.bottom, `${name} space below`).toBeLessThan(80);
+    }
+  });
+}
 
 test('activity draws all six charts without loading a chart vendor', async ({page}) => {
   const requests: string[] = [];
