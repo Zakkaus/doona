@@ -215,7 +215,7 @@ browserTest('a backend that answers 401 opens the Backend token editor', async (
   await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
   await page.getByRole('link', {name: 'Edit saved token'}).click();
   const backend = page.getByRole('region', {name: 'Backend', exact: true});
-  await backend.getByLabel('API Token', {exact: true}).fill('secret-1');
+  await backend.getByLabel('Token', {exact: true}).fill('secret-1');
   await Promise.all([page.waitForEvent('load'), backend.getByRole('button', {name: 'Save', exact: true}).click()]);
   await expect.poll(() => authorization).toBe('Bearer secret-1');
   await expect(page.getByRole('heading', {name: 'Token required'})).toHaveCount(0);
@@ -247,8 +247,11 @@ test('an unknown stored palette falls back to the supported moon palette', async
   await page.goto('/#/settings');
   await expect(page.locator('html')).toHaveAttribute('data-family', 'rose-pine');
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'moon');
-  await page.getByRole('button', {name: 'Palette', exact: true}).first().click();
-  await expect(page.getByRole('menuitemradio', {name: /Moon/})).toHaveAttribute('aria-checked', 'true');
+  await page
+    .getByRole('region', {name: 'Appearance', exact: true})
+    .getByRole('button', {name: /Palette$/})
+    .click();
+  await expect(page.getByRole('option', {name: /Moon/})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('profile switching confirms draft loss without saving edits to the profile being left', async ({page}) => {
