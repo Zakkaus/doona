@@ -240,10 +240,6 @@ export function paletteMenu(t: Translator): Array<{title: string; items: Array<{
 export const languageItems = LANGS.map(([id, label]) => ({id, label}));
 export function appearanceMenu(t: Translator, scheme: Scheme, dark: boolean) {
   return {
-    wordmarks: [
-      {id: 'gradient', label: t('wordmark.gradient')},
-      {id: 'plain', label: t('wordmark.plain')}
-    ],
     schemes: [
       {id: 'system', label: t('theme.system')},
       {id: 'light', label: t('theme.light')},

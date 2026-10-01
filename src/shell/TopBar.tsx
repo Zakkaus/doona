@@ -63,7 +63,7 @@ export const TopBar = memo(function TopBar({
   menu
 }: TopBarProps) {
   const t = useT();
-  const {palettes, wordmarks} = usePaletteChoices({ap, paletteSections, wordmarks: menu.wordmarks});
+  const {palettes} = usePaletteChoices({ap, paletteSections});
   const narrowMenu = useRef<HTMLSpanElement>(null);
   const [backendOpen, setBackendOpen] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
@@ -121,7 +121,7 @@ export const TopBar = memo(function TopBar({
           )}
           <Divider />
           <LanguageMenu lang={lang} pickLang={pickLang} />
-          <PaletteMenu ap={ap} paletteSections={paletteSections} wordmarks={menu.wordmarks} />
+          <PaletteMenu ap={ap} paletteSections={paletteSections} />
           <SchemeToggle dark={ap.dark} label={menu.themeLabel} toggle={ap.toggle} />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>
@@ -140,8 +140,7 @@ export const TopBar = memo(function TopBar({
                 icon: <Contrast />,
                 sections: [{title: t('ui.theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
               },
-              {label: t('ui.palette'), icon: <Color />, sections: palettes},
-              {label: t('ui.wordmark'), icon: <img src={logo} alt="" />, sections: [wordmarks]}
+              {label: t('ui.palette'), icon: <Color />, sections: palettes}
             ]}
             actions={[
               ...(commands.reload ? [{label: commands.reload.label, icon: <Refresh />, onAction: askReload}] : []),
