@@ -391,6 +391,7 @@ test('a group edit refused over a file changed on disk saves on retry', async ({
   await page.goto('/#/policies');
   await moreAction(page.getByRole('region', {name: 'auto', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group auto'});
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
@@ -414,6 +415,7 @@ test('a group edit retried after a refusal writes against the declaration read a
   await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01)');
   // The concurrent edit quotes the default member: the same member, written differently.

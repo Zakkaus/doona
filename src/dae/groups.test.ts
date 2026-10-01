@@ -316,7 +316,9 @@ describe('group filters decide membership as honk does', () => {
     expect(groupAdmits(["subtag(airport) && !name(regex: '^HK')"], hk)).toBe(false);
     expect(groupAdmits(["subtag(airport) && !name(regex: '^HK')"], jp)).toBe(true);
     expect(groupAdmits(['nonsense(x)', 'name(home)'], own)).toBe(true);
-    expect(groupAdmits(['nonsense(x)'], own)).toBe(true);
+    expect(groupAdmits(['nonsense(x)'], own)).toBe(false);
+    expect(groupAdmits(["!subtag(regex: '.*')"], own)).toBe(true);
+    expect(groupAdmits(["subtag(regex: '.*')"], own)).toBe(false);
   });
   it('holds every node without a filter, none with only subgroups, and a built-in only by exact name', () => {
     expect(groupAdmits([], jp)).toBe(true);

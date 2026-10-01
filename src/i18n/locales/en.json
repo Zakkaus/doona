@@ -105,6 +105,8 @@
   "arrange.drag": "Drag {name}",
   "arrange.dropHint": "Drop here to add",
   "arrange.dropInto": "Drop into group {group}",
+  "arrange.editPending": "Apply or discard the staged changes before editing a group.",
+  "arrange.editRuleHelp": "Use Edit group to change the nodes selected by rules.",
   "arrange.editSource": "Change them in the config file",
   "arrange.emptyNew": "Group {group} has no members yet; a group without members holds every node, so add a node or subscription first.",
   "arrange.everyNode": "Includes every node",
@@ -146,16 +148,12 @@
   "arrange.remove": "Remove {name} from {group}",
   "arrange.review": "Review and apply",
   "arrange.reviewTitle": "Review changes",
-  "arrange.ruleNote": {
-    "one": "Nodes this rule selects cannot be removed here.",
-    "other": "Nodes these {n} rules select cannot be removed here."
-  },
   "arrange.ruleSelects": "Currently selects: {names}",
   "arrange.ruleSelectsMore": {
     "one": "Currently selects: {names} and {n} more",
     "other": "Currently selects: {names} and {n} more"
   },
-  "arrange.search": "Search nodes or subscriptions",
+  "arrange.search": "Search nodes",
   "arrange.selectHint": "Select rows to add them together, or drag them.",
   "arrange.selected": "{n} selected",
   "arrange.show": "Show",
@@ -1208,6 +1206,7 @@
   "palette.semi": "Semi Design",
   "policy.actionFailed": "Could not complete the action on {name}: {error}",
   "policy.addFilter": "Add filter",
+  "policy.advanced": "Advanced",
   "policy.aliveOnly": "Available only",
   "policy.allRegions": "All regions",
   "policy.backToAutomatic": "{name} is automatic again, currently {member}",
@@ -1249,6 +1248,10 @@
   "policy.healthy": "{n} available",
   "policy.idleTimeoutHelp": "Seconds of inactivity before the group becomes idle. Leave empty to use the default.",
   "policy.idleTimeoutInvalid": "Enter a whole number of seconds, 0 or more.",
+  "policy.includesCount": {
+    "one": "Currently includes {n} node",
+    "other": "Currently includes {n} nodes"
+  },
   "policy.interrupt": "Interrupt existing connections on switch",
   "policy.kind.all": "All {n}",
   "policy.kind.auto": "Automatic {n}",
@@ -1299,6 +1302,7 @@
   "policy.purpose.dns": "DNS",
   "policy.purpose.shared": "shared",
   "policy.region": "Region",
+  "policy.regions": "Regions",
   "policy.releaseOverride": "Back to automatic",
   "policy.removeFilter": "Remove filter {n}",
   "policy.save": "Apply",

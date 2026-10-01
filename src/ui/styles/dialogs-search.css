@@ -180,3 +180,9 @@
 .group-dialog-filter-help + button {
   margin-block-start: 4px;
 }
+.group-dialog-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}

@@ -32,6 +32,7 @@ test('a group card edits its policy and filters in the main source', async ({pag
   const card = page.getByRole('region', {name: 'gaming'});
   await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveValue('name(jp-01, hk-02)');
   const policy = dialog.getByRole('button', {name: /Selection policy/});
   // A policy the picker does not offer stays selected as written.
@@ -51,6 +52,7 @@ test('editing only filters preserves the native policy spelling', async ({page})
   await page.goto('/#/policies?group=gaming');
   await moreAction(page.getByRole('region', {name: 'gaming'}), 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('min_last_delay');
   await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();

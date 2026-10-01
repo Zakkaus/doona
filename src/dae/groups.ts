@@ -54,6 +54,14 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
   const sections = blocks.filter(block => block.name === 'group');
   const entry = sections.flatMap(block => block.children).find(entry => entry.name === name);
   if (entry) {
+    const current = readGroupEntries(text).find(group => group.name === name)!;
+    if (
+      current.filters.length === next.filters.length &&
+      current.filters.every((filter, i) => filter === next.filters[i]) &&
+      current.policy === next.policy &&
+      (['default', 'final', 'interrupt'] as const).every(key => next[key] === undefined || next[key] === current[key])
+    )
+      return text;
     const lineStart = text.lastIndexOf('\n', entry.from - 1) + 1;
     const prefix = text.slice(lineStart, entry.from);
     const indent = /^\s*$/.test(prefix) ? prefix : '  ';
@@ -108,13 +116,26 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
     const lead = /^\s*/.exec(text.slice(field.valueFrom, field.valueTo))![0];
     edits.push({from: field.valueFrom + lead.length, to: field.valueTo, text: (lead ? '' : ' ') + value});
   };
-  filters.forEach((field, i) => (i < next.filters.length ? replace(field, next.filters[i]) : remove(field)));
   const added = new Map<number, string>();
   const add = (at: number, line: string) => added.set(at, (added.get(at) ?? '') + line);
   // Filters go after the last filter, or before the policy line, or first in the body.
   const policies = fields.filter(field => field.name === 'policy');
   const filterAt = filters.length ? lineEnd(filters.at(-1)!.to) : policies.length ? text.lastIndexOf('\n', policies[0].from - 1) + 1 : lineEnd(entry.open);
-  for (const filter of next.filters.slice(filters.length)) add(filterAt, `${inner}filter: ${filter}\n`);
+  // Unchanged filters anchor each edit so removing an earlier line never moves their comments or formatting.
+  const changeFilters = (from: number, to: number, values: string[], at: number) => {
+    filters.slice(from, to).forEach((field, i) => (i < values.length ? replace(field, values[i]) : remove(field)));
+    for (const value of values.slice(to - from)) add(at, `${inner}filter: ${value}\n`);
+  };
+  let oldFrom = 0;
+  let newFrom = 0;
+  next.filters.forEach((value, i) => {
+    const at = filters.findIndex((field, index) => index >= oldFrom && field.value === value);
+    if (at < 0) return;
+    changeFilters(oldFrom, at, next.filters.slice(newFrom, i), text.lastIndexOf('\n', filters[at].from - 1) + 1);
+    oldFrom = at + 1;
+    newFrom = i + 1;
+  });
+  changeFilters(oldFrom, filters.length, next.filters.slice(newFrom), filterAt);
   singleKeys.forEach((key, i) => {
     const value = next[key];
     if (value === undefined) return;
@@ -160,7 +181,7 @@ export function nestedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
 // lines combine with OR, so adding a value to `name(a, b)` admits one more node and nothing else, while a line
 // with `&&`, `!`, `keyword:` or `regex:` would change meaning.
 export type ExactCall = 'name' | 'subtag';
-function exactTokens(filter: string, call: ExactCall | 'group'): string[] | null {
+export function exactTokens(filter: string, call: ExactCall | 'group'): string[] | null {
   const tokens = scanConfig(filter).tokens;
   const raw = tokens.map(token => filter.slice(token.from, token.to));
   if (tokens[0]?.kind !== 'text' || raw[0] !== call || raw[1] !== '(' || raw.at(-1) !== ')' || tokens.at(-1)?.parens !== 1) return null;
@@ -315,7 +336,8 @@ function parseTerm(raw: string): Term | null {
     else if (regex) {
       let pattern: RegExp;
       try {
-        pattern = new RegExp(value);
+        const flags = /^\(\?([ims]+)\)/.exec(value);
+        pattern = new RegExp(flags ? value.slice(flags[0].length) : value, flags?.[1]);
       } catch {
         return null;
       }
@@ -336,14 +358,18 @@ export type FilterNode = {name: string; subscription_tag: string | null};
 export function compileFilters(filters: string[]): (node: FilterNode) => boolean {
   const lines = filters.map(parseLine).filter((line): line is Term[] => line !== null);
   if (!lines.length) {
-    const subgroupsOnly = filters.some(filter => filter.startsWith('group('));
-    return node => !subgroupsOnly && !isBuiltinOutbound(node.name);
+    return node => filters.length === 0 && !isBuiltinOutbound(node.name);
   }
   return node =>
     lines.some(
       line =>
         (!isBuiltinOutbound(node.name) || line.some(term => term.call === 'name' && !term.negated && term.exact.includes(node.name))) &&
-        line.every(term => term.tests.some(test => test(term.call === 'name' ? node.name : (node.subscription_tag ?? ''))) !== term.negated)
+        line.every(
+          term =>
+            (term.call === 'subtag' && node.subscription_tag === null
+              ? false
+              : term.tests.some(test => test(term.call === 'name' ? node.name : node.subscription_tag!))) !== term.negated
+        )
     );
 }
 export const groupAdmits = (filters: string[], node: FilterNode) => compileFilters(filters)(node);

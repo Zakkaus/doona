@@ -251,3 +251,21 @@
   line-height: var(--rp-line-body);
   color: var(--rp-text);
 }
+
+.rp-checkbox-set {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.rp-checkbox-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  max-height: 160px;
+  overflow: auto;
+  padding: 4px;
+}
+.rp-checkbox-options .rp-radio-text {
+  overflow-wrap: anywhere;
+}

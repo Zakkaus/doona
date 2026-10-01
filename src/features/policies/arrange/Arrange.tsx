@@ -3,7 +3,6 @@ import {useId, useMemo, useState} from 'react';
 import {isTextDropItem, type DropItem, type Selection} from 'react-aria-components';
 import {DropCard, DragCollection} from '../../../ui/DragCollection';
 import {formatList, useLang, useT} from '../../../i18n';
-import {href} from '../../../shell/route';
 import {NodeText} from '../../shared/NodeText';
 import {NodeName} from '../../../ui/NodeName';
 import {DaeCode} from '../../../ui/DaeCode';
@@ -19,7 +18,6 @@ import {
   ErrorMessage,
   InlineAlert,
   Light,
-  Link,
   Loading,
   ModalDialog,
   Segmented,
@@ -27,6 +25,8 @@ import {
   Tags,
   TextField
 } from '../../../ui/ui';
+import Edit from '../../../ui/icons/Edit';
+import {usePolicyGroup, type PolicyGroupInput} from '../usePolicyGroup';
 import Close from '../../../ui/icons/Close';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
@@ -34,28 +34,33 @@ import {groupPolicyText, memberCountText} from '../../shared/policyText';
 import {GroupDialog} from '../../shared/GroupDialog';
 import type {OutboundCatalogue} from '../../shared/groupText';
 import {FilterSummary} from '../FilterSummary';
-import {holds, parsePlaceable, removeReason, type ArrangeGroup, type Placeable} from './view';
+import {holds, parsePlaceable, removeReason, undeclaredGroup, type ArrangeGroup, type Placeable} from './view';
 import {PLACEABLE, useArrange} from './useArrange';
 
 type Model = ReturnType<typeof useArrange>;
-type Source = Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>;
+type Source = MainSourceEdit;
 
 export function Arrange({
   source,
+  text,
   groups,
   outbounds,
-  viewGroup
+  viewGroup,
+  editors
 }: {
   source: Source;
+  text: string;
+  editors: PolicyGroupInput[];
   groups: GroupSummary[] | undefined;
   outbounds: OutboundCatalogue;
   viewGroup: (name: string | null) => void;
 }) {
   const t = useT();
-  const m = useArrange(source, viewGroup, outbounds);
+  const m = useArrange(source, viewGroup, outbounds, text);
   // The live summary of each group, for the same header the Groups tab shows.
   const live = useMemo(() => new Map((groups ?? []).map(group => [group.name, group])), [groups]);
-  if (m.error) return <ErrorMessage error={m.error} onRetry={m.retry} />;
+  const shown = [...m.groups, ...[...live.keys()].filter(name => !m.groups.some(group => group.name === name)).map(undeclaredGroup)];
+  if (m.error && !shown.length) return <ErrorMessage error={m.error} onRetry={m.retry} />;
   if (m.loading) return <Loading />;
   return (
     <div className="rp-arrange">
@@ -71,18 +76,13 @@ export function Arrange({
           {t('arrange.newGroup')}
         </Button>
       </div>
+      {m.error && <ErrorMessage error={m.error} onRetry={m.retry} />}
       {m.blocked && <InlineAlert tone="informative">{m.blocked}</InlineAlert>}
       <div className="rp-arrange-grid">
         <div className="rp-col">
-          {m.groups.length ? (
-            m.groups.map(group => (
-              <GroupCard
-                key={group.name}
-                group={group}
-                live={live.get(group.name)}
-                groupCount={group.liveNestedGroups.filter(name => live.has(name)).length}
-                m={m}
-              />
+          {shown.length ? (
+            shown.map(group => (
+              <GroupCard key={group.name} group={group} live={live.get(group.name)} m={m} editor={editors.find(editor => editor.name === group.name)} />
             ))
           ) : (
             <Empty>{t('policy.empty')}</Empty>
@@ -108,11 +108,11 @@ export function Arrange({
 
 // A group as the Groups tab heads it, with its members as tags: exact members carry a remove action, staged
 // removals an undo, and rule members are described by the rule and what it selects.
-function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: GroupSummary | undefined; groupCount: number; m: Model}) {
+function GroupCard({group, live, m, editor}: {group: ArrangeGroup; live: GroupSummary | undefined; m: Model; editor?: PolicyGroupInput}) {
   const t = useT();
   const lang = useLang();
   const heading = useId();
-  const locked = !!m.blocked;
+  const locked = !!m.blocked || !group.declared;
   const policy = live ? groupPolicyText(live.policy, t) : null;
   const accept = async (items: DropItem[]) => {
     const texts = await Promise.all(
@@ -152,19 +152,26 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
     >
       {({isDropTarget}) => (
         <>
-          <div className="rp-row">
-            <span className="rp-cluster">
+          <div className="rp-row nowrap">
+            <span className="rp-cluster rp-grow">
               <h2 className="rp-h3" id={heading}>
-                {group.name}
+                <TextTooltip>{group.name}</TextTooltip>
               </h2>
               {policy && <Badge tip={policy.id}>{policy.label}</Badge>}
               {live && (
                 <Light small tone="neutral">
-                  {memberCountText(live.member_count, groupCount, t)}
+                  {memberCountText(live.member_count, group.liveNestedGroups.filter(name => m.groups.some(item => item.name === name)).length, t)}
                 </Light>
               )}
               {group.isNew && <Badge>{t('arrange.new')}</Badge>}
             </span>
+            {editor ? (
+              <GroupEdit input={editor} pending={m.changes.length > 0} />
+            ) : (
+              <Button quiet icon small label={t('policy.edit')} isDisabled tip={t(group.isNew ? 'arrange.editPending' : 'policy.editNoConfig')}>
+                <Edit />
+              </Button>
+            )}
           </div>
           {group.holdsAll && <p className="rp-note">{t('arrange.holdsAll')}</p>}
           <ActionHelp reason={removeReason(group, locked || m.applying)}>
@@ -228,12 +235,6 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
                   )}
                 </span>
               )}
-              <span className="rp-label">
-                {group.ruleNote}{' '}
-                <Link appearance="link" href={href('config', {tab: 'source'})}>
-                  {t('arrange.editSource')}
-                </Link>
-              </span>
             </div>
           )}
           {group.stillIn.length > 0 && (
@@ -257,6 +258,34 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
         </>
       )}
     </DropCard>
+  );
+}
+
+function GroupEdit({input, pending}: {input: PolicyGroupInput; pending: boolean}) {
+  const t = useT();
+  const [opened, setOpened] = useState(false);
+  const {edit, details} = usePolicyGroup({...input, paused: !opened});
+  const viewOnly = input.declaration.loaded && !input.declaration.error && !input.declaration.owner;
+  const reason = pending ? t('arrange.editPending') : edit.tip;
+  return (
+    <>
+      <Button
+        quiet
+        icon
+        small
+        label={t(viewOnly ? 'policy.viewConfig' : 'policy.edit')}
+        tip={viewOnly ? undefined : reason}
+        isDisabled={edit.disabled || (!viewOnly && (!edit.editable || pending))}
+        onPress={() => {
+          setOpened(true);
+          if (viewOnly) edit.view();
+          else edit.show();
+        }}
+      >
+        <Edit />
+      </Button>
+      <GroupDialog id={input.id} model={edit} details={details} />
+    </>
   );
 }
 
