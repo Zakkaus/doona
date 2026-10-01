@@ -4,12 +4,12 @@ import {useT, type Params} from '../../i18n';
 import type {Key} from '../../i18n';
 import {discoverAuth} from '../../api/auth';
 import {uuid} from '../../api/hash';
-import {DEMO_API, isDemoApi, normalizeApi, writeProfiles, type Profile} from '../../api/profiles';
+import {DEMO_API, isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../../api/profiles';
 import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
-import {replaceRoute} from '../../shell/route';
+import {parseHash, replaceRoute} from '../../shell/route';
 import {defaultRoute, type RoutePath} from '../../shell/routes';
 import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
@@ -56,9 +56,24 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
       params.delete('token');
       replaceRoute('settings', params.toString());
     }
-    const card = params.get('card');
-    if (card) document.getElementById(cardHeadingId(card))?.scrollIntoView({block: 'start'});
   }, [query]);
+  const card = new URLSearchParams(query).get('card');
+  useEffect(() => {
+    if (card) {
+      const target = document.getElementById(cardHeadingId(card))?.closest('section');
+      if (target) {
+        target.tabIndex = -1;
+        target.focus();
+        target.scrollIntoView({block: 'start'});
+      }
+    }
+  }, [card]);
+  const params = new URLSearchParams(query);
+  const loginProfile = params.get('profile');
+  const [changedLogin, setChangedLogin] = useState(false);
+  const loginApi = params.get('endpoint');
+  const staleLogin = changedLogin || (loginProfile !== null && (loginProfile !== saved.activeId || loginApi !== saved.api));
+  const loginReason = loginProfile === saved.activeId ? params.get('reason') : null;
   const active = saved.profiles.find(profile => profile.id === saved.activeId);
   const [invalid, setInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -119,7 +134,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     setToken(value);
     resetProbe();
   };
-  const persist = (profiles: Profile[], activeId: string, destination?: RoutePath) => {
+  const persist = (profiles: Profile[], activeId: string, destination?: {route: RoutePath; query: string}) => {
     if (saveLock.current) return;
     saveLock.current = true;
     flushSync(() => setSaving(true));
@@ -139,7 +154,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     } catch {
       /* Storage can be unavailable. */
     }
-    if (destination) replaceRoute(destination);
+    if (destination) replaceRoute(destination.route, destination.query);
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };
@@ -150,9 +165,30 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
   };
   const save = () => {
-    const profiles = editedProfiles();
-    if (profiles) persist(profiles, active?.id ?? profiles[0].id, saved.api === null ? startPage : undefined);
-    else toast('negative', t('settings.invalidUrl'));
+    if (staleLogin) return;
+    let profiles = editedProfiles();
+    if (profiles && loginProfile !== null) {
+      try {
+        const current = readProfiles();
+        const original = current.profiles.find(profile => profile.id === loginProfile);
+        if (current.activeId !== loginProfile || !original || original.api !== loginApi) {
+          setChangedLogin(true);
+          return;
+        }
+        const edited = profiles.find(profile => profile.id === loginProfile)!;
+        profiles = current.profiles.map(profile => (profile.id === loginProfile ? {...profile, api: edited.api, token: edited.token.trim()} : profile));
+      } catch {
+        toast('negative', t('settings.saveError'));
+        return;
+      }
+    }
+    if (profiles) {
+      const back = params.get('return');
+      if (loginProfile === saved.activeId && back?.startsWith('#/')) {
+        const destination = parseHash(back);
+        persist(profiles, active?.id ?? profiles[0].id, destination);
+      } else persist(profiles, active?.id ?? profiles[0].id, saved.api === null ? {route: startPage, query: ''} : undefined);
+    } else toast('negative', t('settings.invalidUrl'));
   };
   const [switchId, setSwitchId] = useState<string | null>(null);
   const switchProfile = (id: string) => {
@@ -215,6 +251,8 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
   };
 
   return {
+    staleLogin,
+    loginReason,
     dialog,
     setDialog,
     name,

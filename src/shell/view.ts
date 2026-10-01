@@ -2,10 +2,10 @@ import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
 import {ApiError} from '../api/error';
 import {isDemoApi} from '../api/profiles';
-import type {Scheme, Settings} from './preferences';
+import type {Settings} from './preferences';
 import {palettes, type PaletteId} from './palettes';
 import {defaultRoute, hubs, type PageProps} from './routes';
-import {LANGS, type Translator} from '../i18n';
+import {type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
 import {href} from './route';
 
@@ -49,7 +49,6 @@ export type BackendView = {
   edit: {href: string; label: string};
 };
 export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
-export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
   current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
@@ -235,20 +234,4 @@ export function paletteMenu(t: Translator): Array<{title: string; items: Array<{
     else sections.push({group: palette.group, title: t(palette.group), items: [item]});
   }
   return sections.map(({title, items}) => ({title, items}));
-}
-
-export const languageItems = LANGS.map(([id, label]) => ({id, label}));
-export function appearanceMenu(t: Translator, scheme: Scheme, dark: boolean) {
-  return {
-    wordmarks: [
-      {id: 'gradient', label: t('wordmark.gradient')},
-      {id: 'plain', label: t('wordmark.plain')}
-    ],
-    schemes: [
-      {id: 'system', label: t('theme.system')},
-      {id: 'light', label: t('theme.light')},
-      {id: 'dark', label: t('theme.dark')}
-    ],
-    themeLabel: t('shell.theme', {theme: t(scheme === 'system' ? 'theme.system' : dark ? 'theme.dark' : 'theme.light')})
-  };
 }

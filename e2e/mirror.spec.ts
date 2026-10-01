@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {box, expect, test, turn} from './fixtures';
+import {box, expect, test} from './fixtures';
 
 // The mirrored layout: Settings turns the page right to left while the language, here English, stays left to right.
 
@@ -118,8 +118,8 @@ test.describe('mirrored layout at 390px', () => {
     await expect(menu).toBeVisible();
     await expect(page.locator('.rp-popover').filter({has: menu})).toHaveAttribute('dir', 'rtl');
     const rows = page.locator('.rp-subitem');
-    // Four submenu rows, then Reload honk and Backend, which open a dialog and a popover and have no chevron.
-    await expect(rows).toHaveCount(6);
+    // Appearance, Reload honk and Backend share the overflow menu.
+    await expect(rows).toHaveCount(3);
     for (const row of await rows.all()) {
       const {x, width} = await box(row);
       expect(x).toBeGreaterThanOrEqual(0);
@@ -127,14 +127,8 @@ test.describe('mirrored layout at 390px', () => {
       // The row reads from the right: its icon, then its label.
       expect((await box(row.locator('.ic'))).x).toBeGreaterThan((await box(row.locator('.rp-truncate'))).x);
     }
-    // Each submenu's chevron points left.
-    const chevrons = rows.locator('.rp-chev-end');
-    await expect(chevrons).toHaveCount(4);
-    for (const chevron of await chevrons.all()) expect(await turn(chevron)).toBe(1);
-    await page.getByRole('menuitem', {name: 'Theme'}).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
-    await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
+    await page.getByRole('menuitem', {name: 'Appearance'}).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('region', {name: 'Appearance'})).toBeFocused();
   });
 });

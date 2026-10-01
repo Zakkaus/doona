@@ -1,6 +1,6 @@
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
@@ -20,6 +20,8 @@ export function Settings({query}: PageProps) {
   const session = useSignOut();
   const {
     activeId,
+    staleLogin,
+    loginReason,
     hasActive,
     profileReason,
     firstRun,
@@ -73,6 +75,10 @@ export function Settings({query}: PageProps) {
     backend: (
       <Card aria-label={t(cards.backend.titleKey)} id={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
+        {staleLogin && <InlineAlert tone="negative">{t('login.stale')}</InlineAlert>}
+        {(loginReason === 'rejected' || loginReason === 'required') && (
+          <InlineAlert tone="informative">{t(loginReason === 'rejected' ? 'login.rejected' : 'login.tokenRequired')}</InlineAlert>
+        )}
         <ActionHelp reason={profileReason}>
           <div className="rp-toolbar">
             <LabeledSelect
@@ -134,7 +140,7 @@ export function Settings({query}: PageProps) {
             <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
               {t('settings.test')}
             </Button>
-            <Button type="submit" accent isPending={saving}>
+            <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
               {t('settings.save')}
             </Button>
           </div>

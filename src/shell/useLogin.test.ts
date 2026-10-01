@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {credentialProblems, loginAlert, loginProfiles, predatesAuth, resolveSignInKind, secondsLeft, signIn, signInRefusal, storeToken} from './useLogin';
+import {credentialProblems, loginAlert, predatesAuth, resolveSignInKind, secondsLeft, signIn, signInRefusal} from './useLogin';
 import {ApiError} from '../api/error';
 import {signInKind} from '../api/auth';
 import {translate, type Translator} from '../i18n';
@@ -55,20 +55,6 @@ it('asks for an engine update when discovery still reports the old API name', as
   const body = {name: 'dae/honk-native', api_major: 1, links: {}, auth: {mode: 'password', setup_required: false}};
   vi.stubGlobal('fetch', async () => new Response(JSON.stringify(body), {headers: {'Content-Type': 'application/json'}}));
   await expect(resolveSignInKind('https://router.test')).rejects.toMatchObject({key: 'login.engineOutdated'});
-});
-
-it('rejects a removed or repointed profile without changing its credentials', () => {
-  const repointed = {...challenged, api: 'https://other.test', token: 'other-secret'};
-  expect(loginProfiles([repointed], challenged.id, challenged.api, 'secret')).toBeNull();
-  expect(repointed.token).toBe('other-secret');
-  expect(loginProfiles([{...challenged, id: 'replacement'}], challenged.id, challenged.api, 'secret')).toBeNull();
-});
-
-it('updates only the challenged endpoint, preserving concurrent profile changes', () => {
-  const renamed = {...challenged, name: 'Renamed'};
-  const other = {...challenged, id: 'other', token: 'other-secret'};
-  expect(loginProfiles([renamed, other], challenged.id, challenged.api + '/', ' secret ')).toEqual([{...renamed, token: 'secret'}, other]);
-  expect(renamed.token).toBe('');
 });
 
 it('checks credentials against the backend limits before any attempt, per field', () => {
@@ -127,16 +113,6 @@ function storage(entries: Record<string, string> = {}) {
   };
   return port;
 }
-
-it('stores a pasted token in its profile, and names a stale profile or blocked storage', () => {
-  const local = storage({'doona-profiles': JSON.stringify([challenged]), 'doona-profile': challenged.id});
-  vi.stubGlobal('localStorage', local);
-  expect(storeToken(challenged.id, challenged.api, ' secret ')).toBeNull();
-  expect(JSON.parse(local.store.get('doona-profiles')!)).toEqual([{...challenged, token: 'secret'}]);
-  expect(storeToken(challenged.id, 'https://other.test', 'secret')).toBe('login.stale');
-  local.refuse = true;
-  expect(storeToken(challenged.id, challenged.api, 'another')).toBe('settings.saveError');
-});
 
 it('reports a rejected sign-in, then keeps the session a retry opens', async () => {
   const session = storage();

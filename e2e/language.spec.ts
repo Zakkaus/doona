@@ -21,21 +21,26 @@ test.describe('translated configuration text', () => {
     }).toPass();
   });
 
-  test('updates module diagnostic tooltips when the language changes', async ({page}) => {
-    await page.goto('/#/config');
-    const routing = page.getByRole('region', {name: 'routing', exact: true});
-    await routing.getByRole('button', {name: translate('zh-TW', 'config.edit'), exact: true}).click();
-    await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: proxy\n}');
-    const traditional = translate('zh-TW', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
-    await expect(routing.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(traditional);
-    await routing.locator('.cm-lintRange-error').hover();
-    await expect(page.locator('.cm-tooltip-lint')).toContainText(traditional);
-    await page.getByRole('button', {name: translate('zh-TW', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: 'English'}).click();
-    const english = translate('en', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
-    await expect(routing.getByRole('list', {name: translate('en', 'config.diagnostics')})).toContainText(english);
-    await routing.locator('.cm-lintRange-error').hover();
-    await expect(page.locator('.cm-tooltip-lint')).toContainText(english);
+  test('renders module diagnostic tooltips in the language chosen in Settings', async ({page}) => {
+    const checkDiagnostic = async (lang: 'zh-TW' | 'en') => {
+      await page.goto('/#/config');
+      const routing = page.getByRole('region', {name: 'routing', exact: true});
+      await routing.getByRole('button', {name: translate(lang, 'config.edit'), exact: true}).click();
+      await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: auto\n}');
+      const message = translate(lang, 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
+      await expect(routing.getByRole('list', {name: translate(lang, 'config.diagnostics')})).toContainText(message);
+      await routing.locator('.cm-lintRange-error').hover();
+      await expect(page.locator('.cm-tooltip-lint')).toContainText(message);
+    };
+    await checkDiagnostic('zh-TW');
+    await page.locator('.rp-nav[href="#/settings"]').click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', {name: translate('zh-TW', 'config.discard'), exact: true})
+      .click();
+    await page.getByRole('button', {name: new RegExp(translate('zh-TW', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: 'English', exact: true}).click();
+    await checkDiagnostic('en');
   });
 });
 
@@ -152,10 +157,10 @@ test.describe('language loading', () => {
   test('keeps the current language when a new one does not load', async ({page}) => {
     expectLoadFailures(page, localeChunk('zh-CN'));
     await page.route(localeChunk('zh-CN'), route => route.abort());
-    await page.goto('/#/activity');
+    await page.goto('/#/settings?card=appearance');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
-    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '简体中文'}).click();
+    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.getByText(translate('en', 'shell.langUnavailable', {name: '简体中文'}))).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     expect(await page.evaluate(() => localStorage.getItem('doona-lang'))).toBe('en');
@@ -163,7 +168,7 @@ test.describe('language loading', () => {
 
   test('declares the SC font faces only once zh-CN is chosen, before the page renders in it', async ({page}) => {
     const scFaces = () => page.evaluate(() => [...document.fonts].filter(face => face.family.replace(/["']/g, '') === 'Noto Sans SC').length);
-    await page.goto('/#/activity');
+    await page.goto('/#/settings?card=appearance');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     expect(await scFaces()).toBe(0);
     // Counted in the same task that switches the language, before the browser paints it.
@@ -175,8 +180,8 @@ test.describe('language loading', () => {
         observer.disconnect();
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
     });
-    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '简体中文'}).click();
+    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
     expect(Number(await page.locator('html').getAttribute('data-sc-faces'))).toBeGreaterThan(0);
     await page.reload();
@@ -185,7 +190,7 @@ test.describe('language loading', () => {
   });
 
   test('declares the TC ideograph faces only once zh-TW is chosen, before the page renders in it', async ({page}) => {
-    await page.goto('/#/activity');
+    await page.goto('/#/settings?card=appearance');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
     // Counted in the same task that switches the language, before the browser paints it.
     const latin = await page.evaluate(() => {
@@ -198,20 +203,20 @@ test.describe('language loading', () => {
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
       return count();
     });
-    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     expect(Number(await page.locator('html').getAttribute('data-tc-faces'))).toBeGreaterThan(latin + 50);
   });
 
   test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {
     const family = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
-    await page.goto('/#/activity');
-    await page.getByRole('button', {name: translate('en', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '简体中文'}).click();
+    await page.goto('/#/settings?card=appearance');
+    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    await page.getByRole('button', {name: translate('zh-CN', 'ui.lang'), exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    await page.getByRole('button', {name: new RegExp(translate('zh-CN', 'ui.lang') + '$')}).click();
+    await page.getByRole('option', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     const switched = await family();
     await page.reload();

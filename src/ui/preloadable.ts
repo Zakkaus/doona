@@ -1,4 +1,4 @@
-import {createElement, lazy, type ComponentType} from 'react';
+import {createElement, lazy, useState, type ComponentType} from 'react';
 
 // A lazily loaded component that renders directly once its module has arrived, so a page warmed in idle time
 // opens without suspending. React holds a revealed Suspense fallback for at least 300 ms before swapping in the
@@ -20,7 +20,9 @@ export function preloadable<P extends object>(load: () => Promise<{default: Comp
   const preload = () => (pending ??= settle());
   const Lazy = lazy(preload);
   function Preloaded(props: P) {
-    return createElement(loaded ?? Lazy, props);
+    // Keep the mounted type stable so a cold page's next render preserves its state and actions.
+    const [Component] = useState(() => loaded ?? Lazy);
+    return createElement(Component, props);
   }
   return {Component: Preloaded, preload};
 }
