@@ -1,6 +1,6 @@
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, expectTextInside, mockBackend, test} from './fixtures';
 
 // Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
@@ -185,10 +185,65 @@ test('Cancel on a rule write that has landed reads the sources again, so the nex
 });
 
 test('the rule list fits its rows instead of holding a page of empty space', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const dictionary = await api.rules();
+  handlers['GET rules'] = async () => ({...dictionary, rules: dictionary.rules.slice(0, 3)});
   await page.goto('/#/rules?tab=list&view=advanced');
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Routing rules'})});
-  await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
-  const rows = await table.locator('[role=row][data-key]').count();
-  // Border, header and one row per rule; a fill-height table would stay at 560.
-  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + Math.max(rows, 2) * 40 + 1);
+  await expect(table.locator('[role=row][data-key]')).toHaveCount(3);
+  // Wrapped rows grow with their text; the container ends at the final row without a fill-height gap.
+  const geometry = await table.evaluate(el => {
+    const rows = el.querySelectorAll('[role=row][data-key]');
+    return {bottom: el.getBoundingClientRect().bottom, rowBottom: rows[rows.length - 1].getBoundingClientRect().bottom};
+  });
+  expect(geometry.bottom - geometry.rowBottom).toBeGreaterThanOrEqual(0);
+  expect(geometry.bottom - geometry.rowBottom).toBeLessThanOrEqual(2);
+});
+
+for (const width of [1440, 768, 390]) {
+  test(`rule text and controls follow kit geometry at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    const {api} = await mockBackend(page);
+    const source = (await api.config()).sources.find(source => source.id === 'src-main')!;
+    const expression = `domain(full: '${'a'.repeat(63)}.example')`;
+    const content = source.content!.replace(/^routing\s*\{/m, `routing {\n  ${expression} -> proxy`);
+    expect(content).toContain(expression);
+    await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
+    await page.goto('/#/rules?view=advanced');
+    const longCell = page.locator('.rp-cell-wrap').filter({hasText: expression});
+    await expectTextInside(longCell);
+    await expect(longCell.locator('.rp-code')).toHaveText(expression);
+    const add = page.getByRole('button', {name: 'Add rule', exact: true});
+    await expect(add).toBeVisible();
+    const bar = page.locator('.rp-toolbar').filter({has: add});
+    const segment = await bar.locator('.rp-seg').boundingBox();
+    expect((await add.boundingBox())!.height).toBe(segment!.height);
+    await expect(add).toHaveCSS('font-size', '14px');
+    const cells = page.locator('.rp-cell-wrap');
+    await expect(cells.first()).toBeVisible();
+    expect(
+      await cells.evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).whiteSpace === 'normal'))
+    ).toBe(true);
+    await page.goto('/#/rules?view=simple');
+    const labels = page.locator('.rp-switch');
+    await expect(labels).toHaveCount(3);
+    for (const label of await labels.all()) await expect(label).toHaveCSS('font-size', '14px');
+    for (const description of await page.locator('.rp-radio-text .rp-label, .rp-field > .rp-label').all()) {
+      await expect(description).toHaveCSS('font-size', '12px');
+      await expect(description).toHaveCSS('line-height', '16px');
+    }
+  });
+}
+
+test('long template explanations remain available in contextual help', async ({page}) => {
+  await page.goto('/#/rules?view=simple');
+  const more = page.getByRole('button', {name: 'More templates', exact: true});
+  await expect(more).toBeVisible();
+  if ((await more.getAttribute('aria-expanded')) === 'false') await more.click();
+  const help = page.locator('.rp-radios .rp-help').first();
+  await expect(help).toBeVisible();
+  await help.click();
+  await expect(page.locator('.rp-popover')).toContainText('GFW');
+  await page.keyboard.press('Escape');
+  await expect(help).toBeFocused();
 });

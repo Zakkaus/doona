@@ -98,15 +98,12 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
       {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
       {
         id: 'expression',
+        text: 'wrap',
         label: t('rule.expression'),
-        minWidth: 160,
+        minWidth: 320,
         grow: 3,
         isRowHeader: true,
-        render: row => (
-          <TextTooltip className="rp-code">
-            <DaeCode text={row.expression} />
-          </TextTooltip>
-        )
+        render: row => <DaeCode text={row.expression} />
       },
       {
         id: 'outbound',
@@ -254,7 +251,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
           {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
           <span className="rp-grow" />
           {view.canWrite && (
-            <Button small isDisabled={view.addDisabled} tip={view.addTip} onPress={view.openAdd}>
+            <Button isDisabled={view.addDisabled} tip={view.addTip} onPress={view.openAdd}>
               {t('rule.add')}
             </Button>
           )}
@@ -403,11 +400,12 @@ function Distribution({view}: {view: Model}) {
       {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 2, render: row => row.ruleId},
       {
         id: 'expression',
+        text: 'wrap',
         label: t('rule.expression'),
         minWidth: 240,
         grow: 3,
         isRowHeader: true,
-        render: row => <TextTooltip className={row.expressionClass}>{row.expressionClass ? <DaeCode text={row.expression} /> : row.expression}</TextTooltip>
+        render: row => (row.expressionClass ? <DaeCode text={row.expression} /> : row.expression)
       },
       {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
       {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},

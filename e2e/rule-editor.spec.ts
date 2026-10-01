@@ -268,3 +268,18 @@ test('editing an include refuses a changed generation and retains the condition 
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue('github');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
 });
+
+test('kit pickers keep symmetric insets', async ({page}) => {
+  await page.goto('/#/rules?view=advanced');
+  await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+  const pickers = page.locator('.rp-selectbtn');
+  await expect(pickers.first()).toBeVisible();
+  expect(
+    await pickers.evaluateAll(elements =>
+      elements.every(el => {
+        const style = getComputedStyle(el);
+        return style.paddingInlineStart === style.paddingInlineEnd;
+      })
+    )
+  ).toBe(true);
+});

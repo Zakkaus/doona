@@ -180,3 +180,22 @@ test('an implicit DNS fallback becomes an explicit action in its own list', asyn
     before.replace('      fallback: cloudflare\n    }\n', '      fallback: cloudflare\n    }\n    response {\n      fallback: reject\n    }\n')
   );
 });
+
+for (const width of [768, 390]) {
+  test(`DNS rule expressions stay complete at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    await page.goto('/#/rules?tab=dns');
+    const cells = page.locator('.rp-cell-wrap');
+    await expect(cells.first()).toBeVisible();
+    expect(
+      await cells.evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).whiteSpace === 'normal'))
+    ).toBe(true);
+    if (width === 390) {
+      const bounds = await cells.evaluateAll(elements =>
+        elements.map(el => ({cell: el.getBoundingClientRect().right, table: el.closest('.rp-table')!.getBoundingClientRect().right}))
+      );
+      expect(bounds.every(({cell, table}) => cell <= table + 1)).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  });
+}
