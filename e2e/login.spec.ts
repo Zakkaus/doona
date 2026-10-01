@@ -34,20 +34,21 @@ test.describe('the demo', () => {
     await expect(page.locator('.rp-nav')).toHaveCount(0);
   });
 
-  test('switches language and scheme from the sign-in page', async ({page}) => {
+  test('opens Appearance before sign-in and returns with the selected language and scheme', async ({page}) => {
     await page.goto('/#/activity');
-    const controls = page.locator('.rp-login-controls');
-    await controls.getByRole('button', {name: 'Language', exact: true}).click();
-    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
-    const login = page.locator('.rp-login-page');
-    await expect(login.getByRole('heading', {level: 1})).toHaveText('登入');
-    await expect(login.locator('.rp-login-account')).toHaveText('示範帳號：demo　密碼：demo');
-    await expect(page.locator('html')).toHaveAttribute('data-scheme', 'light');
-    // The same toggle as the top bar: a saved scheme goes back to the system's, which then flips to its opposite.
-    await controls.getByRole('button', {name: '主題：亮色', exact: true}).click();
-    await controls.getByRole('button', {name: '主題：跟隨系統', exact: true}).click();
+    await page.locator('.rp-login-controls').getByRole('link', {name: 'Appearance'}).click();
+    const card = page.getByRole('region', {name: 'Appearance'});
+    await expect(card).toBeFocused();
+    await card.getByRole('button', {name: /Language$/}).click();
+    await page.getByRole('option', {name: '繁體中文'}).click();
+    await page
+      .getByRole('region', {name: '外觀', exact: true})
+      .getByRole('button', {name: /明暗模式$/})
+      .click();
+    await page.getByRole('option', {name: '暗色', exact: true}).click();
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('登入');
     await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
-    await expect(controls.getByRole('button', {name: '主題：暗色', exact: true})).toBeVisible();
   });
 
   test.describe('in Chinese', () => {
@@ -74,17 +75,19 @@ test.describe('the demo', () => {
 
   test('picks a palette from the sign-in page, and the page keeps it after a reload', async ({page}) => {
     await page.goto('/#/activity');
-    const controls = page.locator('.rp-login-controls');
+    await page.locator('.rp-login-controls').getByRole('link', {name: 'Appearance'}).click();
+    const controls = page.getByRole('region', {name: 'Appearance'});
     await expect(page.locator('html')).not.toHaveAttribute('data-family', 'nord');
     await controls.getByRole('button', {name: 'Palette', exact: true}).click();
     await page.getByRole('menuitemradio', {name: /Nord/}).click();
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+    await page.goto('/#/activity');
     await page.reload();
     await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('Sign in');
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-    // The backend settings reached before sign-in draw the top bar, which offers the same menu.
+    // Backend settings remain reachable before sign-in.
     await page.locator('.rp-login-page').getByRole('link', {name: 'Change backend URL'}).click();
-    await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
+    await expect(page.locator('.rp-top').getByRole('link', {name: 'Appearance', exact: true})).toBeVisible();
   });
 
   test('fits a 360px screen without the showcase, and shows the showcase panel from 1024px', async ({page}) => {
@@ -150,7 +153,7 @@ test.describe('the demo', () => {
   });
 });
 
-test('a rejected saved token asks for a new one on the sign-in page', async ({page}) => {
+test('a rejected saved token opens its Backend editor and returns after save', async ({page}) => {
   expectLoadFailures(page, /\/api(\/|$)/);
   await page.addInitScript(() => {
     if (localStorage.getItem('doona-profiles')) return;
@@ -169,12 +172,21 @@ test('a rejected saved token asks for a new one on the sign-in page', async ({pa
   await page.goto('/#/activity');
   const login = page.locator('.rp-login-page');
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Token required');
-  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the token; enter a valid one.');
-  await expect(login.getByRole('button', {name: 'Language', exact: true})).toBeVisible();
+  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the saved token. Update it in Backend settings.');
+  await expect(login.getByRole('link', {name: 'Appearance', exact: true})).toBeVisible();
   await expect(login.getByRole('link', {name: 'Change backend URL'})).toHaveAttribute('href', '#/settings');
-  await login.getByLabel('Token', {exact: true}).fill('fresh-token');
-  await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  await expect(login.locator('[name=token]')).toHaveCount(0);
+  const editToken = login.getByRole('link', {name: 'Edit saved token'});
+  expect(await editToken.evaluate(element => getComputedStyle(element).justifyContent)).toBe('center');
+  await editToken.click();
+  await expect(page).toHaveURL(/card=backend&profile=home&endpoint=.*&reason=rejected&return=/);
+  const card = page.getByRole('region', {name: 'Backend', exact: true});
+  await expect(card).toBeFocused();
+  await card.locator('[name=token]').fill('  fresh-token  ');
+  await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Save', exact: true}).click()]);
+  await expect(page).toHaveURL(/#\/activity$/);
   await expect.poll(() => authorization).toBe('Bearer fresh-token');
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)[0].token).toBe('fresh-token');
 });
 
 // A saved token is the backend's configured secret: signing out forgets it in this browser and revokes nothing.
@@ -195,10 +207,10 @@ test('signing out with a saved token forgets it and returns to the sign-in page'
   await expect(card.getByText('Clears the token saved in this browser. The token stays valid on the backend.')).toBeVisible();
   await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Sign out', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/activity$/);
-  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
+  await expect(page.locator('.rp-login-page').getByRole('link', {name: 'Edit saved token'})).toBeVisible();
   expect(backend.requests.some(request => request.method() !== 'GET')).toBe(false);
   await page.reload();
-  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
+  await expect(page.locator('.rp-login-page').getByRole('link', {name: 'Edit saved token'})).toBeVisible();
   expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)).toEqual([
     {id: 'home', name: 'Home', api: 'http://127.0.0.1:4177', token: ''}
   ]);
@@ -281,3 +293,42 @@ test.describe('secret field geometry', () => {
     });
   }
 });
+for (const when of ['before opening Settings', 'before saving'] as const) {
+  test(`a challenged token cannot follow a changed API ${when}`, async ({page}) => {
+    expectLoadFailures(page, /\/api(\/|$)/);
+    await page.addInitScript(() => {
+      if (localStorage.getItem('doona-profiles')) return;
+      localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: 'old'}]));
+      localStorage.setItem('doona-profile', 'home');
+    });
+    const sent: string[] = [];
+    await page.route('**/api/v1/**', route => {
+      sent.push(route.request().headers()['authorization'] ?? '');
+      return route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'r'}});
+    });
+    await page.route(/\/api$/, route =>
+      route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'nope', details: null}, request_id: 'd'}})
+    );
+    await page.goto('/#/activity');
+    const link = page.getByRole('link', {name: 'Edit saved token'});
+    await expect(link).toBeVisible();
+    const change = () =>
+      page.evaluate(() => {
+        const profiles = JSON.parse(localStorage.getItem('doona-profiles')!);
+        profiles[0].api = location.origin + '/other';
+        localStorage.setItem('doona-profiles', JSON.stringify(profiles));
+      });
+    if (when === 'before opening Settings') await change();
+    await link.click();
+    const card = page.getByRole('region', {name: 'Backend', exact: true});
+    if (when === 'before saving') {
+      await card.locator('[name=token]').fill('a-secret');
+      await change();
+      await card.getByRole('button', {name: 'Save', exact: true}).click();
+    }
+    await expect(card.getByRole('button', {name: 'Save', exact: true})).toBeDisabled();
+    await expect(card.getByRole('alert').filter({hasText: 'The profile changed'})).toBeVisible();
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)[0]).toMatchObject({token: 'old'});
+    expect(sent).not.toContain('Bearer a-secret');
+  });
+}

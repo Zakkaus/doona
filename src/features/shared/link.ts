@@ -59,3 +59,5 @@ export function sectionSourceHref(sources: readonly ConfigSource[], name: string
   }
   return href('config', {tab: 'source', source: authored.find(source => source.kind === 'main')?.id ?? null});
 }
+
+export const appearanceSettingsHref = href('settings', {card: 'appearance'});

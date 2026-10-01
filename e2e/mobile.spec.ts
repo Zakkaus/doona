@@ -123,45 +123,18 @@ test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   expect(content).toBeLessThanOrEqual(top);
 });
 
-test('language, theme, palette and wordmark are each two taps away in the overflow menu', async ({page}) => {
+test('the overflow menu opens Appearance and keeps global Reload', async ({page}) => {
   await page.goto('/#/overview');
   const top = page.locator('.rp-top');
-  await expect(top.getByRole('button', {name: 'Search'})).toBeVisible();
-  await expect(top.getByRole('button', {name: 'Refresh'})).toBeVisible();
-  // Reload lives in the overflow menu on a phone, beside the backend entry.
-  await expect(top.getByRole('button', {name: 'Reload honk'})).toBeHidden();
-  for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
   const more = top.getByRole('button', {name: 'More options'});
-  const box = (await more.boundingBox())!;
-  expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
-  // The menu is four short rows, each naming its current value, then Reload honk and the Backend row; a row opens its
-  // choices in the same popover.
   await more.click();
-  await expect(page.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'WordmarkGradient', 'Reload honk', 'Backend']);
-  // Reload from the menu still asks first.
+  await expect(page.getByRole('menuitem')).toHaveText(['Appearance', 'Reload honk', 'Backend']);
   await page.getByRole('menuitem', {name: 'Reload honk'}).click();
   const confirm = page.getByRole('dialog', {name: 'Reload honk?'});
   await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(confirm).toHaveCount(0);
-  const pick = async (row: string, item: string) => {
-    await more.click();
-    await page.getByRole('menuitem', {name: row}).click();
-    // A palette's name continues with its variants, so the name only has to start with the item.
-    const choice = page.getByRole('menuitemradio', {name: new RegExp(`^${item}`)});
-    const {x, width} = (await choice.boundingBox())!;
-    expect(x).toBeGreaterThanOrEqual(0);
-    expect(x + width).toBeLessThanOrEqual(390);
-    await choice.click();
-    await expect(page.getByRole('menu')).toHaveCount(0);
-  };
-  await pick('Theme', 'Dark');
-  await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
-  await pick('Palette', 'Nord');
-  await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-  await pick('Wordmark', 'Plain');
-  await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
-  await pick('Language', '简体中文');
-  await expect(top.getByRole('button', {name: '更多选项'})).toBeVisible();
+  await more.click();
+  await page.getByRole('menuitem', {name: 'Appearance'}).click();
+  await expect(page.getByRole('region', {name: 'Appearance'})).toBeFocused();
 });
 
 // The fixtures store a light scheme; only the system setting follows the emulated one.
@@ -175,55 +148,23 @@ test.describe('with the scheme left to the system', () => {
       await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
       await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
       const icons = page.locator('.rp-subitem .ic > *');
-      await expect(icons).toHaveCount(6);
+      await expect(icons).toHaveCount(3);
       // Read until every icon settles: one read right after the menu opened once caught an icon 10px wide in CI.
       await expect
         .poll(() => icons.evaluateAll(els => els.map(el => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])))
-        .toEqual(Array(6).fill([16, 16]));
+        .toEqual(Array(3).fill([16, 16]));
       await page.keyboard.press('Escape');
     }
   });
 });
 
-test('the overflow menu opens and leaves a submenu by keyboard', async ({page}) => {
+test('the overflow menu opens Appearance by keyboard', async ({page}) => {
   await page.goto('/#/overview');
   await page.locator('.rp-top').getByRole('button', {name: 'More options'}).focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('menuitem', {name: 'Language'})).toBeFocused();
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('menu', {name: 'Theme'})).toBeVisible();
-  await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
-  await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
-  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', {name: 'Appearance'})).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('menu', {name: 'Palette'})).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('menuitem', {name: 'Palette'})).toBeFocused();
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('Enter');
-  // The submenu moves focus to its current choice a frame after it opens; a key sent before that has nowhere to go.
-  await expect(page.getByRole('menuitemradio', {name: 'Gradient'})).toBeFocused();
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('Enter');
-  await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
-  await expect(page.getByRole('menu')).toHaveCount(0);
-});
-
-test.describe('between phone and desktop widths', () => {
-  test.use({viewport: {width: 800, height: 700}});
-  test('a submenu opens beside its row and stays on screen', async ({page}) => {
-    await page.goto('/#/overview');
-    await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
-    await page.getByRole('menuitem', {name: 'Palette'}).click();
-    await expect(page.getByRole('menu')).toHaveCount(2);
-    const {x, width} = (await page.getByRole('menu', {name: 'Palette'}).boundingBox())!;
-    expect(x).toBeGreaterThanOrEqual(0);
-    expect(x + width).toBeLessThanOrEqual(800);
-    await page.getByRole('menuitemradio', {name: /^Nord/}).click();
-    await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-  });
+  await expect(page.getByRole('region', {name: 'Appearance'})).toBeFocused();
 });
 
 for (const width of [320, 360])
@@ -324,10 +265,9 @@ test.describe('desktop', () => {
     const content = page.locator('.rp-content');
     for (const name of ['Export state JSON', 'Reload', 'Suspend']) await expect(content.getByRole('button', {name, exact: true})).toBeVisible();
     await expect(content.getByRole('button', {name: 'More actions'})).toBeHidden();
-    // The top bar keeps its separate language, palette and theme controls.
+    // Appearance has one destination on the desktop top bar.
     const top = page.locator('.rp-top');
-    for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeVisible();
-    await expect(top.getByRole('button', {name: /^Theme: /})).toBeVisible();
+    await expect(top.getByRole('link', {name: 'Appearance'})).toBeVisible();
     await expect(top.locator('.rp-vrule')).toBeVisible();
     await expect(top.getByRole('button', {name: 'More options'})).toBeHidden();
   });

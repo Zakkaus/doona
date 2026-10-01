@@ -74,7 +74,9 @@ browserTest('a token draft survives persistence failure and can be retried', asy
     })
   );
   await page.goto('/#/activity');
-  const token = page.getByLabel('Token', {exact: true});
+  await page.getByRole('link', {name: 'Edit saved token'}).click();
+  const card = page.getByRole('region', {name: 'Backend', exact: true});
+  const token = card.locator('[name=token]');
   await token.fill('retain-this-token');
   // Full even after the stored chart history is given up, which is the one retry the save makes.
   await page.evaluate(() => {
@@ -88,10 +90,10 @@ browserTest('a token draft survives persistence failure and can be retried', asy
       return setItem.call(this, key, value);
     };
   });
-  await page.getByRole('button', {name: 'Connect', exact: true}).click();
-  await expect(page.locator('.rp-login [role="alert"]')).toBeVisible();
+  await card.getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(card.getByRole('alert')).toBeVisible();
   await expect(token).toHaveValue('retain-this-token');
-  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Save', exact: true}).click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!)[0].token)).toBe('retain-this-token');
 });
 

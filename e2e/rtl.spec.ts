@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {box, detail, expect, test, turn} from './fixtures';
+import {box, detail, expect, test} from './fixtures';
 
 // No right-to-left language ships yet, so these specs make the engine report every locale as right to left. The app's
 // direction and React Aria's both read Intl.Locale's text info, so the first-paint stamp, the shell and React Aria's
@@ -45,19 +45,6 @@ async function expectRtlLayout(page: Page) {
   expect(main.x + main.width - (title.x + title.width), 'title gap on the right').toBeLessThan(title.x - main.x);
 }
 
-// Below the side navigation's breakpoint the top bar's overflow menu lists its rows with a chevron pointing into each
-// submenu; right to left it points left.
-async function expectMirroredChevron(page: Page) {
-  const size = page.viewportSize()!;
-  await page.setViewportSize({width: 800, height: size.height});
-  await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
-  const chevron = page.locator('.rp-subitem .rp-chev-end').first();
-  await expect(chevron).toBeVisible();
-  expect(await turn(chevron)).toBe(1);
-  await page.keyboard.press('Escape');
-  await page.setViewportSize(size);
-}
-
 async function expectTechnicalCell(cells: Locator) {
   const cell = cells.filter({hasText: technical}).first();
   await expect(cell).toBeVisible();
@@ -83,7 +70,6 @@ test.describe('right to left at 1280px', () => {
     await expectRtlLayout(page);
     await expectTechnicalCell(page.locator('.rp-kv .v'));
     await expectValueAtRight(page.locator('.rp-kv .v').filter({hasText: technical}).first());
-    await expectMirroredChevron(page);
   });
 
   test.describe('connections', () => {
@@ -96,7 +82,6 @@ test.describe('right to left at 1280px', () => {
       await expect(cells.first()).toBeVisible();
       await expectRtlLayout(page);
       await expectTechnicalCell(cells);
-      await expectMirroredChevron(page);
       await page.locator('.rp-table [data-key="c-0002"]').click();
       const panel = detail(page);
       await expect(panel).toBeVisible();
@@ -119,7 +104,6 @@ test.describe('right to left at 1280px', () => {
     await expect(rule).toBeVisible();
     expect(await readsLeftToRight(rule)).toBe(true);
     await expect(rule).toHaveCSS('direction', 'ltr');
-    await expectMirroredChevron(page);
   });
 
   test('config keeps the source editor left to right', async ({page}) => {
@@ -130,7 +114,6 @@ test.describe('right to left at 1280px', () => {
     await expect(editor).toHaveCSS('direction', 'ltr');
     const line = page.locator('.cm-line').filter({hasText: /\w{2}/}).first();
     expect(await readsLeftToRight(line)).toBe(true);
-    await expectMirroredChevron(page);
   });
 
   test('the segmented slider sits under the selected segment', async ({page}) => {
@@ -152,7 +135,7 @@ test.describe('right to left at 1280px', () => {
 test.describe('right to left at 390px', () => {
   test.use({viewport: {width: 390, height: 844}});
 
-  test('the overflow menu opens inside the screen with mirrored chevrons and arrow keys', async ({page}) => {
+  test('the overflow menu opens inside the screen and reaches Appearance by keyboard', async ({page}) => {
     await page.goto('/#/overview');
     await expect(page.locator('.rp-content > *').first()).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -163,8 +146,8 @@ test.describe('right to left at 390px', () => {
 
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     const rows = page.locator('.rp-subitem');
-    // Four submenu rows, then Reload honk and Backend, which open a dialog and a popover and have no chevron.
-    await expect(rows).toHaveCount(6);
+    // Appearance, Reload honk and Backend share the overflow menu.
+    await expect(rows).toHaveCount(3);
     for (const row of await rows.all()) {
       const {x, width} = await box(row);
       expect(x).toBeGreaterThanOrEqual(0);
@@ -172,19 +155,8 @@ test.describe('right to left at 390px', () => {
       // The row reads from the right: its icon comes before its label.
       expect((await box(row.locator('.ic'))).x).toBeGreaterThan((await box(row.locator('.rp-truncate'))).x);
     }
-    // Each submenu's chevron points left.
-    const chevrons = rows.locator('.rp-chev-end');
-    await expect(chevrons).toHaveCount(4);
-    for (const chevron of await chevrons.all()) expect(await turn(chevron)).toBe(1);
-    // Into a submenu is the left arrow, and back out of it, which its chevron points to, the right.
-    await page.getByRole('menuitem', {name: 'Theme'}).focus();
-    await page.keyboard.press('ArrowLeft');
-    const back = page.locator('.rp-drill-back .rp-chev-start');
-    await expect(back).toBeVisible();
-    expect(await turn(back)).toBe(-1);
-    await expect(page.getByRole('menuitemradio', {name: 'Light'})).toBeFocused();
-    await page.keyboard.press('ArrowRight');
-    await expect(rows).toHaveCount(6);
-    await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
+    await page.getByRole('menuitem', {name: 'Appearance'}).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('region', {name: 'Appearance'})).toBeFocused();
   });
 });
