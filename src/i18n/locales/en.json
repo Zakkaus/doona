@@ -896,7 +896,6 @@
   "nodes.groups": "Groups",
   "nodes.interval": "Auto-refresh",
   "nodes.intervalOf": "Auto-refresh of {name}",
-  "nodes.intervalSet": "{name} auto-refresh written to the configuration and reloaded: {interval}",
   "nodes.kind.builtin": "Built-in",
   "nodes.kind.file": "File",
   "nodes.kind.inline": "In configuration",
