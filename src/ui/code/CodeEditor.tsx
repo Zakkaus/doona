@@ -224,6 +224,7 @@ export function CodeEditor({
   outbounds,
   onSave,
   onReadOnlyAttempt,
+  acceptChange,
   compact,
   actions = []
 }: {
@@ -239,6 +240,7 @@ export function CodeEditor({
   onSave?: () => void;
   // Typing, paste, cut or a touch tap while read-only; the caller explains why the text cannot change.
   onReadOnlyAttempt?: () => void;
+  acceptChange?: (before: string, after: string) => boolean;
   compact?: boolean;
   actions?: Action[];
 }) {
@@ -251,11 +253,13 @@ export function CodeEditor({
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
+  const accept = useRef(acceptChange);
   const change = useRef(onChange);
   const names = useRef(outbounds);
   const save = useRef(onSave);
   const refused = useRef(onReadOnlyAttempt);
   useEffect(() => {
+    accept.current = acceptChange;
     change.current = onChange;
     names.current = outbounds;
     save.current = onSave;
@@ -273,6 +277,14 @@ export function CodeEditor({
       state: EditorState.create({
         doc: value,
         extensions: [
+          EditorState.transactionFilter.of(transaction =>
+            transaction.docChanged &&
+            !transaction.annotation(external) &&
+            accept.current &&
+            !accept.current(transaction.startState.doc.toString(), transaction.newDoc.toString())
+              ? []
+              : transaction
+          ),
           lineNumbers(),
           highlightSpecialChars(),
           undoable.current.of(history()),

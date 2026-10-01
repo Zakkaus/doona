@@ -11,9 +11,9 @@ const open = async (page: import('@playwright/test').Page, text: string) => {
 test('search reaches tabs and cards, not only pages', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
-  let dialog = await open(page, 'valid');
-  await dialog.getByRole('option', {name: /Validation/}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=validate$/);
+  let dialog = await open(page, 'config files');
+  await dialog.getByRole('option', {name: /Config files/}).click();
+  await expect(page).toHaveURL(/#\/config\?tab=source$/);
   dialog = await open(page, 'geodata');
   await dialog.getByRole('option', {name: /Geodata/}).click();
   await expect(page).toHaveURL(/#\/settings\?card=geodata$/);
@@ -126,13 +126,13 @@ test('search respects destination capabilities, preserves loose-node ownership a
 test('search results are reached with arrow keys while the field keeps focus', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
-  const dialog = await open(page, 'valid');
+  const dialog = await open(page, 'config files');
   const field = dialog.locator('input');
   await expect(field).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(field).toHaveAttribute('aria-activedescendant', /.+/);
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#\/config\?tab=validate$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source$/);
 });
 
 test('search reads live connection addresses, node and group names, and available pages', async ({page}) => {

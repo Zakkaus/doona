@@ -64,7 +64,9 @@ test('a node probe with an unknown result says so and why in words, instead of u
 
 test('source drafts survive cancelled sidebar and hash navigation', async ({page}) => {
   await page.goto('/#/config?tab=source');
-  await page.locator('.cm-content').fill('draft that must survive');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('\n# draft that must survive');
   await page.locator('.rp-nav[href="#/connections"]').click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
@@ -263,7 +265,9 @@ test('discarding source inside Config cancels its transaction and releases the n
     await route.fulfill({status: 500, json: {code: 'unexpected_write', message: 'Discarded draft was written'}});
   });
   await page.goto('/#/config?tab=source');
-  await page.locator('.cm-content').fill('routing {\n  fallback: direct\n}\n');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('\n# pending draft\n');
   const validating = page.waitForRequest('**/config/validate');
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;

@@ -207,3 +207,15 @@ export function addFallback(text: string, anchor: RuleAnchor, target: string): s
     ? text.slice(0, anchor.from) + (anchor.open ?? '') + `${anchor.indent}fallback: ${target}\n` + (anchor.close ?? '') + text.slice(anchor.from)
     : null;
 }
+
+// The current rule dialogs edit targets; conditions and include directives still need raw access.
+export function ruleTargetValues(text: string) {
+  const tokens = scanConfig(text).tokens.filter(token => token.kind !== 'comment');
+  const raw = (index: number) => text.slice(tokens[index].from, tokens[index].to);
+  return tokens.flatMap((token, index) => {
+    const target = token.parens === 0 && (raw(index) === '->' || (raw(index) === ':' && index > 0 && ['fallback', 'default'].includes(raw(index - 1))));
+    if (!target) return [];
+    const end = tokens.findIndex((next, nextIndex) => nextIndex > index && (next.depth < token.depth || (next.line > token.line && next.parens === 0)));
+    return [tokens.slice(index + 1, end < 0 ? undefined : end).map(part => text.slice(part.from, part.to))];
+  });
+}

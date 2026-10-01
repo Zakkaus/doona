@@ -3,24 +3,7 @@ import {configNotes, version} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
-import {
-  configMetadata,
-  saveReason,
-  saveView,
-  validateReason,
-  sourceView,
-  readOnlyBadge,
-  diagnosticRows,
-  moduleEditTip,
-  sectionSummaries,
-  sectionRange,
-  sectionMarks,
-  sectionUnder,
-  sourceMarks,
-  splice,
-  type SectionDraft
-} from './view';
-import {scanConfig} from '../../dae/text';
+import {configMetadata, saveReason, saveView, validateReason, sourceView, readOnlyBadge, diagnosticRows, sectionSummaries, sourceMarks} from './view';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
 import {diagnose} from '../../api/mock/config';
@@ -146,22 +129,6 @@ function source(content: string, id = 'main'): ConfigSource {
   };
 }
 
-it.each(['\n', '\r\n'])('splices only the selected section, preserving surrounding bytes with %j', newline => {
-  const before = ['# untouched', 'global { log_level: info }', '  '].join(newline);
-  const section = ['routing {', '  fallback: direct', '}'].join(newline);
-  const after = [' # keep this comment', "node { a: 'vless://x' }", ''].join(newline);
-  const text = before + section + after;
-  const block = scanConfig(text).blocks.find(block => block.name === 'routing')!;
-  const edited = section.replace('direct', 'proxy');
-  expect(splice(text, block, edited)).toBe(before + edited + after);
-  expect(sectionRange(source(text), block)).toBe('config.dae:3-5');
-});
-
-it('splices a final section without adding a trailing newline', () => {
-  const text = '# prefix\nrouting { fallback: direct }';
-  expect(splice(text, scanConfig(text).blocks[0], 'routing { fallback: block }')).toBe('# prefix\nrouting { fallback: block }');
-});
-
 it('keeps nested blocks inside their module and separates routing occurrences by file', () => {
   const main = source(`dns {
   upstream { a: 'udp://1.1.1.1:53' }
@@ -186,63 +153,14 @@ routing {
   expect(cards[0].block).toBeNull();
   expect(cards[0].summary).toContain('config.dae');
   // Each section links the page for what it defines; the rule sections open their rule lists.
-  expect(cards.map(card => card.href)).toEqual([null, '#/nodes', '#/nodes', '#/policies', '#/rules?tab=dns', '#/rules?tab=list', '#/rules?tab=list']);
-});
-
-it('carries a section draft over a change outside it and stops at a change to the section itself', () => {
-  const file = (routing: string, prefix = '', digest = 'a') => ({
-    ...source(prefix + `global { log_level: info }\nrouting {\n${routing}\n}`),
-    content_sha256: digest
-  });
-  const draftOn = (loaded: ConfigSource, text: string): SectionDraft => {
-    const section = sectionSummaries([loaded], honk, 'en', t).find(item => item.kind === 'routing')!;
-    return {section: {...section, source: section.source!, block: section.block!}, text};
-  };
-  const base = file('  fallback: direct');
-  const typed = 'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}';
-  const draft = draftOn(base, typed);
-  const now = (loaded: ConfigSource) => sectionSummaries([loaded], honk, 'en', t);
-  expect(sectionUnder(draft, now(base))).toEqual({next: null, conflict: false});
-  // Outside the section: carried over, and the splice keeps the other change.
-  const outside = file('  fallback: direct', '# concurrent edit\n', 'b');
-  const carried = sectionUnder(draft, now(outside));
-  expect(carried.conflict).toBe(false);
-  expect(carried.next?.text).toBe(typed);
-  expect(splice(outside.content!, carried.next!.section.block, carried.next!.text)).toBe('# concurrent edit\nglobal { log_level: info }\n' + typed);
-  // The section itself: a conflict, and keeping the draft carries it over to the new section.
-  const inside = file('  fallback: block', '', 'c');
-  const refused = sectionUnder(draft, now(inside));
-  expect(refused.conflict).toBe(true);
-  expect(refused.next).toMatchObject({text: typed, section: {source: {content_sha256: 'c'}}});
-  // The same text written on disk, or a draft not typed in yet, has nothing to settle.
-  expect(sectionUnder(draft, now({...file(typed.slice(10, -2)), content_sha256: 'd'})).conflict).toBe(false);
-  const untouched = sectionUnder(draftOn(base, 'routing {\n  fallback: direct\n}'), now(inside));
-  expect(untouched).toMatchObject({conflict: false, next: {text: 'routing {\n  fallback: block\n}'}});
-  // A section removed on disk can only be cancelled.
-  expect(sectionUnder(draft, now({...source('global { log_level: info }'), content_sha256: 'e'}))).toEqual({next: null, conflict: true});
-});
-
-it('maps only diagnostics within the edited section using its current line count', () => {
-  const text = '# before\n\nglobal { log_level: info }\nrouting {\n  fallback: direct\n}';
-  const block = scanConfig(text).blocks[1];
-  const diagnostic = {...configNotes[0], source_id: 'main', level: 'error' as const};
-  const marks = sectionMarks(
-    [
-      {...diagnostic, line: 3},
-      {...diagnostic, line: 4},
-      {...diagnostic, line: 7},
-      {...diagnostic, line: 8},
-      {...diagnostic, line: null},
-      {...diagnostic, source_id: 'other', line: 5}
-    ],
-    'main',
-    block,
-    'routing {\n  domain(example.org) -> proxy\n  fallback: direct\n}',
-    t
-  );
-  expect(marks.map(mark => [mark.line, mark.column])).toEqual([
-    [1, 3],
-    [4, 3]
+  expect(cards.map(card => card.href)).toEqual([
+    '#/settings?card=global',
+    '#/nodes',
+    '#/nodes',
+    '#/policies',
+    '#/rules?tab=dns',
+    '#/rules?tab=list',
+    '#/rules?tab=list'
   ]);
 });
 
@@ -256,7 +174,6 @@ it('shows the same localized diagnostic in rows and both editor marks', () => {
   expect(rows[0].message).toBe(summary);
   expect(rows[0].detail).toContain(described);
   expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(described);
-  expect(sectionMarks([item], 'main', scanConfig(text).blocks[0], text, translateTW)[0].message).toBe(described);
   // The page's own words already are the backend's in English.
   expect(sourceMarks([item], 'main', t)[0].message).toBe('No group named "nowhere"');
 });
@@ -357,12 +274,6 @@ it('says why Save is disabled, and names the shortcut otherwise', () => {
   expect(saveView(null, true, null, true, t)).toEqual({disabled: false, tip: t('config.saveShortcutMac')});
   // A refetch that made the source read-only while a draft was open: Save is refused with the reason.
   expect(saveView(null, false, t('config.secretNote'), false, t)).toEqual({disabled: true, tip: t('config.secretNote')});
-});
-
-it('tips why a module cannot be edited: another draft first, then a change still being applied', () => {
-  expect(moduleEditTip(true, true, t)).toBe(t('config.moduleEditBlocked'));
-  expect(moduleEditTip(false, true, t)).toBe('Another change is being applied');
-  expect(moduleEditTip(false, false, t)).toBeUndefined();
 });
 
 it('says why Apply is disabled, and nothing while it can run or another change is applied', () => {

@@ -9,9 +9,9 @@ test.describe('translated configuration text', () => {
   test('shows one localized diagnostic in the row and editor tooltip', async ({page}) => {
     await page.goto('/#/config?source=src-rules');
     const editor = page.locator('.cm-content[contenteditable="true"]');
-    await editor.fill((await editor.innerText()) + '\nrouting { fallback: nowhere }\n');
+    await editor.fill((await editor.innerText()) + '\nunknown_section {}\n');
     await page.getByRole('button', {name: translate('zh-TW', 'config.validate'), exact: true}).click();
-    const message = translate('zh-TW', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
+    const message = translate('zh-TW', 'config.diagnostic.unknownSection', {name: 'unknown_section'});
     await expect(page.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(message);
     await expect(async () => {
       // The mark can be redrawn under a pointer that never moved, which raises no new hover.
@@ -21,16 +21,19 @@ test.describe('translated configuration text', () => {
     }).toPass();
   });
 
-  test('renders module diagnostic tooltips in the language chosen in Settings', async ({page}) => {
+  test('renders source diagnostic tooltips in the language chosen in Settings', async ({page}) => {
     const checkDiagnostic = async (lang: 'zh-TW' | 'en') => {
-      await page.goto('/#/config');
-      const routing = page.getByRole('region', {name: 'routing', exact: true});
-      await routing.getByRole('button', {name: translate(lang, 'config.edit'), exact: true}).click();
-      await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: auto\n}');
-      const message = translate(lang, 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
-      await expect(routing.getByRole('list', {name: translate(lang, 'config.diagnostics')})).toContainText(message);
-      await routing.locator('.cm-lintRange-error').hover();
-      await expect(page.locator('.cm-tooltip-lint')).toContainText(message);
+      await page.goto('/#/config?source=src-rules');
+      const editor = page.locator('.cm-content[contenteditable="true"]');
+      await editor.fill((await editor.innerText()) + '\nunknown_section {}\n');
+      await page.getByRole('button', {name: translate(lang, 'config.validate'), exact: true}).click();
+      const message = translate(lang, 'config.diagnostic.unknownSection', {name: 'unknown_section'});
+      await expect(page.getByRole('list', {name: translate(lang, 'config.diagnostics')})).toContainText(message);
+      await expect(async () => {
+        await page.mouse.move(0, 0);
+        await editor.locator('.cm-lintRange-error').last().hover();
+        await expect(page.locator('.cm-tooltip-lint')).toContainText(message, {timeout: 1500});
+      }).toPass();
     };
     await checkDiagnostic('zh-TW');
     await page.locator('.rp-nav[href="#/settings"]').click();
@@ -91,16 +94,16 @@ for (const [lang] of LANGS) {
       expect(keys).toContain(`${translate(lang, 'shell.keyCtrl')} S`);
     });
     test('editor completion suggestions have a localized accessible name', async ({page}) => {
-      await page.goto('/#/config?tab=source');
+      await page.goto('/#/config?tab=source&source=src-rules');
       const editor = page.locator('.cm-content[contenteditable="true"]');
       await editor.click();
-      await page.keyboard.press('ControlOrMeta+A');
-      await page.keyboard.insertText('global {\n  log_l');
+      await page.keyboard.press('ControlOrMeta+End');
+      await page.keyboard.insertText('\ndns {\n  dom');
       await page.keyboard.press('Control+Space');
       const suggestions = page.getByRole('listbox', {name: translate(lang, 'cm.completions'), exact: true});
       await expect(suggestions).toBeVisible();
-      await suggestions.getByRole('option', {name: 'log_level', exact: true}).click();
-      await expect(editor).toContainText('log_level:');
+      await suggestions.getByRole('option', {name: 'domain', exact: true}).click();
+      await expect(editor).toContainText('domain(');
     });
   });
 }

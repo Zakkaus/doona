@@ -27,7 +27,7 @@ const resourcePages: Record<keyof typeof resourceLabels, string> = {
   providers: href('nodes'),
   rules: href('rules', {tab: 'list'}),
   config: href('config'),
-  config_validate: href('config', {tab: 'validate'}),
+  config_validate: href('config', {tab: 'source', panel: 'diagnostics'}),
   runtime_settings: href('settings', {card: 'runtime'}),
   geodata: href('settings', {card: 'geodata'})
 };

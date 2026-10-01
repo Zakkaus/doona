@@ -1,13 +1,15 @@
+import {sourceForms, sameFormValues} from './sourceForms';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
-import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult, EffectiveConfig} from '../../api/model';
+import {useCapabilities, useConfig, useConfigEditor, useVersion, useRules, useDnsRules, useGroups} from '../../store';
+import {readGroupEntries} from '../../dae/groups';
+import {groupQuery} from '../shared/link';
+import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../../api/model';
 import {ApiError} from '../../api/error';
-import {localTime} from '../../i18n/format';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
-import {pickTab, tabQuery, within} from '../../shell/route';
+import {buildHash, href, pickTab, tabQuery, within} from '../../shell/route';
 import {configMetadata, saveReason, saveView, validateReason, sourceView, diagnosticRows, sourceMarks, readOnlyBadge} from './view';
 import {configTabs} from './nav';
 import {useDraftGuard} from '../../shell/draft';
@@ -62,7 +64,7 @@ export function useConfigPage({go, query}: PageProps) {
   const openSource = (sourceId: string, line: number | null) =>
     go('config', within(query, {tab: 'source', source: sourceId, line: line === null ? null : String(line)}));
   const focusLine = Number(params.get('line')) || null;
-  const sourceDiagnostics = useMemo(() => (config.data?.diagnostics ?? []).filter(item => item.source_id === selectedId), [config.data, selectedId]);
+  const sourceDiagnostics = config.data?.diagnostics ?? [];
   const counts = useMemo(() => {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
@@ -78,7 +80,7 @@ export function useConfigPage({go, query}: PageProps) {
   const canWrite = !!source && !readOnly;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
   const tab = pickTab(
-    query,
+    params.get('tab') === 'validate' ? within(query, {tab: 'source'}) : query,
     tabs.map(item => item.id),
     fallback
   );
@@ -88,25 +90,18 @@ export function useConfigPage({go, query}: PageProps) {
         sources,
         open: openSource,
         diagnostics: sourceDiagnostics,
-        // A read-only source has nothing to check before a save, so it offers no validation of its own.
-        canValidate: canValidate && canWrite,
+        canValidate: canValidate && (source.kind === 'main' || source.kind === 'include'),
         canWrite,
         readOnly,
         isComplete,
         editor,
-        focusLine
+        focusLine,
+        generation: config.data?.generation_id ?? '',
+        focusDiagnostics: params.get('tab') === 'validate' || params.get('panel') === 'diagnostics'
       }
     : null;
   const newSourceProps: NewSourceProps | null =
     resources?.config.create === true && resources.config.writable === true ? {sources, refetch: config.refetch, open: id => openSource(id, null)} : null;
-  const validateProps: ValidateTabProps | null = config.data
-    ? {
-        config: config.data,
-        editor,
-        canValidate,
-        open: openSource
-      }
-    : null;
   return {
     error: config.error,
     reload: config.refetch,
@@ -121,16 +116,7 @@ export function useConfigPage({go, query}: PageProps) {
     select,
     sourceProps,
     newSourceProps,
-    modulesProps: config.data
-      ? {
-          config: config.data,
-          editor,
-          canWrite: configWritable,
-          canValidate,
-          open: openSource
-        }
-      : null,
-    validateProps,
+    modulesProps: config.data ? {config: config.data} : null,
     sourceModel: source ? {...sourceView(source, locale, t), readOnly} : null,
     sourceOptions: sources.map(item => {
       const view = sourceView(item, locale, t);
@@ -154,11 +140,24 @@ export type SourceCardProps = {
   isComplete: (source: ConfigSource) => boolean | undefined;
   editor: ConfigEditor;
   focusLine: number | null;
+  generation: string;
+  focusDiagnostics: boolean;
 };
 
-export function useSourceCard({source, sources, diagnostics, canValidate, canWrite, readOnly, isComplete, editor, focusLine}: SourceCardProps) {
+export function useSourceCard({source, sources, diagnostics, canValidate, canWrite, readOnly, isComplete, editor, focusLine, generation}: SourceCardProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const engine = engineOf(useVersion().data);
+  const capabilities = useCapabilities().data?.resources;
+  const routing = useRules(!!focusLine && capabilities?.rules.available === true).data;
+  const dns = useDnsRules(!!focusLine && capabilities?.dns_rules.available === true).data;
+  const groups = useGroups(!!focusLine && capabilities?.groups.available === true).data;
+  const locatedGroup = focusLine ? readGroupEntries(source.content).find(entry => entry.from < focusLine && entry.to >= focusLine - 1) : undefined;
+  const groupLink = locatedGroup && groupQuery(groups, locatedGroup.name);
+  const rule = routing?.rules.find(rule => rule.source?.source_id === source.id && rule.source.line === focusLine);
+  const dnsList = dns?.request.some(rule => rule.source?.source_id === source.id && rule.source.line === focusLine) ? 'request' : 'response';
+  const dnsRule = dns?.[dnsList].find(rule => rule.source?.source_id === source.id && rule.source.line === focusLine);
+
   // The text typed over the loaded source; null while it is unchanged. If-Match uses the draft's original digest to
   // reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
@@ -168,7 +167,8 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   // The read-only notice shows once for this source; the card remounts when another source is chosen.
   const told = useRef(false);
   const saveErrors = editor.errorSource === source.id ? editor.diagnostics : null;
-  const shown = saveErrors ?? found ?? diagnostics;
+  const shown = useMemo(() => saveErrors ?? found ?? (draft ? [] : diagnostics), [saveErrors, found, draft, diagnostics]);
+  useLinked(generation, () => setFound(null));
   const marks = useMemo(() => sourceMarks(shown, source.id, t), [shown, source.id, t]);
   const text = draft?.text ?? source.content ?? '';
   // Names to complete after "->": the groups of every source, this one as edited.
@@ -216,13 +216,18 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
     setDraft(null);
   };
   const cancel = () => {
+    editor.cancel();
     setDraft(null);
     setFound(null);
   };
   // Typing back to the loaded text leaves nothing to save, so it ends the draft as a cancel does.
   const change = (value: string) => {
+    editor.cancel();
     if (value === source.content) cancel();
-    else setDraft(prev => ({text: value, origin: prev?.origin ?? source}));
+    else {
+      setFound(null);
+      setDraft(prev => ({text: value, origin: prev?.origin ?? source}));
+    }
   };
   const refused = readOnly
     ? () => {
@@ -234,9 +239,33 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
   const view = sourceView(source, locale, t);
   return {
     writable,
+    links: groupLink
+      ? [{from: 0, to: 0, line: focusLine!, label: locatedGroup!.name, href: buildHash('policies', groupLink)}]
+      : rule || dnsRule
+        ? [
+            {
+              from: 0,
+              to: 0,
+              line: focusLine!,
+              label: rule?.expression ?? dnsRule!.expression,
+              href: href('rules', {
+                tab: rule ? 'list' : 'dns',
+                view: rule ? 'advanced' : null,
+                edit: rule?.rule_id ?? dnsRule!.rule_id,
+                list: rule ? null : dnsList
+              })
+            }
+          ]
+        : sourceForms(text, source.id, engine, source.kind),
+    acceptChange: (before: string, after: string) => {
+      const accepted = sameFormValues(before, after, source.id, engine, source.kind);
+      if (!accepted) toast('info', t('config.formOwned'));
+      return accepted;
+    },
     note: readOnly?.note ?? t(canValidate ? 'config.editNoteValidate' : 'config.editNote'),
     refused,
     shown: diagnosticRows(shown, sources, locale, t),
+    checkedDraft: found !== null || saveErrors !== null,
     marks,
     text,
     outbounds,
@@ -263,70 +292,5 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
       : canValidate && !editor.busy
         ? validateReason(candidates, sources, isComplete, t)
         : null
-  };
-}
-
-export type ValidateTabProps = {
-  config: EffectiveConfig;
-  editor: ConfigEditor;
-  canValidate: boolean;
-  open: (sourceId: string, line: number | null) => void;
-};
-
-export function useValidateTab({config, editor}: ValidateTabProps) {
-  const t = useT();
-  const locale = LOCALE[useLang()];
-  const [level, setLevel] = useState('all');
-  const [run, setRun] = useState<ConfigValidationResult | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  // A run describes the configuration it checked; after a reload or a save the accepted diagnostics apply again.
-  useLinked(config.generation_id, () => {
-    setRun(null);
-    setSelected(null);
-  });
-  const rows = useMemo(
-    () => diagnosticRows(run?.diagnostics ?? config.diagnostics, config.sources, locale, t),
-    [run, config.diagnostics, config.sources, locale, t]
-  );
-  // Counts stay per diagnostic; a row may stand for several identical ones.
-  const count = (which: ConfigDiagnostic['level']) => rows.reduce((sum, item) => sum + (item.level === which ? item.count : 0), 0);
-  const errors = count('error');
-  const warnings = count('warning');
-  const shown = level === 'all' ? rows : rows.filter(item => item.level === level);
-  const isComplete = useCompleteness(config.sources);
-  const candidates = useValidationSources(config.sources, isComplete);
-  const validate = () => {
-    if (!candidates) return;
-    void editor.validate({sources: candidates, mode: 'full'}).then(result => {
-      // A fresh list has new rows; the old selection would point at a different diagnostic.
-      if (result) {
-        setRun(result);
-        setSelected(null);
-      }
-    });
-  };
-  return {
-    level,
-    setLevel,
-    selected,
-    setSelected,
-    shown,
-    validate,
-    summaryTone: errors ? ('err' as const) : warnings ? ('warn' as const) : ('ok' as const),
-    summary: errors
-      ? t('config.failed', {errors: t('config.errors', {n: errors}), warnings: t('config.warnings', {n: warnings})})
-      : warnings
-        ? t('config.passedWarnings', {n: warnings})
-        : t('config.passed'),
-    lastRun: run ? t('config.lastRun', {time: localTime(run.validated_at, locale)}) : t('config.acceptedDiagnostics', {generation: config.generation_id}),
-    validating: editor.busy === 'validate',
-    blocked: !!editor.busy || !candidates,
-    reason: editor.busy ? null : validateReason(candidates, config.sources, isComplete, t),
-    levels: [
-      ['all', t('config.levelAll', {n: errors + warnings + count('info')})],
-      ['error', t('config.levelErrors', {n: errors})],
-      ['warning', t('config.levelWarnings', {n: warnings})],
-      ['info', t('config.levelInfo', {n: count('info')})]
-    ] as Array<[string, string]>
   };
 }
