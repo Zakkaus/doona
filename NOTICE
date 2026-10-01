@@ -46,3 +46,15 @@ The combined images are licensed under CC BY-SA 4.0; see LICENSES/CC-BY-SA-4.0.t
 src/ui/styles/palettes/qiangguo/flag-*.svg draw the five stars with the geometry
 of the flag of the People's Republic of China, public domain:
 https://commons.wikimedia.org/wiki/File:Flag_of_the_People%27s_Republic_of_China.svg
+
+Twemoji Country Flags
+The flags-only font in src/ui/assets/TwemojiCountryFlags.woff2 is vendored
+unchanged from country-flag-emoji-polyfill 0.1.10 by TalkJS. It is a subset
+of Twemoji Mozilla by the Mozilla Foundation, using Twemoji artwork by
+Twitter and other contributors. The subset retains regional indicators
+and the England, Scotland and Wales tag sequences.
+Source: https://github.com/talkjs/country-flag-emoji-polyfill
+Font build: https://github.com/mozilla/twemoji-colr
+Artwork: https://github.com/twitter/twemoji
+The artwork is licensed under CC BY 4.0; see LICENSES/CC-BY-4.0.txt.
+Mozilla's font build code is Apache-2.0; see LICENSES/Apache-2.0.txt.

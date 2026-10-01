@@ -78,7 +78,9 @@ body {
 /* Integer line heights everywhere so 1px rules land on whole pixels. The language's font stack (FONT in src/i18n) is set
    on the root with its lang; the fallback is the default language's stack. */
 body {
-  font: 14px/20px var(--rp-font-family, 'Noto Sans TC', system-ui, sans-serif);
+  font:
+    14px/20px 'Twemoji Country Flags',
+    var(--rp-font-family, 'Noto Sans TC', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
 }
 * {

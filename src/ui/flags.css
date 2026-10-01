@@ -1,0 +1,6 @@
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  src: url('./assets/TwemojiCountryFlags.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0061-E007A, U+E007F;
+}

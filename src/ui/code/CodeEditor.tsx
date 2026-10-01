@@ -69,7 +69,8 @@ const theme = EditorView.theme({
   },
   '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-accent)', boxShadow: '0 0 0 1px var(--rp-accent)'},
   '.cm-scroller': {
-    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
+    fontFamily:
+      "'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     lineHeight: '20px',
     maxHeight: '70vh',
     fontVariantLigatures: 'none',
@@ -106,7 +107,8 @@ const theme = EditorView.theme({
   '.cm-tooltip': {backgroundColor: 'var(--rp-surface)', border: '1px solid var(--rp-hl-high)', borderRadius: 'var(--rp-r-md)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {backgroundColor: 'var(--rp-selected)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul': {
-    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
+    fontFamily:
+      "'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     fontVariantLigatures: 'none'
   },
   '.cm-panels': {backgroundColor: 'var(--rp-surface)', color: 'var(--rp-text)'},

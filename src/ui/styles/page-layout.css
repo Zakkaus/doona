@@ -89,7 +89,9 @@
 }
 /* Code shows what was typed: a programming font's ligatures would draw `->` or `!=` as one glyph. */
 .rp-code {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace;
+  font-family:
+    'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono',
+    monospace;
   font-size: var(--rp-text-sm);
   font-variant-ligatures: none;
 }
