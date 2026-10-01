@@ -369,9 +369,10 @@ test('the default member is offered only while the dialog selects manual selecti
   await expect(member).toHaveCount(0);
   await policy.focus();
   await expect(policy).toBeFocused();
-  // Use the keyboard so the focus check does not depend on pointer focus during popover teardown.
-  await policy.press('ArrowDown');
-  await page.getByRole('option', {name: /^Manual/}).press('Enter');
+  // Choose by typing on the closed picker: no popover opens, so the check below sees only what the new field does to
+  // focus, not React Aria's focus restore after a popover closes, which runs a frame later and lost focus on CI.
+  await policy.press('m');
+  await expect(policy).toContainText('Manual');
   await expect(page.getByRole('listbox')).toHaveCount(0);
   await expect(member).toBeVisible();
   // Appearing later, the picker leaves focus where it was.
