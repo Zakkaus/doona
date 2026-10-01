@@ -9,15 +9,15 @@ import {ActionHelp} from './Button';
 export const cardClass = (...layout: Array<string | false | undefined>) => cx('rp-card', ...layout);
 
 type Tint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export type TileHeader = {icon: ReactNode; tint: Tint; kind: 'metric' | 'control'};
+export type TileHeader = {icon: ReactNode; tint: Tint; kind: 'metric' | 'control'; layout?: 'responsive'};
 
 // A dashboard tile's caption: an icon in a role colour, the label, then any control the caption holds.
-export function TileHead({icon, tint, kind, label, children}: TileHeader & {label: string; children?: ReactNode}) {
+export function TileHead({icon, tint, kind, layout, label, children}: TileHeader & {label: string; children?: ReactNode}) {
   return (
-    <span className={`${kind === 'metric' ? 'rp-tile-head' : 'rp-qlabel'} rp-tint-c${tint}`}>
+    <span className={`${kind === 'metric' ? 'rp-tile-head' : 'rp-qlabel'} rp-tint-c${tint}`} data-layout={layout}>
       {icon}
-      <span className="rp-tile-caption">{label}</span>
-      {children && <span className="rp-tile-controls">{children}</span>}
+      {kind === 'metric' ? <span className="rp-tile-caption">{label}</span> : label}
+      {kind === 'metric' && children ? <span className="rp-tile-controls">{children}</span> : children}
     </span>
   );
 }
@@ -27,11 +27,13 @@ export function TileHead({icon, tint, kind, label, children}: TileHeader & {labe
 // to assistive technology. With `tile` the title is a caption after an icon in a role colour, not a heading, and names
 // nothing: a metric tile's small caption holds its own control (`aside`), and a control card's label sits beside its
 // control. An untitled card holds its own header, and takes `aria-label` when it needs a name.
+// `titleVariant="caption"` keeps a titled region's name without adding a heading.
 // A tile's caption needs its words, so a card with `tile` must have a `title`.
 type CardHeader = {tile: TileHeader; title: string} | {tile?: undefined; title?: string};
 
 export function Card({
   title,
+  titleVariant = 'heading',
   level = 2,
   titleId,
   tile,
@@ -46,6 +48,7 @@ export function Card({
   children,
   ref
 }: CardHeader & {
+  titleVariant?: 'heading' | 'caption';
   level?: 2 | 3;
   // A heading id other code relies on, such as a `?card=` scroll target.
   titleId?: string;
@@ -68,11 +71,12 @@ export function Card({
   const noteId = useId();
   const headingId = titleId ?? ownTitleId;
   const Heading = level === 2 ? 'h2' : 'h3';
+  const Title = titleVariant === 'caption' ? 'span' : Heading;
   const titled = title != null && !tile;
   const named = title != null && (
-    <Heading className="rp-h3" id={headingId}>
+    <Title className={titleVariant === 'caption' ? 'rp-qlabel' : 'rp-h3'} id={headingId}>
       {title}
-    </Heading>
+    </Title>
   );
   const heading = tile ? (
     <TileHead {...tile} label={title}>
@@ -88,7 +92,7 @@ export function Card({
       ref={ref}
       id={id}
       tabIndex={tabIndex}
-      className={cardClass(titled && 'rp-titled', className)}
+      className={cardClass(titled && 'rp-titled', tile?.layout === 'responsive' && 'rp-tile-responsive', className)}
       aria-labelledby={titled && !label ? headingId : undefined}
       aria-label={label}
     >

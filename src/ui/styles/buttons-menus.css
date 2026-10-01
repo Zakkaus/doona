@@ -148,6 +148,12 @@
   width: 16px;
   height: 16px;
 }
+.rp-btn.rp-help-control {
+  width: var(--rp-control);
+  height: var(--rp-control);
+  margin-block: 0;
+  flex: none;
+}
 /* A control or a title with its help button beside it. */
 .rp-help-row {
   display: inline-flex;

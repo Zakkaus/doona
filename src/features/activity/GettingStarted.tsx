@@ -18,6 +18,7 @@ export function GettingStarted({model: vm}: {model: ReturnType<typeof useGetting
   return (
     <Card
       title={t('act.setup.title')}
+      titleVariant="caption"
       aside={
         <Button quiet small icon label={t('act.setup.dismiss')} onPress={vm.dismiss}>
           <Close />

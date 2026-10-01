@@ -12,9 +12,9 @@ export function NodeCard({connections}: {connections: ConnectionList | undefined
     <Card
       className="rp-latency"
       title={t('act.latency')}
-      tile={{icon: <Clock />, tint: 5, kind: 'metric'}}
+      tile={{icon: <Clock />, tint: 5, kind: 'metric', layout: 'responsive'}}
       aside={
-        <HelpRow help={{title: t('act.latency'), text: t('act.groupPickHelp')}}>
+        <HelpRow size="control" help={{title: t('act.latency'), text: t('act.groupPickHelp')}}>
           <GroupMenu label={t('policy.pickGroups')} model={vm} />
         </HelpRow>
       }
