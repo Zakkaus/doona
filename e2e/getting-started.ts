@@ -5,7 +5,7 @@ import {templates} from '../src/dae/templates';
 export async function freshBackend(page: Page) {
   const backend = await mockBackend(page);
   const runtime = await backend.api.runtime();
-  await page.route('**/api/v1/logs?*', route =>
+  await page.route(/\/api\/v1\/logs(?:\?|$)/, route =>
     fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
   );
   backend.handlers['POST nodes'] = request => backend.api.createNode(request.postDataJSON());
