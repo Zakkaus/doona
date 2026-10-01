@@ -15,6 +15,7 @@ import {
   symlogPosition,
   timeBuckets,
   visibleRows,
+  mountedRanges,
   waffleCells
 } from './layout';
 
@@ -135,14 +136,42 @@ it.each([
   expect(lineSpan(range, max)).toEqual(line);
 });
 
-// A long expanded group mounts the rows that meet the viewport plus the overscan, never past either end of the list.
+// A long expanded group mounts the rows that meet the viewport plus the overscan, never past either end of the list,
+// and at least its nearest row while it is off screen.
 it.each([
-  {name: 'a list starting below the viewport', count: 3000, top: 2000, end: 0},
+  {name: 'a list starting below the viewport', count: 3000, top: 2000, end: 1},
   {name: 'a list starting in the viewport', count: 3000, top: 300, start: 0, end: 32},
   {name: 'a list scrolled into its middle', count: 3000, top: -28000, start: 990, end: 1043},
   {name: 'a list scrolled to its end', count: 3000, top: -83500, start: 2972, end: 3000},
-  {name: 'a list scrolled past', count: 3000, top: -90000, start: 3000, end: 3000},
-  {name: 'a short list', count: 12, top: 0, start: 0, end: 12}
+  {name: 'a list scrolled past', count: 3000, top: -90000, start: 2999, end: 3000},
+  {name: 'a short list', count: 12, top: 0, start: 0, end: 12},
+  {name: 'an empty list', count: 0, top: 0, start: 0, end: 0}
 ])('mounts the visible rows of $name', ({count, top, start = 0, end}) => {
   expect(visibleRows(count, top, 28, 900, 10)).toEqual({start, end});
+});
+
+// The focused row stays mounted outside the window, merged with it where they touch.
+it.each([
+  {name: 'no focus', focused: -1, ranges: [{start: 40, end: 80}]},
+  {name: 'a focus inside the window', focused: 50, ranges: [{start: 40, end: 80}]},
+  {
+    name: 'a focus above the window',
+    focused: 3,
+    ranges: [
+      {start: 3, end: 4},
+      {start: 40, end: 80}
+    ]
+  },
+  {
+    name: 'a focus below the window',
+    focused: 900,
+    ranges: [
+      {start: 40, end: 80},
+      {start: 900, end: 901}
+    ]
+  },
+  {name: 'a focus just above the window', focused: 39, ranges: [{start: 39, end: 80}]},
+  {name: 'a focus just below the window', focused: 80, ranges: [{start: 40, end: 81}]}
+])('mounts the rows of a window with $name', ({focused, ranges}) => {
+  expect(mountedRanges({start: 40, end: 80}, focused)).toEqual(ranges);
 });

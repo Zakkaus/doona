@@ -136,7 +136,19 @@ export function lineSpan([low, high]: [number, number], max: number): {start: nu
 export function visibleRows(count: number, top: number, height: number, viewport: number, overscan: number): {start: number; end: number} {
   const start = Math.max(0, Math.min(count, Math.floor(-top / height) - overscan));
   const end = Math.max(start, Math.min(count, Math.ceil((viewport - top) / height) + overscan));
+  // A list wholly off screen still mounts its nearest row, so its row height can be measured again after a resize.
+  if (start === end && count) return start ? {start: count - 1, end: count} : {start: 0, end: 1};
   return {start, end};
+}
+
+// The row ranges a windowed list mounts: the window, and the focused row (-1 for none) wherever it lies, in order and
+// merged where they touch.
+export function mountedRanges(window: {start: number; end: number}, focused: number): Array<{start: number; end: number}> {
+  if (focused < 0 || (focused >= window.start && focused < window.end)) return [window];
+  if (focused === window.end) return [{start: window.start, end: focused + 1}];
+  if (focused === window.start - 1) return [{start: focused, end: window.end}];
+  const row = {start: focused, end: focused + 1};
+  return focused < window.start ? [row, window] : [window, row];
 }
 
 export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {
