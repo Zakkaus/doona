@@ -1,10 +1,14 @@
 import {createContext, useContext, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
+import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
+import {NodeName, FlagEditingContext} from '../../ui/NodeName';
+import {flagKey} from '../../dae/flags';
+import {SettingsContext} from '../../shell/preferences';
+import {flagForName} from '../shared/countryFlags';
+import {FlagField} from '../../ui/FlagPicker';
 import {phoneQuery, useMediaQuery} from '../../ui/hooks';
-import {NodeName} from '../../ui/NodeName';
 import Close from '../../ui/icons/Close';
-import AddCircle from '../../ui/icons/AddCircle';
+import MoreHorizontal from '../../ui/icons/MoreHorizontal';
 import {SearchSelect} from '../../ui/SearchSelect';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import {primaryFirst} from './tableColumns';
@@ -24,6 +28,8 @@ function ProbeButton({row}: {row: NodeTableView['rows'][number]}) {
 export function NodeTable({model: m}: {model: NodeTableView}) {
   const t = useT();
   const phone = useMediaQuery(phoneQuery);
+  const settings = useContext(SettingsContext);
+  const editFlag = useContext(FlagEditingContext);
   const {canManage, writable, sourceBusy, busy, across} = m;
   const columns = useMemo<TableColumn<NodeTableView['rows'][number]>[]>(
     () => [
@@ -67,15 +73,27 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         id: 'actions',
         label: t('ui.actions'),
         hideLabel: phone,
-        minWidth: (canManage ? 108 : 72) + (writable ? 112 : 0),
+        minWidth: canManage ? 148 : 104,
         grow: 0,
         render: row => (
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
-            {writable && (
-              <ChoiceMenu quiet label={row.joinLabel} isDisabled={sourceBusy} items={row.menu} onAction={row.join} searchLabel={t('ui.filterGroups')}>
-                <AddCircle />
-                {t('nodes.addToGroup')}
+            {(writable || editFlag) && (
+              <ChoiceMenu
+                quiet
+                small
+                chevron={false}
+                label={t('nodes.actions')}
+                sections={() => [
+                  ...(writable && !sourceBusy ? [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}] : []),
+                  ...(editFlag
+                    ? [{title: t('flags.region'), hideHeader: true, selectionMode: 'none' as const, value: '', items: [{id: '/flag', label: t('flags.edit')}]}]
+                    : [])
+                ]}
+                onAction={key => (key === '/flag' ? editFlag?.(row.name) : row.join(key))}
+                searchLabel={t('ui.filterGroups')}
+              >
+                <MoreHorizontal />
               </ChoiceMenu>
             )}
             {row.removable && (
@@ -87,7 +105,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       }
     ],
-    [t, across, canManage, writable, sourceBusy, busy, phone]
+    [t, editFlag, across, canManage, writable, sourceBusy, busy, phone]
   );
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
   return (
@@ -107,7 +125,41 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
       </div>
       <ProbeBusy.Provider value={m.probeBusy}>
-        <DataTable label={m.label} loading={m.loading} rows={m.rows} height={520} empty={m.empty} sort={m.sort} onSort={m.setSort} cols={cols} />
+        <DataTable
+          label={m.label}
+          loading={m.loading}
+          rows={m.rows}
+          height={520}
+          empty={m.empty}
+          sort={m.sort}
+          onSort={m.setSort}
+          cols={cols}
+          detail={
+            settings
+              ? row => (
+                  <Card title={t('nodes.details')}>
+                    <div className="rp-list">
+                      <NodeName name={row.name} />
+                      <Kv
+                        items={[
+                          [t('nodes.provider'), row.source],
+                          [t('nodes.protocol'), row.protocol],
+                          [t('nodes.latency'), row.latency],
+                          [t('nodes.groups'), row.groups]
+                        ]}
+                      />
+                      <FlagField
+                        name={row.name}
+                        value={settings.ap.flagOverrides[flagKey(row.name)] ?? 'automatic'}
+                        automaticFlag={flagForName(row.name)}
+                        onChange={value => settings.ap.pickFlag(row.name, value)}
+                      />
+                    </div>
+                  </Card>
+                )
+              : undefined
+          }
+        />
       </ProbeBusy.Provider>
     </>
   );

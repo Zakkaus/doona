@@ -1,5 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
-import {writeSetting, type PaletteId, type Scheme, type Settings, type ToastPlacement, type Wordmark} from './preferences';
+import {updateFlagOverride, writeSetting, type PaletteId, type Scheme, type Settings, type ToastPlacement, type Wordmark} from './preferences';
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
 
@@ -16,6 +16,7 @@ export function useAppearance(stored: Settings) {
   const [palette, setPalette] = useState<PaletteId>(stored.palette);
   const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
   const [mirrored, setMirrored] = useState(stored.mirrored);
+  const [flagOverrides, setFlagOverrides] = useState(stored.flagOverrides);
   const [countryFlags, setCountryFlags] = useState(stored.countryFlags);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
@@ -44,6 +45,14 @@ export function useAppearance(stored: Settings) {
     setCountryFlags(next);
     writeSetting('countryFlags', next ? 'on' : 'off');
   }, []);
+  const pickFlag = useCallback(
+    (name: string, value: string) => {
+      const next = updateFlagOverride(flagOverrides, name, value);
+      setFlagOverrides(next);
+      writeSetting('flagOverrides', JSON.stringify(next));
+    },
+    [flagOverrides]
+  );
   const pickToastPlacement = useCallback((next: ToastPlacement) => {
     setToastPlacement(next);
     writeSetting('toastPlacement', next);
@@ -64,6 +73,8 @@ export function useAppearance(stored: Settings) {
       pickWordmark,
       mirrored,
       pickMirrored,
+      flagOverrides,
+      pickFlag,
       countryFlags,
       pickCountryFlags,
       toastPlacement,
@@ -82,6 +93,8 @@ export function useAppearance(stored: Settings) {
       pickWordmark,
       mirrored,
       pickMirrored,
+      flagOverrides,
+      pickFlag,
       countryFlags,
       pickCountryFlags,
       toastPlacement,

@@ -150,7 +150,7 @@ export function Button({
     </TooltipTrigger>
   );
 }
-function Tip({children, triggerRef}: {children: ReactNode; triggerRef?: RefObject<HTMLElement | null>}) {
+export function Tip({children, triggerRef}: {children: ReactNode; triggerRef?: RefObject<HTMLElement | null>}) {
   return (
     <Tooltip className="rp-tip" offset={6} triggerRef={triggerRef}>
       <OverlayArrow /> {children}

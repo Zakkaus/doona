@@ -15,10 +15,12 @@ import {
   ListBoxItem,
   Label,
   useLocale,
+  TooltipTrigger,
+  Focusable,
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
-import {buttonClass, TextTooltip, useReasonId} from './Button';
+import {Tip, buttonClass, TextTooltip, useReasonId} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
@@ -27,11 +29,12 @@ import {useT, type Translator} from '../i18n';
 import {cx} from './cx';
 import {NodeName} from './NodeName';
 
-export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean};
-export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start' | 'path'}) => {
+export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean; flag?: string | null};
+export const ItemLabel = ({i, cut, reserveFlag = false}: {i: Item; reserveFlag?: boolean; cut?: 'start' | 'path'}) => {
   const split = cut === 'path' ? i.label.lastIndexOf('/') + 1 : 0;
   return (
     <span className="rp-il">
+      {(i.flag || (reserveFlag && i.flag !== undefined)) && <span className="rp-node-flag" data-flag={i.flag} aria-hidden="true" />}
       {i.icon && <span className="ic">{i.icon}</span>}
       {i.nodeName ? (
         <NodeName name={i.label} cut={cut === 'start' ? cut : undefined} />
@@ -43,7 +46,9 @@ export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start' | 'path'}) => {
           <bdi>{i.label.slice(split)}</bdi>
         </TextTooltip>
       ) : (
-        <TextTooltip cut={cut === 'start' ? cut : undefined}>{i.label}</TextTooltip>
+        <TextTooltip cut={cut === 'start' ? cut : undefined} tooltipText={i.label}>
+          {i.label}
+        </TextTooltip>
       )}
     </span>
   );
@@ -51,7 +56,7 @@ export const ItemLabel = ({i, cut}: {i: Item; cut?: 'start' | 'path'}) => {
 // The title and what follows it share a line while both fit; otherwise the rest moves under the title and wraps.
 export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
-    <ItemLabel i={i} />
+    <ItemLabel i={i} reserveFlag />
     {children ?? (i.desc && <span className="desc">{i.desc}</span>)}
   </span>
 );
@@ -149,20 +154,36 @@ export function MenuButton({
     </span>
   ) : null;
   const reasonId = useReasonId(isDisabled);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const trigger = (
+    <RButton
+      ref={triggerRef}
+      className={appearance ? 'rp-select' : buttonClass({quiet, small, icon: !chevron})}
+      aria-label={label}
+      aria-describedby={reasonId}
+      isDisabled={isDisabled}
+      onHoverStart={onIntent}
+      onFocus={onIntent}
+    >
+      {children}
+      {badge}
+      {chevron && <ChevronDown />}
+    </RButton>
+  );
   return (
     <MenuTrigger>
-      <RButton
-        className={appearance ? 'rp-select' : buttonClass({quiet, small, icon: !chevron})}
-        aria-label={label}
-        aria-describedby={reasonId}
-        isDisabled={isDisabled}
-        onHoverStart={onIntent}
-        onFocus={onIntent}
-      >
-        {children}
-        {badge}
-        {chevron && <ChevronDown />}
-      </RButton>
+      {chevron ? (
+        trigger
+      ) : (
+        <TooltipTrigger delay={400}>
+          <Focusable>
+            <span className="rp-tipwrap" tabIndex={-1} data-passive="">
+              {trigger}
+            </span>
+          </Focusable>
+          <Tip triggerRef={triggerRef}>{label}</Tip>
+        </TooltipTrigger>
+      )}
       <Popover className="rp-popover" placement={placement}>
         {content}
       </Popover>
@@ -170,7 +191,14 @@ export function MenuButton({
   );
 }
 
-export type ChoiceSection = {title: string; items: Item[]; value: string; onChange?: (key: string) => void};
+export type ChoiceSection = {
+  title: string;
+  hideHeader?: boolean;
+  items: Item[];
+  value: string;
+  selectionMode?: 'single' | 'none';
+  onChange?: (key: string) => void;
+};
 // A row that opens its own menu of choices, showing the current one, after S2's ActionMenu with submenus.
 // `searchLabel` names the filter field of a list long enough to get one, by what the submenu lists.
 export type ChoiceSubmenu = {label: string; icon?: ReactNode; sections: ChoiceSection[]; searchLabel?: string};
@@ -180,7 +208,7 @@ export type ChoiceAction = {label: string; icon?: ReactNode; onAction: () => voi
 function SectionMenu({
   label,
   labelledBy,
-  sections,
+  sections: source,
   headers = true,
   focusedByCaller,
   onAction,
@@ -188,13 +216,14 @@ function SectionMenu({
 }: {
   label: string;
   labelledBy?: string;
-  sections: ChoiceSection[];
+  sections: ChoiceSection[] | (() => ChoiceSection[]);
   headers?: boolean;
   // The caller moves focus itself, so the menu does not take it to its first item as a trigger's menu does.
   focusedByCaller?: boolean;
   onAction?: (key: string) => void;
   searchLabel?: string;
 }) {
+  const sections = typeof source === 'function' ? source() : source;
   const long = !!searchLabel && longList(itemCount(sections));
   const menu = (
     <Menu
@@ -210,11 +239,11 @@ function SectionMenu({
           key={section.title}
           id={section.title}
           aria-label={headers ? undefined : section.title}
-          selectionMode="single"
+          selectionMode={section.selectionMode ?? 'single'}
           selectedKeys={[section.value]}
           onSelectionChange={section.onChange && pickMenuKey(section.onChange)}
         >
-          {headers && <Header className="rp-sec-h">{section.title}</Header>}
+          {headers && !section.hideHeader && <Header className="rp-sec-h">{section.title}</Header>}
           {section.items.map(item => (
             <MenuChoice key={item.id} item={item} />
           ))}
@@ -445,12 +474,12 @@ export function ChoiceMenu({
         submenus?: never;
       })
     | (NoActions & {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never})
-    | (NotFlat & NoActions & {sections: ChoiceSection[]; onAction?: (key: string) => void; submenus?: never})
+    | (NotFlat & NoActions & {sections: ChoiceSection[] | (() => ChoiceSection[]); onAction?: (key: string) => void; submenus?: never})
     | (NotFlat & {submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; onAction?: never; sections?: never})
   )) {
   // A list read only once the menu opens is not counted ahead; its search loads when it first opens long.
   const long = sections
-    ? longList(itemCount(sections))
+    ? Array.isArray(sections) && longList(itemCount(sections))
     : submenus
       ? submenus.some(submenu => !!submenu.searchLabel && longList(itemCount(submenu.sections)))
       : Array.isArray(items) && longList(items.length);

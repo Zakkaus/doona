@@ -215,6 +215,7 @@ test.describe('phone editor keyboard', () => {
     await expect(editor).toBeVisible();
     const more = page.locator('.rp-editor-toolbar').getByRole('button', {name: 'More actions', exact: true});
     const open = async () => {
+      await expect(page.locator('.rp-popover')).toHaveCount(0);
       await more.focus();
       await page.keyboard.press('Enter');
       await expect(page.getByRole('menuitem')).toHaveText(['Find and replace', 'Go to line', 'Undo', 'Redo', 'Toggle comment']);

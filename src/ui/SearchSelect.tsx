@@ -1,3 +1,4 @@
+import {useRef} from 'react';
 import {Button as RButton, Header, Label, ListBox, ListBoxItem, ListBoxSection, Popover, Select, SelectValue, Text, type Key} from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
@@ -40,6 +41,8 @@ export function SearchSelect({
   // The label beside the trigger, as LabeledSelect's `side`, for a toolbar.
   side?: boolean;
 }) {
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const shown = sections.flatMap(section => section.items).find(item => item.id === value);
   return (
     <Select
@@ -50,18 +53,21 @@ export function SearchSelect({
       }}
       isDisabled={isDisabled}
     >
-      <Label className={side ? 'rp-label' : 'lbl'}>{label}</Label>
-      <RButton className="rp-selectbtn">
-        {/* The list is built only while the popover is open, so the trigger finds the chosen item itself. */}
-        <SelectValue>{() => (shown ? <ItemLabel i={shown} /> : value)}</SelectValue>
-        <ChevronDown />
-      </RButton>
+      <div ref={fieldRef} className={side ? 'rp-cluster' : 'rp-field'}>
+        <Label className={side ? 'rp-label' : 'lbl'}>{label}</Label>
+        <RButton ref={buttonRef} className="rp-selectbtn">
+          {/* The list is built only while the popover is open, so the trigger finds the chosen item itself. */}
+          <SelectValue>{() => (shown ? <ItemLabel i={shown} /> : value)}</SelectValue>
+          <ChevronDown />
+        </RButton>
+      </div>
       {description && (
         <Text slot="description" className="rp-label">
           {description}
         </Text>
       )}
-      <Popover className="rp-popover rp-search-popover" placement="bottom start">
+      {/* Include the label in the anchor so a flipped list clears both label and trigger. */}
+      <Popover className="rp-popover rp-search-popover" placement="bottom start" triggerRef={side ? buttonRef : fieldRef}>
         <SearchList label={searchLabel}>
           <ListBox className="rp-menu-scroll">
             {sections.map(section =>

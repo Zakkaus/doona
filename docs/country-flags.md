@@ -20,14 +20,13 @@ No CDN, platform sniffing or emoji-replacement script runs in the browser.
 ## Optional prefixes
 
 Settings > Appearance offers Show country flags, default on. The shell passes
-the enabled lookup into the kit's `CountryFlagsContext`. `NodeName` owns display
+the shared lookup into the kit's `CountryFlagsContext`. `NodeName` owns display
 prefixes and truncation, including the table, policy tiles and pickers, Activity,
 global search, latency charts and their tips, connection rows and routing-tree nodes. Picker items declare
 `nodeName`; IDs, `textValue`, filters, sort keys and configuration writes keep the
-real name. Group and source names receive the font rendering without guessing
-new prefixes.
+real name. Group and source names retain their original text.
 
-`src/features/shared/geo.ts` owns the region aliases used by both flags and the
+`src/dae/regions.ts` owns the region aliases used by both flags and the
 Policies region filter. Latin aliases require Unicode letter boundaries; Chinese
 names may occur beside other Chinese text. Codes that are common English words
 (`IN`, `IT`, `MY`, `NO`, `ID`) require uppercase. The first location wins, then the
@@ -36,11 +35,28 @@ An existing regional-indicator pair or subdivision flag suppresses decoration.
 Both region and flag lookups cache positive and negative results, each retaining
 at most 2,048 names and evicting the oldest entry when full.
 
+Change flag… in a node's row action menu opens a searchable flag picker. The
+node row opens its details panel, with the same labelled Flag field beside its
+properties. The picker uses common region names, with other names supplied by
+`Intl.DisplayNames` in the current language. Hong Kong, Taiwan, Japan, Singapore,
+the United States and South Korea appear first, followed by the detector's other
+regions, then the remaining regions in locale order. Search matches common and
+official names, English names, ISO codes and the detector's aliases.
+Automatic shows the detected region. No flag suppresses the added prefix.
+Original flags embedded in a name remain part of that name and cannot be hidden
+or replaced by a display override. Their Flag field is disabled and explains
+this limit.
+
+The `doona-flag-overrides` browser preference holds at most 512 node entries,
+keyed by node name. Automatic removes an entry. Older group entries are ignored.
+Overrides take precedence over the memoized detector and update every shared
+renderer immediately. The master switch hides all added node prefixes.
+
 Added flags are empty, `aria-hidden` spans with CSS-generated content and
 `user-select: none`. The DOM text, selections, clipboard, accessible names and
 overflow tooltips retain the real name. Every view explicitly declares which
 labels are node names; status badges do not control flag decoration. A shared
-4 px spacing token separates the added flag from its name. Light themes apply a
+`--rp-space-1` kit spacing token separates the added flag from its name. Light themes apply a
 subtle edge to the decoration, so white artwork remains visible.
 
 ## Source and licence
@@ -67,10 +83,11 @@ are evaluation assets only and do not ship.
 `e2e/flags.spec.ts` proves
 that decoration leaves copied names, accessible names, overflow tooltips,
 searches and configuration writes unchanged. It also covers Flows records and
-node-name chart tooltips. `src/features/shared/countryFlags.test.ts` covers both scripts, English,
+node-name chart tooltips, flag editing, browser persistence and kit control sizes.
+`src/features/shared/countryFlags.test.ts` covers override resolution, both scripts, English,
 letter boundaries, ambiguous codes, existing flags and bounded cache behavior.
 
-For the opt-in screenshot matrix, set `DOONA_FLAGS_SHOTS=after` (or `before` when
+For the optional screenshot matrix, set `DOONA_FLAGS_SHOTS=after` (or `before` when
 serving the baseline build) and `DOONA_FLAGS_SHOTS_DIR` to an output directory,
 then run `playwright test e2e/flags-shots.spec.ts`. It captures Nodes, a policy
 picker including Macau, and Settings Appearance with both preference values, in English desktop light/dark and Chinese

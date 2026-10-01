@@ -2,6 +2,8 @@ import {createContext, useContext} from 'react';
 import {TextTooltip} from './Button';
 import {cx} from './cx';
 
+export const FlagEditingContext = createContext<((name: string) => void) | null>(null);
+
 export const CountryFlagsContext = createContext<((name: string) => string | null) | null>(null);
 
 export function NodeName({name, cut, className, text}: {name: string; cut?: 'start'; className?: string; text?: string}) {

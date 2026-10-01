@@ -510,7 +510,11 @@ test('new group validation refusal retains the dialog and its name without a suc
     await route.fulfill({json: {...result, valid: false}});
   });
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Add hk-01 to a group', exact: true}).click();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('retained-group');
@@ -524,13 +528,19 @@ test('new group validation refusal retains the dialog and its name without a suc
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
 });
 
-test('main-source actions remain disabled when advertised content fails completeness verification', async ({page}) => {
+test('main-source actions remain unavailable while display actions stay available for incomplete content', async ({page}) => {
   const api = await backend(page);
   const config = await api.config();
   config.sources.find(source => source.kind === 'main')!.content = 'redacted';
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
   await page.goto('/#/nodes?provider=inline');
-  await expect(page.getByRole('button', {name: 'Add hk-01 to a group', exact: true})).toBeDisabled();
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
+  await expect(page.getByRole('menuitem', {name: 'New group…', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('menuitem', {name: 'Change flag…', exact: true})).toBeVisible();
 });
 
 test('a completed provider creation cannot close a newer node draft or clear its guard', async ({page}) => {

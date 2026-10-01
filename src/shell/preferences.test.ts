@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {consumeProfileReadError, detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../api/profiles';
-import {writeSetting, readSettings, shouldOpenSettings} from './preferences';
+import {readFlagOverrides, updateFlagOverride, writeSetting, readSettings, shouldOpenSettings} from './preferences';
 import {routePaths} from './routes';
 
 describe('backend URL normalization', () => {
@@ -193,4 +193,38 @@ it('defaults country flags on and preserves an explicit off preference', () => {
   const storage = storageFrom();
   writeSetting('countryFlags', 'off', storage);
   expect(readSettings(storage).countryFlags).toBe(false);
+});
+
+it('validates and bounds flag overrides and removes automatic choices', () => {
+  const values = Object.fromEntries(Array.from({length: 600}, (_, i) => [`node:${i}`, 'JP']));
+  const storage = storageFrom([['doona-flag-overrides', JSON.stringify({...values, 'node:bad': 'ZZ', 'group:proxy': 'none', bad: 'HK'})]]);
+  const read = readFlagOverrides(storage);
+  expect(Object.keys(read)).toHaveLength(512);
+  expect(read['node:bad']).toBeUndefined();
+  expect(read.bad).toBeUndefined();
+  expect(read['group:proxy']).toBeUndefined();
+  const next = updateFlagOverride(read, 'new', 'TW');
+  expect(Object.keys(next)).toHaveLength(512);
+  expect(next['node:new']).toBe('TW');
+  expect(updateFlagOverride(next, 'new', 'automatic')['node:new']).toBeUndefined();
+  expect(updateFlagOverride(next, 'new', 'invalid')).toBe(next);
+  expect(readFlagOverrides(storageFrom([['doona-flag-overrides', '{']]))).toEqual({});
+  expect(readFlagOverrides(storageFrom([['doona-flag-overrides', '[]']]))).toEqual({});
+  const denied = {
+    getItem() {
+      throw new Error('denied');
+    },
+    setItem() {
+      throw new Error('denied');
+    },
+    removeItem() {}
+  };
+  expect(readFlagOverrides(denied)).toEqual({});
+  expect(() => writeSetting('flagOverrides', '{}', denied)).not.toThrow();
+});
+
+it.each(['Japan\u202801', 'Japan\u202901', 'Japan' + '😀'.repeat(253)])('round trips overrides for %s', name => {
+  const stored = updateFlagOverride({}, name, 'TW');
+  expect(readFlagOverrides(storageFrom([['doona-flag-overrides', JSON.stringify(stored)]]))).toEqual(stored);
+  expect(stored[`node:${name}`]).toBe('TW');
 });

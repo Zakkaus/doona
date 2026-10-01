@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {flagForName} from './countryFlags';
+import {flagForName, resolvedFlag} from './countryFlags';
 
 describe('flags from the shared region detector', () => {
   it.each([
@@ -86,4 +86,28 @@ describe('flags from the shared region detector', () => {
     expect(flag).toBe('🇯🇵');
     expect(calls).toBeGreaterThan(0);
   });
+});
+
+it.each([
+  ['Japan', {'node:Japan': 'TW'}, true, '🇹🇼'],
+  ['Japan', {}, true, '🇯🇵'],
+  ['Japan', {'node:Japan': 'none'}, true, null],
+  ['🇯🇵 Japan', {'node:🇯🇵 Japan': 'TW'}, true, null],
+  ['Japan', {'node:Japan': 'TW'}, false, null]
+] as const)('resolves %s with %j enabled=%s', (name, overrides, enabled, expected) => {
+  expect(resolvedFlag(name, overrides, enabled)).toBe(expected);
+});
+
+it('resolves repeated manual and automatic flags through the memoized name lookup', () => {
+  for (const name of ['Japan resolved memoized', 'unknown resolved memoized', '🇯🇵 resolved memoized']) {
+    resolvedFlag(name, {}, true);
+    const spy = vi.spyOn(RegExp.prototype, 'exec');
+    for (let i = 0; i < 1000; i++) {
+      resolvedFlag(name, {}, true);
+      resolvedFlag(name, {[`node:${name}`]: 'TW'}, true);
+    }
+    const calls = spy.mock.calls.length;
+    spy.mockRestore();
+    expect(calls).toBe(0);
+  }
 });

@@ -30,7 +30,6 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
         )
       : '—',
     probeLabel: t('nodes.probe', {name: node.name}),
-    joinLabel: t('nodes.joinGroup', {name: node.name}),
     removeLabel: t('nodes.remove', {name: node.name})
   };
 }
