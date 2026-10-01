@@ -11,7 +11,7 @@ vi.mock('../../i18n', async importOriginal => ({
   useLang: () => 'en'
 }));
 
-it('looks up opaque provider intervals by verified tags and offers a jump only for an editable source', async () => {
+it('looks up opaque provider intervals by verified tags and keeps editing in the row actions', async () => {
   const api = createMockApi();
   const {sources} = await api.config();
   const entries = readSubscriptionEntries(sources.find(source => source.kind === 'main')!.content).map(entry => ({...entry, interval: 3600}));
@@ -26,7 +26,6 @@ it('looks up opaque provider intervals by verified tags and offers a jump only f
   const input: Parameters<typeof providerTable>[0] = {
     rows,
     entries,
-    query: 'tab=list',
     loading: false,
     selected: null,
     onSelect: vi.fn(),
@@ -42,9 +41,9 @@ it('looks up opaque provider intervals by verified tags and offers a jump only f
   };
   const row = providerTable(input).rows.find(item => item.id === 'harbor')!;
   expect(row.interval).toBe('Every 1 hour');
-  expect(row.intervalHref).toBe('#/nodes?tab=list&editSubscription=harbor&focus=interval');
+  expect(row.action?.kind).toBe('edit');
   for (const kind of ['open', null] as const) {
     const view = providerTable({...input, editAction: () => (kind ? {kind, run: vi.fn()} : null)});
-    expect(view.rows.find(item => item.id === 'harbor')!.intervalHref).toBeNull();
+    expect(view.rows.find(item => item.id === 'harbor')!.action?.kind ?? null).toBe(kind);
   }
 });

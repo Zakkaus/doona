@@ -471,7 +471,6 @@ export function useNodesPage({go, query}: PageProps) {
     busy: !!manage.busy,
     source,
     entries,
-    query,
     refresh: refreshing,
     refreshAll,
     onAdd: () => open({kind: 'provider'}),

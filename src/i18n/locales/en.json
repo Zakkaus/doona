@@ -900,7 +900,6 @@
   "nodes.intervalCount": "Interval",
   "nodes.intervalCustom": "Custom",
   "nodes.intervalInvalid": "Enter a whole number greater than 0",
-  "nodes.intervalOf": "Auto-update of {name}",
   "nodes.intervalUnit": "Unit",
   "nodes.kind.builtin": "Built-in",
   "nodes.kind.file": "File",
