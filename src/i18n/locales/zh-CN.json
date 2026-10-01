@@ -132,7 +132,6 @@
   "config.export": "导出",
   "config.exportWarning": "导出文件保留显示的原始文本，可能包含凭据；分享前请检查内容。",
   "config.fileDiagnostics": "当前配置文件的诊断",
-  "config.formOwned": "已有表单的设置在此处只读，请使用链接前往编辑。",
   "config.forms": "设置表单",
   "config.generatedNote": "此文件由引擎生成，重新生成时会覆盖，只能在此查看。要更改内容，请修改生成它的配置。",
   "config.global.allow_insecure": "允许不安全的 TLS",

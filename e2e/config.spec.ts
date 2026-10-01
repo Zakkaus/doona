@@ -916,21 +916,17 @@ test('global setting fields keep one width across groups', async ({page}) => {
   expect(Math.max(...all) - Math.min(...all)).toBeLessThanOrEqual(1);
 });
 
-test('source editing protects form values while allowing unsupported fields and comments', async ({page}) => {
+test('source editing writes form-owned values in full', async ({page}) => {
   const {api} = await mockBackend(page);
   const original = (await api.config()).sources[0].content;
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
   await expect(editor).toBeVisible();
   await editor.fill(original.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
-  await editor.press('ControlOrMeta+Home');
-  await expect(editor).toContainText('tproxy_port: 12345');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
-  await expect(page.locator('.rp-toast.info')).toContainText('Settings with a form');
-  await editor.fill(original + '\n# retained raw text');
   await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('Current draft');
-  await page.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('accepted configuration');
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
+  expect((await api.config()).sources[0].content).toContain('tproxy_port: 23456');
 });
 
 test('legacy validation links focus diagnostics beside the source at its line', async ({page}) => {

@@ -1,4 +1,4 @@
-import {sourceForms, sameFormValues} from './sourceForms';
+import {sourceForms} from './sourceForms';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {useCapabilities, useConfig, useConfigEditor, useVersion, useRules, useDnsRules, useGroups} from '../../store';
@@ -257,11 +257,6 @@ export function useSourceCard({source, sources, diagnostics, canValidate, canWri
             }
           ]
         : sourceForms(text, source.id, engine, source.kind),
-    acceptChange: (before: string, after: string) => {
-      const accepted = sameFormValues(before, after, source.id, engine, source.kind);
-      if (!accepted) toast('info', t('config.formOwned'));
-      return accepted;
-    },
     note: readOnly?.note ?? t(canValidate ? 'config.editNoteValidate' : 'config.editNote'),
     refused,
     shown: diagnosticRows(shown, sources, locale, t),

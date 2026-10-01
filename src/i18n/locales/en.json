@@ -141,7 +141,6 @@
   "config.export": "Export",
   "config.exportWarning": "Exports preserve the displayed file bytes and may contain credentials. Review them before sharing.",
   "config.fileDiagnostics": "Current config file diagnostics",
-  "config.formOwned": "Settings with a form are read-only here. Use the links to edit them.",
   "config.forms": "Setting forms",
   "config.generatedNote": "The engine generates this file and overwrites it when it regenerates, so it can only be viewed here. To change it, change the configuration that produces it.",
   "config.global.allow_insecure": "Allow insecure TLS",

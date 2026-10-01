@@ -132,7 +132,6 @@
   "config.export": "匯出",
   "config.exportWarning": "匯出檔案保留顯示的原始文字，可能含有憑證；分享前請檢查內容。",
   "config.fileDiagnostics": "目前組態檔的診斷",
-  "config.formOwned": "已有表單的設定在此處唯讀，請使用連結前往編輯。",
   "config.forms": "設定表單",
   "config.generatedNote": "此檔案由引擎產生，重新產生時會覆寫，只能在此檢視。要變更內容，請修改產生它的組態。",
   "config.global.allow_insecure": "允許不安全的 TLS",
