@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, Empty, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, HelpRow, ConfirmDialog, Empty, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -48,7 +48,9 @@ export function Nodes(props: PageProps) {
   } = useNodesPage(props);
   const list = (
     <>
-      <p className="rp-note">{t('nodes.note')}</p>
+      <HelpRow help={{title: t('nav.nodes'), text: t('nodes.sourceHelp')}}>
+        <span className="rp-note">{t('nodes.note')}</span>
+      </HelpRow>
       <ErrorMessage error={error} onRetry={reload} />
       {noSources ? (
         <Empty>
