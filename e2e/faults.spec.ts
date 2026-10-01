@@ -1,4 +1,4 @@
-import {expect, faults, test} from './fixtures';
+import {expect, faults, moreAction, test} from './fixtures';
 
 // Actions the faults scenario refuses the way honk would, through the mock rather than intercepted routes.
 test.use({storage: faults});
@@ -8,10 +8,10 @@ test('a file saved on disk after the last reload refuses writes until honk reloa
   const editor = page.locator('.cm-content');
   await expect(editor).toHaveAttribute('contenteditable', 'true');
   await editor.fill((await editor.innerText()) + '\n# faults draft\n');
-  const apply = page.getByRole('button', {name: 'Apply', exact: true});
-  await apply.click();
+  const toolbar = page.locator('.rp-editor-toolbar');
+  await moreAction(toolbar, 'Apply');
   await expect(page.locator('.rp-toast.negative')).toContainText('changed');
-  await apply.click();
+  await moreAction(toolbar, 'Apply');
   await expect(page.locator('.rp-toast.negative', {hasText: 'not the running configuration'})).toContainText('Reload honk to apply the file');
   await expect(editor).toContainText('# faults draft');
 });
