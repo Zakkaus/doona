@@ -150,7 +150,6 @@ export function activityGroupView(groups: GroupSummary[], nodes: Node[], chosen:
     return {
       id: group.id,
       label: group.name,
-      description: node?.name ?? '—',
       node
     };
   });
@@ -169,11 +168,10 @@ export function activityGroupView(groups: GroupSummary[], nodes: Node[], chosen:
   return {
     ...view,
     options,
-    groupName: group?.label ?? view.name,
     chosen: stored?.id ?? ''
   };
 }
-export type ActivityGroupMenu = Pick<ReturnType<typeof activityGroupView>, 'options' | 'groupName' | 'chosen'>;
+export type ActivityGroupMenu = Pick<ReturnType<typeof activityGroupView>, 'options' | 'name' | 'chosen'>;
 
 export function activityView(runtime: Runtime | undefined, t: LabelFn, runtimeAvailable?: boolean, locale = 'en', datapath?: Datapath['state']) {
   // The status the System status page shows; the card's own link already leads there, so the status carries no link of its own.

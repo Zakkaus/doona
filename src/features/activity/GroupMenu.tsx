@@ -11,14 +11,14 @@ export function GroupMenu({model: vm, label}: {model: Model; label: string}) {
       appearance="select"
       placement="bottom start"
       label={label}
-      description={t('act.groupPickHelp')}
+      triggerLabel={t('ui.valuePair', {label, value: vm.name || '—'})}
       searchLabel={t('policy.pickGroups')}
-      items={[{id: '', label: t('act.groupFollow')}, ...vm.options.map(group => ({id: group.id, label: group.label, desc: group.description}))]}
+      items={[{id: '', label: t('act.groupFollow')}, ...vm.options.map(group => ({id: group.id, label: group.label}))]}
       value={vm.chosen}
       onChange={vm.setChosen}
       onAction={vm.setChosen}
     >
-      <ItemLabel i={{id: vm.chosen, label: vm.groupName}} />
+      <ItemLabel i={{id: vm.chosen, label: vm.name || '—'}} />
     </ChoiceMenu>
   );
 }
