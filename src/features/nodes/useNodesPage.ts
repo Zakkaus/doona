@@ -12,6 +12,7 @@ import {engineOf} from '../../api/engines';
 import {groupNameError} from '../shared/policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {PageProps} from '../../shell/routes';
+import {replaceRoute} from '../../shell/route';
 import {
   isNodeLink,
   keptOptions,
@@ -129,6 +130,17 @@ export function useNodesPage({go, query}: PageProps) {
   const groupNames = useMemo(() => new Set(readGroupEntries(source.main?.content ?? '').map(entry => entry.name)), [source.main?.content]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
+  const canAddProvider = resources?.providers.can_manage === true;
+  useLayoutEffect(() => {
+    if (params.get('add') !== 'subscription' || !resources) return;
+    const frame = requestAnimationFrame(() => {
+      const remaining = new URLSearchParams(params);
+      remaining.delete('add');
+      replaceRoute('nodes', remaining.toString());
+      if (canAddProvider) open({kind: 'provider'});
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [params, resources, canAddProvider, open]);
   const selectedId = selectedProvider(list, params.get('provider'));
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
