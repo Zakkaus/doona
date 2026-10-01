@@ -2,13 +2,14 @@ import {Fragment, type ReactNode} from 'react';
 import {NodeName} from '../../ui/NodeName';
 import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT, type Lang, type Translator} from '../../i18n';
-import {Card, Empty, ErrorMessage, Loading, Segmented} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Loading, Segmented, Link} from '../../ui/ui';
 import {latencyTone} from '../../ui/Tile';
 import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
 import {latencyAverages, latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
+import {nodeSetHref} from '../shared/link';
 import {useLatencyTab} from './useLatencyTab';
 
 const named = 6;
@@ -22,15 +23,25 @@ function nameSlot(message: string, names: ReactNode) {
   ));
 }
 
-export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator): ReactNode {
+export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator, hrefs: Map<string, string>): ReactNode {
   const separator = formatList(lang, ['', '']);
   const names = rows.slice(0, named).map((row, index) => (
     <Fragment key={row.id}>
       {index > 0 && separator}
-      <NodeName name={row.name} />
+      <Link appearance="link" href={hrefs.get(row.id) ?? nodeSetHref([row.id])}>
+        <NodeName name={row.name} />
+      </Link>
     </Fragment>
   ));
-  return rows.length > named ? nameSlot(t('nodes.latency.andMore', {names: '{names}', n: rows.length - named}), names) : names;
+  if (rows.length <= named) return names;
+  const more = (
+    <Link appearance="link" href={nodeSetHref(rows.map(row => row.id))}>
+      {t('nodes.latency.more', {n: rows.length - named})}
+    </Link>
+  );
+  return t('nodes.latency.andMore', {names: '{names}', more: '{more}'})
+    .split(/(\{names\}|\{more\})/)
+    .map((part, index) => <Fragment key={index}>{part === '{names}' ? names : part === '{more}' ? more : part}</Fragment>);
 }
 
 // Every measured node on one axis, its latest latency beside the averages the backend reports, so a node that is slow
@@ -83,9 +94,11 @@ export function NodeLatency() {
     const unmeasured = missing.filter(row => row.state === 'unmeasured');
     return [
       ...(unavailable.length
-        ? [nameSlot(t('nodes.latency.unavailableList', {n: unavailable.length, names: '{names}'}), missingNames(unavailable, lang, t))]
+        ? [nameSlot(t('nodes.latency.unavailableList', {n: unavailable.length, names: '{names}'}), missingNames(unavailable, lang, t, hrefs))]
         : []),
-      ...(unmeasured.length ? [nameSlot(t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: '{names}'}), missingNames(unmeasured, lang, t))] : [])
+      ...(unmeasured.length
+        ? [nameSlot(t('nodes.latency.unmeasuredList', {n: unmeasured.length, names: '{names}'}), missingNames(unmeasured, lang, t, hrefs))]
+        : [])
     ];
   };
   return (
