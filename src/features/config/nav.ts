@@ -1,11 +1,10 @@
 import type {ConfigSource} from '../../api/model';
 import type {Key} from '../../i18n';
 
-export function configTabs(): Array<{id: 'modules' | 'source' | 'validate'; titleKey: Key}> {
+export function configTabs(): Array<{id: 'modules' | 'source'; titleKey: Key}> {
   return [
     {id: 'modules', titleKey: 'config.tabModules'},
-    {id: 'source', titleKey: 'config.tabSource'},
-    {id: 'validate', titleKey: 'config.tabValidate'}
+    {id: 'source', titleKey: 'config.tabSource'}
   ];
 }
 export const sourceKinds: Record<ConfigSource['kind'], Key> = {

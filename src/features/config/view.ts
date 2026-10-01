@@ -27,41 +27,8 @@ export type ModuleSection = {
   href: string | null;
 };
 
-// Why a module's Edit is disabled: a draft open in another section, else another change still being applied.
-export const moduleEditTip = (dirty: boolean, busy: boolean, t: Translator) =>
-  dirty ? t('config.moduleEditBlocked') : busy ? t('ui.changeApplying') : undefined;
-
 export function sectionRange(source: ConfigSource, block: TextBlock): string {
   return `${fileName(source)}:${block.line + 1}-${block.endLine + 1}`;
-}
-
-export function splice(text: string, block: Pick<TextBlock, 'from' | 'to'>, replacement: string): string {
-  return text.slice(0, block.from) + replacement + text.slice(block.to);
-}
-
-// A section being edited, with the file and block it was read from.
-export type SectionDraft = {section: ModuleSection & {source: ConfigSource; block: TextBlock}; text: string};
-
-// A section draft against the sections as loaded now. A file changed only outside the section, or a draft not yet
-// typed in, is carried over to the new text, since splicing the draft into it keeps that change. A section changed or
-// removed on disk is a conflict the person settles, since saving would replace text they have not seen. `next` is the
-// draft carried over to the section as it is now, when it is still there.
-export function sectionUnder(draft: SectionDraft, sections: ModuleSection[]): {next: SectionDraft | null; conflict: boolean} {
-  const {section, text} = draft;
-  const current = sections.find(item => item.id === section.id);
-  if (current?.source?.content_sha256 === section.source.content_sha256) return {next: null, conflict: false};
-  if (!current?.source?.content || !current.block) return {next: null, conflict: true};
-  const now = current.source.content.slice(current.block.from, current.block.to);
-  const base = section.source.content!.slice(section.block.from, section.block.to);
-  const next = {section: {...current, source: current.source, block: current.block}, text: text === base ? now : text};
-  return {next, conflict: now !== base && text !== base && now !== text};
-}
-
-export function sectionMarks(diagnostics: ConfigDiagnostic[], sourceId: string, block: TextBlock, text: string, t: Translator): EditorMark[] {
-  const end = block.line + text.split('\n').length;
-  return diagnostics
-    .filter(d => d.source_id === sourceId && d.line !== null && d.line > block.line && d.line <= end)
-    .map(d => ({line: d.line! - block.line, column: d.column, level: d.level, message: diagnosticText(diagnosticMessage(d, t), t)}));
 }
 
 export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string, t: Translator): EditorMark[] {
@@ -143,8 +110,8 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
 }
 
 // The page that shows and edits what a section defines.
-const sectionPages: Record<SectionKind, string | null> = {
-  global: null,
+export const sectionPages: Record<string, string | null> = {
+  global: routeHref('settings', {card: 'global'}),
   subscription: routeHref('nodes'),
   node: routeHref('nodes'),
   group: routeHref('policies'),
@@ -168,7 +135,7 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
           kind,
           source,
           block,
-          href,
+          href: kind === 'global' ? routeHref('settings', {card: 'global', source: source.id, section: String(index)}) : href,
           range: sectionRange(source, block),
           summary: sectionSummary(kind, source.content, block, tokens, lang, t),
           note: null

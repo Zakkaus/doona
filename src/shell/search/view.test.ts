@@ -147,7 +147,7 @@ it('formats rule positions, source kinds and node groups for the language', asyn
   expect(view.byId.get(`node:${node.id}`)!.description).toBe('a、b');
 });
 
-it('offers the config tabs the page shows, including Modules and Validate without a validator', async () => {
+it('offers the config tabs the page shows, including Modules and Config files without a validator', async () => {
   const capabilities = await createMockApi().capabilities();
   capabilities.resources.config_validate.available = false;
   const sources: SearchSources = {
@@ -162,7 +162,7 @@ it('offers the config tabs the page shows, including Modules and Validate withou
   const t = translate.bind(null, 'en');
   const ids = searchView('config', sources, t).byId;
   expect(ids.has('page:config?tab=modules')).toBe(true);
-  expect(ids.has('page:config?tab=validate')).toBe(true);
+  expect(ids.has('page:config?tab=source')).toBe(true);
   expect(ids.has('page:config?tab=setup')).toBe(false);
 });
 

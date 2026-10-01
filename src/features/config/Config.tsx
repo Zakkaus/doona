@@ -6,7 +6,6 @@ import {useConfigPage} from './useConfigPage';
 import {Modules} from './Modules';
 import {NewSource} from './NewSource';
 import {SourceCard} from './SourceCard';
-import {ValidateTab} from './ValidateTab';
 export function Config(props: PageProps) {
   const t = useT();
   const {
@@ -23,7 +22,6 @@ export function Config(props: PageProps) {
     select,
     sourceProps,
     newSourceProps,
-    validateProps,
     modulesProps,
     sourceModel,
     sourceOptions,
@@ -66,8 +64,7 @@ export function Config(props: PageProps) {
         {sourceModel && <span className="rp-label">{t('config.exportWarning')}</span>}
         {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
       </>
-    ),
-    validate: validateProps && <ValidateTab {...validateProps} />
+    )
   };
   return (
     <div className="rp-page">

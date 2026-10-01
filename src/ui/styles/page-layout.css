@@ -351,3 +351,18 @@
 .rp-source-note {
   min-height: 0;
 }
+
+.rp-config-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.rp-config-workspace > * {
+  min-width: 0;
+}
+@media (max-width: 959.98px) {
+  .rp-config-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

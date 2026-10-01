@@ -114,7 +114,6 @@
   "config.changedMeanwhile": "The configuration changed or another write was still in progress, so nothing was written. Refresh and try again",
   "config.changedOnDisk": "The file changed on disk while you were editing; applying would replace that change.",
   "config.clean": "No diagnostics",
-  "config.code": "Code",
   "config.diagnostic.bareCondition": "Condition has no function call; it will never match",
   "config.diagnostic.braceWithoutSection": "Closing brace without an open section",
   "config.diagnostic.includeNotFound": "Include \"{path}\" cannot be resolved",
@@ -130,7 +129,8 @@
   "config.discardHelp": "Changes to this config file are lost when you leave.",
   "config.discardTitle": "Discard changes not applied?",
   "config.diskAhead": "The file on disk is not the running configuration, so nothing was written. Reload honk to apply the file, or restart honk if it changes a setting that needs a restart",
-  "config.edit": "Edit",
+  "config.draftDiagnostics": "Current draft diagnostics",
+  "config.draftPending": "Current draft has not been validated.",
   "config.editNote": "Click the text to edit.",
   "config.editNoteValidate": "Click the text to edit; validate before applying.",
   "config.editor": "Editor",
@@ -140,7 +140,9 @@
   },
   "config.export": "Export",
   "config.exportWarning": "Exports preserve the displayed file bytes and may contain credentials. Review them before sharing.",
-  "config.failed": "Failed: {errors}, {warnings}",
+  "config.fileDiagnostics": "Current config file diagnostics",
+  "config.formOwned": "Settings with a form are read-only here. Use the links to edit them.",
+  "config.forms": "Setting forms",
   "config.generatedNote": "The engine generates this file and overwrites it when it regenerates, so it can only be viewed here. To change it, change the configuration that produces it.",
   "config.incomplete": "The text is incomplete or redacted; it cannot be edited here",
   "config.invalid": {
@@ -152,7 +154,6 @@
   "config.kind.include": "Include",
   "config.kind.main": "Main",
   "config.kind.subscription": "Subscription",
-  "config.lastRun": "Last validation: {time}",
   "config.level": "Level",
   "config.level.error": "Error",
   "config.level.info": "Info",
@@ -162,7 +163,6 @@
   "config.levelInfo": "Info {n}",
   "config.levelWarnings": "Warnings {n}",
   "config.loadedAt": "Loaded: {time}",
-  "config.message": "Message",
   "config.moduleAbsent": "Section not configured; add it to {file}.",
   "config.moduleAbsentReadOnly": "Section not configured.",
   "config.moduleDnsRequests": {
@@ -177,13 +177,10 @@
     "one": "{n} upstream",
     "other": "{n} upstreams"
   },
-  "config.moduleEditBlocked": "Another section has changes not applied; apply or cancel them first",
   "config.moduleGroups": {
     "one": "{n} group: {policies}",
     "other": "{n} groups: {policies}"
   },
-  "config.moduleManual": "Open config file",
-  "config.moduleManualTip": "Open the whole file in the Config files tab at this section",
   "config.moduleNodes": {
     "one": "{n} node",
     "other": "{n} nodes"
@@ -219,13 +216,7 @@
   "config.newSourceTitle": "New config file",
   "config.newSourceUnmatched": "No include pattern of the loaded files matches this path, so the backend will refuse it.",
   "config.noDiagnostics": "No items at this level",
-  "config.openSource": "Open config file",
   "config.openSourceAt": "Open config file: {where}",
-  "config.passed": "Passed",
-  "config.passedWarnings": {
-    "one": "Passed with {n} warning",
-    "other": "Passed with {n} warnings"
-  },
   "config.readOnly": "Read-only",
   "config.readOnlyAttempt": "This file is read-only",
   "config.readOnlyHelp": "The backend does not allow configuration writes. On honk, enable experimental.native_api.config_write and set a secret or password sign-in.",
@@ -235,7 +226,6 @@
   "config.redactedSource": "Redacted",
   "config.refusedNote": "The backend does not accept writes to this file, so it can only be viewed.",
   "config.repeated": "{text} ({n} times)",
-  "config.revalidate": "Validate again",
   "config.revision": "Config version",
   "config.revisionHelp": "Identifies the version of the configuration in effect. It changes when changed content takes effect.",
   "config.save": "Apply",
@@ -254,7 +244,6 @@
   "config.subscriptionNote": "This file is downloaded from the subscription URL and replaced when the subscription updates, so it can only be viewed here.",
   "config.tabModules": "Modules",
   "config.tabSource": "Config files",
-  "config.tabValidate": "Validation",
   "config.tooLarge": "The configuration is larger than the backend accepts. Limit: {limit} bytes",
   "config.unquotable": "Cannot write this value losslessly as a single-quoted string: it contains an apostrophe, line break, or trailing backslash.",
   "config.unsaved": "Not applied",
@@ -262,13 +251,11 @@
   "config.valid": "Validation passed",
   "config.validate": "Validate",
   "config.validateNoMain": "The backend did not return the whole main configuration, so it cannot be validated",
-  "config.validateNote": "Parsing is lenient and records all issues; validation identifies fatal errors. If errors remain, applying does not write files and reloading does not activate the configuration.",
   "config.validateOther": "Validation covers the main configuration and its includes, not this file",
   "config.warnings": {
     "one": "{n} warning",
     "other": "{n} warnings"
   },
-  "config.where": "Where",
   "config.writeHelp": "If the file changed on disk since loading, honk refuses the write.",
   "config.writeRestart": {
     "one": "{n} setting takes effect only after a restart; nothing written. Change it in the file, then restart honk",

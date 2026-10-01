@@ -29,7 +29,7 @@ for (const {name, lang, viewport} of [
       await expect(card).toBeVisible();
       await expect(card.locator('.rp-light')).toHaveCount(1);
       await expect(card.locator('.rp-light')).toHaveText(t('config.incomplete'));
-      await expect(card.getByRole('button', {name: t('config.edit'), exact: true})).toHaveCount(0);
+      await expect(card.getByRole('button')).toHaveCount(0);
       await expect(page.getByRole('region', {name: 'global', exact: true}).locator('.rp-light').first()).not.toBeEmpty();
       await card.scrollIntoViewIfNeeded();
       if (shots) await page.screenshot({path: `shots/card-${name}.png`});
