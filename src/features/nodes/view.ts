@@ -39,6 +39,7 @@ export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Tra
 export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {
   displayName?: string;
   sourceTag?: string;
+  configTag?: string;
 };
 const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 
@@ -82,9 +83,11 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
   const unclaimed = entries.filter(entry => !claimed.has(entry.tag));
   if (unnamed.length === 1 && unclaimed.length === 1) named.set(unnamed[0].id, unclaimed[0].tag);
   const rows: ProviderRow[] = providers.map(item => {
+    const tag = verifiedTag(item.id);
     return {
       ...item,
       displayName: named.get(item.id) ?? item.name,
+      configTag: item.kind === 'subscription' && tag && entries.filter(entry => entry.tag === tag).length === 1 ? tag : undefined,
       // A subscription provider is named by its tag, so an entry is found before any fetch has tagged a node.
       sourceTag: item.kind === 'subscription' ? item.name : undefined
     };
@@ -213,6 +216,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     interval: interval == null ? '—' : intervalText(interval, locale, t),
+    intervalMissing: interval == null,
     intervalLabel: t('nodes.intervalOf', {name}),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],

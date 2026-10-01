@@ -28,6 +28,7 @@ export function Nodes(props: PageProps) {
     dialogTitle,
     formValid,
     formReason,
+    nodeNameError,
     submit,
     pending,
     submitting,
@@ -145,7 +146,14 @@ export function Nodes(props: PageProps) {
         {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
           <div className="rp-list">
             <span className="rp-label">{t(dialog.kind === 'editNode' ? 'nodes.editNodeHelp' : 'nodes.addNodeHelp')}</span>
-            <TextField isDisabled={pending} label={t('nodes.name')} value={form.name} placeholder="hk-03" onChange={name => setForm({...form, name})} />
+            <TextField
+              error={nodeNameError ?? undefined}
+              isDisabled={pending}
+              label={t('nodes.name')}
+              value={form.name}
+              placeholder="hk-03"
+              onChange={name => setForm({...form, name})}
+            />
             <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
           </div>
         )}

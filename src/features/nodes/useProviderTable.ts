@@ -32,7 +32,7 @@ export function useProviderTable(input: ProviderTableInput) {
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
   const rows = input.rows.map(item => ({
-    ...providerRowView(item, item.sourceTag ? intervals.get(item.sourceTag) : undefined, locale, t),
+    ...providerRowView(item, intervals.get(item.configTag ?? item.sourceTag ?? ''), locale, t),
     action: input.editAction(item),
     editLabel: t('nodes.edit', {name: item.displayName ?? item.name}),
     refreshable: item.kind === 'subscription' && input.canRefresh,
@@ -81,6 +81,7 @@ export type ProviderTableView = {
     expires: string;
     interval: string;
     intervalLabel: string;
+    intervalMissing: boolean;
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
     error?: string;

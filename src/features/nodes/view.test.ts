@@ -323,3 +323,14 @@ it('tells a subscription never fetched apart from one holding older data', () =>
   expect(providerRowView(provider('a', {status: 'error'}), undefined, 'en-US', t)).toMatchObject({status: 'Failed'});
   expect(providerRowView(provider('f', {kind: 'file'}), undefined, 'en-US', t)).toMatchObject({status: 'Stale'});
 });
+
+it('uses a unique verified node tag for the interval without authorizing guesses', () => {
+  const entries = readSubscriptionEntries("subscription {\n primary: {\n url: 'https://primary.example/sub'\n interval: 1h\n }\n}\n");
+  const tagged = node('tagged', {provider_id: 'a', subscription_tag: 'primary'});
+  expect(providerRows([provider('a')], [tagged], [...entries, ...entries], t).list[0].configTag).toBeUndefined();
+  for (const tags of [['primary'], ['primary', 'secondary'], []]) {
+    const nodes = tags.map((tag, index) => node(String(index), {provider_id: 'a', subscription_tag: tag}));
+    const [row] = providerRows([provider('a')], nodes, entries, t).list;
+    expect(row.configTag ?? row.sourceTag).toBe(tags.length === 1 ? 'primary' : 'opaque-a');
+  }
+});
