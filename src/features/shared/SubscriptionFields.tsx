@@ -1,6 +1,6 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {LabeledSelect, Switch, TextField} from '../../ui/ui';
-import {intervalItems} from './subscription';
+import {intervalItems, intervalTyped, startTyping} from './subscription';
 
 // A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
 // without it, so a caller writes only what the person changed.
@@ -24,6 +24,7 @@ export function SubscriptionFields({
   isDisabled,
   nameError,
   agentError,
+  intervalError,
   focusInterval
 }: {
   value: SubscriptionDraft;
@@ -32,12 +33,16 @@ export function SubscriptionFields({
   isDisabled?: boolean;
   nameError?: string | null;
   agentError?: string | null;
+  intervalError?: string | null;
   focusInterval?: boolean;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const set = (patch: Partial<SubscriptionDraft>) => onChange({...value, ...patch});
   const route = value.route || 'routing';
+  // The interval shown: the draft, or what applies while it is untouched.
+  const interval = value.interval || (fields.interval == null ? '' : String(fields.interval));
+  const typed = intervalTyped(interval);
   return (
     <>
       <TextField
@@ -58,14 +63,38 @@ export function SubscriptionFields({
         onChange={url => set({url})}
       />
       {fields.interval !== undefined && (
-        <LabeledSelect
-          takeFocus={focusInterval}
-          label={t('nodes.interval')}
-          items={[...(fields.interval === null ? [{id: '', label: '—'}] : []), ...intervalItems(fields.interval, locale, t)]}
-          value={value.interval || (fields.interval === null ? '' : String(fields.interval))}
-          isDisabled={isDisabled}
-          onChange={interval => set({interval})}
-        />
+        <>
+          <LabeledSelect
+            takeFocus={focusInterval}
+            label={t('nodes.interval')}
+            items={[...(fields.interval === null ? [{id: '', label: '—'}] : []), ...intervalItems(fields.interval, locale, t)]}
+            value={typed ? 'typed' : interval}
+            isDisabled={isDisabled}
+            onChange={next => set({interval: next === 'typed' ? startTyping(interval) : next})}
+          />
+          {typed && (
+            <div className="rp-toolbar top">
+              <TextField
+                isDisabled={isDisabled}
+                label={t('nodes.intervalCount')}
+                width={120}
+                value={typed.count}
+                error={intervalError ?? undefined}
+                onChange={count => set({interval: count + typed.unit})}
+              />
+              <LabeledSelect
+                label={t('nodes.intervalUnit')}
+                items={[
+                  {id: 'm', label: t('nodes.minutes')},
+                  {id: 'h', label: t('nodes.hours')}
+                ]}
+                value={typed.unit}
+                isDisabled={isDisabled}
+                onChange={unit => set({interval: typed.count + unit})}
+              />
+            </div>
+          )}
+        </>
       )}
       {fields.agent && (
         <TextField

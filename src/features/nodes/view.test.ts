@@ -18,7 +18,7 @@ import {
   renameReferences,
   selectedProvider
 } from './view';
-import {intervalItems, intervalText} from '../shared/subscription';
+import {draftInterval, intervalItems, intervalProblem, intervalText, intervalTyped, startTyping} from '../shared/subscription';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
 import {createMockApi} from '../../api/mock';
@@ -267,10 +267,51 @@ describe('providerCreate', () => {
     });
   });
 
-  it('offers the table presets and keeps a default outside them', () => {
-    expect(intervalItems(86400, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
-    expect(intervalItems(7200, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400', '7200']);
-    expect(intervalItems(null, 'en-US', t).map(item => item.id)).toEqual(['0', '3600', '21600', '43200', '86400']);
+  it.each([
+    [86400, ['0', '3600', '21600', '43200', '86400', 'typed']],
+    [7200, ['0', '3600', '21600', '43200', '86400', 'typed']],
+    [10000, ['0', '3600', '21600', '43200', '86400', '10000', 'typed']],
+    [null, ['0', '3600', '21600', '43200', '86400', 'typed']]
+  ])('offers the presets and typing, keeping a default of %s that typing cannot show', (current, ids) => {
+    expect(intervalItems(current, 'en-US', t).map(item => item.id)).toEqual(ids);
+  });
+
+  it.each([
+    // draft, shown as typed, seconds, error, start of typing
+    ['', null, undefined, null, 'h'],
+    ['0', null, 0, null, 'h'],
+    ['21600', null, 21600, null, '6h'],
+    ['10000', null, 10000, null, 'h'],
+    ['7200', {count: '2', unit: 'h'}, 7200, null, '2h'],
+    ['5400', {count: '90', unit: 'm'}, 5400, null, 'h'],
+    ['90m', {count: '90', unit: 'm'}, 5400, null, 'h'],
+    ['2h', {count: '2', unit: 'h'}, 7200, null, 'h'],
+    ['h', {count: '', unit: 'h'}, null, null, 'h'],
+    ['0m', {count: '0', unit: 'm'}, null, 'nodes.intervalInvalid', 'h'],
+    ['1.5h', {count: '1.5', unit: 'h'}, null, 'nodes.intervalInvalid', 'h'],
+    ['-5m', {count: '-5', unit: 'm'}, null, 'nodes.intervalInvalid', 'h'],
+    ['99999999999999h', {count: '99999999999999', unit: 'h'}, null, 'nodes.intervalInvalid', 'h']
+  ])('reads the interval draft %j', (draft, typed, seconds, problem, start) => {
+    expect(intervalTyped(draft)).toEqual(typed);
+    expect(draftInterval(draft)).toBe(seconds);
+    expect(intervalProblem(draft)).toBe(problem);
+    expect(startTyping(draft)).toBe(start);
+  });
+
+  it.each([
+    [0, t('nodes.manualOnly')],
+    [21600, t('nodes.everyHours', {n: 6})],
+    [172800, t('nodes.everyHours', {n: 48})],
+    [2700, t('nodes.everyDuration', {duration: '45 min'})],
+    [5400, t('nodes.everyDuration', {duration: '1 hr 30 min'})]
+  ])('words an interval of %i seconds like the presets', (seconds, text) => {
+    expect(intervalText(seconds, 'en-US', t)).toBe(text);
+  });
+
+  it('sends a typed interval in seconds when it differs from the default', () => {
+    expect(providerCreate({...form, interval: '90m'}, {update_interval: 86400}).update_interval).toBe(5400);
+    expect(providerCreate({...form, interval: '24h'}, {update_interval: 86400}).update_interval).toBeUndefined();
+    expect(providerCreate({...form, interval: 'h'}, {update_interval: 86400}).update_interval).toBeUndefined();
   });
 });
 

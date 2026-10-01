@@ -224,6 +224,17 @@ describe('writeSubscriptionEntry options', () => {
     expect(write(text, 'quoted tag', {ua: null})).toBe(text.replace("    ua: 'honk/1.0'\n", ''));
   });
 
+  it.each([
+    [5400, '90m'],
+    [2700, '45m'],
+    [7200, '2h'],
+    [90, '90s']
+  ])('writes an interval of %i seconds in its shortest exact form, %s', (interval, written) => {
+    const out = write(text, 'old', {interval});
+    expect(out).toBe(text.replace("'10000s'", `'${written}'`));
+    expect(readSubscriptionEntries(out).find(entry => entry.tag === 'old')?.interval).toBe(interval);
+  });
+
   it('keeps the User-Agent when the interval of a block-form entry changes', () => {
     const source = "subscription {\n  paid: 'https://example.com/sub' { # work\n    ua: 'clash.meta' # provider wants it\n    interval: 1h\n  }\n}\n";
     const out = write(source, 'paid', {interval: 21600});
