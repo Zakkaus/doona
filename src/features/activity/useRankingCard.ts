@@ -6,7 +6,7 @@ import {useNearViewport} from '../../ui/ui';
 import {activityRanking} from './view';
 
 // The poll runs every 20 seconds while the card is near the viewport; off screen it is paused and keeps its last list.
-export function useRankingCard() {
+export function useRankingCard(enabled = true) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const p = usePalette();
@@ -15,7 +15,7 @@ export function useRankingCard() {
   const [ref, near] = useNearViewport();
   // Paused only once it has a list to keep showing; before that it loads wherever it is.
   const [loaded, setLoaded] = useState(false);
-  const connections = useConnections(undefined, available === true, !near && loaded, poll.summary);
+  const connections = useConnections(undefined, enabled && available === true, !near && loaded, poll.summary);
   if (connections.data && !loaded) setLoaded(true);
   const rows = useMemo(() => activityRanking(connections.data, by, p, locale, t), [connections.data, by, p, locale, t]);
   const state = connections.data ? (rows.length ? 'ready' : 'empty') : connections.error ? 'error' : available === true ? 'loading' : 'unavailable';
