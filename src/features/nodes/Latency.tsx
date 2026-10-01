@@ -56,6 +56,7 @@ export function NodeLatency() {
           tint: 'c2',
           value: measured[0].name,
           nodeName: true,
+          valueRole: 'name',
           caption: formatLatency(measured[0].latest, t)
         },
         {
@@ -64,6 +65,7 @@ export function NodeLatency() {
           tint: 'c4',
           value: measured[measured.length - 1].name,
           nodeName: true,
+          valueRole: 'name',
           caption: formatLatency(measured[measured.length - 1].latest, t)
         },
         {

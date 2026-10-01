@@ -138,6 +138,7 @@ test('Flows records, tree nodes and latency chart tooltips use the same decorati
     return {...list, nodes: list.nodes.map(node => (node.id === 'jp-01' ? {...node, health: []} : node))};
   };
   await page.goto('/#/nodes?tab=latency');
+  await expect(page.locator('.rp-fact-name .rp-node-flag')).toHaveCount(2);
   const row = page.locator('.rp-markerplot .row').filter({hasText: 'hk-01'}).first();
   await expect(row).toBeVisible();
   const unavailable = page.locator('.rp-markerplot .note').filter({hasText: 'jp-01'}).first();

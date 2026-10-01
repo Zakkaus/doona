@@ -476,8 +476,14 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
 test('the note about node sources belongs to the list, not the latency tab', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/nodes');
-  const note = page.getByText(/^Node sources are subscriptions, files/);
+  const note = page.getByText('Manage subscriptions, files and inline nodes.', {exact: true});
   await expect(note).toBeVisible();
+  const help = page.getByRole('button', {name: 'About Nodes', exact: true});
+  await help.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', {name: 'Nodes', exact: true})).toContainText('changes are written to the main configuration and reloaded.');
+  await page.keyboard.press('Escape');
+  await expect(help).toBeFocused();
   await page.getByRole('tab', {name: 'Latency', exact: true}).click();
   await expect(page.getByRole('tabpanel', {name: 'Latency'}).getByRole('region', {name: 'Node latency'})).toBeVisible();
   await expect(note).toBeHidden();
@@ -963,4 +969,33 @@ test('the add-subscription address is consumed across history and reload', async
   await page.reload();
   await expect(page.getByRole('heading', {name: 'Nodes', exact: true})).toBeVisible();
   await expect(dialog).toHaveCount(0);
+});
+
+test('latency names wrap across the phone fact row', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 1000});
+  await page.goto('/#/nodes?tab=latency');
+  const names = page.locator('.rp-fact-name');
+  await expect(names).toHaveCount(2);
+  for (const name of await names.all()) {
+    const geometry = await name.evaluate(el => {
+      const value = el.querySelector('.rp-big')!;
+      return {
+        width: el.getBoundingClientRect().width,
+        parent: el.parentElement!.getBoundingClientRect().width,
+        scroll: value.scrollWidth,
+        client: value.clientWidth,
+        font: getComputedStyle(value).fontSize
+      };
+    });
+    expect(geometry.width).toBe(geometry.parent);
+    expect(geometry.scroll).toBeLessThanOrEqual(geometry.client);
+    expect(geometry.font).toBe('22px');
+  }
+});
+
+test('node source help is contextual', async ({page}) => {
+  await page.goto('/#/nodes');
+  const help = page.getByRole('button', {name: 'About Nodes', exact: true});
+  await help.click();
+  await expect(page.locator('.rp-popover')).toContainText('main configuration');
 });
