@@ -83,13 +83,25 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(diagnostics.getByRole('listitem')).toHaveCount(1);
   await expect(diagnostics).toContainText('Unknown section "unknown_section"');
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
-  // The action keeps clear of the list's edge and scrollbar, centred on its row.
+  // The bar is as wide as the editor and the list opens inside it; the action keeps clear of the list's edge and
+  // scrollbar, centred on its row.
   const geometry = await diagnostics.evaluate(list => {
+    const bar = list.closest('[role=region]')!.getBoundingClientRect();
+    const editor = document.querySelector('.rp-source-card .cm-editor')!.getBoundingClientRect();
+    const box = list.getBoundingClientRect();
     const row = list.querySelector('[role=listitem]')!.getBoundingClientRect();
     const action = list.querySelector('[role=listitem] button[aria-label^="Go to line"]')!.getBoundingClientRect();
-    const edge = list.getBoundingClientRect().left + list.clientLeft + list.clientWidth;
-    return {room: edge - action.right, offset: Math.abs(action.top + action.bottom - row.top - row.bottom) / 2};
+    const edge = box.left + list.clientLeft + list.clientWidth;
+    return {
+      widths: [bar.left - editor.left, bar.right - editor.right].map(Math.abs),
+      gap: bar.bottom - box.bottom,
+      room: edge - action.right,
+      offset: Math.abs(action.top + action.bottom - row.top - row.bottom) / 2
+    };
   });
+  for (const width of geometry.widths) expect(width).toBeLessThanOrEqual(0.5);
+  expect(geometry.gap).toBeGreaterThanOrEqual(0);
+  expect(geometry.gap).toBeLessThanOrEqual(1);
   expect(geometry.room).toBeGreaterThanOrEqual(8);
   expect(geometry.offset).toBeLessThanOrEqual(1);
   await page.keyboard.press('ControlOrMeta+Home');

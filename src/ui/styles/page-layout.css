@@ -213,6 +213,11 @@
   background: var(--rp-notice);
   color: var(--rp-on-accent);
 }
+.rp-badge.negative {
+  border-color: transparent;
+  background: var(--rp-negative);
+  color: var(--rp-on-negative);
+}
 /* The label reads --rp-negative-text; the border keeps the tone where that falls back to body text. */
 .rp-btn.negative {
   background: transparent;
@@ -321,40 +326,64 @@
   }
 }
 
-/* Configuration page: the diagnostics bar under the editor's toolbar. Its list scrolls inside a bounded height so the
-   pinned bar never fills the screen, and each row's action lines up in one column at its end. */
+/* Configuration page: the diagnostics bar under the editor's toolbar, framed as the editor is and as wide. The whole
+   bar is the disclosure's trigger; the list opens inside the same frame and scrolls in a bounded height so the pinned
+   bar never fills the screen. With nothing to list, one quiet line keeps the bar's height. */
 .rp-config-diagnostics {
   outline: none;
+  border: 1px solid var(--rp-hl-high);
+  border-radius: var(--rp-r-md);
+  background: var(--rp-base);
 }
-/* The counts keep their line; what they were counted on wraps under them on a phone. */
-.rp-config-diagnostics .rp-disclosure-head {
+.rp-config-diagnostics > .rp-disclosure > h3 > .rp-disclosure-trigger,
+.rp-config-diagnostics-quiet {
+  min-height: calc(var(--rp-control) - 2px);
+}
+.rp-config-diagnostics > .rp-disclosure > h3 > .rp-disclosure-trigger {
+  height: auto;
+  /* One line of 20px badges sits centred in the bar's height. */
+  padding-block: calc((var(--rp-control) - 22px) / 2);
+  border: 0;
+  border-radius: calc(var(--rp-r-md) - 1px);
+  white-space: normal;
+  align-items: flex-start;
+}
+.rp-config-diagnostics > .rp-disclosure > h3 > .rp-disclosure-trigger[data-focus-visible] {
+  outline-offset: calc(-1 * var(--rp-focus-width));
+}
+.rp-config-diagnostics > .rp-disclosure[data-expanded] > h3 > .rp-disclosure-trigger {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.rp-config-diagnostics-quiet {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--rp-space-3);
+}
+/* The counts keep their line; what they were counted on wraps under them on a phone, the chevron staying on the first. */
+.rp-config-diagnostics-summary {
+  display: flex;
   flex-wrap: wrap;
-  column-gap: var(--rp-space-3);
-}
-.rp-config-diagnostics .rp-disclosure-head > .rp-disclosure-trigger {
-  flex: none;
-}
-.rp-config-diagnostics .rp-disclosure-head > .rp-label {
-  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--rp-space-1) var(--rp-space-2);
   min-width: 0;
 }
-/* One block of rows under the summary, after the kit's labelled list: the message column fits its longest message
-   so each row's action sits just after it, in one column, and the block is as wide as its rows. Past about six rows the block scrolls; like the dialog body,
-   it keeps its scrollbar's gutter and clear of it. */
+.rp-config-diagnostics > .rp-disclosure > .rp-disclosure-panel > .rp-disclosure-content {
+  padding: 0;
+}
+/* The rows under the bar, after the kit's labelled list: the message column fits its longest message so each row's
+   action sits just after it, in one column. Past about six rows the list scrolls; like the dialog body, it keeps its
+   scrollbar's gutter and clear of it. */
 .rp-config-diagnostic-list {
   display: grid;
   grid-template-columns: minmax(0, max-content) max-content max-content;
   column-gap: var(--rp-space-3);
-  width: fit-content;
-  max-width: 100%;
   max-height: 16.5rem;
   overflow: hidden auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding-inline: var(--rp-space-3) var(--rp-space-2);
-  margin-block-end: var(--rp-space-2);
-  border: 1px solid var(--rp-hl-low);
-  border-radius: var(--rp-r-md);
+  border-top: 1px solid var(--rp-hl-low);
 }
 /* A row: severity and message, the details toggle and the action on one centred line, the details under it. */
 .rp-config-diagnostic {

@@ -52,27 +52,22 @@ export function SourceCard(props: SourceCardProps) {
       ))}
     </div>
   );
-  // Pinned under the editor's toolbar: the counts, opened into the list on errors.
+  // Pinned under the editor's toolbar: one bar as wide as the editor, its counts opening into the list on errors.
   const banner = (
     <div ref={panel} tabIndex={-1} role="region" aria-label={t('config.diagnostics')} className="rp-config-diagnostics">
       {d.quiet ? (
-        <span className="rp-label">{d.quiet}</span>
+        <span className="rp-config-diagnostics-quiet rp-label">{d.quiet}</span>
       ) : (
         <Disclosure
-          flush
           isExpanded={d.open}
           onExpandedChange={d.setOpen}
           title={
-            <>
-              <Light small tone={d.errors ? 'err' : 'muted'}>
-                {t('config.levelErrors', {n: d.errors})}
-              </Light>
-              <Light small tone={d.warnings ? 'warn' : 'muted'}>
-                {t('config.levelWarnings', {n: d.warnings})}
-              </Light>
-            </>
+            <span className="rp-config-diagnostics-summary">
+              <Badge tone={d.errors ? 'negative' : undefined}>{t('config.levelErrors', {n: d.errors})}</Badge>
+              <Badge tone={d.warnings ? 'warn' : undefined}>{t('config.levelWarnings', {n: d.warnings})}</Badge>
+              <span className="rp-label">{d.scope}</span>
+            </span>
           }
-          aside={<span className="rp-label">{d.scope}</span>}
         >
           <div className="rp-config-diagnostic-list" role="list" aria-label={t('config.diagnostics')}>
             {d.rows.map(item => (
