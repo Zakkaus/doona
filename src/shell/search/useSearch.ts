@@ -1,7 +1,8 @@
 import {useMemo, useState} from 'react';
 import type {Key} from 'react-aria-components';
 import {useLang, useT} from '../../i18n';
-import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useDnsRules} from '../../store';
+import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useDnsRules, useVersion} from '../../store';
+import {engineOf} from '../../api/engines';
 import type {PageProps} from '../routes';
 import {
   connectionEntries,
@@ -32,7 +33,8 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const dnsRules = useDnsRules(offered(resources, 'dns_rules', {whileLoading: false}));
   const sources = [capabilities, connections, nodes, groups, providers, config, rules, dnsRules];
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
-  const pages = useMemo(() => pageEntries(capabilities.data, t), [capabilities.data, t]);
+  const hasGlobal = !!engineOf(useVersion().data).globalSettings;
+  const pages = useMemo(() => pageEntries(capabilities.data, t, hasGlobal), [capabilities.data, t, hasGlobal]);
   const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
   const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang), [nodes.data, providers.data, lang]);
   const groupHits = useMemo(() => groupEntries(groups.data), [groups.data]);

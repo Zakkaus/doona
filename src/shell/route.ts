@@ -8,19 +8,24 @@ export function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const i = h.indexOf('?');
   const route = {route: (i < 0 ? h : h.slice(0, i)) || defaultRoute, query: i < 0 ? '' : h.slice(i + 1)};
-  const moved = movedFlows(route.route, route.query);
+  const moved = movedRoute(route.route, route.query);
   return moved ?? {route: isRoutePath(route.route) ? route.route : defaultRoute, query: route.query};
 }
-// The flow map and records moved from the rules page to their own page; old links keep working. The map was the rules
+// Old links keep working. The flow map and records moved from the rules page to their own page. The map was the rules
 // page's default tab once, so its links from then carry a pinned path or grouping but no tab. The flows page before
 // that opened the records for a selected flow or connection.
-function movedFlows(route: string, query: string): Route | null {
+function movedRoute(route: string, query: string): Route | null {
   const params = new URLSearchParams(query);
   const tab = params.get('tab');
   if (route === 'rules' && (tab === 'map' || tab === 'flows' || (tab === null && (params.has('path') || params.has('by'))))) {
     params.set('tab', tab === 'flows' ? 'records' : 'map');
   } else if (route === 'flows' && tab === null && (params.has('id') || params.has('connection_id'))) {
     params.set('tab', 'records');
+  } else if (route === 'settings' && params.get('card') === 'global') {
+    // The persistent global settings moved from a settings card to the configuration page's global tab.
+    params.delete('card');
+    params.set('tab', 'global');
+    return {route: 'config', query: params.toString()};
   } else return null;
   return {route: 'flows', query: params.toString()};
 }

@@ -32,7 +32,7 @@ type SearchSources = {
 function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
   return searchSections(
     {
-      pages: pageEntries(sources.capabilities.data, t),
+      pages: pageEntries(sources.capabilities.data, t, true),
       conns: connectionEntries(sources.connections.data, t),
       nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang),
       groups: groupEntries(sources.groups.data),
@@ -162,6 +162,7 @@ it('offers the config tabs the page shows, including Modules and Config files wi
   const t = translate.bind(null, 'en');
   const ids = searchView('config', sources, t).byId;
   expect(ids.has('page:config?tab=modules')).toBe(true);
+  expect(ids.has('page:config?tab=global')).toBe(true);
   expect(ids.has('page:config?tab=source')).toBe(true);
   expect(ids.has('page:config?tab=setup')).toBe(false);
 });

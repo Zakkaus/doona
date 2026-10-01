@@ -1,6 +1,9 @@
 import {useState} from 'react';
 import {enumLabel} from '../../i18n/enum';
-import {useCapabilities, useRuntimeSettings} from '../../store';
+import {useCapabilities, useRuntimeSettings, useVersion} from '../../store';
+import {offered} from '../../api/capabilities';
+import {engineOf} from '../../api/engines';
+import {href} from '../../shell/route';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {toast, toastErrorDetail} from '../../ui/ui';
@@ -25,6 +28,7 @@ export function useRuntimeSettingsForm() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const caps = useCapabilities();
+  const version = useVersion().data;
   const capabilities = caps.data?.resources;
   const available = capabilities?.runtime_settings.available ?? false;
   const fields = new Set<RuntimeSettingField>(capabilities?.runtime_settings.fields ?? []);
@@ -111,6 +115,8 @@ export function useRuntimeSettingsForm() {
     waiting: !capabilities,
     available,
     note: t(available ? 'settings.runtimeNote' : 'settings.runtimeUnavailable'),
+    // The persistent values have one editor, the configuration page's global tab.
+    persistent: offered(capabilities, 'config', {whileLoading: false}) && engineOf(version).globalSettings ? href('config', {tab: 'global'}) : null,
     error: settings.error,
     retry: settings.refetch,
     loading: settings.loading && !baseline,

@@ -1,8 +1,20 @@
 import {LocalError} from '../api/error';
+import type {Key} from '../i18n';
 import {blockFields, isQuotable, quote, scanConfig, unquote} from './text';
 
+// The headed groups a settings form shows, in order.
+export const settingGroups = {
+  interfaces: 'config.globalGroup.interfaces',
+  logging: 'config.globalGroup.logging',
+  checks: 'config.globalGroup.checks',
+  dialing: 'config.globalGroup.dialing',
+  bandwidth: 'config.globalGroup.bandwidth',
+  storage: 'config.globalGroup.storage'
+} as const satisfies Record<string, Key>;
 export type SettingField = {
   key: string;
+  label: Key;
+  group: keyof typeof settingGroups;
   type: 'boolean' | 'integer' | 'text' | 'list' | 'duration';
   max?: string;
   hexMax?: string;
@@ -78,9 +90,9 @@ export function writeSettings(text: string, section: SettingsSection, index: num
   for (const [key, value] of Object.entries(patch)) {
     const definition = section.fields.find(field => field.key === key);
     const serialized = definition && serializeSetting(definition, value);
-    if (serialized === null || serialized === undefined) throw new LocalError('settings.globalInvalid');
+    if (serialized === null || serialized === undefined) throw new LocalError('config.globalInvalid');
     const matches = fields.filter(field => field.name === key);
-    if (matches.length > 1) throw new LocalError('settings.globalDuplicate');
+    if (matches.length > 1) throw new LocalError('config.globalDuplicate');
     if (value === '') {
       if (matches.length) edits.push({from: matches[0].from, to: matches[0].to, text: ''});
     } else if (matches.length) {

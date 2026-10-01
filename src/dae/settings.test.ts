@@ -2,8 +2,25 @@ import {expect, it} from 'vitest';
 import {engineOf} from '../api/engines';
 import {version} from '../api/mock/fixtures';
 import {globalKeys} from './vocab';
-import {serializeSetting, settingValue, writeSettings} from './settings';
+import {serializeSetting, settingGroups, settingValue, writeSettings} from './settings';
+import en from '../i18n/locales/en.json';
+import zhTW from '../i18n/locales/zh-TW.json';
+import zhCN from '../i18n/locales/zh-CN.json';
 const schema = engineOf(version).globalSettings!;
+const catalogues: Array<[string, Record<string, unknown>]> = [
+  ['en', en],
+  ['zh-TW', zhTW],
+  ['zh-CN', zhCN]
+];
+it.each(schema.fields.flatMap(field => catalogues.map(([lang, messages]) => [field.key, lang, field, messages] as const)))(
+  '%s has a group, and a label and group title in %s',
+  (key, _lang, field, messages) => {
+    expect(schema.fields.filter(other => other.key === key)).toHaveLength(1);
+    expect(Object.keys(settingGroups)).toContain(field.group);
+    expect(messages[field.label]).toEqual(expect.any(String));
+    expect(messages[settingGroups[field.group]]).toEqual(expect.any(String));
+  }
+);
 it('covers every parsed global key and rejects invalid scalar shapes', () => {
   expect(schema.fields.map(field => field.key).sort()).toEqual([...globalKeys].sort());
   for (const field of schema.fields) {
@@ -14,7 +31,7 @@ it('covers every parsed global key and rejects invalid scalar shapes', () => {
       expect(serializeSetting(field, '-1')).toBeNull();
     }
   }
-  const port = schema.fields[0];
+  const port = schema.fields.find(field => field.key === 'tproxy_port')!;
   expect(settingValue(port, '0x10')).toBe('0x10');
   expect(serializeSetting(port, settingValue(port, '0x10'))).toBeNull();
   expect(writeSettings('global { tproxy_port: 0x10 }', schema, 0, {tproxy_port: '16'})).toBe('global { tproxy_port: 16 }');

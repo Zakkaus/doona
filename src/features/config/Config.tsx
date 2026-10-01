@@ -4,6 +4,7 @@ import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage} from './useConfigPage';
 import {Modules} from './Modules';
+import {GlobalSettings} from './GlobalSettings';
 import {NewSource} from './NewSource';
 import {SourceCard} from './SourceCard';
 export function Config(props: PageProps) {
@@ -31,6 +32,7 @@ export function Config(props: PageProps) {
   } = useConfigPage(props);
   const content = {
     modules: modulesProps && <Modules {...modulesProps} />,
+    global: <GlobalSettings {...props} />,
     source: (
       <>
         <div className="rp-toolbar">

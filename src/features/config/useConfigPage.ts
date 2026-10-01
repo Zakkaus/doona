@@ -69,13 +69,13 @@ export function useConfigPage({go, query}: PageProps) {
     const all = config.data?.diagnostics ?? [];
     return {error: all.filter(d => d.level === 'error').length, warning: all.filter(d => d.level === 'warning').length};
   }, [config.data]);
-  const tabs = configTabs();
   const canValidate = offered(resources, 'config_validate', {whileLoading: false}) && (resources?.config_validate.modes ?? []).includes('full');
   const configWritable = resources?.config.writable === true;
   const isComplete = useCompleteness(sources);
   // The engine names the secrets that make a source read-only.
   const version = useVersion().data;
   const engine = useMemo(() => engineOf(version), [version]);
+  const tabs = configTabs(!!engine.globalSettings);
   const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
   const canWrite = !!source && !readOnly;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
@@ -111,7 +111,7 @@ export function useConfigPage({go, query}: PageProps) {
     redacted: !!config.data?.secrets_redacted,
     tabs: tabs.map(item => ({id: item.id, label: t(item.titleKey)})),
     tab,
-    setTab: (tab: string) => go('config', tabQuery(query, tab, null)),
+    setTab: (tab: string) => go('config', within(tabQuery(query, tab, null), {field: null})),
     selectedId: selectedId ?? '',
     select,
     sourceProps,

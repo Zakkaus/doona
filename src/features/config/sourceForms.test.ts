@@ -12,7 +12,7 @@ it.each([1, 2, 3, 4, 5, 6, null])('selects form links by their line interval at 
 it('routes located globals to their sole form and protects them from raw changes', () => {
   const before = "global {\n log_level: info\n unknown: 'keep'\n}\ndns { bind: '127.0.0.1:53' }";
   const [link] = sourceForms(before, 'include', engine);
-  expect(link.href).toBe('#/settings?card=global&source=include&section=0&field=log_level');
+  expect(link.href).toBe('#/config?tab=global&source=include&section=0&field=log_level');
   expect(link.line).toBe(2);
   expect(sameFormValues(before, before.replace('info', 'debug'), 'include', engine)).toBe(false);
   expect(sameFormValues(before, before.replace('keep', 'other'), 'include', engine)).toBe(true);

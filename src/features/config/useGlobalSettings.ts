@@ -6,13 +6,16 @@ import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {blockFields, scanConfig} from '../../dae/text';
-import {serializeSetting, settingValue, writeSettings} from '../../dae/settings';
+import {serializeSetting, settingGroups, settingValue, writeSettings, type SettingField} from '../../dae/settings';
 import {fileName, restartRequired, validationSources} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
+
+// The widest integer a field takes; a hint naming it would only say the value is a whole number.
+const u64 = '18446744073709551615';
 
 export function useGlobalSettings({query, go}: PageProps) {
   const t = useT();
@@ -52,11 +55,34 @@ export function useGlobalSettings({query, go}: PageProps) {
   const parsed = scanConfig(text);
   const block = parsed.blocks.filter(block => block.name === schema?.name)[chosen?.index ?? 0];
   const stored = block ? blockFields(text, block, parsed.tokens) : [];
+  const separator = t('ui.listSeparator');
+  const hint = (field: SettingField) =>
+    field.type === 'list'
+      ? t('config.globalList')
+      : field.choices && field.type === 'integer'
+        ? t('config.globalChoice', {choices: field.choices.join(separator)})
+        : field.max && field.max !== u64
+          ? t('config.globalRange', {max: field.max})
+          : field.units
+            ? t('config.globalUnits', {units: field.units.filter(Boolean).join(separator)})
+            : undefined;
   const fields = (schema?.fields ?? []).map(definition => {
     const matches = stored.filter(field => field.name === definition.key);
     const value = patch[definition.key] ?? (matches[0] ? settingValue(definition, matches[0].value) : '');
+    const picked = definition.type === 'boolean' || (!!definition.choices && definition.type !== 'integer');
+    const options = definition.type === 'boolean' ? ['true', 'false'] : (definition.choices ?? []);
     return {
-      ...definition,
+      key: definition.key,
+      group: definition.group,
+      label: t(definition.label),
+      hint: hint(definition),
+      // A picker lists the accepted values, plus a stored value outside them so it still shows as it is.
+      items: picked
+        ? [
+            {id: '', label: t('config.globalUnset')},
+            ...[...options, ...(value && !options.includes(value) ? [value] : [])].map(item => ({id: item, label: item}))
+          ]
+        : null,
       value,
       duplicate: matches.length > 1,
       invalid: serializeSetting(definition, value) === null,
@@ -114,21 +140,23 @@ export function useGlobalSettings({query, go}: PageProps) {
     }
     guard.clear();
     setDraft(null);
-    toast('positive', t('settings.globalSaved'));
+    toast('positive', t('config.globalSaved'));
   };
   useEffect(() => {
-    if (params.get('card') !== 'global') return;
     const field = params.get('field');
-    const root = document.getElementById('settings-global-form');
-    const element = field
-      ? root?.querySelector<HTMLElement>(`[data-setting="${CSS.escape(field)}"] input, [data-setting="${CSS.escape(field)}"] button`)
-      : document.getElementById('settings-global');
+    if (params.get('tab') !== 'global' || !field) return;
+    const element = document
+      .getElementById('config-global-form')
+      ?.querySelector<HTMLElement>(`[data-setting="${CSS.escape(field)}"] input, [data-setting="${CSS.escape(field)}"] button`);
     element?.focus();
     element?.scrollIntoView({block: 'center'});
   }, [params, source?.id, schema, writable]);
   return {
     available: available && !!schema,
     fields,
+    groups: Object.entries(settingGroups)
+      .map(([id, title]) => ({id, title: t(title), fields: fields.filter(field => field.group === id)}))
+      .filter(group => group.fields.length > 0),
     source,
     busy,
     blocked,
@@ -149,7 +177,7 @@ export function useGlobalSettings({query, go}: PageProps) {
     selected: chosen?.id ?? '',
     select: (id: string) => {
       const choice = choices.find(choice => choice.id === id);
-      if (choice) go('settings', within(query, {card: 'global', source: choice.source.id, section: String(choice.index), field: null}));
+      if (choice) go('config', within(query, {tab: 'global', source: choice.source.id, section: String(choice.index), field: null}));
     }
   };
 }

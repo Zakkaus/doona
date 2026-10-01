@@ -62,6 +62,10 @@ describe('hash routing', () => {
     ['#/rules?path=a', 'flows', 'path=a&tab=map'],
     ['#/rules?by=client', 'flows', 'by=client&tab=map'],
     ['#/rules?tab=list&rule=a', 'rules', 'tab=list&rule=a'],
+    // The global settings card moved to the configuration page's global tab.
+    ['#/settings?card=global', 'config', 'tab=global'],
+    ['#/settings?card=global&source=main&section=1&field=log_level', 'config', 'source=main&section=1&field=log_level&tab=global'],
+    ['#/settings?card=runtime', 'settings', 'card=runtime'],
     ['#/?id=a', 'activity', 'id=a']
   ])('parses %s', (hash, route, query) => {
     expect(parseHash(hash)).toEqual({route, query});

@@ -23,6 +23,11 @@ export function RuntimeSettingsCard() {
         // The note's line is held while capabilities load, so the form's reserved box below starts where the form will.
         <span className="rp-label">{m.waiting ? '\u00a0' : m.note}</span>
       )}
+      {!m.waiting && m.persistent && (
+        <Link appearance="link" href={m.persistent}>
+          {t('settings.runtimePersistent')}
+        </Link>
+      )}
       {m.waiting && !m.capsError && (
         <div className="rp-chart-wait form">
           <Loading />

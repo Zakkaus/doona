@@ -27,7 +27,7 @@ export function sourceForms(text: string, source: string, engine: Engine, kind: 
           to: field.to,
           label: field.name,
           line: text.slice(0, field.from).split('\n').length,
-          href: href('settings', {card: 'global', source, section: String(section), field: field.name})
+          href: href('config', {tab: 'global', source, section: String(section), field: field.name})
         }));
     }
     const target = sectionPages[block.name];
@@ -66,7 +66,7 @@ export function sameFormValues(before: string, after: string, source: string, en
         const fields = blockFields(before, block, scan.tokens);
         return fields
           .filter(field => fields.filter(other => other.name === field.name).length > 1)
-          .map(field => href('settings', {card: 'global', source, section: String(section), field: field.name}));
+          .map(field => href('config', {tab: 'global', source, section: String(section), field: field.name}));
       })
   );
   const values = (text: string) =>
