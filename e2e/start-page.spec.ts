@@ -29,7 +29,7 @@ test('first-run setup opens Settings and connects to the currently chosen page',
   await page.getByRole('button', {name: /Open at startup$/}).click();
   await page.getByRole('option', {name: 'Rules', exact: true}).click();
   await page.locator('[name=api]').fill('mock');
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   await expect(page).toHaveURL(/#\/rules$/);
   await expect(page.locator('.rp-login-page')).toBeVisible();
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Sign in', exact: true}).click()]);
