@@ -360,6 +360,8 @@ test('the default member is offered only while the dialog selects manual selecti
   // honk reads a default member only under manual selection, so a group that picks the fastest offers the final outbound alone.
   await expect(dialog.getByRole('button', {name: /Final outbound$/})).toBeVisible();
   await expect(member).toHaveCount(0);
+  await policy.focus();
+  await expect(policy).toBeFocused();
   await policy.click();
   await page.getByRole('option', {name: /^Manual/}).click();
   await expect(member).toBeVisible();
@@ -448,4 +450,76 @@ test('a long group name truncates with a tooltip and keeps the More menu on its 
   expect(moreBox!.y).toBeLessThan(titleBox!.y + titleBox!.height);
   await cut.focus();
   await expect(page.getByRole('tooltip')).toHaveText(long);
+});
+
+test('automatic node grid keeps its inset and filter type roles', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'backup', exact: true});
+  await expect(card).toBeVisible();
+  await card.scrollIntoViewIfNeeded();
+  const expand = card.getByRole('button', {name: /^Current/});
+  await expect(expand).toHaveAttribute('aria-expanded', 'false');
+  await expand.click();
+  const grid = card.locator('.rp-nodegrid');
+  await expect(grid).toBeVisible();
+  const geometry = await grid.evaluate(el => {
+    const r = el.getBoundingClientRect(),
+      card = el.closest('.rp-card')!,
+      c = card.getBoundingClientRect(),
+      s = getComputedStyle(card);
+    return {left: r.left - c.left, right: c.right - r.right, padding: parseFloat(s.paddingLeft), margin: getComputedStyle(el).marginInlineEnd};
+  });
+  expect(Math.abs(geometry.left - geometry.right)).toBeLessThanOrEqual(1);
+  expect(geometry.left).toBeGreaterThanOrEqual(geometry.padding);
+  expect(geometry.margin).toBe('0px');
+  const tileInsets = await grid.evaluate(el => {
+    const grid = el.getBoundingClientRect();
+    const tiles = Array.from(el.querySelectorAll('.rp-node')).map(tile => tile.getBoundingClientRect());
+    return {left: Math.min(...tiles.map(tile => tile.left)) - grid.left, right: grid.right - Math.max(...tiles.map(tile => tile.right))};
+  });
+  expect(Math.abs(tileInsets.left - tileInsets.right)).toBeLessThanOrEqual(1);
+  await expect(card.getByRole('button', {name: /Sort/})).toHaveCSS('font-size', '14px');
+  await expect(card.locator('.rp-switch')).toHaveCSS('font-size', '14px');
+});
+
+test('a group remeasures across 12 and 13 members and viewport resizes', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const group = await api.group('proxy');
+  const members = Array.from({length: 13}, (_, index) => ({...group.members[0], id: `member-${index}`, name: `member-${index}`}));
+  let count = 12;
+  handlers['GET groups/proxy'] = async () => ({...group, members: members.slice(0, count)});
+  await page.clock.install();
+  await page.setViewportSize({width: 1000, height: 1000});
+  await page.goto('/#/policies');
+  const card = page.getByRole('region', {name: 'proxy', exact: true});
+  await expect(card.locator('.rp-nodes .rp-node')).toHaveCount(12);
+  for (const next of [13, 12, 13]) {
+    count = next;
+    await page.clock.fastForward(31000);
+    if (next === 12) {
+      await expect(card.locator('.rp-nodes .rp-node')).toHaveCount(12);
+      continue;
+    }
+    const grid = card.locator('.rp-nodegrid');
+    await expect(grid).toBeVisible();
+    for (const width of [1000, 390, 1000]) {
+      await page.setViewportSize({width, height: 1000});
+      await expect
+        .poll(() =>
+          grid.evaluate(el => {
+            const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-space-2'));
+            const columns = Math.max(1, Math.floor((el.clientWidth - gap) / (228 + gap)));
+            const tiles = [...el.querySelectorAll('.rp-node')].map(tile => tile.getBoundingClientRect());
+            const first = tiles[0];
+            return (
+              !!first &&
+              tiles.filter(tile => Math.abs(tile.top - first.top) < 1).length === columns &&
+              Math.abs(first.width - (el.clientWidth - gap * (columns + 1)) / columns) < 1
+            );
+          })
+        )
+        .toBe(true);
+    }
+  }
 });

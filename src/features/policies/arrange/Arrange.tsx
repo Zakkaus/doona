@@ -1,17 +1,7 @@
 import '../../../ui/styles/arrange.css';
 import {useId, useMemo, useState} from 'react';
-import {
-  Button as RButton,
-  DropZone,
-  GridList,
-  GridListItem,
-  ListLayout,
-  Virtualizer,
-  isTextDropItem,
-  useDragAndDrop,
-  type DropItem,
-  type Selection
-} from 'react-aria-components';
+import {isTextDropItem, type DropItem, type Selection} from 'react-aria-components';
+import {DropCard, DragCollection} from '../../../ui/DragCollection';
 import {formatList, useLang, useT} from '../../../i18n';
 import {href} from '../../../shell/route';
 import {NodeText} from '../../shared/NodeText';
@@ -22,12 +12,8 @@ import {
   ActionHelp,
   Badge,
   Button,
-  buttonClass,
   Card,
-  cardClass,
-  Check,
   ChoiceMenu,
-  cx,
   Disclosure,
   Empty,
   ErrorMessage,
@@ -39,11 +25,9 @@ import {
   Segmented,
   Tag,
   Tags,
-  TextField,
-  TextTooltip
+  TextField
 } from '../../../ui/ui';
 import Close from '../../../ui/icons/Close';
-import DragHandle from '../../../ui/icons/DragHandle';
 import type {GroupSummary} from '../../../api/model';
 import type {MainSourceEdit} from '../../../store/mainSource';
 import {groupPolicyText, memberCountText} from '../../shared/policyText';
@@ -160,8 +144,7 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
     </Button>
   );
   return (
-    <DropZone
-      className={cardClass('rp-drop')}
+    <DropCard
       aria-label={t('arrange.dropInto', {group: group.name})}
       isDisabled={locked || m.applying}
       getDropOperation={types => (types.has(PLACEABLE) ? 'copy' : 'cancel')}
@@ -273,11 +256,11 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
           )}
         </>
       )}
-    </DropZone>
+    </DropCard>
   );
 }
 
-type Row = {id: string; item: Placeable; label: string; meta: string};
+type Row = {id: string; item: Placeable; label: string; meta: string; nodeName?: boolean};
 
 // Everything that can be placed, as a virtualised list with react-aria's drag and drop (pointer, keyboard and
 // screen reader): drag rows onto a group card, or tick rows and add them from the bar below.
@@ -299,20 +282,18 @@ function Tray({m}: {m: Model}) {
           }))),
       ...(show === 'subscription'
         ? []
-        : m.nodes.map(node => ({id: 'node:' + node.id, item: {kind: 'node' as const, value: node.name}, label: node.name, meta: node.protocol ?? ''})))
+        : m.nodes.map(node => ({
+            id: 'node:' + node.id,
+            item: {kind: 'node' as const, value: node.name},
+            label: node.name,
+            meta: node.protocol ?? '',
+            nodeName: true
+          })))
     ],
     [show, m.subscriptions, m.nodes, t]
   );
   const byId = useMemo(() => new Map(rows.map(row => [row.id, row])), [rows]);
   const chosen = selected === 'all' ? rows : [...selected].flatMap(id => byId.get(String(id)) ?? []);
-  const {dragAndDropHooks} = useDragAndDrop({
-    getItems: ids =>
-      [...ids].flatMap(id =>
-        byId.has(String(id)) ? [{[PLACEABLE]: JSON.stringify(byId.get(String(id))!.item), 'text/plain': byId.get(String(id))!.label}] : []
-      ),
-    getAllowedDropOperations: () => ['copy'],
-    isDisabled: locked
-  });
   // A group that already holds every chosen item is not offered.
   const targets = m.groups.filter(group => chosen.some(row => !holds(group, row.item)));
   return (
@@ -328,38 +309,20 @@ function Tray({m}: {m: Model}) {
           ['node', t('arrange.nodes')]
         ]}
       />
-      <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 48}}>
-        <GridList
-          aria-labelledby={heading}
-          className="rp-tray-list"
-          items={rows}
-          selectionMode="multiple"
-          selectionBehavior="toggle"
-          selectedKeys={selected}
-          onSelectionChange={setSelected}
-          dragAndDropHooks={dragAndDropHooks}
-          renderEmptyState={() => <Empty>{t('arrange.trayEmpty')}</Empty>}
-        >
-          {row => (
-            <GridListItem id={row.id} textValue={row.label} className="rp-item rp-tray-row">
-              {/* First in the row, as in S2's ListView: the keyboard's way into drag and drop, since Space and Enter
-                  already toggle the row's selection. */}
-              <RButton
-                slot="drag"
-                className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-drag')}
-                aria-label={t('arrange.drag', {name: row.label})}
-              >
-                <DragHandle />
-              </RButton>
-              <Check />
-              <span className="rp-grow">
-                {row.item.kind === 'node' ? <NodeName name={row.label} /> : <TextTooltip>{row.label}</TextTooltip>}
-                <span className="desc">{row.meta}</span>
-              </span>
-            </GridListItem>
-          )}
-        </GridList>
-      </Virtualizer>
+      <DragCollection
+        rows={rows}
+        labelledBy={heading}
+        selected={selected}
+        onSelectionChange={setSelected}
+        isDisabled={locked}
+        empty={t('arrange.trayEmpty')}
+        dragLabel={row => t('arrange.drag', {name: row.label})}
+        getItems={ids =>
+          [...ids].flatMap(id =>
+            byId.has(String(id)) ? [{[PLACEABLE]: JSON.stringify(byId.get(String(id))!.item), 'text/plain': byId.get(String(id))!.label}] : []
+          )
+        }
+      />
       <div className="rp-tray-bar">
         <span className="rp-grow rp-label" aria-live="polite">
           {chosen.length ? t('arrange.selected', {n: chosen.length}) : t('arrange.selectHint')}
