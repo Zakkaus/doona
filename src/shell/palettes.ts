@@ -13,7 +13,7 @@ export const palettes = [
   {id: 'catppuccin/macchiato', group: 'palette.catppuccin', label: 'palette.macchiato', desc: 'palette.latteMacchiato'},
   {id: 'catppuccin/mocha', group: 'palette.catppuccin', label: 'palette.mocha', desc: 'palette.latteMocha'},
   {id: 'nord/nord', group: 'palette.nord', label: 'palette.nord', desc: 'palette.nordVariants'},
-  {id: 'kary/kary', group: 'palette.kary', label: 'palette.kary', desc: 'palette.karyVariants'},
+  {id: 'kary/kary', group: 'palette.kary', label: 'palette.kary', desc: 'palette.lightDark'},
   {id: 'antd/antd', group: 'palette.antd', label: 'palette.antd', desc: 'palette.defaultDark'},
   {id: 'arco/arco', group: 'palette.bytedance', label: 'palette.arco', desc: 'palette.lightDark'},
   {id: 'semi/semi', group: 'palette.bytedance', label: 'palette.semi', desc: 'palette.lightDark'},
