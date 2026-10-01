@@ -24,16 +24,31 @@
   margin: 0;
 }
 
-/* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. */
+/* The code editor (CodeMirror) draws its own frame from the theme tokens; the host only keeps it in its column. It
+   grows with its text and the page scrolls it; CodeMirror still renders only the lines in view. Its own layers
+   (gutters, tooltips) stack inside it, under the pinned head. */
 .rp-editor {
   min-width: 0;
   max-width: 100%;
+  isolation: isolate;
 }
-/* The toolbar and any banner under it. */
+/* The toolbar and any banner under it stay below the top bar while the page scrolls; where the top bar scrolls away
+   (a landscape phone), they pin to the top edge. */
 .rp-editor-head {
+  position: sticky;
+  top: var(--rp-topbar);
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: var(--rp-space-2);
+  padding-block: var(--rp-space-2);
+  margin-block: calc(-1 * var(--rp-space-2));
+  background: var(--rp-base);
+}
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  .rp-editor-head {
+    top: env(safe-area-inset-top, 0px);
+  }
 }
 .rp-editor-toolbar,
 .rp-editor-actions > .rp-toolbar {

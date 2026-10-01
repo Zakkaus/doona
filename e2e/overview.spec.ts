@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, mockBackend, moreAction, setAppearance, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, mockBackend, setAppearance, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
@@ -129,7 +129,7 @@ test('an accepted source reload respects Retry-After and retains the draft on te
   await page.goto('/#/config?tab=source');
   const draft = source.content + '\n# keep this draft\n';
   await page.locator('.cm-content').fill(draft);
-  await moreAction(page.locator('.rp-editor-toolbar'), 'Apply');
+  await page.locator('.rp-editor-toolbar').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('Source reload failed');
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
   await expect(page.locator('.cm-content')).toContainText('# keep this draft');
