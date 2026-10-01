@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {backendCode, backendMessage, diagnosticMessage, oneLine} from './backend';
+import {backendCode, backendMessage, diagnosticMessage, namesMore, oneLine} from './backend';
 import {LANGS, translate, type Lang, type Translator} from './index';
 import type {ConfigDiagnostic} from '../api/model';
 
@@ -114,4 +114,23 @@ it('keeps the backend detail for removed configuration keys and no longer names 
     detail: message
   });
   expect(backendMessage('destination_rejected', 'Old backend detail', t).summary).toContain('Old backend detail');
+});
+
+it.each([
+  ['the translation of a demo code', 'not_a_setting', 'Expected "<key>: <value>"', {}, false],
+  ['a demo code naming what its translation names', 'section_not_closed', 'Section "global" is never closed', {name: 'global'}, false],
+  ['a demo code naming a value its translation leaves out', 'section_not_closed', 'Section "global" is never closed at line 40', {name: 'global'}, true],
+  ['a known code, whose words are a label', 'legacy-config-warning', 'setting was removed and can be deleted; its value is ignored', {}, true]
+])('keeps the backend words for %s only when they say more', (_, code, message, params, kept) => {
+  const zh: Translator = (key, values) => translate('zh-TW', key, values);
+  expect(diagnosticMessage({code, message, params} as ConfigDiagnostic, zh).detail !== undefined).toBe(kept);
+});
+
+it.each([
+  ['Expected "<key>: <value>"', '設定格式：<key>: <value>', false],
+  ['Unknown key log_lvl.', '未知的設定', true],
+  ["Group 'proxy' is never closed.", '群組「proxy」未閉合', false],
+  ['retaining the first usable entry', '保留第一個可用項目', false]
+])('%s names more than %s: %s', (message, summary, more) => {
+  expect(namesMore(message, summary)).toBe(more);
 });

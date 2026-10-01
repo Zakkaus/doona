@@ -208,11 +208,11 @@ it('shows the same localized diagnostic in rows and both editor marks', () => {
   const [item] = diagnose('main', text, new Set(), 'full');
   const translateTW: Translator = (key, params) => translate('zh-TW', key, params);
   const summary = translateTW('config.diagnostic.unknownOutbound', {name: 'nowhere'});
-  const described = translateTW('config.backendDetail', {text: summary, message: 'No group named "nowhere"'});
   const rows = diagnosticRows([item], [source(text)], 'zh-TW', translateTW);
   expect(rows[0].message).toBe(summary);
-  expect(rows[0].backend).toBe('No group named "nowhere"');
-  expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(described);
+  // The backend's sentence names nothing the translation leaves out, so it is not repeated.
+  expect(rows[0].backend).toBeNull();
+  expect(sourceMarks([item], 'main', translateTW)[0].message).toBe(summary);
   // The page's own words already are the backend's in English.
   expect(sourceMarks([item], 'main', t)[0].message).toBe('No group named "nowhere"');
 });

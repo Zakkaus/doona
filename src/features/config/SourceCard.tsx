@@ -77,20 +77,19 @@ export function SourceCard(props: SourceCardProps) {
           <div className="rp-config-diagnostic-list" role="list" aria-label={t('config.diagnostics')}>
             {d.rows.map(item => (
               <div className="rp-config-diagnostic" role="listitem" key={item.id}>
-                <div className="rp-col">
-                  <Light small tone={item.tone}>
-                    <VisuallyHidden>{`${item.levelText} `}</VisuallyHidden>
-                    {item.text}
-                  </Light>
-                  {item.backend && (
-                    <Disclosure flush title={t('config.backendText')}>
-                      <span className="rp-label">{item.backend}</span>
-                    </Disclosure>
-                  )}
-                </div>
+                <Light small tone={item.tone}>
+                  <VisuallyHidden>{`${item.levelText} `}</VisuallyHidden>
+                  {item.text}
+                </Light>
+                {item.backend && (
+                  <Disclosure flush title={t('config.backendText')}>
+                    <code>{item.backend}</code>
+                  </Disclosure>
+                )}
                 {item.action && (
                   <Button
                     small
+                    className="rp-config-diagnostic-go"
                     label={item.action === 'jump' ? t('config.jumpToLine', {line: item.line!}) : t('config.openSourceAt', {where: item.where})}
                     onPress={() => d.go(item)}
                   >

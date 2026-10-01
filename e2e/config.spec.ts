@@ -83,6 +83,15 @@ test('editing validates, shows diagnostics on errors, and saves through a reload
   await expect(diagnostics.getByRole('listitem')).toHaveCount(1);
   await expect(diagnostics).toContainText('Unknown section "unknown_section"');
   await expect(page.locator('.rp-toast.negative')).toContainText('Validation found 1 error');
+  // The action keeps clear of the list's edge and scrollbar, centred on its row.
+  const geometry = await diagnostics.evaluate(list => {
+    const row = list.querySelector('[role=listitem]')!.getBoundingClientRect();
+    const action = list.querySelector('[role=listitem] button[aria-label^="Go to line"]')!.getBoundingClientRect();
+    const edge = list.getBoundingClientRect().left + list.clientLeft + list.clientWidth;
+    return {room: edge - action.right, offset: Math.abs(action.top + action.bottom - row.top - row.bottom) / 2};
+  });
+  expect(geometry.room).toBeGreaterThanOrEqual(8);
+  expect(geometry.offset).toBeLessThanOrEqual(1);
   await page.keyboard.press('ControlOrMeta+Home');
   await diagnostics.getByRole('button', {name: /^Go to line/}).click();
   await expect(page.locator('.cm-activeLine')).toContainText('unknown_section');
@@ -234,7 +243,7 @@ test('identical diagnostics share one row with their count, and a known code kee
   await expect(rows).toContainText('Duplicate node in the subscription; the first usable entry is kept (3 times)');
   const backend = rows.getByText('duplicate endpoint identity; retaining the first usable entry', {exact: true});
   await expect(backend).toBeHidden();
-  await rows.getByRole('button', {name: 'Backend message', exact: true}).click();
+  await rows.getByRole('button', {name: 'Details', exact: true}).click();
   await expect(backend).toBeVisible();
   await page.goto('/#/config?tab=source&source=src-main');
   await expect(page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem')).toHaveCount(1);
@@ -612,7 +621,12 @@ test('a validation run gives way to the accepted diagnostics after a reload', as
     await generation;
     await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
   });
-  // A validation that finds something, so the summary names what it checked.
+  // The accepted configuration and a validation each have a diagnostic, so the summary names which one it shows.
+  await page.route('**/api/v1/config', async route => {
+    const accepted = await api.config();
+    accepted.diagnostics = [{level: 'warning', source_id: 'src-main', line: null, column: null, span: null, code: 'duplicate', message: 'Accepted'}];
+    await route.fulfill({json: accepted});
+  });
   await page.route('**/api/v1/config/validate', async route => {
     const result = await api.validateConfig(route.request().postDataJSON());
     const warning = {level: 'warning', source_id: 'src-main', line: null, column: null, span: null, code: 'duplicate', message: 'Checked'} as const;
@@ -628,7 +642,7 @@ test('a validation run gives way to the accepted diagnostics after a reload', as
   await api.replaceConfigSource(source.id, source.content + '\n# elsewhere\n', `"${source.content_sha256}"`);
   await expect.poll(async () => (await api.config()).generation_id).not.toBe(before.generation_id);
   changed();
-  await expect(panel).toContainText('No diagnostics');
+  await expect(panel).toContainText('Diagnostics kept for the accepted configuration');
   await expect(panel).not.toContainText('Current config file diagnostics');
 });
 

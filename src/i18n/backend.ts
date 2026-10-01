@@ -142,10 +142,29 @@ export function backendMessage(code: string, message: string, t: Translator, det
 // words as the detail when they say more. A demo code missing a param its words take reads as any backend code.
 export function diagnosticMessage({code, message, params}: ConfigDiagnostic, t: Translator): BackendMessage {
   const [demo, ...needs] = own(demoDiagnostics, code) ?? [];
-  const key = demo && needs.every(name => params?.[name] !== undefined) ? demo : own(known, code);
+  const translated = !!demo && needs.every(name => params?.[name] !== undefined);
+  const key = translated ? demo : own(known, code);
   if (!key) return backendMessage(code, message, t);
   const summary = t(key, params);
-  return message && message !== summary ? {summary, detail: message} : {summary};
+  // A demo code's words translate the backend's whole sentence, so its English adds something only when it names a
+  // value the translation leaves out; a known code's words are a short label, and the backend's say more.
+  return message && message !== summary && (!translated || namesMore(message, summary)) ? {summary, detail: message} : {summary};
+}
+
+// Whether the backend's words name something the page's words do not: a quoted name, or a token with a digit, a path
+// or key separator or a placeholder bracket.
+export function namesMore(message: string, summary: string): boolean {
+  const said = summary.toLowerCase();
+  const named = message.match(/"[^"]*"|'[^']*'|`[^`]*`|[^\s"'`]*[\d_/<>=][^\s"'`]*|[^\s"'`]+[.:][^\s"'`]+/g) ?? [];
+  return named.some(
+    token =>
+      !said.includes(
+        token
+          .replace(/^["'`]|["'`]$/g, '')
+          .replace(/[.,;:)]+$/, '')
+          .toLowerCase()
+      )
+  );
 }
 
 // A backend message on one line, for a place with room for one.

@@ -106,7 +106,7 @@
   "config.atFile": "{file} 第 {line} 行：{message}",
   "config.atLine": "第 {line} 行：{message}",
   "config.backendDetail": "{text}。后端消息：{message}",
-  "config.backendText": "后端消息",
+  "config.backendText": "详细",
   "config.changedMeanwhile": "配置已被更改或另一次写入尚未完成，因此未写入。请刷新后重试",
   "config.changedOnDisk": "编辑期间磁盘上的文件已更改，应用会覆盖该更改。",
   "config.clean": "没有诊断",
