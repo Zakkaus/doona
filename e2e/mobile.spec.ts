@@ -616,9 +616,10 @@ test('the route trace says what it lacks until a destination and port are given'
   await expect(page.getByText('Ports must be integers from 1 to 65535.', {exact: true})).toHaveCount(0);
 });
 
-// A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, line up
-// with each other and fit the demo's names whole, and the panel keeps the grid's 8px gap between its last column and
-// the scrollbar, which on a phone is drawn over the content.
+// A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, span the
+// same row and fit the demo's names whole, a small group's two tiles sharing the row rather than leaving columns empty,
+// and the panel keeps the grid's 8px gap between its last column and the scrollbar, which on a phone is drawn over the
+// content.
 for (const [width, columns] of [
   [390, 1],
   [440, 1],
@@ -653,16 +654,16 @@ for (const [width, columns] of [
         return {
           inner: box.left + panel.clientLeft + panel.clientWidth,
           large: edges(panel.querySelectorAll('.rp-node')),
-          small: {...edges(small.querySelectorAll('.rp-node')), columns: getComputedStyle(small).gridTemplateColumns.split(' ').length},
+          small: edges(small.querySelectorAll('.rp-node')),
           cut: cut.map(n => n.textContent)
         };
       });
       expect(m.inner - m.large.right).toBeGreaterThanOrEqual(8);
       expect(m.large.columns).toBe(columns);
-      expect(m.small.columns).toBe(columns);
-      expect(Math.abs(m.large.width - m.small.width)).toBeLessThanOrEqual(1);
+      expect(m.small.columns).toBe(Math.min(columns, 2));
+      if (columns <= 2) expect(Math.abs(m.large.width - m.small.width)).toBeLessThanOrEqual(1);
       expect(Math.abs(m.large.left - m.small.left)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 3);
-      if (columns === 1) expect(Math.abs(m.large.right - m.small.right)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(m.large.right - m.small.right)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 3);
       expect(m.cut).toEqual([]);
     });
   });
