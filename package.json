@@ -62,7 +62,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
-    "@react-aria/optimize-locales-plugin": "^1.1.4",
+    "@react-aria/optimize-locales-plugin": "^2.0.2",
     "@types/d3-shape": "^3.2.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
