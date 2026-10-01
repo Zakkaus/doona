@@ -5,7 +5,6 @@ import {toast, toastFailure} from '../../ui/ui';
 import {type MainSourceEdit} from '../../store/mainSource';
 import {type SubscriptionText} from '../../dae/subscriptions';
 import {providerRowView, type ProviderRow} from './view';
-import {href, within} from '../../shell/route';
 import type {useRefreshAll} from '../shared/useRefreshAll';
 
 type ProviderTableInput = {
@@ -18,7 +17,6 @@ type ProviderTableInput = {
   busy: boolean;
   source: MainSourceEdit;
   entries: SubscriptionText[];
-  query: string;
   refresh: ReturnType<typeof useProviderRefresh>;
   refreshAll: ReturnType<typeof useRefreshAll>;
   onAdd: () => void;
@@ -50,8 +48,7 @@ export function useProviderTable(input: ProviderTableInput) {
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
     remove: () => {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
-    },
-    intervalHref: input.editAction(item)?.kind === 'edit' ? href('nodes') + '?' + within(input.query, {editSubscription: item.id, focus: 'interval'}) : null
+    }
   }));
   return {
     rows,
@@ -80,8 +77,6 @@ export type ProviderTableView = {
     updatedAt: string | null;
     expires: string;
     interval: string;
-    intervalLabel: string;
-    intervalMissing: boolean;
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
     error?: string;
@@ -95,7 +90,6 @@ export type ProviderTableView = {
     refresh: () => void;
     removable: boolean;
     remove: () => void;
-    intervalHref: string | null;
   }>;
   loading: boolean;
   selected: string | null;

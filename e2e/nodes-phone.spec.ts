@@ -135,7 +135,7 @@ for (const width of [320, 360, 390])
 test('desktop subscription and node actions use the kit control text role', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/nodes?tab=list');
-  for (const name of [/^Refresh (all )?subscriptions? \(/, 'Add subscription', 'Paste node link']) {
+  for (const name of [/^Update (all )?subscriptions? \(/, 'Add subscription', 'Paste node link']) {
     const button = page.getByRole('button', {name, exact: true});
     await expect(button).toBeVisible();
     const type = await button.evaluate(el => {

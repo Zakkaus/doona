@@ -608,7 +608,14 @@ test('provider host labels cannot enable interval writes without node tag metada
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
   await page.goto('/#/nodes?tab=list');
   await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
-  await expect(page.getByRole('button', {name: /^Auto-update of/})).toHaveCount(0);
+  for (const id of ['main-provider', 'include-provider']) {
+    await page
+      .locator(`[role=row][data-key=${id}]`)
+      .getByRole('button', {name: /^More actions for/})
+      .click();
+    await expect(page.getByRole('menuitem', {name: /^Edit /})).toHaveCount(0);
+    await page.keyboard.press('Escape');
+  }
 });
 
 httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {

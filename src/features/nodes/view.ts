@@ -255,8 +255,6 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     interval: interval == null ? '—' : intervalText(interval, locale, t),
-    intervalMissing: interval == null,
-    intervalLabel: t('nodes.intervalOf', {name}),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],
     error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,

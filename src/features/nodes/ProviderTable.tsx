@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, Link, MoreMenu, TextTooltip, TimeCell, type TableColumn} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, MoreMenu, TextTooltip, TimeCell, type TableColumn} from '../../ui/ui';
 import {phoneQuery, useMediaQuery} from '../../ui/hooks';
 import Refresh from '../../ui/icons/Refresh';
 import {primaryFirst} from './tableColumns';
@@ -28,21 +28,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
       {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6, render: row => row.count},
       {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2, render: row => row.usage},
       {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3, render: row => <TimeCell at={row.updatedAt} />},
-      {
-        id: 'interval',
-        label: t('nodes.interval'),
-        minWidth: 130,
-        grow: 0,
-        drop: 4,
-        render: row =>
-          row.intervalHref ? (
-            <Link appearance="button" small href={row.intervalHref} label={row.intervalLabel}>
-              {row.intervalMissing ? t('config.edit') : row.interval}
-            </Link>
-          ) : (
-            row.interval
-          )
-      },
+      {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4, render: row => row.interval},
       {id: 'expires', label: t('nodes.expires'), minWidth: 140, drop: 1, render: row => row.expires},
       {
         id: 'status',

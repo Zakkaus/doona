@@ -384,8 +384,7 @@ test('a subscription refresh interval is written into the configuration', async 
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
-  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
-  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-update'})).toBeFocused();
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
@@ -396,7 +395,7 @@ test('a subscription refresh interval is written into the configuration', async 
     "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
   );
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Manual only', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
@@ -450,7 +449,9 @@ test('an unspecified subscription interval claims neither manual-only nor an eng
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
-  await expect(subscription.getByRole('link', {name: 'Auto-update of harbor', exact: true})).toHaveText('Edit');
+  await expect(subscription.getByRole('link')).toHaveCount(0);
+  await moreAction(subscription, 'Edit harbor', 'More actions for harbor');
+  await expect(page.getByRole('dialog', {name: 'Edit subscription harbor'})).toBeVisible();
 });
 
 test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
@@ -781,8 +782,7 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   const block = main.content!.replace(`harbor: '${url}'`, `harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
   await api.pollOperation(await api.replaceConfigSource(main.id, block, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('link', {name: 'Auto-update of harbor', exact: true}).click();
-  await expect(page.getByRole('dialog').getByRole('button', {name: 'Auto-update'})).toBeFocused();
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   await page.getByRole('dialog').getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await page.getByRole('dialog').getByRole('button', {name: 'Apply', exact: true}).click();
@@ -1144,14 +1144,11 @@ test('the interval jump edits the declaring include while the main file is read-
     return api.replaceConfigSource(main.id, main.content, `"${main.content_sha256}"`);
   };
   await page.goto('/#/nodes');
-  const jump = page.getByRole('link', {name: 'Auto-update of harbor', exact: true});
-  await expect(jump).toHaveText('Edit');
-  await jump.click();
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const interval = dialog.getByRole('button', {name: 'Auto-update'});
-  await expect(interval).toBeFocused();
   await expect(page).not.toHaveURL(/editSubscription|focus=/);
-  await page.keyboard.press('Enter');
+  await interval.click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
