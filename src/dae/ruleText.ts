@@ -1,5 +1,5 @@
 import type {ConfigSource, DnsRoutingRule, RoutingRule, RuleSource} from '../api/model';
-import {blockFields, scanConfig, uncomment, unquote, type TextBlock} from './text';
+import {blockFields, scanConfig, unquote, type TextBlock} from './text';
 
 export function sourceFor(list: ConfigSource[], source: RuleSource | null | undefined) {
   if (!source) return undefined;
@@ -8,7 +8,16 @@ export function sourceFor(list: ConfigSource[], source: RuleSource | null | unde
 
 // `target` spans what a listed rule writes after its arrow or fallback colon, with the space before it.
 // `open` and `close` wrap an added rule in a block the text does not have yet.
-export type RuleAnchor = {from: number; to: number; indent: string; text: string; target?: {from: number; to: number}; open?: string; close?: string};
+export type RuleAnchor = {
+  from: number;
+  to: number;
+  indent: string;
+  text: string;
+  target?: {from: number; to: number; foldCase?: boolean};
+  condition?: {from: number; to: number};
+  open?: string;
+  close?: string;
+};
 // A listed rule as the anchor reads it: where it is, whether it is the fallback, and the target written after the
 // arrow (an outbound, a DNS upstream or action).
 type Listed = {kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
@@ -19,7 +28,14 @@ type Placement = {
   target: string;
   // honk resolves DNS upstream names without regard to case, so the list may spell one differently from the source.
   foldCase?: boolean;
+  bareInclude?: boolean;
 };
+
+const compact = (value: string) =>
+  scanConfig(value)
+    .tokens.filter(token => token.kind !== 'comment')
+    .map(token => value.slice(token.from, token.to))
+    .join('');
 
 function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
   if (!rule.source || rule.source.source_id !== source.id) return null;
@@ -36,23 +52,32 @@ function anchorAt(source: ConfigSource, rule: Listed, place: Placement, scan?: R
   }
   const first = actual[0];
   const last = actual.at(-1)!;
-  if (!place.within(blocks).some(block => first.from > block.open && last.to <= block.close && first.depth === block.depth + 1)) return null;
+  const within = place.within(blocks).some(block => first.from > block.open && last.to <= block.close && first.depth === block.depth + 1);
+  if (!within && !(place.bareInclude && source.kind === 'include' && !blocks.length && first.depth === 0)) return null;
   const fallback = actual.length >= 3 && place.fallbacks.includes(text.slice(first.from, first.to)) && text.slice(actual[1].from, actual[1].to) === ':';
   if ((rule.kind === 'fallback') !== fallback) return null;
   // The line must still hold this rule: a source shifted since the list was read would otherwise edit its neighbour.
   const fold = (value: string) => (place.foldCase ? value.toLowerCase() : value);
-  const bare = (from: number, to: number) => uncomment(text.slice(from, to)).replace(/\s+/g, '');
+  const bare = (from: number, to: number) => compact(text.slice(from, to));
   const arrow = fallback ? actual[1] : actual.find(token => token.parens === 0 && text.slice(token.from, token.to) === '->');
-  const target = place.target.replace(/\s+/g, '');
+  const target = compact(place.target);
   if (!arrow || fold(bare(arrow.to, last.to)) !== fold(target)) return null;
   // The display expression may end with its target, as the contract shows it (`pname(curl) -> direct`), or not.
-  const shown = rule.expression.replace(/\s+/g, '');
+  const shown = compact(rule.expression);
   const condition = fold(shown).endsWith(fold('->' + target)) ? shown.slice(0, -target.length - 2) : shown;
   if (!fallback && !rule.expression.includes('<redacted>') && bare(first.from, arrow.from) !== condition) return null;
   const from = text.lastIndexOf('\n', first.from - 1) + 1;
   const newline = text.indexOf('\n', last.to);
   const to = newline === -1 ? text.length : newline + 1;
-  return {from, to, indent: text.slice(from, first.from), text: text.slice(from, to), target: {from: arrow.to, to: last.to}};
+  const conditionEnd = actual[actual.indexOf(arrow) - 1];
+  return {
+    from,
+    to,
+    indent: text.slice(from, first.from),
+    text: text.slice(from, to),
+    target: {from: arrow.to, to: last.to, ...(place.foldCase ? {foldCase: true} : {})},
+    ...(!fallback && conditionEnd ? {condition: {from: first.from, to: conditionEnd.to}} : {})
+  };
 }
 
 export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: ReturnType<typeof scanConfig>): RuleAnchor | null {
@@ -62,6 +87,7 @@ export function ruleAnchor(source: ConfigSource, rule: RoutingRule, scan?: Retur
     {
       within: blocks => blocks.filter(block => block.name === 'routing'),
       fallbacks: ['fallback'],
+      bareInclude: true,
       target: (rule.outbound ?? '') + (rule.must ? '(must)' : '')
     },
     scan
@@ -151,11 +177,33 @@ export function addRule(text: string, anchor: RuleAnchor, condition: string, out
 
 // Rewrites only the rule's target, so its condition and any comment after it stay as written.
 export function replaceRuleTarget(text: string, anchor: RuleAnchor, outbound: string, must: boolean): string | null {
-  return anchor.target && text.slice(anchor.from, anchor.to) === anchor.text
-    ? text.slice(0, anchor.target.from) + ` ${outbound}${must ? '(must)' : ''}` + text.slice(anchor.target.to)
-    : null;
+  if (!anchor.target || text.slice(anchor.from, anchor.to) !== anchor.text) return null;
+  const target = `${outbound}${must ? '(must)' : ''}`;
+  const fold = (value: string) => (anchor.target?.foldCase ? value.toLowerCase() : value);
+  if (fold(compact(text.slice(anchor.target.from, anchor.target.to))) === fold(compact(target))) return text;
+  return text.slice(0, anchor.target.from) + ` ${target}` + text.slice(anchor.target.to);
 }
 
 export function removeRule(text: string, anchor: RuleAnchor): string | null {
   return text.slice(anchor.from, anchor.to) === anchor.text ? text.slice(0, anchor.from) + text.slice(anchor.to) : null;
+}
+
+// Replace the located condition and target, retaining trailing markers and comments inside a continued condition.
+export function replaceRule(text: string, anchor: RuleAnchor, condition: string, outbound: string, must: boolean): string | null {
+  const targeted = replaceRuleTarget(text, anchor, outbound, must);
+  if (targeted === null || !anchor.condition) return targeted;
+  const {from, to} = anchor.condition;
+  if (text.slice(from, to) === condition) return targeted;
+  const newline = anchor.text.includes('\r\n') ? '\r\n' : '\n';
+  const comments = scanConfig(text.slice(from, to))
+    .tokens.filter(token => token.kind === 'comment')
+    .map(token => text.slice(from + token.from, from + token.to).replace(/\r$/, '') + newline + anchor.indent)
+    .join('');
+  return targeted.slice(0, from) + comments + condition + targeted.slice(to);
+}
+
+export function addFallback(text: string, anchor: RuleAnchor, target: string): string | null {
+  return text.slice(anchor.from, anchor.to) === anchor.text
+    ? text.slice(0, anchor.from) + (anchor.open ?? '') + `${anchor.indent}fallback: ${target}\n` + (anchor.close ?? '') + text.slice(anchor.from)
+    : null;
 }

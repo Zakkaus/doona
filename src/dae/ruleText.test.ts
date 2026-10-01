@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource, DnsRoutingRule, RoutingRule} from '../api/model';
-import {addRule, dnsListEnd, dnsRuleAnchor, dnsUpstreamNames, removeRule, replaceRuleTarget, ruleAnchor, sourceFor} from './ruleText';
+import {addRule, dnsListEnd, dnsRuleAnchor, dnsUpstreamNames, removeRule, replaceRule, addFallback, replaceRuleTarget, ruleAnchor, sourceFor} from './ruleText';
 
 const rule: RoutingRule = {
   rule_id: 'r1',
@@ -217,4 +217,60 @@ it('creates an absent DNS list block at the end of the dns routing block', () =>
   expect(dnsListEnd([{...source, content: 'dns {\n  routing {}\n}\n'}], 'response')).toBeNull();
   expect(dnsListEnd([{...source, writable: false}], 'response')).toBeNull();
   expect(dnsListEnd([source, {...source, id: 'other'}], 'response')).toBeNull();
+});
+
+it('edits and removes a located bare include, retaining markers and all surrounding bytes', () => {
+  const content = '# header\r\n  pname(curl) -> direct # doona: custom\r\n# footer\r\n';
+  const source = {id: 'source', kind: 'include', content} as ConfigSource;
+  const listed = {...rule, expression: 'pname(curl)', outbound: 'direct'};
+  const anchor = ruleAnchor(source, listed)!;
+  expect(anchor).not.toBeNull();
+  expect(replaceRule(content, anchor, '!pname(firefox) && dport(443)', 'block', true)).toBe(
+    content.replace('pname(curl) -> direct', '!pname(firefox) && dport(443) -> block(must)')
+  );
+  expect(removeRule(content, anchor)).toBe('# header\r\n# footer\r\n');
+  expect(replaceRule(content.replace('curl', 'wget'), anchor, 'pname(firefox)', 'block', false)).toBeNull();
+  expect(ruleAnchor({...source, content: content.replace('curl', 'wget')}, listed)).toBeNull();
+  expect(ruleAnchor({...source, kind: 'main'}, listed)).toBeNull();
+  expect(ruleAnchor({...source, content: content + 'dns {}\n'}, listed)).toBeNull();
+});
+
+it('retains comments inside a replaced multiline condition and the trailing marker', () => {
+  const content = 'routing {\n  pname(curl,\n    # keep this note\n    wget) -> direct # doona: custom\n  fallback: direct\n}\n';
+  const source = {id: 'source', content} as ConfigSource;
+  const anchor = ruleAnchor(source, {...rule, expression: 'pname(curl, wget)', outbound: 'direct'})!;
+  expect(replaceRule(content, anchor, '!pname(firefox)', 'block', false)).toBe(
+    'routing {\n  # keep this note\n  !pname(firefox) -> block # doona: custom\n  fallback: direct\n}\n'
+  );
+  const quoted = content.replace('pname(curl,\n    # keep this note\n    wget)', 'pname("a b")');
+  expect(ruleAnchor({...source, content: quoted}, {...rule, expression: 'pname("ab")', outbound: 'direct'})).toBeNull();
+});
+
+it('changes DNS conditions and fallback actions without rewriting their trailers', () => {
+  const content = dnsText.replace('qname(geosite: cn) -> alidns', 'qname(geosite: cn) -> alidns # doona: request');
+  const source = {...dnsSource, content};
+  const anchor = dnsRuleAnchor(source, dnsRule(8, 'qname(geosite: cn)', 'upstream', 'alidns'), 'request')!;
+  expect(replaceRule(content, anchor, '!qtype(AAAA) && sip(192.0.2.0/24)', 'reject', false)).toBe(
+    content.replace('qname(geosite: cn) -> alidns #', '!qtype(AAAA) && sip(192.0.2.0/24) -> reject #')
+  );
+  const fallback = dnsRuleAnchor(source, dnsRule(13, 'default: accept', 'accept', null, 'fallback'), 'response')!;
+  expect(replaceRule(content, fallback, '', 'googledns', false)).toBe(content.replace('default: accept', 'default: googledns'));
+  const absent = {...source, writable: true, content: content.replace('      default: accept\n', '')};
+  const end = dnsListEnd([absent], 'response')!.anchor;
+  expect(addFallback(absent.content, end, 'reject')).toBe(content.replace('default: accept', 'fallback: reject'));
+  expect(addFallback(absent.content.replace('ip(geoip: private)', 'ip(geoip: cn)'), {...end, text: 'wrong'}, 'reject')).toBeNull();
+});
+
+it('keeps target whitespace byte-identical when only the condition changes', () => {
+  const content = 'routing {\n  pname(curl) ->direct( must ) # marker\n}\n';
+  const source = {id: 'source', content} as ConfigSource;
+  const anchor = ruleAnchor(source, {...rule, expression: 'pname(curl)', outbound: 'direct', must: true})!;
+  expect(replaceRule(content, anchor, 'pname(wget)', 'direct', true)).toBe(content.replace('pname(curl)', 'pname(wget)'));
+});
+
+it('keeps a DNS upstream spelling when the selected target is unchanged', () => {
+  const content = dnsText.replace('qname(geosite: cn) -> alidns', 'qname(geosite: cn) -> AliDNS');
+  const source = {...dnsSource, content};
+  const anchor = dnsRuleAnchor(source, dnsRule(8, 'qname(geosite: cn)', 'upstream', 'alidns'), 'request')!;
+  expect(replaceRule(content, anchor, 'qtype(AAAA)', 'alidns', false)).toBe(content.replace('qname(geosite: cn) -> AliDNS', 'qtype(AAAA) -> AliDNS'));
 });
