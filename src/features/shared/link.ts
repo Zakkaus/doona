@@ -61,3 +61,4 @@ export function sectionSourceHref(sources: readonly ConfigSource[], name: string
 }
 
 export const appearanceSettingsHref = href('settings', {card: 'appearance'});
+export const recordingLimitsHref = href('overview', {card: 'limits'});

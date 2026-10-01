@@ -85,7 +85,7 @@ export function Overview({query}: PageProps) {
   return (
     <div className="rp-page">
       <ErrorMessage error={vm.errors.capabilities} onRetry={vm.retry.capabilities} />
-      <div className="rp-between">
+      <div className="rp-between" id={cardHeadings.status}>
         <div className="rp-cluster">
           {vm.status.href ? (
             <Link appearance="link" href={vm.status.href}>

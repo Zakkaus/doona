@@ -14,7 +14,18 @@ export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> =
 ];
 // The cards the page shows for a backend: the geodata card only where its sources can be configured.
 export const settingsCardList = (resources: Capabilities['resources'] | undefined) =>
-  settingsCards.filter(card => card.id !== 'geodata' || geodataConfigurable(resources));
+  settingsCards.filter(card => (card.id !== 'geodata' || geodataConfigurable(resources)) && (card.id !== 'actions' || backendActionsVisible(resources)));
+
+export function backendActionsVisible(resources: Capabilities['resources'] | undefined): boolean {
+  return (
+    !!resources &&
+    ((resources.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available)) ||
+      (resources.dns_cache.available && resources.dns_cache.flush) ||
+      (resources.providers.available && resources.providers.can_refresh) ||
+      (resources.connections.available && resources.connections.can_close) ||
+      (resources.geodata.available && !geodataConfigurable(resources)))
+  );
+}
 export const cardHeadingId = (id: string) => `settings-${id}`;
 export function settingsCard(id: SettingsCardId) {
   return {headingId: cardHeadingId(id), titleKey: settingsCards.find(card => card.id === id)!.titleKey};

@@ -3,8 +3,7 @@ import {useT} from '../../i18n';
 import {toast, toastErrorDetail} from '../../ui/ui';
 import {refreshAllReason} from './refreshAll';
 
-// Refreshing every subscription in one batch, which Settings' backend actions and the Nodes subscription list both
-// offer. `refresh` is the page's own, so a single refresh and the batch share one busy state.
+// A single subscription refresh and the batch share the Nodes page's busy state.
 export function useRefreshAll(providers: Pick<ReturnType<typeof useProviders>, 'data' | 'error' | 'loading'>, refresh: ReturnType<typeof useProviderRefresh>) {
   const t = useT();
   const subscriptions = (providers.data?.providers ?? []).filter(item => item.kind === 'subscription');

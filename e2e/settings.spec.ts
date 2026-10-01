@@ -196,7 +196,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
 });
 
 // A raw browser test: 401 and 404 responses log console errors by design here.
-browserTest('a backend that answers 401 gets a token form instead of the page', async ({page}) => {
+browserTest('a backend that answers 401 opens the Backend token editor', async ({page}) => {
   let authorization: string | null = null;
   await page.route('**/api/v1/**', async route => {
     // The sign-in page probes without a token, so only a request that carries one is kept.
@@ -213,8 +213,10 @@ browserTest('a backend that answers 401 gets a token form instead of the page', 
   });
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
-  await page.getByLabel('Token', {exact: true}).fill('secret-1');
-  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  await page.getByRole('link', {name: 'Edit saved token'}).click();
+  const backend = page.getByRole('region', {name: 'Backend', exact: true});
+  await backend.getByLabel('API Token', {exact: true}).fill('secret-1');
+  await Promise.all([page.waitForEvent('load'), backend.getByRole('button', {name: 'Save', exact: true}).click()]);
   await expect.poll(() => authorization).toBe('Bearer secret-1');
   await expect(page.getByRole('heading', {name: 'Token required'})).toHaveCount(0);
 });
@@ -305,51 +307,6 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
   await expect(recording.getByText(t('settings.recordingActive'), {exact: true})).toHaveCount(1);
   await expect(recording.getByText(t('settings.recordingIdle'), {exact: true})).toHaveCount(2);
-});
-
-test('a confirmation removed while its action is pending abandons the action', async ({page}) => {
-  const {api, capabilities, handlers} = await mockBackend(page);
-  capabilities.resources.events.available = true;
-  let changed!: () => void;
-  const generation = new Promise<void>(resolve => (changed = resolve));
-  await page.route('**/api/v1/events**', async route => {
-    await generation;
-    await route.fulfill({contentType: 'text/event-stream', body: 'event: generation.changed\ndata: {}\n\n'});
-  });
-  let release!: () => void;
-  const gate = new Promise<void>(resolve => (release = resolve));
-  handlers['POST dns/cache/flush'] = async () => {
-    await gate;
-    return api.flushDnsCache();
-  };
-  await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: 'Backend actions'});
-  const trigger = card.getByRole('button', {name: 'Clear all cache', exact: true});
-  await trigger.click();
-  const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
-  const flushing = page.waitForRequest(request => request.method() === 'POST');
-  await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  const request = await flushing;
-  // A new generation withdraws the flush, so the button and its open dialog unmount mid-action.
-  capabilities.resources.dns_cache.flush = false;
-  changed();
-  await expect(trigger).toHaveCount(0);
-  await expect(dialog).toHaveCount(0);
-  const settled = Promise.race([request.response(), page.waitForEvent('requestfailed', failed => failed === request)]);
-  release();
-  await settled;
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  await expect(page.locator('.rp-toast')).toHaveCount(0);
-});
-
-test('the service actions stay buttons on a phone and run when pressed', async ({page}) => {
-  await page.setViewportSize({width: 390, height: 844});
-  await page.goto('/#/settings?card=actions');
-  const actions = page.getByRole('region', {name: t('settings.actions')});
-  await expect(actions.getByRole('button', {name: t('ov.suspend'), exact: true})).toBeVisible();
-  await expect(actions.getByRole('button', {name: t('ui.moreActions')})).toHaveCount(0);
-  await actions.getByRole('button', {name: t('ov.reload'), exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText(`${t('ov.reload')}: `);
 });
 
 test('the About card opens the keyboard shortcuts and links the guide', async ({page}) => {

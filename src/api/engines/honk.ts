@@ -1,5 +1,5 @@
 import {scanConfig, type TextBlock} from '../../dae/text';
-import type {Capabilities} from '../model';
+import type {Capabilities, RuntimeSettings} from '../model';
 import type {Engine, EngineReason, EngineSetting, EngineSubject} from './types';
 
 // honk's recorders, each available unless its record_* setting is false; every one defaults to true
@@ -18,10 +18,13 @@ const lacks: EngineReason = {code: 'build-lacks'};
 const geositeUrl = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat';
 const geoipUrl = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat';
 
-function reason(subject: EngineSubject, capabilities: Capabilities): EngineReason | undefined {
+function reason(subject: EngineSubject, capabilities: Capabilities, recording?: RuntimeSettings['recording']): EngineReason | undefined {
   const resources = capabilities.resources;
   // A resource an older build leaves out is off because that build does not have it, which is all honk can say.
   if (capabilities.unreported?.includes(subject as keyof Capabilities['resources'])) return lacks;
+  if ((subject === 'flows' || subject === 'logs' || subject === 'dns_log') && recording?.[subject]?.allowed === false) {
+    return recorderOff(recorders[subject]!);
+  }
   switch (subject) {
     // honk config.rs: the sources load once honk has started and stay within 32 files and 8 MiB; writes follow
     // config_write. A build that does not report the switch may not have it.

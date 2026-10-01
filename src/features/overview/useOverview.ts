@@ -1,5 +1,5 @@
-import {useEffect, useMemo, useState} from 'react';
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeSettings, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
 import {usePalette} from '../../ui/charts';
@@ -9,7 +9,7 @@ import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
 
 // Cards that `?card=` scrolls to, by their heading ids.
-export const cardHeadings = {limits: 'overview-limits', datapath: 'overview-datapath'};
+export const cardHeadings = {status: 'overview-status', limits: 'overview-limits', datapath: 'overview-datapath'};
 
 export function useOverview(query = '') {
   const t = useT();
@@ -21,20 +21,41 @@ export function useOverview(query = '') {
   const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
   const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
   const version = useVersion();
+  const settings = useRuntimeSettings(offered(resources, 'runtime_settings', {whileLoading: false}));
   const lifecycle = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
   const [asking, setAsking] = useState(false);
   const data = useMemo(
     () => ({capabilities: capabilities.data, runtime: runtime.data, version: version.data, memory: memory.data, datapath: datapath.data}),
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
   );
-  const limits = useMemo(() => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang) : []), [capabilities.data, version.data, t, lang]);
+  const limits = useMemo(
+    () => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang, settings.data?.recording) : []),
+    [capabilities.data, version.data, t, lang, settings.data?.recording]
+  );
   // The cards appear once their data arrives, so the scroll waits for them.
   const hasLimits = limits.length > 0;
   const hasDatapath = !!datapath.data;
+  const loading = capabilities.loading || runtime.loading || version.loading || memory.loading || datapath.loading || settings.loading;
+  const focusedCard = useRef<string | null>(null);
+  const card = new URLSearchParams(query).get('card');
   useEffect(() => {
-    const card = new URLSearchParams(query).get('card');
-    if ((card === 'limits' && hasLimits) || (card === 'datapath' && hasDatapath)) document.getElementById(cardHeadings[card])?.scrollIntoView({block: 'start'});
-  }, [query, hasLimits, hasDatapath]);
+    focusedCard.current = null;
+  }, [card]);
+  useEffect(() => {
+    if (card === 'status' || (card === 'limits' && hasLimits) || (card === 'datapath' && hasDatapath)) {
+      const heading = document.getElementById(cardHeadings[card]);
+      const target = heading?.closest('section') ?? heading;
+      if (target) {
+        if (focusedCard.current !== card) {
+          focusedCard.current = card;
+          target.tabIndex = -1;
+          target.focus();
+        }
+        // Initial reads can move the card; stop following it once focus leaves.
+        if (document.activeElement === target) target.scrollIntoView({block: card === 'status' ? 'center' : 'start'});
+      }
+    }
+  }, [card, hasLimits, hasDatapath, loading]);
   const view = useMemo(
     () =>
       overviewView(

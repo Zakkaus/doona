@@ -1,5 +1,5 @@
 import {engineOf, type EngineReason} from '../../api/engines';
-import type {Capabilities, Version} from '../../api/model';
+import type {Capabilities, RuntimeSettings, Version} from '../../api/model';
 import {formatList, type Key, type Lang, type Translator as LabelFn} from '../../i18n';
 import {href} from '../../shell/route';
 import {docsHref, type DocsAnchor} from './docs';
@@ -84,10 +84,16 @@ const reasonHelp: Partial<Record<EngineReason['code'], {text: Key; docs?: [DocsA
 // The backend features that are off or limited, grouped by why, so each cause is explained once. A feature appears
 // in at most one group, and a resource absent from every group is available. The contract says what is off; the
 // engine adapter adds why, where it knows.
-export function backendLimits(capabilities: Capabilities, version: Pick<Version, 'engine'> | undefined, t: LabelFn, lang: Lang): LimitGroup[] {
+export function backendLimits(
+  capabilities: Capabilities,
+  version: Pick<Version, 'engine'> | undefined,
+  t: LabelFn,
+  lang: Lang,
+  recording?: RuntimeSettings['recording']
+): LimitGroup[] {
   const resources = capabilities.resources;
   const engine = engineOf(version);
-  const reason = (id: LimitId) => engine.reason(id, capabilities);
+  const reason = (id: LimitId) => engine.reason(id, capabilities, recording);
   const found = new Map<LimitCause, LimitGroup['items']>();
   const add = (cause: LimitCause, id: LimitId, label: Key = resourceLabels[id as Resource]) => {
     const items = found.get(cause) ?? [];
@@ -123,7 +129,8 @@ export function backendLimits(capabilities: Capabilities, version: Pick<Version,
     if (id === 'config' || (id === 'config_validate' && validateUnloaded)) continue;
     // Flows stay available with recording off; auto records on demand, which reads the same.
     const flowsOff = id === 'flows' && resource.available && (resources.flows.recording === 'off' || resources.flows.recording === 'auto');
-    if (flowsOff || !resource.available) {
+    const forbidden = (id === 'flows' || id === 'logs' || id === 'dns_log') && recording?.[id]?.allowed === false;
+    if (forbidden || flowsOff || !resource.available) {
       const code = reason(id)?.code;
       add((code && reasonCause[code]) ?? (flowsOff ? 'flowsIdle' : 'notProvided'), id);
     } else {
