@@ -12,14 +12,29 @@ export function deferred<T>() {
 // Controller tests use the same hook-slot stand-in as ui/hooks.test.ts, without a DOM renderer.
 const slots: unknown[] = [];
 let slot = 0;
+// Effects of the last render, run only when a test asks, whatever their dependencies; cleanups wait for unmount.
+const effects: Array<() => void | (() => void)> = [];
+const cleanups: Array<() => void> = [];
 export const hookHarness = {
   reset() {
     slots.length = 0;
     slot = 0;
+    effects.length = 0;
+    cleanups.length = 0;
   },
   render<T>(read: () => T): T {
     slot = 0;
+    effects.length = 0;
     return read();
+  },
+  runEffects() {
+    for (const effect of effects.splice(0)) {
+      const cleanup = effect();
+      if (typeof cleanup === 'function') cleanups.push(cleanup);
+    }
+  },
+  unmount() {
+    for (const cleanup of cleanups.splice(0)) cleanup();
   },
   hooks: {
     useState<T>(initial: T) {
@@ -39,6 +54,8 @@ export const hookHarness = {
     useMemo<T>(read: () => T) {
       return read();
     },
-    useEffect() {}
+    useEffect(effect: () => void | (() => void)) {
+      effects.push(effect);
+    }
   }
 };
