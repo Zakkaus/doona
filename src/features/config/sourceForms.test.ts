@@ -39,18 +39,20 @@ it('keeps raw access to fields without a form and links subscriptions to their e
   expect(sameFormValues(before, before.replace('policy: fixed(0)', 'policy: min'), 'main', engine)).toBe(false);
 });
 
-it('protects rule targets while keeping conditions and include paths editable until their forms cover them', () => {
+it('protects visual rule conditions and targets while keeping unsupported conditions and include paths editable', () => {
   const before = 'routing {\n domain(example.org) -> direct\n include rules.dae\n fallback: direct\n}';
-  expect(sameFormValues(before, before.replace('example.org', 'example.net'), 'main', engine)).toBe(true);
+  expect(sameFormValues(before, before.replace('example.org', 'example.net'), 'main', engine)).toBe(false);
   expect(sameFormValues(before, before.replace('rules.dae', 'other.dae'), 'main', engine)).toBe(true);
   expect(sameFormValues(before, before.replace('-> direct', '-> block'), 'main', engine)).toBe(false);
   expect(sameFormValues(before, before.replace('fallback: direct', 'fallback: block'), 'main', engine)).toBe(false);
+  const unsupported = before.replace('domain(example.org)', 'domain(example.org) || dport(443)');
+  expect(sameFormValues(unsupported, unsupported.replace('example.org', 'example.net'), 'main', engine)).toBe(true);
 });
 
 it('protects targets in bare routing includes and leaves subscription includes without a form editable', () => {
   const rules = 'domain(example.org) -> direct\n';
   expect(sameFormValues(rules, rules.replace('direct', 'block'), 'include', engine, 'include')).toBe(false);
-  expect(sameFormValues(rules, rules.replace('example.org', 'example.net'), 'include', engine, 'include')).toBe(true);
+  expect(sameFormValues(rules, rules.replace('example.org', 'example.net'), 'include', engine, 'include')).toBe(false);
   const subscriptions = "subscription { sub: 'https://example.org' }";
   expect(sourceForms(subscriptions, 'include', engine, 'include')).toEqual([]);
   expect(sameFormValues(subscriptions, subscriptions.replace('example.org', 'example.net'), 'include', engine, 'include')).toBe(true);
@@ -68,4 +70,14 @@ it('compares a large routing file without quadratic stalls', () => {
   const start = performance.now();
   expect(sameFormValues(before, before + '\n# comment', 'main', engine)).toBe(true);
   expect(performance.now() - start).toBeLessThan(2000);
+});
+
+it.each([
+  'routing {\n domain(example.org) && !dport(80) -> direct\n}',
+  'routing {\n domain(\n example.org\n ) -> direct\n}',
+  'dns { routing { request {\n qname(example.org) -> direct\n} } }',
+  'dns { routing { response {\n ip(1.1.1.1) -> accept\n} } }'
+])('protects supported routing and DNS conditions without blocking comments in %s', before => {
+  expect(sameFormValues(before, before.replace('example.org', 'example.net').replace('1.1.1.1', '8.8.8.8'), 'main', engine)).toBe(false);
+  expect(sameFormValues(before, before.replace('->', '# keep\n ->'), 'main', engine)).toBe(true);
 });
