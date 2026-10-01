@@ -2,6 +2,7 @@ import type {Group, HealthObservation, Node, Provider, GeoData} from '../../mode
 import {ago, now, observedAt} from './clock';
 import {configMain} from './configuration';
 import {activateInventory} from '../activation';
+import {resolveLeaf} from '../control';
 import {defaultGeodataPreset} from '../../../dae/geodata';
 function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
   return {
@@ -83,6 +84,12 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     const selected = groups.find(group => group.name === name)!;
     selected.runtime.selection.tcp = {member_id: 'hk-01', resolved_leaf_node_id: 'hk-01', source: 'runtime'};
     selected.runtime.selection.udp = {member_id: 'hk-02', resolved_leaf_node_id: 'hk-02', source: 'runtime'};
+  }
+  for (const group of groups) {
+    for (const network of ['tcp', 'udp'] as const) {
+      const selection = group.runtime.selection[network];
+      if (selection) selection.resolved_leaf_node_id = resolveLeaf(selection.member_id, network, nodes, groups)?.id ?? null;
+    }
   }
   return {nodes, groups};
 }

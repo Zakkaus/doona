@@ -3,6 +3,7 @@ import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
 import {scanConfig} from '../src/dae/text';
+import {demoRouting} from '../src/dae/startingRouting';
 
 test('home charts collect memory polls and change the traffic history range', async ({page}) => {
   const api = createMockApi();
@@ -795,7 +796,12 @@ test('interleaved mandatory rules reject mode changes without writing configurat
   expect(requests.filter(request => request.method() === 'PUT')).toEqual([]);
 });
 
-test('the demo switches the outbound mode and back through its own configuration', async ({page}) => {
+test('the demo switches the outbound mode and back while preserving mandatory rules', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const block = scanConfig(main.content!).blocks.find(block => block.name === 'routing')!;
+  const content = main.content!.slice(0, block.from) + demoRouting + main.content!.slice(block.to);
+  await api.pollOperation(await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`));
   await page.goto('/#/activity');
   const modes = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await modes.getByRole('radio', {name: 'Direct', exact: true}).click();
@@ -805,8 +811,14 @@ test('the demo switches the outbound mode and back through its own configuration
   // The catch-all is a real rule of the new generation, right after the must rules.
   await page.goto('/#/rules?tab=list&view=advanced');
   const rules = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
-  await expect(rules.filter({hasText: 'l4proto(tcp, udp)'})).toContainText('l4proto(tcp, udp)');
-  await expect(rules.filter({hasText: 'l4proto(tcp, udp)'})).toContainText('direct');
+  await expect(rules.nth(0)).toContainText('pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53)');
+  await expect(rules.nth(0)).toContainText('direct');
+  await expect(rules.nth(0).getByText('must', {exact: true})).toBeVisible();
+  await expect(rules.nth(1)).toContainText('dip(geoip: private)');
+  await expect(rules.nth(1)).toContainText('direct');
+  await expect(rules.nth(1).getByText('must', {exact: true})).toBeVisible();
+  await expect(rules.nth(2)).toContainText('l4proto(tcp, udp)');
+  await expect(rules.nth(2)).toContainText('direct');
   await page.goto('/#/activity');
   await expect(modes.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   await modes.getByRole('radio', {name: 'Rule', exact: true}).click();

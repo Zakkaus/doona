@@ -31,6 +31,8 @@ it('seeds the regions template with its default routing and groups beside explic
     ]);
     expect(group.config.default_member_id).toBe(entry.default?.replaceAll("'", '') ?? null);
   }
+  expect(actual.find(entry => entry.name === 'auto')).toMatchObject({filters: ["!name('direct', 'block')"], policy: 'min_moving_avg'});
+  expect(actual.find(entry => entry.name === 'gaming')).toMatchObject({filters: ['name(jp-01, hk-02)'], policy: 'min_last_delay'});
   expect((await api.group('gaming')).members.map(member => member.id)).toEqual(['hk-02', 'jp-01']);
   expect((await api.group('backup')).members).toHaveLength(120);
   expect((await api.group('office')).policy.native).toBe('fixed(0)');
@@ -42,12 +44,18 @@ it('preserves template memberships and nested defaults across a reload', async (
   try {
     const api = createMockApi();
     const before = await Promise.all((await api.groups()).map(group => api.group(group.id)));
+    for (const name of ['telegram', 'ai']) {
+      expect(before.find(group => group.name === name)!.runtime.selection).toMatchObject({
+        tcp: {member_id: 'proxy', resolved_leaf_node_id: 'hk-01'},
+        udp: {member_id: 'proxy', resolved_leaf_node_id: 'hk-02'}
+      });
+    }
     const accepted = await api.startReload();
     await vi.advanceTimersByTimeAsync(1000);
     expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
     const after = await Promise.all((await api.groups()).map(group => api.group(group.id)));
-    expect(after.map(group => [group.id, group.members, group.policy, group.config.default_member_id])).toEqual(
-      before.map(group => [group.id, group.members, group.policy, group.config.default_member_id])
+    expect(after.map(group => [group.id, group.members, group.policy, group.config.default_member_id, group.runtime.selection])).toEqual(
+      before.map(group => [group.id, group.members, group.policy, group.config.default_member_id, group.runtime.selection])
     );
     expect((await api.group('bahamut')).runtime.selection.tcp).toMatchObject({member_id: 'tw', resolved_leaf_node_id: expect.any(String)});
   } finally {

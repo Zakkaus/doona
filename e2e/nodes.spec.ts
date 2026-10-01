@@ -557,8 +557,15 @@ test('a latency row opens its node in the list', async ({page}) => {
   await page.goto('/#/nodes?tab=latency');
   const row = page.locator('.rp-markerplot .row .name').getByRole('link').first();
   const name = (await row.innerText()).trim();
+  const api = createMockApi();
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.name === name)!;
+  expect(node.provider_id).toBeTruthy();
   await row.click();
-  await expect(page).toHaveURL(url => url.hash.includes(`q=${encodeURIComponent(name).replaceAll('%20', '+')}`));
+  await expect(page).toHaveURL(url => {
+    const [path, search] = url.hash.slice(1).split('?');
+    const params = new URLSearchParams(search);
+    return path === '/nodes' && params.get('provider') === node.provider_id && params.get('q') === name;
+  });
   await expect(page.getByRole('tab', {name: 'Nodes', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(name);
   await expect(page.getByRole('grid').last()).toContainText(name);

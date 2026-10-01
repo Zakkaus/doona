@@ -113,10 +113,11 @@ test('a rule is added before the fallback and removed again through validate, sa
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   await expect(list).toHaveCount(22);
-  await expect(list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'})).toContainText('domain(geosite:netflix)');
-  await expect(list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'})).toContainText('gaming');
+  await expect(list.nth(20)).toContainText('domain(geosite:netflix)');
+  await expect(list.nth(20)).toContainText('gaming');
+  await expect(list.nth(21)).toContainText('fallback: proxy');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('generation 41');
-  await list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'}).getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await list.nth(20).getByRole('button', {name: 'Remove rule', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
   await expect(list).toHaveCount(21);

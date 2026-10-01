@@ -6,7 +6,7 @@ export const demoRouting = `routing {
   domain(geosite: cn) -> direct
   domain(geosite: telegram) -> proxy
   include rules.dae
-  fallback: resilient
+  fallback: auto
 }`;
 export const demoRoutingInclude = `# Household exceptions, kept apart from config.dae.
 # The TV never leaves through a node.

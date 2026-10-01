@@ -52,9 +52,9 @@ for (const lang of ['en', 'zh-TW'])
     test.use({viewport: {width: 390, height: 900}, storage: {'doona-lang': lang}});
 
     for (const [source, basename] of [
-      ['src-sub-c', 'sub-c.dae'],
+      ['src-harbor', 'sub-c.dae'],
       ['src-generated', 'skylink.dae'],
-      ['src-sub-c', 'subscription-routing-backup.dae']
+      ['src-harbor', 'subscription-routing-backup.dae']
     ])
       test(`${basename} stays inside the picker and clear of file details`, async ({page}) => {
         const {api, handlers} = await mockBackend(page);
