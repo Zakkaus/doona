@@ -13,18 +13,24 @@ import {NodeCard} from './NodeCard';
 import {OutboundsCard} from './OutboundsCard';
 import {RankingCard} from './RankingCard';
 import {useRankingCard} from './useRankingCard';
+import {GettingStarted} from './GettingStarted';
+import {useGettingStarted} from './useGettingStarted';
 
 export function Activity() {
   const t = useT();
   const vm = useActivity();
-  const ranking = useRankingCard();
+  const setup = useGettingStarted();
+  const ranking = useRankingCard(vm.ready && !setup.pending);
   const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
   const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   if (!vm.ready) return alert || (vm.discoveryFailed ? null : <Loading>{t('ui.loading')}</Loading>);
+  // Decide the leading card before showing content, so a late setup read cannot shift a scrolled page.
+  if (setup.pending) return <Loading>{t('ui.loading')}</Loading>;
   return (
     <>
       {alert}
+      <GettingStarted model={setup} />
       <div className="rp-quick">
         <ModeCards model={vm.mode} />
         <Card>

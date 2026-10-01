@@ -17,6 +17,7 @@ export const storageKeys = {
   ringsPrefix: 'doona-rings-',
   connectionsView: 'doona-connections-view',
   activityGroup: 'doona-activity-group',
+  gettingStarted: 'doona-getting-started',
   // sessionStorage
   session: 'doona-session',
   saved: 'doona-saved',

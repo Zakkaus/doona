@@ -383,6 +383,7 @@ for (const [name, storage] of [
       const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
       const spark = tile.locator('.rp-spark svg');
       await expect(spark).toBeVisible();
+      await spark.scrollIntoViewIfNeeded();
       const card = (await tile.boundingBox())!;
       const line = (await spark.boundingBox())!;
       for (const x of [1, line.width - 1]) {
@@ -406,6 +407,7 @@ for (const [name, storage] of [
       const tile = page.locator('.rp-card').filter({has: page.locator('.rp-spark'), hasText: 'Download'});
       const spark = tile.locator('.rp-spark svg');
       await expect(spark).toBeVisible();
+      await spark.scrollIntoViewIfNeeded();
       const card = (await tile.boundingBox())!;
       const line = (await spark.boundingBox())!;
       await page.mouse.move(line.x + line.width - 1, line.y + line.height / 2);

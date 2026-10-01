@@ -1,6 +1,6 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
-import {expect, mockBackend, routes, scrollTableToEnd, test} from './fixtures';
+import {expect, isLive, mockBackend, routes, scrollTableToEnd, test} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
@@ -58,6 +58,13 @@ test('the open hub lists its pages as links, the current one marked', async ({pa
 });
 
 test('another page opens at its top, while a change within the page keeps the scroll position', async ({page}) => {
+  if (!isLive) {
+    const backend = await mockBackend(page);
+    backend.handlers['GET config'] = async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      return backend.api.config();
+    };
+  }
   await page.goto('/#/activity');
   // The tiles fill in as their reads arrive, so the page may not reach 400 px on the first try.
   await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
@@ -65,6 +72,7 @@ test('another page opens at its top, while a change within the page keeps the sc
     location.hash = '#/activity?unused=1';
   });
   await expect(page).toHaveURL(/unused=1$/);
+  if (!isLive) await expect(page.getByRole('region', {name: 'Getting started'})).toBeVisible();
   expect(await page.evaluate(() => scrollY)).toBe(400);
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/connections$/);

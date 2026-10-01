@@ -1,3 +1,4 @@
+import {demoRouting, demoRoutingInclude} from '../../../dae/startingRouting';
 import type {Group, RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
 import {faultRules, rules, type ConfigRule} from '../rules';
 import {ago, observedAt, generationId} from './clock';
@@ -83,28 +84,13 @@ dns {
   }
 }
 
-routing {
-  pname(NetworkManager, systemd-resolved) && l4proto(udp) && dport(53) -> direct(must)
-  dip(geoip: private) -> direct(must)
-  domain(suffix: doubleclick.net) -> block
-  domain(geosite: cn) -> direct
-  domain(geosite: telegram) -> proxy
-  include rules.dae
-  fallback: resilient
-}
+${demoRouting}
 
 include {
   config.d/*.dae
 }
 `;
-const configRulesFile = `# Household exceptions, kept apart from config.dae.
-# The TV never leaves through a node.
-mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct
-
-# AI
-domain(geosite: openai) -> proxy
-sip(10.0.0.0/24) && dport(25) -> block
-`;
+const configRulesFile = demoRoutingInclude;
 const configSubscription = `'香港 01 IPLC': 'vless://<redacted>'
 '香港 02 BGP': 'vless://<redacted>'
 '新加坡 01 2x': 'trojan://<redacted>'

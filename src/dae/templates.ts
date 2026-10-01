@@ -1,6 +1,7 @@
 import type {Key, Translator} from '../i18n';
 import {quote, scanConfig, unquote} from './text';
 import {isBuiltinOutbound} from './vocab';
+import {demoRouting, demoRoutingInclude} from './startingRouting';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'single' | 'services' | 'regions' | 'homebound';
 export type TemplateOptions = {blockAds: boolean; blockQuic: boolean; networkManagerDirect: boolean};
 export const defaultTemplateOptions: TemplateOptions = {blockAds: false, blockQuic: true, networkManagerDirect: true};
@@ -214,4 +215,33 @@ export function detectTemplate(text: string): (TemplateOptions & {template: Rule
     }
   }
   return null;
+}
+
+const directFallback = ['fallback', ':', 'direct'];
+function combinedRoutingEntries(text: string): string[][] | null {
+  const entries = routingEntries(text);
+  if (!entries) return null;
+  const {blocks} = scanConfig(text);
+  // Includes can be bare routing fragments; only text outside top-level blocks belongs to those fragments.
+  let fragments = text;
+  for (const block of [...blocks].reverse()) fragments = fragments.slice(0, block.from) + '\n' + fragments.slice(block.to);
+  const bare = routingEntries('routing {\n' + fragments + '\n}');
+  if (!bare) return null;
+  const combined = [...entries, ...bare].filter(entry => entry[0] !== 'include');
+  return [...combined.filter(entry => entry[0] !== 'fallback'), ...combined.filter(entry => entry[0] === 'fallback')];
+}
+const startingEntries = [
+  [...templateEntries('global', defaultTemplateOptions).slice(0, -1), directFallback],
+  [directFallback],
+  combinedRoutingEntries(demoRouting + '\n' + demoRoutingInclude)!
+];
+export function isPresetRouting(text: string): boolean {
+  const entries = combinedRoutingEntries(text);
+  if (!entries) return false;
+  if (!entries.length) return true;
+  return startingEntries.some(
+    expected =>
+      entries.length === expected.length &&
+      entries.every((entry, i) => entry.length === expected[i].length && entry.every((token, j) => token === expected[i][j]))
+  );
 }
