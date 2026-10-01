@@ -36,8 +36,8 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
         drop: 4,
         render: row =>
           row.intervalHref ? (
-            <Link appearance="link" href={row.intervalHref} label={row.intervalLabel}>
-              {row.interval}
+            <Link appearance="button" small href={row.intervalHref} label={row.intervalLabel}>
+              {row.intervalMissing ? t('config.edit') : row.interval}
             </Link>
           ) : (
             row.interval

@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Badge, Button, Card, Light, Link} from '../../ui/ui';
+import {TextTooltip, ActionHelp, Badge, Button, Card, Light, Link} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {useModules, type ModulesProps} from './useModules';
@@ -39,8 +39,8 @@ export function Modules(props: ModulesProps) {
           {card.nodeLinks.length > 0 && (
             <div className="rp-cluster">
               {card.nodeLinks.map(node => (
-                <Link key={node.name} appearance="link" href={node.href}>
-                  {t('nodes.edit', {name: node.name})}
+                <Link key={node.name} appearance="link" layout="constrained" href={node.href}>
+                  <TextTooltip>{t('nodes.edit', {name: node.name})}</TextTooltip>
                 </Link>
               ))}
             </div>

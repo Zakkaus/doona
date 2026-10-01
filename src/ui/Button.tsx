@@ -302,6 +302,7 @@ export function TextTooltip({
 // The button style applies only with `appearance="button"`.
 export function Link({
   external,
+  layout,
   appearance,
   label,
   className,
@@ -316,6 +317,7 @@ export function Link({
   ButtonStyle & {
     external?: boolean;
     appearance?: 'button' | 'version' | 'link';
+    layout?: 'inline' | 'constrained';
     label?: string;
   }) {
   const base = appearance === 'button' ? buttonClass({quiet, secondary, small, icon, accent, negative}) : `rp-${appearance}`;
@@ -324,6 +326,7 @@ export function Link({
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={label}
+      data-layout={layout}
       {...props}
       className={appearance ? composeRenderProps(className, value => cx(base, value)) : className}
     />

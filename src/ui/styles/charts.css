@@ -277,9 +277,6 @@
   margin: var(--rp-space-1) 0 0;
   overflow-wrap: anywhere;
 }
-.rp-markerplot .note .rp-link {
-  max-inline-size: 100%;
-}
 .rp-markerplot .track {
   position: relative;
   height: 20px;

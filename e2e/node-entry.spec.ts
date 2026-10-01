@@ -93,7 +93,11 @@ test('missing latency names and the remaining count open probeable node rows', a
     health: original.health.map(health => ({...health, state: index === 0 ? ('unavailable' as const) : ('unknown' as const), latency_ms: null}))
   }));
   handlers['GET nodes'] = async () => ({...listed, next_cursor: null});
+  await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/nodes?tab=latency');
+  const more = page.getByRole('link', {name: '2 more', exact: true}).first();
+  await expect(more).toHaveCSS('padding-left', '0px');
+  await expect(more).toHaveCSS('min-height', '0px');
   await page.getByRole('link', {name: 'missing-0', exact: true}).first().click();
   await expect(page).toHaveURL(/provider=inline.*q=missing-0.*node=missing-0/);
   await expect(nodeRows(page)).toHaveCount(1);
@@ -129,7 +133,11 @@ test('the interval jump edits the declaring include while the main file is read-
     return api.replaceConfigSource(main.id, main.content, `"${main.content_sha256}"`);
   };
   await page.goto('/#/nodes');
-  await page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true}).click();
+  const jump = page.getByRole('link', {name: 'Auto-refresh of harbor', exact: true});
+  await expect(jump).toHaveText('Edit');
+  await expect(jump).toHaveClass(/rp-btn/);
+  expect((await jump.boundingBox())!.height).toBe((await page.getByRole('button', {name: 'Refresh harbor', exact: true}).boundingBox())!.height);
+  await jump.click();
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const interval = dialog.getByRole('button', {name: 'Auto-refresh'});
   await expect(interval).toBeFocused();
@@ -164,6 +172,28 @@ test('referenced subscriptions cannot be removed', async ({page}) => {
   await expect(dialog.getByRole('button', {name: 'Remove', exact: true})).toHaveCount(0);
   await expect(dialog.getByRole('link', {name: 'Open Policies', exact: true})).toHaveAttribute('href', '#/policies');
   expect(requests.filter(request => request.method() === 'DELETE')).toHaveLength(0);
+});
+
+test('long node edit links keep card padding and expose the full name', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const name = 'HongKongEnterpriseDedicatedPremiumBackupConnection01';
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.pollOperation(await api.replaceConfigSource(source.id, source.content.replaceAll('hk-01', name), `"${source.content_sha256}"`));
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/config');
+  const card = page.getByRole('region', {name: 'node', exact: true});
+  const link = card.getByRole('link', {name: `Edit ${name}`, exact: true});
+  await expect(link).toBeVisible();
+  const bounds = await link.evaluate(el => {
+    const card = el.closest('.rp-card')!;
+    return {right: el.getBoundingClientRect().right, edge: card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight)};
+  });
+  expect(bounds.right).toBeLessThanOrEqual(bounds.edge + 1);
+  await link.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(link).toBeFocused();
+  await expect(page.getByRole('tooltip')).toContainText(name);
 });
 
 test('a verified node tag preserves the interval for an opaque provider name', async ({page}) => {
