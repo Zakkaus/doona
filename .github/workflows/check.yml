@@ -13,8 +13,37 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      lane: ${{ steps.route.outputs.lane }}
+      matrix: ${{ steps.route.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: route
+        run: node tools/ci-changes.mjs
+
+  check-lite:
+    needs: [changes]
+    if: needs.changes.outputs.lane == 'docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm check:i18n
+
   # Static checks, unit tests and the bundle budget: a few minutes, independent of the browsers.
   check:
+    needs: [changes]
+    if: needs.changes.outputs.lane == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -41,6 +70,8 @@ jobs:
 
   # The browser suite is most of the run's time, so it is split over parallel runners; each builds its own dist.
   e2e:
+    needs: [changes]
+    if: needs.changes.outputs.lane == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # The image ships the browsers and their OS packages; installing those per run took up to 21 minutes on some runners.
@@ -81,7 +112,7 @@ jobs:
           retention-days: 1
 
   merge-reports:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
     needs: [e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -98,6 +129,14 @@ jobs:
           path: all-blob-reports
           pattern: blob-report-*
           merge-multiple: true
+      - name: Require blob reports from the browser shards
+        run: |
+          shopt -s nullglob
+          blobs=(all-blob-reports/*.zip)
+          if [ "${#blobs[@]}" -eq 0 ]; then
+            echo '::error::The browser jobs ran but produced no blob reports; inspect the failed e2e steps.'
+            exit 1
+          fi
       - run: pnpm exec playwright merge-reports --reporter html ./all-blob-reports
       - uses: actions/upload-artifact@v4
         with:
@@ -105,3 +144,27 @@ jobs:
           path: playwright-report/
           if-no-files-found: error
           retention-days: 14
+
+  ci-ok:
+    needs: [changes, check-lite, check, e2e, merge-reports]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require the selected lane
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node <<'JS'
+          const needs = JSON.parse(process.env.NEEDS);
+          const lane = needs.changes.outputs.lane;
+          const selected = lane === 'docs' ? ['check-lite'] : lane === 'full' ? ['check', 'e2e', 'merge-reports'] : [];
+          const lanes = ['check-lite', 'check', 'e2e', 'merge-reports'];
+          const ok = needs.changes.result === 'success' && selected.length > 0 &&
+            ['true', 'false'].includes(needs.changes.outputs.matrix) &&
+            lanes.every(job => needs[job].result === (selected.includes(job) ? 'success' : 'skipped'));
+          if (!ok) {
+            console.error('CI lane did not complete successfully', needs);
+            process.exit(1);
+          }
+          JS
