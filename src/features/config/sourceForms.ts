@@ -85,7 +85,8 @@ export function sameFormValues(before: string, after: string, source: string, en
         return scanConfig(value)
           .tokens.filter(token => token.kind !== 'comment')
           .map(token => value.slice(token.from, token.to));
-      });
+      })
+      .filter(value => value.length > 0);
   const includedTargets = (text: string) => {
     const {blocks} = scanConfig(text);
     let outside = text;
