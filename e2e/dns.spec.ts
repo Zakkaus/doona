@@ -1,4 +1,4 @@
-import {downloadText, expect, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectTextInside, mockBackend, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {test as browserTest} from '@playwright/test';
@@ -527,3 +527,37 @@ for (const [lang, type, elapsed] of [
     }
   });
 }
+
+for (const width of [768, 390]) {
+  test(`cache domains stay complete at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    const {api, handlers} = await mockBackend(page);
+    const cache = await api.dnsCache({});
+    const domain = `${'a'.repeat(63)}.example.`;
+    handlers['GET dns/cache'] = async () => ({...cache, entries: cache.entries.map((entry, index) => (index === 0 ? {...entry, domain} : entry))});
+    await page.goto('/#/dns?tab=cache');
+    const cells = page.locator('.rp-cell-wrap');
+    await expect(cells.first()).toHaveText(domain);
+    await expectTextInside(cells.first());
+    await expect(cells.first()).toBeVisible();
+    expect(
+      await cells.evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis'))
+    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  });
+}
+
+test('kit pickers keep symmetric insets', async ({page}) => {
+  await page.goto('/#/dns?tab=query');
+  await expect(page.locator('.rp-switch')).toHaveCSS('font-size', '14px');
+  const pickers = page.locator('.rp-selectbtn');
+  await expect(pickers.first()).toBeVisible();
+  expect(
+    await pickers.evaluateAll(elements =>
+      elements.every(el => {
+        const style = getComputedStyle(el);
+        return style.paddingInlineStart === style.paddingInlineEnd;
+      })
+    )
+  ).toBe(true);
+});
