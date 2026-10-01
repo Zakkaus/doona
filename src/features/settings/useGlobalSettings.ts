@@ -80,7 +80,7 @@ export function useGlobalSettings({query, go}: PageProps) {
     complete(source) === true &&
     !engine.holdsCredentials(source);
   const busy = !!editor.busy;
-  const blocked = !draft || !writable || conflict || fields.some(field => field.invalid);
+  const blocked = !draft || !writable || conflict || fields.some(field => field.key in patch && field.invalid);
   const invalid = (diagnostics: ConfigDiagnostic[]) => {
     const restart = restartRequired(diagnostics);
     return restart ? t('config.writeRestart', {n: restart}) : t('config.invalid', {n: diagnostics.filter(item => item.level === 'error').length});
