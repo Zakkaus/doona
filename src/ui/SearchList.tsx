@@ -10,7 +10,7 @@ export function SearchList({label, children}: {label: string; children: ReactNod
     <Autocomplete filter={contains}>
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user into the opened popover */}
       <TextField search label={label} autoFocus className="rp-menu-search" />
-      <Virtualizer layout={ListLayout} layoutOptions={{rowHeight: 32, estimatedHeadingHeight: 26}}>
+      <Virtualizer layout={ListLayout} layoutOptions={{estimatedRowHeight: 32, estimatedHeadingHeight: 26}}>
         {children}
       </Virtualizer>
     </Autocomplete>

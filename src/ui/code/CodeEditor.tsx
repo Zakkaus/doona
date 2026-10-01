@@ -77,11 +77,11 @@ const theme = EditorView.theme({
     // Clip the opaque gutter to the frame's corners; tooltips live outside the scroller and are not clipped.
     borderRadius: 'calc(var(--rp-r-md) - 1px)'
   },
-  '.cm-content': {padding: '8px 0', caretColor: 'var(--rp-text)'},
-  '.cm-line': {padding: '0 12px'},
+  '.cm-content': {padding: 'var(--rp-space-2) 0', caretColor: 'var(--rp-text)'},
+  '.cm-line': {padding: '0 var(--rp-space-3)'},
   // Opaque, so a line scrolled sideways passes under the numbers rather than through them.
   '.cm-gutters': {backgroundColor: 'var(--rp-base)', color: 'var(--rp-muted)', border: 'none'},
-  '.cm-lineNumbers .cm-gutterElement': {padding: '0 8px 0 12px', minWidth: '40px'},
+  '.cm-lineNumbers .cm-gutterElement': {padding: '0 var(--rp-space-2) 0 var(--rp-space-3)', minWidth: '40px'},
   '.cm-activeLine, .cm-focusLine': {backgroundColor: 'color-mix(in srgb, var(--rp-hl-med) 60%, transparent)'},
   '.cm-activeLineGutter': {backgroundColor: 'transparent', color: 'var(--rp-text)'},
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {backgroundColor: 'var(--rp-hl-high)'},
@@ -94,9 +94,15 @@ const theme = EditorView.theme({
     color: 'var(--rp-on-text)',
     border: 'none',
     borderRadius: 'var(--rp-r-sm)',
-    padding: '2px 0'
+    padding: 'var(--rp-space-half) 0'
   },
-  '.cm-tooltip-lint .cm-diagnostic': {border: 'none', padding: '2px 8px', fontSize: 'var(--rp-text-xs)', lineHeight: '16px', fontFamily: 'inherit'},
+  '.cm-tooltip-lint .cm-diagnostic': {
+    border: 'none',
+    padding: 'var(--rp-space-half) var(--rp-space-2)',
+    fontSize: 'var(--rp-text-xs)',
+    lineHeight: '16px',
+    fontFamily: 'inherit'
+  },
   '.cm-tooltip-lint .cm-diagnosticText': {color: 'inherit'},
   '.cm-diag-line-error': {backgroundColor: 'color-mix(in srgb, var(--rp-negative) 14%, transparent)'},
   '.cm-diag-line-warning': {backgroundColor: 'color-mix(in srgb, var(--rp-notice) 16%, transparent)'},

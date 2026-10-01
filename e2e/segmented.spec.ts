@@ -152,3 +152,34 @@ test.describe('1440px', () => {
     await expect(picker).not.toBeFocused();
   });
 });
+
+for (const width of [1440, 768, 390]) {
+  test(`kit controls share the row height at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    await page.goto('/#/policies');
+    await expect(page.getByRole('tab').first()).toBeVisible();
+    const geometry = await page.locator('.rp-tabhead').evaluate(el => {
+      const tabs = el.querySelector('.rp-tabbar')!;
+      const segments = el.querySelector('.rp-seg')!;
+      return {
+        tabs: tabs.getBoundingClientRect().height,
+        segments: segments.getBoundingClientRect().height,
+        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control'))
+      };
+    });
+    expect(geometry.tabs).toBe(geometry.control);
+    expect(geometry.segments).toBe(geometry.control);
+    const tab = page.getByRole('tab').first();
+    await tab.focus();
+    await page.keyboard.press('ArrowRight');
+    const ring = await page.locator('.rp-tab[data-focus-visible]').evaluate(el => {
+      const s = getComputedStyle(el),
+        r = el.getBoundingClientRect(),
+        outer = el.closest('.rp-tabbar')!.getBoundingClientRect();
+      const extent = parseFloat(s.outlineWidth) + parseFloat(s.outlineOffset);
+      return {top: r.top - extent - outer.top, bottom: outer.bottom - r.bottom - extent};
+    });
+    expect(ring.top).toBeGreaterThanOrEqual(0);
+    expect(ring.bottom).toBeGreaterThanOrEqual(0);
+  });
+}

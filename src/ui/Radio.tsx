@@ -44,7 +44,7 @@ export function Radio({value, label, description, isDisabled}: {value: string; l
       <span className="rp-radio-text">
         <span id={labelId}>{label}</span>
         {description && (
-          <span id={descriptionId} className="rp-note">
+          <span id={descriptionId} className="rp-label">
             {description}
           </span>
         )}

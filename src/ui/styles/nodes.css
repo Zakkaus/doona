@@ -12,7 +12,7 @@ button.rp-node {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
 }
 .rp-node .n {
@@ -43,12 +43,12 @@ button.rp-node {
 .ms:is(.ok, .warn, .err) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--rp-space-1h);
 }
 .rp-node .s {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--rp-space-2);
   font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
@@ -62,20 +62,16 @@ button.rp-node {
 }
 .rp-nodegrid {
   height: 376px;
-  /* Every cell ends in the 8px gap (Nodes.tsx), so the scroller reaches that far into the card's padding: the tiles line
-     up with a small group's, and the last column's gap is the room an overlay scrollbar, as on phones, draws in. */
-  margin-inline-end: -8px;
   overflow: auto;
   outline: none;
   border-radius: var(--rp-r-md);
   /* The last visible row fades out, so a cut tile reads as more to scroll; the padding lets the final row scroll clear
      of the fade. */
-  padding-bottom: 24px;
+  padding-bottom: var(--rp-space-6);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 .rp-nodegrid .rp-node {
   width: auto;
-  margin-inline-end: 8px;
   cursor: default;
   outline: none;
 }

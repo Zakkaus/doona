@@ -1,9 +1,9 @@
 .rp-select {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--rp-space-1);
   height: var(--rp-control);
-  padding: 0 8px;
+  padding: 0 var(--rp-space-2);
   border-radius: var(--rp-r-md);
   background: transparent;
   border: 0;
@@ -28,11 +28,11 @@
 .rp-dialog {
   flex: 1;
   min-width: 0;
-  padding: 24px 32px;
+  padding: var(--rp-space-6) var(--rp-space-8);
   overflow: hidden auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--rp-space-4);
   outline: none;
 }
 .rp-dialog-sections {
@@ -61,9 +61,9 @@
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   height: var(--rp-control);
-  padding: 0 12px;
+  padding: 0 var(--rp-space-3);
   border: 1px solid var(--rp-hl-high);
   border-radius: var(--rp-r-md);
   background: var(--rp-base);
@@ -105,7 +105,6 @@
 /* A secret field's show or hide toggle sits at the field's end. */
 .rp-input .reveal {
   flex: none;
-  margin-inline-end: -10px;
 }
 .rp-input .reveal[data-focus-visible] {
   outline: 2px solid var(--rp-accent);
@@ -149,11 +148,10 @@
 .rp-results {
   max-height: 420px;
   overflow: auto;
-  padding-inline-end: 12px;
 }
 .rp-results .rp-sec-h {
   /* Search results have no check column to align with. */
-  padding: 8px 12px 4px;
+  padding: var(--rp-space-2) var(--rp-space-3) var(--rp-space-1);
 }
 
 .group-dialog-filters {

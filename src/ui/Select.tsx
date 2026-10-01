@@ -14,6 +14,7 @@ import {
   ListBox,
   ListBoxItem,
   Label,
+  Text,
   useLocale,
   TooltipTrigger,
   Focusable,
@@ -53,11 +54,16 @@ export const ItemLabel = ({i, cut, reserveFlag = false}: {i: Item; reserveFlag?:
     </span>
   );
 };
-// The title and what follows it share a line while both fit; otherwise the rest moves under the title and wraps.
+// S2 descriptions sit below the label and grow with their content.
 export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
     <ItemLabel i={i} reserveFlag />
-    {children ?? (i.desc && <span className="desc">{i.desc}</span>)}
+    {children ??
+      (i.desc && (
+        <Text slot="description" className="desc">
+          {i.desc}
+        </Text>
+      ))}
   </span>
 );
 const ItemBody = ({i}: {i: Item}) => (

@@ -23,7 +23,7 @@ import {Empty, Loading} from './Feedback';
 import {revealFlowRow, useTableFlow} from './tableFlow';
 
 // Minima include padding; positive drop priorities yield in ascending order when columns cannot fit. A phone drops none:
-// the table scrolls sideways instead (see DataTable).
+// complete text fits the viewport and secondary columns scroll sideways (see DataTable).
 type Col = {
   id: string;
   label: string;
@@ -34,6 +34,7 @@ type Col = {
   drop?: number;
   sortable?: boolean;
   hideLabel?: boolean;
+  text?: 'wrap';
 };
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
@@ -71,12 +72,26 @@ export function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols
   );
 }
 
+export function revealScrollTop(scrollTop: number, viewportHeight: number, row: {y: number; height: number}) {
+  if (row.y < scrollTop + tableLayout.headingHeight) return row.y - tableLayout.headingHeight;
+  if (row.y + row.height > scrollTop + viewportHeight) return row.y + row.height - viewportHeight;
+  return scrollTop;
+}
+
 // Scrolls a selected row into view when the selection changes or the selected row first appears (a deep link
 // before the rows load). A poll that only moves the row does not scroll: the person may have scrolled away.
-export function useTableReveal(selected: string | null, at: number, ref: RefObject<HTMLElement | null>, flow?: boolean) {
+export function useTableReveal(
+  selected: string | null,
+  at: number,
+  ref: RefObject<HTMLElement | null>,
+  flow?: boolean,
+  rowBounds?: (key: string) => {y: number; height: number} | null
+) {
   const index = useRef(at);
+  const measure = useRef(rowBounds);
   useEffect(() => {
     index.current = at;
+    measure.current = rowBounds;
   });
   const present = at >= 0;
   useEffect(() => {
@@ -85,14 +100,14 @@ export function useTableReveal(selected: string | null, at: number, ref: RefObje
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const top = tableLayout.headingHeight + at * tableLayout.rowHeight;
-      const bottom = top + tableLayout.rowHeight;
+      const measured = measure.current?.(selected);
+      const top = measured?.y ?? tableLayout.headingHeight + at * tableLayout.rowHeight;
+      const bottom = top + (measured?.height ?? tableLayout.rowHeight);
       if (flow) {
         revealFlowRow(box, top, bottom);
         return;
       }
-      if (top < box.scrollTop + tableLayout.headingHeight) box.scrollTop = top - tableLayout.headingHeight;
-      else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
+      box.scrollTop = revealScrollTop(box.scrollTop, box.clientHeight, {y: top, height: measured?.height ?? tableLayout.rowHeight});
     };
     const frame = requestAnimationFrame(place);
     // The table may still settle its height after the reveal (a tab bar, the detail panel); until the person
@@ -117,8 +132,16 @@ export function selectedRow(keys: Selection): string | null {
   return keys === 'all' || !keys.size ? null : String([...keys][0]);
 }
 
-export function fitColumns<C extends {id: string; minWidth: number; drop?: number}>(cols: C[], width: number | null): C[] {
+export function fitColumns<C extends {id: string; minWidth: number; drop?: number; text?: 'wrap'}>(cols: C[], width: number | null, phone = false): C[] {
   if (width === null) return cols;
+  if (phone) {
+    let preceding = 0;
+    return cols.map(column => {
+      const minWidth = column.text === 'wrap' ? Math.min(column.minWidth, Math.max(0, width - preceding)) : column.minWidth;
+      preceding += minWidth;
+      return minWidth === column.minWidth ? column : {...column, minWidth};
+    });
+  }
   const kept = new Set(cols.map(column => column.id));
   let total = cols.reduce((sum, column) => sum + column.minWidth, 0);
   for (const column of [...cols].filter(column => column.drop).sort((a, b) => a.drop! - b.drop!)) {
@@ -218,7 +241,7 @@ export function DataTable<T extends {id: string}>({
   onSelect?: (id: string | null) => void;
   // Arrow keys select as they move (a list with its detail beside it); otherwise Enter or Space selects.
   selectOnFocus?: boolean;
-  // Fixed row heights allow revealing selected rows outside the DOM.
+  // Reveals the selected row, using the layout for virtual rows outside the DOM.
   reveal?: boolean;
   empty?: string;
   loading?: boolean;
@@ -255,10 +278,9 @@ export function DataTable<T extends {id: string}>({
   // A tree fits its columns to the grid, which scrolls it, so its width excludes the scrollbar gutter.
   const [treeGridRef, gridWidth] = useContentWidth<HTMLElement>();
   const width = tree ? gridWidth : containerWidth;
-  // Fitting a phone's width would leave one or two columns and put the rest of each row out of reach, so there every
-  // column keeps its minimum and the table scrolls sideways; wider screens drop columns rather than scroll.
+  // Phones keep secondary columns available by scrolling sideways; complete text uses the visible primary width.
   const phone = useMediaQuery(phoneQuery);
-  const shown = useMemo(() => fitColumns(cols, phone ? null : width), [cols, phone, width]);
+  const shown = useMemo(() => fitColumns(cols, width, phone), [cols, phone, width]);
   // Groups count as rows for the height, the virtual row count and the reveal offset; a folded group's children do not.
   const flat = useMemo(
     () => (tree ? rows.flatMap(row => (isGroup(row) ? (tree.collapsed(row.group) ? [row] : [row, ...row.children]) : [row])) : rows),
@@ -267,6 +289,7 @@ export function DataTable<T extends {id: string}>({
   const groups = useMemo(() => (tree ? rows.filter(isGroup) : []), [rows, tree]);
   const groupKeys = useMemo(() => (tree ? groups.map(row => row.id) : undefined), [groups, tree]);
   const expandedKeys = useMemo(() => (tree ? groups.filter(row => !tree.collapsed(row.group)).map(row => row.id) : undefined), [groups, tree]);
+  const multiline = shown.some(column => column.text === 'wrap');
   const fitted = useTableHeight(flow ? Infinity : height, flat.length, loading, fit || flow);
   const [virtual, setVirtual] = useState(flow || stream || flat.length >= virtualiseFrom);
   if (!virtual && flat.length >= virtualiseFrom) setVirtual(true);
@@ -300,7 +323,23 @@ export function DataTable<T extends {id: string}>({
   }, [phone, virtual, tree, shown, ref]);
   const detailRef = useRef<HTMLDivElement>(null);
   const [restoreKey, setRestoreKey] = useState<string | null>(null);
-  useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref, flow);
+  const [layout] = useState(() => new TableLayout());
+  useTableReveal(
+    reveal ? (selected ?? null) : null,
+    at,
+    virtual ? grid : ref,
+    flow,
+    multiline
+      ? key => {
+          if (virtual) return layout.getLayoutInfo(key)?.rect ?? null;
+          const box = ref.current;
+          const row = Array.from(box?.querySelectorAll<HTMLElement>('[role="row"][data-key]') ?? []).find(row => row.dataset.key === key);
+          if (!box || !row) return null;
+          const bounds = row.getBoundingClientRect();
+          return {y: bounds.top - box.getBoundingClientRect().top + box.scrollTop, height: bounds.height};
+        }
+      : undefined
+  );
   useTableFlow(flow, stream, flat, grid, detailRef, tableLayout.headingHeight, tableLayout.rowHeight);
   useEffect(() => {
     if (!detail || !selected || flat.some(row => row.id === selected)) return;
@@ -342,8 +381,8 @@ export function DataTable<T extends {id: string}>({
     return (
       <Row key={row.id} id={row.id} textValue={getTextValue?.(row)}>
         {shown.map(column => (
-          <Cell key={column.id} className={column.align}>
-            {content(column.render(row))}
+          <Cell key={column.id} className={cx(column.align, column.text === 'wrap' && 'rp-cell-wrap')}>
+            {column.text === 'wrap' ? column.render(row) : content(column.render(row))}
           </Cell>
         ))}
       </Row>
@@ -419,7 +458,8 @@ export function DataTable<T extends {id: string}>({
       className="rp-table"
       data-flow={flow || undefined}
       data-row-detail={rowDetail || detail ? '' : undefined}
-      style={{height: fitted}}
+      data-multiline={multiline || undefined}
+      style={multiline && !virtual && !flow ? {height: 'auto', maxHeight: height} : {height: fitted}}
       // RAC (1.21) keeps Home/End inside the row while a cell or a control in one has focus, which is where a click on
       // cut text leaves it. Focus the row and re-dispatch there so the cell cannot handle the original event.
       // The container passes no key handlers, so tree and flow modes render their own div to catch the key first.
@@ -447,7 +487,10 @@ export function DataTable<T extends {id: string}>({
       }
     >
       {virtual ? (
-        <Virtualizer layout={TableLayout} layoutOptions={tableLayout}>
+        <Virtualizer
+          layout={layout}
+          layoutOptions={multiline ? {estimatedRowHeight: tableLayout.rowHeight, headingHeight: tableLayout.headingHeight} : tableLayout}
+        >
           {table}
         </Virtualizer>
       ) : (

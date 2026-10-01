@@ -1,7 +1,7 @@
 .rp-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--rp-space-6);
   min-width: 0;
 }
 .rp-note {
@@ -13,7 +13,7 @@
 .rp-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--rp-space-3);
   flex-wrap: wrap;
 }
 /* A toolbar's primary text filter: the fixed width it always had, but on phones it takes the row instead of shrinking
@@ -30,7 +30,7 @@
 .rp-filter-row {
   display: flex;
   flex: 1 1 100%;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
 }
 .rp-toolbar .rp-filter-row .rp-filter {
@@ -51,13 +51,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--rp-space-3);
   flex-wrap: wrap;
 }
 .rp-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--rp-space-4);
   min-width: 0;
 }
 .rp-col > .rp-btn,
@@ -154,7 +154,7 @@
 .rp-kv {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-  gap: 12px 16px;
+  gap: var(--rp-space-3) var(--rp-space-4);
 }
 /* A phone card is too narrow for two 176px columns, so it splits in two while each half keeps 128px and stacks
    only below that; the half is a pixel short so rounding cannot drop a column. */
@@ -180,7 +180,7 @@
   white-space: nowrap;
   flex: none;
   height: 20px;
-  padding: 0 8px;
+  padding: 0 var(--rp-space-2);
   border-radius: var(--rp-r-sm);
   font-size: var(--rp-text-xs);
   /* Flex centres the glyphs; a line box as tall as the badge would sit CJK glyphs below its middle. */
@@ -196,7 +196,7 @@
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 6px;
+  padding: 0 var(--rp-space-1h);
   border-radius: var(--rp-r-pill);
   background: var(--rp-accent);
   color: var(--rp-on-accent);
@@ -248,7 +248,8 @@
 .rp-nodes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
-  gap: 8px;
+  gap: var(--rp-space-2);
+  padding-inline: var(--rp-space-2);
 }
 .rp-grow {
   flex: 1;
@@ -271,20 +272,20 @@
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  gap: 12px;
+  gap: var(--rp-space-3);
 }
 .rp-ops-group {
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: var(--rp-space-3);
 }
 .rp-geodata {
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--rp-space-2);
+  margin-top: var(--rp-space-2);
 }
 /* Settings geodata: a lite source's missing categories and a failed update take their tone's text colour. */
 .rp-geodata-note.notice {

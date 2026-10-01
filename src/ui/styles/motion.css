@@ -129,6 +129,24 @@
   --rp-text-3xl: 22px;
   --rp-text-4xl: 24px;
   --rp-text-5xl: 28px;
+  --rp-space-half: 2px;
+  --rp-space-1: 4px;
+  --rp-space-1h: 6px;
+  --rp-space-2: 8px;
+  --rp-space-2h: 10px;
+  --rp-space-3: 12px;
+  --rp-space-3h: 14px;
+  --rp-space-4: 16px;
+  --rp-space-5: 20px;
+  --rp-space-6: 24px;
+  --rp-space-8: 32px;
+  --rp-space-10: 40px;
+  --rp-space-12: 48px;
+  --rp-line-body: 20px;
+  --rp-line-caption: 16px;
+  --rp-focus-width: 2px;
+  --rp-control-inset: var(--rp-space-half);
+  --rp-control-block-inset: var(--rp-control-inset);
   --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
@@ -162,11 +180,13 @@
 @media (pointer: coarse) {
   :root {
     --rp-control: 36px;
+    --rp-control-block-inset: 0px;
   }
 }
 @media (max-width: 599px) {
   :root {
     --rp-control: 36px;
+    --rp-control-block-inset: 0px;
   }
 }
 :root[data-scheme='dark'] {
@@ -187,11 +207,11 @@
   display: inline-flex;
   /* Counts in segment labels tick without the neighbouring segments shifting. */
   font-variant-numeric: tabular-nums;
-  gap: 4px;
+  gap: var(--rp-space-1);
   max-width: 100%;
   background: var(--rp-overlay);
   border-radius: var(--rp-r-lg);
-  padding: 2px;
+  padding: var(--rp-control-block-inset) var(--rp-control-inset);
   position: relative;
 }
 /* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. */
@@ -226,8 +246,8 @@
 }
 .rp-slider {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  top: var(--rp-control-block-inset);
+  bottom: var(--rp-control-block-inset);
   /* Physical on purpose: useSlider places it from offsetLeft, which counts from the left in either direction. */
   left: 0;
   border-radius: var(--rp-r-md);
@@ -244,8 +264,9 @@
 }
 .rp-seg .rp-btn {
   flex: none;
-  padding: 0 8px;
-  height: var(--rp-control);
+  padding: 0 var(--rp-space-2);
+  height: calc(var(--rp-control) - 2 * var(--rp-control-block-inset));
+  min-height: 0;
   background: transparent;
   color: var(--rp-text);
   border-radius: var(--rp-r-md);

@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {cachedRows, fitColumns} from './Table';
+import {cachedRows, fitColumns, revealScrollTop} from './Table';
 
 it('builds a row once per source object and keeps it across lists', () => {
   const built: string[] = [];
@@ -37,4 +37,24 @@ it('fits columns by the width alone, dropping one only below the sum of the mini
   expect(ids(455)).toEqual(ids(455));
   expect(ids(328)).toEqual(['target', 'device']);
   expect(ids(327)).toEqual(['target']);
+});
+
+it('reveals the complete measured row while preserving an already visible row', () => {
+  expect(revealScrollTop(0, 200, {y: 157, height: 80})).toBe(37);
+  expect(revealScrollTop(120, 200, {y: 97, height: 80})).toBe(60);
+  expect(revealScrollTop(60, 200, {y: 137, height: 80})).toBe(60);
+  expect(revealScrollTop(0, 200, {y: 157, height: 40})).toBe(0);
+});
+
+it('fits the complete text column before horizontally scrolling secondary phone columns', () => {
+  const cols = [
+    {id: 'position', minWidth: 40},
+    {id: 'expression', minWidth: 320, text: 'wrap' as const},
+    {id: 'source', minWidth: 160, drop: 1}
+  ];
+  const fitted = fitColumns(cols, 324, true);
+  expect(fitted.map(column => column.minWidth)).toEqual([40, 284, 160]);
+  expect(fitted.map(column => column.id)).toEqual(['position', 'expression', 'source']);
+  expect(fitColumns(cols, 700, true)).toEqual(cols);
+  expect(cols[1].minWidth).toBe(320);
 });

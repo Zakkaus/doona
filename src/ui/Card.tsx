@@ -78,7 +78,7 @@ export function Card({
     <TileHead {...tile} label={title}>
       {tile.kind === 'metric' && aside}
     </TileHead>
-  ) : help && named ? (
+  ) : named ? (
     <HelpRow help={help}>{named}</HelpRow>
   ) : (
     named
