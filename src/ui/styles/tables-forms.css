@@ -365,6 +365,7 @@
   overflow: auto hidden;
   overflow-anchor: none;
   scroll-padding-top: calc(var(--rp-topbar) + 37px);
+  scroll-padding-bottom: calc(var(--rp-dock) + 16px);
 }
 .rp-table[data-flow] > div[role='grid'] > div > div:has(> [role='rowgroup']:first-child [role='columnheader']) {
   top: var(--rp-flow-heading, 0px) !important;
@@ -386,4 +387,14 @@
   background: var(--rp-surface);
   border: 1px solid var(--rp-hl-med);
   border-radius: var(--rp-r-md);
+}
+
+.rp-table[data-flow] :is([role='row'][data-key], [role='rowheader'], [role='gridcell']) {
+  scroll-margin-block-start: calc(var(--rp-topbar) + 37px);
+  scroll-margin-block-end: var(--rp-flow-bottom, calc(var(--rp-dock) + 16px));
+}
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  .rp-table[data-flow] :is([role='row'][data-key], [role='rowheader'], [role='gridcell']) {
+    scroll-margin-block-start: 37px;
+  }
 }
