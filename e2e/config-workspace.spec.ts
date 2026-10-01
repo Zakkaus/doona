@@ -1,4 +1,5 @@
 import {expect, mockBackend, test} from './fixtures';
+import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';
 import {readGroupEntries} from '../src/dae/groups';
@@ -210,4 +211,79 @@ test('bare routing includes protect targets while their conditions remain editab
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText('\n# retained include comment');
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
+});
+
+for (const state of ['unavailable', 'loading', 'error'] as const) {
+  test(`global settings block editing in the ${state} state`, async ({page}) => {
+    const {capabilities, handlers} = await mockBackend(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    if (state === 'unavailable') capabilities.resources.config.available = false;
+    else
+      handlers['GET config'] = async () => {
+        if (state === 'loading') await pending;
+        throw new ApiError(503, 'temporarily_unavailable', 'Config unavailable');
+      };
+    await page.goto('/#/settings?card=global');
+    const card = page.getByRole('region', {name: 'Persistent global settings'});
+    try {
+      if (state === 'unavailable') {
+        await expect(page.getByRole('region', {name: 'Temporary runtime overrides'})).toBeVisible();
+        await expect(card).toHaveCount(0);
+      } else {
+        await expect(card.getByRole('button', {name: 'Config file', exact: true})).toBeDisabled();
+        await expect(card.getByRole('textbox', {name: 'tproxy_port', exact: true})).toBeDisabled();
+        if (state === 'error') await expect(card).toContainText('Backend temporarily unavailable');
+      }
+    } finally {
+      release();
+    }
+  });
+}
+for (const mode of ['validation', 'restart'] as const) {
+  test(`global saves explain ${mode} failures and count only errors`, async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    const diagnostic = {
+      level: 'error',
+      source_id: 'src-main',
+      line: null,
+      column: null,
+      span: null,
+      code: mode === 'restart' ? 'restart-required' : 'invalid',
+      message: 'Change refused'
+    };
+    const diagnostics = [diagnostic, {...diagnostic, level: 'warning'}, {...diagnostic, level: 'info'}];
+    let validations = 0;
+    handlers['POST config/validate'] = async request => {
+      const result = await api.validateConfig(request.postDataJSON());
+      return mode === 'validation' && ++validations > 1 ? {...result, valid: false, diagnostics} : result;
+    };
+    handlers['PUT config/sources/src-main'] = async () => {
+      throw new ApiError(422, 'unsupported_value', 'Configuration validation failed', null, {diagnostics});
+    };
+    await page.goto('/#/settings?card=global');
+    const card = page.getByRole('region', {name: 'Persistent global settings'});
+    await card.getByRole('textbox', {name: 'tproxy_port', exact: true}).fill('23456');
+    await card.getByRole('button', {name: 'Write and reload'}).click();
+    await expect(card).toContainText(mode === 'restart' ? '1 setting takes effect only after a restart; nothing written' : 'Validation found 1 error');
+  });
+}
+
+test('invalid stored hex ports remain visible and can be corrected', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const config = await api.config();
+  const file = config.sources[0];
+  file.content = file.content.replace('tproxy_port: 12345', 'tproxy_port: 0x10');
+  file.content_sha256 = await sha256(file.content);
+  file.bytes = new TextEncoder().encode(file.content).length;
+  handlers['GET config'] = async () => config;
+  await page.goto('/#/settings?card=global');
+  const field = page.getByRole('textbox', {name: 'tproxy_port', exact: true});
+  await expect(field).toHaveValue('0x10');
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  await field.fill('16');
+  await expect(field).not.toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('button', {name: 'Write and reload'})).toBeEnabled();
 });

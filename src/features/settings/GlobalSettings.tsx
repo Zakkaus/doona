@@ -16,7 +16,7 @@ export function GlobalSettings(props: PageProps) {
       {m.failure && <InlineAlert>{m.failure}</InlineAlert>}
       {m.conflict && <InlineAlert>{t('config.changedOnDisk')}</InlineAlert>}
       {m.source && !m.writable && <InlineAlert>{t('config.readOnly')}</InlineAlert>}
-      <LabeledSelect label={t('config.source')} value={m.selected} items={m.choices} onChange={m.select} isDisabled={m.busy} />
+      <LabeledSelect label={t('config.source')} value={m.selected} items={m.choices} onChange={m.select} isDisabled={m.busy || !m.source} />
       <form
         id="settings-global-form"
         className="rp-form"

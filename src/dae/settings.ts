@@ -5,6 +5,7 @@ export type SettingField = {
   key: string;
   type: 'boolean' | 'integer' | 'text' | 'list' | 'duration';
   max?: string;
+  hexMax?: string;
   bareItems?: boolean;
   choices?: readonly string[];
   units?: readonly string[];
@@ -23,7 +24,12 @@ export function settingValue(field: SettingField, value: string): string {
     if (/^(true|yes|1|on)$/i.test(text)) return 'true';
     if (/^(false|no|0|off)$/i.test(text)) return 'false';
   }
-  if (field.type === 'integer' && /^0x[0-9a-f]+$/i.test(text)) return BigInt(text).toString();
+  if (field.hexMax && /^(?:0x)?[0-9a-f]+$/i.test(text)) {
+    const digits = text.replace(/^0x/i, '');
+    const hex = BigInt(`0x${digits}`);
+    if (hex <= BigInt(field.hexMax)) return hex.toString();
+    if (/^\d+$/.test(digits) && BigInt(digits) <= BigInt(field.hexMax)) return BigInt(digits).toString();
+  }
   if (field.type === 'list') {
     return settingItems(value)
       .map(item => (item.includes(',') ? quote(item) : item))
@@ -36,7 +42,10 @@ export function serializeSetting(field: SettingField, value: string): string | n
   if (value === '') return '';
   if (field.choices?.includes(value)) return value;
   if (field.type === 'boolean') return /^(true|false)$/.test(value) ? value : null;
-  if (field.type === 'integer') return /^\d+$/.test(value) && BigInt(value) <= BigInt(field.max!) ? value : null;
+  if (field.type === 'integer') {
+    if (!/^\d+$/.test(value) || BigInt(value) > BigInt(field.max!)) return null;
+    return field.hexMax ? `0x${BigInt(value).toString(16)}` : value;
+  }
   if (field.choices) return null;
   if (field.type === 'duration') {
     const match = /^(\d+(?:\.\d+)?)(ms|s|m|h)?$/.exec(value);
@@ -53,7 +62,7 @@ export function serializeSetting(field: SettingField, value: string): string | n
   }
   const values = field.type === 'list' ? settingItems(value).filter(Boolean) : [value];
   // A whole quoted list containing a comma is read as legacy aggregate syntax by the engine.
-  if (field.type === 'list' && values.some(value => value.includes(','))) return null;
+  if (field.type === 'list' && values.length === 1 && values[0].includes(',')) return null;
   if (field.bareItems) return values.length && values.every(value => /^[-\w.*]+$/.test(value)) ? values.join(', ') : null;
   return values.length && values.every(isQuotable) ? values.map(quote).join(', ') : null;
 }
@@ -65,6 +74,7 @@ export function writeSettings(text: string, section: SettingsSection, index: num
   const fields = block ? blockFields(text, block, tokens) : [];
   const edits: Array<{from: number; to: number; text: string}> = [];
   const added: string[] = [];
+  const indent = (block && text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1]) || '  ';
   for (const [key, value] of Object.entries(patch)) {
     const definition = section.fields.find(field => field.key === key);
     const serialized = definition && serializeSetting(definition, value);
@@ -77,7 +87,7 @@ export function writeSettings(text: string, section: SettingsSection, index: num
       const field = matches[0];
       const start = field.valueFrom + (text.slice(field.valueFrom, field.valueTo).match(/^\s*/)?.[0].length ?? 0);
       edits.push({from: start, to: field.valueTo, text: serialized});
-    } else added.push(`  ${key}: ${serialized}`);
+    } else added.push(`${indent}${key}: ${serialized}`);
   }
   const newline = text.includes('\r\n') ? '\r\n' : '\n';
   if (added.length) {
