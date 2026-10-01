@@ -125,6 +125,15 @@ export function symlogAxis(max: number): {end: number; ticks: number[]} {
   return {end, ticks};
 }
 
+// A marker row's span in percent of the axis [0, max], from its lowest value to its highest, with values past the
+// axis end held on the edge; null when the values meet at one point and there is nothing to join.
+export function markerSpan(values: number[], max: number): {start: number; width: number} | null {
+  const at = values.map(value => Math.min(100, Math.max(0, (value / max) * 100)));
+  const start = Math.min(...at);
+  const width = Math.max(...at) - start;
+  return width > 0 ? {start, width} : null;
+}
+
 export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {
   const fraction = hi === lo ? 0.5 : (value - lo) / (hi - lo);
   return start * (1 - fraction) + end * fraction;

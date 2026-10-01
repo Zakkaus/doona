@@ -141,8 +141,9 @@ test('Flows records, tree nodes and latency chart tooltips use the same decorati
   await expect(page.locator('.rp-fact-name .rp-node-flag')).toHaveCount(2);
   const row = page.locator('.rp-markerplot .row').filter({hasText: 'hk-01'}).first();
   await expect(row).toBeVisible();
-  const unavailable = page.locator('.rp-markerplot .note').filter({hasText: 'jp-01'}).first();
-  await expect(unavailable.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇯🇵');
+  // The unmeasured note lists jp-01 beside the mock's never-probed nodes.
+  const unmeasured = page.locator('.rp-markerplot .note').getByRole('link', {name: 'jp-01', exact: true}).first();
+  await expect(unmeasured.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇯🇵');
   await expect(row.getByRole('link', {name: 'hk-01', exact: true})).toHaveAccessibleName('hk-01');
   await row.hover();
   await expect(page.locator('.rp-charttip .rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');

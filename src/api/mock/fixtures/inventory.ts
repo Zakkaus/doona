@@ -4,7 +4,10 @@ import {configMain} from './configuration';
 import {activateInventory} from '../activation';
 import {resolveLeaf} from '../control';
 import {defaultGeodataPreset} from '../../../dae/geodata';
-function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
+// `drift` sets the moving and 10-sample averages as multiples of the latest latency, so a node can be slower or faster
+// now than on average.
+function health(transport: 'tcp' | 'udp', latency: number | null, drift: [number, number], ip_version: 'ipv4' | 'ipv6' = 'ipv4'): HealthObservation {
+  const average = (factor: number) => (latency === null ? null : Math.round(latency * factor * 10) / 10);
   return {
     transport,
     purpose: transport === 'tcp' ? 'data' : 'dns',
@@ -14,14 +17,22 @@ function health(transport: 'tcp' | 'udp', latency: number | null, ip_version: 'i
     sample_source: 'probe',
     state: latency === null ? 'unavailable' : 'healthy',
     latency_ms: latency,
-    // honk does not compute averages, and names a failed probe with this code.
-    moving_avg_ms: null,
-    avg10_ms: null,
+    // honk leaves both averages null on an unavailable row, and names a failed probe with this code.
+    moving_avg_ms: average(drift[0]),
+    avg10_ms: average(drift[1]),
     observed_at: observedAt,
     error: latency === null ? 'probe_failed' : null
   };
 }
-function node(name: string, tcp: number | null, udp: number | null, v6: boolean, source: string, protocol: Node['protocol'] = 'shadowsocks'): Node {
+function node(
+  name: string,
+  tcp: number | null,
+  udp: number | null,
+  v6: boolean,
+  source: string,
+  protocol: Node['protocol'] = 'shadowsocks',
+  drift: [number, number] = [1, 1]
+): Node {
   return {
     id: name,
     name,
@@ -29,7 +40,7 @@ function node(name: string, tcp: number | null, udp: number | null, v6: boolean,
     subscription_tag: source,
     provider_id: source === 'inline' ? 'inline' : source,
     group_ids: [],
-    health: [health('udp', udp), health('tcp', tcp), ...(v6 ? [health('tcp', tcp, 'ipv6')] : [])]
+    health: [health('udp', udp, drift), health('tcp', tcp, drift), ...(v6 ? [health('tcp', tcp, drift, 'ipv6')] : [])]
   };
 }
 export function policyPick(group: Group): string {
@@ -38,15 +49,16 @@ export function policyPick(group: Group): string {
     .sort((a, b) => a.latency_ms! - b.latency_ms!);
   return ranked[0]?.member_id ?? group.members[0].id;
 }
-// Every node answers its probes unless the faults scenario takes jp-01 and about one subscription node in sixteen down.
+// Every node answers its probes unless the faults scenario takes jp-01 and about one subscription node in sixteen down;
+// one subscription node in fifty has never been probed.
 export function nodeFixtures(count: number, faults = false): {nodes: Node[]; groups: Group[]} {
   const nodes = [
     // The inline nodes match the links in the mock's config.dae.
-    node('hk-01', 84, 91, true, 'inline', 'vless'),
-    node('hk-02', 91, 88, true, 'inline', 'vless'),
-    node('sg-01', 63, 70, false, 'inline', 'trojan'),
-    node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless'),
-    node('us-01', 188, 201, true, 'inline', 'anytls')
+    node('hk-01', 84, 91, true, 'inline', 'vless', [0.95, 1.04]),
+    node('hk-02', 91, 88, true, 'inline', 'vless', [1.12, 1.18]),
+    node('sg-01', 63, 70, false, 'inline', 'trojan', [0.98, 1.02]),
+    node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless', [0.86, 0.9]),
+    node('us-01', 188, 201, true, 'inline', 'anytls', [0.62, 0.7])
   ];
   const regions: Array<[string, number]> = [
     ['香港', 60],
@@ -66,6 +78,14 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     seed = (seed * 48271) % 2147483647;
     return seed / 2147483647;
   };
+  // A second sequence for the averages, so adding them left every other fixture value as it was.
+  let wobble = 11;
+  const drift = (): [number, number] => {
+    wobble = (wobble * 48271) % 2147483647;
+    const moving = 0.75 + (wobble / 2147483647) * 0.5;
+    wobble = (wobble * 48271) % 2147483647;
+    return [moving, moving + (wobble / 2147483647 - 0.5) * 0.2];
+  };
   const airport: Node[] = [];
   for (let i = 0; i < count; i++) {
     const [region, base] = regions[i % regions.length];
@@ -74,7 +94,9 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     const alive = rnd() > 0.06 || !faults;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    airport.push(node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'harbor'));
+    const entry = node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'harbor', 'shadowsocks', drift());
+    if (i % 50 === 49) entry.health = [];
+    airport.push(entry);
   }
   nodes.push(...airport);
   const groups: Group[] = [];

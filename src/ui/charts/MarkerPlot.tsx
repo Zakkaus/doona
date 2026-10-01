@@ -4,6 +4,7 @@ import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
+import {markerSpan} from './layout';
 
 export type MarkerKind = 'dot' | 'diamond' | 'tick';
 // `description` is what the row says to a screen reader: every value it draws, in words.
@@ -78,9 +79,10 @@ export function MarkerPlot({
         <section key={group.id} aria-label={group.label}>
           {groups.length > 1 && <h4 className="rp-label">{group.label}</h4>}
           {(expanded.has(group.id) ? group.rows : group.rows.slice(0, limit)).map(row => {
-            const values = Object.values(row.values).filter((value): value is number => value !== undefined);
-            const low = at(Math.min(...values));
-            const high = at(Math.max(...values));
+            const span = markerSpan(
+              Object.values(row.values).filter((value): value is number => value !== undefined),
+              max
+            );
             return (
               <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details], row.nodeName)}>
                 <span className="name">
@@ -98,7 +100,7 @@ export function MarkerPlot({
                   {ticks.map(tick => (
                     <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />
                   ))}
-                  {high > low && <i className="span" style={{insetInlineStart: `${low}%`, width: `${high - low}%`}} />}
+                  {span && <i className="span" style={{insetInlineStart: `${span.start}%`, width: `${span.width}%`}} />}
                   {(['tick', 'diamond', 'dot'] as const).map(kind =>
                     row.values[kind] === undefined ? null : (
                       <span

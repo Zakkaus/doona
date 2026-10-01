@@ -47,6 +47,10 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
         const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
         const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
         const state = latency_ms === null ? 'unavailable' : 'healthy';
+        // A success folds into both averages, the 10-sample one as a tenth so the mock keeps no window; a failure
+        // reports neither.
+        const fold = (average: number | null | undefined, weight: number) =>
+          latency_ms === null ? null : average == null ? latency_ms : average + (latency_ms - average) * weight;
         const error = state === 'unavailable' ? 'probe_failed' : null;
         const observation: HealthObservation = {
           transport,
@@ -57,8 +61,8 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           sample_source: 'probe',
           state,
           latency_ms,
-          moving_avg_ms: null,
-          avg10_ms: null,
+          moving_avg_ms: fold(previous?.moving_avg_ms, 1 / 2),
+          avg10_ms: fold(previous?.avg10_ms, 1 / 10),
           observed_at,
           error
         };
@@ -75,7 +79,16 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           else node.health[index] = observation;
         }
         if (group) {
-          const health = {...observation, member_id, resolved_leaf_node_id: node?.id ?? null, sorting_latency_ms: latency_ms, ranking: null};
+          // honk keeps averages to node rows; a group's own samples carry none.
+          const health = {
+            ...observation,
+            moving_avg_ms: null,
+            avg10_ms: null,
+            member_id,
+            resolved_leaf_node_id: node?.id ?? null,
+            sorting_latency_ms: latency_ms,
+            ranking: null
+          };
           const index = group.runtime.health.findIndex(
             h =>
               h.member_id === member_id &&
