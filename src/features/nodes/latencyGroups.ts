@@ -43,7 +43,8 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
   return list.sort((a, b) => (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) || byName(a.label ?? '', b.label ?? ''));
 }
 
-// Which averages the backend reports. honk sends neither, so a chart names only the ones some row has.
+// Which averages the backend reports. honk leaves both null on an unavailable row and on a backend without them,
+// so a chart names only the ones some row has.
 export function latencyAverages(groups: LatencyGroup[]) {
   const rows = groups.flatMap(group => group.rows);
   return {moving: rows.some(row => row.moving !== null), avg10: rows.some(row => row.avg10 !== null)};
@@ -52,7 +53,7 @@ export function latencyAverages(groups: LatencyGroup[]) {
 // The axis end: past most of the values rather than the single slowest, so one outlier does not push every other
 // node to the left edge; values beyond it are drawn on the edge with their number.
 export function latencyMax(groups: LatencyGroup[]): number {
-  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? row.latest])).sort((a, b) => a - b);
+  const values = groups.flatMap(group => group.rows.flatMap(row => [row.latest, row.moving ?? row.latest, row.avg10 ?? row.latest])).sort((a, b) => a - b);
   const top = Math.max(10, (percentile(values, 90) ?? 0) * 1.25);
   const step = top <= 100 ? 20 : top <= 500 ? 100 : top <= 2000 ? 500 : 1000;
   return Math.ceil(top / step) * step;

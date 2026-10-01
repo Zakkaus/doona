@@ -50,6 +50,35 @@ it('groups by protocol and rounds the axis end up', () => {
   expect(latencyMax(latencyGroups(nodes, [], 'protocol', locale))).toBe(200);
 });
 
+// honk reports both averages as fractional milliseconds on a healthy row and null on an unavailable one.
+it.each([
+  {name: 'both averages', patch: {latency_ms: 48.2, moving_avg_ms: 47.5, avg10_ms: 51.25}, row: {latest: 48.2, moving: 47.5, avg10: 51.25}},
+  {name: 'no averages', patch: {latency_ms: 48, moving_avg_ms: null, avg10_ms: null}, row: {latest: 48, moving: null, avg10: null}},
+  {name: 'an unavailable row', patch: {state: 'unavailable' as const, latency_ms: null, moving_avg_ms: null, avg10_ms: null}, row: null}
+])('reads $name from honk', ({patch, row}) => {
+  const [group] = latencyGroups([node('a', [], [observation(patch)])], [], 'protocol', locale);
+  expect(group.rows).toEqual(row ? [{id: 'a', name: 'a', ...row}] : []);
+  expect(group.missing).toEqual(row ? [] : [{id: 'a', name: 'a', state: 'unavailable'}]);
+});
+
+// Each row adds its latest value and both averages; a missing average counts as the latest value.
+it.each([
+  {
+    name: 'latest values alone',
+    rows: [
+      [130, null, null],
+      [20, null, null]
+    ],
+    max: 200
+  },
+  {name: 'a moving average past the latest', rows: [[40, 70, null]], max: 100},
+  {name: 'a 10-sample average past the latest', rows: [[40, null, 70]], max: 100},
+  {name: 'floating averages', rows: [[12, 13.5, 14.25]], max: 20}
+])('ends the axis past $name', ({rows, max}) => {
+  const nodes = rows.map(([latency_ms, moving_avg_ms, avg10_ms], i) => node('n' + i, [], [observation({latency_ms, moving_avg_ms, avg10_ms})]));
+  expect(latencyMax(latencyGroups(nodes, [], 'protocol', locale))).toBe(max);
+});
+
 it('keeps the axis clear of a lone outlier', () => {
   const nodes = [...Array(10)].map((_, i) => node('n' + i, [], [observation({latency_ms: 30 + i, moving_avg_ms: 30 + i, avg10_ms: 30 + i})], 'vless'));
   nodes.push(node('far', [], [observation({latency_ms: 2000, moving_avg_ms: 1900, avg10_ms: 1800})], 'vless'));

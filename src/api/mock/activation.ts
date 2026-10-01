@@ -125,7 +125,16 @@ export function activateInventory(
       runtime: {
         selection,
         health: memberNodes.flatMap(node =>
-          node.health.map(health => ({...health, member_id: node.id, resolved_leaf_node_id: node.id, sorting_latency_ms: health.latency_ms, ranking: null}))
+          node.health.map(health => ({
+            ...health,
+            // Averages belong to node rows; a group's own samples carry none.
+            moving_avg_ms: null,
+            avg10_ms: null,
+            member_id: node.id,
+            resolved_leaf_node_id: node.id,
+            sorting_latency_ms: health.latency_ms,
+            ranking: null
+          }))
         )
       },
       capabilities: groupCapabilities(kind)
