@@ -1,5 +1,5 @@
 import type {TextBlock} from '../../dae/text';
-import type {Capabilities, ConfigSource} from '../model';
+import type {Capabilities, ConfigSource, RuntimeSettings} from '../model';
 
 // What the engine can be asked about: a capabilities resource, or one of the actions the contract flags on a resource.
 // `manage` stands for adding and editing nodes and subscriptions (nodes and providers `can_manage`), `subscriptions`
@@ -35,7 +35,7 @@ export type EngineReason =
 export type Engine = {
   id: 'honk' | 'unknown';
   // Why `subject` is off, given that the capabilities show it is; undefined when the engine does not say.
-  reason(subject: EngineSubject, capabilities: Capabilities): EngineReason | undefined;
+  reason(subject: EngineSubject, capabilities: Capabilities, recording?: RuntimeSettings['recording']): EngineReason | undefined;
   // Whether the engine refuses to write a source because its text holds credentials it will not write back.
   holdsCredentials(source: Pick<ConfigSource, 'content'>): boolean;
   // The settings as a snippet of the engine's configuration text.

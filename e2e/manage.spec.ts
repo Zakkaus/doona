@@ -8,20 +8,28 @@ test('close all closes what the backend owns and skips the rest', async ({page})
   await expect(page.locator('.rp-toast')).toContainText(/Closed \d+, skipped \d+/);
 });
 
-test('the backend actions card gathers reload, DNS, subscriptions and connections', async ({page}) => {
+test('the backend actions card links to reload, DNS, subscriptions and connections', async ({page}) => {
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Backend actions'});
   // Geodata has its own card where the sources are configurable.
   await expect(card).not.toContainText('geosite');
-  await card.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
+  await card.getByRole('link', {name: 'Open subscriptions', exact: true}).click();
+  await page.getByRole('button', {name: 'Refresh subscription (1)', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions refreshed: 1 of 1'})).toBeVisible();
-  await card.getByRole('button', {name: 'Clear all cache', exact: true}).click();
+  await page.goto('/#/settings');
+  await card.getByRole('link', {name: 'Open DNS cache', exact: true}).click();
+  await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Cache cleared'})).toBeVisible();
-  await card.getByRole('button', {name: 'Close all', exact: true}).click();
+  await page.goto('/#/settings');
+  await card.getByRole('link', {name: 'Open connections', exact: true}).click();
+  await page.getByRole('button', {name: 'Close all', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Close all', exact: true}).click();
   await expect(page.locator('.rp-toast', {hasText: /Closed \d+, skipped \d+/})).toBeVisible();
-  await card.getByRole('button', {name: 'Reload', exact: true}).click();
+  await page.goto('/#/settings');
+  await card.getByRole('link', {name: 'System status', exact: true}).click();
+  await page.locator('#overview-status').getByRole('button', {name: 'Reload', exact: true}).click();
+  await page.getByRole('dialog', {name: 'Reload honk?'}).getByRole('button', {name: 'Reload honk', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Reload: Completed'})).toBeVisible();
 });
 
@@ -30,10 +38,11 @@ test.describe('with more connections than one bulk close admits', () => {
   // sizes only the node inventory, so it stays at the default.
   test.use({storage: {'doona-mock-big': '120'}});
 
-  test('Settings close all closes them in batches and reports the totals', async ({page}) => {
+  test('Settings links to closing all connections in batches and reporting the totals', async ({page}) => {
     await page.goto('/#/settings');
     const card = page.getByRole('region', {name: 'Backend actions'});
-    await card.getByRole('button', {name: 'Close all', exact: true}).click();
+    await card.getByRole('link', {name: 'Open connections', exact: true}).click();
+    await page.getByRole('button', {name: 'Close all', exact: true}).click();
     const dialog = page.locator('.rp-dialog[role="alertdialog"]');
     await expect(dialog).toContainText(/\(([\d,]+) right now\)/);
     const live = Number(/\(([\d,]+) right now\)/.exec((await dialog.textContent()) ?? '')![1].replace(/,/g, ''));
@@ -45,7 +54,7 @@ test.describe('with more connections than one bulk close admits', () => {
     expect(closed).toBeGreaterThan(0);
     expect(closed + skipped).toBe(live);
     // What is left is what the backend could not close.
-    await card.getByRole('button', {name: 'Close all', exact: true}).click();
+    await page.getByRole('button', {name: 'Close all', exact: true}).click();
     await expect(dialog).toContainText(`(${skipped.toLocaleString('en')} right now)`);
   });
 });

@@ -1,34 +1,22 @@
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Button, Card, ConfirmButton, DataTable, ErrorMessage, Link, Loading, TextTooltip, TimeCell} from '../../ui/ui';
+import {ActionHelp, Button, Card, DataTable, ErrorMessage, Link, Loading, TextTooltip, TimeCell} from '../../ui/ui';
 import {useBackendActions} from './useBackendActions';
+import {href} from '../../shell/route';
 import {settingsCard} from './nav';
 
 const card = settingsCard('actions');
 export function BackendActionsCard() {
   const t = useT();
   const {
-    runtimeError,
-    retryRuntime,
+    visible,
     lifecycle,
-    flush,
-    closeAll,
     geodataBusy,
     geodataBlocked,
     geodataReason,
     geodataLoading,
     geodataError,
     retryGeodata,
-    providersError,
-    providersLoading,
-    retryProviders,
-    connectionsError,
-    retryConnections,
     note,
-    refreshingAll,
-    refreshAll,
-    refreshDisabled,
-    refreshReason,
-    refreshLabel,
     canFlush,
     canRefresh,
     canClose,
@@ -39,21 +27,23 @@ export function BackendActionsCard() {
     update,
     waiting
   } = useBackendActions();
+  if (!waiting && !visible) return null;
   return (
     <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
       <span className="rp-label">{waiting ? '\u00a0' : note}</span>
-      <ErrorMessage error={runtimeError} onRetry={retryRuntime} />
       <div className="rp-ops">
         {waiting && (
           <div className="rp-chart-wait ops">
             <Loading />
           </div>
         )}
-        {lifecycle.length > 0 && (
+        {lifecycle && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('settings.groupLifecycle')}</span>
             <div className="rp-cluster">
-              <ActionGroup overflowMode="wrap" actions={lifecycle} />
+              <Link appearance="button" href={href('overview', {card: 'status'})}>
+                {t('nav.overview')}
+              </Link>
             </div>
           </div>
         )}
@@ -61,30 +51,29 @@ export function BackendActionsCard() {
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.dns')}</span>
             <div className="rp-cluster">
-              <ConfirmButton label={t('dns.flushAll')} {...flush} />
+              <Link appearance="button" href={href('dns', {tab: 'cache'})}>
+                {t('settings.openDnsCache')}
+              </Link>
             </div>
           </div>
         )}
         {canRefresh && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.nodes')}</span>
-            <ErrorMessage error={providersError} onRetry={retryProviders} />
-            {/* Loading shows on the button itself: a spinner row would push the other groups down and back. */}
-            <ActionHelp reason={refreshReason}>
-              <div className="rp-cluster">
-                <Button isPending={refreshingAll || providersLoading} isDisabled={refreshingAll || refreshDisabled} onPress={() => void refreshAll()}>
-                  {refreshLabel}
-                </Button>
-              </div>
-            </ActionHelp>
+            <div className="rp-cluster">
+              <Link appearance="button" href={href('nodes', {tab: 'list'})}>
+                {t('settings.openSubscriptions')}
+              </Link>
+            </div>
           </div>
         )}
         {canClose && (
           <div className="rp-ops-group">
             <span className="rp-label">{t('nav.connections')}</span>
-            <ErrorMessage error={connectionsError} onRetry={retryConnections} />
             <div className="rp-cluster">
-              <ConfirmButton label={t('conn.closeAll')} {...closeAll} />
+              <Link appearance="button" href={href('connections', {tab: 'list', network: 'all', out: 'all', rule: 'all', src: '', q: '', scope: 'all'})}>
+                {t('settings.openConnections')}
+              </Link>
             </div>
           </div>
         )}

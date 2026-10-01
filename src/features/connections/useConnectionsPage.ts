@@ -73,7 +73,7 @@ export function useConnectionsPage({go, query}: PageProps) {
   const rule = q.get('rule') ?? 'all';
   const setFilter = (key: 'network' | 'out' | 'rule', value: string) => go('connections', stay(query, {[key]: value === 'all' ? null : value}));
   const sel = q.get('id');
-  const [confirmed, setConfirmed] = useState<CloseSelection | null>(null);
+  const [confirmed, setConfirmed] = useState<(CloseSelection & {count?: number}) | null>(null);
   useLinked(q.get('q'), value => setText(value ?? ''));
   // A close resolves after the person may have changed the filters; navigating from the query captured when it
   // started would put the old ones back.
@@ -228,20 +228,22 @@ export function useConnectionsPage({go, query}: PageProps) {
       confirmationText: confirmed?.query
         ? t(
             confirmed.query.type === 'all' ? 'conn.closeAllLive' : confirmed.query.type === 'tcp' ? 'conn.closeAllLiveTcp' : 'conn.closeAllLiveUdp',
-            src ? {n: confirmed.ids.length, source: src} : {n: confirmed.ids.length, source: t('conn.anySource')}
+            src ? {n: confirmed.count ?? confirmed.ids.length, source: src} : {n: confirmed.count ?? confirmed.ids.length, source: t('conn.anySource')}
           )
         : t('conn.closeAllHelp', {n: confirmed?.ids.length ?? 0}),
       open: !!confirmed,
       setOpen: (open: boolean) =>
         setConfirmed(
           open
-            ? closeSelection(shown, {
-                network,
-                src,
-                narrowed: out !== 'all' || rule !== 'all' || !!needle,
-                truncated: !!resource.data?.truncated,
-                bulkLimit: capabilities.data?.resources.connections.max_bulk_close
-              })
+            ? q.get('scope') === 'all' && network === 'all' && !src && out === 'all' && rule === 'all' && !needle
+              ? {ids: [], query: {type: 'all', all: true}, count: (resource.data?.total_tcp ?? 0) + (resource.data?.total_udp ?? 0)}
+              : closeSelection(shown, {
+                  network,
+                  src,
+                  narrowed: out !== 'all' || rule !== 'all' || !!needle,
+                  truncated: !!resource.data?.truncated,
+                  bulkLimit: capabilities.data?.resources.connections.max_bulk_close
+                })
             : null
         ),
       isDisabled: !shown.length || !!closing.busy || text !== settledText,

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import type {Capabilities, ReportedCapabilities, Version} from '../../api/model';
+import type {Capabilities, ReportedCapabilities, RuntimeSettings, Version} from '../../api/model';
 import {capabilities as demoCapabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, type LimitCause, type LimitGroup} from './limits';
@@ -218,4 +218,15 @@ describe('backendLimits on an older honk', () => {
       ['geodata']
     ]);
   });
+});
+
+it('explains forbidden runtime recorders even when their resources remain available', () => {
+  const recording: RuntimeSettings['recording'] = {
+    flows: {allowed: false, active: false, mode: 'off'},
+    logs: {allowed: false, active: false, mode: 'off'},
+    dns_log: {allowed: false, active: false, mode: 'off'}
+  };
+  const result = backendLimits(capabilities, version, t, 'en', recording);
+  expect(ids(group(result, 'recordOff'))).toEqual(['flows', 'dns_log', 'logs']);
+  expect(group(result, 'recordOff')?.help?.snippet).toBe(nativeApi(['record_flows: true', 'record_dns_log: true', 'record_logs: true']));
 });

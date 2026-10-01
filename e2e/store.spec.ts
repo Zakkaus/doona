@@ -103,7 +103,7 @@ test('query simulation traces the first IPv4 and IPv6 answer and lists every ans
 for (const [route, path, most] of [
   ['activity', 'runtime/traffic/history', 2],
   ['activity', 'connections', 4],
-  ['settings', 'providers', 3]
+  ['nodes?tab=list', 'providers', 3]
 ] as const)
   test(`${route} fetches ${path} at most ${most} times a minute`, async ({page}) => {
     const {requests} = await mockBackend(page);

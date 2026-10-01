@@ -1,23 +1,8 @@
-import {
-  useCapabilities,
-  useConnectionClose,
-  useConnectionTotals,
-  useDnsFlush,
-  useGeodata,
-  useProviderRefresh,
-  useProviders,
-  useRuntime,
-  useVersion
-} from '../../store';
-import {useLifecycle} from '../shared/useLifecycle';
-import {useRefreshAll} from '../shared/useRefreshAll';
-import {closedAllTone} from '../../api/selectors';
+import {useCapabilities, useGeodata, useVersion} from '../../store';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail} from '../../ui/ui';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
-import {geodataConfigurable} from './nav';
-import {errorText} from '../../api/error';
-import {offered} from '../../api/capabilities';
+import {backendActionsVisible, geodataConfigurable} from './nav';
 export function useBackendActions() {
   const t = useT();
   const lang = useLang();
@@ -25,80 +10,25 @@ export function useBackendActions() {
   const capabilities = useCapabilities();
   const version = useVersion();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
-  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
-  const refresh = useProviderRefresh(providers.refetch);
-  // Only the close-all action needs the live count, so the poll runs only where that action exists.
-  const connections = useConnectionTotals(offered(resources, 'connections', {whileLoading: false}) && resources?.connections.can_close === true);
-  const closing = useConnectionClose(connections.refetch);
-  const flushing = useDnsFlush();
-  const operations = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
   // Where sources are configurable, geodata has its own card with the update button, so this card leaves it out.
   const plainGeodata = !!resources?.geodata.available && !geodataConfigurable(resources);
   const geodata = useGeodata(plainGeodata);
   const lifecycle = !!resources?.operations.available && (['reload', 'suspend', 'resume'] as const).some(kind => resources[kind].available);
-  const anyAction =
-    lifecycle ||
-    !!(resources?.dns_cache.available && resources.dns_cache.flush) ||
-    !!resources?.providers.can_refresh ||
-    !!resources?.connections.can_close ||
-    (plainGeodata && !!resources?.geodata.can_update);
-  const connectionsReady = !!connections.data && !connections.error && !connections.loading;
-  const liveCount = connectionsReady ? connections.data!.total_tcp + connections.data!.total_udp : null;
-  const refreshAll = useRefreshAll(providers, refresh);
-  const closeAll = () =>
-    closing.closeAll({ids: [], query: {all: true}}).then(
-      tally => {
-        if (tally) toast(closedAllTone(tally), t('conn.closedAll', {closed: tally.closed, skipped: tally.skipped}));
-      },
-      error => t('ui.valuePair', {label: t('conn.closeFailed'), value: errorText(error, t)})
-    );
   return {
-    runtimeError: runtime.error,
-    retryRuntime: runtime.refetch,
-    lifecycle: operations.actions,
-    flush: {
-      confirmationText: t('dns.flushConfirmAll'),
-      isPending: flushing.busy,
-      isDisabled: flushing.busy,
-      onAbort: flushing.cancel,
-      onConfirm: () =>
-        flushing.flush().then(
-          result => {
-            if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
-          },
-          error => t('dns.flushFailed', {error: errorText(error, t)})
-        )
-    },
-    closeAll: {
-      confirmationText: liveCount === null ? '' : t('settings.closeAllHelp', {n: liveCount}),
-      isDisabled: !connectionsReady || !liveCount || !!closing.busy,
-      isPending: closing.busy === 'all' || (connections.loading && !connections.data),
-      onConfirm: closeAll,
-      onAbort: closing.cancel
-    },
+    visible: backendActionsVisible(resources),
+    lifecycle,
     geodataBusy: geodata.busy,
     geodataBlocked: geodata.busy || !geodata.data,
     geodataReason: geodataUpdateReason({busy: geodata.busy, loaded: !!geodata.data, failed: !!geodata.error}, t),
     geodataLoading: geodata.loading && !geodata.data,
     geodataError: geodata.error,
     retryGeodata: geodata.refetch,
-    providersError: providers.error,
-    providersLoading: providers.loading && !providers.data,
-    retryProviders: providers.refetch,
-    connectionsError: connections.error,
-    retryConnections: connections.refetch,
     // Only while capabilities are on their way; a failed load is reported by the page banner, not a spinner.
     waiting: !resources && !capabilities.error,
-    note: t(anyAction ? 'settings.actionsNote' : 'settings.actionsNone'),
-    refreshingAll: refreshAll.refreshing,
-    refreshAll: refreshAll.run,
-    refreshDisabled: refreshAll.disabled,
-    refreshReason: refreshAll.reason,
-    refreshLabel: refreshAll.label,
+    note: t('settings.actionsNote'),
     canFlush: !!(resources?.dns_cache.available && resources.dns_cache.flush),
-    canRefresh: !!resources?.providers.can_refresh,
-    canClose: !!resources?.connections.can_close,
+    canRefresh: !!(resources?.providers.available && resources.providers.can_refresh),
+    canClose: !!(resources?.connections.available && resources.connections.can_close),
     canUpdate: !!resources?.geodata.can_update,
     hasGeodata: plainGeodata,
     fromConfig: geodataFromConfig(capabilities.data, version.data, t, lang),

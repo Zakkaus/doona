@@ -625,20 +625,24 @@ httpTest('backend inventory failures expose independent retries without claiming
   );
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Backend actions'});
-  const providers = card.locator('.rp-ops-group').filter({hasText: 'Provider inventory unavailable'});
-  const connections = card.locator('.rp-ops-group').filter({hasText: 'Connection inventory unavailable'});
+  await expect(card.getByRole('link', {name: 'Open subscriptions', exact: true})).toBeEnabled();
+  await expect(card.getByRole('link', {name: 'Open connections', exact: true})).toBeEnabled();
+  await card.getByRole('link', {name: 'Open subscriptions', exact: true}).click();
+  const providers = page.getByRole('alert').filter({hasText: 'Provider inventory unavailable'});
   await expect(providers).toBeVisible();
-  await expect(connections).toBeVisible();
-  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).toBeDisabled();
-  await expect(card.getByRole('button', {name: /^Refresh .*subscription/})).not.toContainText('(0)');
-  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: /^Refresh .*subscription/})).toBeDisabled();
+  await expect(page.getByRole('button', {name: /^Refresh .*subscription/})).not.toContainText('(0)');
   failProviders = false;
   await providers.getByRole('button', {name: 'Retry', exact: true}).click();
-  await expect(card.getByRole('button', {name: 'Refresh subscription (1)', exact: true})).toBeEnabled();
+  await expect(page.getByRole('button', {name: 'Refresh subscription (1)', exact: true})).toBeEnabled();
+  await page.goto('/#/settings');
+  await card.getByRole('link', {name: 'Open connections', exact: true}).click();
+  const connections = page.getByRole('alert').filter({hasText: 'Connection inventory unavailable'});
   await expect(connections).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeDisabled();
   failConnections = false;
   await connections.getByRole('button', {name: 'Retry', exact: true}).click();
-  await expect(card.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
+  await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
 });
 
 httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {

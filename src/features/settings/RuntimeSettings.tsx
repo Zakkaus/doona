@@ -1,6 +1,7 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Loading, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
+import {recordingLimitsHref} from '../shared/link';
 import {settingsCard} from './nav';
 
 const card = settingsCard('runtime');
@@ -55,7 +56,7 @@ export function RuntimeSettingsCard() {
                 ))}
               </div>
               {m.recorders.length > 0 && (
-                <div className="rp-toolbar rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
+                <div className="rp-toolbar top rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
                   {m.recorders.map(recorder => (
                     <div key={recorder.id} className="rp-field">
                       <LabeledSelect
@@ -68,6 +69,11 @@ export function RuntimeSettingsCard() {
                       <Light tone={recorder.tone} small>
                         {recorder.status}
                       </Light>
+                      {recorder.disabled && (
+                        <Link appearance="link" href={recordingLimitsHref}>
+                          {t('settings.recordingRequirements')}
+                        </Link>
+                      )}
                     </div>
                   ))}
                   {m.recordingNote && <span className="rp-label">{m.recordingNote}</span>}
