@@ -26,7 +26,14 @@ export function useDnsUpstreams() {
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const complete = useCompleteness(sources);
   const editor = useConfigEditor(reread);
-  const [draft, setDraft] = useState<{sourceId: string; old: string | null; name: string; address: string; staged?: boolean} | null>(null);
+  const [draft, setDraft] = useState<{
+    sourceId: string;
+    old: string | null;
+    name: string;
+    address: string;
+    staged?: boolean;
+    expected: Map<string, string | null | undefined>;
+  } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const rows = sources.flatMap(source =>
@@ -54,7 +61,7 @@ export function useDnsUpstreams() {
       !validDnsAddress(draft.address) ||
       rows.some(row => row.name === draft.name && !(row.sourceId === draft.sourceId && (row.name === draft.old || (draft.staged && row.name === draft.name)))));
   const close = () => {
-    if (!saving) {
+    if (!saving && !draft?.staged) {
       setDraft(null);
       setFailure(null);
     }
@@ -65,7 +72,7 @@ export function useDnsUpstreams() {
     setFailure(null);
     try {
       const snapshot = (await readConfigFresh(getApi(), new AbortController().signal)).sources;
-      if (snapshot.length !== sources.length || snapshot.some(source => source.content_sha256 !== sources.find(old => old.id === source.id)?.content_sha256)) {
+      if (snapshot.length !== draft.expected.size || snapshot.some(source => source.content !== draft.expected.get(source.id))) {
         setFailure(t('rule.stale'));
         return;
       }
@@ -73,7 +80,7 @@ export function useDnsUpstreams() {
       const other = draft.old
         ? snapshot.filter(item => item.id !== source.id && renameDnsReferences(item.content ?? '', draft.old!, draft.name) !== (item.content ?? ''))
         : [];
-      const expected = new Map(snapshot.map(source => [source.id, source.content]));
+      const expected = draft.expected;
       const write = async (id: string, transform: (text: string) => string | null) => {
         const fresh = (await readConfigFresh(getApi(), new AbortController().signal)).sources.find(item => item.id === id);
         if (!fresh || fresh.content !== expected.get(id)) {
@@ -86,15 +93,20 @@ export function useDnsUpstreams() {
           return false;
         }
         const result = await editor.apply(fresh, next);
-        if (result && !result.diagnostics) expected.set(id, next);
+        if (
+          (result && !result.diagnostics) ||
+          (!result && (await readConfigFresh(getApi(), new AbortController().signal)).sources.find(item => item.id === id)?.content === next)
+        )
+          expected.set(id, next);
         if (result?.diagnostics) setFailure(t('ui.writeInvalid', {n: result.diagnostics.length}));
         return !!result && !result.diagnostics;
       };
       // Across files, keep the old name until all references use the new one. Each intermediate config remains valid.
       if (changedName && (other.length || draft.staged)) {
         if (!draft.staged) {
-          if (!(await write(source.id, text => aliasDnsUpstream(text, draft.old!, draft.name, draft.address)))) return;
-          setDraft({...draft, staged: true});
+          const applied = await write(source.id, text => aliasDnsUpstream(text, draft.old!, draft.name, draft.address));
+          if (expected.get(source.id) !== source.content) setDraft({...draft, staged: true});
+          if (!applied) return;
         }
         for (const item of other) if (!(await write(item.id, text => renameDnsReferences(text, draft.old!, draft.name)))) return;
         const latest = (await readConfigFresh(getApi(), new AbortController().signal)).sources;
@@ -144,10 +156,18 @@ export function useDnsUpstreams() {
     canWrite: resources?.config.writable === true,
     open: (id: string) => {
       const row = rows.find(row => row.id === id);
-      if (row) setDraft({sourceId: row.sourceId, old: row.name, name: row.name, address: row.address});
+      if (row)
+        setDraft({
+          sourceId: row.sourceId,
+          old: row.name,
+          name: row.name,
+          address: row.address,
+          expected: new Map(sources.map(source => [source.id, source.content]))
+        });
     },
     add: () => {
-      if (addSource) setDraft({sourceId: addSource.id, old: null, name: '', address: ''});
+      if (addSource)
+        setDraft({sourceId: addSource.id, old: null, name: '', address: '', expected: new Map(sources.map(source => [source.id, source.content]))});
     }
   };
 }

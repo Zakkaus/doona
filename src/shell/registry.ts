@@ -78,7 +78,7 @@ const definitions = {
     shortcut: 'r',
     nav: {titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     ...lazyPage(() => import('../features/rules/Rules').then(m => ({default: m.Rules}))),
-    requires: {resources: ['routing_trace', 'flows', 'rules', 'dns_rules']}
+    requires: {resources: ['routing_trace', 'flows', 'rules', 'dns_rules', 'config']}
   },
   nodes: {
     shortcut: 'n',

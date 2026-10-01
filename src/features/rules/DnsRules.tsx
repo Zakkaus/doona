@@ -1,4 +1,3 @@
-import {dnsSettingsHref} from '../shared/link';
 import {useT} from '../../i18n';
 import {Card, Link} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
@@ -18,7 +17,7 @@ export function DnsRules(props: PageProps) {
       {request.addReason && (
         <p className="rp-note">
           {t('rule.dns.noPlace')}{' '}
-          <Link appearance="link" href={dnsSettingsHref}>
+          <Link appearance="link" href={links.sourceHref}>
             {t('dns.openConfig')}
           </Link>
         </p>

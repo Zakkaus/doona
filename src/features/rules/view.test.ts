@@ -153,6 +153,8 @@ it('rejects unavailable tab requests and keeps trace-only navigation usable', as
   resources.flows.available = false;
   resources.rules.available = false;
   resources.dns_rules.available = false;
+  expect(rulesView(resources, 'tab=dns', t).tab).toBe('dns');
+  resources.config.available = false;
   resources.routing_trace.available = true;
   const view = rulesView(resources, 'tab=map', t);
   expect(view.tabs.map(tab => tab.id)).toEqual(['trace']);
@@ -291,7 +293,7 @@ it('says why Run trace is disabled, and nothing while the capabilities load or a
   expect(traceReason({...ok, modeOffered: false}, t)).toBe('The backend does not offer this resolution mode');
 });
 
-it('puts the rule lists first, routing then DNS, and offers DNS only when the backend lists its rules', async () => {
+it('offers the DNS workspace when either rules or configuration is available', async () => {
   const {resources} = await createMockApi().capabilities();
   const view = rulesView(resources, '', t);
   expect(view.tabs.map(tab => tab.id)).toEqual(['list', 'dns', 'trace']);
@@ -300,15 +302,17 @@ it('puts the rule lists first, routing then DNS, and offers DNS only when the ba
   expect(rulesView(resources, 'tab=dns', t).tab).toBe('dns');
   expect(rulesView(resources, 'tab=trace', t).tab).toBe('trace');
   resources.dns_rules.available = false;
+  expect(rulesView(resources, 'tab=dns', t).tab).toBe('dns');
+  resources.config.available = false;
   expect(rulesView(resources, 'tab=dns', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
   expect(rulesView(resources, 'tab=dns', t).tab).toBe('list');
 });
 
-it('opens the rules page without a DNS tab on a backend that does not report DNS rules', async () => {
+it('keeps the upstream editor accessible on older backends without DNS rules', async () => {
   const raw = await createMockApi().capabilities();
   const {dns_rules: _dnsRules, ...older} = raw.resources;
   const {resources} = normalizeCapabilities({...raw, resources: older as ReportedCapabilities['resources']});
-  expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'trace']);
+  expect(rulesView(resources, '', t).tabs.map(tab => tab.id)).toEqual(['list', 'dns', 'trace']);
 });
 
 it('lists DNS request and response rules with their actions, locations and insertion points', async () => {

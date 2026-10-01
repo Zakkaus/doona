@@ -265,6 +265,7 @@ export function ConfirmDialog({
   onConfirm,
   tone = 'negative',
   isPending,
+  locked,
   isDisabled,
   dismissOnly,
   reason,
@@ -279,6 +280,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   tone?: 'negative' | 'accent';
   isPending?: boolean;
+  locked?: boolean;
   isDisabled?: boolean;
   // The action is not offered: the footer holds one Close button instead of Cancel and Confirm.
   dismissOnly?: boolean;
@@ -293,6 +295,7 @@ export function ConfirmDialog({
     <ModalDialog
       title={title}
       narrow
+      locked={locked}
       scrollBody={scrollBody}
       alert={tone === 'negative'}
       isOpen={isOpen}
@@ -302,10 +305,14 @@ export function ConfirmDialog({
       }}
       footer={() =>
         dismissOnly ? (
-          <Button onPress={onCancel}>{t('ui.close')}</Button>
+          <Button isDisabled={locked} onPress={onCancel}>
+            {t('ui.close')}
+          </Button>
         ) : (
           <>
-            <Button onPress={onCancel}>{t('ui.cancel')}</Button>
+            <Button isDisabled={locked} onPress={onCancel}>
+              {t('ui.cancel')}
+            </Button>
             <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
               {confirmLabel}
             </Button>

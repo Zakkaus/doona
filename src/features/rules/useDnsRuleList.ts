@@ -10,7 +10,7 @@ import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
 import {answeredUpstream, dnsUpstreamChoices} from '../shared/rule';
 import {useRuleEditor} from './useRuleEditor';
-import {parseRuleSeed, ruleSeedParams} from '../shared/link';
+import {parseRuleSeed, ruleSeedParams, sectionSourceHref} from '../shared/link';
 import {href, within} from '../../shell/route';
 import type {DictionaryModel} from './useRuleList';
 
@@ -113,7 +113,9 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
 // configuration the rules were read from.
 export function useDnsRuleLinks() {
   const resources = useCapabilities().data?.resources;
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   return {
+    sourceHref: sectionSourceHref(config.data?.sources ?? [], 'dns'),
     logHref: offered(resources, 'dns_log', {whileLoading: false}) ? href('dns', {tab: 'log'}) : null
   };
 }

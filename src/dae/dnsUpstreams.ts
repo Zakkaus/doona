@@ -13,7 +13,12 @@ export function readDnsUpstreams(text: string): DnsUpstreamEntry[] {
         const key = tokens[i];
         const value = tokens[i + 2];
         if ((i > 0 && tokens[i - 1].line === key.line) || text.slice(tokens[i + 1].from, tokens[i + 1].to) !== ':') continue;
-        const end = value.kind === 'quoted' ? value.to : value.from + (text.slice(value.from, block.close).match(/^\S+/)?.[0].length ?? 0);
+        let end = value.to;
+        if (value.kind !== 'quoted')
+          for (const token of tokens.slice(i + 3)) {
+            if (token.from !== end || ['->', '}'].includes(text.slice(token.from, token.to))) break;
+            end = token.to;
+          }
         const address = unquote(text.slice(value.from, end));
         if (!validDnsAddress(address)) continue;
         const to = Math.max(end, ...tokens.filter(token => token.line === key.line && token.from >= key.from).map(token => token.to));

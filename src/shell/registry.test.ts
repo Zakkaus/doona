@@ -11,11 +11,11 @@ it('gates explicit resource absence but accepts either DNS resource', () => {
   expect(navAvailable('dns', {...base, resources: {...base.resources, dns_query: {...base.resources.dns_query, available: false}}})).toBe(true);
 });
 
-it('offers the rules page for its DNS rules alone', () => {
+it.each(['dns_rules', 'config'] as const)('offers the rules page for %s alone', resource => {
   const base = capabilitiesBase;
-  const dnsRules = {...base, resources: {...base.resources, dns_rules: {...base.resources.dns_rules, available: true}}};
+  const supported = {...base, resources: {...base.resources, [resource]: {...base.resources[resource], available: true}}};
   expect(navAvailable('rules', base)).toBe(false);
-  expect(navAvailable('rules', dnsRules)).toBe(true);
+  expect(navAvailable('rules', supported)).toBe(true);
 });
 
 it('registers a page for every route id', () => {

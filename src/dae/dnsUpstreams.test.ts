@@ -83,3 +83,11 @@ it('keeps legacy outbound detours out of the upstream list', () => {
   expect(readDnsUpstreams(legacy).map(row => row.name)).toEqual(['local']);
   expect(editDnsUpstream(legacy, 'local', 'backup', '1.1.1.1:53')).toBe(legacy.replace('local:', 'backup:'));
 });
+
+it.each(['->direct', ' -> direct', '}'])('reads an unquoted address up to the scanner boundary %s', suffix => {
+  const source = `dns {\n upstream {\n primary: udp://1.1.1.1:53${suffix}\n }\n}`;
+  expect(readDnsUpstreams(source)[0]?.address).toBe('udp://1.1.1.1:53');
+  expect(editDnsUpstream(source, 'primary', 'secondary', 'tcp://9.9.9.9:53')).toBe(
+    source.replace('primary: udp://1.1.1.1:53', "secondary: 'tcp://9.9.9.9:53'")
+  );
+});

@@ -9,7 +9,9 @@ export function rulesTabs(resources: Capabilities['resources'] | undefined): Arr
   const rules = offered(resources, 'rules', {whileLoading: false});
   return [
     ...(flows || rules ? [{id: 'list' as const, titleKey: 'rule.listTitle' as const}] : []),
-    ...(offered(resources, 'dns_rules', {whileLoading: false}) ? [{id: 'dns' as const, titleKey: 'rule.dnsTitle' as const}] : []),
+    ...(offered(resources, 'dns_rules', {whileLoading: false}) || offered(resources, 'config', {whileLoading: false})
+      ? [{id: 'dns' as const, titleKey: 'rule.dnsTitle' as const}]
+      : []),
     ...(offered(resources, 'routing_trace', {whileLoading: true}) ? [{id: 'trace' as const, titleKey: 'rule.trace' as const}] : [])
   ];
 }

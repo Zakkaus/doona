@@ -54,6 +54,7 @@ export function DnsUpstreams({focus}: {focus: boolean}) {
         confirmLabel={t('settings.save')}
         tone="accent"
         isPending={model.saving}
+        locked={model.saving || draft?.staged}
         isDisabled={model.disabled}
         reason={model.reason}
       >
@@ -64,7 +65,7 @@ export function DnsUpstreams({focus}: {focus: boolean}) {
               value={draft.name}
               onChange={name => model.setDraft({...draft, name})}
               isDisabled={model.saving || draft.staged}
-              description={t('rule.dns.renameHelp')}
+              description={draft.old ? t('rule.dns.renameHelp') : undefined}
             />
             <TextField
               label={t('rule.dns.address')}

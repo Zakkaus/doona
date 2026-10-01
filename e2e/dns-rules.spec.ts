@@ -3,13 +3,14 @@ import {expect, mockBackend, test} from './fixtures';
 const section = (page: import('@playwright/test').Page, name: string) => page.getByRole('region', {name, exact: true});
 const rows = (page: import('@playwright/test').Page, name: string) => section(page, name).locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
 
-test('the rules page has no DNS rules tab when the backend does not list DNS rules', async ({page}) => {
+test('the DNS workspace keeps upstream editing when the backend does not list DNS rules', async ({page}) => {
   const {capabilities, requests} = await mockBackend(page);
-  capabilities.resources.dns_rules.available = false;
+  for (const resource of ['dns_rules', 'rules', 'flows', 'routing_trace'] as const) capabilities.resources[resource].available = false;
   await page.goto('/#/rules?tab=dns');
   const tabs = page.getByRole('tablist', {name: 'Rules', exact: true}).getByRole('tab');
-  await expect(tabs).toHaveText(['Routing rules', 'Trace simulation']);
-  await expect(page.getByRole('tab', {name: 'Routing rules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs).toHaveText(['DNS rules']);
+  await expect(page.getByRole('tab', {name: 'DNS rules', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(section(page, 'DNS upstreams')).toBeVisible();
   expect(requests.some(request => request.url().includes('/dns/rules'))).toBe(false);
 });
 
