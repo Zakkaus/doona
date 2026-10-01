@@ -1,6 +1,8 @@
+import {dnsSettingsHref} from '../shared/link';
 import {useT} from '../../i18n';
 import {Card, Link} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
+import {DnsUpstreams} from './DnsUpstreams';
 import {RuleDictionary} from './RuleList';
 import {useDnsRuleLinks, useDnsRuleList} from './useDnsRuleList';
 
@@ -12,20 +14,24 @@ export function DnsRules(props: PageProps) {
   const links = useDnsRuleLinks();
   return (
     <div className="rp-col">
+      <DnsUpstreams focus={new URLSearchParams(props.query).get('section') === 'upstreams'} />
+      {request.addReason && (
+        <p className="rp-note">
+          {t('rule.dns.noPlace')}{' '}
+          <Link appearance="link" href={dnsSettingsHref}>
+            {t('dns.openConfig')}
+          </Link>
+        </p>
+      )}
       <Card
         title={request.copy.label}
         note={t('rule.dns.requestNote')}
         aside={
-          (links.logHref || links.configHref) && (
+          links.logHref && (
             <span className="rp-cluster">
               {links.logHref && (
                 <Link appearance="link" href={links.logHref}>
                   {t('dns.log')}
-                </Link>
-              )}
-              {links.configHref && (
-                <Link appearance="link" href={links.configHref}>
-                  {t('dns.openConfig')}
                 </Link>
               )}
             </span>

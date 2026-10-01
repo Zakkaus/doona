@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {useFilter} from 'react-aria-components';
 import {getApi} from '../../api';
-import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
+import {queryTypes, useCapabilities, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsQueryResponse} from '../../api/model';
@@ -14,7 +14,7 @@ import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
 import {wait} from '../../api/wait';
 import {cacheCard, cacheCardState} from './cache';
-import {sectionSourceHref} from '../shared/link';
+import {dnsSettingsHref} from '../shared/link';
 import {useQuickRule} from '../shared/useQuickRule';
 
 export function useDns({go, query}: PageProps) {
@@ -166,12 +166,7 @@ export function useDnsCacheTab(domain: string) {
 export function useDnsStatsTab(enabled: boolean | undefined) {
   const log = useDnsLog({}, enabled === true);
   const resources = useCapabilities().data?.resources;
-  // The upstreams the statistics chart, and the rules that pick them, are written in the configuration's `dns` section.
-  const configReadable = offered(resources, 'config', {whileLoading: false});
-  const config = useConfig(enabled === true && configReadable);
-  // Shown once the sources are read, so the link never opens the file before the section's line is known.
-  const sources = config.data?.sources;
-  const configHref = useMemo(() => (configReadable && sources ? sectionSourceHref(sources, 'dns') : null), [configReadable, sources]);
+  const configHref = offered(resources, 'config', {whileLoading: false}) ? dnsSettingsHref : null;
   return {
     log,
     cacheListed: offered(resources, 'dns_cache', {whileLoading: false}) && resources?.dns_cache.read === true,
