@@ -11,7 +11,7 @@ test.use({viewport: {width: 1440, height: 1000}});
 test('the removed quick setup address opens the default tab', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const tabs = page.getByRole('tablist', {name: 'Configuration'});
-  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Config files']);
+  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Global settings', 'Config files']);
   await expect(tabs.getByRole('tab', {name: 'Modules'})).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -868,7 +868,7 @@ test('modules are summaries with one link to each editor', async ({page}) => {
   await page.goto('/#/config');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
   for (const [section, path] of [
-    ['global', 'settings'],
+    ['global', 'config\\?tab=global'],
     ['node', 'nodes'],
     ['subscription', 'nodes'],
     ['group', 'policies'],
@@ -878,7 +878,7 @@ test('modules are summaries with one link to each editor', async ({page}) => {
     const card = modules.getByRole('region', {name: section, exact: true});
     await card.getByRole('link', {name: 'Open page'}).click();
     await expect(page).toHaveURL(new RegExp('#/' + path));
-    if (section === 'global') await expect(page.getByRole('region', {name: 'Persistent global settings'})).toBeInViewport();
+    if (section === 'global') await expect(page.getByRole('tabpanel', {name: 'Global settings'})).toBeVisible();
     await page.goBack();
   }
 });
@@ -889,11 +889,10 @@ test('a located global jumps to its field, writes only the value, and survives n
   const line = original.content.slice(0, original.content.indexOf('tproxy_port:')).split('\n').length;
   await page.goto(`/#/config?tab=source&source=${original.id}&line=${line}`);
   await page.getByRole('link', {name: 'tproxy_port', exact: true}).click();
-  const field = page.getByRole('textbox', {name: 'tproxy_port', exact: true});
+  const field = page.getByRole('textbox', {name: 'Transparent proxy port', exact: true});
   await expect(field).toBeFocused();
-  const card = page.getByRole('region', {name: 'Persistent global settings'});
   await field.fill('23456');
-  await card.getByRole('button', {name: 'Write and reload'}).click();
+  await page.getByRole('tabpanel', {name: 'Global settings'}).getByRole('button', {name: 'Write and reload'}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Global settings written');
   expect((await api.config()).sources[0].content).toBe(original.content.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
   await page.reload();

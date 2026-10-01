@@ -71,6 +71,32 @@ it.each(['unavailable', 'loading', 'error', 'disabled', 'read-only', 'redacted',
   expect(editor.apply).not.toHaveBeenCalled();
 });
 
+it.each([
+  ['tproxy_port', 'Transparent proxy port', 'Range: 0–65535', null],
+  ['max_concurrent_dials', 'Concurrent dial limit', undefined, null],
+  ['preconnect_node_count', 'Preconnected nodes', 'A number, or auto', null],
+  ['check_tolerance', 'Switch tolerance', 'Units: ms, s', null],
+  ['lan_interface', 'LAN interfaces', 'Separate with commas', null],
+  ['mptcp', 'Multipath TCP', undefined, ['', 'true', 'false']],
+  ['dial_mode', 'Dial mode', undefined, ['', 'ip', 'domain', 'domain+', 'domain++', 'legacy']]
+])('labels %s and offers its hint and choices', (key, label, hint, items) => {
+  config.data!.sources[0].content = 'global { dial_mode: legacy }';
+  const shown = field(key);
+  expect(shown).toMatchObject({label, hint});
+  expect(shown.items?.map(item => item.id) ?? null).toEqual(items);
+});
+
+it('groups the fields under headings in form order', () => {
+  expect(read().groups.map(group => [group.title, group.fields.length])).toEqual([
+    ['Interfaces and ports', 9],
+    ['Logging', 2],
+    ['Node checks', 5],
+    ['Dialing and TLS', 12],
+    ['Bandwidth and preconnection', 4],
+    ['Data storage', 2]
+  ]);
+});
+
 it('keeps stored hex ports visible and requires a valid edited value', () => {
   config.data!.sources[0].content = 'global { tproxy_port: 0x10 }';
   expect(field('tproxy_port')).toMatchObject({value: '0x10', invalid: true});

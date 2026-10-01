@@ -1,4 +1,3 @@
-import {GlobalSettings} from './GlobalSettings';
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField} from '../../ui/ui';
@@ -16,7 +15,7 @@ import {settingsCard, settingsCards, type SettingsCardId} from './nav';
 
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
-export function Settings({query, go}: PageProps) {
+export function Settings({query}: PageProps) {
   const t = useT();
   const session = useSignOut();
   const {
@@ -156,7 +155,6 @@ export function Settings({query, go}: PageProps) {
         </form>
       </Card>
     ),
-    global: <GlobalSettings query={query} go={go} />,
     runtime: <RuntimeSettingsCard />,
     geodata: <GeodataSettingsCard />,
     appearance: (

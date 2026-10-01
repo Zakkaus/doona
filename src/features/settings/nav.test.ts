@@ -5,15 +5,7 @@ import {geodataConfigurable, settingsCardList} from './nav';
 
 describe('capability', () => {
   it('lists the cards in page order', () => {
-    expect(settingsCardList(capabilities.resources).map(card => card.id)).toEqual([
-      'backend',
-      'global',
-      'runtime',
-      'geodata',
-      'appearance',
-      'actions',
-      'about'
-    ]);
+    expect(settingsCardList(capabilities.resources).map(card => card.id)).toEqual(['backend', 'runtime', 'geodata', 'appearance', 'actions', 'about']);
   });
 
   it('omits backend actions when no operation or legacy geodata table remains', () => {

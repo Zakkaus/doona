@@ -31,7 +31,7 @@ const entry = (
   keys: keys.flatMap(key => (key == null ? [] : [key.toLowerCase()]))
 });
 
-export function pageEntries(capabilities: Capabilities | undefined, t: Translator): SearchEntry[] {
+export function pageEntries(capabilities: Capabilities | undefined, t: Translator, hasGlobal: boolean): SearchEntry[] {
   const available = (path: string) => navAvailable(path, capabilities);
   const resources = capabilities?.resources;
   // Each page's own tab list, so search offers exactly the tabs the page shows.
@@ -41,7 +41,7 @@ export function pageEntries(capabilities: Capabilities | undefined, t: Translato
     ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
-    ...configTabs().map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    ...configTabs(hasGlobal).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...settingsCardList(resources).map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey}))
   ];
   const places = [

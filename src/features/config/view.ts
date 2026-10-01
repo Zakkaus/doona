@@ -111,7 +111,7 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
 
 // The page that shows and edits what a section defines.
 export const sectionPages: Record<string, string | null> = {
-  global: routeHref('settings', {card: 'global'}),
+  global: routeHref('config', {tab: 'global'}),
   subscription: routeHref('nodes'),
   node: routeHref('nodes'),
   group: routeHref('policies'),
@@ -135,7 +135,7 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
           kind,
           source,
           block,
-          href: kind === 'global' ? routeHref('settings', {card: 'global', source: source.id, section: String(index)}) : href,
+          href: kind === 'global' ? routeHref('config', {tab: 'global', source: source.id, section: String(index)}) : href,
           range: sectionRange(source, block),
           summary: sectionSummary(kind, source.content, block, tokens, lang, t),
           note: null

@@ -1,10 +1,12 @@
 import type {ConfigSource} from '../../api/model';
 import type {Key} from '../../i18n';
 
-export function configTabs(): Array<{id: 'modules' | 'source'; titleKey: Key}> {
+// The global tab edits the engine's global section, so it shows only for an engine whose settings doona knows.
+export function configTabs(hasGlobal: boolean): Array<{id: 'modules' | 'global' | 'source'; titleKey: Key}> {
   return [
-    {id: 'modules', titleKey: 'config.tabModules'},
-    {id: 'source', titleKey: 'config.tabSource'}
+    {id: 'modules' as const, titleKey: 'config.tabModules' as const},
+    ...(hasGlobal ? [{id: 'global' as const, titleKey: 'config.tabGlobal' as const}] : []),
+    {id: 'source' as const, titleKey: 'config.tabSource' as const}
   ];
 }
 export const sourceKinds: Record<ConfigSource['kind'], Key> = {

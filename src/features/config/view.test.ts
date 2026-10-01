@@ -154,7 +154,7 @@ routing {
   expect(cards[0].summary).toContain('config.dae');
   // Each section links the page for what it defines; the rule sections open their rule lists.
   expect(cards.map(card => card.href)).toEqual([
-    '#/settings?card=global',
+    '#/config?tab=global',
     '#/nodes',
     '#/nodes',
     '#/policies',
