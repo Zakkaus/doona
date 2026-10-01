@@ -24,12 +24,29 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await expect(list.first()).toContainText('us-01');
   await table.getByRole('columnheader', {name: /^Node/}).click();
   await expect(list.first()).toContainText('hk-01');
-  await page.getByRole('button', {name: /Group$/}).click();
-  await page.getByRole('option', {name: 'gaming', exact: true}).click();
-  await expect(list).toHaveCount(2);
+  for (const [group, count] of [
+    ['auto', 5],
+    ['office', 5],
+    ['gaming', 2]
+  ] as const) {
+    await page.getByRole('button', {name: /Group$/}).click();
+    await page.getByRole('option', {name: group, exact: true}).click();
+    await expect(list).toHaveCount(count);
+  }
   await expect(page.locator('.rp-toolbar').nth(1)).toContainText('2 / 5');
   await page.getByLabel('Search nodes').fill('jp');
   await expect(list).toHaveCount(1);
+  await page.goto('/#/nodes?provider=harbor');
+  await page.getByLabel('Search nodes').fill('');
+  for (const [group, region] of [
+    ['hk', /香港/],
+    ['jp', /日本/],
+    ['us', /美國/]
+  ] as const) {
+    await page.getByRole('button', {name: /Group$/}).click();
+    await page.getByRole('option', {name: group, exact: true}).click();
+    await expect(table.getByRole('rowheader').first()).toContainText(region);
+  }
 });
 
 test('a share link becomes an inline node and can be removed again', async ({page}) => {
@@ -93,7 +110,7 @@ test('a subscription a group filters on cannot be removed until the group change
   handlers['GET config'] = async () => {
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    const content = 'group {\n  roaming { filter: subtag(harbor) && !name(keyword: HK) policy: min_moving_avg }\n}\n';
+    const content = 'group {\n  travel { filter: subtag(harbor) && !name(keyword: HK) policy: min_moving_avg }\n}\n';
     config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
     return config;
   };
@@ -105,7 +122,7 @@ test('a subscription a group filters on cannot be removed until the group change
   await page.goto('/#/nodes?tab=list');
   await moreAction(page.locator('body'), 'Remove harbor', 'More actions for harbor');
   const confirmation = page.getByRole('alertdialog');
-  await expect(confirmation).toContainText('Groups that filter on harbor: backup, roaming. Change their filters on the Policies page first.');
+  await expect(confirmation).toContainText('Groups that filter on harbor: backup, travel. Change their filters on the Policies page first.');
   await expect(confirmation.getByRole('button', {name: 'Remove harbor', exact: true})).toHaveCount(0);
   await expect(confirmation.getByRole('button')).toHaveText(['Close']);
   await confirmation.getByRole('link', {name: 'Open Policies', exact: true}).click();
@@ -870,7 +887,7 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   handlers['GET config'] = async () => {
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    const content = 'group {\n  roaming { filter: subtag(harbor) policy: min_moving_avg }\n}\n';
+    const content = 'group {\n  travel { filter: subtag(harbor) policy: min_moving_avg }\n}\n';
     config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
     return config;
   };
@@ -878,7 +895,7 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('backup-sub');
-  await expect(dialog.getByText('Groups that filter on harbor: backup, roaming. Change their filters on the Policies page first.')).toBeVisible();
+  await expect(dialog.getByText('Groups that filter on harbor: backup, travel. Change their filters on the Policies page first.')).toBeVisible();
   await expect(dialog.getByRole('link', {name: 'Open Policies', exact: true})).toHaveAttribute('href', '#/policies');
   await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
