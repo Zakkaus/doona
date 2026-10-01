@@ -1,15 +1,8 @@
-import {demoRouting, demoRoutingInclude} from '../../../dae/startingRouting';
-import type {Group, RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
+import type {RuntimeSettings, ConfigDiagnostic, ConfigSource} from '../../model';
 import {faultRules, rules, type ConfigRule} from '../rules';
 import {ago, observedAt, generationId} from './clock';
-export const groupPolicies = {
-  proxy: {kind: 'selector', native: 'fixed(0)'},
-  resilient: {kind: 'urltest', native: 'min_avg10'},
-  gaming: {kind: 'urltest', native: 'min_last_delay'},
-  skylink: {kind: 'urltest', native: 'min_moving_avg'}
-} satisfies Record<string, Group['policy']>;
-// The members the demo's groups name as `default`, so the Configuration list and the Edit group dialog show one.
-export const groupDefaultMembers: Partial<Record<keyof typeof groupPolicies, string>> = {proxy: 'hk-01'};
+import {writeTemplate} from '../../../dae/setup';
+import {scanConfig} from '../../../dae/text';
 // Runtime-setting defaults come from configuration; capability values provide their ceilings.
 export const runtimeSettings: RuntimeSettings = {
   observed_at: observedAt,
@@ -33,9 +26,9 @@ export const faultSettings: RuntimeSettings = {
 
 // Initial routing dictionary for fixture flow evidence and stable rule IDs.
 type MockConfigRules = {generation_id: string; rules: ConfigRule[]; fallback: {target: string; source: string}};
-export const configRules: MockConfigRules = {generation_id: generationId, rules, fallback: {target: 'resilient', source: 'config.dae:57'}};
+export const configRules: MockConfigRules = {generation_id: generationId, rules, fallback: {target: 'proxy', source: 'config.dae'}};
 export {rules};
-const configMain = `global {
+const configBase = `global {
   tproxy_port: 12345
   log_level: info
   lan_interface: br-lan
@@ -45,7 +38,7 @@ const configMain = `global {
 }
 
 subscription {
-  sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'
+  harbor: 'https://sub.example.net/api/v1/client/subscribe?token=demo'
 }
 
 node {
@@ -54,13 +47,6 @@ node {
   'sg-01': 'trojan://demo@sg-01.example.net:443#sg-01'
   'jp-01': 'vless://demo@jp-01.example.net:443?security=tls#jp-01'
   'us-01': 'anytls://demo@us-01.example.net:443#us-01'
-}
-
-group {
-  proxy { policy: ${groupPolicies.proxy.native} default: ${groupDefaultMembers.proxy} }
-  resilient { filter: name(hk-01, sg-01, us-01) policy: ${groupPolicies.resilient.native} }
-  gaming { filter: name(jp-01, hk-02) policy: ${groupPolicies.gaming.native} }
-  skylink { filter: subtag(sub-c) policy: ${groupPolicies.skylink.native} }
 }
 
 dns {
@@ -84,20 +70,39 @@ dns {
   }
 }
 
-${demoRouting}
-
 include {
+  rules.dae
   config.d/*.dae
 }
 `;
-const configRulesFile = demoRoutingInclude;
+const templateConfig = writeTemplate(configBase, 'regions', [], {t: key => key.slice('rule.template.group.'.length)});
+const groupEnd = scanConfig(templateConfig).blocks.find(block => block.name === 'group')!.close;
+export const configMain =
+  templateConfig.slice(0, groupEnd) +
+  `  gaming {
+    filter: name(jp-01, hk-02)
+    policy: min_last_delay
+  }
+  office {
+    policy: fixed(0)
+    default: hk-01
+  }
+  backup {
+    filter: subtag(harbor)
+    policy: min_moving_avg
+  }
+` +
+  templateConfig.slice(groupEnd);
+const configRulesFile = `# Household overrides can be added here.
+# This include leaves the selected routing template unchanged.
+`;
 const configSubscription = `'香港 01 IPLC': 'vless://<redacted>'
 '香港 02 BGP': 'vless://<redacted>'
 '新加坡 01 2x': 'trojan://<redacted>'
 '日本 01 2x': 'vless://<redacted>'
 `;
 const configGenerated = `# Written by honk from the subscription; edits are lost on refresh.
-skylink { filter: subtag(sub-c) }
+backup { filter: subtag(harbor) }
 `;
 // The faults scenario's backend notes.
 export const configNotes: ConfigDiagnostic[] = [
@@ -121,7 +126,7 @@ export const configNotes: ConfigDiagnostic[] = [
   },
   {
     level: 'info',
-    source_id: 'src-sub-c',
+    source_id: 'src-harbor',
     line: 1,
     column: null,
     span: null,
@@ -134,19 +139,32 @@ export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' 
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},
   {
-    id: 'src-sub-c',
-    path: '/var/lib/honk/subscriptions/sub-c.dae',
+    id: 'src-harbor',
+    path: '/var/lib/honk/subscriptions/harbor.dae',
     kind: 'subscription',
     writable: false,
     loaded_at: ago(1800),
     content: configSubscription,
     onDisk: configSubscription.replaceAll('<redacted>', 'demo@edge.example.net:443')
   },
-  {id: 'src-generated', path: '/var/lib/honk/generated/skylink.dae', kind: 'generated', writable: false, loaded_at: ago(1800), content: configGenerated}
+  {
+    id: 'src-generated',
+    path: '/var/lib/honk/generated/backup.dae',
+    kind: 'generated',
+    writable: false,
+    loaded_at: ago(1800),
+    content: configGenerated
+  }
 ];
 // The faults scenario's sources: rules.dae carries its extra rules.
 export const faultSources = configSources.map(source =>
-  source.id === 'src-rules' ? {...source, content: source.content + '\n# Ads\n' + faultRules.map(rule => `${rule.cond} -> ${rule.target}\n`).join('')} : source
+  source.id === 'src-rules'
+    ? {
+        ...source,
+        content:
+          source.content + 'mac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct\n\n# Ads\n' + faultRules.map(rule => `${rule.cond} -> ${rule.target}\n`).join('')
+      }
+    : source
 );
 // The faults scenario's files on disk: someone saved rules.dae after honk loaded it, so writes to it are refused as stale
 // until a reload takes the file in.

@@ -1,10 +1,11 @@
 import type {Group, Node, Provider} from '../model';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
-import {groupAdmits, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {groupAdmits, nestedIn, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {redactUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
+import {resolveLeaf} from './control';
 
 export function activateInventory(text: string, revision: string, nodes: Node[], groups: Group[], providers: Provider[]) {
   const {blocks, tokens} = scanConfig(text);
@@ -53,7 +54,12 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
   const nextGroups = entries.map((entry): Group => {
     const previous = groups.find(group => group.name === entry.name);
     const memberNodes = nextNodes.filter(node => groupAdmits(entry.filters, node));
-    const members: Group['members'] = memberNodes.map(node => ({id: node.id, name: node.name, kind: 'node'}));
+    const members: Group['members'] = [
+      ...nestedIn(entry)
+        .filter(name => entries.some(group => group.name === name))
+        .map(name => ({id: name, name, kind: 'group' as const})),
+      ...memberNodes.map(node => ({id: node.id, name: node.name, kind: 'node' as const}))
+    ];
     for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
     const native = entry.policy ?? 'fixed(0)';
     const kind = policyKind(native) ?? 'selector';
@@ -80,11 +86,20 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       });
     }
     // Without a default, a fixed policy starts on the member it numbers.
+    const fastest =
+      kind !== 'selector'
+        ? memberNodes
+            .filter(node => node.health.some(h => h.transport === 'tcp' && h.state === 'healthy'))
+            .sort(
+              (a, b) =>
+                (a.health.find(h => h.transport === 'tcp')?.latency_ms ?? Infinity) - (b.health.find(h => h.transport === 'tcp')?.latency_ms ?? Infinity)
+            )[0]?.id
+        : undefined;
     const fixed = kind === 'selector' ? members[Number(/^fixed\((\d+)\)$/.exec(native)?.[1] ?? 0)]?.id : undefined;
     const selection: Group['runtime']['selection'] = {tcp: null, udp: null};
     for (const network of ['tcp', 'udp'] as const) {
       const old = previous?.runtime.selection[network];
-      const id = old && members.some(member => member.id === old.member_id) ? old.member_id : (config.default_member_id ?? fixed ?? members[0]?.id);
+      const id = old && members.some(member => member.id === old.member_id) ? old.member_id : (config.default_member_id ?? fixed ?? fastest ?? members[0]?.id);
       if (id) selection[network] = {member_id: id, resolved_leaf_node_id: id, source: kind === 'selector' ? 'runtime' : 'policy'};
     }
     return {
@@ -104,6 +119,12 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       capabilities: groupCapabilities(kind)
     };
   });
+  for (const group of nextGroups) {
+    for (const network of ['tcp', 'udp'] as const) {
+      const selection = group.runtime.selection[network];
+      if (selection) selection.resolved_leaf_node_id = resolveLeaf(selection.member_id, network, nextNodes, nextGroups)?.id ?? null;
+    }
+  }
   for (const node of nextNodes) node.group_ids = memberships.get(node.id)!;
   for (const provider of nextProviders) provider.node_count = nextNodes.filter(node => node.provider_id === provider.id).length;
   // Like honk, a subscription reports the route its fetches take: empty or `routing` follows the rules, `direct` goes

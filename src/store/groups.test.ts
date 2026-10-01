@@ -11,7 +11,7 @@ it.each([256, 6])('probes every direct member within member and result budgets (
   const api = createMockApi();
   const caps = await api.capabilities();
   caps.resources.probes.limits!.max_results_per_job = maxResults;
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   const start = api.startProbe;
   api.startProbe = vi.fn(async (request, signal) => {
     expect(Array.isArray(request.members)).toBe(true);
@@ -29,7 +29,7 @@ it.each([256, 6])('probes every direct member within member and result budgets (
 it('rejects oversized direct jobs in mock admission', async () => {
   const api = createMockApi();
   const caps = await api.capabilities();
-  const request = latencyProbe(caps, {type: 'group', group_id: 'skylink'})!;
+  const request = latencyProbe(caps, {type: 'group', group_id: 'backup'})!;
   await expect(api.startProbe(request)).rejects.toMatchObject({status: 413, code: 'request_too_large'});
 });
 
@@ -37,7 +37,7 @@ it('retains completed batches and fails the action when a later job is refused',
   vi.useFakeTimers();
   const api = createMockApi();
   const caps = await api.capabilities();
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   const start = api.startProbe;
   api.startProbe = vi
     .fn()
@@ -58,7 +58,7 @@ it('does not submit the next batch after cancellation', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
   const caps = await api.capabilities();
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   const controller = new AbortController();
   api.startProbe = vi.fn(api.startProbe);
   const result = probeGroup(api, caps, group, controller.signal).catch(error => error);
@@ -79,7 +79,7 @@ it('treats a stale revision and a refused test op as the group changing first', 
 it('writes a group check URL at its revision and refuses a stale revision or an unsafe URL', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
-  const group = await api.group('resilient');
+  const group = await api.group('auto');
   const url = 'https://cp.cloudflare.com/generate_204';
   let done = false;
   const saved = patchConfig(api, group, [{op: 'replace', path: '/config/check_url', value: url}]).finally(() => (done = true));
@@ -87,7 +87,7 @@ it('writes a group check URL at its revision and refuses a stale revision or an 
   // between checks and moves the fake clock each time, so the operation's timer fires however long the hash takes.
   await vi.waitFor(() => expect(done).toBe(true), {timeout: 4000, interval: 50});
   await saved;
-  const after = await api.group('resilient');
+  const after = await api.group('auto');
   expect(after.config.check_url).toBe(url);
   await expect(patchConfig(api, group, [{op: 'replace', path: '/config/check_url', value: null}])).rejects.toMatchObject({status: 412});
   for (const value of ['ftp://a.example/', 'http://user@a.example/', 'http://a.example/a,b'])
@@ -99,7 +99,7 @@ it('writes a group check URL at its revision and refuses a stale revision or an 
 it('offers a group only the actions the backend offers for groups as a whole', async () => {
   const api = createMockApi();
   const caps = await api.capabilities();
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   group.capabilities = {...group.capabilities, can_select: true, can_override: true, mutable_config: ['interrupt_connections', 'check_url']};
   const offered = (groups: Partial<typeof caps.resources.groups> | null) =>
     groupActions(group, groups ? {...caps, resources: {...caps.resources, groups: {...caps.resources.groups, ...groups}}} : undefined).capabilities;

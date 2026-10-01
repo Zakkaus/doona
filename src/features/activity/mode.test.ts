@@ -15,9 +15,9 @@ dns {
 }
 
 routing {
-    dip(geoip: private) -> direct(must)
+    dip(geoip:private) -> direct(must)
     pname(NetworkManager) -> direct(must) # keep
-    domain(geosite: cn) -> direct
+    domain(geosite:cn) -> direct
     fallback: proxy
 }
 `;

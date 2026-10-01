@@ -16,8 +16,10 @@ it('lays the config out as a tree and weights it with retained flows', async () 
     expect(tree.links.some(link => link.source === entry.id && link.target === 'outbound:' + rule.outbound)).toBe(true);
   }
   expect(tree.leaves.find(rule => rule.fallback)?.outbound).toBe('outbound:' + rules.fallback.outbound);
-  // Every configured group is an outbound with its selected node linked before any flow used it.
+  // A group appears as an outbound or inside a nested selection.
   for (const group of groups) {
+    expect(tree.outbounds.some(outbound => outbound.groups.some(nested => nested.name === group.name))).toBe(true);
+    if (!tree.outbounds.some(outbound => outbound.label === group.name)) continue;
     const outbound = tree.outbounds.find(item => item.label === group.name)!;
     expect(outbound.kind).toBe('group');
     expect(outbound.groups[0]).toMatchObject({name: group.name, kind: group.policy.kind});
@@ -48,15 +50,15 @@ it('labels a pin that names no stage as unknown', () => {
 it('follows a nested selection to its node and draws the inner group inside the outbound', async () => {
   const api = createMockApi();
   const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
-  const inner = groups.find(group => group.name === 'resilient')!;
+  const inner = groups.find(group => group.name === 'auto')!;
   const nested: GroupSummary[] = groups.map(group => (group.name === 'proxy' ? {...group, selection: {tcp_member_id: inner.id, udp_member_id: null}} : group));
   const tree = routingTree([], nested, nodes.nodes, rules);
   const proxy = tree.outbounds.find(outbound => outbound.label === 'proxy')!;
-  expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'resilient']);
+  expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'auto']);
   expect(proxy.node).toBe('node:' + inner.selection.tcp_member_id);
   // The inner group is only drawn inside proxy unless a rule names it directly.
-  const named = rules.rules.some(rule => rule.outbound === 'resilient');
-  expect(tree.outbounds.some(outbound => outbound.label === 'resilient')).toBe(named);
+  const named = rules.rules.some(rule => rule.outbound === 'auto');
+  expect(tree.outbounds.some(outbound => outbound.label === 'auto')).toBe(named);
 });
 
 it('takes a one-element chain as the leaf node the flow left through', async () => {
@@ -138,7 +140,7 @@ it('seen by device, the leaves are client addresses joined to outbounds by flows
   expect(tree.links.some(link => link.source === device.id && link.target.startsWith('outbound:') && link.count > 0)).toBe(true);
   expect(flowsThrough(flows.flows, device.id, rules)).toHaveLength(device.count);
   // Groups and their selected nodes still come from the config.
-  expect(tree.outbounds.some(outbound => outbound.label === 'skylink' && outbound.count === 0)).toBe(true);
+  expect(tree.outbounds.some(outbound => outbound.label === 'backup' && outbound.count === 0)).toBe(true);
   const {rows, at} = treeRows(tree);
   expect(rows).toBeGreaterThanOrEqual(tree.leaves.length);
   for (const leaf of tree.leaves) expect(at.has(leaf.id)).toBe(true);

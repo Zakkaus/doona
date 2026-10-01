@@ -36,7 +36,7 @@ it('keeps comments adjacent to braces out of section headers and depth', () => {
 
 describe('isFragment', () => {
   it('accepts one balanced line and rejects text that would escape it', () => {
-    for (const ok of ['domain(geosite: cn)', 'name(\'a # b\', "c}")', 'min_moving_avg', "!name('direct')"]) expect(isFragment(ok)).toBe(true);
+    for (const ok of ['domain(geosite:cn)', 'name(\'a # b\', "c}")', 'min_moving_avg', "!name('direct')"]) expect(isFragment(ok)).toBe(true);
     for (const bad of ['domain(a) # x', 'domain(a', 'domain(a))', 'a } routing {', 'domain(a)\nb', 'name({a})']) expect(isFragment(bad)).toBe(false);
   });
 });

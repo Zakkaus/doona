@@ -152,8 +152,8 @@ export function createLifecycle(
   const trickle = [
     () => log('info', 'honk::routing', 'Routing generation published.', {generation_id: revision()}),
     () => log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12}),
-    () => log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: 3, unavailable: 0}),
-    ...(faults ? [() => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800})] : []),
+    () => log('info', 'honk::group', 'Health check finished.', {group: 'auto', healthy: 3, unavailable: 0}),
+    ...(faults ? [() => log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'harbor', age_seconds: 1800})] : []),
     () => log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096})
   ];
   // A four-hour ring has routine traffic and busy periods; the faults scenario adds a stale subscription and a short
@@ -163,10 +163,10 @@ export function createLifecycle(
     const at = started - minute * 60000;
     const trouble = faults && minute >= 34 && minute <= 48;
     const busy = (minute >= 72 && minute <= 116) || (minute >= 164 && minute <= 188);
-    log('info', 'honk::group', 'Health check finished.', {group: 'resilient', healthy: trouble ? 2 : 3, unavailable: trouble ? 1 : 0}, at);
+    log('info', 'honk::group', 'Health check finished.', {group: 'auto', healthy: trouble ? 2 : 3, unavailable: trouble ? 1 : 0}, at);
     log('debug', 'honk::dns', 'Upstream answered.', {upstream: 'tls://1.1.1.1:853', elapsed_ms: 12 + (minute % 9)}, at + 20000);
     if (minute % 6 === 0) log('trace', 'honk::datapath', 'Kernel map synced.', {entries: 4096 + minute}, at + 10000);
-    if (faults && minute % 14 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'sub-c', age_seconds: 1800}, at + 40000);
+    if (faults && minute % 14 === 0) log('warn', 'honk::subscription', 'Subscription served from cache.', {provider: 'harbor', age_seconds: 1800}, at + 40000);
     if (busy) log('info', 'honk::dns', 'Query answered.', {queries: 12 + (minute % 15)}, at + 30000);
     if (trouble) {
       log('warn', 'honk::group', 'Health check slow.', {node: 'us-01', elapsed_ms: 2400}, at + 30000);

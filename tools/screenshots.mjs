@@ -23,7 +23,7 @@ const shots = [
   ['activity', 'light', '#/activity'],
   ['activity', 'dark', '#/activity'],
   ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/flows']
+  ['rules', 'light', '#/rules']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -182,7 +182,8 @@ function recorder(page, clip) {
 async function recordArrange(browser, lang, path) {
   const page = await openPage(browser, lang, '#/policies?tab=arrange', '.rp-drop', {viewport: {width: 1280, height: 1100}});
   const group = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'gaming', exact: true})});
-  const clip = await panelClip(page, '.rp-drop >> nth=-1');
+  await group.scrollIntoViewIfNeeded();
+  const clip = await panelClip(page, '.rp-tray');
   const row = await page.getByRole('row').filter({hasText: 'us-01'}).boundingBox();
   const handle = {x: row.x + 16, y: row.y + row.height / 2};
   const anim = recorder(page, clip);
@@ -238,7 +239,7 @@ async function recordPhones(browser, lang, path) {
   for (const [route, ready, submenu] of [
     ['#/connections?tab=list', '.rp-table [role=row] >> nth=4'],
     ['#/activity', '.rp-donut path', false],
-    ['#/policies', '.rp-nodes', true]
+    ['#/policies', '.rp-node', true]
   ]) {
     const page = await openPage(browser, lang, route, ready, phone);
     if (submenu !== undefined) {
@@ -322,7 +323,7 @@ try {
       const page = await context.newPage();
       await page.goto(`${baseURL}/${route}`);
       await page
-        .locator(name === 'policies' ? '.rp-nodes' : name === 'rules' ? '.rp-tree-tile' : '.rp-donut path')
+        .locator(name === 'policies' ? '.rp-node' : name === 'rules' ? '.rp-radios' : '.rp-donut path')
         .first()
         .waitFor();
       await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
