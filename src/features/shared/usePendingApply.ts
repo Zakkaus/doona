@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react';
+import {createContext, useEffect, useRef} from 'react';
 import {getApi} from '../../api/index';
 import {LocalError} from '../../api/error';
 import type {ConfigSource} from '../../api/model';
@@ -83,7 +83,9 @@ export function usePendingApply() {
   return {apply, busy, cancel};
 }
 
-// The top bar's apply: every held rule at once, with the outcome toasted and a failure kept for the rule list.
+export const ApplyHeldContext = createContext<(() => Promise<void>) | null>(null);
+
+// The workspace's apply: every held rule at once, with the outcome toasted and a failure kept for the rule list.
 export function useApplyHeld() {
   const t = useT();
   const {rules} = usePendingRules();

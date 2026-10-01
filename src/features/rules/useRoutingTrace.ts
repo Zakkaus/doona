@@ -31,9 +31,10 @@ const blankForm = {
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };
-// Held by the rules page rather than the trace tab, so what was typed survives a tab switch. A link that names a
+// Held by the rules page rather than the trace tab, so the input and result survive a tab switch. A link that names a
 // target fills the form in, opening the advanced fields when it names the source or process; it does not run the trace.
 export function useTraceForm(query: string) {
+  const [accepted, setResult] = useState<{run: RoutingTraceRun; input: RoutingTraceRequest['input']} | null>(null);
   const linked = useMemo(() => parseTraceLink(query), [query]);
   const [form, setForm] = useState(() => (linked ? {...blankForm, ...linked} : blankForm));
   const [advanced, setAdvanced] = useState(!!(linked?.src_ip || linked?.src_port || linked?.pname));
@@ -42,9 +43,9 @@ export function useTraceForm(query: string) {
     setForm({...blankForm, ...linked});
     setAdvanced(!!(linked.src_ip || linked.src_port || linked.pname));
   });
-  return {form, setForm, advanced, setAdvanced};
+  return {form, setForm, advanced, setAdvanced, accepted, setResult};
 }
-export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>, go: PageProps['go']) {
+export function useRoutingTrace({form, setForm, advanced, setAdvanced, accepted, setResult}: ReturnType<typeof useTraceForm>, go: PageProps['go']) {
   const t = useT();
   const lang = useLang();
   const api = getApi();
@@ -59,7 +60,6 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
   const nodesById = useMemo(() => new Map(nodes.data?.map(node => [node.id, node]) ?? []), [nodes.data]);
   const rulesById = useMemo(() => new Map(rules.data?.rules.map(rule => [rule.rule_id, rule]) ?? []), [rules.data]);
-  const [accepted, setResult] = useState<{run: RoutingTraceRun; input: RoutingTraceRequest['input']} | null>(null);
   // A result's node opens under the owner the Nodes page files it under, which the provider list decides.
   const providersListed = offered(resources, 'providers', {whileLoading: false});
   const providers = useProviders(!!accepted && providersListed);

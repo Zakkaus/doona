@@ -14,6 +14,9 @@ for (const query of ['', '?view=simple', '?view=advanced'])
     await page.goto(`/#/rules${query}`);
     await expect(page.getByRole('tabpanel', {name: 'Routing rules'}).getByRole('grid')).toBeVisible();
     await expect(page.getByRole('radiogroup', {name: 'Rules view'})).toHaveCount(0);
+    await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
+    expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).has('view')).toBe(false);
+    await page.getByRole('tab', {name: 'Routing rules', exact: true}).click();
     await page.getByRole('button', {name: 'Apply template', exact: true}).click();
     await expect(page.getByRole('dialog', {name: 'Apply template'})).toBeVisible();
   });
@@ -123,7 +126,7 @@ test('a contextual seed waits for its outbound group before opening the editor',
   await expect(dialog(page).getByRole('button', {name: /Outbound$/})).toContainText(target);
 });
 
-test('a DNS seed without a writable rule position links to the upstream editor', async ({page}) => {
+test('a DNS seed without a writable rule position links to its source', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const dns = await api.dnsRules();
   handlers['GET dns/rules'] = async () => ({...dns, request: [], response: []});
@@ -132,8 +135,7 @@ test('a DNS seed without a writable rule position links to the upstream editor',
   handlers['GET config'] = async () => config;
   await page.goto('/#/rules?tab=dns&list=request&add=domain:example.org&before=end');
   const link = page.getByRole('link', {name: 'Open DNS configuration', exact: true});
-  await expect(link).toHaveAttribute('href', '#/rules?tab=dns&section=upstreams');
+  await expect(link).toHaveAttribute('href', /^#\/config\?tab=source&source=src-main&line=\d+$/);
   await link.click();
-  await expect(page.getByRole('region', {name: 'DNS upstreams', exact: true})).toBeFocused();
-  await expect(page.getByRole('region', {name: 'DNS upstreams', exact: true}).getByRole('button', {name: 'Edit', exact: true}).first()).toBeDisabled();
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=\d+$/);
 });

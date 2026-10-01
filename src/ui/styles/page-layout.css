@@ -95,6 +95,12 @@
   font-size: var(--rp-text-sm);
   font-variant-ligatures: none;
 }
+.rp-code[data-wrap] {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 /* Right to left, technical values keep their own order. A table cell or a detail value takes its direction from its
    text, so a domain, address or path reads left to right while a name in the page's script does not; code, rule text
    and keys are always left to right. unicode-bidi is not inherited, so the rule names each box that holds the text;

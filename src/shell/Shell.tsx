@@ -1,4 +1,5 @@
 import './install';
+import {ApplyHeldContext, useApplyHeld} from '../features/shared/usePendingApply';
 import {lazy, Suspense, useCallback, useState, type ContextType} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
@@ -118,9 +119,12 @@ type FrameProps = {
 };
 function ShellFrame(props: FrameProps) {
   const view = useShell(props.settings, props.route);
+  const held = useApplyHeld();
   return (
     <AboutContext.Provider value={view.about}>
-      <Frame {...props} view={view} />
+      <ApplyHeldContext.Provider value={held.apply}>
+        <Frame {...props} view={view} />
+      </ApplyHeldContext.Provider>
       <Shortcuts go={props.go} openSearch={props.openSearch} refresh={view.refresh} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
     </AboutContext.Provider>
   );
