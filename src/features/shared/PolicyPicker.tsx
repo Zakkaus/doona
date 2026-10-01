@@ -6,5 +6,5 @@ import {policyChoices} from './policyText';
 export function PolicyPicker({value, onChange, isDisabled}: {value: string | null; onChange: (policy: string) => void; isDisabled?: boolean}) {
   const t = useT();
   const {selected, items} = policyChoices(value, t);
-  return <LabeledSelect label={t('arrange.policy')} value={selected} onChange={onChange} items={items} isDisabled={isDisabled} />;
+  return <LabeledSelect label={t('group.policy')} value={selected} onChange={onChange} items={items} isDisabled={isDisabled} />;
 }

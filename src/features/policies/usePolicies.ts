@@ -1,5 +1,5 @@
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {poll, useCapabilities, useGroups, useNodes} from '../../store';
+import {useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {poll, useCapabilities, useGroups, useNodes, useProviders} from '../../store';
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
@@ -8,14 +8,13 @@ import {groupOwners, outboundLinks, type OutboundCatalogue} from '../shared/grou
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
-import {pickTab, tabQuery, within} from '../../shell/route';
+import {within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {openGroup} from '../shared/openGroup';
 import {useNearViewport} from '../../ui/ui';
-import {policiesTabs} from './nav';
+import {useGroupDialog} from '../shared/useGroupDialog';
+import {quoteName, isWritableName} from '../../dae/groups';
 import {useT} from '../../i18n';
-
-const policyTabIds = policiesTabs().map(tab => tab.id);
 
 export function usePolicies({go, query}: PageProps) {
   const t = useT();
@@ -27,7 +26,12 @@ export function usePolicies({go, query}: PageProps) {
   const nodesOffered = offered(resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesOffered);
   const params = new URLSearchParams(query);
-  const focus = params.get('group');
+  const requestedGroup = params.get('group');
+  const focus = groups.data?.find(group => group.id === requestedGroup || group.name === requestedGroup)?.id ?? requestedGroup;
+  const providers = useProviders(offered(resources, 'providers', {whileLoading: false}));
+  useEffect(() => {
+    if (new URLSearchParams(query).has('tab')) go('policies', within(query, {tab: null}), {replace: true});
+  }, [query, go]);
   const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
   if (health.from !== nodes.data) {
     const map = new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)]));
@@ -83,15 +87,23 @@ export function usePolicies({go, query}: PageProps) {
   useEffect(() => {
     if (kinds.kind !== requested) go('policies', within(query, {kind: null}), {replace: true});
   }, [kinds.kind, requested, go, query]);
-  const ready = !!groups.data;
+  const ready = !!groups.data && (!focus || cards.some(card => card.id === focus));
   // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
   // once per link, and never after the user starts moving the page themselves.
   useEffect(() => {
     const target = focus && ready ? document.getElementById('group-' + focus) : null;
     if (!target) return;
-    const scroll = () => target.scrollIntoView({block: 'start'});
+    const scroll = () => {
+      target.scrollIntoView({block: 'start'});
+      target.querySelector<HTMLElement>('h2')?.focus({preventScroll: true});
+    };
     scroll();
     const observer = new ResizeObserver(scroll);
+    // A loaded heading can replace its placeholder without changing the card's size.
+    const content = new MutationObserver(scroll);
+    content.observe(target, {childList: true, subtree: true});
+    if (target.parentElement?.parentElement) content.observe(target.parentElement.parentElement, {attributes: true, attributeFilter: ['data-wait']});
+    observer.observe(target);
     for (const card of target.parentElement?.children ?? []) {
       if (card === target) break;
       observer.observe(card);
@@ -100,6 +112,7 @@ export function usePolicies({go, query}: PageProps) {
     const stop = () => {
       clearTimeout(settle);
       observer.disconnect();
+      content.disconnect();
       for (const type of inputs) removeEventListener(type, stop, true);
     };
     const settle = setTimeout(stop, 3000);
@@ -112,13 +125,32 @@ export function usePolicies({go, query}: PageProps) {
     refreshGroups();
     refreshNodes();
   }, [refreshGroups, refreshNodes]);
+  const create = useGroupDialog({
+    mode: 'create',
+    source,
+    taken: new Set([...outbounds.groups, ...owners.keys()]),
+    outbounds,
+    nodes: nodes.data ?? [],
+    onCreated: name => openGroup(go, name)
+  });
+  const openCreate = useEffectEvent(() => {
+    create.show(params.has('node') && isWritableName(params.get('node')!) ? [`name(${quoteName(params.get('node')!)})`] : []);
+    go('policies', within(query, {new: null, node: null}), {replace: true});
+  });
+  const editorOpened = useCallback(() => go('policies', within(query, {edit: null, node: null}), {replace: true}), [go, query]);
+  const newRequested = params.get('new') === '1';
+  useEffect(() => {
+    if (newRequested && source.main && source.writable) openCreate();
+  }, [newRequested, source.main, source.writable]);
   return {
-    tab: pickTab(query, policyTabIds, 'groups'),
-    // After an arrangement is written: the one group it changed, or the Groups tab when it changed several.
-    viewGroup: (name: string | null) => (name === null ? go('policies') : openGroup(go, name)),
-    setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),
     cards: kinds.shown,
-    allCards: cards,
+    nodes: nodes.data ?? [],
+    providers: providers.data?.providers ?? [],
+    create,
+    createDisabled: !source.writable || !source.main || source.busy,
+    editRequested: params.get('edit') === '1',
+    seedNode: params.get('node') ?? undefined,
+    editorOpened,
     // The kind filter, in the query so a reload and Back keep it. Choosing one ends a link's hold on its group.
     kind: kinds.kind,
     kindItems: kinds.items,
@@ -130,7 +162,6 @@ export function usePolicies({go, query}: PageProps) {
     health: health.map,
     outbounds,
     source,
-    arrangeText: sources?.find(source => source.kind === 'main')?.content ?? '',
     error: groups.error ?? nodes.error,
     // A card's size depends on its members' health as well, so the cards wait for the node list too, and for the
     // capabilities that say whether it is offered.

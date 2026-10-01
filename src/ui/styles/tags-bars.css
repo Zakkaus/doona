@@ -1,14 +1,27 @@
 /* ---- Tags and the action bar: S2's Tag and ActionBar shapes on doona's tokens. ---- */
 .rp-tags {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--rp-space-2);
 }
 .rp-tags-title {
   flex-basis: 100%;
 }
+.rp-tags[data-single-line] {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.rp-tags[data-single-line] > .rp-tag {
+  flex-shrink: 0;
+}
 .rp-tag {
+  min-width: 0;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -20,6 +33,26 @@
 }
 .rp-tag:not(:has(> .rp-btn, > .rp-tipwrap)) {
   padding-inline-end: 10px;
+}
+.rp-tag > :is(.rp-btn, .rp-tipwrap),
+.rp-tag > .rp-tipwrap > .rp-btn {
+  flex-shrink: 0;
+}
+.rp-tag-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rp-tag-link {
+  color: var(--rp-text);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+.rp-tag-link[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-tag-link[data-pressed] {
+  background: var(--rp-hl-high);
 }
 .rp-tag.new {
   border-color: var(--rp-accent);

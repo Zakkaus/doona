@@ -38,12 +38,12 @@
 .rp-dialog-sections {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--rp-space-6);
 }
 .rp-dialog-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
 }
 .rp-underlay {
@@ -169,20 +169,6 @@
 .group-dialog-filter-list:empty {
   display: none;
 }
-.group-dialog-filter-help {
-  color: var(--rp-subtle);
-  font-size: var(--rp-text-xs);
-  line-height: 16px;
-}
 .group-dialog-filters > button {
   align-self: flex-start;
-}
-.group-dialog-filter-help + button {
-  margin-block-start: 4px;
-}
-.group-dialog-results {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-wrap: anywhere;
 }

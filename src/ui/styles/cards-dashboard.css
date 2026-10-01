@@ -57,6 +57,7 @@
   background: var(--rp-overlay);
 }
 .rp-card {
+  scroll-margin-block-start: calc(var(--rp-topbar) + 16px);
   background: var(--rp-base);
   border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
   border-radius: var(--rp-r-xl);
@@ -538,4 +539,9 @@
 }
 .rp-setup-step[data-complete='true'] > .rp-setup-status {
   color: var(--rp-positive-text);
+}
+
+.rp-card[data-highlighted] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
 }

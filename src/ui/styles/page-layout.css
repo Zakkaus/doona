@@ -163,6 +163,9 @@
     grid-template-columns: repeat(auto-fill, minmax(max(128px, calc((100% - 17px) / 2)), 1fr));
   }
 }
+.rp-kv > div {
+  min-width: 0;
+}
 .rp-kv .k {
   display: block;
   font-size: var(--rp-text-xs);

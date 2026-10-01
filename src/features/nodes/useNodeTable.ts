@@ -1,3 +1,4 @@
+import {href} from '../../shell/route';
 import {useCallback, useMemo, useState} from 'react';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {useFilter} from 'react-aria-components';
@@ -29,6 +30,7 @@ type NodeTableInput = {
   scope: string | null;
   multiple: boolean;
   query: string | null;
+  groupQuery: string | null;
   source: MainSourceEdit;
   canManage: boolean;
   busy: boolean;
@@ -46,10 +48,11 @@ export function useNodeTable(input: NodeTableInput) {
   const probe = useNodeProbe(reload);
   const [search, setSearch] = useState(query ?? '');
   useLinked(query, value => setSearch(value ?? ''));
-  const [group, setGroup] = useState('');
+  const [group, setGroup] = useState(input.groupQuery ?? '');
+  useLinked(input.groupQuery, value => setGroup(value ?? ''));
   const [protocol, setProtocol] = useState('');
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});
-  const across = input.multiple && search.trim() !== '';
+  const across = !!input.groupQuery || (input.multiple && search.trim() !== '');
   const nodes = across ? input.all : input.nodes;
   const groups = useMemo(
     () =>
@@ -66,9 +69,13 @@ export function useNodeTable(input: NodeTableInput) {
         .map(id => ({id, label: id})),
     [nodes, locale]
   );
-  const groupItems = [{id: '', label: t('nodes.anyGroup')}, ...groups];
+  const linkedGroup =
+    input.groupQuery && !groups.some(item => item.id === input.groupQuery)
+      ? [{id: input.groupQuery, label: names.get(input.groupQuery) ?? input.groupQuery}]
+      : [];
+  const groupItems = [{id: '', label: t('nodes.anyGroup')}, ...linkedGroup, ...groups];
   // A filter chosen for another source applies only if this source offers that value.
-  const activeGroup = groups.some(item => item.id === group) ? group : '';
+  const activeGroup = group === input.groupQuery || groups.some(item => item.id === group) ? group : '';
   const activeProtocol = protocols.some(item => item.id === protocol) ? protocol : '';
   const {contains} = useFilter({sensitivity: 'base'});
   const members = useMemo(
@@ -88,6 +95,7 @@ export function useNodeTable(input: NodeTableInput) {
     (node: Node): NodeTableView['rows'][number] => ({
       ...nodeRowView(node, names, lang, t),
       source: sourceOf(node),
+      groupLinks: node.group_ids.map(id => ({id, label: names.get(id) ?? id, href: href('policies', {group: id})})),
       canProbe: canProbe && !isBuiltinOutbound(node.protocol),
       probe: () =>
         void runProbe(node.id).then(
@@ -149,6 +157,7 @@ export type NodeTableView = {
     latency: string;
     latencyClass: string;
     groups: string;
+    groupLinks: Array<{id: string; label: string; href: string}>;
     probeLabel: string;
     removeLabel: string;
     canProbe: boolean;

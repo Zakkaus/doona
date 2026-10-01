@@ -13,7 +13,6 @@ import {settingsCardList} from '../../features/settings/nav';
 import {configTabs, sourceKinds} from '../../features/config/nav';
 import {connectionsTabs} from '../../features/connections/nav';
 import {nodesTabs} from '../../features/nodes/nav';
-import {policiesTabs} from '../../features/policies/nav';
 
 type SearchHit = {id: string; label: string; description: string | undefined; route: RoutePath; query: string};
 // A hit with its lower-cased match text, projected once per dataset so a keystroke only filters.
@@ -39,7 +38,6 @@ export function pageEntries(capabilities: Capabilities | undefined, t: Translato
   const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key}> = [
     ...connectionsTabs().map(tab => ({path: 'connections' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...nodesTabs(resources).map(tab => ({path: 'nodes' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
-    ...policiesTabs().map(tab => ({path: 'policies' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),

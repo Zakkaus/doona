@@ -1,17 +1,42 @@
 import {describe, expect, it} from 'vitest';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {compileFilters, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {flagChoices, regionFlag} from '../../dae/flags';
+import {regions} from '../../dae/regions';
+import {flagForName} from './countryFlags';
 import {regionGroups} from '../../dae/templates';
-import {includeChoices, includeMatches, recogniseInclude, regionFilters, selectedIncludes, setIncludes} from './groupIncludes';
+import {
+  includeChoices,
+  includeMatches,
+  retainedIncludes,
+  recogniseInclude,
+  regionFilters,
+  selectedIncludes,
+  setIncludes,
+  includesEveryNode,
+  setEveryNode,
+  noNodes
+} from './groupIncludes';
 
 const hk = regionFilters.find(region => region.id === 'HK')!.filter;
 const cn = regionFilters.find(region => region.id === 'CN')!.filter;
 describe('visual group includes', () => {
+  it('uses the flag picker region vocabulary and locale names', () => {
+    for (const locale of ['en', 'zh-TW', 'zh-CN']) {
+      const flags = flagChoices(locale);
+      const choices = includeChoices([], [], [], locale).region;
+      expect(choices.map(choice => choice.id)).toEqual(regions.map(([id]) => id));
+      for (const choice of choices) {
+        expect(choice.label).toBe(flags.find(flag => flag.id === choice.id)!.label);
+        expect(flagForName(choice.id + ' 01')).toBe(regionFlag(choice.id));
+      }
+    }
+  });
   it('recognises template regions, exact lists and leaves compound filters advanced', () => {
     for (const group of regionGroups) expect(recogniseInclude(group.lines[0].slice(8))).toEqual({kind: 'region', values: [group.name.toUpperCase()]});
     expect(recogniseInclude("name( '香港 01', node-2 )")).toEqual({kind: 'node', values: ['香港 01', 'node-2']});
     expect(recogniseInclude('subtag("paid", backup)')).toEqual({kind: 'subscription', values: ['paid', 'backup']});
-    for (const filter of ["subtag(paid) && !name(keyword: 'slow')", '!name(block)', 'group(auto)', "name(regex: 'custom')"])
+    for (const filter of ["subtag(paid) && !name(keyword: 'slow')", '!name(block)', "group('')", 'group(auto) && name(x)', "name(regex: 'custom')"])
       expect(recogniseInclude(filter)).toBeNull();
   });
 
@@ -22,7 +47,7 @@ describe('visual group includes', () => {
     ]) {
       const entry = readGroupEntries(source)[0];
       let filters = entry.filters;
-      for (const kind of ['region', 'subscription', 'node'] as const) filters = setIncludes(filters, kind, selectedIncludes(filters, kind));
+      for (const kind of ['region', 'subscription', 'node', 'group'] as const) filters = setIncludes(filters, kind, selectedIncludes(filters, kind));
       expect(writeGroupEntry(source, 'g', {...entry, filters})).toBe(source);
     }
   });
@@ -60,12 +85,23 @@ describe('visual group includes', () => {
 
   it('counts matches and retains absent names and subscription tags as selectable values', () => {
     const {nodes} = nodeFixtures(0, true);
-    const choices = includeChoices(['subtag(missing)', "name('offline node')"], nodes, [], 'en');
+    const choices = includeChoices(['subtag(missing)', "name('offline node')"], nodes, [], 'en', ['unfetched']);
     expect(choices.region.find(region => region.id === 'HK')?.count).toBe(nodes.filter(compileFilters([hk])).length);
+    expect(choices.subscription).toContainEqual({id: 'unfetched', label: 'unfetched', count: 0, disabled: false});
     expect(choices.subscription).toContainEqual({id: 'missing', label: 'missing', count: 0, disabled: false});
     expect(choices.node).toContainEqual({id: 'offline node', label: 'offline node', count: 0, disabled: false});
     expect(setIncludes([], 'node', ["O'Hare"])).toEqual([]);
   });
+});
+
+it('warns only about removed selections retained by another filter', () => {
+  const {nodes} = nodeFixtures(120, true);
+  const before = [hk, 'subtag(harbor)'];
+  const selected = nodes.filter(node => node.subscription_tag === 'harbor' && compileFilters([hk])(node)).map(node => node.name);
+  expect(retainedIncludes(before, ['subtag(harbor)'], nodes)).toEqual(selected);
+  expect(retainedIncludes(before, before, nodes)).toEqual([]);
+  expect(retainedIncludes([hk], [], nodes)).toEqual([]);
+  expect(retainedIncludes(before, ['name(missing)'], nodes)).toEqual([]);
 });
 
 it('matches explicit demo names and case-insensitive region tokens', () => {
@@ -102,6 +138,65 @@ it('preserves every legacy template until that selection is removed', () => {
     expect(writeGroupEntry(source, 'g', {filters, policy: 'select'})).toBe(source);
     expect(setIncludes(filters, 'node', ['new'])).toEqual([legacy, 'name(new)']);
   }
+});
+
+it('removing the last explicit selection leaves no members', () => {
+  const {nodes} = nodeFixtures(0, true);
+  const filters = setIncludes(['name(hk-01)', ''], 'node', []);
+  expect(nodes.filter(compileFilters(filters)).map(node => node.name)).toEqual([]);
+  expect(nodes.filter(compileFilters(setIncludes(filters, 'node', ['jp-01']))).map(node => node.name)).toEqual(['jp-01']);
+});
+
+it('does not count untouched region members when removing a subscription', () => {
+  const {nodes: fixture} = nodeFixtures(0, true);
+  const nodes = fixture.map(node => ({...node, subscription_tag: node.name === 'jp-01' ? 'paid' : null}));
+  expect(retainedIncludes([hk, 'subtag(paid)'], [hk], nodes)).toEqual([]);
+  nodes[0].subscription_tag = 'paid';
+  expect(retainedIncludes([hk, 'subtag(paid)'], [hk], nodes)).toEqual(['hk-01']);
+});
+
+it('turns every-node off to an empty set or the remaining selections', () => {
+  const {nodes} = nodeFixtures(0, true);
+  for (const filters of [[], ['!name(direct, block)']]) {
+    expect(includesEveryNode(filters)).toBe(true);
+    const off = setEveryNode(filters, false);
+    expect(off).toEqual([noNodes]);
+    expect(nodes.filter(compileFilters(off)).map(node => node.name)).toEqual([]);
+    expect(includesEveryNode(off)).toBe(false);
+    expect(nodes.filter(compileFilters(setEveryNode(off, true))).map(node => node.name)).toEqual(['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01']);
+  }
+  const off = setEveryNode(['!name(direct, block)', hk], false);
+  expect(nodes.filter(compileFilters(off)).map(node => node.name)).toEqual(['hk-01', 'hk-02']);
+});
+
+it('uses the original legacy region when counting retained removed members', () => {
+  const legacy = regionGroups.find(group => group.name === 'hk')!.lines[0].slice(8);
+  const nodes = nodeFixtures(0, true).nodes.map(node => ({...node, subscription_tag: 'paid'}));
+  expect(retainedIncludes([legacy, 'subtag(paid)'], ['subtag(paid)'], nodes)).toEqual([]);
+});
+
+it('documents legacy case sensitivity and substring matches without rewriting them', () => {
+  const names = ['hk-01', 'HK 01', 'AUS 01', 'CN2 回国 HK'];
+  const nodes = names.map(name => ({name, subscription_tag: null}));
+  const legacy = (id: string) => regionGroups.find(group => group.name === id)!.lines[0].slice(8);
+  expect(nodes.filter(compileFilters([legacy('hk')])).map(node => node.name)).toEqual(['HK 01', 'CN2 回国 HK']);
+  expect(nodes.filter(compileFilters([legacy('us')])).map(node => node.name)).toEqual(['AUS 01']);
+  const removed = setIncludes([legacy('hk')], 'region', []);
+  expect(setIncludes(removed, 'region', ['HK'])).toEqual([hk]);
+  expect(setIncludes([legacy('hk'), noNodes], 'region', ['HK'])).toEqual([legacy('hk'), noNodes]);
+});
+
+it('edits nested groups visually while preserving untouched tokens and legacy pipe lists', () => {
+  const filters = [`group( "auto", 'hk|jp', sg )`, 'name(hk-01)'];
+  expect(recogniseInclude(filters[0])).toEqual({kind: 'group', values: ['auto', 'hk', 'jp', 'sg']});
+  expect(setIncludes(filters, 'group', ['auto', 'hk', 'jp', 'sg'])).toBe(filters);
+  expect(setIncludes(filters, 'group', ['auto', 'jp', 'sg', 'new group'])).toEqual(['group("auto", jp, sg)', 'name(hk-01)', "group('new group')"]);
+  expect(recogniseInclude("group('hk,jp')")).toEqual({kind: 'group', values: ['hk', 'jp']});
+  expect(setIncludes(["group('hk,jp')"], 'group', ['jp'])).toEqual(['group(jp)']);
+  const source = `group {\n  proxy {\n    filter: ${filters[0]} # keep\n    filter: name(hk-01)\n    policy: select\n  }\n}\n`;
+  expect(writeGroupEntry(source, 'proxy', {filters: setIncludes(filters, 'group', ['auto', 'hk', 'jp', 'sg']), policy: 'select'})).toBe(source);
+  expect(setIncludes(['group(hk)'], 'group', [])).toEqual([noNodes]);
+  expect(setIncludes([], 'group', ['hk|jp', 'hk,jp', "O'Hare"])).toEqual([]);
 });
 
 it('counts the kept legacy region and its replacement from the same explicit matches', () => {

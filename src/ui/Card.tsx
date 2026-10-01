@@ -43,6 +43,7 @@ export function Card({
   reason,
   id,
   className,
+  isHighlighted,
   tabIndex,
   'aria-label': label,
   children,
@@ -61,6 +62,7 @@ export function Card({
   id?: string;
   // Layout for what the card holds.
   className?: string;
+  isHighlighted?: boolean;
   tabIndex?: number;
   'aria-label'?: string;
   children?: ReactNode;
@@ -92,6 +94,7 @@ export function Card({
       ref={ref}
       id={id}
       tabIndex={tabIndex}
+      data-highlighted={isHighlighted || undefined}
       className={cardClass(titled && 'rp-titled', tile?.layout === 'responsive' && 'rp-tile-responsive', className)}
       aria-labelledby={titled && !label ? headingId : undefined}
       aria-label={label}

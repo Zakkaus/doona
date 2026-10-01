@@ -1,6 +1,6 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
 // Also builds a palette sheet, the English theme gallery, and per language the phone strip, the page tour stills and
-// its two animations (cwebp and img2webp), all from mock-backed screenshots.
+// the routing animation (cwebp and img2webp), all from mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -177,32 +177,6 @@ function recorder(page, clip) {
     }
   };
 }
-// Drags a node from the tray onto a group on the arrange tab. The viewport is tall enough that the bar for pending
-// changes sits below the clip.
-async function recordArrange(browser, lang, path) {
-  const page = await openPage(browser, lang, '#/policies?tab=arrange', '.rp-drop', {viewport: {width: 1280, height: 1100}});
-  const group = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'gaming', exact: true})});
-  await group.scrollIntoViewIfNeeded();
-  const clip = await panelClip(page, '.rp-tray');
-  const row = await page.getByRole('row').filter({hasText: 'us-01'}).boundingBox();
-  const handle = {x: row.x + 16, y: row.y + row.height / 2};
-  const anim = recorder(page, clip);
-  const start = {x: clip.x + clip.width - 120, y: clip.y + 160};
-  await page.mouse.move(start.x, start.y);
-  await pointer(page, start);
-  await anim.frame(900);
-  await anim.glide(start, handle);
-  await page.mouse.down();
-  await anim.frame(250);
-  await anim.glide(handle, await center(group), 'us-01', 16);
-  await anim.frame(700);
-  await page.mouse.up();
-  await pointer(page, await center(group));
-  await group.getByText('us-01').waitFor();
-  await anim.frame(2400);
-  anim.encode(path);
-  await page.context().close();
-}
 // Selects a rule, then a node, on the routing map, then clears the selection so the loop starts where it ends.
 async function recordRouting(browser, lang, path) {
   const page = await openPage(browser, lang, '#/flows', '.rp-tree-tile');
@@ -337,7 +311,6 @@ try {
       await page.context().close();
     }
     await recordPhones(browser, lang, join(dir, lang, 'phone'));
-    await recordArrange(browser, lang, join(dir, lang, 'arrange'));
     await recordRouting(browser, lang, join(dir, lang, 'routing'));
   }
 } finally {

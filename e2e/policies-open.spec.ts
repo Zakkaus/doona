@@ -14,7 +14,7 @@ function watchCards(count: number) {
   const channel = new MessageChannel();
   channel.port1.onmessage = () => {
     // Cards laid out hidden behind the loading state are not on screen.
-    const cards = [...document.querySelectorAll('.rp-tabpanel[data-shown] .rp-card')].filter(card => card.checkVisibility({visibilityProperty: true}));
+    const cards = [...document.querySelectorAll('.rp-policy-list .rp-card')].filter(card => card.checkVisibility({visibilityProperty: true}));
     if (cards.length && seen.frames.length < count) seen.frames.push(cards.map(card => Math.round(card.getBoundingClientRect().height)).join(' '));
   };
   const tick = () => {
@@ -37,7 +37,7 @@ async function expectSteadyCards(page: Page) {
   await expect.poll(() => page.evaluate(() => (window as unknown as {cards: {frames: unknown[]}}).cards.frames.length), {timeout: 10_000}).toBe(FRAMES);
   const {frames} = await page.evaluate(() => (window as unknown as {cards: {frames: string[]}}).cards);
   // The members have arrived by the last frame, and every frame before it showed the cards at that size.
-  await expect(page.locator('.rp-tabpanel[data-shown] .rp-card :is(button, [role=row]).rp-node').first()).toBeVisible();
+  await expect(page.locator('.rp-policy-list .rp-card :is(button, [role=row]).rp-node').first()).toBeVisible();
   expect(frames[0], 'first painted card heights').toBe(frames.at(-1));
   expect(new Set(frames)).toEqual(new Set([frames.at(-1)]));
 }
@@ -80,7 +80,7 @@ test('scrolling away from a loading card shows the list', async ({page}) => {
   });
   await page.setViewportSize({width: 1440, height: 500});
   await page.goto('/#/policies');
-  const list = page.locator('.rp-tabpanel[data-shown] .rp-policy-list');
+  const list = page.locator('.rp-policy-list');
   await expect(list).toHaveAttribute('data-wait', '');
   await page.mouse.move(720, 300);
   for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 1000);

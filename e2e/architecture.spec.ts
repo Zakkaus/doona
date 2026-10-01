@@ -32,6 +32,7 @@ async function backend(page: Page) {
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/api/v1/', '');
     if (reads[path]) return route.fulfill({json: await reads[path]()});
+    if (route.request().method() === 'GET' && path.startsWith('groups/')) return route.fulfill({json: await api.group(decodeURIComponent(path.slice(7)))});
     throw new Error(`Unexpected request: ${route.request().method()} ${path}`);
   });
   return api;
@@ -396,19 +397,21 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
     }
   });
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  const filter = dialog.getByRole('textbox', {name: 'Filter', exact: true});
-  await filter.fill('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
+  const filter = dialog.getByRole('textbox', {name: 'Values', exact: true});
+  await filter.fill('hk-01');
   await api.replaceConfigSource(main.id, main.content + '\n# concurrent edit\n', `"${main.content_sha256}"`);
   const refreshed = page.waitForResponse('**/api/v1/config');
   changed();
   await refreshed;
-  await expect(filter).toHaveValue('name(hk-01)');
+  await expect(filter).toHaveValue('hk-01');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog.getByRole('alert')).toContainText('changed');
-  await expect(filter).toHaveValue('name(hk-01)');
+  await expect(filter).toHaveValue('hk-01');
 });
 
 test('policy details load near the viewport and a deep link explicitly mounts a distant group', async ({page}) => {

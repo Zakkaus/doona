@@ -141,7 +141,8 @@ test('a group check URL is edited in its dialog, refused inline when unsafe', as
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'Configuration for auto written and reloaded'})).toBeVisible();
   // The edit dialog lists the group's running configuration under the declaration.
-  await moreAction(card, 'Edit group');
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const edit = page.getByRole('dialog', {name: 'Edit group auto'});
   await expect(edit.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
   await expect(edit.getByText(url204, {exact: true})).toBeVisible();
@@ -243,7 +244,8 @@ test('a group is switched to the score policy in its edit dialog', async ({page}
   await mockBackend(page);
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   let dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('button', {name: /Selection policy/}).click();
   await expect(page.getByRole('option', {name: /^Score/})).toContainText('Picks a node by its observed reliability and recent connection quality');
@@ -254,7 +256,8 @@ test('a group is switched to the score policy in its edit dialog', async ({page}
   expect(await editorText(page)).toContain('gaming {\n    filter: name(jp-01, hk-02)\n    policy: score\n  }');
   // Reopened, the group shows the policy as chosen rather than as a raw name.
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
 });
@@ -264,7 +267,8 @@ test('the edit dialog makes a node the final outbound and None clears it', async
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'office', exact: true});
-  await moreAction(card, 'Edit group');
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   const member = dialog.getByRole('button', {name: /Default member$/});
   const final = dialog.getByRole('button', {name: /Final outbound$/});
@@ -307,7 +311,8 @@ test('the edit dialog makes a node the final outbound and None clears it', async
   await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for office written and reloaded');
   await expect.poll(async () => (await api.group('office')).config).toMatchObject({default_member_id: 'hk-02', final_outbound: 'sg-01'});
   // None removes the line again.
-  await moreAction(card, 'Edit group');
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   await expect(dialog.locator('.rp-kv').getByText('sg-01', {exact: true})).toBeVisible();
   await expect(final).toContainText('sg-01');
   await final.click();
@@ -333,7 +338,8 @@ test('a final outbound does not offer the group or a group that nests it', async
   await expect.poll(async () => (await api.operation(accepted.operation_id)).status).toBe('succeeded');
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'auto', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'auto', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group auto'});
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
   await expect(page.getByRole('listbox').getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText([
@@ -353,7 +359,8 @@ test('the default member is offered only while the dialog selects manual selecti
   await page.setViewportSize({width: 1440, height: 1000});
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'auto', exact: true});
-  await moreAction(card, 'Edit group');
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   let dialog = page.getByRole('dialog', {name: 'Edit group auto'});
   const member = dialog.getByRole('button', {name: /Default member$/});
   const policy = dialog.getByRole('button', {name: /Selection policy/});
@@ -373,7 +380,8 @@ test('the default member is offered only while the dialog selects manual selecti
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   // Switching a manual group away writes the new policy and keeps its default line as written.
-  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
   await dialog.getByRole('button', {name: /Selection policy/}).click();
@@ -389,10 +397,14 @@ test('the default member is offered only while the dialog selects manual selecti
 test('a group edit refused over a file changed on disk saves on retry', async ({page}) => {
   const {api} = await mockBackend(page);
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'auto', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'auto', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group auto'});
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
+  await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
+  await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Exact names', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('hk-01, sg-01');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, '# concurrent edit\n' + main.content, `"${main.content_sha256}"`);
   await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('# concurrent edit');
@@ -406,18 +418,21 @@ test('a group edit refused over a file changed on disk saves on retry', async ({
   await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for auto written and reloaded');
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(saved).toContain('# concurrent edit');
-  expect(saved).toContain('filter: name(hk-01, sg-01)');
+  expect(saved).toContain("filter: name('hk-01', 'sg-01')");
 });
 
 test('a group edit retried after a refusal writes against the declaration read again, not the one it opened on', async ({page}) => {
   const {api} = await mockBackend(page);
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await expect(dialog.getByRole('button', {name: /Default member$/})).toContainText('hk-01');
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01)');
+  await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Exact names', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('hk-01');
   // The concurrent edit quotes the default member: the same member, written differently.
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, main.content!.replace('default: hk-01', "default: 'hk-01'"), `"${main.content_sha256}"`);
@@ -431,7 +446,7 @@ test('a group edit retried after a refusal writes against the declaration read a
   await expect(page.locator('.rp-toast.positive')).toContainText('Configuration for office written and reloaded');
   // The unchanged member keeps the spelling on disk, so the retry took its baseline from the fresh read.
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
-  expect(saved).toMatch(/office \{[^}]*filter: name\(hk-01\)[^}]*default: 'hk-01'[^}]*\}/);
+  expect(saved).toMatch(/office \{[^}]*filter: name\('hk-01'\)[^}]*default: 'hk-01'[^}]*\}/);
 });
 
 test('a long group name truncates with a tooltip and keeps the More menu on its title row', async ({page}) => {
@@ -450,7 +465,12 @@ test('a long group name truncates with a tooltip and keeps the More menu on its 
   const more = card.getByRole('button', {name: 'More actions', exact: true});
   const [titleBox, moreBox] = [await title.boundingBox(), await more.boundingBox()];
   expect(moreBox!.y).toBeLessThan(titleBox!.y + titleBox!.height);
+  await expect(cut).toHaveAttribute('tabindex', '0');
+  await cut.scrollIntoViewIfNeeded();
   await cut.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(cut).toBeFocused();
   await expect(page.getByRole('tooltip')).toHaveText(long);
 });
 

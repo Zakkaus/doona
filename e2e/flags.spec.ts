@@ -1,4 +1,4 @@
-import {test, expect, moreAction, query} from './fixtures';
+import {test, expect, query} from './fixtures';
 import {mockBackend} from './flag-fixtures';
 
 test('country flags are a default-on display preference in the table and group picker', async ({page}) => {
@@ -29,7 +29,7 @@ test('country flags are a default-on display preference in the table and group p
   await expect(search).toHaveCount(0);
   await page.goto('/#/policies');
   const proxy = page.getByRole('region', {name: 'proxy', exact: true});
-  await moreAction(proxy, 'Edit group');
+  await proxy.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds', exact: true}).fill('jp-01');
@@ -185,7 +185,7 @@ test('edits node flags from the existing menu and updates the table, picker and 
   await dialog.getByRole('button', {name: 'Close', exact: true}).click();
   await expect(row.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const policy = page.getByRole('dialog');
   await policy.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds', exact: true}).fill('hk-01');
@@ -340,10 +340,11 @@ test('node details and row actions share live overrides, aligned flag rows and i
   });
   for (const offset of iconOffset) expect(Math.abs(offset)).toBeLessThanOrEqual(1);
   await row.focus();
-  for (let i = 0; i < 12 && !(await actions.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+  const stops = await row.locator('td, th, a, button, [tabindex]').count();
+  for (let i = 0; i < stops && !(await actions.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
   await expect(actions).toBeFocused();
   await expect(page.getByRole('tooltip', {name: 'Node actions', exact: true})).toBeVisible();
-  await row.click();
+  await row.getByRole('rowheader').click();
   const details = page.getByRole('region', {name: 'Node details', exact: true});
   await expect(details.getByText('vless', {exact: true})).toBeVisible();
   await details.getByRole('button', {name: /Flag/}).click();
@@ -354,7 +355,7 @@ test('node details and row actions share live overrides, aligned flag rows and i
   expect(await labelLeft(noFlag)).toBe(await labelLeft(page.getByRole('option', {name: /^Hong Kong/})));
   await noFlag.click();
   await expect(details.locator('.rp-node-name .rp-node-flag')).toHaveCount(0);
-  await row.click();
+  await row.getByRole('rowheader').click();
   await expect(row.locator('.rp-node-flag')).toHaveCount(0);
   await actions.click();
   await expect(page.getByRole('menu').getByText('Add to group', {exact: true})).toBeVisible();
@@ -365,9 +366,9 @@ test('node details and row actions share live overrides, aligned flag rows and i
   await page.getByRole('searchbox', {name: 'Search regions', exact: true}).fill('Taiwan');
   await page.getByRole('option', {name: /Taiwan/}).click();
   await dialog.getByRole('button', {name: 'Close', exact: true}).click();
-  await row.click();
+  await row.getByRole('rowheader').click();
   await expect(details.locator('.rp-node-name .rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
-  await row.click();
+  await row.getByRole('rowheader').click();
   await page.reload();
   await expect(row.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
 });
@@ -381,35 +382,13 @@ test('Policies member lists, folded selection, default members and member picker
     const group = await api.group('proxy');
     return {...group, config: {...group.config, default_member_id: 'hk-01', final_outbound: 'hk-01'}};
   };
-  await page.goto('/#/policies?tab=arrange');
-  await page.getByRole('searchbox', {name: 'Search nodes or subscriptions', exact: true}).fill('hk-01');
-  await expect(page.locator('.rp-tray-row[data-key="node:hk-01"] .rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
-  const resilient = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'resilient', exact: true})});
-  await expect(resilient.getByRole('heading').locator('.rp-node-flag')).toHaveCount(0);
-  await expect(
-    resilient
-      .locator('.rp-tag')
-      .filter({hasText: /^hk-01$/})
-      .locator('.rp-node-flag')
-  ).toHaveAttribute('data-flag', '🇹🇼');
-  const gaps = await resilient.locator('.rp-node-name').evaluateAll(elements =>
-    elements.map(element => {
-      const flag = element.querySelector('.rp-node-flag')!;
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      range.setStartAfter(flag);
-      return range.getBoundingClientRect().left - flag.getBoundingClientRect().right;
-    })
-  );
-  expect(gaps.length).toBeGreaterThan(0);
-  for (const gap of gaps) expect(gap).toBeCloseTo(4, 0);
   await page.goto('/#/policies');
   const automatic = page.getByRole('region', {name: 'resilient', exact: true});
   await automatic.scrollIntoViewIfNeeded();
   await expect(automatic.locator('.rp-disclosure-trigger .rp-node-flag').first()).toHaveAttribute('data-flag', '🇸🇬');
   await expect(automatic.getByRole('heading', {name: 'resilient', exact: true}).locator('.rp-node-flag')).toHaveCount(0);
   const proxy = page.getByRole('region', {name: 'proxy', exact: true});
-  await moreAction(proxy, 'Edit group');
+  await proxy.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.locator('.rp-kv .rp-node-flag')).toHaveCount(2);
   for (const flag of await dialog.locator('.rp-kv .rp-node-flag').all()) await expect(flag).toHaveAttribute('data-flag', '🇹🇼');

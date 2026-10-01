@@ -1,4 +1,4 @@
-import {test, expect, moreAction} from './fixtures';
+import {test, expect} from './fixtures';
 import {mockBackend} from './flag-fixtures';
 
 const env = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env ?? {};
@@ -55,12 +55,14 @@ for (const [variant, lang, scheme, width] of [
             .evaluate(node => getComputedStyle(node).marginInlineEnd)
         : null;
       await page.screenshot({path: `${directory}/nodes-${shot}-${variant}-${enabled ? 'on' : 'off'}.png`});
-      await page.goto('/#/policies');
+      await page.goto('/#/policies?group=proxy');
       const proxy = page.getByRole('region', {name: 'proxy', exact: true});
-      await moreAction(proxy, lang === 'en' ? 'Edit group' : '编辑群组', lang === 'en' ? 'More actions' : '更多操作');
+      await proxy.getByRole('button', {name: lang === 'en' ? 'Edit group' : '编辑群组', exact: true}).click();
       await page.getByRole('button', {name: lang === 'en' ? /Final outbound$/ : /最终出站$/}).click();
-      await page.getByRole('searchbox', {name: lang === 'en' ? 'Filter outbounds' : '筛选出站', exact: true}).fill('');
+      const search = page.getByRole('searchbox', {name: lang === 'en' ? 'Filter outbounds' : '筛选出站', exact: true});
+      await search.fill('Hong Kong 02');
       await expect(page.getByRole('option', {name: /Hong Kong 02/})).toBeVisible();
+      await search.fill('Macau');
       await expect(page.getByRole('option', {name: /Macau 01/})).toBeVisible();
       await page.getByRole('option', {name: /Macau 01/}).scrollIntoViewIfNeeded();
       if (enabled) {
@@ -136,22 +138,22 @@ for (const [width, scheme] of [
     );
 
     if (env.DOONA_FLAGS_BASELINE) return;
-    await page.goto('/#/policies?tab=arrange');
-    await expect(page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'resilient', exact: true})})).toContainText('hk-01');
+    await page.goto('/#/policies?group=resilient');
+    await expect(page.getByRole('region', {name: 'resilient', exact: true})).toContainText('hk-01');
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({path: `${directory}/after-group-${width}-${scheme}.png`, fullPage: true});
-    await page.goto('/#/policies');
+    await page.goto('/#/policies?group=proxy');
     await expect(page.getByRole('region', {name: 'proxy', exact: true})).toContainText('hk-01');
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({path: `${directory}/after-policies-${width}-${scheme}.png`, fullPage: true});
     await page.goto('/#/nodes?provider=inline&q=hk-01');
     if (width === 1440 && scheme === 'light') {
       const row = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})});
-      await row.click();
+      await row.getByRole('rowheader').click();
       const details = page.getByRole('region', {name: '節點詳細資料', exact: true});
       await details.scrollIntoViewIfNeeded();
       await page.screenshot({path: `${directory}/node-details.png`});
-      await row.click();
+      await row.getByRole('rowheader').click();
     }
     await page.getByRole('button', {name: '節點操作', exact: true}).click();
     if (width === 390 && scheme === 'light') await page.screenshot({path: `${directory}/node-actions.png`});
@@ -196,15 +198,16 @@ for (const [width, scheme] of [
     const actions = row.getByRole('button', {name: '節點操作', exact: true});
     await actions.scrollIntoViewIfNeeded();
     await row.focus();
-    for (let i = 0; i < 12 && !(await actions.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+    const stops = await row.locator('td, th, a, button, [tabindex]').count();
+    for (let i = 0; i < stops && !(await actions.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
     await expect(actions).toBeFocused();
     await expect(page.getByRole('tooltip', {name: '節點操作', exact: true})).toBeVisible();
     await snap('actions', width === 390 ? page : row);
-    await row.click();
+    await row.getByRole('rowheader').click();
     const details = page.getByRole('region', {name: '節點詳細資料', exact: true});
     await details.scrollIntoViewIfNeeded();
     await snap('details', details);
-    await row.click();
+    await row.getByRole('rowheader').click();
     await row.getByRole('button', {name: '節點操作', exact: true}).click();
     await snap('menu', page.getByRole('menu'));
     await page.getByRole('menuitem', {name: '更換國旗…', exact: true}).click();
@@ -224,8 +227,8 @@ for (const [width, scheme] of [
     await page.goto('/#/activity');
     await expect(page.locator('.rp-latency .rp-select')).toContainText('hk-01');
     await snap('activity', page.locator('.rp-latency'));
-    await page.goto('/#/policies');
-    await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), '編輯群組', '更多操作');
+    await page.goto('/#/policies?group=proxy');
+    await page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: '編輯群組', exact: true}).click();
     const policyDialog = page.getByRole('dialog', {name: '編輯群組 proxy', exact: true});
     await expect(policyDialog.locator('.rp-kv .rp-node-flag')).toHaveCount(2);
     await snap('outbound', policyDialog);

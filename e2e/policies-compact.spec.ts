@@ -9,25 +9,22 @@ test('the kind filter counts manual and automatic groups, and the address keeps 
   const filter = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
   await expect(filter.getByRole('radio')).toHaveText(['All 17', 'Manual 8', 'Automatic 9']);
   await expect(filter.getByRole('radio', {name: 'All 17'})).toBeChecked();
-  // It sits on the tab row, at its end.
-  const [tabs, box] = [await page.getByRole('tablist', {name: 'Policies'}).boundingBox(), await filter.boundingBox()];
+  // It shares the header row with the create action.
+  const [tabs, box] = [await page.getByRole('button', {name: 'New group', exact: true}).boundingBox(), await filter.boundingBox()];
   expect(Math.abs(tabs!.y + tabs!.height / 2 - (box!.y + box!.height / 2))).toBeLessThan(4);
   await filter.getByRole('radio', {name: 'Manual 8'}).click();
   await expect(page).toHaveURL(/kind=manual/);
   await expect(regions(page)).toHaveCount(8);
-  await expect(page.getByRole('region', {name: 'proxy', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: 'office', exact: true})).toBeVisible();
   await page.reload();
   await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 8'})).toBeChecked();
   await expect(regions(page)).toHaveCount(8);
   await page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Automatic 9'}).click();
   await expect(regions(page)).toHaveCount(9);
-  await expect(page.getByRole('region', {name: 'proxy', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('region', {name: 'office', exact: true})).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'}).getByRole('radio', {name: 'Manual 8'})).toBeChecked();
   await expect(regions(page)).toHaveCount(8);
-  // The arrange tab has no use for it.
-  await page.getByRole('tab', {name: 'Group membership'}).click();
-  await expect(page.getByRole('radiogroup', {name: 'Filter groups by selection'})).toHaveCount(0);
 });
 
 test('a filter that leaves no group says so in one line', async ({page}) => {
@@ -49,6 +46,8 @@ test('a link to a group the filter hides shows every group and opens the linked 
   // The linked automatic group opens with its members shown.
   await expect(card.getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'true');
   await expect(card.getByRole('row', {name: '日本 01 2x', exact: true})).toBeVisible();
+  // User navigation releases the brief deep-link scroll follow before visiting another card.
+  await page.keyboard.press('PageDown');
   // An automatic group nobody linked stays folded.
   await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
   await expect(page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: /^Current/})).toHaveAttribute('aria-expanded', 'false');
@@ -92,13 +91,16 @@ test('releasing a collapsed automatic group clears overrides on both networks', 
 test('toggling interruption stages it with unsaved filters in one conditional source write', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01, sg-01)');
+  await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Exact names', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('hk-01, sg-01');
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
-  await expect(dialog.getByRole('switch')).toBeChecked();
+  await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).toBeChecked();
   expect(requests.filter(request => request.method() === 'PATCH')).toHaveLength(0);
   expect((await api.group('office')).config.interrupt_connections).toBe(false);
   const origin = (await api.config()).sources.find(source => source.kind === 'main')!;
@@ -107,7 +109,7 @@ test('toggling interruption stages it with unsaved filters in one conditional so
   await apply.click();
   await expect(dialog).toHaveCount(0);
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
-  expect(saved).toContain('filter: name(hk-01, sg-01)');
+  expect(saved).toContain("filter: name('hk-01', 'sg-01')");
   expect((await api.group('office')).config.interrupt_connections).toBe(true);
   const writes = requests.filter(request => request.method() === 'PUT' && new URL(request.url()).pathname.includes('/config/sources/'));
   expect(writes).toHaveLength(1);
@@ -118,8 +120,9 @@ for (const when of ['before', 'after'])
   test(`an external source edit ${when} toggling interruption still refuses the first save`, async ({page}) => {
     const {api} = await mockBackend(page);
     await page.goto('/#/policies');
-    await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
-    const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+    await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+    await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+    const dialog = page.getByRole('dialog', {name: 'Edit group office'});
     const external = async () => {
       const main = (await api.config()).sources.find(source => source.kind === 'main')!;
       await api.replaceConfigSource(main.id, '# external edit\n' + main.content, `"${main.content_sha256}"`);
@@ -127,7 +130,7 @@ for (const when of ['before', 'after'])
     };
     if (when === 'before') await external();
     await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
-    await expect(dialog.getByRole('switch')).toBeChecked();
+    await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).toBeChecked();
     const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
     await expect(apply).toBeEnabled();
     if (when === 'after') await external();
@@ -141,26 +144,27 @@ test('a resource-level read-only dialog explains why configuration cannot be edi
   const {capabilities} = await mockBackend(page);
   capabilities.resources.config.writable = false;
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'View configuration');
-  await expect(page.getByRole('dialog', {name: 'proxy configuration'})).toContainText(
+  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'View configuration');
+  await expect(page.getByRole('dialog', {name: 'office configuration'})).toContainText(
     'This backend does not provide configuration writes, so this view is read-only.'
   );
 });
 
 test('running configuration has a heading when interruption is its only field', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  handlers['GET groups/proxy'] = async () => {
-    const group = await api.group('proxy');
+  handlers['GET groups/office'] = async () => {
+    const group = await api.group('office');
     for (const key of Object.keys(group.config)) Object.assign(group.config, {[key]: null});
     group.capabilities.mutable_config = ['interrupt_connections'];
     return group;
   };
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'Edit group');
-  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await expect(dialog.locator('.rp-kv')).toHaveCount(0);
   await expect(dialog.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
-  await expect(dialog.getByRole('switch')).toBeVisible();
+  await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).toBeVisible();
 });
 
 test('an automatic group sums itself up, opens on a press and still takes a pinned member', async ({page}) => {
@@ -189,29 +193,31 @@ test('an automatic group sums itself up, opens on a press and still takes a pinn
 test('cancelling an interrupt-only draft leaves the source and live group unchanged', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.goto('/#/policies');
-  const card = page.getByRole('region', {name: 'proxy', exact: true});
+  const card = page.getByRole('region', {name: 'office', exact: true});
   await expect(card.getByRole('switch')).toHaveCount(0);
-  await moreAction(card, 'Edit group');
-  const dialog = page.getByRole('dialog', {name: 'Edit group proxy'});
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
   await expect(dialog.getByText('Check interval', {exact: true})).toBeVisible();
   const origin = (await api.config()).sources.find(source => source.kind === 'main')!;
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
-  await expect(dialog.getByRole('switch')).toBeChecked();
+  await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).toBeChecked();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   expect(requests.filter(request => ['PATCH', 'PUT'].includes(request.method()))).toHaveLength(0);
   expect((await api.config()).sources.find(source => source.id === origin.id)!.content_sha256).toBe(origin.content_sha256);
-  expect((await api.group('proxy')).config.interrupt_connections).toBe(false);
-  await moreAction(card, 'Edit group');
-  await expect(dialog.getByRole('switch')).not.toBeChecked();
+  expect((await api.group('office')).config.interrupt_connections).toBe(false);
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).not.toBeChecked();
 });
 
 test('the view dialog patches interruption live and refetches after a PATCH 412', async ({page}) => {
   const {api, capabilities, requests} = await mockBackend(page);
   capabilities.resources.config.writable = false;
   await page.goto('/#/policies');
-  await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), 'View configuration');
-  const dialog = page.getByRole('dialog', {name: 'proxy configuration'});
+  await moreAction(page.getByRole('region', {name: 'office', exact: true}), 'View configuration');
+  const dialog = page.getByRole('dialog', {name: 'office configuration'});
   const toggle = dialog.getByRole('switch', {name: 'Interrupt existing connections on switch'});
   await expect(toggle).not.toBeChecked();
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
@@ -224,7 +230,7 @@ test('the view dialog patches interruption live and refetches after a PATCH 412'
     return true;
   });
   const refreshed = page.waitForResponse(
-    response => patchRejected && response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/groups/proxy')
+    response => patchRejected && response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/groups/office')
   );
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
   await rejected;
@@ -235,6 +241,6 @@ test('the view dialog patches interruption live and refetches after a PATCH 412'
   await dialog.getByText('Interrupt existing connections on switch', {exact: true}).click();
   await saved;
   await expect(toggle).toBeChecked();
-  expect((await api.group('proxy')).config.interrupt_connections).toBe(true);
+  expect((await api.group('office')).config.interrupt_connections).toBe(true);
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
 });

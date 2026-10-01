@@ -269,3 +269,17 @@
 .rp-checkbox-options .rp-radio-text {
   overflow-wrap: anywhere;
 }
+
+@media (max-width: 480px) {
+  .rp-checkbox-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rp-field-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+}
