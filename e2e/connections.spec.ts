@@ -245,6 +245,9 @@ test('group slots take focus but never the selection across virtual keyboard nav
   const groups = grid.locator('[role=row][aria-level="1"]');
   const selected = grid.locator('[aria-selected="true"]');
   await expect(grid).toHaveAttribute('aria-rowcount', '1005');
+  const expander = groups.first().locator('.rp-expand');
+  await expect(expander).toHaveCSS('margin-inline-start', '0px');
+  expect(await expander.evaluate(el => el.getBoundingClientRect().left >= el.closest('[role=rowheader]')!.getBoundingClientRect().left)).toBe(true);
   await expect(groups.first()).toHaveAttribute('aria-expanded', 'true');
   await groups.first().click({force: true});
   await expect(selected).toHaveCount(0);
