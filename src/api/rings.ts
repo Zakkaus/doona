@@ -193,12 +193,23 @@ export function resetRings() {
   for (const listener of listeners) listener();
 }
 
+const emptyRings: Rings<never> = {fine: [], coarse: []};
+const unobserved = () => () => {};
+
 // The store is the external system: a fresh poll (the source compared by identity) is recorded after render,
 // and the component reads the ring the store holds.
-export function useRings<S, T extends Timed>(name: string, source: S | undefined, sample: (source: S) => T | undefined, fold: Fold<T>): Rings<T> {
+export function useRings<S, T extends Timed>(
+  name: string,
+  source: S | undefined,
+  sample: (source: S) => T | undefined,
+  fold: Fold<T>,
+  enabled = true
+): Rings<T> {
   useEffect(() => {
-    record(name, source && sample(source), fold);
-  }, [name, source, sample, fold]);
+    if (enabled) record(name, source && sample(source), fold);
+  }, [name, source, sample, fold, enabled]);
   // A render reads the ring already loaded; the next record re-checks the profile, so storage is not read per render.
-  return useSyncExternalStore(subscribe, () => ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings);
+  return useSyncExternalStore(enabled ? subscribe : unobserved, () =>
+    enabled ? ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings : emptyRings
+  );
 }

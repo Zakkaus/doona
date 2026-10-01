@@ -1,4 +1,5 @@
-import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
+import {useCallback, useContext, useEffect, useRef, useSyncExternalStore} from 'react';
+import {ResourcePreview} from './preview';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, Capabilities} from '../api/model';
@@ -193,14 +194,15 @@ export function reopenEvents(api: Api) {
   streams.get(api)?.reopen?.();
 }
 export function useEvents(onEvent: Listener, replayRecent = false) {
+  const preview = useContext(ResourcePreview);
   const api = getApi();
   const callback = useRef(onEvent);
   useEffect(() => {
     callback.current = onEvent;
   });
   const subscribe = useCallback(
-    (notify: () => void) => subscribeEvents(api, (event, reconnected) => callback.current(event, reconnected), {notify, replayRecent}),
-    [api, replayRecent]
+    (notify: () => void) => (preview ? () => {} : subscribeEvents(api, (event, reconnected) => callback.current(event, reconnected), {notify, replayRecent})),
+    [api, replayRecent, preview]
   );
   const getSnapshot = useCallback(() => eventStatus(api), [api]);
   return useSyncExternalStore(subscribe, getSnapshot);

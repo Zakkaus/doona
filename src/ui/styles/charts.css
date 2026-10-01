@@ -498,3 +498,14 @@
     grid-column: 1 / -1;
   }
 }
+.rp-compact-chart {
+  margin: 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rp-counter-since {
+  text-wrap: balance;
+}

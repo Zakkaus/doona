@@ -15,38 +15,40 @@ export type MockApi = Api & OperationReader;
 // the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
 // specs' in-process backend. `acceptWrites` answers node and provider writes with 202 and an operation, as a honk
 // that runs them in the background does.
-export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null; acceptWrites?: boolean};
+export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null; acceptWrites?: boolean; isolated?: boolean};
 
 export function createMockApi(options: MockOptions = {}): MockApi {
   let count = 120;
   let big = false;
   // A busy backend for tools/perf.mjs: byte counters move on every poll and logs arrive every 20 ms.
   let busy = false;
-  try {
-    const value = localStorage.getItem('doona-mock-big');
-    big = value !== null;
-    if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
-    busy = localStorage.getItem('doona-mock-busy') !== null;
-  } catch {
-    /* Storage can be unavailable. */
-  }
+  if (!options.isolated)
+    try {
+      const value = localStorage.getItem('doona-mock-big');
+      big = value !== null;
+      if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
+      busy = localStorage.getItem('doona-mock-busy') !== null;
+    } catch {
+      /* Storage can be unavailable. */
+    }
   let capabilities = fullCapabilities;
   let profile: string | null = null;
   // The default demo is a healthy honk; the faults scenario seeds the degraded states that specs need.
   let faults = options.faults ?? false;
-  try {
-    // ?scenario=faults in the page address turns the scenario on for this browser, and an empty ?scenario= turns it
-    // off, so the public demo can show the error states from a link.
-    const scenario = new URLSearchParams(globalThis.location?.search).get('scenario');
-    if (scenario === 'faults') localStorage.setItem('doona-mock-scenario', 'faults');
-    else if (scenario === '') localStorage.removeItem('doona-mock-scenario');
-    faults ||= localStorage.getItem('doona-mock-scenario') === 'faults';
-    profile = localStorage.getItem('doona-mock-profile');
-    if (profile === 'base') capabilities = capabilitiesBase;
-    if (profile === 'm1') capabilities = capabilitiesM1;
-  } catch {
-    /* Storage can be unavailable. */
-  }
+  if (!options.isolated)
+    try {
+      // ?scenario=faults in the page address turns the scenario on for this browser, and an empty ?scenario= turns it
+      // off, so the public demo can show the error states from a link.
+      const scenario = new URLSearchParams(globalThis.location?.search).get('scenario');
+      if (scenario === 'faults') localStorage.setItem('doona-mock-scenario', 'faults');
+      else if (scenario === '') localStorage.removeItem('doona-mock-scenario');
+      faults ||= localStorage.getItem('doona-mock-scenario') === 'faults';
+      profile = localStorage.getItem('doona-mock-profile');
+      if (profile === 'base') capabilities = capabilitiesBase;
+      if (profile === 'm1') capabilities = capabilitiesM1;
+    } catch {
+      /* Storage can be unavailable. */
+    }
   const runtime = createRuntime(capabilities, big, () => configuration.flowRecorder(), faults);
   const geodata = createGeodataState(capabilities, () => inventory.groupIds(), faults);
   const configuration = createConfiguration(

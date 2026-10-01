@@ -102,6 +102,54 @@ section:not(:first-child) > .rp-sec-h {
   background: transparent;
   margin: var(--rp-space-2) 0;
 }
+/* A scroller's slim scrollbar that shows only while the pointer or focus is in it (the sidebar's links, the widget
+   panel), so it adds nothing to a list at rest, and has no arrow buttons. Chromium and WebKit draw the styled
+   scrollbar only while the standard properties are left at auto; Firefox keeps the thin standard one, which has none.
+   The gutter stays, so showing the scrollbar moves nothing. */
+@supports not selector(::-webkit-scrollbar) {
+  .rp-overlay-scroll {
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color var(--rp-duration) var(--rp-ease);
+  }
+  .rp-overlay-scroll:focus-within {
+    scrollbar-color: var(--rp-hl-high) transparent;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    /* stylelint-disable-next-line selector-pseudo-class-disallowed-list -- guarded by the media query above */
+    .rp-overlay-scroll:hover {
+      scrollbar-color: var(--rp-hl-high) transparent;
+    }
+  }
+}
+@supports selector(::-webkit-scrollbar) {
+  .rp-overlay-scroll {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+.rp-overlay-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.rp-overlay-scroll::-webkit-scrollbar-button {
+  display: none;
+}
+.rp-overlay-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rp-overlay-scroll::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: transparent;
+}
+.rp-overlay-scroll:focus-within::-webkit-scrollbar-thumb {
+  background: var(--rp-hl-high);
+}
+@media (hover: hover) and (pointer: fine) {
+  /* stylelint-disable-next-line selector-pseudo-class-disallowed-list -- guarded by the media query above */
+  .rp-overlay-scroll:hover::-webkit-scrollbar-thumb {
+    background: var(--rp-hl-high);
+  }
+}
 /* Popover surface after S2: layer-2 background, radius 10, the three-layer elevated shadow, an outline only in dark. */
 .rp-popover {
   background: var(--rp-surface);
@@ -297,4 +345,9 @@ section:not(:first-child) > .rp-sec-h {
 }
 .rp-item .desc.err {
   color: var(--rp-negative-text);
+}
+
+.rp-btn.quiet[data-toggle-selected] {
+  background: var(--rp-hl-high);
+  color: var(--rp-text);
 }

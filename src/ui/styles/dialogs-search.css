@@ -172,3 +172,22 @@
 .group-dialog-filters > button {
   align-self: flex-start;
 }
+.rp-modal[data-size='large'] {
+  width: min(960px, 94vw);
+}
+.rp-modal[data-size='wide'] {
+  width: min(1440px, 94vw);
+}
+@media (max-width: 639.98px) {
+  .rp-underlay[data-size='wide'],
+  .rp-underlay[data-size='large'] {
+    padding: 0;
+  }
+  .rp-modal[data-size='wide'],
+  .rp-modal[data-size='large'] {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}

@@ -42,11 +42,13 @@ export const Donut = memo(
   function Donut({
     label,
     rows,
-    total
+    total,
+    legendLimit
   }: {
     label: string;
     rows: Array<{name: string; value: number | null; text: string; color: string; href?: string}>;
     total: string;
+    legendLimit?: number;
   }) {
     const t = useT();
     const legend = useMemo(() => rows.map(row => ({...row, percent: row.value === null ? '—' : t('ui.percent', {n: row.value})})), [rows, t]);
@@ -61,7 +63,7 @@ export const Donut = memo(
           <div className="center">{total}</div>
         </div>
         <div className="lst">
-          {legend.map(r => (
+          {legend.slice(0, legendLimit).map(r => (
             <div key={r.name} className="r">
               <i className="dot" style={{background: r.color}} />
               <span className="n">
@@ -84,6 +86,7 @@ export const Donut = memo(
   (previous, next) =>
     previous.label === next.label &&
     previous.total === next.total &&
+    previous.legendLimit === next.legendLimit &&
     (previous.rows === next.rows ||
       (previous.rows.length === next.rows.length &&
         previous.rows.every((row, index) => {

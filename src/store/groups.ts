@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult} from '../api/model';
@@ -6,6 +6,7 @@ import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
 import {activationError, etag, finished, settle, latencyProbe, useAction} from './action';
+import {useSharedControl} from './sharedControl';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
@@ -61,8 +62,8 @@ export function groupConflict(error: unknown): boolean {
 // flags whenever groups are available, so an absent one leaves the group's own flags in charge.
 export function groupActions(group: Group, capabilities: Capabilities | undefined): Group {
   const groups = capabilities?.resources.groups;
-  const selection = !!groups && groups.selection !== false;
-  const patch = !!groups && groups.config_patch !== false;
+  const selection = !!groups?.available && groups.selection !== false;
+  const patch = !!groups?.available && groups.config_patch !== false;
   if (selection && patch) return group;
   const {can_select, can_override, mutable_config} = group.capabilities;
   return {
@@ -86,8 +87,8 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
   const data = useMemo(() => resource.data && groupActions(resource.data, capabilities), [resource.data, capabilities]);
-  const [network, setNetwork] = useState<GroupSelectionRequest['network']>('both');
-  const action = useAction<'selection' | 'probe' | 'config'>({scope: id});
+  const [network, setNetwork] = useSharedControl<GroupSelectionRequest['network']>(`group-network:${id}`, 'both');
+  const action = useAction<'selection' | 'probe' | 'config'>({shared: `group-action:${id}`});
   const {run: act} = action;
   // Every control changes what the lists show, so all three refetch once it has gone through.
   const run = useCallback(

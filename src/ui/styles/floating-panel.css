@@ -1,0 +1,155 @@
+/* The widget panel's frame: the room between the top bar and the dock, inside the viewport's inset. The panel sits at
+   its bottom inline-end corner, or where the reader moved it: `--rp-panel-y` is a gap below the panel, or above it when
+   the panel keeps its top edge. The gap gives way first, so a panel that grows never leaves the frame. */
+.rp-floating-frame {
+  position: fixed;
+  z-index: 9;
+  inset-block: calc(var(--rp-topbar) + var(--rp-space-4) + env(safe-area-inset-top)) calc(var(--rp-dock) + var(--rp-space-4) + env(safe-area-inset-bottom));
+  inset-inline: max(var(--rp-space-4), env(safe-area-inset-left)) max(var(--rp-space-4), env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.rp-floating-frame::after {
+  content: '';
+  flex: 0 1 var(--rp-panel-y, 0px);
+  min-block-size: 0;
+}
+.rp-floating-frame[data-anchor='top'] {
+  justify-content: flex-start;
+}
+.rp-floating-frame[data-anchor='top']::after {
+  order: -1;
+}
+/* Without a stored size the panel is the narrowest preset wide and its content's height, up to a limit; a stored
+   height is a limit too, so the panel is never taller than its content. Its list scrolls to the panel's bottom edge.
+   Nothing clips the panel, so the corner hit areas reach past its rounded corners. */
+.rp-floating-panel {
+  position: relative;
+  flex: none;
+  pointer-events: auto;
+  margin-inline-end: var(--rp-panel-x, 0px);
+  inline-size: min(var(--rp-panel-width), 100%);
+  max-block-size: min(var(--rp-panel-height, 480px), 100%);
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-popover-border);
+  border-radius: var(--rp-r-lg);
+  background: var(--rp-surface);
+  box-shadow: var(--rp-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+}
+/* The collapse chevron points the way the panel grows or shrinks: down from a panel kept by its top edge. */
+.rp-floating-frame[data-anchor='top'] .rp-widget-collapse > svg {
+  rotate: 180deg;
+}
+.rp-floating-frame[data-anchor='top'] .rp-widget-collapse[aria-expanded='false'] > svg {
+  rotate: none;
+}
+.rp-floating-panel > .rp-widget-panel,
+.rp-floating-panel .rp-widget-body {
+  flex: 1 1 auto;
+}
+/* The header is the move handle: a bare button under its content takes the presses that miss the header's own
+   controls, and the arrow keys once focused. */
+.rp-panel-head {
+  position: relative;
+  flex: none;
+}
+.rp-panel-head > :not(.rp-panel-move) {
+  position: relative;
+  pointer-events: none;
+}
+.rp-panel-head :is(button, a, input, [role='button']) {
+  pointer-events: auto;
+}
+.rp-panel-move {
+  position: absolute;
+  inset-block: calc(0px - var(--rp-space-4)) 0;
+  inset-inline: calc(0px - var(--rp-space-4));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: move;
+  touch-action: none;
+}
+/* Resize hit areas over the panel's corners and edges, its border included: they show only the resize cursor for
+   their direction. */
+.rp-panel-resize {
+  position: absolute;
+  z-index: 1;
+  inset: -1px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+}
+.rp-panel-resize[data-inline='start'] {
+  inset-inline-end: auto;
+}
+.rp-panel-resize[data-inline='end'] {
+  inset-inline-start: auto;
+}
+.rp-panel-resize[data-block='start'] {
+  inset-block-end: auto;
+}
+.rp-panel-resize[data-block='end'] {
+  inset-block-start: auto;
+}
+.rp-panel-resize:is([data-inline], [data-block]) {
+  inline-size: var(--rp-space-2);
+  block-size: var(--rp-space-2);
+  cursor: ew-resize;
+}
+.rp-panel-resize:not([data-inline]) {
+  inline-size: auto;
+  cursor: ns-resize;
+}
+.rp-panel-resize:not([data-block]) {
+  block-size: auto;
+}
+/* A finger gets the panel's whole inset along each edge. */
+@media (pointer: coarse) {
+  .rp-panel-resize[data-inline]:not([data-block]) {
+    inline-size: var(--rp-space-4);
+  }
+  .rp-panel-resize[data-block]:not([data-inline]) {
+    block-size: var(--rp-space-4);
+  }
+}
+.rp-panel-resize[data-inline][data-block] {
+  z-index: 2;
+  inline-size: var(--rp-space-4);
+  block-size: var(--rp-space-4);
+  cursor: nwse-resize;
+}
+.rp-panel-resize[data-inline='start'][data-block='end'],
+.rp-panel-resize[data-inline='end'][data-block='start'],
+.rp-panel-resize[data-inline='start'][data-block='start']:dir(rtl),
+.rp-panel-resize[data-inline='end'][data-block='end']:dir(rtl) {
+  cursor: nesw-resize;
+}
+.rp-panel-resize[data-inline='start'][data-block='end']:dir(rtl),
+.rp-panel-resize[data-inline='end'][data-block='start']:dir(rtl) {
+  cursor: nwse-resize;
+}
+:is(.rp-panel-resize, .rp-panel-move):focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}
+.rp-panel-move:focus-visible {
+  border-radius: var(--rp-r-lg) var(--rp-r-lg) 0 0;
+}
+/* Moving or resizing the panel selects nothing on the page. */
+:root[data-panel-gesture] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Over the dock slot, the panel takes the slot's accent outline; it stays opaque, so the slot's label never shows
+   through its content. */
+.rp-floating-panel[data-docking] {
+  outline: 2px solid var(--rp-accent);
+}

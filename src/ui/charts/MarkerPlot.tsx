@@ -1,7 +1,7 @@
 import {useLayoutEffect, useRef, useState, type FocusEvent, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {NodeName} from '../NodeName';
-import {Button, Link} from '../Button';
+import {Button, Link, TextTooltip} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
@@ -163,7 +163,7 @@ export function MarkerPlot({
           ) : row.nodeName ? (
             <NodeName name={row.label} />
           ) : (
-            row.label
+            <TextTooltip>{row.label}</TextTooltip>
           )}
         </span>
         <div className="track" role="img" aria-label={[row.label, ...row.details()].join(t('ui.separator'))}>
@@ -195,14 +195,16 @@ export function MarkerPlot({
       aria-label={label}
       aria-describedby={describedBy}
     >
-      <ul className="legend">
-        {legend.map(item => (
-          <li key={item.label}>
-            <Marker kind={item.kind} tone={item.tone} />
-            {item.label}
-          </li>
-        ))}
-      </ul>
+      {legend.length > 0 && (
+        <ul className="legend">
+          {legend.map(item => (
+            <li key={item.label}>
+              <Marker kind={item.kind} tone={item.tone} />
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="axis" aria-hidden="true">
         <span />
         <div className="scale">

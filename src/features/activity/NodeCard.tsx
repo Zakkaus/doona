@@ -1,13 +1,14 @@
+import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
-import {Card, HelpRow, ErrorMessage, Light, Link, Loading, TextTooltip} from '../../ui/ui';
+import {Card, HelpRow, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode} from './useActivityNode';
 import {GroupMenu} from './GroupMenu';
 import type {ConnectionList} from '../../api/model';
 
-export function NodeCard({connections}: {connections: ConnectionList | undefined}) {
+export function NodeCard({connections, selection}: {connections: ConnectionList | undefined; selection?: {chosen: string; setChosen: (id: string) => void}}) {
   const t = useT();
-  const vm = useActivityNode(connections);
+  const vm = useActivityNode(connections, selection);
   return (
     <Card
       className="rp-latency"
@@ -22,7 +23,7 @@ export function NodeCard({connections}: {connections: ConnectionList | undefined
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <div className="rp-tile-body">
         {vm.loading ? (
-          <Loading />
+          <DeferredLoading />
         ) : (
           <>
             <span className="rp-tile-val">

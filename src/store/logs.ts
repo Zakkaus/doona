@@ -1,10 +1,11 @@
-import {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
+import {useContext, useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
 import {EVENT_FEED_LIMIT, useEvents} from './events';
 import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
+import {ResourcePreview, ResourceSamples} from './preview';
 
 // A resumed stream's `stream.ready` carries the cursor it resumed from, the id of the last event already listed.
 export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', {key: event => `${event.event} ${event.id}`});
@@ -49,12 +50,16 @@ export function noticeFeed(api: Api) {
 // The events `keep` accepts, including those the shared stream received before the page opened. The feed outlives
 // the page, so every caller passes the same `keep`.
 export function useNoticeFeed(keep: (event: ApiEvent) => boolean) {
+  const preview = useContext(ResourcePreview);
+  const samples = useContext(ResourceSamples);
   const feed = noticeFeed(getApi());
   const {records} = useSyncExternalStore(feed.subscribe, feed.getSnapshot);
   const status = useEvents(event => {
     if (keep(event)) feed.append(event);
   }, true);
-  return {...status, records};
+  const sample = preview ? samples?.get('notices', records) : undefined;
+  const sampled = sample !== undefined;
+  return {...status, records: sampled ? (sample as ApiEvent[]) : records};
 }
 
 export function useLogFeed({level, target, paused}: {level?: LogLevel; target?: string; paused: boolean}) {

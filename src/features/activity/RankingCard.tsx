@@ -1,5 +1,6 @@
+import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
-import {Badge, Bar, Card, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
+import {Badge, Bar, Card, Empty, ErrorMessage, Link, Segmented, TextTooltip} from '../../ui/ui';
 import type {useRankingCard} from './useRankingCard';
 
 export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>}) {
@@ -29,7 +30,7 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
       )}
       {state === 'error' ? null : state === 'loading' ? (
         <div className="rp-chart-wait bars">
-          <Loading>{t('ui.loading')}</Loading>
+          <DeferredLoading>{t('ui.loading')}</DeferredLoading>
         </div>
       ) : state === 'unavailable' ? (
         <div className="rp-chart-wait bars">

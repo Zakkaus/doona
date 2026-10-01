@@ -51,6 +51,8 @@ export function Button({
   form,
   appearance,
   className,
+  isSelected,
+  expanded,
   ...style
 }: {
   children?: ReactNode;
@@ -66,6 +68,8 @@ export function Button({
   // field). `className` is added to the base, never in place of it.
   appearance?: 'select' | 'plain';
   className?: string;
+  isSelected?: boolean;
+  expanded?: boolean;
 } & ButtonStyle) {
   // The tip is positioned from the button's own box: its wrapper has none while the button is enabled.
   const ref = useRef<HTMLButtonElement>(null);
@@ -121,6 +125,9 @@ export function Button({
       className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
       onPress={press}
       aria-label={label}
+      data-toggle-selected={isSelected || undefined}
+      aria-pressed={isSelected}
+      aria-expanded={expanded}
       aria-describedby={reasonId ?? (tipReason ? tipId : undefined)}
       isDisabled={disabled}
       isPending={isPending}
@@ -230,6 +237,8 @@ export function TextTooltip({
     const hide = () => setOpen(false);
     stop.addEventListener('focus', show);
     stop.addEventListener('blur', hide);
+    // The text can turn truncated, or the listeners arrive, after the stop took focus.
+    if (document.activeElement === stop) show();
     return () => {
       stop.removeEventListener('focus', show);
       stop.removeEventListener('blur', hide);

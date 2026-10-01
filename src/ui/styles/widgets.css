@@ -1,0 +1,242 @@
+.rp-widget-panel {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+.rp-widget-body {
+  /* Keep absolute live regions inside this scroller's overflow boundary. */
+  position: relative;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0;
+  scroll-padding-block: var(--rp-space-4);
+}
+.rp-widget-body-content {
+  min-inline-size: 0;
+  padding: var(--rp-space-1) var(--rp-sidebar-padding) var(--rp-space-4);
+}
+.rp-widget {
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+}
+.rp-widget-label {
+  margin: 0;
+}
+/* Controls keep their own width, as on the main pages: a segmented control or a button does not stretch. */
+.rp-widget > :is(.rp-segfit, .rp-cluster, .rp-btn) {
+  align-self: flex-start;
+}
+.rp-widget-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  min-inline-size: 0;
+}
+.rp-widget-row > .rp-kv-label {
+  flex: none;
+}
+.rp-widget-row > .rp-btn {
+  min-inline-size: 0;
+}
+/* Main's quiet action row, one control high: the backend's light, the rates while collapsed (two lines in the
+   control's height, so the row fits the narrowest panel), then the kit-sized icon buttons at the end. The light's
+   tooltip and name carry the engine and its version. */
+.rp-widget-header,
+.rp-widget-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  min-inline-size: 0;
+}
+.rp-widget-backend {
+  flex: none;
+}
+.rp-widget-actions {
+  flex: none;
+  margin-inline-start: auto;
+}
+.rp-widget-speed {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-size: var(--rp-text-xs);
+  line-height: var(--rp-line-caption);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rp-widget-speed > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-widget-editor {
+  display: grid;
+  /* The canvas is the floating panel at its own width (set by the editor); its border and inset are the panel's. */
+  grid-template-columns: minmax(0, 1fr) var(--rp-panel-width) minmax(0, 1fr);
+  gap: var(--rp-space-6);
+  align-items: start;
+}
+.rp-widget-collapse[aria-expanded='false'] > svg {
+  rotate: 180deg;
+}
+.rp-widget-gallery,
+.rp-widget-inspector,
+.rp-widget-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-4);
+  min-inline-size: 0;
+}
+.rp-widget-gallery-list > .rp-widget-body-content {
+  padding: var(--rp-space-1) var(--rp-space-1) var(--rp-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-4);
+}
+@media (max-width: 1023.98px) {
+  .rp-widget-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-widget-gallery {
+    position: static;
+  }
+  .rp-widget-gallery-list > .rp-widget-body-content {
+    display: flex;
+    flex-direction: column;
+    max-block-size: none;
+    inline-size: 100%;
+    padding-inline-end: calc(var(--rp-space-1) + var(--rp-scrollbar-gutter, 0px));
+  }
+  .rp-widget-inspector {
+    position: static;
+    order: 2;
+  }
+  .rp-widget-canvas > :not(h3) {
+    inline-size: 100%;
+    align-self: center;
+  }
+  .rp-widget-canvas {
+    inline-size: 100%;
+    order: 1;
+  }
+}
+
+.rp-widget-panel[data-more] > .rp-widget-body {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--rp-space-4)), transparent);
+}
+
+.rp-widget-panel[data-kind='gallery'],
+.rp-widget-panel[data-kind='canvas'] {
+  --rp-widget-body-limit: calc(88dvh - 15 * var(--rp-space-4));
+}
+.rp-widget-panel[data-kind='gallery'] > .rp-widget-body,
+.rp-widget-panel[data-kind='canvas'] > .rp-widget-body {
+  max-block-size: var(--rp-widget-body-limit);
+  padding: 0;
+}
+@media (max-width: 1023.98px) {
+  .rp-widget-panel[data-kind='canvas'] {
+    --rp-widget-body-limit: min(60dvh, 30 * var(--rp-space-4));
+  }
+  .rp-widget-panel[data-kind='gallery'] > .rp-widget-body {
+    max-block-size: 28dvh;
+    padding-block-end: var(--rp-space-4);
+  }
+}
+
+.rp-widget-canvas > .rp-widget-panel {
+  background: var(--rp-fill);
+  border: 1px solid var(--rp-line);
+  border-radius: var(--rp-r-lg);
+  padding: 0;
+}
+.rp-widget-canvas .rp-widget-body {
+  scrollbar-gutter: auto;
+}
+.rp-widget-canvas .rp-widget-body-content {
+  padding-block: var(--rp-space-4);
+}
+.rp-widget-inspector {
+  border-inline-start: 1px solid var(--rp-line);
+  padding-inline-start: var(--rp-space-4);
+}
+@media (max-width: 1023.98px) {
+  .rp-widget-inspector {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--rp-line);
+    padding-inline-start: 0;
+    padding-block-start: var(--rp-space-4);
+  }
+}
+.rp-widget-body-content .rp-kv .k,
+.rp-widget-body-content .rp-kv .v {
+  overflow-wrap: normal;
+  white-space: normal;
+}
+/* Docked: the sidebar's last section, under a divider at its foot, as the backend indicator sits on main. It keeps
+   its height while the links scroll above it, and its list scrolls within, up to 45% of the sidebar. */
+.rp-side-dock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+  min-block-size: 0;
+  max-block-size: 45%;
+  margin-block-start: var(--rp-space-2);
+}
+/* The panel's list scrolls into the inset of its panel, sheet or sidebar, as the sidebar's links do, so its
+   scrollbar sits there and the content keeps the header's inset. */
+:is(.rp-floating-panel, .rp-side-dock, .rp-drawer) .rp-widget-body {
+  margin-inline: calc(0px - var(--rp-sidebar-padding));
+}
+/* The divider is the section's height handle; a set height still leaves the links a fifth of the sidebar. */
+.rp-side-dock[data-sized] {
+  block-size: var(--rp-dock-height);
+  max-block-size: 80%;
+}
+.rp-dock-edge {
+  position: relative;
+  flex: none;
+}
+.rp-dock-edge > .rp-panel-resize {
+  inset-block-start: calc(0px - var(--rp-space-1));
+}
+.rp-side-dock > .rp-widget-panel {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+.rp-side-dock .rp-version {
+  flex: none;
+  height: auto;
+  min-height: var(--rp-control);
+  padding-block: var(--rp-space-1);
+  white-space: normal;
+  text-align: start;
+}
+.rp-side-dock .rp-version-text {
+  overflow: visible;
+  text-overflow: clip;
+}
+/* The panel's new element arrives from where the old one was, fading in as a popover does. The sidebar clips it
+   meanwhile, so the flight adds no scrollbar. */
+@keyframes rp-dock-in {
+  from {
+    opacity: 0;
+    translate: var(--rp-dock-from);
+  }
+}
+:is(.rp-side-dock, .rp-floating-panel)[data-arriving] {
+  animation: rp-dock-in var(--rp-duration-panel) var(--rp-ease-out);
+}
+.rp-side:has([data-arriving]) {
+  overflow: hidden;
+}

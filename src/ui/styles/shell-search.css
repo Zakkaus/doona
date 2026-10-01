@@ -264,12 +264,19 @@
     display: none;
   }
 }
-.rp-vrule {
+.rp-vrule,
+.rp-hrule {
   width: 2px;
   height: 32px;
   margin: 0 var(--rp-space-1);
   background: var(--rp-hl-med);
+  border: 0;
   border-radius: 1px;
+}
+.rp-hrule {
+  width: auto;
+  height: 2px;
+  margin: 0;
 }
 /* Below 400px the brand, the compact search and the five actions no longer fit with the wide gutter: the bar
    would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the top bar's brand. */
@@ -289,9 +296,8 @@
   }
 }
 /* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. With it,
-   the bar needs 333px: the 24px gutter, two 8px gaps, the 137px brand with the long name a honk leaves, and the 156px
-   of search, refresh, apply and the overflow menu; below 1024px reload is in the overflow menu. */
-@media (max-width: 332px) {
+   the widget toggle adds one control and gap to the bar's minimum width; below 1024px reload is in the overflow menu. */
+@media (max-width: 420px) {
   .rp-brand-text {
     position: absolute;
     width: 1px;
@@ -305,7 +311,7 @@
   display: none;
   flex-direction: column;
   padding-block: var(--rp-space-4);
-  padding-inline: var(--rp-space-6) var(--rp-space-3);
+  padding-inline: var(--rp-sidebar-padding);
   position: sticky;
   top: 64px;
   height: calc(100vh - 64px);
@@ -316,9 +322,6 @@
     display: flex;
   }
 }
-.rp-side-grow {
-  flex: 1;
-}
 .rp-group {
   font-size: var(--rp-text-xs);
   line-height: 16px;
@@ -327,6 +330,9 @@
 }
 .rp-side > div + div {
   margin-top: var(--rp-space-4);
+}
+.rp-side-links .rp-nav-slider {
+  inset-inline-start: var(--rp-sidebar-padding);
 }
 .rp-nav {
   display: flex;
@@ -353,7 +359,7 @@
 
 .rp-nav-slider {
   position: absolute;
-  inset-inline-start: 12px;
+  inset-inline-start: 0;
   top: 0;
   width: 2px;
   border-radius: 1px;
@@ -544,4 +550,58 @@
   font-size: var(--rp-text-2xs);
   line-height: 16px;
   font-weight: 600;
+}
+
+/* The links scroll up to the sidebar's edge, so the overlay scrollbar sits at the divider. */
+.rp-side-links {
+  position: relative;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  max-block-size: 100%;
+  overflow: auto;
+  transition: max-block-size var(--rp-duration-panel) var(--rp-ease-out);
+  margin-inline: calc(0px - var(--rp-sidebar-padding));
+  padding-inline: var(--rp-sidebar-padding);
+}
+/* While a pointer drags the floating panel's header, the links (still scrolling) give the lower half of the sidebar
+   to the dock slot, drawn as the editor's drop targets are: dashed while open, solid under the pointer. */
+/* Links cut by the docked widgets fade at that edge, as the widget panel's list does. */
+.rp-side-links[data-more] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--rp-space-4)), transparent);
+}
+.rp-side:has(.rp-dock-slot[data-dock-armed]) > .rp-side-links {
+  max-block-size: 50%;
+}
+.rp-dock-slot {
+  flex: 0 0 0;
+  display: grid;
+  place-items: center;
+  min-block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  border-radius: var(--rp-r-lg);
+  outline: 2px dashed var(--rp-accent);
+  outline-offset: -2px;
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-xs);
+  transition:
+    flex-grow var(--rp-duration-panel) var(--rp-ease-out),
+    opacity var(--rp-duration-panel) var(--rp-ease-out),
+    visibility var(--rp-duration-panel),
+    background-color var(--rp-duration) var(--rp-ease);
+}
+.rp-dock-slot[data-dock-armed] {
+  flex-grow: 1;
+  margin-block: var(--rp-space-2);
+  visibility: visible;
+  opacity: 1;
+}
+.rp-dock-slot[data-dock-target] {
+  outline-style: solid;
+  background: var(--rp-selected);
+  color: var(--rp-text);
+}
+.rp-side-links > div + div {
+  margin-top: 16px;
 }

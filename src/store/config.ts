@@ -143,7 +143,7 @@ export function useConfigCreate(refetch: () => void) {
   };
 }
 
-export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
+export function useConfigEditor(refetch: () => void, {rethrow = false, shared}: {rethrow?: boolean; shared?: string} = {}) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const validation = capabilities?.resources.config_validate;
@@ -158,7 +158,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false} = {}) {
       ),
     [api, validateMax, body]
   );
-  const {busy, error, run, cancel} = useAction<'validate' | 'save'>({rethrow});
+  const {busy, error, run, cancel} = useAction<'validate' | 'save'>({rethrow, shared});
   const [sourceId, setSourceId] = useState<string | null>(null);
   const lastRefused = useRef<string | null>(null);
   return {

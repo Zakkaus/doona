@@ -2,6 +2,9 @@
 // changes: a renamed key would lose what readers saved. The mock backend's development switches are its own.
 export const storageKeys = {
   lang: 'doona-lang',
+  widgets: 'doona-widgets',
+  dashboard: 'doona-dashboard',
+  navGroups: 'doona-nav-groups',
   scheme: 'doona-scheme',
   palette: 'doona-palette',
   wordmark: 'doona-wordmark',

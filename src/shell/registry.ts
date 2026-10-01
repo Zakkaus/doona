@@ -13,7 +13,6 @@ import TextAlignLeft from '../ui/icons/TextAlignLeft';
 import FileText from '../ui/icons/FileText';
 import GlobeGrid from '../ui/icons/GlobeGrid';
 import History from '../ui/icons/History';
-import {Activity} from '../features/activity/Activity';
 import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 import Shuffle from '../ui/icons/Shuffle';
@@ -23,6 +22,11 @@ function lazyPage(load: () => Promise<{default: ComponentType<PageProps>}>) {
   const page = preloadable<PageProps>(load);
   return {Page: page.Component, preload: page.preload};
 }
+
+// The default page is its own chunk, requested as soon as the shell runs: it loads beside the capabilities read the
+// page waits for anyway, so first paint gains no round trip while the startup shell stays within its budget.
+const activity = lazyPage(() => import('./widgets/Dashboard').then(m => ({default: m.Activity})));
+void activity.preload().catch(() => undefined);
 
 type Feature = {
   id: string;
@@ -42,8 +46,7 @@ type Feature = {
 
 // Keyed by path in navigation order, so a new route without a page fails to compile.
 const definitions = {
-  // The default page stays eager so first paint has no second round trip.
-  activity: {shortcut: 'a', nav: {titleKey: 'nav.activity', Icon: SpeedFast}, Page: Activity, requires: {}},
+  activity: {shortcut: 'a', nav: {titleKey: 'nav.activity', Icon: SpeedFast}, ...activity, requires: {}},
   overview: {
     shortcut: 'o',
     nav: {titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},

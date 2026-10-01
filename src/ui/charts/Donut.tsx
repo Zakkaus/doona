@@ -19,7 +19,11 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
   const sectors = pie<(typeof data)[number]>()
     .sort(null)
     .value((_, index) => angles[index])(data);
-  const ring = arc<(typeof sectors)[number]>().innerRadius(44).outerRadius(56).digits(3);
+  const radius = Math.min(56, width / 2, height / 2);
+  const ring = arc<(typeof sectors)[number]>()
+    .innerRadius(radius * (44 / 56))
+    .outerRadius(radius)
+    .digits(3);
   const select = (index: number) => setSelected(index);
   const clear = () => {
     setSelected(null);

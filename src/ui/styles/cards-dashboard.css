@@ -37,10 +37,6 @@
   justify-content: center;
   padding: 0;
 }
-/* An error from the mode card spans the row rather than taking one of its three slots. */
-.rp-quick > .rp-alert {
-  grid-column: 1 / -1;
-}
 .rp-card-link {
   color: inherit;
   text-decoration: none;
@@ -333,28 +329,6 @@
   min-height: 182px;
   contain: size;
   overflow-y: auto;
-}
-.rp-quick {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--rp-space-3);
-}
-/* The mode card needs a full row for its label, switch, and apply button. */
-@media (min-width: 640px) {
-  .rp-quick {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .rp-quick > :first-child:nth-last-child(3) {
-    grid-column: 1 / -1;
-  }
-}
-@media (min-width: 1100px) {
-  .rp-quick {
-    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
-  }
-  .rp-quick > :first-child:nth-last-child(3) {
-    grid-column: auto;
-  }
 }
 .rp-qlabel {
   display: flex;

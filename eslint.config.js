@@ -106,8 +106,8 @@ export default [
             {
               target: './src/shell',
               from: './src/features',
-              except: ['./shared', ...features.map(f => `./${f}/nav.ts`)],
-              message: 'The shell reaches pages through registry.ts and navigation through features/*/nav.ts.'
+              except: ['./shared', ...features.flatMap(f => [`./${f}/nav.ts`, `./${f}/widgets.ts`])],
+              message: 'The shell reaches pages through registry.ts, navigation through nav.ts and dashboard modules through widgets.ts.'
             }
           ]
         }
