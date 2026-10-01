@@ -356,7 +356,7 @@ export function connectionDetail(
         tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
         status: t('ui.aside', {text: enumLabel(connectionStates, current.state, t), note: current.network.toUpperCase()}),
         chain: chainLabel(current, t, names),
-        outbound: outboundLabel(current.outbound, t),
+        outbound: current.outbound,
         rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
         fields: connectionDetails(current, locale).map(
           ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]

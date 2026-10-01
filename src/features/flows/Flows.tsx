@@ -1,3 +1,4 @@
+import {OutboundTag} from '../shared/OutboundTag';
 import '../../ui/styles/routing.css';
 import {useMemo} from 'react';
 import Tree from './Tree';
@@ -191,7 +192,7 @@ function FlowRecords(props: PageProps) {
                 <Badge tone={detail.tone}>{detail.status}</Badge>
                 <span className="rp-label">{detail.revision}</span>
               </div>
-              <Kv inline items={detail.fields} />
+              <Kv inline items={[[t('ui.outbound'), <OutboundTag name={detail.seed.outbound} />], ...detail.fields]} />
               <div className="rp-cluster">
                 {detail.connectionHref && (
                   <Link appearance="button" small href={detail.connectionHref}>

@@ -1,6 +1,7 @@
 import {describeFilters} from '../../dae/groups';
 import {useT} from '../../i18n';
-import {Tag, Tags} from '../../ui/ui';
+import {Tag, Tags, LinkTag} from '../../ui/ui';
+import {href} from '../../shell/route';
 import {DaeCode} from '../../ui/DaeCode';
 
 export function FilterSummary({filters, showRules = true}: {filters: string[]; showRules?: boolean}) {
@@ -8,19 +9,25 @@ export function FilterSummary({filters, showRules = true}: {filters: string[]; s
   const description = describeFilters(filters);
   return (
     <>
-      {!filters.length && <p className="rp-note">{t('arrange.holdsAll')}</p>}
+      {!filters.length && (
+        <Tags label={t('policy.includes')}>
+          <Tag>{t('group.allNodes')}</Tag>
+        </Tags>
+      )}
       {description.groups.length > 0 && (
-        <Tags label={t('arrange.nestedGroups')}>
-          <span className="rp-label rp-tags-title">{t('arrange.nestedGroups')}</span>
+        <Tags label={t('group.nestedGroups')}>
+          <span className="rp-label rp-tags-title">{t('group.nestedGroups')}</span>
           {description.groups.map(name => (
-            <Tag key={name}>{name}</Tag>
+            <LinkTag key={name} href={href('policies', {group: name})}>
+              {name}
+            </LinkTag>
           ))}
         </Tags>
       )}
-      {description.everyNode && <p className="rp-note">{t('arrange.everyNode')}</p>}
+      {description.everyNode && <p className="rp-note">{t('group.everyNode')}</p>}
       {showRules && description.rules.length > 0 && (
         <div className="rp-list">
-          <span className="rp-label">{t('arrange.byRule')}</span>
+          <span className="rp-label">{t('group.byRule')}</span>
           {description.rules.map(rule => (
             <DaeCode key={rule} as="code" text={rule} />
           ))}

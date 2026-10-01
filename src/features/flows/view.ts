@@ -256,7 +256,6 @@ export function flowDetailView(
     revision: t('flow.revision', {n: detail.revision}),
     fields: [
       [t('ui.state'), enumLabel(connectionStates, detail.state, t)],
-      [t('ui.outbound'), outboundLabel(detail.outbound, t)],
       ...(row ? [[t('conn.node'), row.path ?? row.node] as [string, string]] : []),
       ...(row?.expression ? [[t('conn.rule'), row.expression] as [string, string]] : []),
       ...(detail.trace.missing.length

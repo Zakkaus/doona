@@ -1,7 +1,7 @@
 import {useId} from 'react';
 import {Checkbox} from './Checkbox';
 
-export type CheckboxChoice = {id: string; label: string; isDisabled?: boolean};
+export type CheckboxChoice = {id: string; label: string; isDisabled?: boolean; nodeName?: boolean};
 export function CheckboxSet({
   label,
   items,

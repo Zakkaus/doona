@@ -1,9 +1,33 @@
 import {useMemo, useRef, useState} from 'react';
-import {formatList, useLang, useT} from '../../i18n';
+import {useLang, useT} from '../../i18n';
 import {offered} from '../../api/capabilities';
 import {useCapabilities, useNodes, useProviders} from '../../store';
-import {includeChoices, recogniseInclude, selectedIncludes, setIncludes, type IncludeKind} from './groupIncludes';
+import {useConfig} from '../../store/config';
+import {readSubscriptionEntries} from '../../dae/subscriptions';
+import {
+  groupFilterDraft,
+  groupFilterText,
+  groupFilterTexts,
+  newGroupCondition,
+  newGroupFilter,
+  reconcileGroupFilters,
+  type GroupFilterDraft,
+  type GroupConditionRow
+} from '../../dae/groupConditions';
+import {describeFilters, isWritableName} from '../../dae/groups';
+import {
+  includeChoices,
+  includesEveryNode,
+  noNodes as noNodeFilter,
+  setEveryNode,
+  retainedIncludes,
+  recogniseInclude,
+  selectedIncludes,
+  setIncludes,
+  type IncludeKind
+} from './groupIncludes';
 import {nameText, readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../../dae/groups';
+import {href} from '../../shell/route';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource, Group, Node} from '../../api/model';
@@ -33,7 +57,6 @@ import {
 export type GroupDialogView = {
   title: string;
   name: {value: string; error: string | null; change: (value: string) => void} | null;
-  help: string;
   submitLabel: string;
   open: boolean;
   // Open on the file's declaration; false while the dialog only shows the group's configuration.
@@ -48,18 +71,38 @@ export type GroupDialogView = {
   problem: {id: number; text: string} | null;
   policy: string | null;
   membershipFilters: string[] | null;
-  filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
+  invalid: boolean;
+  filters: Array<{
+    id: number;
+    value: string;
+    rows: GroupConditionRow[] | null;
+    error: boolean;
+    label: string;
+    removeLabel: string;
+    change: (value: string) => void;
+    remove: () => void;
+    changeRow: (row: GroupConditionRow) => void;
+    addRow: () => void;
+    removeRow: (id: number) => void;
+  }>;
   includes: {
     choices: Record<IncludeKind, CheckboxChoice[]>;
     nodeSummary: string;
+    groupSummary: string;
     selected: Record<IncludeKind, string[]>;
     change: (kind: IncludeKind, value: string[]) => void;
     count: string;
-    names: string;
-    all: boolean;
+    names: string[];
+    everyNode: boolean;
+    changeEveryNode: (value: boolean) => void;
     advanced: boolean;
+    tags: Array<{id: string; label: string; nodeName: boolean; removeLabel: string; remove: () => void}>;
+    stillIn: string;
   };
   // The default member and final outbound pickers under the filters, each only when the group offers it.
+  nodesHref?: string;
+  undo: () => void;
+  canUndo: boolean;
   routes: Array<{
     id: RouteField;
     label: string;
@@ -69,7 +112,7 @@ export type GroupDialogView = {
     sections: SearchSection[];
     change: (id: string) => void;
   }>;
-  show: (filters?: string[], help?: string) => void;
+  show: (filters?: string[]) => void;
   // Opens the dialog read-only, on the group's configuration alone.
   view: () => void;
   close: () => void;
@@ -93,15 +136,25 @@ const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as con
 // declared then, since the sources are read again after a refusal.
 type Draft = {
   name: string;
-  help?: string;
   origin: ConfigSource | null;
   refused: boolean;
   policy: string | null;
-  filters: string[];
+  filters: GroupFilterDraft[];
   default: string | null;
   final: string | null;
   interrupt: string | null;
 };
+const advancedFilter = (filter: GroupFilterDraft) =>
+  recogniseInclude(groupFilterText(filter) ?? filter.source)?.kind !== 'group' &&
+  (filter.advanced || (filter.source !== noNodeFilter && !recogniseInclude(filter.source) && !describeFilters([filter.source]).everyNode));
+function editMembership(filters: GroupFilterDraft[], change: (values: string[]) => string[]): GroupFilterDraft[] {
+  const quick = filters.filter(filter => !advancedFilter(filter));
+  const hasAdvanced = filters.some(filter => advancedFilter(filter) && groupFilterText(filter)?.trim());
+  const next = reconcileGroupFilters(quick, change(groupFilterTexts(quick))).filter(
+    filter => filter.source !== noNodeFilter || !hasAdvanced || filters.some(previous => previous.id === filter.id)
+  );
+  return [...filters.flatMap(filter => (advancedFilter(filter) ? [filter] : next.length ? [next.shift()!] : [])), ...next];
+}
 type Input =
   | {mode: 'edit'; name: string; source: MainSourceEdit; declaration: PolicyDeclaration; context: RouteContext}
   | {
@@ -110,7 +163,6 @@ type Input =
       taken: ReadonlySet<string>;
       outbounds: OutboundCatalogue;
       nodes: Node[];
-      stage?: (name: string, entry: GroupEntryUpdate) => void;
       onCreated?: (name: string) => void;
     };
 export function useGroupDialog(input: Input): GroupDialogView {
@@ -126,26 +178,37 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const entry = declared?.entry;
   const blocked = declaration ? editBlocked(owner, declaration, t) : null;
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [history, setHistory] = useState<Draft[]>([]);
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
   const resources = useCapabilities().data?.resources;
   const allNodes = useNodes(!!draft && offered(resources, 'nodes', {whileLoading: false}));
   const providers = useProviders(!!draft && offered(resources, 'providers', {whileLoading: false}));
+  const config = useConfig(!!draft && offered(resources, 'config', {whileLoading: false}));
+  const declaredTags = useMemo(
+    () => (config.data?.sources ?? []).flatMap(source => readSubscriptionEntries(source.content).map(entry => entry.tag)),
+    [config.data]
+  );
   const nodes = draft ? (allNodes.data ?? (creating ? input.nodes : noNodes)) : noNodes;
-  const filters = draft?.filters ?? noFilters;
+  const filters = useMemo(() => (draft ? groupFilterTexts(draft.filters) : noFilters), [draft]);
+  const invalid = !!draft?.filters.some(filter => groupFilterText(filter) === null);
+  const quickFilters = draft ? groupFilterTexts(draft.filters.filter(filter => !advancedFilter(filter))) : noFilters;
   const selected = {
-    region: selectedIncludes(filters, 'region'),
-    subscription: selectedIncludes(filters, 'subscription'),
-    node: selectedIncludes(filters, 'node')
+    region: selectedIncludes(quickFilters, 'region'),
+    subscription: selectedIncludes(quickFilters, 'subscription'),
+    node: selectedIncludes(quickFilters, 'node'),
+    group: selectedIncludes(quickFilters, 'group')
   };
-  const choices = useMemo(() => includeChoices(filters, nodes, providers.data?.providers ?? [], lang), [filters, nodes, providers.data, lang]);
-  const selectedNodes = choices.matchedNodes.map(node => node.name);
+  const choices = useMemo(
+    () => includeChoices(filters, nodes, providers.data?.providers ?? [], lang, declaredTags),
+    [filters, nodes, providers.data, lang, declaredTags]
+  );
   const routes: RouteField[] = creating
     ? manualPolicy(draft?.policy ?? null)
       ? ['default_member_id', 'final_outbound']
       : ['final_outbound']
     : routeFields(context.g, draft?.policy ?? null);
-  const members = creating ? (draft && manualPolicy(draft.policy) ? draftMembers(draft.filters, input.nodes, t) : []) : context.members;
+  const members = draft && manualPolicy(draft.policy) ? draftMembers(filters, nodes, t) : creating ? [] : context.members;
   const groupName = creating ? (draft?.name.trim() ?? '') : (draft?.name ?? '');
   const excluded = finalExcluded(groupName, context.outbounds.links);
   const [tried, setTried] = useState(false);
@@ -159,7 +222,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
       ((creating && !!draft.name) ||
         (!creating && draft.interrupt !== entry?.interrupt) ||
         draft.policy !== (creating ? newGroupPolicies[0].id : entry?.policy) ||
-        JSON.stringify(draft.filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
+        invalid ||
+        JSON.stringify(filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
         routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null))),
     () => {
       session.next();
@@ -170,8 +234,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const save = (close: () => void) => {
     if (!draft || source.busy || saving.current) return;
     setTried(true);
-    if (nameProblem) return;
-    const filters = draft.filters.map(f => f.trim()).filter(Boolean);
+    if (nameProblem || invalid) return;
+    const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
     const written = {default: entry?.default ?? null, final: entry?.final ?? null};
     if (
       !groupEditSafe(filters, draft.policy, entry) ||
@@ -184,18 +248,12 @@ export function useGroupDialog(input: Input): GroupDialogView {
     const group = creating ? draft.name.trim() : draft.name;
     const update: GroupEntryUpdate = {filters, policy: draft.policy, ...(!creating ? {interrupt: draft.interrupt} : {})};
     for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
-    if (creating && input.stage) {
-      input.stage(group, update);
-      guard.clear();
-      close();
-      return;
-    }
     saving.current = true;
     const current = session.start();
     const origin = draft.refused ? (creating ? source.main : declared?.origin) : draft.origin;
     void source
       .apply(text => {
-        if (creating && readGroupEntries(text).some(entry => entry.name === group)) throw new LocalError('arrange.takenName');
+        if (creating && readGroupEntries(text).some(entry => entry.name === group)) throw new LocalError('group.takenName');
         return writeGroupEntry(text, group, update);
       }, origin ?? undefined)
       .then(result => {
@@ -206,7 +264,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
             close();
           }
           if (creating && input.onCreated) input.onCreated(group);
-          else toast('positive', t('policy.updated', {name: group}));
+          toast('positive', t('policy.updated', {name: group}));
         }
         const problem = editProblem(result, t);
         // A refusal after the dialog closed has nowhere inline to go.
@@ -223,55 +281,110 @@ export function useGroupDialog(input: Input): GroupDialogView {
   };
   // Edits wait while a save is in flight; what was submitted is what the outcome describes.
   const edit = (update: (prev: NonNullable<typeof draft>) => NonNullable<typeof draft>) => {
-    if (!source.busy && !saving.current) setDraft(prev => (prev ? update(prev) : prev));
+    if (!source.busy && !saving.current && draft) {
+      const next = update(draft);
+      if (JSON.stringify(next) === JSON.stringify(draft)) return;
+      setHistory(previous => [...previous, draft]);
+      setDraft(next);
+    }
   };
   return {
-    title: creating ? t('arrange.newGroup') : t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
+    title: creating ? t('group.newGroup') : t(draft ? 'policy.editTitle' : 'policy.viewTitle', {name}),
     name:
       creating && draft
         ? {value: draft.name, error: tried || draft.name.trim() ? nameProblem : null, change: value => edit(prev => ({...prev, name: value}))}
         : null,
-    help: creating ? (draft?.help ?? t('arrange.newGroupNote')) : t('policy.editHelp'),
-    submitLabel: t(creating ? 'arrange.create' : 'policy.save'),
+    submitLabel: t(creating ? 'group.create' : 'policy.save'),
     open: !!draft || viewing,
     editing: !!draft,
     editable: !!draft || (source.writable && blocked === null),
     disabled: busy,
-    tip: blocked ?? (source.writable ? undefined : t('arrange.readOnly')),
+    tip: blocked ?? (source.writable ? undefined : t('group.readOnly')),
     busy,
     problem,
     policy: draft?.policy ?? null,
-    membershipFilters: draft?.filters ?? entry?.filters ?? null,
-    filters: (draft?.filters ?? []).map((value, id) => ({
-      id,
-      value,
-      label: draft?.filters.length === 1 ? t('ui.filter') : t('policy.filterN', {n: id + 1}),
-      removeLabel: t('policy.removeFilter', {n: id + 1}),
-      change: (value: string) => edit(prev => ({...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))})),
-      remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
-    })),
+    membershipFilters: draft ? filters : (entry?.filters ?? null),
+    invalid,
+    filters: (draft?.filters ?? []).filter(advancedFilter).map((filter, index, fields) => {
+      const update = (change: (filter: GroupFilterDraft) => GroupFilterDraft) =>
+        edit(prev => ({...prev, filters: prev.filters.map(item => (item.id === filter.id ? change(item) : item))}));
+      return {
+        id: filter.id,
+        value: filter.source,
+        rows: filter.rows,
+        error: groupFilterText(filter) === null,
+        label: fields.length === 1 ? t('ui.filter') : t('policy.filterN', {n: index + 1}),
+        removeLabel: t('policy.removeFilter', {n: index + 1}),
+        change: (value: string) => update(item => ({...groupFilterDraft(value, true), id: item.id})),
+        remove: () => edit(prev => ({...prev, filters: prev.filters.filter(item => item.id !== filter.id)})),
+        changeRow: (row: GroupConditionRow) => update(item => ({...item, rows: item.rows!.map(value => (value.id === row.id ? row : value))})),
+        addRow: () => update(item => ({...item, rows: [...item.rows!, newGroupCondition()]})),
+        removeRow: (id: number) => update(item => ({...item, rows: item.rows!.filter(row => row.id !== id)}))
+      };
+    }),
     includes: {
       choices: {
-        region: choices.region.map(item => ({id: item.id, label: t('arrange.subscriptionCount', {name: item.label, n: item.count})})),
+        region: choices.region.map(item => ({id: item.id, label: t('group.subscriptionCount', {name: item.label, n: item.count})})),
         subscription: choices.subscription.map(item => ({
           id: item.id,
-          label: t('arrange.subscriptionCount', {name: item.label, n: item.count}),
+          label: t('group.subscriptionCount', {name: item.label, n: item.count}),
           isDisabled: item.disabled
         })),
-        node: choices.node.map(item => ({id: item.id, label: item.label, isDisabled: item.disabled}))
+        node: choices.node.map(item => ({id: item.id, label: item.label, nodeName: true, isDisabled: item.disabled})),
+        group: [...new Set([...context.outbounds.groups, ...selected.group])].map(name => ({
+          id: name,
+          label: name,
+          isDisabled: excluded.has(name) || !isWritableName(name) || /[|,]/.test(name)
+        }))
       },
-      nodeSummary: selected.node.length ? t('arrange.selected', {n: selected.node.length}) : t('ui.none'),
+      groupSummary: selected.group.length ? t('group.selected', {n: selected.group.length}) : t('ui.none'),
+      nodeSummary: selected.node.length ? t('group.selected', {n: selected.node.length}) : t('ui.none'),
       selected,
-      change: (kind, value) => edit(prev => ({...prev, filters: setIncludes(prev.filters, kind, value)})),
-      count: t('policy.includesCount', {n: selectedNodes.length}),
-      names:
-        selectedNodes.length > 6
-          ? t('arrange.ruleSelectsMore', {names: formatList(lang, selectedNodes.slice(0, 6)), n: selectedNodes.length - 6})
-          : selectedNodes.length
-            ? t('arrange.ruleSelects', {names: formatList(lang, selectedNodes)})
-            : '',
-      all: filters.every(filter => !filter.trim()),
-      advanced: filters.some(filter => !recogniseInclude(filter))
+      change: (kind, value) => edit(prev => ({...prev, filters: editMembership(prev.filters, filters => setIncludes(filters, kind, value))})),
+      count: t('group.memberCount', {n: choices.matchedNodes.length}),
+      names: [...new Set(choices.matchedNodes.map(node => node.name))],
+      everyNode:
+        includesEveryNode(filters) &&
+        !draft?.filters.some(filter => advancedFilter(filter) && describeFilters([groupFilterText(filter) ?? filter.source]).everyNode),
+      changeEveryNode: value => edit(prev => ({...prev, filters: editMembership(prev.filters, filters => setEveryNode(filters, value))})),
+      advanced: !!draft?.filters.some(advancedFilter),
+      tags: (['region', 'subscription', 'node', 'group'] as const).flatMap(kind =>
+        selected[kind].map(value => {
+          const item = kind === 'group' ? undefined : choices[kind].find(item => item.id === value);
+          const label = kind === 'region' && item ? t('group.subscriptionCount', {name: item.label, n: item.count}) : (item?.label ?? value);
+          return {
+            id: `${kind}:${value}`,
+            label,
+            nodeName: kind === 'node',
+            removeLabel: t('group.removeMember', {name: item?.label ?? value}),
+            remove: () =>
+              edit(prev => ({
+                ...prev,
+                filters: editMembership(prev.filters, filters =>
+                  setIncludes(
+                    filters,
+                    kind,
+                    selected[kind].filter(id => id !== value)
+                  )
+                )
+              }))
+          };
+        })
+      ),
+      stillIn: (() => {
+        const prior = history.at(-1)?.filters;
+        if (!prior) return '';
+        const retained = retainedIncludes(groupFilterTexts(prior), filters, nodes);
+        return retained.length ? t('group.stillIn', {n: retained.length}) : '';
+      })()
+    },
+    nodesHref: !creating && context.g ? href('nodes', {group: context.g.id}) : undefined,
+    canUndo: history.length > 0,
+    undo: () => {
+      if (!busy && !saving.current && history.length) {
+        setDraft(history.at(-1)!);
+        setHistory(history.slice(0, -1));
+      }
     },
     routes: draft
       ? routes.map(id => {
@@ -288,19 +401,32 @@ export function useGroupDialog(input: Input): GroupDialogView {
           };
         })
       : [],
-    show: (filters = [], help) => {
+    show: (filters = []) => {
       session.next();
+      setHistory([]);
       setProblem(null);
       setTried(false);
       if (creating)
-        setDraft({name: '', help, origin: source.main, refused: false, policy: newGroupPolicies[0].id, filters, default: null, final: null, interrupt: null});
+        setDraft({
+          name: '',
+          origin: source.main,
+          refused: false,
+          policy: newGroupPolicies[0].id,
+          filters: filters.map(filter => groupFilterDraft(filter)),
+          default: null,
+          final: null,
+          interrupt: null
+        });
       else if (declared && !blocked)
         setDraft({
           name: declared.entry.name,
           origin: declared.origin,
           refused: false,
           policy: declared.entry.policy,
-          filters: declared.entry.filters,
+          filters: (filters.length
+            ? [...declared.entry.filters, ...filters.filter(filter => !declared.entry.filters.includes(filter))]
+            : declared.entry.filters
+          ).map(filter => groupFilterDraft(filter)),
           default: routeValue(declared.entry.default),
           final: routeValue(declared.entry.final),
           interrupt: declared.entry.interrupt
@@ -319,7 +445,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
       setViewing(false);
     },
     setPolicy: policy => edit(prev => ({...prev, policy})),
-    add: () => edit(prev => ({...prev, filters: [...prev.filters, '']})),
+    add: () => edit(prev => ({...prev, filters: [...prev.filters, newGroupFilter()]})),
     save,
     interrupt: draft ? (draft.interrupt === null ? null : unquote(draft.interrupt) === 'true') : undefined,
     setInterrupt: value => edit(prev => ({...prev, interrupt: value ? 'true' : prev.interrupt === null ? null : 'false'}))

@@ -76,23 +76,28 @@ test('a group declared in an include is edited there while the main source is re
   };
   await page.goto('/#/policies');
   // A group the read-only main source declares says why it cannot be edited.
-  const proxy = page.getByRole('region', {name: 'proxy', exact: true});
+  const office = page.getByRole('region', {name: 'office', exact: true});
+  await office.scrollIntoViewIfNeeded();
   const reason = 'This group is defined in /etc/honk/config.dae, which is read-only';
-  await expect(proxy.getByRole('button', {name: 'Why proxy is locked'})).toBeVisible();
+  await expect(office.getByRole('button', {name: 'Why office is locked'})).toBeVisible();
   // Its configuration still opens, read-only, with the reason it cannot be edited.
-  await expect(await moreItem(proxy, 'Edit group')).toHaveCount(0);
+  await expect(await moreItem(office, 'Edit group')).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await moreAction(proxy, 'View configuration');
-  const view = page.getByRole('dialog', {name: 'proxy configuration'});
+  await moreAction(office, 'View configuration');
+  const view = page.getByRole('dialog', {name: 'office configuration'});
   await expect(view.getByText(reason, {exact: true})).toBeVisible();
   await expect(view.getByRole('textbox')).toHaveCount(0);
   await view.getByRole('button', {name: 'Close', exact: true}).click();
   const card = page.getByRole('region', {name: 'gaming', exact: true});
   await card.scrollIntoViewIfNeeded();
-  await moreAction(card, 'Edit group');
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter', exact: true}).fill('name(hk-01)');
+  await dialog.getByRole('button', {name: 'Remove jp-01', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Remove hk-02', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Nodes', exact: true}).click();
+  await page.getByRole('option', {name: 'hk-01', exact: true}).click();
+  await page.keyboard.press('Escape');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   const writes = requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname);
@@ -105,21 +110,22 @@ test('a group declared in an include is edited there while the main source is re
 test('policy editing discards a cancelled draft and saves filters through the main source', async ({page}) => {
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'gaming', exact: true});
-  const edit = () => moreAction(card, 'Edit group');
+  const edit = async () => {
+    await card.scrollIntoViewIfNeeded();
+    await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  };
   await edit();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
-  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  const filter = dialog.getByRole('textbox', {name: 'Filter', exact: true});
-  const original = await filter.inputValue();
-  await filter.fill('name(hk-01)');
+  const tags = dialog.getByRole('group', {name: 'Includes', exact: true});
+  await expect(tags).toContainText('jp-01');
+  await dialog.getByRole('button', {name: 'Remove jp-01', exact: true}).click();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await edit();
-  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await expect(filter).toHaveValue(original);
-  await filter.fill('name(hk-01)');
+  await expect(tags).toContainText('jp-01');
+  await dialog.getByRole('button', {name: 'Remove jp-01', exact: true}).click();
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await edit();
-  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await expect(filter).toHaveValue('name(hk-01)');
+  await expect(tags).not.toContainText('jp-01');
+  await expect(tags).toContainText('hk-02');
 });

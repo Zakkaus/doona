@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {blockFields, scanConfig, uncomment, isFragment, quote, unquote} from './text';
-import {addNamesToGroup, namedIn, readGroupEntries} from './groups';
+import {writeGroupEntry, namedIn, readGroupEntries} from './groups';
 import {LocalError} from '../api/error';
 
 it('keeps source ranges through quoted braces, escaped quotes, comments and repeated inline sections', () => {
@@ -51,7 +51,7 @@ it('scans the routing arrow as its own token when written without spaces', () =>
 it('preserves representable names and URLs without decoding backslashes', () => {
   const name = 'edge "west" \\ path';
   expect(unquote(quote(name))).toBe(name);
-  const out = addNamesToGroup('group { proxy {} }', 'proxy', [name]);
+  const out = writeGroupEntry('group { proxy {} }', 'proxy', {filters: [`name(${quote(name)})`], policy: null});
   expect(namedIn(readGroupEntries(out)[0])).toEqual([name]);
   const url = 'https://example.org/{#}?token=a\\b';
   expect(unquote(quote(url))).toBe(url);
@@ -60,6 +60,5 @@ it('preserves representable names and URLs without decoding backslashes', () => 
 it('refuses apostrophes instead of silently changing group names or subscription URLs', () => {
   const url = "https://example.org/o'brien";
   expect(() => quote("o'brien")).toThrowError(new LocalError('config.unquotable'));
-  expect(() => addNamesToGroup('group { proxy {} }', 'proxy', ["o'brien"])).toThrowError(LocalError);
   expect(() => quote(url)).toThrowError(LocalError);
 });

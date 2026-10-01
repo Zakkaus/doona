@@ -1,5 +1,5 @@
 import {Button, Dialog, DialogTrigger, ListBox, ListBoxItem, Popover} from 'react-aria-components';
-import {useId} from 'react';
+import {useId, useState, type ReactNode} from 'react';
 import {SearchList} from './SearchList';
 import {Check} from './Check';
 import {ItemText} from './Select';
@@ -13,7 +13,9 @@ export function SearchMultiSelect({
   items,
   value,
   onChange,
-  isDisabled
+  isDisabled,
+  description,
+  action
 }: {
   label: string;
   searchLabel: string;
@@ -22,21 +24,44 @@ export function SearchMultiSelect({
   value: string[];
   onChange: (value: string[]) => void;
   isDisabled?: boolean;
+  description?: string;
+  action?: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   const heading = useId();
-  const description = useId();
+  const summaryId = useId();
+  const helpId = useId();
   return (
     <div className="rp-field">
       <span id={heading} className="lbl">
         {label}
       </span>
-      <DialogTrigger>
-        <Button className="rp-selectbtn" aria-labelledby={heading} aria-describedby={description} isDisabled={isDisabled}>
-          <span id={description}>{summary}</span>
+      <DialogTrigger isOpen={open} onOpenChange={setOpen}>
+        <Button
+          className="rp-selectbtn"
+          aria-labelledby={heading}
+          aria-describedby={[summaryId, description && helpId].filter(Boolean).join(' ')}
+          isDisabled={isDisabled}
+        >
+          <span id={summaryId}>{summary}</span>
           <ChevronDown />
         </Button>
         <Popover className="rp-popover rp-search-popover" placement="bottom start">
-          <Dialog aria-label={label}>
+          <Dialog
+            aria-label={label}
+            render={props => (
+              <section
+                {...props}
+                onKeyDownCapture={event => {
+                  // Autocomplete consumes Escape before the popover can dismiss.
+                  if (event.key !== 'Escape') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setOpen(false);
+                }}
+              />
+            )}
+          >
             <SearchList label={searchLabel}>
               <ListBox
                 className="rp-menu-scroll"
@@ -58,6 +83,16 @@ export function SearchMultiSelect({
           </Dialog>
         </Popover>
       </DialogTrigger>
+      {(description || action) && (
+        <div className="rp-field-help">
+          {description && (
+            <span id={helpId} className="rp-label" role="status">
+              {description}
+            </span>
+          )}
+          {action}
+        </div>
+      )}
     </div>
   );
 }

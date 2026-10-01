@@ -1,53 +1,60 @@
 import {expect, loadCatalogues, mockBackend, moreAction, test} from './fixtures';
 import {translate, type Lang, type Translator} from '../src/i18n';
-
-const labels = {
-  en: {everyNode: 'Includes every node', groups: 'Groups', count: '125 nodes, 7 groups'},
-  'zh-TW': {everyNode: '包含所有節點', groups: '子群組', count: '125 個節點，7 個群組'},
-  'zh-CN': {everyNode: '包含所有节点', groups: '子组', count: '125 个节点，7 个组'}
-};
+import {readGroupEntries} from '../src/dae/groups';
 
 test.beforeAll(loadCatalogues);
 
-for (const lang of Object.keys(labels) as Array<keyof typeof labels>) {
+for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
   test.describe(lang, () => {
     test.use({storage: {'doona-lang': lang}});
-    test('describes template membership on cards and in the editor while preserving filter syntax', async ({page}) => {
-      await mockBackend(page);
+    test('describes template membership and edits all nodes without rewriting untouched filters', async ({page}) => {
+      const {api} = await mockBackend(page);
       const t: Translator = (key, params) => translate(lang as Lang, key, params);
-      const words = labels[lang];
-      await page.goto('/#/policies?tab=arrange');
-      const card = (name: string) => page.locator('.rp-drop').filter({has: page.getByRole('heading', {name, exact: true})});
-      await expect(card('auto')).toContainText(words.everyNode);
-      await expect(card('auto').getByRole('button', {name: /^(Remove|移除)/})).toHaveCount(0);
-      await expect(card('proxy')).toContainText(words.count);
-      await expect(card('proxy').locator('.rp-tags-title')).toHaveText(words.groups);
-      await expect(card('proxy').locator('.rp-tag')).toHaveText(['auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr']);
-      await expect(card('proxy').locator('.rp-tags button')).toHaveCount(0);
+      await page.goto('/#/policies?group=proxy');
+      const card = (name: string) => page.getByRole('region', {name, exact: true});
       for (const name of ['proxy', 'auto']) {
-        await expect(card(name)).toContainText(words.everyNode);
+        await expect(card(name)).toContainText(t('group.everyNode'));
         await expect(card(name)).not.toContainText('!name(');
         await expect(card(name)).not.toContainText('group(');
-        await expect(card(name)).not.toContainText(t('arrange.ruleSelects', {names: 'hk-01'}));
-        await expect(card(name)).toContainText(t('arrange.filterNote'));
-        await expect(card(name).getByRole('link', {name: t('arrange.editSource')})).toHaveAttribute('href', '#/config?tab=source');
       }
+      const nested = card('proxy').getByRole('group', {name: t('policy.includes'), exact: true});
+      await expect(nested.locator('.rp-tag')).toHaveText(['auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr']);
+      await expect(nested.getByRole('button')).toHaveCount(0);
+      await card('gaming').getByRole('button', {name: 'gaming', exact: true}).click();
       await expect(card('gaming').locator('.rp-tag-label')).toHaveText(['jp-01', 'hk-02']);
-      await expect(card('hk')).toContainText('name(regex:');
       for (const name of ['auto', 'proxy']) {
-        await page.goto(`/#/policies?group=${name}`);
-        await moreAction(page.getByRole('region', {name, exact: true}), t('policy.edit'), t('ui.moreActions'));
+        const before = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+        await card(name)
+          .getByRole('button', {name: t('policy.edit'), exact: true})
+          .click();
         const dialog = page.getByRole('dialog', {name: t('policy.editTitle', {name})});
-        await expect(dialog).toContainText(words.everyNode);
-        const filter = dialog.getByRole('textbox', {name: name === 'proxy' ? t('policy.filterN', {n: 2}) : t('ui.filter')});
-        await expect(filter).toHaveValue("!name('direct', 'block')");
-        if (name === 'proxy') {
-          await expect(dialog.locator('.rp-tags-title')).toHaveText(words.groups);
-          await expect(dialog.locator('.rp-tag')).toHaveText(['auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr']);
-          await expect(dialog.getByRole('textbox', {name: t('policy.filterN', {n: 1})})).toHaveValue("group('auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')");
-        }
-        await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
+        await expect(dialog.getByRole('switch', {name: t('group.allNodes'), exact: true})).toBeChecked();
+        await expect(dialog).not.toContainText('!name(');
+        await dialog.getByRole('button', {name: t('policy.save'), exact: true}).click();
+        await expect(dialog).toHaveCount(0);
+        expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(before);
       }
+      await card('proxy')
+        .getByRole('button', {name: t('policy.edit'), exact: true})
+        .click();
+      const dialog = page.getByRole('dialog', {name: t('policy.editTitle', {name: 'proxy'})});
+      const all = dialog.getByRole('switch', {name: t('group.allNodes'), exact: true});
+      await dialog.getByText(t('group.allNodes'), {exact: true}).click();
+      await expect(all).not.toBeChecked();
+      await dialog.getByRole('button', {name: t('policy.save'), exact: true}).click();
+      await expect(dialog).toHaveCount(0);
+      const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+      expect(readGroupEntries(saved).find(group => group.name === 'proxy')!.filters).toEqual(["group('auto', 'hk', 'jp', 'us', 'tw', 'sg', 'kr')"]);
+      await card('proxy')
+        .getByRole('button', {name: t('policy.edit'), exact: true})
+        .click();
+      await all.focus();
+      await page.keyboard.press('Space');
+      await dialog.getByRole('button', {name: t('policy.save'), exact: true}).click();
+      await expect(dialog).toHaveCount(0);
+      expect(
+        readGroupEntries((await api.config()).sources.find(source => source.kind === 'main')!.content).find(group => group.name === 'proxy')!.filters
+      ).toContain('!name(direct, block)');
     });
   });
 }

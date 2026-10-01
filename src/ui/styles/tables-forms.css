@@ -236,6 +236,7 @@
   padding: var(--rp-space-6) var(--rp-space-8) var(--rp-space-3);
 }
 .rp-dialog-body {
+  scrollbar-gutter: stable;
   flex: 1 1 auto;
   min-height: 0;
   padding: var(--rp-space-3) var(--rp-space-8);
@@ -409,6 +410,7 @@
 }
 
 .rp-table-detail[data-flow]:not(:empty) {
+  scrollbar-gutter: stable;
   position: sticky;
   bottom: calc(var(--rp-dock) + 16px);
   z-index: 1;

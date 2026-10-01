@@ -1,17 +1,14 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
-import {useCapabilities, useGroups, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {addNamesToGroup, addSubtagsToGroup, citingGroups, groupsNamingTag, readGroupEntries, quoteName, removeSubtagsFromGroup} from '../../dae/groups';
+import {isWritableName, addSubtagsToGroup, citingGroups, groupsNamingTag, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {useGroupDialog} from '../shared/useGroupDialog';
-import {groupOwners, outboundLinks} from '../shared/groupText';
-import {healthMillis, preferredHealth} from '../../api/selectors';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -34,7 +31,6 @@ import {useDraftGuard} from '../../shell/draft';
 import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
-import {openGroup} from '../shared/openGroup';
 import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
 import type {SubscriptionDraft, SubscriptionFieldSet} from '../shared/SubscriptionFields';
@@ -84,7 +80,6 @@ export function useNodesPage({go, query}: PageProps) {
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const names = useOutboundNames();
-  const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
   const reload = useCallback(() => {
@@ -148,48 +143,24 @@ export function useNodesPage({go, query}: PageProps) {
   const sourceOf = useMemo(() => nodeSource(list, providers.data?.providers ?? []), [list, providers.data]);
   const {apply} = source;
   // A written group and an added subscription each offer the next place to look.
-  const viewGroup = useCallback((group: string) => ({label: t('policy.viewGroup'), onAction: () => openGroup(go, group), closeOnAction: true}), [go, t]);
   const viewNodes = (id: string) => ({label: t('nodes.viewNodes'), onAction: () => go('nodes', within('', {provider: id})), closeOnAction: true});
   const joinExistingGroup = useCallback(
     (node: Node, group: string) => {
-      void apply(text => addNamesToGroup(text, group, [node.name])).then(result => {
-        if (result.kind === 'ok') toast('positive', t('nodes.joined', {name: node.name, group}), {action: viewGroup(group)});
-        const problem = editProblem(result, t);
-        if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
-      });
+      if (!isWritableName(node.name)) {
+        toast('negative', t('config.unquotable'));
+        return;
+      }
+      go('policies', within('', {group, edit: '1', node: node.name}));
     },
-    [apply, t, viewGroup]
+    [go, t]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
-  const outbounds = useMemo(
-    () => ({
-      groups: [
-        ...new Set([...(groups.data ?? []).map(group => group.name), ...sources.flatMap(item => readGroupEntries(item.content).map(entry => entry.name))])
-      ],
-      nodes: (nodes.data ?? []).map(node => {
-        const health = preferredHealth(node);
-        return {name: node.name, tcp: healthMillis(health), alive: health?.state === 'unavailable' ? false : undefined};
-      }),
-      links: outboundLinks(groupOwners(sources))
-    }),
-    [groups.data, sources, nodes.data]
-  );
-  const groupCreate = useGroupDialog({
-    mode: 'create',
-    source,
-    taken: new Set(outbounds.groups),
-    outbounds,
-    nodes: nodes.data ?? [],
-    onCreated: group => {
-      toast('positive', t('policy.updated', {name: group}), {action: viewGroup(group)});
+  const newGroup = (node: Node) => {
+    if (!isWritableName(node.name)) {
+      toast('negative', t('config.unquotable'));
+      return;
     }
-  });
-  const newGroup = (item: Node) => {
-    try {
-      groupCreate.show([`name(${quoteName(item.name)})`], t('nodes.newGroupHelp', {name: item.name}));
-    } catch (error) {
-      toast('negative', errorText(error, t));
-    }
+    go('policies', within('', {new: '1', node: node.name}));
   };
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.
@@ -410,6 +381,7 @@ export function useNodesPage({go, query}: PageProps) {
     scope: provider && list.length > 1 ? t('nodes.scope', {name: provider.displayName ?? provider.name}) : null,
     multiple: list.length > 1,
     query: params.get('q'),
+    groupQuery: params.get('group'),
     source,
     canManage: !!resources?.nodes.can_manage,
     busy: !!manage.busy,
@@ -476,7 +448,6 @@ export function useNodesPage({go, query}: PageProps) {
     setUpdateGroups: (next: boolean) => {
       if (submitting.current !== dialog) setUpdateGroups(next);
     },
-    groupCreate,
     subscription,
     setSubscription: (next: SubscriptionDraft) => {
       if (submitting.current !== dialog) setForm({...form, ...next, value: next.url});

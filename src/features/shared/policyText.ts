@@ -37,7 +37,7 @@ export function policyChoices(value: string | null, t: Translator) {
   return {selected: value ?? IMPLIED, items: value && !items.some(item => item.id === value) ? [{id: value, label: value}, ...items] : items};
 }
 
-const nameProblems = {invalid: 'arrange.badName', taken: 'arrange.takenName'} as const;
+const nameProblems = {invalid: 'group.badName', taken: 'group.takenName'} as const;
 export function groupNameError(name: string, taken: ReadonlySet<string>, t: Translator): string | null {
   const problem = groupNameProblem(name, taken);
   return problem ? t(nameProblems[problem]) : null;
@@ -49,6 +49,6 @@ export function groupEditSafe(filters: string[], policy: string | null, entry: P
 }
 
 export function memberCountText(total: number, groups: number, t: Translator): string {
-  const nodes = t('arrange.memberCount', {n: total - groups});
-  return groups ? t('arrange.mixedCount', {nodes, groups: t('arrange.groupCount', {n: groups})}) : nodes;
+  const nodes = t('group.memberCount', {n: total - groups});
+  return groups ? t('group.mixedCount', {nodes, groups: t('group.groupCount', {n: groups})}) : nodes;
 }

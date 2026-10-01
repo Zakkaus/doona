@@ -120,7 +120,7 @@ export function memberSections(
   return [noneFirst(items, held, t), {id: 'members', title: t('policy.pickMembers'), items}].filter(section => section.items.length);
 }
 
-// A new group's direct members follow its draft filters, before it exists on the backend.
+// Member choices follow the draft filters, including before a new group exists on the backend.
 export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
   const admits = compileFilters(filters);
   return [

@@ -1,7 +1,10 @@
+import {href} from '../../shell/route';
+import {includeChoices, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
+import {quoteName, isWritableName} from '../../dae/groups';
 import {useEffect, useEffectEvent, useMemo, useState} from 'react';
-import {useT} from '../../i18n';
+import {useT, useLang} from '../../i18n';
 import {groupConflict, useGroupControl} from '../../store';
-import type {GroupSummary, HealthObservation} from '../../api/model';
+import type {GroupSummary, HealthObservation, Node, Provider} from '../../api/model';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, selectionSummary, probeSummary, untestedHelp} from './view';
@@ -11,6 +14,11 @@ import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {requestIdOf} from '../../api/error';
 export type PolicyGroupInput = {
+  nodes?: Node[];
+  providers?: Provider[];
+  editRequested?: boolean;
+  seedNode?: string;
+  editorOpened?: () => void;
   id: string;
   name: string;
   health: Map<string, HealthObservation | undefined>;
@@ -31,6 +39,7 @@ export type PolicyGroupInput = {
 export function usePolicyGroup(input: PolicyGroupInput) {
   const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused, focused} = input;
   const t = useT();
+  const lang = useLang();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused && !focused);
   // A language switch does not repeat the toast.
   const report = useEffectEvent((error: Error) =>
@@ -76,6 +85,35 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       refetch();
       declared.view();
     }
+  };
+  const openRequested = useEffectEvent(() => {
+    refetch();
+    declared.show(input.seedNode && isWritableName(input.seedNode) ? [`name(${quoteName(input.seedNode)})`] : []);
+    input.editorOpened?.();
+  });
+  useEffect(() => {
+    if (input.editRequested && declared.editable && !declared.open) openRequested();
+  }, [input.editRequested, declared.editable, declared.open]);
+  const filters = useMemo(() => (declaration.owner && declaration.owner !== 'ambiguous' ? declaration.owner.entry.filters : []), [declaration.owner]);
+  const choices = useMemo(() => includeChoices(filters, input.nodes ?? [], input.providers ?? [], lang), [filters, input.nodes, input.providers, lang]);
+  const includes = {
+    filters:
+      declaration.owner && declaration.owner !== 'ambiguous'
+        ? !filters.length || filters.some(filter => !recogniseInclude(filter))
+          ? filters.filter(filter => !recogniseInclude(filter))
+          : null
+        : null,
+    tags: (['region', 'subscription', 'node', 'group'] as const).flatMap(kind =>
+      selectedIncludes(filters, kind).map(value => {
+        const choice = kind === 'group' ? undefined : choices[kind].find(item => item.id === value);
+        return {
+          id: `${kind}:${value}`,
+          nodeName: kind === 'node',
+          href: kind === 'group' ? href('policies', {group: value}) : undefined,
+          label: kind === 'region' && choice ? t('group.subscriptionCount', {name: choice.label, n: choice.count}) : (choice?.label ?? value)
+        };
+      })
+    )
   };
   const conflict = groupConflict(control.actionError);
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
@@ -127,6 +165,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
         }
       : undefined;
   return {
+    includes,
     card,
     summaryText: g
       ? selectionSummary(g, members, t, id => {

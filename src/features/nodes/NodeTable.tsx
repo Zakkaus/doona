@@ -1,6 +1,6 @@
 import {createContext, useContext, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, ChoiceMenu, DataTable, LabeledSelect, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
+import {Button, ChoiceMenu, DataTable, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
 import {NodeName, FlagEditingContext} from '../../ui/NodeName';
 import {flagKey} from '../../dae/flags';
 import {SettingsContext} from '../../shell/preferences';
@@ -68,7 +68,24 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         sortable: true,
         render: row => <span className={row.latencyClass}>{row.latency}</span>
       },
-      {id: 'groups', label: t('nodes.groups'), minWidth: 200, drop: 1, render: row => <TextTooltip>{row.groups}</TextTooltip>},
+      {
+        id: 'groups',
+        drop: 1,
+        label: t('nodes.groups'),
+        minWidth: 200,
+        render: row =>
+          row.groupLinks.length ? (
+            <Tags label={t('nodes.groups')} singleLine>
+              {row.groupLinks.map(group => (
+                <LinkTag key={group.id} href={group.href}>
+                  {group.label}
+                </LinkTag>
+              ))}
+            </Tags>
+          ) : (
+            row.groups
+          )
+      },
       {
         id: 'actions',
         label: t('ui.actions'),
@@ -145,7 +162,20 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                           [t('nodes.provider'), row.source],
                           [t('nodes.protocol'), row.protocol],
                           [t('nodes.latency'), row.latency],
-                          [t('nodes.groups'), row.groups]
+                          [
+                            t('nodes.groups'),
+                            row.groupLinks.length ? (
+                              <Tags label={t('nodes.groups')}>
+                                {row.groupLinks.map(group => (
+                                  <LinkTag key={group.id} href={group.href}>
+                                    {group.label}
+                                  </LinkTag>
+                                ))}
+                              </Tags>
+                            ) : (
+                              row.groups
+                            )
+                          ]
                         ]}
                       />
                       <FlagField

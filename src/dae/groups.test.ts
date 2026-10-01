@@ -1,22 +1,17 @@
 import {describe, expect, it} from 'vitest';
 import {
-  addNamesToGroup,
   addSubtagsToGroup,
   groupAdmits,
   groupsNamingTag,
   groupNameProblem,
-  applyChanges,
   classifyFilters,
   describeFilters,
   readGroupEntries,
-  removalWidens,
-  removeNamesFromGroup,
   ruleCondition,
   dnsConditionKinds,
   writeGroupEntry,
   nameText,
-  nestedIn,
-  type GroupChange
+  nestedIn
 } from './groups';
 
 const text = `global {
@@ -66,6 +61,7 @@ describe('group entries', () => {
       ['hk', null, 'direct', []],
       ['proxy', "'hk'", null, ['hk']]
     ]);
+    expect(nestedIn({filters: ["group('a,b')"]})).toEqual(['a', 'b']);
     expect(nestedIn({filters: ["group('a', b|c) && name(x)", 'name(group)', 'group()']})).toEqual(['a', 'b', 'c']);
   });
 
@@ -115,31 +111,6 @@ describe('group entries', () => {
     );
   });
 
-  it('adds node names to the name filter, or adds that filter', () => {
-    expect(addNamesToGroup(text, 'proxy', ['b3', 'jp 01'])).toContain("        filter: name('backup', b2, b3, 'jp 01')\n");
-    // A list written all in single quotes stays that way.
-    expect(addNamesToGroup("group { g { filter: name('a', 'b c') } }", 'g', ['d'])).toContain("name('a', 'b c', 'd')");
-    expect(addNamesToGroup(text, 'hk', ['hk-09'])).toContain(
-      "        filter: name(regex: '^Hong Kong ')\n        filter: name(hk-09)\n        policy: min_moving_avg"
-    );
-    expect(addNamesToGroup(text, 'proxy', ['backup'])).toBe(text);
-    expect(addNamesToGroup(text, 'new', ['a'])).toContain('    new {\n        filter: name(a)\n    }');
-    expect(addNamesToGroup('group {\n  a { policy: score }\n}\n', 'b', ['x'])).toBe('group {\n  a { policy: score }\n  b {\n    filter: name(x)\n  }\n}\n');
-  });
-
-  it('preserves compound and qualified filters when adding a name', () => {
-    for (const filter of ['name(a) && subtag(b)', 'name(a) || name(b)', 'name(keyword: a)', "name(regex: '^a')"]) {
-      const source = `group { proxy { filter: ${filter} } }`;
-      expect(readGroupEntries(addNamesToGroup(source, 'proxy', ['c']))[0].filters).toEqual([filter, 'name(c)']);
-    }
-  });
-
-  it('extends only a complete plain call with quoted boundaries', () => {
-    const source = `group { proxy { filter: name ("a)b", 'c,d', e) } }`;
-    const next = addNamesToGroup(source, 'proxy', ['a)b', 'f', 'f']);
-    expect(readGroupEntries(next)[0].filters).toEqual([`name("a)b", 'c,d', e, f)`]);
-  });
-
   it('composes conditions from a kind and values', () => {
     expect(ruleCondition('domainSuffix', 'example.com, example.net')).toBe('domain(suffix: example.com, suffix: example.net)');
     expect(ruleCondition('domain', 'example.com example.net')).toBe('domain(full: example.com, full: example.net)');
@@ -178,7 +149,7 @@ it('reads and expands the one-line form', () => {
     ['proxy', [], 'fixed(0)'],
     ['auto', ['name(hk-01, sg-01)'], 'min_avg10']
   ]);
-  expect(addNamesToGroup(text, 'auto', ['jp-01'])).toBe(
+  expect(writeGroupEntry(text, 'auto', {filters: ['name(hk-01, sg-01, jp-01)'], policy: 'min_avg10'})).toBe(
     'group {\n  proxy { policy: fixed(0) }\n  auto {\n    filter: name(hk-01, sg-01, jp-01)\n    policy: min_avg10\n  }\n}\n'
   );
 });
@@ -193,7 +164,7 @@ it('keeps the order of the other fields when it spreads a one-line entry', () =>
 it('reads every group section and appends to the last', () => {
   const text = 'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n}\n';
   expect(readGroupEntries(text).map(e => e.name)).toEqual(['a', 'b']);
-  expect(addNamesToGroup(text, 'c', ['n'])).toBe(
+  expect(writeGroupEntry(text, 'c', {filters: ['name(n)'], policy: null})).toBe(
     'group {\n  a { policy: score }\n}\ngroup {\n  b {\n    filter: subtag(x)\n  }\n  c {\n    filter: name(n)\n  }\n}\n'
   );
 });
@@ -214,7 +185,7 @@ group {
     ['other', [], 'random'],
     ['backup', ['name("a}#b")'], 'min_last_delay']
   ]);
-  const written = addNamesToGroup(source, 'backup', ['node']);
+  const written = writeGroupEntry(source, 'backup', {filters: ['name("a}#b", node)'], policy: 'min_last_delay'});
   expect(written).toContain(source.slice(0, source.indexOf('group {\n')));
   expect(written).toContain("check_url: 'https://example.org/{#}'");
   expect(written).toContain('# keep {');
@@ -252,45 +223,15 @@ it('returns no condition for a picked value that would escape the rule line', ()
   expect(ruleCondition('pname', 'a->b')).toBeNull();
 });
 
-describe('arranging groups edits only exact lists', () => {
+describe('subscription group edits preserve other filters', () => {
   it('classifies each filter line', () => {
     const [hk, proxy] = readGroupEntries(text);
     expect(classifyFilters(hk)).toEqual({names: [], subtags: [], rules: ["subtag('airport') && name(keyword: 'HK')", "name(regex: '^Hong Kong ')"]});
     expect(classifyFilters(proxy)).toEqual({names: ['backup', 'b2'], subtags: [], rules: ["group('hk')"]});
   });
 
-  it('adds to the exact list, never to a line with other terms', () => {
-    const added = addNamesToGroup(text, 'hk', ['JP 01']);
-    expect(readGroupEntries(added)[0].filters).toEqual(["subtag('airport') && name(keyword: 'HK')", "name(regex: '^Hong Kong ')", "name('JP 01')"]);
-    expect(readGroupEntries(addNamesToGroup(text, 'proxy', ['b3']))[1].filters).toEqual(["group('hk')", "name('backup', b2, b3)"]);
+  it('adds an exact subscription list', () => {
     expect(readGroupEntries(addSubtagsToGroup(text, 'proxy', ['sub-a']))[1].filters).toEqual(["group('hk')", "name('backup', b2)", 'subtag(sub-a)']);
-  });
-
-  it('removes from exact lists, drops an emptied line, and never leaves a group without filters', () => {
-    const one = removeNamesFromGroup(text, 'proxy', ['backup']);
-    expect(readGroupEntries(one)[1].filters).toEqual(["group('hk')", 'name(b2)']);
-    expect(readGroupEntries(removeNamesFromGroup(one, 'proxy', ['b2']))[1].filters).toEqual(["group('hk')"]);
-    const only = writeGroupEntry(text, 'solo', {filters: ['name(a)'], policy: 'fixed(0)'});
-    const solo = readGroupEntries(only).find(entry => entry.name === 'solo')!;
-    expect(removalWidens(solo, 'name', 'a')).toBe(true);
-    expect(removeNamesFromGroup(only, 'solo', ['a'])).toBe(only);
-    expect(removalWidens(readGroupEntries(text)[1], 'name', 'b2')).toBe(false);
-  });
-
-  it('applies staged changes in order and ignores repeats', () => {
-    const changes: GroupChange[] = [
-      {kind: 'createGroup', filters: [], group: 'streaming', policy: 'min_moving_avg'},
-      {kind: 'addNode', group: 'streaming', value: 'US 01'},
-      {kind: 'addNode', group: 'streaming', value: 'US 01'},
-      {kind: 'addSubscription', group: 'streaming', value: 'sub-b'}
-    ];
-    const next = applyChanges(text, changes);
-    const streaming = readGroupEntries(next).find(entry => entry.name === 'streaming')!;
-    expect(streaming).toMatchObject({filters: ["name('US 01')", 'subtag(sub-b)'], policy: 'min_moving_avg'});
-    expect(applyChanges(next, changes)).toBe(next);
-    // The rest of the file is untouched.
-    expect(next.startsWith(text.slice(0, text.indexOf('group {')))).toBe(true);
-    expect(next).toContain('routing {\n  fallback: proxy\n}');
   });
 });
 
@@ -300,8 +241,6 @@ it('reads bare non-ASCII names as exact, as honk does', () => {
   const source = `group {\n    hk {\n        filter: name(${hong}, hk-02)\n    }\n}\n`;
   const [hk] = readGroupEntries(source);
   expect(classifyFilters(hk).names).toEqual([hong, 'hk-02']);
-  expect(readGroupEntries(addNamesToGroup(source, 'hk', [hong]))[0].filters).toEqual([`name(${hong}, hk-02)`]);
-  expect(readGroupEntries(removeNamesFromGroup(source, 'hk', [hong]))[0].filters).toEqual(['name(hk-02)']);
 });
 
 describe('group filters decide membership as honk does', () => {
@@ -343,7 +282,7 @@ it('keeps a comment inside a multi-line filter within that filter and the rest o
   const after = '\n    policy: select\n  }\n}\n';
   const source = `${before}    filter: ${filter}${after}`;
   expect(readGroupEntries(source)[0].filters).toEqual([filter]);
-  expect(addNamesToGroup(source, 'hk', ['c'])).toBe(`${before}    filter: ${filter}\n    filter: name(c)${after}`);
+  expect(writeGroupEntry(source, 'hk', {filters: [filter, 'name(c)'], policy: 'select'})).toBe(`${before}    filter: ${filter}\n    filter: name(c)${after}`);
 });
 
 it('edits a group in place and keeps its comments, other fields and the rest of the file byte-identical', () => {
@@ -371,8 +310,8 @@ it.each([
   {group: 'streaming', final: undefined, header: 'streaming', finalLine: ''},
   {group: 'streaming', final: 'direct', header: 'streaming', finalLine: '        final: direct\n'},
   {group: 'streaming list', final: "'US 01'", header: "'streaming list'", finalLine: "        final: 'US 01'\n"}
-])('creates $group with final $final through staged source edits', ({group, final, header, finalLine}) => {
-  const next = applyChanges('group {\n}\n', [{kind: 'createGroup', group, filters: ['name(hk-01)'], policy: 'select', final}]);
+])('creates $group with final $final through the group writer', ({group, final, header, finalLine}) => {
+  const next = writeGroupEntry('group {\n}\n', group, {filters: ['name(hk-01)'], policy: 'select', final});
   expect(next).toBe(`group {\n    ${header} {\n        filter: name(hk-01)\n        policy: select\n${finalLine}    }\n}\n`);
   expect(readGroupEntries(next)[0]).toMatchObject({name: group, filters: ['name(hk-01)'], policy: 'select', final: final ?? null});
 });
@@ -392,4 +331,23 @@ it('describes complete template filters and preserves other filter expressions',
     expect(describeFilters([filter])).toEqual({everyNode: false, groups: [], rules: [filter]});
   }
   expect(describeFilters([])).toEqual({everyNode: false, groups: [], rules: []});
+});
+
+it('inserts before a filter sharing the opening line inside its group', () => {
+  const source = 'group {\n  g { filter: name(a) # keep\n    filter: name(b)\n    policy: select\n  }\n}\n';
+  const output = writeGroupEntry(source, 'g', {filters: ['name(c)', 'name(a)'], policy: 'select'});
+  expect(readGroupEntries(output)[0].filters).toEqual(['name(c)', 'name(a)']);
+  expect(output).toContain('filter: name(a) # keep\n');
+  expect(output.indexOf('filter: name(c)')).toBeGreaterThan(output.indexOf('g {'));
+});
+
+it('keeps inserted filters inside mixed opening and closing lines', () => {
+  for (const source of [
+    'group {\n  g { policy: select\n  }\n}\n',
+    'group {\n  g { filter: name(a)\n    filter: name(b) } }',
+    'group {\n  g { filter: name(a)\n    filter: name(b) } }\n'
+  ]) {
+    const output = writeGroupEntry(source, 'g', {filters: ['name(c)', 'name(a)', 'name(d)'], policy: 'select'});
+    expect(readGroupEntries(output)[0]).toMatchObject({filters: ['name(c)', 'name(a)', 'name(d)'], policy: 'select'});
+  }
 });

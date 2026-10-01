@@ -154,21 +154,18 @@ test.describe('1440px', () => {
 });
 
 for (const width of [1440, 768, 390]) {
-  test(`kit controls share the row height at ${width}px`, async ({page}) => {
+  test(`kit tabs and segmented controls share the control height at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
-    await page.goto('/#/policies');
+    await page.goto('/#/connections?tab=list');
     await expect(page.getByRole('tab').first()).toBeVisible();
-    const geometry = await page.locator('.rp-tabhead').evaluate(el => {
+    const geometry = await page.locator('.rp-tabs').evaluate(el => {
       const tabs = el.querySelector('.rp-tabbar')!;
-      const segments = el.querySelector('.rp-seg')!;
       return {
         tabs: tabs.getBoundingClientRect().height,
-        segments: segments.getBoundingClientRect().height,
         control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control'))
       };
     });
     expect(geometry.tabs).toBe(geometry.control);
-    expect(geometry.segments).toBe(geometry.control);
     const tab = page.getByRole('tab').first();
     await tab.focus();
     await page.keyboard.press('ArrowRight');
@@ -181,5 +178,9 @@ for (const width of [1440, 768, 390]) {
     });
     expect(ring.top).toBeGreaterThanOrEqual(0);
     expect(ring.bottom).toBeGreaterThanOrEqual(0);
+    await page.goto('/#/policies');
+    const segments = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
+    await expect(segments).toBeVisible();
+    expect((await segments.boundingBox())!.height).toBe(geometry.control);
   });
 }

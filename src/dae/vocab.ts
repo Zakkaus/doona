@@ -71,11 +71,11 @@ export function policyKind(native: string): Group['policy']['kind'] | undefined 
 export const policies = ['select', 'urltest', 'roundrobin', 'fallback', 'score', 'fixed', 'min_moving_avg', 'min_avg10', 'min_last_delay', 'loadbalance'];
 // The policies a new group can start with, in the order the picker offers them.
 export const newGroupPolicies: Array<{id: string; label: Key; description: Key}> = [
-  {id: 'min_moving_avg', label: 'policy.kind.urltest', description: 'arrange.policy.fastestHint'},
-  {id: 'score', label: 'policy.kind.score', description: 'arrange.policy.scoreHint'},
-  {id: 'fallback', label: 'policy.kind.fallback', description: 'arrange.policy.fallbackHint'},
-  {id: 'roundrobin', label: 'arrange.policy.spread', description: 'arrange.policy.spreadHint'},
-  {id: 'select', label: 'policy.kind.selector', description: 'arrange.policy.manualHint'}
+  {id: 'min_moving_avg', label: 'policy.kind.urltest', description: 'group.policy.fastestHint'},
+  {id: 'score', label: 'policy.kind.score', description: 'group.policy.scoreHint'},
+  {id: 'fallback', label: 'policy.kind.fallback', description: 'group.policy.fallbackHint'},
+  {id: 'roundrobin', label: 'group.policy.spread', description: 'group.policy.spreadHint'},
+  {id: 'select', label: 'policy.kind.selector', description: 'group.policy.manualHint'}
 ];
 // Built-in outbounds, as nodes, groups and rules name them; a rule may add `(must)`, which keeps DNS traffic from
 // being hijacked for that rule.

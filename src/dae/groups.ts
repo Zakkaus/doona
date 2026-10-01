@@ -116,11 +116,19 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
     const lead = /^\s*/.exec(text.slice(field.valueFrom, field.valueTo))![0];
     edits.push({from: field.valueFrom + lead.length, to: field.valueTo, text: (lead ? '' : ' ') + value});
   };
+  const beforeField = (field: TextField) => {
+    const start = text.lastIndexOf('\n', field.from - 1) + 1;
+    return /^[ \t]*$/.test(text.slice(start, field.from)) ? start : field.from;
+  };
   const added = new Map<number, string>();
   const add = (at: number, line: string) => added.set(at, (added.get(at) ?? '') + line);
   // Filters go after the last filter, or before the policy line, or first in the body.
   const policies = fields.filter(field => field.name === 'policy');
-  const filterAt = filters.length ? lineEnd(filters.at(-1)!.to) : policies.length ? text.lastIndexOf('\n', policies[0].from - 1) + 1 : lineEnd(entry.open);
+  const afterField = (at: number) => {
+    const end = lineEnd(at);
+    return end > 0 && end <= entry.close ? end : at;
+  };
+  const filterAt = filters.length ? afterField(filters.at(-1)!.to) : policies.length ? beforeField(policies[0]) : afterField(entry.open + 1);
   // Unchanged filters anchor each edit so removing an earlier line never moves their comments or formatting.
   const changeFilters = (from: number, to: number, values: string[], at: number) => {
     filters.slice(from, to).forEach((field, i) => (i < values.length ? replace(field, values[i]) : remove(field)));
@@ -131,7 +139,7 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
   next.filters.forEach((value, i) => {
     const at = filters.findIndex((field, index) => index >= oldFrom && field.value === value);
     if (at < 0) return;
-    changeFilters(oldFrom, at, next.filters.slice(newFrom, i), text.lastIndexOf('\n', filters[at].from - 1) + 1);
+    changeFilters(oldFrom, at, next.filters.slice(newFrom, i), beforeField(filters[at]));
     oldFrom = at + 1;
     newFrom = i + 1;
   });
@@ -149,9 +157,12 @@ function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inne
     if (!value) return;
     if (key === 'policy') return add(filterAt, `${inner}policy: ${value}\n`);
     const before = fields.filter(field => field.name === 'filter' || singleKeys.slice(0, i).some(key => field.name === fieldName(key))).at(-1);
-    add(before ? lineEnd(before.to) : lineEnd(entry.open), `${inner}${fieldName(key)}: ${value}\n`);
+    add(before ? afterField(before.to) : afterField(entry.open + 1), `${inner}${fieldName(key)}: ${value}\n`);
   });
-  for (const [at, lines] of added) edits.push({from: at, to: at, text: lines});
+  for (const [at, lines] of added) {
+    const inline = at > entry.open && text[at - 1] !== '\n' && !/^[ \t]*$/.test(text.slice(text.lastIndexOf('\n', at - 1) + 1, at));
+    edits.push({from: at, to: at, text: inline ? '\n' + lines + inner : lines});
+  }
   return edits.sort((a, b) => b.from - a.from || b.to - a.to).reduce((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), text);
 }
 
@@ -168,7 +179,7 @@ export function nestedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
       term.startsWith('group(') && term.endsWith(')')
         ? splitTop(term.slice(6, -1), ',').flatMap(argument =>
             unquote(argument)
-              .split('|')
+              .split(/[|,]/)
               .map(tag => tag.trim())
               .filter(Boolean)
           )
@@ -205,7 +216,7 @@ export function namedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
   return exactIn(entry.filters, 'name');
 }
 
-// What each filter line of a group does, in the terms the arrange view shows: exact names and exact subscription
+// What each filter line of a group does, as exact selections and rules: exact names and exact subscription
 // tags can be edited by adding and removing; every other line is a rule, shown and left alone.
 export function classifyFilters(entry: Pick<GroupEntry, 'filters'>) {
   return {
@@ -232,16 +243,6 @@ export function describeFilters(filters: string[]) {
   return {everyNode, groups: [...new Set(groups)], rules};
 }
 
-// Whether removing `value` would leave the group without any filter line, which honk reads as every node.
-export function removalWidens(entry: Pick<GroupEntry, 'filters'>, call: ExactCall, value: string): boolean {
-  return entry.filters.every(filter => {
-    const raw = exactTokens(filter, call);
-    return raw !== null && raw.every(item => unquote(item) === value);
-  });
-}
-
-// Adds to the first exact list of `call` (or appends one) and removes from every exact list; a list left empty is
-// dropped. Filters selecting by other means are kept as they are.
 // Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) names the tag anywhere.
 const expressionNames = (entry: Pick<GroupEntry, 'filters'>, tag: string) =>
   classifyFilters(entry).rules.some(filter =>
@@ -289,8 +290,6 @@ function editExact(text: string, group: string, call: ExactCall, add: string[], 
   if (entry?.filters.length && !filters.length) return text;
   return writeGroupEntry(text, group, {filters, policy: entry?.policy ?? null});
 }
-export const addNamesToGroup = (text: string, group: string, names: string[]) => editExact(text, group, 'name', names, []);
-export const removeNamesFromGroup = (text: string, group: string, names: string[]) => editExact(text, group, 'name', [], names);
 export const addSubtagsToGroup = (text: string, group: string, tags: string[]) => editExact(text, group, 'subtag', tags, []);
 export const removeSubtagsFromGroup = (text: string, group: string, tags: string[]) => editExact(text, group, 'subtag', [], tags);
 
@@ -373,26 +372,6 @@ export function compileFilters(filters: string[]): (node: FilterNode) => boolean
     );
 }
 export const groupAdmits = (filters: string[], node: FilterNode) => compileFilters(filters)(node);
-
-// An edit staged by the arrange view, applied to the source text in the order it was made.
-export type GroupChange =
-  | {kind: 'addNode' | 'removeNode' | 'addSubscription' | 'removeSubscription'; group: string; value: string}
-  | ({kind: 'createGroup'; group: string} & GroupEntryUpdate);
-function applyChange(text: string, change: GroupChange): string {
-  switch (change.kind) {
-    case 'addNode':
-      return addNamesToGroup(text, change.group, [change.value]);
-    case 'removeNode':
-      return removeNamesFromGroup(text, change.group, [change.value]);
-    case 'addSubscription':
-      return addSubtagsToGroup(text, change.group, [change.value]);
-    case 'removeSubscription':
-      return removeSubtagsFromGroup(text, change.group, [change.value]);
-    case 'createGroup':
-      return readGroupEntries(text).some(entry => entry.name === change.group) ? text : writeGroupEntry(text, change.group, change);
-  }
-}
-export const applyChanges = (text: string, changes: GroupChange[]) => changes.reduce(applyChange, text);
 
 export type ConditionKind = 'domain' | 'domainSuffix' | 'domainKeyword' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
 export const conditionKinds: ConditionKind[] = [

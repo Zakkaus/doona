@@ -581,7 +581,7 @@ test('a latency row opens its node in the list', async ({page}) => {
   await expect(page.getByRole('grid').last()).toContainText(name);
 });
 
-test('adding a node to a group offers the group on the policies page', async ({page}) => {
+test('adding a node to a group opens its staged editor on the policies page', async ({page}) => {
   await page.goto('/#/nodes?tab=list&provider=inline');
   await page
     .getByRole('row')
@@ -589,8 +589,9 @@ test('adding a node to a group offers the group on the policies page', async ({p
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
   await page.getByRole('menuitem', {name: /^gaming/}).click();
-  const joined = page.locator('.rp-toast.positive', {hasText: 'gaming'});
-  await joined.getByRole('button', {name: 'View group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group gaming', exact: true});
+  await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-01');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies\?group=gaming$/);
   await expect(page.locator('#group-gaming')).toBeInViewport();
 });

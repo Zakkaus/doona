@@ -110,6 +110,7 @@
   }
 }
 .rp-panel {
+  scrollbar-gutter: stable;
   position: sticky;
   top: 16px;
   max-height: calc(100vh - 32px);

@@ -2,7 +2,7 @@ import type {Locator} from '@playwright/test';
 import en from '../src/i18n/locales/en.json' with {type: 'json'};
 import zh from '../src/i18n/locales/zh-CN.json' with {type: 'json'};
 import tw from '../src/i18n/locales/zh-TW.json' with {type: 'json'};
-import {expect, mockBackend, moreAction, scrollIntoList, test} from './fixtures';
+import {expect, mockBackend, scrollIntoList, test} from './fixtures';
 import {readGroupEntries} from '../src/dae/groups';
 
 async function expectFormGeometry(dialog: Locator) {
@@ -12,7 +12,12 @@ async function expectFormGeometry(dialog: Locator) {
       return {x, y, right: x + width, bottom: y + height, width, height};
     };
     const section = root.querySelector('.rp-dialog-section')!;
-    const blocks = Array.from(section.children).map(box);
+    const blocks = Array.from(section.children)
+      .filter(element => {
+        const style = getComputedStyle(element);
+        return style.position !== 'absolute' && style.display !== 'none' && element.getBoundingClientRect().height > 1;
+      })
+      .map(box);
     const fields = Array.from(section.querySelectorAll('.rp-field')).map(field => ({
       ...box(field),
       control: box(field.querySelector('.rp-input, .rp-selectbtn')!),
@@ -22,7 +27,16 @@ async function expectFormGeometry(dialog: Locator) {
     const foot = Array.from(root.querySelectorAll('.foot button')).map(box);
     const content = root.querySelector('.rp-dialog-body') ?? root;
     const help = root.querySelector('[slot="description"]');
-    return {blocks, fields, filters, foot, help: help ? box(help) : null, dialog: box(root), inset: parseFloat(getComputedStyle(content).paddingInlineStart)};
+    return {
+      blocks,
+      fields,
+      filters,
+      foot,
+      help: help ? box(help) : null,
+      dialog: box(root),
+      contentRight: content.getBoundingClientRect().left + content.clientLeft + content.clientWidth,
+      inset: parseFloat(getComputedStyle(content).paddingInlineStart)
+    };
   });
   const {blocks, fields, filters, foot} = geometry;
   expect(fields.length).toBeGreaterThan(1);
@@ -39,10 +53,10 @@ async function expectFormGeometry(dialog: Locator) {
   }
   for (let i = 1; i < blocks.length; i++) expect(blocks[i].y - blocks[i - 1].bottom).toBeCloseTo(8, 1);
   for (let i = 1; i < filters.length; i++) expect(filters[i].y - filters[i - 1].bottom).toBeCloseTo(8, 1);
-  expect(foot).toHaveLength(2);
+  expect(foot).toHaveLength(3);
   expect(foot[0].height).toBeCloseTo(foot[1].height, 1);
   expect(blocks[0].x - geometry.dialog.x).toBeCloseTo(geometry.inset, 1);
-  expect(geometry.dialog.right - blocks[0].right).toBeCloseTo(geometry.inset, 1);
+  expect(geometry.contentRight - blocks[0].right).toBeCloseTo(geometry.inset, 1);
   if (geometry.help) {
     expect(geometry.help.x).toBeCloseTo(blocks[0].x, 1);
     expect(geometry.help.right).toBeCloseTo(blocks[0].right, 1);
@@ -51,51 +65,45 @@ async function expectFormGeometry(dialog: Locator) {
 
 test.use({storage: {'doona-lang': 'en'}});
 
-test('Policies stages all new group fields and writes them on Apply', async ({page}) => {
+test('Policies creates a group with all fields in the shared editor', async ({page}) => {
   const {api} = await mockBackend(page);
-  await page.goto('/#/policies?tab=arrange');
+  await page.goto('/#/policies');
   await page.getByRole('button', {name: 'New group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await expect(dialog).not.toHaveAttribute('aria-describedby');
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await expect(dialog.getByRole('group', {name: 'Filter', exact: true})).toHaveAccessibleDescription(en['arrange.newGroupNote']);
+  await expect(dialog.getByRole('group', {name: 'Filter', exact: true})).not.toHaveAttribute('aria-describedby');
   const name = dialog.getByRole('textbox', {name: 'Group name'});
   await expect(name).toHaveAttribute('aria-required', 'true');
   await expect(dialog.locator('label').filter({hasText: 'Group name'})).toContainText('*');
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(name).toHaveAttribute('aria-invalid', 'true');
-  await name.fill('proxy');
+  await name.fill('office');
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(name).toHaveAccessibleDescription(/already exists/);
   await name.fill('streaming');
   await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-  await dialog.getByRole('textbox', {name: 'Filter'}).fill('name(hk-01)');
-  await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveAccessibleDescription(`${en['policy.filterHelp']} ${en['arrange.newGroupNote']}`);
+  await dialog.getByRole('button', {name: /Match by$/}).click();
+  await page.getByRole('option', {name: 'Exact names', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('hk-01');
+  await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toHaveCount(0);
   await dialog.getByRole('button', {name: /Selection policy/}).click();
   await page.getByRole('option', {name: /^Score/}).click();
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('option', {name: 'direct', exact: true}).click();
   await expect(dialog.getByRole('button', {name: /Default member$/})).toHaveCount(0);
-  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await expect(dialog.getByRole('switch', {name: 'All nodes', exact: true})).not.toBeChecked();
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  expect((await api.config()).sources.some(source => source.content.includes('streaming {'))).toBe(false);
-  await page.getByRole('button', {name: 'Review and apply'}).click();
-  const review = page.getByRole('dialog', {name: 'Review changes'});
-  await expect(review).toContainText('filter: name(hk-01)');
-  await expect(review).toContainText('policy: score');
-  await expect(review).toContainText('final: direct');
-  await review.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(review).toHaveCount(0);
   await expect.poll(async () => (await api.group('streaming')).config.final_outbound).toBe('direct');
   const source = (await api.config()).sources.find(source => source.kind === 'main')!;
   expect(readGroupEntries(source.content).find(entry => entry.name === 'streaming')).toMatchObject({
-    filters: ['name(hk-01)'],
+    filters: ["name('hk-01')"],
     policy: 'score',
     final: 'direct'
   });
-  await page.locator('.rp-toast.positive').getByRole('button', {name: 'View group', exact: true}).click();
-  await moreAction(page.getByRole('region', {name: 'streaming', exact: true}), 'Edit group');
+  await page.getByRole('region', {name: 'streaming', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'streaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const edit = page.getByRole('dialog', {name: 'Edit group streaming'});
   await expect(edit.getByRole('textbox', {name: 'Group name'})).toHaveCount(0);
   await expect(edit.getByRole('button', {name: /Final outbound$/})).toContainText('direct');
@@ -126,7 +134,8 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await dialog.getByRole('textbox', {name: 'Group name'}).fill('nodegroup');
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveValue('name(hk-01)');
+  await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toBeVisible();
+  await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveCount(0);
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('sg-01');
   const option = page.getByRole('option', {name: /^sg-01/});
@@ -147,7 +156,7 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
 for (const entry of ['Nodes', 'Policies'])
   test(`${entry} creates a manual group with a default from the draft members`, async ({page}) => {
     const {api} = await mockBackend(page);
-    await page.goto(entry === 'Nodes' ? '/#/nodes?provider=inline' : '/#/policies?tab=arrange');
+    await page.goto(entry === 'Nodes' ? '/#/nodes?provider=inline' : '/#/policies');
     if (entry === 'Nodes') {
       await page
         .getByRole('row')
@@ -158,11 +167,11 @@ for (const entry of ['Nodes', 'Policies'])
     } else await page.getByRole('button', {name: 'New group', exact: true}).click();
     const dialog = page.getByRole('dialog', {name: 'New group'});
     await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-    await expect(dialog).toContainText(entry === 'Nodes' ? en['nodes.newGroupHelp'].replace('{name}', 'hk-01') : en['arrange.newGroupNote']);
     await dialog.getByRole('textbox', {name: 'Group name'}).fill('manualgroup');
-    if (entry === 'Policies') await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
-    const filter = dialog.getByRole('textbox', {name: 'Filter'});
-    await filter.fill("name(keyword: 'hk')");
+    await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
+    const filter = dialog.getByRole('textbox', {name: 'Values', exact: true});
+    await filter.fill('hk');
+    if (entry === 'Nodes') await dialog.getByRole('button', {name: 'Remove hk-01', exact: true}).click();
     await dialog.getByRole('button', {name: /Selection policy/}).click();
     await page.getByRole('option', {name: /^Manual/}).click();
     const picker = dialog.getByRole('button', {name: /Default member$/});
@@ -170,24 +179,19 @@ for (const entry of ['Nodes', 'Policies'])
     await expect(page.getByRole('option', {name: /^hk-01/})).toBeVisible();
     await expect(page.getByRole('option', {name: /^sg-01/})).toHaveCount(0);
     await page.keyboard.press('Escape');
-    await filter.fill('name(hk-02)');
+    await dialog.getByRole('button', {name: /Match by$/}).click();
+    await page.getByRole('option', {name: 'Exact names', exact: true}).click();
+    await filter.fill('hk-02');
     await picker.click();
     await expect(page.getByRole('option', {name: /^hk-01/})).toHaveCount(0);
     await page.getByRole('option', {name: /^hk-02/}).click();
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(dialog).toHaveCount(0);
-    if (entry === 'Policies') {
-      await page.getByRole('button', {name: 'Review and apply'}).click();
-      const review = page.getByRole('dialog', {name: 'Review changes'});
-      await expect(review).toContainText('default: hk-02');
-      await review.getByRole('button', {name: 'Apply', exact: true}).click();
-      await expect(review).toHaveCount(0);
-    }
     await expect.poll(async () => (await api.group('manualgroup')).config.default_member_id).toBe('hk-02');
     expect((await api.group('manualgroup')).members.map(member => member.name)).toEqual(['hk-02']);
     const main = (await api.config()).sources.find(source => source.kind === 'main')!;
     expect(readGroupEntries(main.content).find(entry => entry.name === 'manualgroup')).toMatchObject({
-      filters: ['name(hk-02)'],
+      filters: ["name('hk-02')"],
       policy: 'select',
       default: 'hk-02'
     });
@@ -226,11 +230,11 @@ for (const viewport of [
       test.use({viewport, storage: {'doona-lang': lang, 'doona-scheme': scheme}});
       test('create and edit dialogs fit the viewport and return keyboard focus', async ({page}, info) => {
         await mockBackend(page);
-        await page.goto('/#/policies?tab=arrange');
+        await page.goto('/#/policies');
         const labels = lang === 'en' ? en : zh;
-        const create = page.getByRole('button', {name: labels['arrange.newGroup'], exact: true});
+        const create = page.getByRole('button', {name: labels['group.newGroup'], exact: true});
         await create.click();
-        const dialog = page.getByRole('dialog', {name: labels['arrange.newGroup'], exact: true});
+        const dialog = page.getByRole('dialog', {name: labels['group.newGroup'], exact: true});
         await dialog.focus();
         await page.keyboard.press('Tab');
         await expect(dialog.locator('.rp-dialog-body')).toBeFocused();
@@ -244,20 +248,20 @@ for (const viewport of [
         await dialog.getByRole('textbox').fill('streaming');
         await dialog.getByRole('button', {name: labels['policy.advanced'], exact: true}).click();
         await dialog.getByRole('button', {name: labels['policy.addFilter'], exact: true}).click();
-        await dialog.getByRole('textbox').nth(1).fill('name(hk-01)');
+        await dialog.getByRole('textbox').nth(1).fill('hk-01');
         await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         await page.mouse.move(0, 0);
         await expectFormGeometry(dialog);
-        await expect(dialog.getByRole('button', {name: labels['arrange.create'], exact: true})).toBeEnabled();
+        await expect(dialog.getByRole('button', {name: labels['group.create'], exact: true})).toBeEnabled();
         await page.screenshot({path: info.outputPath('create-auto.png')});
         await dialog.getByRole('button', {name: labels['policy.addFilter'], exact: true}).click();
-        await expect(dialog.getByRole('textbox', {name: labels['policy.filterN'].replace('{n}', '1'), exact: true})).toBeVisible();
-        await expect(dialog.getByText(labels['policy.filterHelp'], {exact: false})).toHaveCount(1);
+        await expect(dialog.getByRole('textbox', {name: labels['rule.values'], exact: true})).toHaveCount(2);
+        await expect(dialog.getByText(labels['group.filterOr'], {exact: true})).toBeVisible();
         await expectFormGeometry(dialog);
         await dialog.getByRole('button', {name: labels['policy.removeFilter'].replace('{n}', '2'), exact: true}).click();
-        await expect(dialog.getByRole('textbox', {name: labels['ui.filter'], exact: true})).toBeVisible();
-        const policy = dialog.getByRole('button', {name: new RegExp(labels['arrange.policy'])});
+        await expect(dialog.getByRole('textbox', {name: labels['rule.values'], exact: true})).toBeVisible();
+        const policy = dialog.getByRole('button', {name: new RegExp(labels['group.policy'])});
         await policy.click();
         await page.getByRole('option', {name: new RegExp(`^${labels['policy.kind.selector']}`)}).click();
         await expect(dialog.getByRole('button', {name: new RegExp(`${labels['policy.cfg.defaultMember']}$`)})).toBeVisible();
@@ -270,8 +274,9 @@ for (const viewport of [
         await expect(dialog).toHaveCount(0);
         await expect(create).toBeFocused();
         await page.goto('/#/policies');
-        await moreAction(page.getByRole('region', {name: 'proxy', exact: true}), labels['policy.edit'], labels['ui.moreActions']);
-        const edit = page.getByRole('dialog', {name: labels['policy.editTitle'].replace('{name}', 'proxy'), exact: true});
+        await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+        await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: labels['policy.edit'], exact: true}).click();
+        const edit = page.getByRole('dialog', {name: labels['policy.editTitle'].replace('{name}', 'office'), exact: true});
         await expect(edit).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         const heading = (await edit.getByRole('heading', {name: labels['policy.liveConfig']}).boundingBox())!;
@@ -292,12 +297,12 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
       test('five filters scroll between a fixed title and footer without clipping picker values', async ({page}, info) => {
         await mockBackend(page);
         const labels = lang === 'en' ? en : lang === 'zh-CN' ? zh : tw;
-        await page.goto('/#/policies?tab=arrange');
-        await page.getByRole('button', {name: labels['arrange.newGroup'], exact: true}).click();
-        const dialog = page.getByRole('dialog', {name: labels['arrange.newGroup'], exact: true});
+        await page.goto('/#/policies');
+        await page.getByRole('button', {name: labels['group.newGroup'], exact: true}).click();
+        const dialog = page.getByRole('dialog', {name: labels['group.newGroup'], exact: true});
         await dialog.getByRole('textbox').fill('streaming');
         await dialog.getByRole('button', {name: labels['policy.advanced'], exact: true}).click();
-        const policy = dialog.getByRole('button', {name: new RegExp(labels['arrange.policy'])});
+        const policy = dialog.getByRole('button', {name: new RegExp(labels['group.policy'])});
         await policy.click();
         await page.getByRole('option', {name: new RegExp(`^${labels['policy.kind.selector']}`)}).click();
         for (let i = 0; i < 5; i++) {
@@ -305,14 +310,14 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
           await dialog
             .getByRole('textbox')
             .nth(i + 1)
-            .fill(`name(keyword: 'region-${i}')`);
+            .fill(`region-${i}`);
         }
         const body = dialog.locator('.rp-dialog-body');
         await expect(body).toHaveAttribute('data-overflow', 'true');
         await body.focus();
         await page.keyboard.press('Home');
         await expect.poll(() => body.evaluate(element => element.scrollTop)).toBe(0);
-        const title = dialog.getByRole('heading', {name: labels['arrange.newGroup'], exact: true});
+        const title = dialog.getByRole('heading', {name: labels['group.newGroup'], exact: true});
         const footer = dialog.locator('.foot');
         const titleBox = (await title.boundingBox())!;
         const footerBox = (await footer.boundingBox())!;
@@ -324,7 +329,7 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
           }
           await expect(title).toBeInViewport({ratio: 1});
           await expect(dialog.getByRole('button', {name: labels['ui.cancel'], exact: true})).toBeInViewport({ratio: 1});
-          await expect(dialog.getByRole('button', {name: labels['arrange.create'], exact: true})).toBeInViewport({ratio: 1});
+          await expect(dialog.getByRole('button', {name: labels['group.create'], exact: true})).toBeInViewport({ratio: 1});
           expect(await title.boundingBox()).toEqual(titleBox);
           expect(await footer.boundingBox()).toEqual(footerBox);
           const pickers =
@@ -356,13 +361,15 @@ for (const width of [390, 1440])
         const labels = lang === 'en' ? en : lang === 'zh-TW' ? tw : zh;
         await mockBackend(page);
         await page.goto('/#/policies');
-        await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), labels['policy.edit'], labels['ui.moreActions']);
-        const title = labels['policy.editTitle'].replace('{name}', 'gaming');
+        await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
+        await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: labels['policy.edit'], exact: true}).click();
+        const title = labels['policy.editTitle'].replace('{name}', 'office');
         const dialog = page.getByRole('dialog', {name: title, exact: true});
         await expect(dialog).toHaveAccessibleDescription(labels['policy.editHelp']);
         const heading = await dialog.getByRole('heading', {name: title, exact: true}).boundingBox();
         const content = await dialog.locator('.rp-dialog-content').boundingBox();
         expect(heading!.x).toBeCloseTo(content!.x, 1);
+        await dialog.getByRole('button', {name: labels['policy.advanced'], exact: true}).click();
         const add = dialog.getByRole('button', {name: labels['policy.addFilter'], exact: true});
         await expect(add).toHaveClass(/\bsecondary\b/);
         await expect(add.locator('svg')).toHaveCount(1);

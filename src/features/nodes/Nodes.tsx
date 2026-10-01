@@ -5,7 +5,6 @@ import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
-import {GroupDialog} from '../shared/GroupDialog';
 import {SubscriptionFields} from '../shared/SubscriptionFields';
 export function Nodes(props: PageProps) {
   const t = useT();
@@ -33,7 +32,6 @@ export function Nodes(props: PageProps) {
     pending,
     submitting,
     submitLabel,
-    groupCreate,
     subscription,
     setSubscription,
     subscriptionFields,
@@ -151,7 +149,6 @@ export function Nodes(props: PageProps) {
           </div>
         )}
       </ModalDialog>
-      <GroupDialog id="nodes-create" model={groupCreate} details={null} />
       <ConfirmDialog
         title={dialogTitle}
         isOpen={removing}

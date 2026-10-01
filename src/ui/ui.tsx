@@ -28,7 +28,7 @@ export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, toastErr
 export {Kv, type KvItem} from './Kv';
 export {ContextualHelp, IconTip, HelpRow, type Help} from './ContextualHelp';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
-export {Tag, Tags} from './Tag';
+export {Tag, Tags, LinkTag} from './Tag';
 export {ActionBar} from './ActionBar';
 export {ActionGroup, MoreMenu, type Action} from './ActionGroup';
 export {Card, cardClass} from './Card';

@@ -2,7 +2,9 @@ import {isFragment, isQuotable, quote, scanConfig, unquote} from './text';
 
 export const groupConditionKinds = ['nameKeyword', 'nameRegex', 'nameExact', 'subtag', 'subtagKeyword', 'subtagRegex', 'group'] as const;
 export type GroupConditionKind = (typeof groupConditionKinds)[number];
-export type GroupConditionRow = {id: number; kind: GroupConditionKind; value: string; negate: boolean};
+export type GroupConditionTerm = {id: number; kind: GroupConditionKind; value: string};
+export type GroupConditionRow = GroupConditionTerm & {negate: boolean; alternatives?: GroupConditionTerm[]};
+export const conditionFamily = (kind: GroupConditionKind) => calls[kind][0];
 export type GroupFilterDraft = {id: number; source: string; initial: string; rows: GroupConditionRow[] | null; advanced: boolean};
 const calls: Record<GroupConditionKind, [string, string]> = {
   nameKeyword: ['name', 'keyword:'],
@@ -67,8 +69,7 @@ export function parseGroupConditions(source: string): GroupConditionRow[] | null
     index++;
     if (raw() !== '(') return null;
     index++;
-    const values: string[] = [];
-    let prefix: string | undefined;
+    const terms: GroupConditionTerm[] = [];
     while (index < tokens.length && raw() !== ')') {
       let argumentPrefix = '';
       if (raw() === 'keyword' || raw() === 'regex') {
@@ -81,25 +82,31 @@ export function parseGroupConditions(source: string): GroupConditionRow[] | null
       const token = tokens[index];
       if (!token || !['text', 'quoted'].includes(token.kind)) return null;
       const value = unquote(raw());
-      if (!value || /[\r\n]/.test(value) || (prefix !== undefined && prefix !== argumentPrefix)) return null;
-      prefix = argumentPrefix;
-      values.push(value);
+      if (!value || /[\r\n]/.test(value)) return null;
+      const kind = groupConditionKinds.find(kind => calls[kind][0] === head && calls[kind][1] === argumentPrefix);
+      if (!kind) return null;
+      const values =
+        kind === 'group'
+          ? value
+              .split(/[|,]/)
+              .map(value => value.trim())
+              .filter(Boolean)
+          : [value];
+      if (!values.length) return null;
+      const previous = terms.at(-1);
+      if (previous?.kind === kind) previous.value = conditionValues([...parseConditionValues(previous.value)!, ...values]);
+      else terms.push({id: nextId++, kind, value: conditionValues(values)});
       index++;
       if (raw() === ',') {
         index++;
         if (raw() === ')') return null;
       } else if (raw() !== ')') return null;
     }
-    if (raw() !== ')' || !values.length) return null;
+    if (raw() !== ')' || !terms.length) return null;
     index++;
-    const kind = groupConditionKinds.find(kind => calls[kind][0] === head && calls[kind][1] === prefix);
-    if (!kind || (kind === 'group' && (negate || rows.length || index < tokens.length))) return null;
-    rows.push({
-      id: nextId++,
-      kind,
-      value: conditionValues(kind === 'group' ? values.flatMap(value => value.split(/[|,]/).map(value => value.trim())) : values),
-      negate
-    });
+    const [first, ...alternatives] = terms;
+    if (first.kind === 'group' && (negate || rows.length || index < tokens.length)) return null;
+    rows.push({...first, negate, ...(alternatives.length ? {alternatives} : {})});
     if (index < tokens.length) {
       if (raw() !== '&&') return null;
       index++;
@@ -112,14 +119,28 @@ export function serializeGroupConditions(rows: GroupConditionRow[]): string | nu
   if (!rows.length) return null;
   const terms: string[] = [];
   for (const row of rows) {
-    const values = parseConditionValues(row.value);
-    if (!values || (row.kind === 'group' && (rows.length !== 1 || row.negate || values.some(value => /[|,]/.test(value))))) return null;
-    const [call, prefix] = calls[row.kind];
-    terms.push(`${row.negate ? '!' : ''}${call}(${values.map(value => `${prefix}${prefix ? ' ' : ''}${quote(value)}`).join(', ')})`);
+    const arguments_: string[] = [];
+    const call = conditionFamily(row.kind);
+    for (const term of [row, ...(row.alternatives ?? [])]) {
+      const values = parseConditionValues(term.value);
+      if (!values || conditionFamily(term.kind) !== call) return null;
+      if (term.kind === 'group' && (rows.length !== 1 || row.negate || row.alternatives?.length || values.some(value => /[|,]/.test(value)))) return null;
+      const prefix = calls[term.kind][1];
+      arguments_.push(...values.map(value => `${prefix}${prefix ? ' ' : ''}${quote(value)}`));
+    }
+    terms.push(`${row.negate ? '!' : ''}${call}(${arguments_.join(', ')})`);
   }
   return terms.join(' && ');
 }
-const rowState = (rows: GroupConditionRow[] | null) => JSON.stringify(rows?.map(({kind, value, negate}) => ({kind, value, negate})) ?? null);
+const rowState = (rows: GroupConditionRow[] | null) =>
+  JSON.stringify(
+    rows?.map(({kind, value, negate, alternatives}) => ({
+      kind,
+      value,
+      negate,
+      alternatives: alternatives?.length ? alternatives.map(({kind, value}) => ({kind, value})) : undefined
+    })) ?? null
+  );
 export function groupFilterDraft(source: string, advanced = false): GroupFilterDraft {
   const rows = parseGroupConditions(source);
   return {id: nextId++, source, rows, initial: rowState(rows), advanced};

@@ -53,8 +53,7 @@ test('keyboard press opens the reason while only the focused control has a ring'
   await lock.focus();
   await expect(dialog).toHaveCount(0);
   expect(await lock.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
-  await expect(page.locator('.rp-tabs')).toHaveAttribute('data-focus-visible', 'true');
-  expect(await page.locator('.rp-tabs').evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+  expect(await page.getByRole('region', {name: 'proxy', exact: true}).evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
   expect(await page.locator('.rp-content').evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
   await page.keyboard.press('Enter');
   await expect(dialog).toContainText(reason);

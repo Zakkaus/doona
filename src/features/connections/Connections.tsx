@@ -1,3 +1,4 @@
+import {OutboundTag} from '../shared/OutboundTag';
 import {
   Badge,
   Button,
@@ -147,7 +148,7 @@ export function Connections(props: PageProps) {
               <Kv items={cur.fields} />
               <Kv
                 items={[
-                  [t('ui.outbound'), cur.outbound],
+                  [t('ui.outbound'), <OutboundTag name={cur.outbound} />],
                   [t('conn.chain'), cur.chain]
                 ]}
               />

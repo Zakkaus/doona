@@ -83,9 +83,7 @@ Sign-in is a page of its own with language and palette menus and a scheme toggle
 
 ### Group membership
 
-On the Group membership tab of Policies, drag a node or a subscription from the list on the right onto a group to add it. Keyboard dragging does the same, and Add to group below the list adds the selected rows to a group. The changes stay staged until you open Review and apply and press Apply.
-
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/arrange.webp" alt="Dragging the node us-01 onto the gaming group" width="100%">
+On Policies, use the pencil button on a group card to edit its policy and included regions, subscriptions and nodes. The dialog shows the matching nodes and supports undo before saving. New group opens the same editor. Group links on Nodes return to the group card; Add to group opens its editor with the node staged for confirmation.
 
 ### Traffic and connections
 

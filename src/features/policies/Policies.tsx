@@ -1,36 +1,35 @@
-import {
-  createContext,
-  memo,
-  useCallback,
-  Suspense,
-  use,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode
-} from 'react';
-import type {Arrange as ArrangeTab} from './arrange/Arrange';
-import {preloadable} from '../../ui/preloadable';
+import Edit from '../../ui/icons/Edit';
+import AddCircle from '../../ui/icons/AddCircle';
+import {FilterSummary} from '../shared/FilterSummary';
+import {createContext, Fragment, memo, useCallback, use, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, HelpRow, Disclosure, ErrorMessage, IconTip, Light, Loading, Segmented, Empty, Tabs, TextTooltip, MoreMenu} from '../../ui/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  HelpRow,
+  Disclosure,
+  ErrorMessage,
+  IconTip,
+  Light,
+  Loading,
+  Segmented,
+  Empty,
+  Tag,
+  Tags,
+  LinkTag,
+  TextTooltip,
+  MoreMenu
+} from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
+import {NodeName} from '../../ui/NodeName';
 import {NodeText} from '../shared/NodeText';
 import {NodeGrid} from './Nodes';
 import {GroupDialog} from '../shared/GroupDialog';
 import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
-import {policiesTabs} from './nav';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
-
-// The arrange tab and its drag and drop are a chunk of their own, fetched as soon as this page's module loads (in idle
-// time, like the page itself), so opening the tab later does not wait.
-const arrange = preloadable<ComponentProps<typeof ArrangeTab>>(() => import('./arrange/Arrange').then(module => ({default: module.Arrange})));
-const Arrange = arrange.Component;
-void arrange.preload().catch(() => undefined);
 
 // Holds roughly the loaded card's height, so cards below do not move when the details arrive. A collapsed automatic
 // group holds its summary line alone.
@@ -87,6 +86,11 @@ function PolicyList({loading, children}: {loading: boolean; children: ReactNode}
   useLayoutEffect(() => {
     if (!shown && !loading && !waiting.current.size) setShown(true);
   }, [shown, loading, checks]);
+  useEffect(() => {
+    if (shown || loading) return;
+    const timeout = setTimeout(() => setShown(true), 3000);
+    return () => clearTimeout(timeout);
+  }, [shown, loading]);
   return (
     <FirstShow value={gate}>
       <div className="rp-policy-list" data-wait={shown ? undefined : ''}>
@@ -134,7 +138,11 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
         <PolicyWait
-          heading={<h2 className="rp-h3">{props.name}</h2>}
+          heading={
+            <h2 className="rp-h3" tabIndex={-1}>
+              {props.name}
+            </h2>
+          }
           members={props.members}
           label={m.loadingText}
           collapsed={props.kind === 'auto' && !props.focused}
@@ -144,8 +152,8 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
         <>
           {/* A long name gives way, truncating, so the More menu keeps its place on the title row. */}
           <div className="rp-row nowrap">
-            <span className="rp-cluster">
-              <h2 className="rp-h3">
+            <span className="rp-cluster rp-grow">
+              <h2 className="rp-h3" tabIndex={-1}>
                 <TextTooltip>{g.name}</TextTooltip>
               </h2>
               {m.actionsReason && (
@@ -170,20 +178,30 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
                 </HelpRow>
               )}
             </span>
-            {/* Choosing a member is the card's primary action; every command goes into its More menu. */}
+            <Button quiet icon small label={t('policy.edit')} tip={m.edit.tip} isDisabled={!m.edit.editable || m.edit.disabled} onPress={() => m.edit.show()}>
+              <Edit />
+            </Button>
             <GroupDialog id={g.id} model={m.edit} details={m.details} />
             <CheckEdit model={m.check} />
             <MoreMenu
               actions={[
-                m.edit.editable
-                  ? {id: 'edit', label: t('policy.edit'), isDisabled: m.edit.disabled, onAction: m.edit.show}
-                  : {id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view},
+                ...(!m.edit.editable ? [{id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view}] : []),
                 ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
                 {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
                 ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
               ]}
             />
           </div>
+          {m.includes.tags.length > 0 && (
+            <Tags label={t('policy.includes')}>
+              {m.includes.tags.map(tag => (
+                <Fragment key={tag.id}>
+                  {tag.href ? <LinkTag href={tag.href}>{tag.label}</LinkTag> : <Tag>{tag.nodeName ? <NodeName name={tag.label} /> : tag.label}</Tag>}
+                </Fragment>
+              ))}
+            </Tags>
+          )}
+          {m.includes.filters && <FilterSummary filters={m.includes.filters} />}
           {g.automatic ? (
             // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
             // its light beside the summary while they are folded.
@@ -216,9 +234,15 @@ const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) 
   // A card removed before its details mount does not hold the list.
   useLayoutEffect(() => () => gate.release(id), [gate, id]);
   const {focused} = props;
+  const [highlight, setHighlight] = useState({focused, active: focused});
+  if (highlight.focused !== focused) setHighlight({focused, active: focused});
+  useEffect(() => {
+    const timer = setTimeout(() => setHighlight(previous => ({...previous, active: false})), 3000);
+    return () => clearTimeout(timer);
+  }, [focused]);
   const {ref, active, visible, expand} = usePolicyVisibility(focused, hold);
   return (
-    <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1}>
+    <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1} isHighlighted={highlight.active}>
       {active ? (
         <PolicyDetail {...props} paused={!visible} />
       ) : (
@@ -251,6 +275,11 @@ export function Policies(props: PageProps) {
               key={card.id}
               {...card}
               focused={m.focus === card.id}
+              nodes={m.nodes}
+              providers={m.providers}
+              editRequested={m.focus === card.id && m.editRequested}
+              seedNode={m.seedNode}
+              editorOpened={m.editorOpened}
               health={m.health}
               outbounds={m.outbounds}
               source={m.source}
@@ -262,40 +291,18 @@ export function Policies(props: PageProps) {
       </PolicyList>
     </>
   );
-  const content = {
-    groups,
-    arrange: (
-      <Suspense fallback={<Loading />}>
-        <Arrange
-          text={m.arrangeText}
-          source={m.source}
-          groups={m.groups}
-          outbounds={m.outbounds}
-          viewGroup={m.viewGroup}
-          editors={m.allCards.map(card => ({
-            ...card,
-            source: m.source,
-            outbounds: m.outbounds,
-            health: m.health,
-            refreshGroups: m.refreshGroups,
-            refreshNodes: m.refreshNodes,
-            paused: true,
-            focused: false
-          }))}
-        />
-      </Suspense>
-    )
-  };
   return (
     <div className="rp-page">
-      <Tabs
-        keepMounted
-        label={t('nav.policies')}
-        actions={m.tab === 'groups' && m.showKinds ? <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} /> : null}
-        value={m.tab}
-        onChange={m.setTab}
-        items={policiesTabs().map(tab => ({id: tab.id, label: t(tab.titleKey), content: content[tab.id]}))}
-      />
+      <div className="rp-toolbar">
+        {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
+        <span className="rp-grow" />
+        <Button secondary isDisabled={m.createDisabled} tip={m.create.tip} onPress={() => m.create.show()}>
+          <AddCircle />
+          {t('group.newGroup')}
+        </Button>
+      </div>
+      <GroupDialog id="policies-create" model={m.create} details={null} />
+      {groups}
     </div>
   );
 }
