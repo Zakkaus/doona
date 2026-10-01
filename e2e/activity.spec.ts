@@ -551,9 +551,9 @@ for (const [width, lang] of [
       expect(name, 'the name is ellipsised').not.toBeNull();
       expect(name!.full).toBeGreaterThan(name!.shown);
       expect(name!.overflow).toBe('ellipsis');
-      expect(gap).toBe(width < 600 ? '2px' : '4px');
+      expect(gap).toBe('4px');
       expect(height).toBe(control);
-      expect(chevron).toBe(width < 600 ? 14 : 20);
+      expect(chevron).toBe(20);
       if (width === 1440) {
         await expect(picker.locator('.rp-truncate')).toHaveAttribute('data-tip');
         await picker.focus();
@@ -946,12 +946,13 @@ test('the latency picker shows the resolved node on a phone', async ({page}) => 
   expect(controls!.y).toBeGreaterThanOrEqual(caption!.y + caption!.height);
 });
 
-// Relative boxes measured at 6bb91def, immediately before #261, without optional flag decoration.
+// Wide boxes measured at 6bb91def without flag decoration; narrow controls now take a second row.
 for (const [lang, scheme, width, title, trigger, valueColor] of [
   ['en', 'light', 1440, [45, 26, 45, 14], [98, 17, 71, 32], 'rgb(70, 66, 97)'],
-  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)']
+  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)'],
+  ['zh-CN', 'light', 390, [45, 20, 24, 14], [17, 45, 71, 36], 'rgb(70, 66, 97)']
 ] as const)
-  test.describe(`${lang} ${scheme} original latency geometry`, () => {
+  test.describe(`${lang} ${scheme} latency geometry`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang, 'doona-scheme': scheme, 'doona-country-flags': 'off'}});
     test('preserves the title, node picker and large value boxes', async ({page}) => {
       await page.goto('/#/activity');
@@ -987,7 +988,7 @@ for (const [lang, scheme, width, title, trigger, valueColor] of [
       for (const [key, expected] of [
         ['title', title],
         ['trigger', trigger],
-        ['value', [17, width < 600 ? 61 : 63, 77, 28]]
+        ['value', [17, width < 600 ? 93 : 63, 77, 28]]
       ] as const)
         actual[key].forEach((coordinate, i) => expect(Math.abs(coordinate - expected[i]), `${key}[${i}]`).toBeLessThanOrEqual(1));
       expect(actual.pickerStyle).toEqual(['rgba(0, 0, 0, 0)', '12px', '16px', '400']);
