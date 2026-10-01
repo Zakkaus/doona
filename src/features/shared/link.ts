@@ -9,8 +9,8 @@ import {href, within} from '../../shell/route';
 export const ruleHref = (ruleId: string | null, listed: boolean) => (listed && ruleId ? href('rules', {tab: 'list', rule: ruleId}) : undefined);
 
 // A node on the Nodes page: under the owner the page files it under, found by its name.
-export const nodeHref = (node: Pick<Node, 'provider_id' | 'protocol' | 'name'>, providers: ReadonlyArray<{id: string}>) =>
-  href('nodes', {provider: nodeOwner(node, providers), q: node.name});
+export const nodeHref = (node: Pick<Node, 'provider_id' | 'protocol' | 'name'> & {id?: string}, providers: ReadonlyArray<{id: string}>, exact = false) =>
+  href('nodes', {provider: nodeOwner(node, providers), q: node.name, node: exact ? (node.id ?? null) : null});
 
 // The Policies page focuses a group by the id the backend gives it, which a group written by name does not carry. A
 // group the list does not hold opens the page without a focus.
@@ -63,3 +63,4 @@ export function sectionSourceHref(sources: readonly ConfigSource[], name: string
 export const appearanceSettingsHref = href('settings', {card: 'appearance'});
 export const outboundModeHref = href('activity', {card: 'mode'});
 export const recordingLimitsHref = href('overview', {card: 'limits'});
+export const nodeSetHref = (ids: string[]) => href('nodes', {nodes: JSON.stringify(ids)});

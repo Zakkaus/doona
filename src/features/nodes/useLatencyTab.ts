@@ -15,7 +15,7 @@ export function useLatencyTab() {
   const [by, setBy] = useState<LatencyBy>('group');
   const view = useMemo(() => latencyGroups(nodes.data ?? [], groups.data, by, locale), [nodes.data, groups.data, by, locale]);
   const hrefs = useMemo(
-    () => new Map((nodes.data ?? []).map(node => [node.id, nodeHref(node, providers.data?.providers ?? [])])),
+    () => new Map((nodes.data ?? []).map(node => [node.id, nodeHref(node, providers.data?.providers ?? [], true)])),
     [nodes.data, providers.data]
   );
   return {nodes, by, setBy, view, hrefs};

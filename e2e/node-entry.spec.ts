@@ -71,6 +71,34 @@ test('incomplete authored sources do not offer node editing', async ({page}) => 
   await expect(page.getByRole('menuitem', {name: 'Edit hk-01', exact: true})).toHaveCount(0);
 });
 
+test('missing latency names and the remaining count open probeable node rows', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const listed = await api.nodes();
+  const original = listed.nodes.find(node => node.name === 'hk-01')!;
+  listed.nodes = Array.from({length: 9}, (_, index) => ({
+    ...original,
+    id: `missing-${index}`,
+    name: `missing-${index}`,
+    health: original.health.map(health => ({...health, state: index === 0 ? ('unavailable' as const) : ('unknown' as const), latency_ms: null}))
+  }));
+  handlers['GET nodes'] = async () => ({...listed, next_cursor: null});
+  await page.goto('/#/nodes?tab=latency');
+  await page.getByRole('link', {name: 'missing-0', exact: true}).first().click();
+  await expect(page).toHaveURL(/provider=inline.*q=missing-0.*node=missing-0/);
+  await expect(nodeRows(page)).toHaveCount(1);
+  await expect(page.getByRole('button', {name: 'Test missing-0', exact: true})).toBeVisible();
+  await page.goto('/#/nodes?tab=latency');
+  await page.getByRole('link', {name: '2 more', exact: true}).first().click();
+  await expect(nodeRows(page)).toHaveCount(8);
+  await expect(page.getByRole('button', {name: 'Test missing-8', exact: true})).toBeVisible();
+  await page.reload();
+  await expect(nodeRows(page)).toHaveCount(8);
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await expect(page).not.toHaveURL(/nodes=/);
+  await page.locator('.rp-table').first().locator('[role=row][data-key=inline]').click();
+  await expect(nodeRows(page)).toHaveCount(9);
+});
+
 test('the interval jump edits the declaring include while the main file is read-only', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
