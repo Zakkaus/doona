@@ -49,3 +49,17 @@ it('protects targets in bare routing includes and leaves subscription includes w
   expect(sourceForms(subscriptions, 'include', engine, 'include')).toEqual([]);
   expect(sameFormValues(subscriptions, subscriptions.replace('example.org', 'example.net'), 'include', engine, 'include')).toBe(true);
 });
+
+it.each(['routing { fallback: direct }', 'dns { routing { request { fallback: direct } } }', 'routing { domain(example.org) -> direct }'])(
+  'allows formatting %s while protecting the target',
+  before => {
+    expect(sameFormValues(before, before.replaceAll(' }', '\n}'), 'main', engine)).toBe(true);
+    expect(sameFormValues(before, before.replace('direct', 'block'), 'main', engine)).toBe(false);
+  }
+);
+it('compares a large routing file without quadratic stalls', () => {
+  const before = 'routing {\n' + 'domain(example.org) -> direct\n'.repeat(60000) + '}';
+  const start = performance.now();
+  expect(sameFormValues(before, before + '\n# comment', 'main', engine)).toBe(true);
+  expect(performance.now() - start).toBeLessThan(2000);
+});
