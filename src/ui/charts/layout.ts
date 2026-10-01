@@ -125,13 +125,10 @@ export function symlogAxis(max: number): {end: number; ticks: number[]} {
   return {end, ticks};
 }
 
-// A marker row's span in percent of the axis [0, max], from its lowest value to its highest, with values past the
-// axis end held on the edge; null when the values meet at one point and there is nothing to join.
-export function markerSpan(values: number[], max: number): {start: number; width: number} | null {
-  const at = values.map(value => Math.min(100, Math.max(0, (value / max) * 100)));
-  const start = Math.min(...at);
-  const width = Math.max(...at) - start;
-  return width > 0 ? {start, width} : null;
+// A range's band in percent of the axis [0, max], both ends held inside the axis; zero wide when the ends meet.
+export function bandSpan([low, high]: [number, number], max: number): {start: number; width: number} {
+  const at = (value: number) => Math.min(100, Math.max(0, (value / max) * 100));
+  return {start: at(low), width: at(high) - at(low)};
 }
 
 export function linearPosition(value: number, [lo, hi]: [number, number], [start, end]: [number, number]): number {

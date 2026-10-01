@@ -35,12 +35,12 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(fact(page, 'Highest').locator('.rp-fact-caption')).toHaveText(/^\d+ ms$/);
   await expect(fact(page, 'Unavailable')).toHaveText(/^\d+ nodes?$/);
   const plot = page.getByRole('group', {name: 'Node latency'});
-  // The mock, like honk, reports both averages, and a span joins them to the latest latency.
-  for (const label of ['Latest latency', 'Moving average', 'Average of the last 10']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
+  // The mock, like honk, reports both averages: a band spans them, and the tip keeps every number.
+  for (const label of ['Latest latency', 'Usual range', 'Slower than usual']) await expect(plot.getByText(label, {exact: true})).toBeVisible();
   const row = plot.getByRole('img', {name: /^.+, Latest latency: \d+ ms, Moving average: \d+ ms, Average of the last 10: \d+ ms$/}).first();
-  await expect(row.locator('.span')).toBeVisible();
+  await expect(row.locator('.band')).toBeVisible();
   await row.hover();
-  await expect(page.locator('.rp-charttip')).toContainText('Moving average');
+  for (const label of ['Moving average', 'Average of the last 10']) await expect(page.locator('.rp-charttip')).toContainText(label);
   const showAll = plot.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: /^Show all \d+$/});
   await expect(showAll).toBeVisible();
   const before = await plot.getByRole('img').count();

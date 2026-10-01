@@ -6,6 +6,6 @@ export {FactStrip, type ChartFact} from './FactStrip';
 export {LegendItem} from './LegendItem';
 export {Beeswarm, type SwarmPoint, type SwarmMark, type SwarmRow} from './Beeswarm';
 export {Waffle, type WaffleShare} from './Waffle';
-export {MarkerPlot, type MarkerGroup, type MarkerRow, type MarkerKind} from './MarkerPlot';
+export {MarkerPlot, type MarkerGroup, type MarkerRow, type MarkerLegend} from './MarkerPlot';
 export {Heatmap, type HeatRow} from './Heatmap';
 export {Scatter, ScatterLegend, type ScatterPoint, type ScatterSeries} from './Scatter';

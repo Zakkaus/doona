@@ -4,17 +4,18 @@ import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
-import {markerSpan} from './layout';
+import {bandSpan} from './layout';
 
-export type MarkerKind = 'dot' | 'diamond' | 'tick';
-// `description` is what the row says to a screen reader: every value it draws, in words.
-// `details` are the hover tip's lines under the row's name. With `href` the name opens what it names.
+// `value` is the row's dot and `range` its band, a thin line when both ends meet. `description` is what the row says
+// to a screen reader: every value it stands for, in words. `details` are the hover tip's lines under the row's name.
+// With `href` the name opens what it names.
 export type MarkerRow = {
   id: string;
   label: string;
   nodeName?: boolean;
   href?: string;
-  values: Partial<Record<MarkerKind, number>>;
+  value: number;
+  range: [number, number] | null;
   text: string;
   description: string;
   details: string[];
@@ -22,14 +23,14 @@ export type MarkerRow = {
 };
 // `notes` are the rows that have no value to draw, summed up in a sentence each (say, which nodes are unavailable).
 export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
+export type MarkerLegend = {kind: 'dot' | 'band'; label: string; color?: string};
 
-function Marker({kind, color}: {kind: MarkerKind; color?: string}) {
+function Marker({kind, color}: {kind: MarkerLegend['kind']; color?: string}) {
   return <i className={'rp-marker ' + kind} style={color ? {color} : undefined} aria-hidden="true" />;
 }
 
-// Rows of up to three values on one shared axis, each drawn with its own marker shape and named in the legend. A faint
-// span joins a row's lowest and highest value, so three close values read as one tight cluster rather than a pile of
-// shapes. Values past the axis end sit on the edge, and the row's number still says what they are.
+// Rows on one shared axis: a dot for each row's value over a band for its range, so a dot past its band stands out.
+// Values past the axis end sit on the edge, and the row's number still says what they are.
 export function MarkerPlot({
   label,
   groups,
@@ -41,7 +42,7 @@ export function MarkerPlot({
 }: {
   label: string;
   groups: MarkerGroup[];
-  legend: Array<{kind: MarkerKind; label: string}>;
+  legend: MarkerLegend[];
   max: number;
   fmt: (value: number) => string;
   // Rows shown per group before a "show all" button, so a hundred-node subscription does not fill the page.
@@ -58,8 +59,8 @@ export function MarkerPlot({
     <div className="rp-markerplot rp-chart-hover" ref={tipRef} onPointerLeave={hideTip} role="group" aria-label={label} aria-describedby={describedBy}>
       <ul className="legend">
         {legend.map(item => (
-          <li key={item.kind}>
-            <Marker kind={item.kind} />
+          <li key={item.label}>
+            <Marker kind={item.kind} color={item.color} />
             {item.label}
           </li>
         ))}
@@ -79,10 +80,7 @@ export function MarkerPlot({
         <section key={group.id} aria-label={group.label}>
           {groups.length > 1 && <h4 className="rp-label">{group.label}</h4>}
           {(expanded.has(group.id) ? group.rows : group.rows.slice(0, limit)).map(row => {
-            const span = markerSpan(
-              Object.values(row.values).filter((value): value is number => value !== undefined),
-              max
-            );
+            const band = row.range && bandSpan(row.range, max);
             return (
               <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details], row.nodeName)}>
                 <span className="name">
@@ -100,18 +98,15 @@ export function MarkerPlot({
                   {ticks.map(tick => (
                     <i key={tick} className="grid" style={{insetInlineStart: `${at(tick)}%`}} />
                   ))}
-                  {span && <i className="span" style={{insetInlineStart: `${span.start}%`, width: `${span.width}%`}} />}
-                  {(['tick', 'diamond', 'dot'] as const).map(kind =>
-                    row.values[kind] === undefined ? null : (
-                      <span
-                        key={kind}
-                        className={'at ' + kind + (row.values[kind]! > max ? ' over' : '')}
-                        style={{insetInlineStart: `${at(row.values[kind]!)}%`}}
-                      >
-                        <Marker kind={kind} color={kind === 'dot' ? row.tone : undefined} />
-                      </span>
-                    )
+                  {band && (
+                    <i
+                      className={band.width ? 'band' : 'band line'}
+                      style={band.width ? {insetInlineStart: `${band.start}%`, width: `${band.width}%`} : {insetInlineStart: `${band.start}%`}}
+                    />
                   )}
+                  <span className={'at' + (row.value > max ? ' over' : '')} style={{insetInlineStart: `${at(row.value)}%`}}>
+                    <Marker kind="dot" color={row.tone} />
+                  </span>
                 </div>
                 <span className="value">{row.text}</span>
               </div>

@@ -8,7 +8,7 @@ import {
   logDomain,
   logPosition,
   logTicks,
-  markerSpan,
+  bandSpan,
   percentile,
   swarm,
   symlogAxis,
@@ -124,14 +124,12 @@ it('selects the nearest sample, keeping the earlier sample at a midpoint', () =>
   expect(nearestIndex([0, 10, 20], 16)).toBe(2);
 });
 
-// The latest latency against its two averages: the span joins all three wherever the latest one lies.
+// A node's usual latency range: a band between its two averages, a line when they meet, held inside the axis.
 it.each([
-  {name: 'latest inside the averages', values: [50, 40, 60], max: 100, span: {start: 40, width: 20}},
-  {name: 'latest below both averages', values: [20, 60, 70], max: 100, span: {start: 20, width: 50}},
-  {name: 'latest past the axis end', values: [300, 40, 45], max: 200, span: {start: 20, width: 80}},
-  {name: 'every value past the axis end', values: [300, 250, 400], max: 200, span: null},
-  {name: 'values on one point', values: [50, 50], max: 100, span: null},
-  {name: 'a lone value', values: [50], max: 100, span: null}
-])('spans a marker row with $name', ({values, max, span}) => {
-  expect(markerSpan(values, max)).toEqual(span);
+  {name: 'inside the axis', range: [40, 60], max: 100, band: {start: 40, width: 20}},
+  {name: 'one value', range: [50, 50], max: 100, band: {start: 50, width: 0}},
+  {name: 'its top past the axis end', range: [100, 300], max: 200, band: {start: 50, width: 50}},
+  {name: 'wholly past the axis end', range: [250, 400], max: 200, band: {start: 100, width: 0}}
+] as Array<{name: string; range: [number, number]; max: number; band: {start: number; width: number}}>)('places a band $name', ({range, max, band}) => {
+  expect(bandSpan(range, max)).toEqual(band);
 });

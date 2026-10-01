@@ -3,12 +3,11 @@ import {NodeName} from '../../ui/NodeName';
 import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT, type Lang, type Translator} from '../../i18n';
 import {Card, Empty, ErrorMessage, Loading, Segmented, Link} from '../../ui/ui';
-import {latencyTone} from '../../ui/Tile';
 import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {latencyAverages, latencyMax, type LatencyBy, type LatencyMissing} from './latencyGroups';
+import {isSlowerThanUsual, latencyAverages, latencyMax, usualRange, type LatencyBy, type LatencyMissing} from './latencyGroups';
 import {nodeSetHref} from '../shared/link';
 import {useLatencyTab} from './useLatencyTab';
 
@@ -44,8 +43,8 @@ export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator, 
     .map((part, index) => <Fragment key={index}>{part === '{names}' ? names : part === '{more}' ? more : part}</Fragment>);
 }
 
-// Every measured node on one axis, its latest latency beside the averages the backend reports, so a node that is slow
-// now or slow on average stands out; failed and unmeasured nodes are listed, not left out.
+// Every measured node on one axis, its latest latency over the usual range its two averages span, so a node slower now
+// than usual stands out; failed and unmeasured nodes are listed, not left out.
 export function NodeLatency() {
   const t = useT();
   const lang = useLang();
@@ -54,7 +53,6 @@ export function NodeLatency() {
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
-  const tone = {ok: p.positive, warn: p.notice, err: p.negative};
   const averages = latencyAverages(view);
   // One entry per node for the summary, whichever groups it sits in.
   const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
@@ -126,26 +124,33 @@ export function NodeLatency() {
           showAll={n => t('nodes.latency.showAll', {n})}
           legend={[
             {kind: 'dot', label: t('nodes.latency.latest')},
-            ...(averages.moving ? [{kind: 'diamond' as const, label: t('nodes.latency.moving')}] : []),
-            ...(averages.avg10 ? [{kind: 'tick' as const, label: t('nodes.latency.avg10')}] : [])
+            ...(averages.moving || averages.avg10
+              ? [
+                  {kind: 'band' as const, label: t('nodes.latency.usual')},
+                  {kind: 'dot' as const, label: t('nodes.latency.slower'), color: p.notice}
+                ]
+              : [])
           ]}
           groups={view.map(group => ({
             id: group.id,
             label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
             rows: group.rows.map(row => {
+              const slower = isSlowerThanUsual(row);
               const details = [
                 t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
                 ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
-                ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : [])
+                ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
+                ...(slower ? [t('nodes.latency.slower')] : [])
               ];
               return {
                 id: row.id,
                 label: row.name,
                 nodeName: true,
                 href: hrefs.get(row.id),
-                values: {dot: row.latest, diamond: row.moving ?? undefined, tick: row.avg10 ?? undefined},
+                value: row.latest,
+                range: usualRange(row),
                 text: formatLatency(row.latest, t),
-                tone: tone[latencyTone(row.latest)],
+                tone: slower ? p.notice : undefined,
                 description: details.join(t('ui.separator')),
                 details
               };
