@@ -21,7 +21,7 @@ async function regionalGroup(page: import('@playwright/test').Page) {
 
 test('one pencil opens the visual editor, no-op saves preserve bytes and tag removal can be undone', async ({page}) => {
   const {api} = await regionalGroup(page);
-  await page.goto('/#/policies?group=visual');
+  await page.goto(`/#/policies?group=${(await api.groups()).find(group => group.name === 'visual')!.id}`);
   const card = cardFor(page, 'visual');
   await expect(card.getByRole('group', {name: 'Includes'})).toContainText('Hong Kong');
   await card.getByRole('button', {name: 'More actions', exact: true}).click();
@@ -81,7 +81,7 @@ test('Nodes creates through the shared editor with region and subscription selec
   const card = cardFor(page, 'visual');
   await expect(card.getByRole('group', {name: 'Includes'})).toContainText('Hong Kong');
   await expect(card.getByRole('group', {name: 'Includes'})).toContainText('harbor');
-  await expect.poll(async () => (await api.group('visual')).members.length).toBe(count);
+  await expect.poll(async () => (await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.length).toBe(count);
   await expect(card).toContainText(`${count} members`);
   const text = (await api.config()).sources.find(source => source.kind === 'main')!.content;
   expect(readGroupEntries(text).find(group => group.name === 'visual')!.filters).toEqual(filters);
@@ -128,7 +128,7 @@ for (const reason of ['read-only', 'ambiguous'] as const)
             : [...config.sources, {...config.sources.find(source => source.kind === 'main')!, id: 'duplicate', path: '/etc/duplicate.dae'}]
       };
     };
-    await page.goto('/#/policies?group=visual');
+    await page.goto(`/#/policies?group=${(await api.groups()).find(group => group.name === 'visual')!.id}`);
     const button = cardFor(page, 'visual').getByRole('button', {name: 'Edit group', exact: true});
     await expect(button).toBeDisabled();
     await expect(button).toHaveAccessibleDescription(reason === 'read-only' ? /read.only/ : /more than once/);
@@ -167,7 +167,7 @@ test('node search adds a selection and keeps advanced filters unchanged', async 
   await api.pollOperation(
     await api.replaceConfigSource(main.id, writeGroupEntry(main.content, 'visual', {filters: [custom], policy: 'min_moving_avg'}), `"${main.content_sha256}"`)
   );
-  await page.goto('/#/policies?group=visual');
+  await page.goto(`/#/policies?group=${(await api.groups()).find(group => group.name === 'visual')!.id}`);
   await cardFor(page, 'visual').getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group visual'});
   await expect(dialog.getByRole('textbox', {name: 'Values', exact: true}).nth(0)).toHaveValue('hk');
@@ -196,7 +196,7 @@ test('a linked group with no members does not show all nodes', async ({page}) =>
       `"${main.content_sha256}"`
     )
   );
-  await page.goto('/#/nodes?group=empty');
+  await page.goto(`/#/nodes?group=${(await api.groups()).find(group => group.name === 'empty')!.id}`);
   await expect(page.getByRole('rowheader', {name: 'hk-01', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: /Group$/})).toContainText('empty');
 });
@@ -213,12 +213,13 @@ test.describe('phone jumps', () => {
         `"${main.content_sha256}"`
       )
     );
-    await page.goto('/#/policies?group=linked');
+    const id = (await api.groups()).find(group => group.name === 'linked')!.id;
+    await page.goto(`/#/policies?group=${id}`);
     const card = cardFor(page, 'linked');
     await card.scrollIntoViewIfNeeded();
     await card.getByRole('button', {name: 'Edit group', exact: true}).click();
     await page.getByRole('dialog', {name: 'Edit group linked'}).getByRole('link', {name: 'View on Nodes page', exact: true}).click();
-    await expect(page).toHaveURL(/#\/nodes\?group=linked/);
+    await expect(page).toHaveURL(new RegExp(`#/nodes\\?group=${id}$`));
     await page.locator('.rp-table [role=grid]').last().getByRole('rowheader').first().click();
     const jump = page.locator('.rp-table-detail').getByRole('link', {name: 'linked', exact: true});
     await expect(jump).toBeVisible();
@@ -239,7 +240,7 @@ test('removing the final node and turning every-node off both save an empty grou
       `"${main.content_sha256}"`
     )
   );
-  await page.goto('/#/policies?group=visual');
+  await page.goto(`/#/policies?group=${(await api.groups()).find(group => group.name === 'visual')!.id}`);
   const card = cardFor(page, 'visual');
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group visual', exact: true});
@@ -253,7 +254,7 @@ test('removing the final node and turning every-node off both save an empty grou
   await expect(dialog.getByRole('status')).toContainText('0 nodes');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  expect((await api.group('visual')).members.map(node => node.name)).toEqual([]);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(node => node.name)).toEqual([]);
 });
 
 test('a group without filters shows every-node selected', async ({page}) => {
@@ -262,7 +263,7 @@ test('a group without filters shows every-node selected', async ({page}) => {
   await api.pollOperation(
     await api.replaceConfigSource(main.id, writeGroupEntry(main.content, 'visual', {filters: [], policy: 'min_moving_avg'}), `"${main.content_sha256}"`)
   );
-  await page.goto('/#/policies?group=visual');
+  await page.goto(`/#/policies?group=${(await api.groups()).find(group => group.name === 'visual')!.id}`);
   await cardFor(page, 'visual').getByRole('button', {name: 'Edit group', exact: true}).click();
   await expect(page.getByRole('dialog', {name: 'Edit group visual', exact: true}).getByRole('switch', {name: 'All nodes', exact: true})).toBeChecked();
 });

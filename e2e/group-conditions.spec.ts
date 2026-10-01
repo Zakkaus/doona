@@ -9,7 +9,7 @@ async function setup(page: import('@playwright/test').Page, filters = [compound]
   await backend.api.pollOperation(
     await backend.api.replaceConfigSource(main.id, writeGroupEntry(main.content, 'visual', {filters, policy: 'min_moving_avg'}), `"${main.content_sha256}"`)
   );
-  await page.goto('/#/policies?group=visual');
+  await page.goto(`/#/policies?group=${(await backend.api.groups()).find(group => group.name === 'visual')!.id}`);
   const card = page.getByRole('region', {name: 'visual', exact: true});
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   return {...backend, dialog: page.getByRole('dialog', {name: 'Edit group visual', exact: true}), card};
@@ -67,7 +67,7 @@ test('AND rows, negate and OR filters edit membership and undo incomplete drafts
   await expect(dialog).toHaveCount(0);
   const entry = readGroupEntries((await api.config()).sources.find(source => source.kind === 'main')!.content).find(entry => entry.name === 'visual')!;
   expect(entry.filters).toEqual([`name(keyword: 'hk') && !name(keyword: '01')`, `name('sg-01')`]);
-  expect((await api.group('visual')).members.map(member => member.name)).toEqual(['hk-02', 'sg-01']);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual(['hk-02', 'sg-01']);
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   await expect(values).toHaveCount(2);
   await expect(dialog.getByRole('button', {name: 'Remove sg-01', exact: true})).toBeVisible();
@@ -105,7 +105,7 @@ test('Nodes creates a group through visual AND conditions', async ({page}) => {
   await page.keyboard.press('Space');
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  expect((await api.group('visual')).members.map(member => member.name)).toEqual(['hk-01']);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual(['hk-01']);
 });
 
 test('nested groups have one selector and never appear among Advanced condition kinds', async ({page}) => {
@@ -157,7 +157,7 @@ test('mixed argument matches edit visually and keep OR inside a negated AND row'
   expect(
     readGroupEntries((await api.config()).sources.find(source => source.kind === 'main')!.content).find(entry => entry.name === 'visual')!.filters
   ).toEqual([`!name(keyword: 'hk', regex: '^sg') && name(regex: '^[a-z]')`]);
-  expect((await api.group('visual')).members.map(member => member.name)).toEqual(['jp-01', 'us-01']);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual(['jp-01', 'us-01']);
 });
 
 test('OR matches can be added, removed and combined with the existing AND row', async ({page}) => {
@@ -183,5 +183,5 @@ test('OR matches can be added, removed and combined with the existing AND row', 
   expect(
     readGroupEntries((await api.config()).sources.find(source => source.kind === 'main')!.content).find(entry => entry.name === 'visual')!.filters
   ).toEqual([`name(keyword: 'hk', regex: '^jp') && !name(keyword: '02')`]);
-  expect((await api.group('visual')).members.map(member => member.name)).toEqual(['hk-01', 'jp-01']);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual(['hk-01', 'jp-01']);
 });
