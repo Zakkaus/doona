@@ -135,6 +135,7 @@ export function SourceCard(props: SourceCardProps) {
   return (
     <Card
       title={t('config.editor')}
+      className="rp-source-card"
       aria-label={view.label}
       help={writable ? {title: t('config.editor'), text: t('config.writeHelp')} : undefined}
       reason={reason}

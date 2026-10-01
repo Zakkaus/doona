@@ -386,3 +386,9 @@
 .rp-source-note {
   min-height: 0;
 }
+
+/* The editor card lets its toolbar stick to the page: overflow: clip keeps the rounded corners without making the card
+   a scroll container, which would pin the toolbar to the card instead. */
+.rp-source-card {
+  overflow: clip;
+}

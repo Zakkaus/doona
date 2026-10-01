@@ -99,10 +99,11 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await apply.click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(apply).toBeDisabled();
-  // The marked rule is near the source end, outside CodeMirror's initial viewport.
+  // The marked rule is near the source end, outside CodeMirror's initial viewport; the page scrolls the editor.
   const routing = async () => {
     await page.goto('/#/config?tab=source');
-    await page.locator('.cm-scroller').evaluate(el => el.scrollTo(0, el.scrollHeight));
+    await expect(page.locator('.cm-content')).toBeVisible();
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
     return page.locator('.cm-content');
   };
   await expect(await routing()).toContainText('l4proto(tcp, udp) -> direct # doona: outbound mode');

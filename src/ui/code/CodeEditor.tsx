@@ -72,7 +72,6 @@ const theme = EditorView.theme({
     fontFamily:
       "'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
     lineHeight: '20px',
-    maxHeight: '70vh',
     fontVariantLigatures: 'none',
     // Clip the opaque gutter to the frame's corners; tooltips live outside the scroller and are not clipped.
     borderRadius: 'calc(var(--rp-r-md) - 1px)'
@@ -251,7 +250,7 @@ export function CodeEditor({
   actions?: Action[];
   // Changes to move to focusLine again when it is the line already asked for.
   focusKey?: number;
-  // What shows under the toolbar, above the text, such as a diagnostics summary.
+  // What stays pinned under the toolbar while the page scrolls the editor, such as a diagnostics summary.
   banner?: ReactNode;
 }) {
   const toolbar = useRef<HTMLDivElement>(null);
@@ -261,6 +260,7 @@ export function CodeEditor({
     if (collapsed && toolbar.current?.contains(document.activeElement)) overflow.current?.querySelector('button')?.focus();
   }, [collapsed]);
   const host = useRef<HTMLDivElement>(null);
+  const head = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
   const change = useRef(onChange);
@@ -287,6 +287,12 @@ export function CodeEditor({
         extensions: [
           lineNumbers(),
           lintGutter(),
+          // The editor grows with its text and the page scrolls it, so a moved cursor must clear the pinned head. CodeMirror
+          // adds the margin to the scroller's top for tooltips as well, so it covers only the part of the head over the text.
+          EditorView.scrollMargins.of(view => {
+            const pinned = head.current?.getBoundingClientRect().bottom;
+            return pinned === undefined ? null : {top: Math.min(pinned, Math.max(0, pinned - view.scrollDOM.getBoundingClientRect().top))};
+          }),
           highlightSpecialChars(),
           undoable.current.of(history()),
           rectangularSelection(),
@@ -383,7 +389,7 @@ export function CodeEditor({
   return (
     <>
       {!compact && (
-        <div className="rp-editor-head">
+        <div className="rp-editor-head" ref={head}>
           <div className="rp-toolbar rp-editor-toolbar">
             <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
             <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
