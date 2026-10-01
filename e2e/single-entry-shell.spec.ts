@@ -1,7 +1,8 @@
 import {expect, mockBackend, test} from './fixtures';
 import {writeMode} from '../src/dae/outboundMode';
 
-test('the desktop appearance link focuses the only appearance editor', async ({page}) => {
+test('the desktop theme shortcut stays in sync with the appearance editor', async ({page}) => {
+  await page.emulateMedia({colorScheme: 'light'});
   await page.goto('/#/activity');
   const top = page.locator('.rp-top');
   await expect(top.getByRole('button', {name: 'Language', exact: true})).toHaveCount(0);
@@ -10,6 +11,28 @@ test('the desktop appearance link focuses the only appearance editor', async ({p
   await expect(page).toHaveURL(/#\/settings\?card=appearance$/);
   const card = page.getByRole('region', {name: 'Appearance'});
   await expect(card).toBeFocused();
+  const scheme = card.getByRole('button', {name: /Color scheme$/});
+  await scheme.click();
+  await page.getByRole('option', {name: 'System', exact: true}).click();
+  const theme = top.getByRole('button', {name: /^Theme:/});
+  await theme.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Theme: System');
+  await theme.focus();
+  await theme.press('Enter');
+  await expect(theme).toBeFocused();
+  await expect(theme).toHaveAccessibleName('Theme: Dark');
+  await expect(scheme).toContainText('Dark');
+  await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
+  await theme.press('Space');
+  await expect(theme).toHaveAccessibleName('Theme: System');
+  await expect(scheme).toContainText('System');
+  await scheme.click();
+  await page.getByRole('option', {name: 'Dark', exact: true}).click();
+  await expect(theme).toHaveAccessibleName('Theme: Dark');
+  await expect(top.locator('.rp-icon-stack')).toHaveAttribute('data-dark', 'true');
+  await page.reload();
+  await expect(theme).toHaveAccessibleName('Theme: Dark');
+  await expect(scheme).toContainText('Dark');
   await card.getByRole('button', {name: /Wordmark$/}).click();
   await page.getByRole('option', {name: 'Plain', exact: true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
