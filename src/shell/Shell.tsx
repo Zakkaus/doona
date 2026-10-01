@@ -1,8 +1,10 @@
 import './install';
 import {lazy, Suspense, useCallback, useState, type ContextType} from 'react';
+import {WidgetDraftGuard} from './widgets/host';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
 import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
+import {PageActionsTarget} from '../ui/PageActions';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
 import {CountryFlagsContext, FlagEditingContext} from '../ui/NodeName';
@@ -120,6 +122,7 @@ function ShellFrame(props: FrameProps) {
   const view = useShell(props.settings, props.route);
   return (
     <AboutContext.Provider value={view.about}>
+      <WidgetDraftGuard />
       <Frame {...props} view={view} />
       <Shortcuts go={props.go} openSearch={props.openSearch} refresh={view.refresh} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
     </AboutContext.Provider>
@@ -128,6 +131,7 @@ function ShellFrame(props: FrameProps) {
 function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
   const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
+  const [actions, setActions] = useState<HTMLElement | null>(null);
   const Page = view.current.Page;
   const hub = view.groups.find(group => group.items.some(item => item.current));
   // Signing in takes the whole page: the shell around it would offer nothing that works yet.
@@ -149,6 +153,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   return (
     <div className="rp-shell">
       <TopBar
+        route={route}
         lang={lang}
         pickLang={pickLang}
         ap={ap}
@@ -170,30 +175,35 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">
-            <div className="rp-title">
-              <h1 className="rp-h1">{view.current.title}</h1>
-              {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
+            <div className="rp-page-heading">
+              <div className="rp-title">
+                <h1 className="rp-h1">{view.current.title}</h1>
+                {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
+              </div>
+              <div ref={setActions} className="rp-page-actions" />
             </div>
             {hub && <HubPages key={hub.id} hub={hub} />}
           </div>
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
-          <SettingsContext.Provider value={settingsValue}>
-            {view.content.kind === 'loading' ? (
-              <Loading />
-            ) : view.content.kind === 'unavailable' ? (
-              <Empty>
-                {t('shell.notOffered')}
-                <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-              </Empty>
-            ) : (
-              <LoadBoundary key={view.current.id}>
-                <Suspense fallback={<Loading />}>
-                  <Page go={go} query={query} />
-                </Suspense>
-              </LoadBoundary>
-            )}
-          </SettingsContext.Provider>
+          <PageActionsTarget value={actions}>
+            <SettingsContext.Provider value={settingsValue}>
+              {view.content.kind === 'loading' ? (
+                <Loading />
+              ) : view.content.kind === 'unavailable' ? (
+                <Empty>
+                  {t('shell.notOffered')}
+                  <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
+                </Empty>
+              ) : (
+                <LoadBoundary key={view.current.id}>
+                  <Suspense fallback={<Loading />}>
+                    <Page go={go} query={query} />
+                  </Suspense>
+                </LoadBoundary>
+              )}
+            </SettingsContext.Provider>
+          </PageActionsTarget>
         </div>
       </main>
       <HubBar groups={view.groups} />

@@ -33,7 +33,7 @@ export function useMainSourceEdit(): MainSourceEdit & {checking: boolean} {
   const resources = useCapabilities().data?.resources;
   const writable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
-  const editor = useConfigEditor(config.refetch, {rethrow: true});
+  const editor = useConfigEditor(config.refetch, {rethrow: true, shared: 'main-source-edit'});
   const source = config.data?.sources.find(source => source.kind === 'main' && source.writable) ?? null;
   const complete = useSourceComplete(source);
   const main = complete ? source : null;

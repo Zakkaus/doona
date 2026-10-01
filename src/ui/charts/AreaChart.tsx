@@ -183,7 +183,7 @@ export function AreaPlot({
   );
   const grid = [...new Set([...yTicksVisible.map(tick => y(yTicks[tick.index])), 8, bottom])];
   return (
-    <div ref={ref} style={{height, width: '100%', flex: fill ? '1 1 auto' : undefined, position: 'relative'}} onPointerLeave={selection.onPointerLeave}>
+    <div ref={ref} style={{height, width: '100%', flex: fill ? '1 0 auto' : undefined, position: 'relative'}} onPointerLeave={selection.onPointerLeave}>
       {timestamps.length > 0 && size && (
         <>
           <ChartTip tip={tip} />

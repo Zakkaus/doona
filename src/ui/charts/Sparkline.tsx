@@ -19,7 +19,7 @@ function tipBounds(own: HTMLElement) {
 }
 
 // A tile's trend line. It stays hidden from assistive technology, since the tile's number carries the value; with
-// `fmt` and `locale` a pointer over it shows the hovered sample's value and time.
+// `fmt` and `locale` a pointer over it shows the hovered sample's value (or `lines`) and time.
 export function SparkPlot({
   values,
   timestamps,
@@ -27,7 +27,9 @@ export function SparkPlot({
   fmt,
   locale,
   height = 32,
-  floor = 0
+  floor = 0,
+  inset = 0,
+  lines
 }: {
   values: Array<number | null>;
   timestamps: number[];
@@ -36,6 +38,9 @@ export function SparkPlot({
   locale?: string;
   height?: number;
   floor?: number;
+  inset?: number;
+  // The tip's lines for a sample, when it reads more than this line's value (every series of a split chart).
+  lines?: (index: number) => string[];
 }) {
   const uid = useId();
   const p = usePalette();
@@ -44,7 +49,7 @@ export function SparkPlot({
   const {tip, showAt, hide} = useChartTip();
   const known = values.filter((value): value is number => value !== null);
   const domain: [number, number] = [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)];
-  const x = (value: number) => linearPosition(value, [Math.min(...timestamps), Math.max(...timestamps)], [0, size?.width ?? 0]);
+  const x = (value: number) => linearPosition(value, [Math.min(...timestamps), Math.max(...timestamps)], [inset, Math.max(inset, (size?.width ?? 0) - inset)]);
   const y = (value: number) => linearPosition(value, domain, [(size?.height ?? height) - 2, 2]);
   useLayoutEffect(() => {
     if (selected === null || values[selected] == null || !fmt || !locale || !ref.current || !size) {
@@ -57,7 +62,7 @@ export function SparkPlot({
       width: size.width,
       bounds: tipBounds(ref.current),
       label: localTimeFormat(locale).format(timestamps[selected]),
-      lines: [fmt(values[selected]!)]
+      lines: lines?.(selected) ?? [fmt(values[selected]!)]
     });
   });
   return (

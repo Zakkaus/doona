@@ -1,0 +1,25 @@
+.rp-widget-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--rp-space-4);
+}
+.rp-widget-gallery-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+  min-inline-size: 0;
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-line);
+  border-radius: var(--rp-r-lg);
+}
+.rp-widget-gallery-tile[data-added] {
+  background: var(--rp-fill);
+  --rp-subtle: var(--rp-subtle-text);
+}
+/* Every preview shares one frame and one scale: the card at its own size, clipped to the frame. */
+.rp-widget-gallery-frame {
+  block-size: 200px;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 80%, transparent);
+}

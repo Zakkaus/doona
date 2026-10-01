@@ -6,11 +6,13 @@ import {useNearViewport} from '../../ui/ui';
 import {activityRanking} from './view';
 
 // The poll runs every 20 seconds while the card is near the viewport; off screen it is paused and keeps its last list.
-export function useRankingCard(enabled = true) {
+export function useRankingCard(enabled = true, selection?: {by: string; setBy: (by: string) => void}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const p = usePalette();
-  const [by, setBy] = useState('dev');
+  const [localBy, setLocalBy] = useState('dev');
+  const by = selection?.by ?? localBy;
+  const setBy = selection?.setBy ?? setLocalBy;
   const available = useCapabilities().data?.resources.connections.available;
   const [ref, near] = useNearViewport();
   // Paused only once it has a list to keep showing; before that it loads wherever it is.

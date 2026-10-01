@@ -5,9 +5,9 @@ import type {Api} from '../api/api';
 import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
 import {activationError, finished, settle, useAction} from './action';
-export function useVersion() {
+export function useVersion(enabled = true) {
   const api = getApi();
-  return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)});
+  return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)}, {enabled});
 }
 export function useRuntime(enabled = true) {
   const api = getApi();

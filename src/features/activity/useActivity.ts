@@ -1,34 +1,33 @@
 import {useCallback, useMemo, useState} from 'react';
-import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useTrafficHistory, useVersion} from '../../store';
+import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
-import {useMemorySeries} from './useMemorySeries';
-import {foldTraffic, historyTrafficSamples, isTrafficRange, trafficRanges, trafficSample, trafficWindow, type TrafficRange} from './traffic';
-import {useNotices} from './useNotices';
-import {useMode} from './useMode';
+import {useMemorySeries, useTrafficSeries} from '../shared/useSeries';
+import {isTrafficRange, trafficRanges, trafficWindow, type TrafficRange} from '../shared/traffic';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
-import {useRings} from '../../api/rings';
 import {backendLimits} from '../shared/limits';
 
-export function useActivity() {
+export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' | 'history' | 'memory' | 'status' = 'history') {
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
   const p = usePalette();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const runtime = useRuntime(offered(resources, 'runtime', {whileLoading: false}));
-  const memory = useRuntimeMemory(offered(resources, 'runtime_memory', {whileLoading: false}));
-  const datapath = useDatapath(offered(resources, 'datapath', {whileLoading: false}));
+  const runtime = useRuntime(kind !== 'memory' && offered(resources, 'runtime', {whileLoading: false}));
+  const memory = useRuntimeMemory(kind === 'memory' && offered(resources, 'runtime_memory', {whileLoading: false}));
+  const datapath = useDatapath(kind === 'status' && offered(resources, 'datapath', {whileLoading: false}));
   const [range, setRange] = useState<TrafficRange>('live');
   const windowSeconds = trafficRanges[range].seconds;
-  const memoryHistory = useMemorySeries(capabilities.data, memory.data);
-  const history = useTrafficHistory(windowSeconds, capabilities.data);
-  const polledTraffic = useRings('traffic', runtime.data, trafficSample, foldTraffic);
-  const historySamples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
-  const series = useMemo(() => trafficWindow(polledTraffic, historySamples, windowSeconds), [polledTraffic, historySamples, windowSeconds]);
+  const memoryHistory = useMemorySeries(capabilities.data, memory.data, {enabled: kind === 'memory'});
+  const {
+    history,
+    rings: polledTraffic,
+    samples: historySamples,
+    series
+  } = useTrafficSeries(capabilities.data, runtime.data, windowSeconds, {enabled: ['download', 'upload', 'connections', 'history'].includes(kind)});
   const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, 24), [polledTraffic, historySamples]);
   const traffic = useMemo(
     () => [
@@ -58,19 +57,16 @@ export function useActivity() {
     () => activityView(runtime.data, t, resources?.runtime.available, locale, datapath.data?.state),
     [runtime.data, t, resources?.runtime.available, locale, datapath.data?.state]
   );
-  const version = useVersion();
+  const version = useVersion(kind === 'status');
   // System status lists these with their reasons; here the status card only counts them.
   const limited = useMemo(
-    () => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang).reduce((n, group) => n + group.items.length, 0) : 0),
-    [capabilities.data, version.data, t, lang]
+    () =>
+      kind === 'status' && capabilities.data ? backendLimits(capabilities.data, version.data, t, lang).reduce((n, group) => n + group.items.length, 0) : 0,
+    [kind, capabilities.data, version.data, t, lang]
   );
-  const notices = useNotices();
-  const mode = useMode();
   return {
     ...view,
     limited: limited > 0 ? t('act.limited', {n: limited}) : null,
-    mode,
-    notices,
     range,
     ranges,
     setRange: pickRange,

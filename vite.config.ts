@@ -27,6 +27,28 @@ const cssMinify = (() => {
 // The mock backend, loaded only by the demo and development profiles.
 const mockEntry = /\/src\/api\/mock\/index\.ts$/;
 
+// The modules a module reaches by static imports; the Activity chunk takes those the shell entry does not reach.
+const statics = (start: string, getModuleInfo: (id: string) => {importedIds: readonly string[]} | null) => {
+  const seen = new Set<string>();
+  const queue = [start];
+  while (queue.length) {
+    const id = queue.pop()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    queue.push(...(getModuleInfo(id)?.importedIds ?? []));
+  }
+  return seen;
+};
+let reach: {activity: Set<string>; shell: Set<string>} | undefined;
+function activityOnly(id: string, getModuleInfo: (id: string) => {importedIds: readonly string[]} | null) {
+  if (!reach) {
+    // The desktop panel and the dashboard's cards load with the page, so their code shares its chunk.
+    const starts = ['Dashboard', 'WidgetContent', 'Widgets'].map(name => fileURLToPath(new URL(`src/shell/widgets/${name}.tsx`, import.meta.url)));
+    const entry = fileURLToPath(new URL('src/main.tsx', import.meta.url));
+    reach = {activity: new Set(starts.flatMap(start => [...statics(start, getModuleInfo)])), shell: statics(entry, getModuleInfo)};
+  }
+  return reach.activity.has(id) && !reach.shell.has(id);
+}
 export default defineConfig({
   base: './',
   define: {
@@ -127,12 +149,20 @@ export default defineConfig({
         // Locale catalogues are named apart, so the service worker can leave them out of its precache.
         chunkFileNames: chunk =>
           chunk.facadeModuleId && /\/src\/i18n\/locales\//.test(chunk.facadeModuleId) ? 'assets/locale-[name]-[hash].js' : 'assets/[name]-[hash].js',
-        manualChunks(id) {
+        // A manual chunk holds only the modules named for it; their other dependencies stay where Rollup puts them, so
+        // the shell's modules are not pulled into the Activity chunk.
+        onlyExplicitManualChunks: true,
+        manualChunks(id, {getModuleInfo}) {
+          // The Activity page is its own chunk, requested as the shell starts. Code it shares with later pages stays in
+          // it rather than in many small shared chunks, since it is always loaded by then.
           // Keep the React runtime and react-aria shared utilities in the startup vendor chunk.
           if (/\/node_modules\/(react|react-dom|scheduler|clsx|use-sync-external-store)\//.test(id)) return 'vendor-react';
           // react-aria is left to Rollup: forcing all of it into one startup chunk shipped the components that only lazy
           // pages use (drag and drop, grids) with the shell.
           if (/\/node_modules\/(@codemirror|@lezer|style-mod|w3c-keyname|crelt)\//.test(id)) return 'vendor-editor';
+          // The Activity page is its own chunk, requested as the shell starts. Code it shares with later pages stays in
+          // it rather than in many small shared chunks, since it is always loaded by then.
+          if (activityOnly(id, getModuleInfo)) return 'activity';
         }
       }
     }

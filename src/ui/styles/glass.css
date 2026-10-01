@@ -101,7 +101,7 @@
   background: transparent;
   border-color: transparent;
 }
-:root[data-family='glass'] .rp-vrule {
+:root[data-family='glass'] :is(.rp-vrule, .rp-hrule) {
   background: var(--rp-line);
 }
 

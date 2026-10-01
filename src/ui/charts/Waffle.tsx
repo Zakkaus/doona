@@ -7,7 +7,7 @@ import {ChartTip, useChartTip} from './tip';
 export type WaffleShare = {id: string; label: string; count: number; color: string; text: string};
 
 // A hundred cells split by share: proportions read by eye, with the counts in the legend beside or under them.
-export function Waffle({label, shares}: {label: string; shares: WaffleShare[]}) {
+export function Waffle({label, shares, legendLimit}: {label: string; shares: WaffleShare[]; legendLimit?: number}) {
   const t = useT();
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
@@ -24,7 +24,7 @@ export function Waffle({label, shares}: {label: string; shares: WaffleShare[]}) 
           ))}
         </div>
         <ul className="legend">
-          {shares.map(share => (
+          {shares.slice(0, legendLimit).map(share => (
             <li key={share.id}>
               <i className="sw" style={{background: share.color}} />
               <span>{share.label}</span>

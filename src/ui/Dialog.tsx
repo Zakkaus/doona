@@ -42,15 +42,16 @@ export function Disclosure({
   title,
   flush,
   aside,
+  variant,
   children,
   ...props
-}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: ReactNode; flush?: boolean; aside?: ReactNode; children: ReactNode}) {
+}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: ReactNode; flush?: boolean; aside?: ReactNode; variant?: 'nav'; children: ReactNode}) {
   return (
-    <RDisclosure {...props} className="rp-disclosure">
+    <RDisclosure {...props} className="rp-disclosure" data-variant={variant}>
       <Heading level={3} className={aside ? 'rp-disclosure-head' : undefined}>
-        <RButton slot="trigger" className={cx('rp-btn quiet rp-disclosure-trigger', flush && 'flush')}>
+        <RButton slot="trigger" className={cx('rp-disclosure-trigger', variant === 'nav' ? 'rp-group' : 'rp-btn quiet', flush && 'flush')}>
           <ChevronDown />
-          {title}
+          <span className="rp-disclosure-title">{title}</span>
         </RButton>
         {aside}
       </Heading>
@@ -69,6 +70,7 @@ export function ModalDialog({
   children,
   footer,
   narrow,
+  size,
   alert,
   isOpen,
   onOpenChange,
@@ -84,6 +86,7 @@ export function ModalDialog({
   children: ReactNode | ((close: () => void) => ReactNode);
   footer?: (close: () => void) => ReactNode;
   narrow?: boolean;
+  size?: 'large' | 'wide';
   alert?: boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -102,8 +105,15 @@ export function ModalDialog({
     </Text>
   );
   const modal = (
-    <ModalOverlay className="rp-underlay" isDismissable={!alert && !locked} isKeyboardDismissDisabled={locked} isOpen={isOpen} onOpenChange={onOpenChange}>
-      <Modal className={cx('rp-modal', narrow && 'narrow')}>
+    <ModalOverlay
+      className="rp-underlay"
+      data-size={size}
+      isDismissable={!alert && !locked}
+      isKeyboardDismissDisabled={locked}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+    >
+      <Modal className={cx('rp-modal', narrow && 'narrow')} data-size={size}>
         <Dialog
           className={cx('rp-dialog', scrollBody && 'split')}
           role={alert ? 'alertdialog' : 'dialog'}
@@ -483,7 +493,25 @@ const TabShown = createContext(true);
 export const useTabShown = () => useContext(TabShown);
 
 // The last child of rp-with-panel is a side panel on wide screens and a drawer below the breakpoint.
-export function DetailPanel({open, title, onClose, children}: {open: boolean; title: string; onClose: () => void; children: ReactNode}) {
+export function DetailPanel({
+  open,
+  title,
+  icon,
+  onClose,
+  actions,
+  fit = false,
+  children
+}: {
+  open: boolean;
+  title: string;
+  // A status mark before the title, such as a light.
+  icon?: ReactNode;
+  // The drawer is its content's height, up to the full height, rather than always full height.
+  fit?: boolean;
+  onClose: () => void;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
   const t = useT();
   const wide = useMediaQuery(panelQuery);
   const showing = useContext(TabShown) && open;
@@ -500,12 +528,26 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
     return () => removeEventListener('keydown', on);
   }, [showing, wide, onClose]);
   if (!showing) return null;
+  const close = (
+    <RButton className="rp-btn quiet icon close" aria-label={t('ui.close')} onPress={onClose}>
+      <Close />
+    </RButton>
+  );
+  // A panel's own actions sit with its close button, one kit gap apart.
   const head = (
     <div className="rp-row">
-      <h2 className="rp-h3">{title}</h2>
-      <RButton className="rp-btn quiet icon close" aria-label={t('ui.close')} onPress={onClose}>
-        <Close />
-      </RButton>
+      <h2 className={icon ? 'rp-h3 rp-title-icon' : 'rp-h3'}>
+        {icon}
+        {title}
+      </h2>
+      {actions ? (
+        <span className="rp-cluster">
+          {actions}
+          {close}
+        </span>
+      ) : (
+        close
+      )}
     </div>
   );
   if (wide)
@@ -517,7 +559,7 @@ export function DetailPanel({open, title, onClose, children}: {open: boolean; ti
     );
   return (
     <ModalOverlay className={cx('rp-underlay rp-drawer-underlay', was.seen && 'still')} isDismissable isOpen onOpenChange={o => !o && onClose()}>
-      <Modal className="rp-modal rp-drawer">
+      <Modal className={cx('rp-modal rp-drawer', fit && 'rp-drawer-fit')}>
         <Dialog className="rp-dialog" aria-label={title}>
           {head}
           {children}

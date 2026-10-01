@@ -26,8 +26,8 @@ export type Resource<T> = {
 };
 type Entry = {
   snapshot: ResourceState<unknown>;
-  subscribers: Set<() => void>;
-  watcher: {refetch: () => Promise<RefreshOutcome>; invalidate: (reconnected: boolean) => void; dispose: () => void};
+  subscribers: Map<symbol, {notify: () => void; every: number}>;
+  watcher: {refetch: () => Promise<RefreshOutcome>; invalidate: (reconnected: boolean) => void; dispose: () => void; setEvery: (every: number) => void};
 };
 type Store = {
   active: Map<string, Entry>;
@@ -124,7 +124,7 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
   if (!entry) {
     const state = snapshot<T>(api, name);
     forget(store, name);
-    const subscribers = new Set<() => void>();
+    const subscribers: Entry['subscribers'] = new Map();
     const shared: Entry = {
       snapshot: state,
       subscribers,
@@ -133,13 +133,19 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
         const {data, loading, error} = shared.snapshot;
         if (next.data === data && next.loading === loading && next.error === error) return;
         shared.snapshot = next;
-        subscribers.forEach(fn => fn());
+        subscribers.forEach(({notify}) => notify());
       })
     };
     store.active.set(name, (entry = shared));
   }
-  entry.subscribers.add(notify);
+  const lease = Symbol();
+  entry.subscribers.set(lease, {notify, every: resource.every ?? poll.live});
+  const cadence = () => {
+    const intervals = [...shared.subscribers.values()].map(item => item.every).filter(every => every > 0);
+    shared.watcher.setEvery(intervals.length ? Math.min(...intervals) : 0);
+  };
   const shared = entry;
+  cadence();
   let disposed = false;
   return {
     getSnapshot: () => shared.snapshot as ResourceState<T>,
@@ -148,8 +154,11 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
     dispose() {
       if (disposed) return;
       disposed = true;
-      shared.subscribers.delete(notify);
-      if (shared.subscribers.size) return;
+      shared.subscribers.delete(lease);
+      if (shared.subscribers.size) {
+        cadence();
+        return;
+      }
       shared.watcher.dispose();
       store.active.delete(name);
       if (shared.snapshot.data === undefined) return;
@@ -185,6 +194,8 @@ function createWatcher<T>(
   let deadline = Infinity;
   let retryAt = 0;
   let startedAt = -Infinity;
+  let finishedAt = Date.now();
+  let eventPending = false;
   let refused = 0;
   let failure: Error | null = null;
   let recoveryDelay = 5000;
@@ -222,6 +233,7 @@ function createWatcher<T>(
   };
   const finish = (outcome: RefreshOutcome) => {
     phase = 'idle';
+    finishedAt = Date.now();
     const complete = resolve;
     resolve = undefined;
     complete?.(outcome);
@@ -232,6 +244,7 @@ function createWatcher<T>(
   const attempt = () => {
     phase = 'fetching';
     startedAt = Date.now();
+    eventPending = false;
     dirty = false;
     stale = false;
     const lease = inflight.acquire(api, name, fetch);
@@ -322,7 +335,10 @@ function createWatcher<T>(
       dirty = true;
       clear();
     } else if (reconnected) load();
-    else schedule(eventDue());
+    else {
+      eventPending = true;
+      schedule(eventDue());
+    }
   };
   const visibility = () => {
     if (document.hidden) {
@@ -349,6 +365,18 @@ function createWatcher<T>(
   return {
     refetch,
     invalidate,
+    setEvery(next: number) {
+      if (every === next) return;
+      every = next;
+      // Rescheduling cadence must not discard an event refresh or a backend retry deadline.
+      if (phase !== 'idle' || stale || recovering) return;
+      if (eventPending) {
+        if (started && every > 0) schedule(finishedAt + every);
+        return;
+      }
+      clear();
+      if (started && every > 0) schedule(finishedAt + every);
+    },
     dispose() {
       disposed = true;
       unsubscribe();

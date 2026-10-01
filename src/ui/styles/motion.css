@@ -26,7 +26,7 @@
   scale: 0.95;
 }
 /* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
-.rp-btn[aria-expanded='true']:not(.rp-disclosure-trigger) {
+.rp-btn[aria-expanded='true'][aria-haspopup] {
   background-color: var(--rp-hl-high);
 }
 /* A pending button keeps its colour and shows its spinner at once, with the label dimmed behind it; the refresh
@@ -144,11 +144,14 @@
   --rp-space-8: 32px;
   --rp-space-10: 40px;
   --rp-space-12: 48px;
+  --rp-space-16: 64px;
   --rp-line-body: 20px;
   --rp-line-caption: 16px;
   --rp-focus-width: 2px;
   --rp-control-inset: var(--rp-space-half);
   --rp-control-block-inset: var(--rp-control-inset);
+  --rp-sidebar-width: 240px;
+  --rp-sidebar-padding: 16px;
   --rp-control: 32px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;

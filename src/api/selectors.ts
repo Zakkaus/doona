@@ -279,3 +279,5 @@ export const logLevelLabels: Record<LogLevel, Key> = {
   error: 'log.level.error'
 };
 export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;
+
+export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);

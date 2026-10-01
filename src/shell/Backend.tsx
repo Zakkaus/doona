@@ -50,13 +50,17 @@ function BackendPopover({backend, honk, popover}: {backend: BackendView; honk: (
 }
 
 // The side navigation's corner, like an editor's remote indicator: the connection's light, then the engine and its version.
-export function BackendIndicator({backend, honk}: {backend: BackendView; honk: () => void}) {
+export function BackendIndicator({backend, honk, panel = false}: {backend: BackendView; honk: () => void; panel?: boolean}) {
   return (
     <BackendPopover
       backend={backend}
       honk={honk}
       popover={{
-        trigger: (
+        trigger: panel ? (
+          <Button quiet icon label={backend.label}>
+            <Light tone={backend.tone} small />
+          </Button>
+        ) : (
           <Button appearance="plain" className="rp-version" label={backend.label}>
             <Light tone={backend.tone} small />
             <span className="rp-version-text">{backend.text}</span>

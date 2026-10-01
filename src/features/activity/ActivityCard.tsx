@@ -1,58 +1,105 @@
-import type {PageProps} from '../../shell/routes';
+import {DeferredLoading} from './DeferredLoading';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Cpu from '../../ui/icons/Cpu';
 import {useT} from '../../i18n';
-import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Loading, Empty, Link} from '../../ui/ui';
+import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link} from '../../ui/ui';
 import {href} from '../../shell/route';
 import {AreaChart, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
+import {useMode} from '../shared/useMode';
+import {useNotices} from './useNotices';
 import {Notices} from './Notices';
 import {useActivity} from './useActivity';
 import {NodeCard} from './NodeCard';
 import {OutboundsCard} from './OutboundsCard';
 import {RankingCard} from './RankingCard';
 import {useRankingCard} from './useRankingCard';
-import {GettingStarted} from './GettingStarted';
-import {useGettingStarted} from './useGettingStarted';
 
-export function Activity({query}: PageProps) {
+export function ActivityCard({
+  item,
+  selection,
+  ranking
+}: {
+  item: {id: string};
+  ranking?: {by: string; setBy: (by: string) => void};
+  selection?: {chosen: string; setChosen: (id: string) => void};
+}) {
+  switch (item.id) {
+    case 'mode':
+      return <ModeModule part="mode" />;
+    case 'global':
+      return <ModeModule part="global" />;
+    case 'latency':
+      return <LatencyModule selection={selection} />;
+    case 'ranking':
+      return <RankingModule selection={ranking} />;
+    case 'notices':
+      return <NoticesModule />;
+    case 'outbounds':
+      return <OutboundsCard />;
+    case 'download':
+    case 'upload':
+    case 'connections':
+    case 'cpu':
+    case 'history':
+    case 'memory':
+    case 'status':
+      return <MetricModule kind={item.id} />;
+    default:
+      return null;
+  }
+}
+function ModeModule({part}: {part: 'mode' | 'global'}) {
+  return <ModeCards model={useMode()} part={part} />;
+}
+function LatencyModule({selection}: {selection?: {chosen: string; setChosen: (id: string) => void}}) {
+  return <NodeCard connections={undefined} selection={selection} />;
+}
+
+function RankingModule({selection}: {selection?: {by: string; setBy: (by: string) => void}}) {
+  return <RankingCard model={useRankingCard(true, selection)} />;
+}
+function NoticesModule() {
+  return <Notices {...useNotices()} />;
+}
+// The status card carries the runtime read's error; without it, the dashboard shows the same error and retry above
+// the cards that read runtime.
+export function RuntimeAlert() {
+  const vm = useActivity('status');
+  return vm.error ? <ErrorMessage error={vm.error} onRetry={vm.retry} /> : null;
+}
+function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
   const t = useT();
-  const vm = useActivity();
-  const setup = useGettingStarted();
-  const ranking = useRankingCard(vm.ready && !setup.pending);
-  const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes, notices} = vm;
-  const alert = vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
+  const vm = useActivity(kind);
+  const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes} = vm;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
-  if (!vm.ready) return alert || (vm.discoveryFailed ? null : <Loading>{t('ui.loading')}</Loading>);
-  // Decide the leading card before showing content, so a late setup read cannot shift a scrolled page.
-  if (setup.pending) return <Loading>{t('ui.loading')}</Loading>;
-  return (
-    <>
-      {alert}
-      <GettingStarted model={setup} />
-      <div className="rp-quick">
-        <ModeCards model={vm.mode} query={query} />
-        <Card>
+  const alert = kind === 'status' && vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
+  if (!vm.ready) return alert || (vm.discoveryFailed ? null : <DeferredLoading>{t('ui.loading')}</DeferredLoading>);
+  let content;
+  switch (kind) {
+    case 'status':
+      content = (
+        <Card className="rp-control-card">
           <div className="rp-row">
-            <div className="rp-cluster">
-              <Light tone={vm.status.tone}>{vm.status.text}</Light>
+            <Light tone={vm.status.tone}>{vm.status.text}</Light>
+            <div className="rp-control-tail">
               {vm.limited && (
                 <Link appearance="link" href={href('overview', {card: 'limits'})}>
                   {vm.limited}
                 </Link>
               )}
+              <Link appearance="button" quiet href={href('overview')}>
+                {t('act.viewDetails')}
+              </Link>
             </div>
-            <Link appearance="button" quiet href={href('overview')}>
-              {t('act.viewDetails')}
-            </Link>
           </div>
         </Card>
-      </div>
-
-      {/* Each tile opens what it measures: the rates open the connections' traffic, the count opens their list. */}
-      <div className="rp-strip">
+      );
+      break;
+    case 'download':
+      content = (
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
@@ -63,6 +110,10 @@ export function Activity({query}: PageProps) {
             </span>
           </div>
         </CardLink>
+      );
+      break;
+    case 'upload':
+      content = (
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
@@ -73,6 +124,10 @@ export function Activity({query}: PageProps) {
             </span>
           </div>
         </CardLink>
+      );
+      break;
+    case 'connections':
+      content = (
         <CardLink href={href('connections', {tab: 'list'})} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
@@ -83,7 +138,10 @@ export function Activity({query}: PageProps) {
             </span>
           </div>
         </CardLink>
-        <NodeCard connections={ranking.connections} />
+      );
+      break;
+    case 'cpu':
+      content = (
         <Card title={t('act.cpu')} tile={{icon: <Cpu />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
           <div className="rp-tile-body">
             <span className="rp-tile-val">
@@ -94,9 +152,10 @@ export function Activity({query}: PageProps) {
             </span>
           </div>
         </Card>
-      </div>
-
-      <div className="rp-g21">
+      );
+      break;
+    case 'history':
+      content = (
         <Card title={t('act.traffic')} aside={<Segmented label={t('act.historyRange')} value={range} onChange={setRange} items={ranges} />}>
           {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
@@ -106,7 +165,7 @@ export function Activity({query}: PageProps) {
             </div>
           ) : vm.history.state === 'loading' ? (
             <div className="rp-chart-wait tall">
-              <Loading>{t('ui.loading')}</Loading>
+              <DeferredLoading>{t('ui.loading')}</DeferredLoading>
             </div>
           ) : vm.history.state === 'empty' ? (
             <div className="rp-chart-wait tall">
@@ -128,11 +187,10 @@ export function Activity({query}: PageProps) {
             </>
           )}
         </Card>
-        <OutboundsCard />
-      </div>
-
-      <div className="rp-g3">
-        <RankingCard model={ranking} />
+      );
+      break;
+    case 'memory':
+      content = (
         <Card
           title={t('act.memory')}
           aside={
@@ -162,12 +220,17 @@ export function Activity({query}: PageProps) {
             <Empty>{t('act.noHistory')}</Empty>
           ) : (
             <div className="rp-chart-wait">
-              <Loading>{t('act.sampling')}</Loading>
+              <DeferredLoading>{t('act.sampling')}</DeferredLoading>
             </div>
           )}
         </Card>
-        <Notices {...notices} />
-      </div>
+      );
+      break;
+  }
+  return (
+    <>
+      {alert}
+      {content}
     </>
   );
 }

@@ -1,4 +1,5 @@
 import {memo, useRef, useState} from 'react';
+import {PhoneWidgets} from './widgets/host';
 import {About} from './About';
 import {BackendMenuPopover} from './Backend';
 import Checkmark from '../ui/icons/Checkmark';
@@ -24,6 +25,7 @@ import {LanguageMenu, PaletteMenu, SchemeToggle, usePaletteChoices} from './Appe
 type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
 
 type TopBarProps = {
+  route: string;
   lang: Lang;
   pickLang: (lang: Lang) => void;
   ap: Appearance;
@@ -42,9 +44,9 @@ type TopBarProps = {
   menu: AppearanceMenu;
 };
 
-// The top bar depends on appearance, language and the backend's version and state, not on the open page or its query,
-// so it is memoised: moving between pages or tabs leaves it alone.
+// Route changes close the phone widget drawer; query-only updates keep the top bar memoised.
 export const TopBar = memo(function TopBar({
+  route,
   lang,
   pickLang,
   ap,
@@ -90,6 +92,7 @@ export const TopBar = memo(function TopBar({
         </Button>
       </div>
       <div className="rp-actions">
+        <PhoneWidgets route={route} backend={backend} />
         <span className="rp-search-compact" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
           <Button quiet icon label={t('shell.search')} onPress={openSearch}>
             <Search />

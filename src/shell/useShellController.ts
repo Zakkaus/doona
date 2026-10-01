@@ -122,7 +122,7 @@ export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: No
   );
   const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections, startPageItems}), [lang, pickLang, ap, paletteSections, startPageItems]);
   const menu = useMemo(() => appearanceMenu(t, ap.scheme, ap.dark), [t, ap.scheme, ap.dark]);
-  const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
+  const [navRef, navPos] = useSlider(route, '[aria-current="page"]', true);
   // One object per measured position: a fresh one on every render would re-render the memoised navigation.
   const navStyle = useMemo(() => (navPos ? {translate: `0 ${navPos.y}px`, height: navPos.h} : undefined), [navPos]);
   return {paletteSections, settingsValue, menu, navRef, navStyle};

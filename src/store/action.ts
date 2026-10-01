@@ -1,48 +1,76 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {Capabilities, Operation, OperationAccepted, OperationState, ProbeRequest} from '../api/model';
 import {ApiError, LocalError} from '../api/error';
 import {refetchAll} from './resourceCore';
-// One action per hook; an abort drops the late result, a failure lands in `error` and rethrows when asked.
-export function useAction<K extends string>({scope, rethrow = false}: {scope?: unknown; rethrow?: boolean} = {}) {
-  const api = getApi();
-  const [busy, setBusy] = useState<K | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const active = useRef<AbortController | null>(null);
-  const cancel = useCallback(() => {
-    active.current?.abort();
-    active.current = null;
-    setBusy(null);
-    setError(null);
-  }, []);
-  useEffect(() => cancel, [api, scope, cancel]);
-  const run = useCallback(
-    async <T>(kind: K, action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> => {
-      if (active.current) return undefined;
+
+type ActionState = {busy: string | null; error: Error | null};
+function createAction() {
+  let state: ActionState = {busy: null, error: null};
+  let active: AbortController | null = null;
+  const listeners = new Set<() => void>();
+  const publish = (next: ActionState) => {
+    state = next;
+    listeners.forEach(notify => notify());
+  };
+  return {
+    snapshot: () => state,
+    subscribe(notify: () => void) {
+      listeners.add(notify);
+      return () => void listeners.delete(notify);
+    },
+    cancel() {
+      active?.abort();
+      active = null;
+      publish({busy: null, error: null});
+    },
+    setError(error: Error | null) {
+      publish({...state, error});
+    },
+    async run<T>(kind: string, action: (signal: AbortSignal) => Promise<T>, rethrow: boolean): Promise<T | undefined> {
+      if (active) return undefined;
       const controller = new AbortController();
-      active.current = controller;
-      setBusy(kind);
-      setError(null);
+      active = controller;
+      publish({busy: kind, error: null});
       try {
         const result = await action(controller.signal);
         return controller.signal.aborted ? undefined : result;
       } catch (reason) {
         if (controller.signal.aborted) return undefined;
-        const failure = reason instanceof Error ? reason : new Error(String(reason));
-        setError(failure);
-        if (rethrow) throw failure;
+        const error = reason instanceof Error ? reason : new Error(String(reason));
+        state = {busy: kind, error};
+        if (rethrow) throw error;
         return undefined;
       } finally {
-        if (active.current === controller) {
-          active.current = null;
-          setBusy(null);
+        if (active === controller) {
+          active = null;
+          publish({...state, busy: null});
         }
       }
-    },
-    [rethrow]
-  );
-  return {busy, error, setError, run, cancel};
+    }
+  };
+}
+type ActionCell = ReturnType<typeof createAction>;
+const actions = new WeakMap<Api, Map<string, ActionCell>>();
+export function actionCell(api: Api, shared?: string): ActionCell {
+  if (!shared) return createAction();
+  let cells = actions.get(api);
+  if (!cells) actions.set(api, (cells = new Map()));
+  let cell = cells.get(shared);
+  if (!cell) cells.set(shared, (cell = createAction()));
+  return cell;
+}
+// Shared transactions outlive a panel closing; local actions still abort on unmount.
+export function useAction<K extends string>({scope, rethrow = false, shared}: {scope?: unknown; rethrow?: boolean; shared?: string} = {}) {
+  const api = getApi();
+  // A local action gets a fresh cell when its scope changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const cell = useMemo(() => actionCell(api, shared), [api, shared, scope]);
+  const state = useSyncExternalStore(cell.subscribe, cell.snapshot);
+  useEffect(() => (shared ? undefined : cell.cancel), [shared, cell]);
+  const run = useCallback(<T>(kind: K, action: (signal: AbortSignal) => Promise<T>) => cell.run(kind, action, rethrow), [cell, rethrow]);
+  return {...state, busy: state.busy as K | null, setError: cell.setError, run, cancel: cell.cancel};
 }
 // The backend forgets an operation when it restarts or the record expires, so a 404 while polling leaves the
 // outcome unknown: everything shown is re-read rather than reporting the operation missing.

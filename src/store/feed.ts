@@ -71,7 +71,7 @@ export function createFeed<T extends {id: string}, S extends object>(
     append(record: T) {
       const id = key(record);
       if (records.has(id)) {
-        if (replay === 'ignore') return;
+        if (replay === 'ignore' || records.get(id) === record) return;
         records.delete(id);
       }
       records.set(id, record);

@@ -129,6 +129,17 @@
   border-start-start-radius: var(--rp-r-xl);
   border-end-start-radius: var(--rp-r-xl);
 }
+.rp-modal.rp-drawer.rp-drawer-fit {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  height: auto;
+  max-height: 100%;
+  border-end-end-radius: var(--rp-r-xl);
+}
+.rp-drawer-fit > .rp-dialog {
+  min-height: 0;
+}
 .rp-underlay[data-entering] .rp-modal.rp-drawer {
   animation: rp-drawer-in var(--rp-duration-modal-in) var(--rp-ease) both;
 }
@@ -151,4 +162,57 @@
 .rp-page-links [aria-current='page'] {
   border-color: var(--rp-accent);
   background: var(--rp-selected);
+}
+.rp-disclosure[data-variant='nav'] {
+  margin: 0;
+}
+.rp-disclosure[data-variant='nav'] > h3 {
+  display: flex;
+  margin: 0;
+  font: inherit;
+}
+/* S2 docs navigation: full-height section triggers and spaced links. */
+.rp-disclosure[data-variant='nav'] .rp-disclosure-trigger {
+  display: inline-flex;
+  align-items: center;
+  inline-size: 100%;
+  min-block-size: 0;
+  block-size: var(--rp-control);
+  font: inherit;
+  font-size: var(--rp-text-md);
+  line-height: var(--rp-line-caption);
+  font-weight: 400;
+  color: var(--rp-subtle);
+  letter-spacing: inherit;
+  padding: 0;
+  padding-inline-start: var(--rp-space-3);
+  margin-block-end: var(--rp-space-1);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  gap: var(--rp-space-1);
+  justify-content: flex-start;
+}
+.rp-disclosure[data-variant='nav'] .rp-disclosure-trigger > svg {
+  order: 1;
+  inline-size: var(--rp-space-2h);
+  block-size: var(--rp-space-2h);
+  margin-inline-start: auto;
+  margin-inline-end: var(--rp-space-2);
+}
+.rp-disclosure[data-variant='nav'] .rp-disclosure-panel,
+.rp-disclosure[data-variant='nav'] .rp-disclosure-content {
+  gap: var(--rp-space-1h);
+  padding: 0;
+}
+
+.rp-side:has(.rp-disclosure:not([data-expanded]) [aria-current='page']) .rp-nav-slider {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rp-disclosure[data-variant='nav'] .rp-disclosure-trigger[data-pressed] {
+    transform: scale(0.98);
+  }
 }

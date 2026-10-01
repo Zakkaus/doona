@@ -77,6 +77,11 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.rp-title-icon {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+}
 :root {
   --rp-code-comment: var(--rp-muted);
   --rp-code-string: var(--rp-gold);
@@ -167,11 +172,16 @@
 .rp-kv > div {
   min-width: 0;
 }
-.rp-kv .k {
+.rp-kv .k,
+.rp-kv-label {
   display: block;
   font-size: var(--rp-text-xs);
   line-height: 16px;
   color: var(--rp-subtle);
+  font-weight: 400;
+}
+.rp-kv .k > .rp-truncate {
+  display: block;
 }
 .rp-kv .v {
   display: block;
@@ -456,4 +466,18 @@
    a scroll container, which would pin the toolbar to the card instead. */
 .rp-source-card {
   overflow: clip;
+}
+.rp-kv.compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.rp-kv.compact > div {
+  min-inline-size: 0;
+}
+.rp-kv.compact.row {
+  display: grid;
+  gap: 8px;
+}
+.rp-kv.compact.row > div {
+  justify-content: space-between;
 }

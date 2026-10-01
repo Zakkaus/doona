@@ -7,7 +7,7 @@ export function withCrossfade(fn: () => void) {
   d.startViewTransition(() => flushSync(fn));
 }
 
-export function useSlider(value: string, selector = '[data-selected]') {
+export function useSlider(value: string, selector = '[data-selected]', keepVisible = false) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{x: number; y: number; w: number; h: number; still: boolean} | null>(null);
   useLayoutEffect(() => {
@@ -19,14 +19,22 @@ export function useSlider(value: string, selector = '[data-selected]') {
       if (!el.offsetWidth) return;
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      const next = {x: sel.offsetLeft, y: sel.offsetTop, w: sel.offsetWidth, h: sel.offsetHeight, still};
+      const box = el.getBoundingClientRect();
+      if (keepVisible) {
+        const item = sel.getBoundingClientRect();
+        if (item.top < box.top) el.scrollTop -= box.top - item.top;
+        else if (item.bottom > box.bottom) el.scrollTop += item.bottom - box.bottom;
+      }
+      const selected = sel.getBoundingClientRect();
+      const next = {x: selected.left - box.left + el.scrollLeft, y: selected.top - box.top + el.scrollTop, w: sel.offsetWidth, h: sel.offsetHeight, still};
       setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
     measure(false);
     const ro = new ResizeObserver(() => measure(true));
     ro.observe(el);
+    for (const child of el.children) ro.observe(child);
     return () => ro.disconnect();
-  }, [value, selector]);
+  }, [value, selector, keepVisible]);
   return [ref, pos] as const;
 }
 
@@ -202,33 +210,36 @@ export function useDebounced<T>(value: T, ms = 300): T {
 const nearMargin = 400;
 
 // Whether the element is within `nearMargin` of the viewport; `onNear` runs each time it comes near.
-export function useNearViewport(onNear?: () => void) {
+export function useNearViewport(onNear?: () => void, margin = nearMargin) {
   const [near, setNear] = useState(false);
   // Read when it fires, so an inline `onNear` keeps the same observer across renders.
   const latest = useRef(onNear);
   useLayoutEffect(() => {
     latest.current = onNear;
   }, [onNear]);
-  const ref = useCallback((element: HTMLElement | null) => {
-    if (!element) return;
-    // An element that mounts on screen reads as near in the first frame; waiting for the observer's first report
-    // would paint the placeholder for a frame and make the page jump.
-    const box = element.getBoundingClientRect();
-    if (box.top < innerHeight + nearMargin && box.bottom > -nearMargin) {
-      setNear(true);
-      latest.current?.();
-    }
-    const observer = new IntersectionObserver(
-      entries => {
-        const next = entries.at(-1)!.isIntersecting;
-        setNear(next);
-        if (next) latest.current?.();
-      },
-      {rootMargin: `${nearMargin}px`}
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const ref = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element) return;
+      // An element that mounts on screen reads as near in the first frame; waiting for the observer's first report
+      // would paint the placeholder for a frame and make the page jump.
+      const box = element.getBoundingClientRect();
+      if (box.top < innerHeight + margin && box.bottom > -margin) {
+        setNear(true);
+        latest.current?.();
+      }
+      const observer = new IntersectionObserver(
+        entries => {
+          const next = entries.at(-1)!.isIntersecting;
+          setNear(next);
+          if (next) latest.current?.();
+        },
+        {rootMargin: `${margin}px`}
+      );
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [margin]
+  );
   return [ref, near] as const;
 }
 
@@ -242,4 +253,23 @@ export function useMediaQuery(query: string) {
     return () => list.removeEventListener('change', on);
   }, [query]);
   return matches;
+}
+
+// Marks a vertical scroller with `data-more` while more of its content lies below, for the CSS to fade that edge as
+// the widget panel's list does. Set on the element directly, so scrolling does not re-render its owner.
+export function useMoreBelow(ref: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => el.toggleAttribute('data-more', el.scrollHeight > el.clientHeight + el.scrollTop + 1);
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of el.children) ro.observe(child);
+    el.addEventListener('scroll', measure, {passive: true});
+    measure();
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', measure);
+    };
+  }, [ref]);
 }

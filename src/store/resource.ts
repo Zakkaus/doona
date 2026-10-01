@@ -1,4 +1,5 @@
-import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react';
+import {useCallback, useContext, useEffect, useRef, useSyncExternalStore} from 'react';
+import {ResourcePreview, ResourceSamples} from './preview';
 import {MAX_PAGE} from './cadence';
 import {getApi} from '../api/index';
 import type {Capabilities} from '../api/model';
@@ -17,8 +18,11 @@ export function useResource<T>(
   resource: WatchedResource<T>,
   {enabled = true, pending = false, paused = false}: {enabled?: boolean; pending?: boolean; paused?: boolean} = {}
 ) {
+  const preview = useContext(ResourcePreview);
+  const samples = useContext(ResourceSamples);
   const api = getApi();
   const name = normalizeResourceKey(resource.key);
+  const every = resource.every;
   const current = useRef(resource);
   useEffect(() => {
     current.current = resource;
@@ -26,16 +30,22 @@ export function useResource<T>(
   const subscribe = useCallback(
     (notify: () => void) => {
       if (!enabled) return () => {};
-      if (paused) return retainInactive(api, name);
+      if (paused || preview) return retainInactive(api, name);
       const {followEvents = true, ...resource} = current.current;
       const events: EventFeed | undefined = followEvents ? (listener, onBaseline) => subscribeEvents(api, listener, {onBaseline}) : undefined;
-      return watchResource(api, {...resource, events}, notify, name).dispose;
+      return watchResource(api, {...resource, every, events}, notify, name).dispose;
     },
-    [api, name, enabled, paused]
+    [api, name, enabled, paused, preview, every]
   );
-  const getSnapshot = useCallback(() => (enabled ? snapshot<T>(api, name) : pending ? initialState : disabledState), [api, name, enabled, pending]);
+  const getSnapshot = useCallback(() => {
+    const state = enabled ? snapshot<T>(api, name) : pending ? initialState : disabledState;
+    return preview && state === initialState ? disabledState : state;
+  }, [api, name, enabled, pending, preview]);
   const refetch = useCallback(() => (enabled ? refetchResource(api, name) : undefined), [api, name, enabled]);
-  return {...useSyncExternalStore(subscribe, getSnapshot), refetch};
+  const state = useSyncExternalStore(subscribe, getSnapshot);
+  const sample = preview ? samples?.get(resource.key[0], state.data) : undefined;
+  const sampled = sample !== undefined;
+  return {...state, ...(sampled ? {data: sample as T, loading: false, error: null} : {}), refetch};
 }
 // Walks a cursor-paged list to its end. A cursor the backend no longer honours (400 for an unknown or expired
 // cursor, 410 for a gone snapshot) restarts the walk once from the head, which is what the contract asks for.

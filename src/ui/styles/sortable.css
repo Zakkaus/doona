@@ -1,0 +1,43 @@
+.rp-sortable-row {
+  position: relative;
+  min-inline-size: 0;
+  outline: none;
+}
+.rp-sortable-row[data-focus-visible] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+.rp-sortable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(64px, 1fr));
+  gap: 16px 8px;
+  min-block-size: 100px;
+  outline: none;
+}
+.rp-sortable-grid > .rp-sortable-row {
+  grid-column: span 2;
+  padding-block: calc(var(--rp-control) + 16px);
+  padding-inline: var(--rp-widget-tile-padding);
+  align-self: start;
+  border-radius: var(--rp-r-md);
+  outline: 1px solid var(--rp-line);
+  background: var(--rp-base);
+}
+.rp-sortable-grid > .rp-sortable-row[data-size='small'] {
+  grid-column: span 1;
+}
+.rp-sortable-grid > .rp-sortable-row[data-size='large'] {
+  grid-row: span 2;
+}
+.rp-sortable-grid > .rp-sortable-row[data-selected] {
+  outline: 2px solid var(--rp-accent);
+  background: var(--rp-fill);
+  --rp-subtle: var(--rp-subtle-text);
+}
+.rp-sortable-grid[data-drop-target] {
+  outline: 2px dashed var(--rp-accent);
+}
+.rp-sortable-grid .rp-dashboard-tools {
+  inset-block-start: 8px;
+  inset-inline-end: 0;
+}
