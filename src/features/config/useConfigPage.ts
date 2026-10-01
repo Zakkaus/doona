@@ -61,6 +61,9 @@ function useConfigEditorController(refetch: () => void) {
   return {...editor, diagnostics};
 }
 
+// Keyed by source id, which is the backend's text: a plain object would answer `constructor` from its prototype.
+const noChoices: ReadonlyMap<string, DiagnosticsChoice> = new Map();
+
 export function useConfigPage({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -93,7 +96,7 @@ export function useConfigPage({go, query}: PageProps) {
   const canWrite = !!source && !readOnly;
   // Each source keeps the person's last open or collapse of its diagnostics, and the card reports the errors it shows
   // for the tab, a draft's included; away from the card the tab counts the accepted configuration's.
-  const [choices, setChoices] = useState<Record<string, DiagnosticsChoice>>({});
+  const [choices, setChoices] = useState<ReadonlyMap<string, DiagnosticsChoice>>(noChoices);
   const [shownErrors, setShownErrors] = useState<number | null>(null);
   const tabErrors = shownErrors ?? counts.error;
   const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
@@ -116,8 +119,8 @@ export function useConfigPage({go, query}: PageProps) {
         focusLine,
         generation: config.data?.generation_id ?? '',
         focusDiagnostics: params.get('tab') === 'validate',
-        diagnosticsChoice: choices[source.id] ?? null,
-        chooseDiagnostics: choice => setChoices(previous => ({...previous, [source.id]: choice})),
+        diagnosticsChoice: choices.get(source.id) ?? null,
+        chooseDiagnostics: choice => setChoices(previous => new Map(previous).set(source.id, choice)),
         reportErrors: setShownErrors
       }
     : null;
@@ -324,7 +327,6 @@ export function useSourceCard({
         else if (row.action === 'open') open(row.sourceId, row.line);
       }
     },
-    checkedDraft,
     marks,
     text,
     outbounds,

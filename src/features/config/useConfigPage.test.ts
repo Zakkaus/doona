@@ -35,6 +35,11 @@ let complete: boolean | undefined;
 let props: SourceCardProps;
 const editor: ConfigEditor = {busy: null, error: null, errorSource: null, diagnostics: null, cancel: vi.fn(), validate: vi.fn(), apply: vi.fn()};
 const read = () => hookHarness.render(() => useSourceCard(props));
+// Where the shown diagnostics come from: the accepted configuration, a check of the file or the draft, or a draft not yet checked.
+const provenance = () => {
+  const {quiet, scope} = read().diagnostics;
+  return quiet === 'Current draft has not been validated.' ? 'pending' : scope.startsWith('Diagnostics kept') ? 'accepted' : scope;
+};
 beforeEach(async () => {
   hookHarness.reset();
   const api = createMockApi();
@@ -102,7 +107,7 @@ it('retains accepted diagnostics and a legacy focus request before redacted text
   expect(page.sourceProps).toMatchObject({focusDiagnostics: true, focusLine: 5, diagnostics: config.diagnostics});
   hookHarness.reset();
   props = page.sourceProps!;
-  expect(read().checkedDraft).toBe(false);
+  expect(provenance()).toBe('accepted');
   expect(read().diagnostics.rows).toHaveLength(config.diagnostics.length);
 });
 
@@ -112,15 +117,16 @@ it('restores accepted provenance after cancel and after a generation change', as
   expect(read().diagnostics.rows).toEqual([]);
   vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [draftError]});
   await read().validate();
-  expect(read().checkedDraft).toBe(true);
+  expect(provenance()).toBe('Current draft diagnostics');
   read().cancel();
   expect(read().dirty).toBe(false);
-  expect(read().checkedDraft).toBe(false);
+  expect(provenance()).toBe('accepted');
   expect(read().diagnostics.rows).toHaveLength(config.diagnostics.length);
   await read().validate();
+  expect(provenance()).toBe('Current config file diagnostics');
   props.generation = 'next';
   read();
-  expect(read().checkedDraft).toBe(false);
+  expect(provenance()).toBe('accepted');
 });
 
 it.each([true, false])('validates and saves a raw edit of a form-owned value (accepted: %s)', async accepted => {
@@ -133,17 +139,17 @@ it.each([true, false])('validates and saves a raw edit of a form-owned value (ac
   read().change(text);
   expect(read().links.some(link => link.label === 'tproxy_port')).toBe(true);
   expect(read().text).toBe(text);
-  expect(read().checkedDraft).toBe(false);
+  expect(provenance()).toBe('pending');
   expect(await read().validate()).toBe(accepted);
   expect(editor.validate).toHaveBeenCalledWith({
     sources: expect.arrayContaining([expect.objectContaining({id: props.source.id, content: text})]),
     mode: 'full'
   });
-  expect(read().checkedDraft).toBe(true);
+  expect(provenance()).toBe('Current draft diagnostics');
   await read().save();
   expect(editor.apply).toHaveBeenCalledWith(props.source, text);
   expect(read().dirty).toBe(!accepted);
-  expect(read().checkedDraft).toBe(!accepted);
+  expect(provenance()).toBe(accepted ? 'accepted' : 'Current draft diagnostics');
 });
 
 it('summarises the shown diagnostics, opens on errors and jumps within the source', async () => {
@@ -172,4 +178,34 @@ it('counts the accepted errors on the source tab', () => {
   config.diagnostics = [{level: 'error', source_id: 'src-main', line: 1, column: 1, span: null, code: 'invalid', message: 'Bad'}];
   const page = hookHarness.render(() => useConfigPage({query: 'tab=modules', go: vi.fn()}));
   expect(page.tabs.find(item => item.id === 'source')?.label).toBe('Config files (1)');
+});
+
+it('reports the shown errors for the tab and clears them on unmount', async () => {
+  const error = {level: 'error' as const, source_id: props.source.id, line: 3, column: 1, span: null, code: 'invalid', message: 'Bad'};
+  read().change(props.source.content + '\n# draft');
+  vi.mocked(editor.validate).mockResolvedValue({...validation, valid: false, diagnostics: [error, {...error, line: 4}]});
+  await read().validate();
+  read();
+  hookHarness.runEffects();
+  expect(props.reportErrors).toHaveBeenLastCalledWith(2);
+  hookHarness.unmount();
+  expect(props.reportErrors).toHaveBeenLastCalledWith(null);
+  hookHarness.reset();
+  const page = () => hookHarness.render(() => useConfigPage({query: 'tab=source', go: vi.fn()}));
+  page().sourceProps!.reportErrors(3);
+  expect(page().tabs.find(item => item.id === 'source')?.label).toBe('Config files (3)');
+});
+
+it.each(['constructor', '__proto__', 'toString'])('keeps no diagnostics choice for a source named %s until one is made', id => {
+  config.sources[0].id = id;
+  config.diagnostics = [{level: 'error', source_id: id, line: 1, column: 1, span: null, code: 'invalid', message: 'Bad'}];
+  const page = () => hookHarness.render(() => useConfigPage({query: `tab=source&source=${id}`, go: vi.fn()}));
+  expect(page().sourceProps!.diagnosticsChoice).toBeNull();
+  page().sourceProps!.chooseDiagnostics({open: false, errorKeys: ['x']});
+  expect(page().sourceProps!.diagnosticsChoice).toEqual({open: false, errorKeys: ['x']});
+  // A choice made before this error was listed gives way to it.
+  const chosen = page().sourceProps!;
+  hookHarness.reset();
+  props = chosen;
+  expect(read().diagnostics.open).toBe(true);
 });
