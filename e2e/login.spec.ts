@@ -78,8 +78,8 @@ test.describe('the demo', () => {
     await page.locator('.rp-login-controls').getByRole('link', {name: 'Appearance'}).click();
     const controls = page.getByRole('region', {name: 'Appearance'});
     await expect(page.locator('html')).not.toHaveAttribute('data-family', 'nord');
-    await controls.getByRole('button', {name: 'Palette', exact: true}).click();
-    await page.getByRole('menuitemradio', {name: /Nord/}).click();
+    await controls.getByRole('button', {name: /Palette$/}).click();
+    await page.getByRole('option', {name: /Nord/}).click();
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
     await page.goto('/#/activity');
     await page.reload();

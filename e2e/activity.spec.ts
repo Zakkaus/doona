@@ -196,6 +196,8 @@ test('the compact group menu selects by keyboard and returns focus to its trigge
 });
 
 test('the latency card follows the busiest group, remembers a choice and resolves its active node', async ({page}) => {
+  // Keep the ranking card near the viewport so its shared connection poll runs.
+  await page.setViewportSize({width: 1280, height: 1000});
   const backend = await mockBackend(page);
   backend.capabilities.resources.events.available = false;
   const snapshot = await backend.api.connections({detail: 'full', limit: 1000});

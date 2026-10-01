@@ -91,7 +91,7 @@ browserTest('a token draft survives persistence failure and can be retried', asy
     };
   });
   await card.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(card.getByRole('alert')).toBeVisible();
+  await expect(card.getByRole('alert').filter({hasText: 'Could not save settings'})).toBeVisible();
   await expect(token).toHaveValue('retain-this-token');
   await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Save', exact: true}).click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!)[0].token)).toBe('retain-this-token');
