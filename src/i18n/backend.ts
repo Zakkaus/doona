@@ -49,7 +49,6 @@ const known: Record<string, Key> = {
   http_failed: 'ui.backend.httpFailed',
   group_unavailable: 'ui.backend.groupUnavailable',
   route_blocked: 'ui.backend.routeBlocked',
-  destination_rejected: 'ui.backend.destinationRejected',
   asset_too_large: 'ui.backend.assetTooLarge',
   invalid_source: 'ui.backend.invalidSource',
   probe_interrupted: 'ui.backend.probeInterrupted',
@@ -73,6 +72,7 @@ const known: Record<string, Key> = {
   udp_trace_unavailable: 'ui.backend.udpTraceUnavailable',
   quic_probe_disabled: 'ui.backend.quicProbeDisabled',
   // Codes honk sets on config diagnostics.
+  'legacy-config-warning': 'ui.backend.legacyConfigWarning',
   'duplicate-subscription-entry': 'ui.backend.duplicateSubscriptionEntry'
 };
 
@@ -85,6 +85,7 @@ const refusalReasons: Record<string, Key> = {
   listener_secret_in_content: 'ui.refusal.listenerSecretInContent',
   listener_secret_source: 'ui.refusal.listenerSecretSource',
   listener_settings_changed: 'ui.refusal.listenerSettingsChanged',
+  store_blocked: 'ui.refusal.storeBlocked',
   unsafe_path: 'ui.refusal.unsafePath',
   writes_disabled: 'ui.refusal.writesDisabled'
 };

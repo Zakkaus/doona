@@ -79,7 +79,7 @@ it('recorder controls follow the reported state and the wire form', () => {
 it('names the pages that make automatic flow recording capture', () => {
   const auto = (id: 'record_flows' | 'record_logs') => recorderView(id, 'auto', undefined, t).items.find(item => item.id === 'auto')?.label;
   expect(auto('record_flows')).toBe('On flow demand');
-  expect(auto('record_logs')).toBe('With panel');
+  expect(auto('record_logs')).toBe('On log demand');
   expect(flowRecordingNote('auto', t)).toContain('60');
   expect(flowRecordingNote('on', t)).toBeNull();
   for (const lang of ['zh-TW', 'zh-CN'] as const)
@@ -139,4 +139,9 @@ it('notes URLs from the configuration file only where sources are fixed but an u
   const other = {...version, engine: {...version.engine, name: 'other'}};
   expect(geodataFromConfig(fixed({}), other, t, 'en')).toBeNull();
   expect(geodataFromConfig(fixed({}), undefined, t, 'en')).toBeNull();
+});
+
+it('displays masked download URLs verbatim even when the mask is not a URI', () => {
+  const url = 'https://<redacted>.example/data?token=<redacted>';
+  expect(geodataRows([{...geodata.assets[0], source_redacted: url, fetched_url_redacted: url}], 'en')[0]).toMatchObject({source: url, fetched: url});
 });

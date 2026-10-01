@@ -105,3 +105,13 @@ it.each(LANGS.map(([lang]) => lang))('names every runtime degradation code honk 
   for (const code of codes) expect(backendCode(code, t), code).not.toMatch(/ui\.backend\.|_/);
   expect(new Set(codes.map(code => backendCode(code, t))).size).toBe(codes.length);
 });
+
+it('keeps the backend detail for removed configuration keys and no longer names destination policy errors', () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  const message = 'setting was removed and can be deleted; its value is ignored';
+  expect(diagnosticMessage({code: 'legacy-config-warning', message} as ConfigDiagnostic, t)).toEqual({
+    summary: t('ui.backend.legacyConfigWarning'),
+    detail: message
+  });
+  expect(backendMessage('destination_rejected', 'Old backend detail', t).summary).toContain('Old backend detail');
+});

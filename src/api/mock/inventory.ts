@@ -44,7 +44,7 @@ export function createInventory(
   count: number,
   {enqueue, log, pending}: Pick<MockLifecycle, 'enqueue' | 'log' | 'pending'>,
   advance: () => string,
-  editMain: (edit: (text: string) => string) => Promise<() => string>,
+  editSource: (edit: (text: string) => string, groupName?: string) => Promise<() => string>,
   interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean,
   geodata: MockGeodataState,
   faults = false,
@@ -157,12 +157,13 @@ export function createInventory(
         groups.find(g => g.id === groupId),
         'Group'
       );
-      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
-      if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
+      if (!ops.length) throw new ApiError(400, 'invalid_request', 'A group patch must not be empty');
       const limit = capabilities.resources.groups.max_patch_operations;
       if (limit !== undefined && ops.length > limit) throw new ApiError(413, 'request_too_large', 'Too many patch operations');
+      if (ifMatch !== '"' + group.config_revision + '"') throw new ApiError(412, 'stale_revision', 'Group configuration revision changed');
+      if (updating.has(groupId)) throw new ApiError(409, 'state_conflict', 'Group update is pending');
       const updated = patchGroupConfig(group, ops);
-      const activate = await editMain(text => writeGroupConfig(text, group.name, {...updated, members: group.members}));
+      const activate = await editSource(text => writeGroupConfig(text, group.name, {...updated, members: group.members}), group.name);
       updating.add(groupId);
       return enqueue('group_update', () => {
         updating.delete(groupId);
@@ -269,7 +270,7 @@ export function createInventory(
           ? `  ${quoteName(request.name)}: {\n    url: ${quote(request.url)}\n${options.join('')}  }\n`
           : `  ${quoteName(request.name)}: ${quote(request.url)}\n`
       );
-      const activate = await editMain(text => text.replace(/^(subscription \{\n)/m, `$1${line}`));
+      const activate = await editSource(text => text.replace(/^(subscription \{\n)/m, `$1${line}`));
       log('info', 'honk::subscription', 'Subscription added.', {provider: request.name});
       const finish = () => {
         activate();
@@ -290,7 +291,7 @@ export function createInventory(
       if (providers[index].kind === 'inline') throw new ApiError(404, 'capability_not_supported', 'The inline provider is the node section itself');
       const provider = providers[index];
       const name = escapeRegExp(provider.name);
-      const activate = await editMain(text => text.replace(new RegExp(`^\\s*${name}:\\s*\\{\\n[\\s\\S]*?\\n\\s*\\}\\n|^\\s*${name}:.*\\n`, 'm'), ''));
+      const activate = await editSource(text => text.replace(new RegExp(`^\\s*${name}:\\s*\\{\\n[\\s\\S]*?\\n\\s*\\}\\n|^\\s*${name}:.*\\n`, 'm'), ''));
       log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
       const finish = () => {
         activate();
@@ -305,7 +306,7 @@ export function createInventory(
       if (!scheme || !fixtures.linkSchemes.includes(scheme)) throw new ApiError(422, 'unsupported_value', `Unsupported share link scheme "${scheme ?? ''}"`);
       if (nodes.some(n => n.name === request.name)) throw new ApiError(409, 'state_conflict', `An inline node named ${request.name} already exists`);
       const line = configLine(() => `  ${quote(request.name)}: ${quote(request.link.trim())}\n`);
-      const activate = await editMain(text => text.replace(/^(node \{\n)/m, `$1${line}`));
+      const activate = await editSource(text => text.replace(/^(node \{\n)/m, `$1${line}`));
       log('info', 'honk::config', 'Node added.', {node: request.name, protocol: scheme});
       const finish = () => {
         activate();
@@ -325,7 +326,7 @@ export function createInventory(
       if (!node) return {deleted: 0};
       if (node.provider_id !== 'inline')
         throw new ApiError(404, 'capability_not_supported', 'Only inline nodes can be deleted; refresh or delete the provider instead');
-      const activate = await editMain(text => text.replace(new RegExp(`^\\s*'${escapeRegExp(node.name)}':.*\\n`, 'm'), ''));
+      const activate = await editSource(text => text.replace(new RegExp(`^\\s*'${escapeRegExp(node.name)}':.*\\n`, 'm'), ''));
       log('info', 'honk::config', 'Node removed.', {node: node.name});
       const finish = () => {
         activate();

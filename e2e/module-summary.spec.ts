@@ -25,7 +25,7 @@ for (const {name, lang, viewport} of [
       });
       await page.route('**/api/v1/config', route => route.fulfill({json: config}));
       await page.goto('/#/config');
-      const card = page.getByRole('region', {name: 'experimental.native_api', exact: true});
+      const card = page.getByRole('region', {name: 'experimental.native_api', exact: true}).filter({has: page.getByText('api.dae:1-1', {exact: true})});
       await expect(card).toBeVisible();
       await expect(card.locator('.rp-light')).toHaveCount(1);
       await expect(card.locator('.rp-light')).toHaveText(t('config.incomplete'));

@@ -18,6 +18,7 @@ import {found} from './common';
 import {eventKinds, logLevels} from '../selectors';
 import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
+import type {MockRecording} from './recording';
 
 // `operation` answers GET /operations/{id} for the e2e backend and the tests; doona itself only polls.
 export type OperationReader = {operation(id: string, signal?: AbortSignal): Promise<OperationState>};
@@ -37,6 +38,7 @@ export function createLifecycle(
   runtime: Pick<Runtime, 'observed_at' | 'last_reload'>,
   logSettings: () => RuntimeSettings['log'],
   revision: () => string,
+  recording: MockRecording,
   trickleEvery = 2500,
   faults = false
 ): MockLifecycle {
@@ -210,29 +212,34 @@ export function createLifecycle(
         onRecord({...structuredClone(record), id: issueCursor('logs', filter, Number(record.id.split(':')[2]))});
     };
     const cursor = resume(lastEventId, 'logs', filter, 0);
-    onConnectionChange?.(true);
-    for (const record of logRing) if (Number(record.id.split(':')[2]) > cursor) emit(record);
-    if (signal?.aborted) {
-      onConnectionChange?.(false);
-      return;
+    const release = recording.attach('logs');
+    try {
+      onConnectionChange?.(true);
+      for (const record of logRing) if (Number(record.id.split(':')[2]) > cursor) emit(record);
+      if (signal?.aborted) {
+        onConnectionChange?.(false);
+        return;
+      }
+      logListeners.add(emit);
+      if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), trickleEvery);
+      await new Promise<void>(resolve => {
+        signal?.addEventListener(
+          'abort',
+          () => {
+            logListeners.delete(emit);
+            if (!logListeners.size) {
+              clearInterval(logTimer);
+              logTimer = undefined;
+            }
+            onConnectionChange?.(false);
+            resolve();
+          },
+          {once: true}
+        );
+      });
+    } finally {
+      release();
     }
-    logListeners.add(emit);
-    if (!logTimer) logTimer = setInterval(() => trickle[Math.floor(Math.random() * trickle.length)](), trickleEvery);
-    await new Promise<void>(resolve => {
-      signal?.addEventListener(
-        'abort',
-        () => {
-          logListeners.delete(emit);
-          if (!logListeners.size) {
-            clearInterval(logTimer);
-            logTimer = undefined;
-          }
-          onConnectionChange?.(false);
-          resolve();
-        },
-        {once: true}
-      );
-    });
   }
   async function events({kinds, lastEventId, signal, onEvent, onConnectionChange}: EventOptions): Promise<void> {
     if (signal?.aborted) return;
@@ -244,30 +251,35 @@ export function createLifecycle(
         onEvent({...structuredClone(event), id: issueCursor('events', filter, Number(event.id.split(':')[1]))});
     };
     const cursor = resume(lastEventId, 'events', filter, 0);
-    onConnectionChange?.(true);
-    emit({id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
-    for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);
-    if (signal?.aborted) {
-      onConnectionChange?.(false);
-      return;
+    const release = recording.attach(kinds?.some(kind => kind === 'flow.updated' || kind === 'flow.gap') ? 'flows' : undefined);
+    try {
+      onConnectionChange?.(true);
+      emit({id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
+      for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);
+      if (signal?.aborted) {
+        onConnectionChange?.(false);
+        return;
+      }
+      listeners.add(emit);
+      if (!timer) timer = setInterval(runtimeUpdated, 5000);
+      await new Promise<void>(resolve => {
+        signal?.addEventListener(
+          'abort',
+          () => {
+            listeners.delete(emit);
+            if (!listeners.size) {
+              clearInterval(timer);
+              timer = undefined;
+            }
+            onConnectionChange?.(false);
+            resolve();
+          },
+          {once: true}
+        );
+      });
+    } finally {
+      release();
     }
-    listeners.add(emit);
-    if (!timer) timer = setInterval(runtimeUpdated, 5000);
-    await new Promise<void>(resolve => {
-      signal?.addEventListener(
-        'abort',
-        () => {
-          listeners.delete(emit);
-          if (!listeners.size) {
-            clearInterval(timer);
-            timer = undefined;
-          }
-          onConnectionChange?.(false);
-          resolve();
-        },
-        {once: true}
-      );
-    });
   }
   const api: LifecycleApi = {
     operation,

@@ -95,7 +95,7 @@ test('Policies creates a group with all fields in the shared editor', async ({pa
   await expect(dialog.getByRole('switch', {name: 'All nodes', exact: true})).not.toBeChecked();
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(async () => (await api.group('streaming')).config.final_outbound).toBe('direct');
+  await expect.poll(async () => (await api.group((await api.groups()).find(group => group.name === 'streaming')!.id)).config.final_outbound).toBe('direct');
   const source = (await api.config()).sources.find(source => source.kind === 'main')!;
   expect(readGroupEntries(source.content).find(entry => entry.name === 'streaming')).toMatchObject({
     filters: ["name('hk-01')"],
@@ -110,7 +110,7 @@ test('Policies creates a group with all fields in the shared editor', async ({pa
   await edit.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('option', {name: 'block', exact: true}).click();
   await edit.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect.poll(async () => (await api.group('streaming')).config.final_outbound).toBe('block');
+  await expect.poll(async () => (await api.group((await api.groups()).find(group => group.name === 'streaming')!.id)).config.final_outbound).toBe('block');
 });
 
 test('Nodes creates a filtered group with a final and keeps the draft after validation refuses it', async ({page}) => {
@@ -149,8 +149,8 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
   invalid = false;
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(async () => (await api.group('nodegroup')).config.final_outbound).toBe('sg-01');
-  expect((await api.group('nodegroup')).members.map(member => member.name)).toEqual(['hk-01']);
+  await expect.poll(async () => (await api.group((await api.groups()).find(group => group.name === 'nodegroup')!.id)).config.final_outbound).toBe('sg-01');
+  expect((await api.group((await api.groups()).find(group => group.name === 'nodegroup')!.id)).members.map(member => member.name)).toEqual(['hk-01']);
 });
 
 for (const entry of ['Nodes', 'Policies'])
@@ -187,8 +187,10 @@ for (const entry of ['Nodes', 'Policies'])
     await page.getByRole('option', {name: /^hk-02/}).click();
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(dialog).toHaveCount(0);
-    await expect.poll(async () => (await api.group('manualgroup')).config.default_member_id).toBe('hk-02');
-    expect((await api.group('manualgroup')).members.map(member => member.name)).toEqual(['hk-02']);
+    await expect
+      .poll(async () => (await api.group((await api.groups()).find(group => group.name === 'manualgroup')!.id)).config.default_member_id)
+      .toBe('hk-02');
+    expect((await api.group((await api.groups()).find(group => group.name === 'manualgroup')!.id)).members.map(member => member.name)).toEqual(['hk-02']);
     const main = (await api.config()).sources.find(source => source.kind === 'main')!;
     expect(readGroupEntries(main.content).find(entry => entry.name === 'manualgroup')).toMatchObject({
       filters: ["name('hk-02')"],

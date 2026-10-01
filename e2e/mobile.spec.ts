@@ -67,7 +67,7 @@ test('another page opens at its top, while a change within the page keeps the sc
       return {
         ...config,
         sources: config.sources.map(source =>
-          source.kind === 'main' ? {...source, content: demoRouting} : source.kind === 'include' ? {...source, content: demoRoutingInclude} : source
+          source.kind === 'main' ? {...source, content: demoRouting} : source.id === 'src-rules' ? {...source, content: demoRoutingInclude} : source
         )
       };
     };

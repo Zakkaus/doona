@@ -6,6 +6,7 @@ import * as fixtures from './fixtures/network';
 import {instanceId, observedAt} from './fixtures/clock';
 import {found, createPager, pageLimit} from './common';
 import {routingTrace} from './routing';
+import type {MockRecording} from './recording';
 
 const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
 // Derived once per flows array; a real backend keeps its ring, so the mock should not re-sort on every poll.
@@ -84,6 +85,7 @@ export function createNetwork(
   outbounds: RuntimeOutbounds,
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>,
+  recording: MockRecording,
   busy = false,
   faults = false
 ) {
@@ -160,6 +162,7 @@ export function createNetwork(
         ),
         query
       );
+      recording.renew('flows');
       return {
         instance_id: instanceId,
         observed_at: observedAt,
@@ -179,12 +182,14 @@ export function createNetwork(
     flow: async (id, signal) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.flows.available) throw new ApiError(404, 'capability_not_supported', 'Flows are unavailable');
-      return structuredClone(
+      const result = structuredClone(
         found(
           flows.find(f => f.id === id),
           'Flow'
         )
       );
+      recording.renew('flows');
+      return result;
     },
     routingTrace: async (request, signal) => {
       signal?.throwIfAborted();
@@ -219,6 +224,7 @@ export function createNetwork(
           (!src || (r.src !== null && sourceIp(r.src) === src))
       );
       const result = logPage(records, {...query, limit: query?.limit ?? 200});
+      recording.renew('dns_log');
       // total counts the ring before filters, as the contract defines it.
       return {observed_at: new Date().toISOString(), total: ring.length, next_cursor: result.next_cursor, records: result.items};
     },

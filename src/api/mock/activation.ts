@@ -1,13 +1,21 @@
 import type {Group, Node, Provider} from '../model';
+import {uuid} from '../hash';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
 import {groupAdmits, nestedIn, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {policyKind} from '../../dae/vocab';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
-import {redactUrl} from './common';
+import {displayUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
 import {resolveLeaf} from './control';
 
-export function activateInventory(text: string, revision: string, nodes: Node[], groups: Group[], providers: Provider[]) {
+export function activateInventory(
+  text: string,
+  revision: string,
+  nodes: Node[],
+  groups: Group[],
+  providers: Provider[],
+  newGroupId: (name: string) => string = uuid
+) {
   const {blocks, tokens} = scanConfig(text);
   const fields = (section: string) => blocks.filter(block => block.name === section).flatMap(block => blockFields(text, block, tokens));
   const subscriptions = fields('subscription');
@@ -30,7 +38,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       .flatMap(child => blockFields(text, child, tokens))
       .find(field => field.name === 'url')?.value;
   for (const field of subscriptions) {
-    const url_redacted = redactUrl(unquote(blockUrl(field.name) ?? field.value));
+    const url_redacted = displayUrl(unquote(blockUrl(field.name) ?? field.value));
     const existing = nextProviders.find(provider => provider.name === field.name);
     if (existing) {
       existing.url_redacted = url_redacted;
@@ -49,7 +57,10 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       last_error: null
     });
   }
-  const entries = readGroupEntries(text);
+  const declarations = readGroupEntries(text);
+  // Only the last declaration of a name is visible, in configuration order.
+  const entries = declarations.filter((entry, index) => !declarations.slice(index + 1).some(later => later.name === entry.name));
+  const ids = new Map(entries.map(entry => [entry.name, groups.find(group => group.name === entry.name)?.id ?? newGroupId(entry.name)]));
   const memberships = new Map(nextNodes.map(node => [node.id, [] as string[]]));
   const nextGroups = entries.map((entry): Group => {
     const previous = groups.find(group => group.name === entry.name);
@@ -57,17 +68,18 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
     const members: Group['members'] = [
       ...nestedIn(entry)
         .filter(name => entries.some(group => group.name === name))
-        .map(name => ({id: name, name, kind: 'group' as const})),
+        .map(name => ({id: ids.get(name)!, name, kind: 'group' as const})),
       ...memberNodes.map(node => ({id: node.id, name: node.name, kind: 'node' as const}))
     ];
-    for (const node of memberNodes) memberships.get(node.id)!.push(previous?.id ?? entry.name);
+    for (const node of memberNodes) memberships.get(node.id)!.push(ids.get(entry.name)!);
     const native = entry.policy ?? 'fixed(0)';
     const kind = policyKind(native) ?? 'selector';
     const config = groupConfig(kind);
     const block = blocks
       .filter(block => block.name === 'group')
       .flatMap(block => block.children)
-      .find(block => block.name === entry.name)!;
+      .filter(block => block.name === entry.name)
+      .at(-1)!;
     for (const field of blockFields(text, block, tokens)) {
       // honk's own keys: `default` names a member by its tag, `final` an outbound.
       if (field.name === 'default') config.default_member_id = members.find(member => member.name === unquote(field.value))?.id ?? null;
@@ -103,7 +115,7 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
       if (id) selection[network] = {member_id: id, resolved_leaf_node_id: id, source: kind === 'selector' ? 'runtime' : 'policy'};
     }
     return {
-      id: previous?.id ?? entry.name,
+      id: ids.get(entry.name)!,
       name: entry.name,
       icon: previous?.icon ?? null,
       config_revision: revision,
@@ -144,7 +156,9 @@ export function activateInventory(text: string, revision: string, nodes: Node[],
 }
 
 export function writeGroupConfig(text: string, name: string, update: Pick<Group, 'policy' | 'config' | 'members'>): string {
-  const entry = readGroupEntries(text).find(entry => entry.name === name)!;
+  const entry = readGroupEntries(text)
+    .filter(entry => entry.name === name)
+    .at(-1)!;
   // The API's default_member_id and final_outbound are the native `default` member tag and `final` outbound.
   const {default_member_id, final_outbound, ...config} = update.config;
   const member = update.members.find(member => member.id === default_member_id)?.name ?? null;
@@ -158,7 +172,8 @@ export function writeGroupConfig(text: string, name: string, update: Pick<Group,
   const block = blocks
     .filter(block => block.name === 'group')
     .flatMap(block => block.children)
-    .find(block => block.name === name)!;
+    .filter(block => block.name === name)
+    .at(-1)!;
   const existing = blockFields(text, block, tokens).filter(field => field.name in config);
   const values = Object.entries(config)
     .map(([key, value]) => `${key}: ${typeof value === 'string' ? quote(value) : String(value)}`)

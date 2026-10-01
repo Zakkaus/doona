@@ -47,7 +47,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
   } catch {
     /* Storage can be unavailable. */
   }
-  const runtime = createRuntime(capabilities, big, faults);
+  const runtime = createRuntime(capabilities, big, () => configuration.flowRecorder(), faults);
   const geodata = createGeodataState(capabilities, () => inventory.groupIds(), faults);
   const configuration = createConfiguration(
     capabilities,
@@ -70,16 +70,27 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     runtime.runtime,
     configuration.logSettings,
     configuration.revision,
+    configuration.recording,
     busy ? 20 : 2500,
     faults
   );
-  const network = createNetwork(capabilities, big, profile, runtime.outbounds, configuration.revision, configuration.ruleSnapshot, busy, faults);
+  const network = createNetwork(
+    capabilities,
+    big,
+    profile,
+    runtime.outbounds,
+    configuration.revision,
+    configuration.ruleSnapshot,
+    configuration.recording,
+    busy,
+    faults
+  );
   const inventory = createInventory(
     capabilities,
     count,
     lifecycle,
     configuration.advance,
-    configuration.editMain,
+    configuration.editSource,
     network.interrupt,
     geodata,
     faults,

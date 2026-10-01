@@ -1738,6 +1738,18 @@ export interface components {
              *     cannot accept writes; observe alone never grants writes.
              */
             writable: boolean;
+            /**
+             * @description Present only while writable is false and one of these causes applies,
+             *     naming the first that does in this order. Describes the accepted
+             *     snapshot. writes_disabled: config_write is off or no secret or
+             *     password_auth is configured. store_blocked: a failed db record blocks
+             *     writes until the head revision is activated again.
+             *     listener_secret_source: the source declares a native or Clash listener
+             *     secret. listener_secret_in_content: the source text contains a
+             *     listener secret value.
+             * @enum {string}
+             */
+            read_only_reason?: "writes_disabled" | "store_blocked" | "listener_secret_source" | "listener_secret_in_content";
             /** @description Time these source bytes were accepted, not the current file modification time. */
             loaded_at: components["schemas"]["Timestamp"];
         };

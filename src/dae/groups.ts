@@ -52,9 +52,14 @@ export type GroupEntryUpdate = {filters: string[]; policy: string | null; defaul
 export function writeGroupEntry(text: string, name: string, next: GroupEntryUpdate): string {
   const {blocks, tokens} = scanConfig(text);
   const sections = blocks.filter(block => block.name === 'group');
-  const entry = sections.flatMap(block => block.children).find(entry => entry.name === name);
+  const entry = sections
+    .flatMap(block => block.children)
+    .filter(entry => entry.name === name)
+    .at(-1);
   if (entry) {
-    const current = readGroupEntries(text).find(group => group.name === name)!;
+    const current = readGroupEntries(text)
+      .filter(group => group.name === name)
+      .at(-1)!;
     if (
       current.filters.length === next.filters.length &&
       current.filters.every((filter, i) => filter === next.filters[i]) &&
@@ -264,7 +269,9 @@ export const groupsNamingTag = (text: string, tag: string) =>
     .map(group => group.name);
 
 function editExact(text: string, group: string, call: ExactCall, add: string[], remove: string[]): string {
-  const entry = readGroupEntries(text).find(e => e.name === group);
+  const entry = readGroupEntries(text)
+    .filter(e => e.name === group)
+    .at(-1);
   if (!entry && !add.length) return text;
   const gone = new Set(remove);
   const present = new Set(exactIn(entry?.filters ?? [], call).filter(value => !gone.has(value)));

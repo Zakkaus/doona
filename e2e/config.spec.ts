@@ -21,7 +21,7 @@ test('configuration sources list with the main source open, read-only ones canno
   const picker = page.getByRole('button', {name: /Config file/});
   await expect(picker).toContainText('/etc/honk/config.dae');
   await picker.click();
-  await expect(page.getByRole('option')).toHaveCount(4);
+  await expect(page.getByRole('option')).toHaveCount(5);
   await page.getByRole('option', {name: /harbor\.dae/}).click();
   await expect(page).toHaveURL(/source=src-harbor$/);
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/harbor.dae"]')).toContainText('redacted');
@@ -491,7 +491,7 @@ test('modules list top-level counts and edit only routing through reload', async
   await page.goto('/#/config');
   await expect(page.getByRole('tab', {name: 'Modules', exact: true})).toHaveAttribute('aria-selected', 'true');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
-  await expect(modules.getByRole('heading', {level: 2})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing']);
+  await expect(modules.getByRole('heading', {level: 2})).toHaveText(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'experimental.native_api']);
   await expect(modules.getByRole('region', {name: 'global', exact: true})).toContainText('6 settings');
   await expect(modules.getByRole('region', {name: 'subscription', exact: true})).toContainText('1 subscription');
   await expect(modules.getByRole('region', {name: 'node', exact: true})).toContainText('5 nodes');
@@ -816,7 +816,7 @@ test('source redaction does not certify exports or diagnose the redacted include
   await page.getByRole('button', {name: 'Export', exact: true}).click();
   expect(await downloadText(await downloading)).toBe(main.content);
   await page.getByRole('button', {name: /Config file/}).click();
-  await page.getByRole('option', {name: /Include/}).click();
+  await page.getByRole('option', {name: /Include src-rule/}).click();
   await expect(page.locator('.rp-content')).toContainText('The backend does not accept writes to this file, so it can only be viewed.');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
