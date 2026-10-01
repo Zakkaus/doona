@@ -314,15 +314,15 @@ test('global target cannot change during a pending mode apply', async ({page}) =
 
 test('trace headings and selected leaves retain the submitted domain and network', async ({page}) => {
   const api = await backend(page);
-  await api.selectGroup('proxy', {member_id: 'hk-01', network: 'tcp'});
-  await api.selectGroup('proxy', {member_id: 'sg-01', network: 'udp'});
+  await api.selectGroup('office', {member_id: 'hk-01', network: 'tcp'});
+  await api.selectGroup('office', {member_id: 'sg-01', network: 'udp'});
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
   });
   await page.route('**/api/v1/routing/trace', async route => {
     const response = await api.routingTrace(route.request().postDataJSON());
-    response.evaluations = [{...response.evaluations[0], dst_ip: null, outbound: 'proxy'}];
+    response.evaluations = [{...response.evaluations[0], dst_ip: null, outbound: 'office'}];
     await gate;
     await route.fulfill({json: response});
   });
