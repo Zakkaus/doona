@@ -29,7 +29,7 @@ export function Modules(props: ModulesProps) {
             </div>
           )}
           {card.summary && (
-            <Light small tone={card.block ? 'info' : 'muted'}>
+            <Light small tone="muted">
               {card.summary}
             </Light>
           )}

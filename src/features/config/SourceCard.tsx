@@ -144,8 +144,8 @@ export function SourceCard(props: SourceCardProps) {
               <Light small tone={item.tone}>
                 {item.detail}
               </Light>
-              <Button small quiet label={t('config.openSourceAt', {where: item.where})} onPress={() => props.open(item.sourceId, item.line)}>
-                {item.where}
+              <Button small onPress={() => props.open(item.sourceId, item.line)}>
+                {t('config.openSourceAt', {where: item.where})}
               </Button>
             </div>
           ))}

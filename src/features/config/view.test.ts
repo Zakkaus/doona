@@ -323,3 +323,7 @@ it('prefers reported source reasons over inferred credentials and falls back for
   }
   expect(readOnlyBadge({...source, read_only_reason: 'future' as never}, true, true, honk, t)?.reason).toBe('secret');
 });
+
+it('does not invent a source filename when no main file exists', () => {
+  expect(sectionSummaries([], honk, 'en', t).every(card => card.range === '')).toBe(true);
+});
