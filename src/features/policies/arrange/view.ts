@@ -163,6 +163,19 @@ export function changeText(change: GroupChange, subscriptions: TraySubscription[
   }
 }
 
+export function changePresentation(change: GroupChange, subscriptions: TraySubscription[], t: Translator) {
+  const node = change.kind === 'addNode' || change.kind === 'removeNode';
+  return {
+    text: changeText(node ? {...change, value: '{0}', group: '{1}'} : change, subscriptions, t),
+    names: node
+      ? [
+          {name: change.value, nodeName: true},
+          {name: change.group, nodeName: false}
+        ]
+      : []
+  };
+}
+
 // Staging an edit that undoes an earlier staged one removes both, so the review never lists a change and its reverse.
 export function stage(changes: GroupChange[], next: GroupChange): GroupChange[] {
   const opposite: Partial<Record<GroupChange['kind'], GroupChange['kind']>> = {

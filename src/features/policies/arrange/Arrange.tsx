@@ -14,6 +14,7 @@ import {
 } from 'react-aria-components';
 import {formatList, useLang, useT} from '../../../i18n';
 import {href} from '../../../shell/route';
+import {NodeText} from '../../shared/NodeText';
 import {NodeName} from '../../../ui/NodeName';
 import {DaeCode} from '../../../ui/DaeCode';
 import {
@@ -220,9 +221,28 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
               <FilterSummary filters={group.rules} />
               {group.ruleNodes.length > 0 && (
                 <span>
-                  {group.ruleMore
-                    ? t('arrange.ruleSelectsMore', {names: formatList(lang, group.ruleNodes), n: group.ruleMore})
-                    : t('arrange.ruleSelects', {names: formatList(lang, group.ruleNodes)})}
+                  {group.ruleMore ? (
+                    <NodeText
+                      text={t('arrange.ruleSelectsMore', {
+                        names: formatList(
+                          lang,
+                          group.ruleNodes.map((_, i) => `{${i}}`)
+                        ),
+                        n: group.ruleMore
+                      })}
+                      names={group.ruleNodes.map(name => ({name, nodeName: true}))}
+                    />
+                  ) : (
+                    <NodeText
+                      text={t('arrange.ruleSelects', {
+                        names: formatList(
+                          lang,
+                          group.ruleNodes.map((_, i) => `{${i}}`)
+                        )
+                      })}
+                      names={group.ruleNodes.map(name => ({name, nodeName: true}))}
+                    />
+                  )}
                 </span>
               )}
               <span className="rp-label">
@@ -233,7 +253,19 @@ function GroupCard({group, live, groupCount, m}: {group: ArrangeGroup; live: Gro
               </span>
             </div>
           )}
-          {group.stillIn.length > 0 && <InlineAlert tone="informative">{t('arrange.stillIn', {names: formatList(lang, group.stillIn)})}</InlineAlert>}
+          {group.stillIn.length > 0 && (
+            <InlineAlert tone="informative">
+              <NodeText
+                text={t('arrange.stillIn', {
+                  names: formatList(
+                    lang,
+                    group.stillIn.map((_, i) => `{${i}}`)
+                  )
+                })}
+                names={group.stillIn.map(name => ({name, nodeName: true}))}
+              />
+            </InlineAlert>
+          )}
           {isDropTarget && (
             <div className="rp-drop-hint" aria-hidden="true">
               {t('arrange.dropHint')}
@@ -379,11 +411,25 @@ function Review({m}: {m: Model}) {
     >
       {m.failure && <InlineAlert takeFocus>{m.failure}</InlineAlert>}
       {m.applyNote && <InlineAlert>{m.applyNote}</InlineAlert>}
-      {m.unknown.size > 0 && <InlineAlert tone="informative">{t('arrange.unknown', {names: formatList(lang, [...m.unknown])})}</InlineAlert>}
+      {m.unknown.size > 0 && (
+        <InlineAlert tone="informative">
+          <NodeText
+            text={t('arrange.unknown', {
+              names: formatList(
+                lang,
+                [...m.unknown].map((_, i) => `{${i}}`)
+              )
+            })}
+            names={[...m.unknown].map(name => ({name, nodeName: true}))}
+          />
+        </InlineAlert>
+      )}
       <ol className="rp-arrange-changes">
         {m.changeLines.map((line, index) => (
           <li key={index} className="rp-row">
-            <span className="rp-grow">{line}</span>
+            <span className="rp-grow">
+              <NodeText {...m.changePresentations[index]} />
+            </span>
             <Button quiet icon small label={t('arrange.undo', {change: line})} isDisabled={m.applying} onPress={() => m.drop(index)}>
               <Close />
             </Button>

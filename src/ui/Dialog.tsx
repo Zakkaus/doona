@@ -44,7 +44,7 @@ export function Disclosure({
   aside,
   children,
   ...props
-}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: string; flush?: boolean; aside?: ReactNode; children: ReactNode}) {
+}: Omit<ComponentProps<typeof RDisclosure>, 'children'> & {title: ReactNode; flush?: boolean; aside?: ReactNode; children: ReactNode}) {
   return (
     <RDisclosure {...props} className="rp-disclosure">
       <Heading level={3} className={aside ? 'rp-disclosure-head' : undefined}>

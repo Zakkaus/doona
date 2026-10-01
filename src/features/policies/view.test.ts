@@ -64,7 +64,7 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   expect(policyCardView(g, members, 'tcp', t).marks).toEqual({});
   expect(policyCardView(g, members, 'tcp', t).selected).toBe('hk-01');
   expect(policyCardView(g, members, 'udp', t).selected).toBe('hk-02');
-  expect(policyCardView(g, members, 'both', t).fields.some(([key]) => key === t('policy.cfg.interruptConnections'))).toBe(false);
+  expect(policyCardView(g, members, 'both', t).fields.some(field => !Array.isArray(field) && field.label === t('policy.cfg.interruptConnections'))).toBe(false);
   expect(groupConfigFields(g)).toContainEqual(['policy.cfg.checkInterval', {key: 'policy.cfg.seconds', params: {n: 30}}]);
   expect(groupConfigFields(g)).toContainEqual(['policy.cfg.interruptConnections', {key: 'ui.no'}]);
   // An unset option reads as off, flagged so the card can say the engine default applies.
@@ -468,4 +468,16 @@ it('marks node names by member kind even when badge presentation changes', () =>
       .map(item => item.nodeName)
       .filter(value => value !== undefined)
   ).toEqual(groups[0].members.map(member => member.kind === 'node'));
+});
+
+it('marks a final outbound from the node catalogue while keeping groups and built-ins plain', () => {
+  const g = nodeFixtures(0).groups[0];
+  const outbounds = {groups: ['resilient'], nodes: ['jp-01', 'resilient', 'direct', 'block'].map(name => ({name})), links: new Map<string, string[]>()};
+  for (const final of ['jp-01', 'resilient', 'direct', 'block']) {
+    const fields = policyCardView({...g, config: {...g.config, final_outbound: final}}, [], 'both', t, outbounds).fields;
+    expect(fields.find(field => !Array.isArray(field) && field.label === t('policy.cfg.finalOutbound'))).toMatchObject({
+      value: final,
+      nodeName: final === 'jp-01'
+    });
+  }
 });

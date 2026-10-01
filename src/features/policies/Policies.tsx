@@ -17,6 +17,7 @@ import {preloadable} from '../../ui/preloadable';
 import {useT} from '../../i18n';
 import {Badge, Button, Card, HelpRow, Disclosure, ErrorMessage, IconTip, Light, Loading, Segmented, Empty, Tabs, TextTooltip, MoreMenu} from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
+import {NodeText} from '../shared/NodeText';
 import {NodeGrid} from './Nodes';
 import {GroupDialog} from '../shared/GroupDialog';
 import {CheckEdit} from './CheckEdit';
@@ -186,7 +187,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
           {g.automatic ? (
             // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
             // its light beside the summary while they are folded.
-            <Disclosure title={g.summary} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
+            <Disclosure title={<NodeText text={m.summaryText} names={m.members} />} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
               {network && <div className="rp-toolbar">{network}</div>}
               {grid}
             </Disclosure>

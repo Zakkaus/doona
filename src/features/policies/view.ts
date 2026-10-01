@@ -1,4 +1,4 @@
-import {groupConfigLabels} from '../shared/groupText';
+import {groupConfigLabels, type OutboundCatalogue} from '../shared/groupText';
 import {compareNames, formatLatency} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
@@ -6,7 +6,8 @@ import type {Key} from '../../i18n';
 import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
 import {formatNumber, type Translator} from '../../i18n';
-import {latencyTone, type Help, type NodeStatus} from '../../ui/ui';
+import {latencyTone, type Help, type NodeStatus, type KvItem} from '../../ui/ui';
+import {builtinOutboundNames} from '../../dae/vocab';
 import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
@@ -180,8 +181,8 @@ export function kindView<T extends {id: string; kind: GroupKind}>(cards: T[], re
 }
 // A collapsed automatic group's one line: the member in place, each network's when they differ, and how many members
 // are available.
-export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator): string {
-  const name = (id: string) => members.find(member => member.id === id)?.name ?? id;
+export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator, renderName?: (id: string) => string): string {
+  const name = renderName ?? ((id: string) => members.find(member => member.id === id)?.name ?? id);
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
   const n = members.filter(member => member.healthy).length;
@@ -189,7 +190,7 @@ export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[
   const id = tcp ?? udp;
   return t('policy.summary', {member: id ? name(id) : t('policy.noneSelected'), n});
 }
-export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator) {
+export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator, outbounds?: OutboundCatalogue) {
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
   const selectable = g.policy.kind === 'selector' && g.capabilities.can_select;
@@ -222,10 +223,16 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     untested: untested ? t('policy.untested', {n: untested}) : null,
     fields: groupConfigFields(g)
       .filter(([key]) => !(interruptable && key === 'policy.cfg.interruptConnections'))
-      .map(([key, value]): [string, string] => [
-        typeof key === 'string' ? t(key) : t(key.key, key.params),
-        typeof value === 'string' ? value : t(value.key, value.params)
-      ])
+      .map(([key, value]): KvItem => ({
+        label: typeof key === 'string' ? t(key) : t(key.key, key.params),
+        nodeName:
+          (key === 'policy.cfg.defaultMember' && g.members.some(member => member.id === g.config.default_member_id && member.kind === 'node')) ||
+          (key === 'policy.cfg.finalOutbound' &&
+            !builtinOutboundNames.some(name => name === g.config.final_outbound) &&
+            !outbounds?.groups.includes(g.config.final_outbound ?? '') &&
+            !!outbounds?.nodes.some(node => node.name === g.config.final_outbound)),
+        value: typeof value === 'string' ? value : t(value.key, value.params)
+      }))
   };
 }
 
