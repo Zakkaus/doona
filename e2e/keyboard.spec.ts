@@ -217,11 +217,11 @@ test('Escape on a menu or dialog opened from a table row returns focus to its tr
   await expect(menu).toBeFocused();
 
   await page.goto('/#/rules?tab=list&view=advanced');
-  const edit = await reach(page.getByRole('row', {name: /domain\(geosite:telegram\)/}), 'Edit outbound settings');
+  const edit = await reach(page.getByRole('row', {name: /domain\(geosite:telegram\)/}), 'Edit rule');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeVisible();
+  await expect(page.getByRole('dialog', {name: 'Edit rule'})).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeHidden();
+  await expect(page.getByRole('dialog', {name: 'Edit rule'})).toBeHidden();
   await expect(edit).toBeFocused();
 });
 

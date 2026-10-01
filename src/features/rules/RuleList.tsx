@@ -13,6 +13,8 @@ import {
   StaticField,
   Light,
   ConfirmDialog,
+  DialogForm,
+  DialogSection,
   Segmented,
   Switch,
   ErrorMessage,
@@ -75,7 +77,7 @@ const hitsColumn = (t: Translator): TableColumn<Row> => ({
 // One rule list with its add and remove dialogs; the routing list and each DNS list render through it.
 export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewSwitch?: ReactNode}) {
   const t = useT();
-  const {form, setForm, pick, setPick, draft, dialog} = view;
+  const {form, setForm, draft, dialog} = view;
   const mustHelpId = useId();
   // The row actions are new functions each render; a ref keeps the columns, and so the rows, stable.
   const latest = useRef(view);
@@ -124,41 +126,47 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
       {
         id: 'actions',
         label: t('ui.actions'),
-        minWidth: editable ? 136 : canWrite ? 96 : 56,
+        minWidth: 136,
         grow: 0,
         render: row => (
           <span className="rp-chain">
-            {row.sourceQuery && (
-              <Button small quiet icon label={t('rule.openSource')} onPress={() => latest.current.openSource(row.sourceQuery!)}>
-                <FileText />
-              </Button>
-            )}
-            {editable && (
-              <Button
-                small
-                quiet
-                icon
-                isDisabled={busy || row.editReason !== null}
-                tip={row.editReason ?? undefined}
-                label={t('rule.edit')}
-                onPress={() => latest.current.openEdit?.(row.id)}
-              >
-                <Edit />
-              </Button>
-            )}
-            {canWrite && (row.removable || row.removeReason) && (
-              <Button
-                small
-                quiet
-                icon
-                isDisabled={busy || !row.removable}
-                tip={row.removeReason ?? undefined}
-                label={t('rule.remove')}
-                onPress={() => latest.current.openRemove(row.id)}
-              >
-                <Close />
-              </Button>
-            )}
+            <span className="rp-action-slot">
+              {row.sourceQuery && (!row.visual || !editable || row.editReason !== null) && (
+                <Button small quiet icon label={t('rule.openSource')} onPress={() => latest.current.openSource(row.sourceQuery!)}>
+                  <FileText />
+                </Button>
+              )}
+            </span>
+            <span className="rp-action-slot">
+              {editable && (
+                <Button
+                  small
+                  quiet
+                  icon
+                  isDisabled={busy || row.editReason !== null}
+                  tip={row.editReason ?? undefined}
+                  label={t('rule.edit')}
+                  onPress={() => latest.current.openEdit?.(row.id)}
+                >
+                  <Edit />
+                </Button>
+              )}
+            </span>
+            <span className="rp-action-slot">
+              {canWrite && (row.removable || row.removeReason) && (
+                <Button
+                  small
+                  quiet
+                  icon
+                  isDisabled={busy || !row.removable}
+                  tip={row.removeReason ?? undefined}
+                  label={t('rule.remove')}
+                  onPress={() => latest.current.openRemove(row.id)}
+                >
+                  <Close />
+                </Button>
+              )}
+            </span>
           </span>
         )
       }
@@ -199,6 +207,45 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         </span>
       )}
     </>
+  );
+  const conditionFields = (
+    <DialogForm onSubmit={event => event.preventDefault()}>
+      {view.conditions?.map(row => (
+        <DialogSection key={row.id}>
+          <LabeledSelect
+            isDisabled={view.busy}
+            label={t('rule.kind')}
+            value={row.kind}
+            onChange={kind => view.setCondition(row.id, {...row, kind: kind as RuleConditionKind})}
+            items={row.draft.choices}
+          />
+          <TextField
+            isDisabled={view.busy}
+            label={t('rule.values')}
+            value={row.value}
+            placeholder={row.draft.hint}
+            description={t('rule.valuesHelp')}
+            error={row.draft.pickError}
+            spellCheck={false}
+            onChange={value => view.setCondition(row.id, {...row, value})}
+          />
+          <div className="rp-toolbar">
+            <Switch isDisabled={view.busy} isSelected={row.negate} onChange={negate => view.setCondition(row.id, {...row, negate})}>
+              {t('rule.negate')}
+            </Switch>
+            <span className="rp-grow" />
+            <Button small isDisabled={view.busy || view.conditions!.length === 1} onPress={() => view.removeCondition(row.id)}>
+              {t('rule.removeCondition')}
+            </Button>
+          </div>
+        </DialogSection>
+      ))}
+      <div className="rp-toolbar">
+        <Button small isDisabled={view.busy} onPress={view.addCondition}>
+          {t('rule.addCondition')}
+        </Button>
+      </div>
+    </DialogForm>
   );
   return (
     <div className="rp-col">
@@ -263,6 +310,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         cols={columns}
       />
       <ConfirmDialog
+        scrollBody
         title={view.dialogTitle}
         isOpen={dialog !== null}
         onCancel={view.close}
@@ -281,14 +329,27 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         )}
         {dialog?.kind === 'edit' && (
           <div className="rp-list">
-            <span className="rp-label">{t('rule.editHelp')}</span>
+            <span className="rp-label">{t(dialog.fallback ? 'rule.editFallbackHelp' : view.conditions ? 'rule.editHelp' : 'rule.editExpressionHelp')}</span>
             <DaeCode text={dialog.expression} />
+            {!dialog.fallback &&
+              (view.conditions ? (
+                conditionFields
+              ) : (
+                <TextField
+                  isDisabled={view.busy}
+                  label={t('rule.expression')}
+                  value={form.condition}
+                  isInvalid={draft.rawInvalid}
+                  spellCheck={false}
+                  onChange={condition => setForm({...form, condition})}
+                />
+              ))}
             {targetFields}
           </div>
         )}
         {dialog?.kind === 'add' && (
           <div className="rp-list">
-            <span className="rp-label">{view.copy.addHelp}</span>
+            <span className="rp-label">{draft.mode === 'pick' ? view.copy.addHelp : t('rule.addExpressionHelp')}</span>
             <Segmented
               isDisabled={view.busy}
               label={t('rule.conditionMode')}
@@ -299,27 +360,9 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
                 ['text', t('rule.expression')]
               ]}
             />
-            {pick.on ? (
+            {draft.mode === 'pick' ? (
               <>
-                <div className="rp-toolbar top">
-                  <LabeledSelect
-                    isDisabled={view.busy}
-                    label={t('rule.kind')}
-                    value={pick.kind}
-                    onChange={kind => setPick({...pick, kind: kind as RuleConditionKind})}
-                    items={draft.choices}
-                  />
-                  <TextField
-                    isDisabled={view.busy}
-                    label={t('rule.values')}
-                    value={pick.value}
-                    placeholder={draft.hint}
-                    description={t('rule.valuesHelp')}
-                    error={draft.pickError}
-                    spellCheck={false}
-                    onChange={value => setPick({...pick, value})}
-                  />
-                </div>
+                {conditionFields}
                 {draft.preview && <DaeCode text={draft.preview} />}
               </>
             ) : (

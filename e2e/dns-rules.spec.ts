@@ -33,8 +33,9 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(response.nth(1)).toContainText('!qname(geosite: cn)');
   await expect(response.last()).toContainText('fallback: accept');
   await expect(section(page, 'Response rules')).toContainText('3 rules, generation 40');
-  await request.first().getByRole('button', {name: 'Open config file', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=29$/);
+  await expect(request.first().getByRole('button', {name: 'Open config file', exact: true})).toHaveCount(0);
+  await request.first().getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await expect(page.getByRole('dialog').getByRole('textbox', {name: 'Values'})).toHaveValue('category-ads-all');
 });
 
 test('the DNS rules lead to the resolution log and to the dns section of the configuration', async ({page}) => {
@@ -56,7 +57,8 @@ test('a DNS request rule is added through the source splice and removed again', 
   await section(page, 'Request rules').getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog');
   // DNS rules have no must keyword, and a request rule cannot match the answer.
-  await expect(dialog.getByRole('switch')).toHaveCount(0);
+  await expect(dialog.getByRole('switch', {name: /must$/})).toHaveCount(0);
+  await expect(dialog.getByRole('switch', {name: 'Negate condition'})).toHaveCount(1);
   await dialog.getByRole('button', {name: /Match by$/}).click();
   await expect(page.getByRole('option', {name: 'Answer IP', exact: true})).toHaveCount(0);
   await page.getByRole('option', {name: 'Query type', exact: true}).click();
@@ -128,3 +130,53 @@ for (const [name, strip, written] of [
     expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toContain(written);
   });
 }
+
+for (const list of ['request', 'response'] as const) {
+  test(`DNS ${list} conditions and fallback share the editor and edit links focus it`, async ({page}) => {
+    const {api} = await mockBackend(page);
+    const rules = (await api.dnsRules())[list];
+    const rule = rules[1];
+    await page.goto(`/#/rules?tab=dns&list=${list}&edit=${encodeURIComponent(rule.rule_id)}`);
+    const dialog = page.getByRole('dialog', {name: 'Edit rule'});
+    await expect(dialog.getByRole('textbox', {name: 'Values'}).first()).toHaveValue(list === 'request' ? 'lan, home.arpa' : 'private');
+    const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content;
+    await dialog
+      .getByRole('textbox', {name: 'Values'})
+      .first()
+      .fill(list === 'request' ? 'example.com' : 'cn');
+    await dialog.locator('.rp-switch').filter({hasText: 'Negate condition'}).first().click();
+    if (list === 'response') await expect(dialog.getByRole('switch', {name: 'Negate condition'}).nth(1)).toBeChecked();
+    await dialog.getByRole('button', {name: /Action$/}).click();
+    await page.getByRole('option', {name: /^reject/}).click();
+    await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+    await expect(dialog).toBeHidden();
+    const changed = list === 'request' ? '!qname(suffix: example.com) -> reject' : '!ip(geoip: cn) && !qname(geosite: cn) -> reject';
+    expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toBe(before.replace(rule.expression, changed));
+    await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+    const fallback = rows(page, list === 'request' ? 'Request rules' : 'Response rules').last();
+    await fallback.getByRole('button', {name: 'Edit rule', exact: true}).click();
+    await expect(dialog.getByRole('textbox')).toHaveCount(0);
+    await dialog.getByRole('button', {name: /Action$/}).click();
+    await page.getByRole('option', {name: /^alidns/}).click();
+    await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+    await expect(dialog).toBeHidden();
+    await expect(fallback).toContainText('fallback: alidns');
+  });
+}
+
+test('an implicit DNS fallback becomes an explicit action in its own list', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const source = (await api.config()).sources.find(source => source.id === 'src-main')!;
+  const before = source.content.replace(/\n {4}response \{[^}]*\}/, '');
+  await api.pollOperation(await api.replaceConfigSource(source.id, before, `"${source.content_sha256}"`));
+  await page.goto('/#/rules?tab=dns');
+  await rows(page, 'Response rules').last().getByRole('button', {name: 'Edit rule', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit rule'});
+  await dialog.getByRole('button', {name: /Action$/}).click();
+  await page.getByRole('option', {name: /^reject/}).click();
+  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await expect(dialog).toBeHidden();
+  expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toBe(
+    before.replace('      fallback: cloudflare\n    }\n', '      fallback: cloudflare\n    }\n    response {\n      fallback: reject\n    }\n')
+  );
+});

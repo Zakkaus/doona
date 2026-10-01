@@ -21,11 +21,12 @@ import type {Key} from '../../i18n';
 import {isFragment, scanConfig, unquote} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth, simulatedAddress} from '../../api/selectors';
-import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
+import {parseConditions} from '../../dae/conditions';
+import {conditionKinds, dnsConditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
-import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, sourceFor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, sourceFor, type DnsRuleListId, type RuleAnchor} from '../../dae/ruleText';
 import type {SearchSection} from '../../ui/SearchSelect';
 import {ruleDistribution} from './distribution';
 import {href, pickTab, within} from '../../shell/route';
@@ -84,6 +85,7 @@ type DictionaryRow = {
   // Why a rule that is not removable cannot be removed here; null when it is, or for a fallback.
   removeReason: string | null;
   sourceQuery: string | null;
+  visual: boolean;
 };
 // `outbounds`: every target a rule can name. `outboundSections`: the same targets in sections, for a list long enough
 // to need the searchable picker; null for the short DNS action lists. `positionSections`: the positions for the
@@ -140,11 +142,12 @@ type Listed = {rule_id: string; index: number; kind: 'rule' | 'fallback'; expres
 function listedRows<R extends Listed>(
   rules: R[],
   config: ConfigSource[],
-  anchor: (source: ConfigSource, rule: R, scan: ReturnType<typeof scanConfig>) => unknown,
+  anchor: (source: ConfigSource, rule: R, scan: ReturnType<typeof scanConfig>) => RuleAnchor | null,
   // The target, hits and, when it differs from the listed text, the expression a row shows.
   fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string},
   t: Translator,
   lang: Lang,
+  kinds: readonly RuleConditionKind[],
   // The end position of a list whose fallback is not written, when it has one.
   end: {id: 'end'; label: string; desc?: string} | null = null
 ): Pick<DictionaryView, 'rows' | 'positions' | 'positionSections'> {
@@ -158,17 +161,21 @@ function listedRows<R extends Listed>(
   // Why doona cannot locate a rule's line to rewrite it, or null when it can.
   const unanchored = (rule: R): string | null => {
     const source = rule.source && byId.get(rule.source.source_id);
-    if (!source) return t('rule.notLocated');
+    if (!source) return rule.kind === 'fallback' && end ? null : t('rule.notLocated');
     if (!source.writable) return t('config.readOnlyAttempt');
     if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
     if (anchor(source, rule, scans.get(source.id)!) !== null) return null;
-    // An include file spliced into a routing section holds bare rules, outside any routing section of its own.
-    return source.kind === 'include' ? t('rule.inInclude', {file: fileName(source)}) : t('rule.notLocated');
+    return t('rule.notLocated');
   };
   const rows = rules.map(rule => {
     const linked = resolve(rule.source);
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
     const editReason = unanchored(rule);
+    const at = linked ? anchor(linked, rule, scans.get(linked.id) ?? scanConfig(linked.content)) : null;
+    const visual =
+      rule.kind === 'fallback'
+        ? !!at || !!end
+        : !!(at?.condition && linked && parseConditions(linked.content.slice(at.condition.from, at.condition.to), kinds));
     return {
       id: rule.rule_id,
       number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
@@ -177,6 +184,7 @@ function listedRows<R extends Listed>(
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       removable: rule.kind === 'rule' && editReason === null,
       editReason,
+      visual,
       removeReason: rule.kind === 'rule' ? editReason : null,
       sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
@@ -228,7 +236,8 @@ export function dictionaryView(
         hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—'
       }),
       t,
-      lang
+      lang,
+      conditionKinds
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
     outbounds: sections.flatMap(section => section.items),
@@ -263,6 +272,7 @@ export function dnsDictionaryView(
       rule => ({expression: dnsCondition(rule), outbound: unquote(dnsRuleTarget(rule)), must: false, hits: '—'}),
       t,
       lang,
+      dnsConditionKinds[list],
       end && {id: 'end', ...dnsEndPosition(end.anchor, list, t)}
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
