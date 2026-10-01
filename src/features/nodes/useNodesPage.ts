@@ -7,14 +7,18 @@ import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, addSubtagsToGroup, citingGroups, groupsNamingTag, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
-import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, urlHost, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {groupsNamingNode, readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
 import {nodeOwner} from '../../api/selectors';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
   isNodeLink,
+  editableSource,
+  subscriptionPlace,
+  nodeEditState,
+  subscriptionRemoval,
   keptOptions,
   nodeFormReason,
   nodeSource,
@@ -46,6 +50,11 @@ type NodeDialog =
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
   | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
+
+export function runSubscriptionAction(query: string, action: {run: () => void}) {
+  replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
+  action.run();
+}
 
 export function useNodesPage({go, query}: PageProps) {
   const t = useT();
@@ -114,17 +123,10 @@ export function useNodesPage({go, query}: PageProps) {
   const editSource = editing?.length === 1 ? editing[0].source : null;
   const editAction = useCallback(
     (item: ProviderRow, focus?: 'interval') => {
-      const place = item.sourceTag ? declared.get(item.sourceTag) : undefined;
-      if (!place?.length) return null;
-      // honk lets two subscriptions share a name, such as a tagged entry and an untagged one named after the same host;
-      // the entry found by that name may then declare the other one, so it only opens, at the entry on the row's host
-      // when one alone matches.
-      const own = place.length > 1 ? place.filter(({entry}) => urlHost(entry.url) === urlHost(item.url_redacted)) : place;
-      const {source: origin, entry} = own.length === 1 ? own[0] : place[0];
-      const unique =
-        place.length === 1 && (providers.data?.providers ?? []).filter(other => other.kind === 'subscription' && other.name === item.name).length === 1;
-      // A source whose listener secrets came back masked would be saved with the masks, so it only opens.
-      if (daeText && unique && source.writable && origin.writable && isComplete(origin) === true)
+      const place = subscriptionPlace(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : [], item, providers.data?.providers ?? []);
+      if (!place) return null;
+      const {source: origin, entry, unique} = place;
+      if (unique && editableSource(daeText, source.writable, origin, isComplete(origin)))
         return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry, focus})};
       return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
     },
@@ -141,7 +143,7 @@ export function useNodesPage({go, query}: PageProps) {
     (node: Node) => {
       const own = authored.filter(item => item.entry.name === node.name);
       const inline = providers.data?.providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline');
-      if (!inline || own.length !== 1 || !daeText || !source.writable || !own[0].source.writable || isComplete(own[0].source) !== true) return null;
+      if (!inline || own.length !== 1 || !editableSource(daeText, source.writable, own[0].source, isComplete(own[0].source))) return null;
       return () => open({kind: 'editNode', ...own[0]});
     },
     [authored, providers.data, daeText, source.writable, isComplete, open]
@@ -167,8 +169,7 @@ export function useNodesPage({go, query}: PageProps) {
     const action = item ? editAction(item, params.get('focus') === 'interval' ? 'interval' : undefined) : null;
     if (!action) return;
     const frame = requestAnimationFrame(() => {
-      replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
-      action.run();
+      runSubscriptionAction(query, action);
     });
     return () => cancelAnimationFrame(frame);
   }, [params, providers.data, config.data, list, editAction, query]);
@@ -391,34 +392,24 @@ export function useNodesPage({go, query}: PageProps) {
   // Removing a subscription, or renaming it where the write cannot carry every filter along, would leave the groups
   // whose filters name it matching nothing, or everything once a last filter goes, so both wait until those groups
   // are changed on the Policies page.
-  const namingGroups = (tag: string) => [...new Set(sources.flatMap(item => groupsNamingTag(item.content ?? '', tag)))];
+  const removal = subscriptionRemoval(config.data?.sources, config.loading, dialog?.kind === 'removeProvider' ? dialog.item : null);
   const blockedTag =
     dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription'
       ? dialog.item.name
       : dialog?.kind === 'editProvider' && references.elsewhere.length
         ? dialog.entry.tag
         : null;
-  const blockers = blockedTag === null ? [] : namingGroups(blockedTag);
-  // A removal waits for the configuration that says whether any group names the subscription.
-  const checkingRemoval = dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription' && config.loading && !config.data;
-  const nodeRenameBlocked =
-    dialog?.kind === 'editNode' &&
-    form.name.trim() !== dialog.entry.name &&
-    sources.some(item => item.id !== dialog.source.id && groupsNamingNode(item.content, dialog.entry.name).length > 0);
-  const nodeNameTaken =
-    dialog?.kind === 'editNode' &&
-    form.name.trim() !== dialog.entry.name &&
-    ((nodes.data ?? []).some(node => node.name === form.name.trim()) || authored.some(item => item.entry.name === form.name.trim()));
-  const nodeNameError =
-    dialog?.kind === 'editNode' ? (nodeNameTaken ? t('nodes.nameTaken') : !isQuotable(form.name.trim()) ? t('config.unquotable') : null) : null;
-  const nodeEditError = nodeRenameBlocked
-    ? t('nodes.renameElsewhere')
-    : dialog?.kind === 'editNode' && !isQuotable(form.value.trim())
-      ? t('config.unquotable')
-      : null;
+  const blockers =
+    dialog?.kind === 'editProvider' && blockedTag !== null
+      ? [...new Set(sources.flatMap(item => groupsNamingTag(item.content, blockedTag)))]
+      : removal.blockers;
+  const checkingRemoval = removal.checking;
+  const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodes.data ?? [], form, t) : null;
+  const nodeNameError = nodeState?.nameError ?? null;
+  const nodeEditError = nodeState?.error ?? null;
   const formValid =
     dialog?.kind === 'editNode'
-      ? !!form.name.trim() && isNodeLink(form.value) && !nodeEditError && !nodeNameError && edited
+      ? nodeState!.valid
       : dialog?.kind === 'editProvider'
         ? !!editName &&
           editNameError === null &&

@@ -3,6 +3,10 @@ import type {ConfigSource, Node, Provider} from '../../api/model';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {
   nodeFormReason,
+  editableSource,
+  subscriptionPlace,
+  nodeEditState,
+  subscriptionRemoval,
   nodeRows,
   nodeSource,
   ownedNodes,
@@ -16,6 +20,8 @@ import {
 } from './view';
 import {intervalItems, intervalText} from '../shared/subscription';
 import {translate, type Translator} from '../../i18n';
+import {readNodeEntries} from '../../dae/nodes';
+import {createMockApi} from '../../api/mock';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {formatBytes} from '../../i18n/format';
 const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
@@ -333,4 +339,57 @@ it('uses a unique verified node tag for the interval without authorizing guesses
     const [row] = providerRows([provider('a')], nodes, entries, t).list;
     expect(row.configTag ?? row.sourceTag).toBe(tags.length === 1 ? 'primary' : 'opaque-a');
   }
+});
+
+const config = await createMockApi().config();
+const main = config.sources.find(source => source.kind === 'main')!;
+const [entry] = readNodeEntries(main.content);
+const form = {name: entry.name, value: entry.link, interval: '', agent: '', cache: null, route: ''};
+
+it.each(['filter: name(hk-01)', 'default: hk-01', 'final: hk-01'])('blocks a cross-source rename through %s but allows a link edit', reference => {
+  const other = {...main, id: 'other', kind: 'include' as const, content: `group {\n other {\n ${reference}\n policy: random\n }\n}\n`};
+  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, error: t('nodes.renameElsewhere')});
+  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, error: null});
+});
+
+it('assigns duplicate names to the name field and validates links and unchanged drafts', () => {
+  for (const nodes of [[], [node('hk-02')]]) {
+    expect(nodeEditState([main], main, entry, nodes, {...form, name: 'hk-02'}, t)).toMatchObject({valid: false, nameError: t('nodes.nameTaken')});
+  }
+  for (const patch of [{}, {name: ''}, {name: "can't"}, {value: 'vless:/broken'}, {value: "socks5://host:1080#can't"}])
+    expect(nodeEditState([main], main, entry, [], {...form, ...patch}, t).valid).toBe(false);
+  expect(nodeEditState([main], main, entry, [], {...form, name: 'edge one'}, t)).toMatchObject({valid: true, nameError: null});
+});
+
+it.each([
+  [true, true, true, true, true],
+  [false, true, true, true, false],
+  [true, false, true, true, false],
+  [true, true, false, true, false],
+  [true, true, true, false, false],
+  [true, true, true, null, false],
+  [true, true, true, undefined, false]
+] as const)('permits editing only complete writable authored text (%s, %s, %s, %s)', (daeText, canWrite, writable, complete, expected) => {
+  expect(editableSource(daeText, canWrite, {...main, writable}, complete)).toBe(expected);
+});
+
+it('locates the declaring subscription and opens ambiguous names without editing', () => {
+  const [entry] = readSubscriptionEntries(main.content);
+  const item = {...provider('harbor', {name: entry.tag, url_redacted: entry.url}), sourceTag: entry.tag};
+  const place = {source: main, entry};
+  expect(subscriptionPlace([], item, [item])).toBeNull();
+  expect(subscriptionPlace([place], item, [item])).toEqual({...place, unique: true});
+  expect(subscriptionPlace([place], item, [item, {...item, id: 'duplicate'}])?.unique).toBe(false);
+  const other = {source: {...main, id: 'other'}, entry: {...entry, url: 'https://other.example/sub'}};
+  expect(subscriptionPlace([other, place], item, [item])).toEqual({...place, unique: false});
+});
+
+it('blocks subscription removal across sources and waits for the first config read', () => {
+  const item = provider('harbor', {name: 'harbor'});
+  const other = {...main, id: 'other', content: 'group {\n travel { filter: subtag(harbor) && !name(keyword: HK) policy: min }\n}\n'};
+  expect(subscriptionRemoval([main, other], false, item)).toEqual({blockers: ['backup', 'travel'], checking: false});
+  expect(subscriptionRemoval(undefined, true, item)).toEqual({blockers: [], checking: true});
+  expect(subscriptionRemoval([main], true, item).checking).toBe(false);
+  expect(subscriptionRemoval([main], false, {...item, name: 'unused'}).blockers).toEqual([]);
+  expect(subscriptionRemoval([main], false, {...item, kind: 'file'}).blockers).toEqual([]);
 });
