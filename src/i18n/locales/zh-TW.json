@@ -1180,6 +1180,7 @@
   "rule.editExpressionHelp": "修改運算式與目標後，驗證、儲存並重新載入。",
   "rule.editFallbackHelp": "修改 fallback 目標；驗證通過後儲存並重新載入。",
   "rule.editHelp": "修改條件與目標後，驗證、儲存並重新載入。所有條件列必須同時符合。",
+  "rule.editOutboundMode": "編輯出站模式",
   "rule.edited": "規則變更已生效",
   "rule.evaluation": "規則評估 {n}",
   "rule.expression": "運算式",

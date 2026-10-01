@@ -1363,6 +1363,7 @@
   "rule.editExpressionHelp": "Edit the expression and target, then validate, save and reload.",
   "rule.editFallbackHelp": "Change the fallback target, then validate, save and reload.",
   "rule.editHelp": "Edit the conditions and target, then validate, save and reload. All condition rows must match.",
+  "rule.editOutboundMode": "Edit outbound mode",
   "rule.edited": "Rule change is in effect",
   "rule.evaluation": "Rule evaluation {n}",
   "rule.expression": "Expression",

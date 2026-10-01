@@ -1,5 +1,5 @@
-import {LocalError} from '../../api/error';
-import {scanConfig, type TextBlock, type TextToken} from '../../dae/text';
+import {LocalError} from '../api/error';
+import {scanConfig, type TextBlock, type TextToken} from './text';
 
 // The marker lets mode changes remove their catch-all without touching authored rules.
 export type OutboundMode = {mode: 'rule'} | {mode: 'direct'} | {mode: 'global'; target: string};
@@ -79,3 +79,8 @@ export function writeMode(text: string, next: OutboundMode): string {
 }
 
 export const sameMode = (a: OutboundMode, b: OutboundMode) => a.mode === b.mode && (a.mode !== 'global' || b.mode !== 'global' || a.target === b.target);
+
+export function modeRuleLines(text: string): number[] {
+  const scanned = scanConfig(text);
+  return modeRanges(text, scanned.blocks, scanned.tokens).map(range => text.slice(0, range.from).split('\n').length);
+}

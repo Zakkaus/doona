@@ -425,3 +425,33 @@ it('links a trace result to its groups, its node and its DNS name', async () => 
   expect(nameLinks('example.com.', resources, t).map(link => link.href)).toEqual(['#/dns?tab=query&domain=example.com', '#/dns?tab=cache&domain=example.com']);
   expect(nameLinks('example.com', {...resources, dns_cache: {...resources.dns_cache, available: false}}, t).map(link => link.id)).toEqual(['query']);
 });
+
+it('marks an outbound mode row for the Activity editor using its source location', async () => {
+  const api = createMockApi();
+  const [rules, config] = await Promise.all([api.rules(), api.config()]);
+  const first = rules.rules[0];
+  const sources = config.sources.map(source => {
+    if (source.id !== first.source!.source_id) return source;
+    const lines = source.content.split('\n');
+    lines[first.source!.line - 1] += ' # doona: outbound mode';
+    return {...source, content: lines.join('\n')};
+  });
+  const rows = dictionaryView(rules.rules, rules.generation_id, undefined, sources, [], t, 'en').rows;
+  expect(rows[0].modeManaged).toBe(true);
+  expect(rows[1].modeManaged).toBe(false);
+});
+
+it('keeps marked include rules editable in Rules', async () => {
+  const api = createMockApi();
+  await api.pollOperation(await api.createConfigSource('config.d/marked.dae', 'routing {\n  l4proto(tcp, udp) -> direct # doona: outbound mode\n}\n'));
+  const [rules, config] = await Promise.all([api.rules(), api.config()]);
+  const included = config.sources.find(source => source.path.endsWith('/marked.dae'))!;
+  const rule = rules.rules.find(rule => rule.source?.source_id === included.id)!;
+  expect(rule).toBeDefined();
+  const rows = dictionaryView(rules.rules, rules.generation_id, undefined, config.sources, [], t, 'en').rows;
+  const row = rows.find(row => row.id === rule.rule_id)!;
+  expect(row.modeManaged).toBe(false);
+  expect(row.sourceQuery).toBeTruthy();
+  expect(row.removable).toBe(true);
+  expect(row.editReason).toBeNull();
+});

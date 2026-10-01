@@ -1,6 +1,6 @@
-import {LocalError} from '../../api/error';
+import {LocalError} from '../api/error';
 import {expect, it} from 'vitest';
-import {readMode, sameMode, writeMode} from './mode';
+import {modeRuleLines, readMode, sameMode, writeMode} from './outboundMode';
 
 const config = `global {
     log_level: info
@@ -103,4 +103,21 @@ it('finds a hand-edited marked line by its marker and replaces it rather than ad
   expect(direct.match(/doona: outbound mode/g)).toHaveLength(1);
   expect(direct).not.toContain('proxy');
   expect(writeMode(edited, {mode: 'rule'})).toBe('routing {\n  fallback: direct\n}\n');
+});
+
+it('identifies only the top-level rules owned by the mode editor', () => {
+  const text = `routing {
+  l4proto(tcp, udp) -> direct # doona: outbound mode
+  fallback: direct
+}
+dns {
+ routing {
+  request {
+   qname(example.com) -> asis # doona: outbound mode
+  }
+ }
+}
+`;
+  expect(modeRuleLines(text)).toEqual([2]);
+  expect(modeRuleLines('routing { l4proto(tcp) -> direct # doona: outbound mode\n}')).toEqual([]);
 });
