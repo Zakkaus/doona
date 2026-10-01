@@ -9,13 +9,25 @@ it('covers every parsed global key and rejects invalid scalar shapes', () => {
   for (const field of schema.fields) {
     expect(serializeSetting(field, "x'\n} routing { fallback: block")).toBeNull();
     if (field.type === 'integer') {
-      expect(serializeSetting(field, field.max!)).toBe(field.max);
+      expect(settingValue(field, serializeSetting(field, field.max!)!)).toBe(field.max);
       expect(serializeSetting(field, String(BigInt(field.max!) + 1n))).toBeNull();
       expect(serializeSetting(field, '-1')).toBeNull();
     }
   }
   const port = schema.fields[0];
-  expect(settingValue(port, '0x10')).toBe('16');
+  expect(settingValue(port, '0x10')).toBe('0x10');
+  expect(serializeSetting(port, settingValue(port, '0x10'))).toBeNull();
+  expect(writeSettings('global { tproxy_port: 0x10 }', schema, 0, {tproxy_port: '16'})).toBe('global { tproxy_port: 16 }');
+  const mark = schema.fields.find(field => field.key === 'so_mark_from_dae')!;
+  for (const [raw, expected] of [
+    ['0x10', '16'],
+    ['10', '16'],
+    ['ff', '255'],
+    ['1073741823', '1073741823'],
+    ['0x1073741823', '1073741823']
+  ])
+    expect(settingValue(mark, raw)).toBe(expected);
+  expect(serializeSetting(mark, '16')).toBe('0x10');
   expect(
     serializeSetting(
       schema.fields.find(field => field.key === 'preconnect_node_count')!,
@@ -30,6 +42,7 @@ it.each(['\n', '\r\n'])('preserves untouched bytes and comments with %j', newlin
   );
   expect(writeSettings(input, schema, 0, {tproxy_port: '65535'})).toBe(input.replace('12345', '65535'));
   expect(writeSettings(input, schema, 0, {log_level: ''})).toBe(input.replace("log_level: 'info'", ''));
+  expect(writeSettings(input, schema, 0, {mptcp: 'true'})).toBe(input.replace(`${newline}}`, `${newline}${newline}\tmptcp: true${newline}}`));
 });
 it('checks duration precision, unit grammar and multiplication overflow', () => {
   const seconds = schema.fields.find(field => field.key === 'check_interval')!;
@@ -45,7 +58,11 @@ it('does not silently split a quoted list item containing a comma', () => {
   const written = "'https://example.com/a,b', 'https://example.com/c'";
   const value = settingValue(field, written);
   expect(value).toBe("'https://example.com/a,b', https://example.com/c");
-  expect(serializeSetting(field, value)).toBeNull();
+  expect(serializeSetting(field, value)).toBe(written);
+  expect(writeSettings(`global { tcp_check_url: ${written} }`, schema, 0, {tcp_check_url: value.replace('/c', '/d')})).toBe(
+    `global { tcp_check_url: ${written.replace('/c', '/d')} }`
+  );
+  expect(serializeSetting(field, "'https://example.com/a,b'")).toBeNull();
 });
 it('selects the requested occurrence, appends absent fields and creates an absent section', () => {
   const input = 'global { log_level: info }\nglobal { log_level: warn }';

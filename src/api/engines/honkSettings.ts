@@ -7,7 +7,7 @@ export const honkGlobal: SettingsSection = {
     {key: 'tproxy_port', type: 'integer', max: '65535'},
     {key: 'tproxy_port_protect', type: 'boolean'},
     {key: 'pprof_port', type: 'integer', max: '65535'},
-    {key: 'so_mark_from_dae', type: 'integer', max: '1073741823'},
+    {key: 'so_mark_from_dae', type: 'integer', max: '1073741823', hexMax: '4294967295'},
     {key: 'log_level', type: 'text', choices: ['trace', 'debug', 'info', 'warn', 'error', 'off']},
     {key: 'log_file', type: 'text'},
     {key: 'disable_waiting_network', type: 'boolean'},

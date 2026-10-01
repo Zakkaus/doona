@@ -1,11 +1,13 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
+import {ApiError} from '../../api/error';
+import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
-import type {ConfigSource} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {blockFields, scanConfig} from '../../dae/text';
 import {serializeSetting, settingValue, writeSettings} from '../../dae/settings';
-import {fileName, validationSources} from '../../dae/sources';
+import {fileName, restartRequired, validationSources} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
@@ -15,7 +17,8 @@ import {toast} from '../../ui/ui';
 export function useGlobalSettings({query, go}: PageProps) {
   const t = useT();
   const caps = useCapabilities().data?.resources;
-  const config = useConfig(caps?.config.available === true);
+  const available = offered(caps, 'config', {whileLoading: false});
+  const config = useConfig(available);
   const version = useVersion().data;
   const engine = engineOf(version);
   const schema = engine.globalSettings;
@@ -56,7 +59,7 @@ export function useGlobalSettings({query, go}: PageProps) {
       ...definition,
       value,
       duplicate: matches.length > 1,
-      invalid: definition.key in patch && serializeSetting(definition, value) === null,
+      invalid: serializeSetting(definition, value) === null,
       change: (value: string) => {
         if (!source || editor.busy) return;
         editor.cancel();
@@ -68,9 +71,22 @@ export function useGlobalSettings({query, go}: PageProps) {
     };
   });
   const conflict = !!draft && (draft.source.content_sha256 !== source?.content_sha256 || draft.id !== chosen?.id);
-  const writable = !!source && caps?.config.writable === true && source.writable && complete(source) === true && !engine.holdsCredentials(source);
+  const writable =
+    available &&
+    !config.error &&
+    !!source &&
+    caps?.config.writable === true &&
+    source.writable &&
+    complete(source) === true &&
+    !engine.holdsCredentials(source);
   const busy = !!editor.busy;
   const blocked = !draft || !writable || conflict || fields.some(field => field.invalid);
+  const invalid = (diagnostics: ConfigDiagnostic[]) => {
+    const restart = restartRequired(diagnostics);
+    return restart ? t('config.writeRestart', {n: restart}) : t('config.invalid', {n: diagnostics.filter(item => item.level === 'error').length});
+  };
+  const rejected =
+    editor.error instanceof ApiError && editor.error.status === 422 ? (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics : null;
   const save = async () => {
     if (blocked || busy || !schema || !chosen) return;
     const content = writeSettings(draft.source.content, schema, chosen.index, patch);
@@ -86,14 +102,14 @@ export function useGlobalSettings({query, go}: PageProps) {
       const result = await editor.validate({sources: candidates, mode: 'full'});
       if (!result) return;
       if (!result.valid) {
-        setFailure(t('config.invalid', {n: result.diagnostics.filter(item => item.level === 'error').length}));
+        setFailure(invalid(result.diagnostics));
         return;
       }
     }
     const result = await editor.apply(draft.source, content);
     if (!result) return;
     if (result.diagnostics) {
-      setFailure(t('config.invalid', {n: result.diagnostics.length}));
+      setFailure(invalid(result.diagnostics));
       return;
     }
     guard.clear();
@@ -111,7 +127,7 @@ export function useGlobalSettings({query, go}: PageProps) {
     element?.scrollIntoView({block: 'center'});
   }, [params, source?.id, schema, writable]);
   return {
-    available: !!schema,
+    available: available && !!schema,
     fields,
     source,
     busy,
@@ -119,8 +135,8 @@ export function useGlobalSettings({query, go}: PageProps) {
     writable,
     dirty: !!draft,
     conflict,
-    failure,
-    error: editor.error ?? config.error,
+    failure: failure ?? (rejected ? invalid(rejected) : null),
+    error: (rejected ? null : editor.error) ?? config.error,
     retry: config.refetch,
     save,
     cancel: () => {
