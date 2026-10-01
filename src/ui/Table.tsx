@@ -262,8 +262,43 @@ export function DataTable<T extends {id: string}>({
   const at = reveal && selected ? flat.findIndex(r => r.id === selected) : -1;
   // A virtualised grid scrolls itself, a native table its container; the virtual height lands a frame later.
   const grid = useRef<HTMLElement>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+  const [restoreKey, setRestoreKey] = useState<string | null>(null);
   useTableReveal(reveal ? (selected ?? null) : null, at, virtual ? grid : ref, flow);
-  useTableFlow(flow, stream, flat, grid, tableLayout.headingHeight, tableLayout.rowHeight);
+  useTableFlow(flow, stream, flat, grid, detailRef, tableLayout.headingHeight, tableLayout.rowHeight);
+  useEffect(() => {
+    if (!detail || !selected || flat.some(row => row.id === selected)) return;
+    if (document.activeElement === document.body) grid.current?.focus({preventScroll: true});
+    onSelect?.(null);
+  }, [detail, selected, flat, onSelect]);
+  useEffect(() => {
+    const box = grid.current;
+    if (!restoreKey || !box) return;
+    const at = flat.findIndex(row => row.id === restoreKey);
+    const restore = () => {
+      const row = box.querySelector<HTMLElement>(`[data-key="${CSS.escape(restoreKey)}"]`);
+      if (!row) return;
+      row.focus({preventScroll: true});
+      setRestoreKey(null);
+    };
+    const observer = new MutationObserver(restore);
+    observer.observe(box, {childList: true, subtree: true});
+    // Closing the panel changes the page height; reveal after that layout, then wait for virtualisation.
+    const frame = requestAnimationFrame(() => {
+      if (at < 0) {
+        box.focus({preventScroll: true});
+        setRestoreKey(null);
+        return;
+      }
+      const top = tableLayout.headingHeight + at * tableLayout.rowHeight;
+      revealFlowRow(box, top, top + tableLayout.rowHeight);
+      restore();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [restoreKey, flat]);
   useOpenerFocus(ref);
   // Tree cells wrap their content so it truncates inside the flex cell.
   const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
@@ -358,9 +393,13 @@ export function DataTable<T extends {id: string}>({
               <div
                 {...props}
                 onKeyDownCapture={event => {
-                  if (event.key !== 'Home' && event.key !== 'End') return;
+                  if (!['Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
                   const row = (event.target as HTMLElement).closest<HTMLElement>('[role="row"][data-key]');
-                  if (!row || event.target === row) return;
+                  if (!row) return;
+                  // Toggle selection changes focus without RAC cancelling the browser's page scroll.
+                  if (flow && !(event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) event.preventDefault();
+                  if (event.key !== 'Home' && event.key !== 'End') return;
+                  if (event.target === row) return;
                   event.preventDefault();
                   event.stopPropagation();
                   row.focus({preventScroll: true});
@@ -386,11 +425,19 @@ export function DataTable<T extends {id: string}>({
     <>
       {container}
       {/* Always mounted, so the text it takes is announced; empty, it takes no room. */}
-      <div className="rp-table-detail" data-flow={flow || undefined} aria-live="polite">
+      <div ref={detailRef} className="rp-table-detail" data-flow={flow || undefined} aria-live="polite">
         {open && (
           <>
             {flow && (
-              <RButton className={buttonClass({quiet: true, small: true})} aria-label={t('ui.close')} onPress={() => onSelect?.(null)}>
+              <RButton
+                className={buttonClass({quiet: true, small: true})}
+                aria-label={t('ui.close')}
+                onPress={() => {
+                  grid.current?.focus({preventScroll: true});
+                  setRestoreKey(selected ?? null);
+                  onSelect?.(null);
+                }}
+              >
                 {t('ui.close')}
               </RButton>
             )}

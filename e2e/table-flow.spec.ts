@@ -75,7 +75,7 @@ for (const viewport of [
         await expect(page.locator('.rp-table-detail')).toBeInViewport();
         await page.getByRole('button', {name: 'Close', exact: true}).click();
         await expect(page.locator('.rp-table-detail')).toBeEmpty();
-        await row.focus();
+        await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).toBe(held.key);
         await page.keyboard.press('PageDown');
         await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).not.toBe(held.key);
         const nextIndex = await page.evaluate(() => Number(document.activeElement?.closest('[data-key]')?.getAttribute('aria-rowindex')));
@@ -85,12 +85,78 @@ for (const viewport of [
         const last = kind === 'logs' ? 'log:1002' : 'event:2';
         await expect(grid.locator(`[data-key="${last}"]`)).toBeInViewport();
         await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).toBe(last);
+        await page.keyboard.press('Home');
+        const first = grid.locator(`[data-key="${kind === 'logs' ? 'log:2001' : 'event:2001'}"]`);
+        await expect(first).toBeInViewport();
+        await expect.poll(async () => (await first.boundingBox())!.y).toBeGreaterThanOrEqual(101);
+        await page.keyboard.press('End');
         await page.keyboard.press('Enter');
         await expect(page.locator('.rp-table-detail')).toContainText(kind === 'logs' ? 'Record 1002' : 'Record 2');
         expect(await mounted.count()).toBeLessThan(150);
+        expect((await geometry()).top).toBe(0);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
       });
     }
+  });
+}
+
+for (const viewport of [
+  {width: 390, height: 844},
+  {width: 1440, height: 900}
+]) {
+  test.describe(`${viewport.width}px detail`, () => {
+    test.use({viewport});
+    for (const kind of ['events', 'logs'] as const) {
+      test(`${kind} reveal End above the open detail`, async ({page}) => {
+        const {grid} = await feed(page, kind, 200);
+        const selectedKey = kind === 'logs' ? 'log:200' : 'event:200';
+        const selected = grid.locator(`[data-key="${selectedKey}"]`);
+        await selected.click();
+        await page.keyboard.press('End');
+        const lastKey = kind === 'logs' ? 'log:1' : 'event:1';
+        const last = grid.locator(`[data-key="${lastKey}"]`);
+        await expect(last).toBeFocused();
+        const detail = page.locator('.rp-table-detail');
+        await expect
+          .poll(async () => {
+            const row = (await last.boundingBox())!;
+            const panel = (await detail.boundingBox())!;
+            return panel.y - row.y - row.height;
+          })
+          .toBeGreaterThanOrEqual(0);
+      });
+      test(`${kind} restore focus after the selected row is unmounted`, async ({page}) => {
+        const {grid} = await feed(page, kind, 200);
+        const selectedKey = kind === 'logs' ? 'log:200' : 'event:200';
+        const selected = grid.locator(`[data-key="${selectedKey}"]`);
+        await selected.click();
+        await page.keyboard.press('End');
+        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:1' : 'event:1'}"]`)).toBeFocused();
+        const detail = page.locator('.rp-table-detail');
+        await expect(selected).toHaveCount(0);
+        await page.keyboard.press('Tab');
+        await expect(detail.getByRole('button', {name: 'Close', exact: true})).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(detail).toBeEmpty();
+        await expect(selected).toBeFocused();
+        await expect(selected).toHaveAttribute('data-focus-visible');
+        await expect.poll(async () => (await selected.boundingBox())!.y).toBeGreaterThanOrEqual(101);
+        await page.keyboard.press('ArrowDown');
+        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:199' : 'event:199'}"]`)).toBeFocused();
+      });
+    }
+    test('logs return focus to the grid when the selected record is evicted', async ({page}) => {
+      const {grid, frame} = await feed(page, 'logs', 1000);
+      await grid.locator('[data-key="log:1000"]').focus();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      const detail = page.locator('.rp-table-detail');
+      await expect(detail).toContainText('Record 1');
+      await detail.getByRole('button', {name: 'Close', exact: true}).focus();
+      await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(1001));
+      await expect(detail).toBeEmpty();
+      await expect.poll(() => grid.evaluate(el => el.contains(document.activeElement))).toBe(true);
+    });
   });
 }
 
