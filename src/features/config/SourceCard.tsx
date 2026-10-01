@@ -4,6 +4,7 @@ import {Badge, Button, Card, Disclosure, Light, Link, Segmented, type Action} fr
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
+import {locatedForms} from './sourceForms';
 export function SourceCard(props: SourceCardProps) {
   const {canValidate} = props;
   const t = useT();
@@ -42,7 +43,7 @@ export function SourceCard(props: SourceCardProps) {
       panel.current?.scrollIntoView({block: 'nearest'});
     }
   }, [props.focusDiagnostics, props.focusLine, props.source.id]);
-  const located = links.filter(link => link.line === focus || (focus && link.line <= focus && text.slice(0, link.to).split('\n').length >= focus));
+  const located = locatedForms(links, focus, text);
   const jumps = located.length ? located : links;
   const formLinks = (
     <div className="rp-toolbar" aria-label={t('config.forms')}>

@@ -7,6 +7,10 @@ import {href} from '../../shell/route';
 import {sectionPages} from './view';
 import {ruleTargetValues} from '../../dae/ruleText';
 
+export function locatedForms<T extends {line: number; to: number}>(links: T[], focus: number | null, text: string): T[] {
+  return links.filter(link => link.line === focus || (focus && link.line <= focus && text.slice(0, link.to).split('\n').length >= focus));
+}
+
 export function sourceForms(text: string, source: string, engine: Engine, kind: ConfigSource['kind'] = 'main') {
   if (!engine.daeText) return [];
   const {blocks, tokens} = scanConfig(text);

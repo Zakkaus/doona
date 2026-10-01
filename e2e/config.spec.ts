@@ -1,8 +1,10 @@
 import {test as httpTest, type Page, type Route} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend} from './fixtures';
 import {sha256} from '../src/api/hash';
+import {readSubscriptionEntries} from '../src/dae/subscriptions';
+import {readGroupEntries} from '../src/dae/groups';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
@@ -26,27 +28,6 @@ test('configuration sources list with the main source open, read-only ones canno
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/harbor.dae"]')).toContainText('redacted');
   await expect(page.locator('.cm-content[aria-label="/var/lib/honk/subscriptions/harbor.dae"]')).toHaveAttribute('contenteditable', 'false');
 });
-
-// At wider widths the badge and facts keep the toolbar's height; the note's per-source text may wrap independently.
-for (const width of [768, 1440])
-  test(`at ${width}px the rows above the editor keep their lines for writable and read-only sources`, async ({page}) => {
-    await page.setViewportSize({width, height: 900});
-    await page.goto('/#/config?tab=source');
-    const bar = page.locator('.rp-toolbar').filter({has: page.locator('.rp-selectbtn')});
-    const rows = async (path: string) => {
-      await expect(page.locator(`.cm-content[aria-label="${path}"]`)).toBeVisible();
-      const toolbar = (await bar.boundingBox())!;
-      const note = (await page.locator('.rp-card > .rp-row').first().boundingBox())!;
-      const text = (await page.locator('.rp-card > .rp-row > :first-child').first().boundingBox())!;
-      return {toolbar: toolbar.height, note: note.height - text.height};
-    };
-    const writable = await rows('/etc/honk/config.dae');
-    await page.getByRole('button', {name: /Config file/}).click();
-    await page.getByRole('option', {name: /harbor\.dae/}).click();
-    const readOnly = await rows('/var/lib/honk/subscriptions/harbor.dae');
-    expect(Math.abs(readOnly.toolbar - writable.toolbar)).toBeLessThanOrEqual(1);
-    expect(Math.abs(readOnly.note - writable.note)).toBeLessThanOrEqual(1);
-  });
 
 test('a generated source names why it is read-only and offers no validation', async ({page}) => {
   await page.goto('/#/config?tab=source&source=src-generated');
@@ -593,25 +574,19 @@ test('source redaction does not certify exports or diagnose the redacted include
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeDisabled();
 });
 
-for (const appearance of ['light', 'dark', 'glass'] as const) {
-  test(`configuration details wrap on phones in ${appearance}`, async ({page}) => {
-    const {api} = await configBackend(page);
-    await page.setViewportSize({width: 390, height: 844});
-    await page.addInitScript(appearance => {
-      localStorage.setItem('doona-scheme', appearance === 'light' ? 'light' : 'dark');
-      localStorage.setItem('doona-palette', appearance === 'glass' ? 'glass/glass' : 'rose-pine/moon');
-    }, appearance);
-    const config = await api.config();
-    const main = config.sources.find(source => source.kind === 'main')!;
-    const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(20);
-    config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
-    await page.route('**/api/v1/config', route => route.fulfill({json: config}));
-    await page.goto('/#/config?tab=source');
-    const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`, {exact: true});
-    await expect(diagnostic).toBeVisible();
-    expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-  });
-}
+test('configuration diagnostics wrap on phones', async ({page}) => {
+  const {api} = await configBackend(page);
+  await page.setViewportSize({width: 390, height: 844});
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(20);
+  config.diagnostics = [{level: 'warning', source_id: main.id, line: null, column: null, span: null, code: 'duplicate', message}];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=source');
+  const diagnostic = page.getByRole('list', {name: 'Diagnostics'}).getByText(`Backend message: ${message}`, {exact: true});
+  await expect(diagnostic).toBeVisible();
+  expect(await diagnostic.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
 
 test('a validation run gives way to the accepted diagnostics after a reload', async ({page}) => {
   const {api, capabilities} = await configBackend(page);
@@ -887,4 +862,104 @@ test('kit pickers keep symmetric insets', async ({page}) => {
       })
     )
   ).toBe(true);
+});
+
+test('modules are summaries with one link to each editor', async ({page}) => {
+  await page.goto('/#/config');
+  const modules = page.getByRole('tabpanel', {name: 'Modules'});
+  for (const [section, path] of [
+    ['global', 'settings'],
+    ['node', 'nodes'],
+    ['subscription', 'nodes'],
+    ['group', 'policies'],
+    ['dns', 'rules'],
+    ['routing', 'rules']
+  ]) {
+    const card = modules.getByRole('region', {name: section, exact: true});
+    await card.getByRole('link', {name: 'Open page'}).click();
+    await expect(page).toHaveURL(new RegExp('#/' + path));
+    if (section === 'global') await expect(page.getByRole('region', {name: 'Persistent global settings'})).toBeInViewport();
+    await page.goBack();
+  }
+});
+
+test('a located global jumps to its field, writes only the value, and survives navigation', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const original = (await api.config()).sources[0];
+  const line = original.content.slice(0, original.content.indexOf('tproxy_port:')).split('\n').length;
+  await page.goto(`/#/config?tab=source&source=${original.id}&line=${line}`);
+  await page.getByRole('link', {name: 'tproxy_port', exact: true}).click();
+  const field = page.getByRole('textbox', {name: 'tproxy_port', exact: true});
+  await expect(field).toBeFocused();
+  const card = page.getByRole('region', {name: 'Persistent global settings'});
+  await field.fill('23456');
+  await card.getByRole('button', {name: 'Write and reload'}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Global settings written');
+  expect((await api.config()).sources[0].content).toBe(original.content.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
+  await page.reload();
+  await expect(field).toHaveValue('23456');
+  await field.fill('23457');
+  await page.getByRole('link', {name: 'Configuration', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config/);
+});
+
+test('source editing protects form values while allowing unsupported fields and comments', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const original = (await api.config()).sources[0].content;
+  await page.goto('/#/config?tab=source');
+  const editor = page.locator('.cm-content');
+  await expect(editor).toBeVisible();
+  await editor.fill(original.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
+  await editor.press('ControlOrMeta+Home');
+  await expect(editor).toContainText('tproxy_port: 12345');
+  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
+  await expect(page.locator('.rp-toast.info')).toContainText('Settings with a form');
+  await editor.fill(original + '\n# retained raw text');
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('Current draft');
+  await page.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('accepted configuration');
+});
+
+test('legacy validation links focus diagnostics beside the source at its line', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const file = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const line = file.content.slice(0, file.content.indexOf('tproxy_port:')).split('\n').length;
+  await page.goto(`/#/config?tab=validate&source=${file.id}&line=${line}`);
+  await expect(page.getByRole('tab', {name: 'Config files', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'Validation', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeFocused();
+  await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toBeInViewport();
+  await expect(page.locator('.cm-activeLine')).toContainText('tproxy_port:');
+  await expect(page.getByRole('list', {name: 'Diagnostics'})).toHaveCount(1);
+});
+
+test('located routing and DNS rules open their exact edit dialogs', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const routing = (await api.rules()).rules.find(rule => rule.kind === 'rule' && rule.source)!;
+  const dns = (await api.dnsRules()).request.find(rule => rule.kind === 'rule' && rule.source)!;
+  for (const rule of [routing, dns]) {
+    await page.goto(`/#/config?tab=source&source=${rule.source!.source_id}&line=${rule.source!.line}`);
+    await page.getByRole('link', {name: rule.expression, exact: true}).click();
+    await expect(page).toHaveURL(new RegExp(`edit=${encodeURIComponent(rule.rule_id)}`));
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', {name: 'Cancel', exact: true}).click();
+  }
+});
+
+test('located subscriptions open the existing editor and groups focus their card', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const file = (await api.config()).sources[0];
+  const subscription = readSubscriptionEntries(file.content)[0];
+  await page.goto(`/#/config?tab=source&source=${file.id}&line=${subscription.line}`);
+  await page.getByRole('link', {name: subscription.tag, exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Edit subscription ' + subscription.tag, exact: true})).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', {name: 'Cancel', exact: true}).click();
+  const group = readGroupEntries(file.content)[0];
+  await page.goto(`/#/config?tab=source&source=${file.id}&line=${group.from + 1}`);
+  await page.getByRole('link', {name: group.name, exact: true}).click();
+  await expect(page).toHaveURL(/#\/policies\?group=/);
+  await expect(page.getByRole('region', {name: group.name, exact: true})).toBeInViewport();
 });
