@@ -219,10 +219,10 @@
   opacity: 0.4;
   cursor: default;
 }
-/* Settings controls share a column width, including fields with nested status or help text. */
+/* Settings controls share one column width across groups (auto-fill keeps empty tracks), including fields with nested status or help text. */
 .rp-toolbar.rp-fieldgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   align-items: start;
 }
 .rp-fieldgrid :is(.rp-field, .rp-selectbtn, .rp-input) {

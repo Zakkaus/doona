@@ -905,6 +905,17 @@ test('a located global jumps to its field, writes only the value, and survives n
   await expect(page).toHaveURL(/#\/config/);
 });
 
+test('global setting fields keep one width across groups', async ({page}) => {
+  await page.goto('/#/config?tab=global');
+  const grids = page.getByRole('tabpanel', {name: 'Global settings'}).locator('.rp-fieldgrid');
+  await expect(grids.first()).toBeVisible();
+  const widths = await grids.evaluateAll(els => els.map(grid => [...grid.children].map(child => child.getBoundingClientRect().width)));
+  const counts = new Set(widths.map(group => group.length));
+  expect(counts.size).toBeGreaterThan(1);
+  const all = widths.flat();
+  expect(Math.max(...all) - Math.min(...all)).toBeLessThanOrEqual(1);
+});
+
 test('source editing protects form values while allowing unsupported fields and comments', async ({page}) => {
   const {api} = await mockBackend(page);
   const original = (await api.config()).sources[0].content;
