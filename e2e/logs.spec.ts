@@ -170,7 +170,7 @@ test('the log toolbar opens the recording settings', async ({page}) => {
   await page.goto('/#/logs');
   await page.getByRole('button', {name: 'Recording settings', exact: true}).click();
   await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
-  await expect(page.getByRole('heading', {name: 'Backend options', exact: true})).toBeInViewport();
+  await expect(page.getByRole('heading', {name: 'Temporary runtime overrides', exact: true})).toBeInViewport();
   await page.goBack();
   await expect(page).toHaveURL(/#\/logs$/);
 });

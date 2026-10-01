@@ -1,3 +1,4 @@
+import {honkGlobal} from './honkSettings';
 import {scanConfig, type TextBlock} from '../../dae/text';
 import type {Capabilities, RuntimeSettings} from '../model';
 import type {Engine, EngineReason, EngineSetting, EngineSubject} from './types';
@@ -71,6 +72,7 @@ const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => l
 
 export const honk: Engine = {
   id: 'honk',
+  globalSettings: honkGlobal,
   reason,
   // Reading these back takes a BPF_PROG_QUERY per hook, or a switch into the daens namespace for dae0peer.
   uncheckedHooks: ['cgroup', 'sk_lookup', 'dae0peer'],

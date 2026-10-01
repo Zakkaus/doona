@@ -12,7 +12,7 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(6);
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(7);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
@@ -90,7 +90,7 @@ test('saving mock reloads and restores the default activity route', async ({page
   // The built-in demo ignores any token, so the field goes.
   await page.locator('[name=api]').fill(' mock ');
   await expect(token).toHaveCount(0);
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   await expect(page).toHaveURL(/#\/activity$/);
   // A saved demo profile signs in with its published account, filled in, before the default route.
   await page.goto('/#/');
@@ -103,7 +103,7 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill('ftp://honk.example');
   await page.locator('[name=token]').fill('not-saved');
-  await page.locator('form button[type=submit]').click();
+  await page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click();
   await expect(page.locator('[name=api]')).toHaveAttribute('aria-invalid', 'true');
   // The error joins the hint in the field's description rather than replacing it.
   await expect(page.locator('[name=api]')).toHaveAccessibleDescription(/not \/api\/v1/);
@@ -132,10 +132,10 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   expectLoadFailures(page, /\/settings-backend\/api$/);
   await page.locator('[name=token]').fill('wrong-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
-  await expect(page.locator('form')).toContainText(t('settings.tokenRejected'));
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form')).toContainText(t('settings.tokenRejected'));
   await page.locator('[name=token]').fill('test-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
-  await expect(page.locator('form').getByRole('status')).toContainText('API v1');
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toContainText('API v1');
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
 });
 
@@ -184,15 +184,15 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await expect(page.locator('[name=api]')).toHaveValue(origin + '/new-backend');
   await expect(probe).toBeEnabled();
   resolve();
-  await expect(page.locator('form').getByRole('status')).toHaveCount(0);
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toHaveCount(0);
   await probe.click();
-  await expect(page.locator('form').getByRole('status')).toContainText('API v2');
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toContainText('API v2');
   await page.evaluate(() => {
     location.hash = '#/settings?api=mock';
   });
   await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue('mock');
-  await expect(page.locator('form').getByRole('status')).toHaveCount(0);
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toHaveCount(0);
 });
 
 // A raw browser test: 401 and 404 responses log console errors by design here.
@@ -286,7 +286,7 @@ test('profile switching confirms draft loss without saving edits to the profile 
   await page.getByRole('option', {name: /Backend A/}).click();
   await expect(page.locator('[name=token]')).toHaveValue('saved-a');
   await page.locator('[name=token]').fill('explicitly-saved');
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!))).toEqual([{...profiles[0], token: 'explicitly-saved'}, profiles[1]]);
 });
 

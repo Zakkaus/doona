@@ -448,7 +448,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
     await route.fulfill({json: await api.patchRuntimeSettings(route.request().postDataJSON())});
   });
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: 'Backend options'});
+  const card = page.getByRole('region', {name: 'Temporary runtime overrides'});
   await expect(card).toContainText('any change that reloads the configuration, restores the configured values');
   const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
   await records.fill('512');
@@ -474,7 +474,7 @@ test('runtime drafts survive a changed poll and explicit discard loads the curre
   await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: settings}));
   await page.clock.install();
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: 'Backend options'});
+  const card = page.getByRole('region', {name: 'Temporary runtime overrides'});
   const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
   await records.fill('512');
   settings.log!.buffered_records = 2048;
@@ -495,7 +495,7 @@ test('sparse runtime settings hide the controls the engine omits', async ({page}
   // The log's record count and the whole flows section are left out; the members that remain keep their controls.
   await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: {log: {level: log!.level}, dns_log}}));
   await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: 'Backend options'});
+  const card = page.getByRole('region', {name: 'Temporary runtime overrides'});
   await expect(card.getByRole('textbox', {name: 'DNS log records kept', exact: true})).toBeVisible();
   await expect(card.getByText('Log level', {exact: true})).toBeVisible();
   for (const name of ['Log records kept', 'Flows kept', 'Flow retention (seconds)'])

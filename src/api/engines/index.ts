@@ -13,6 +13,7 @@ const unknown: Engine = {
   settingName: key => key,
   redactedSections: () => [],
   daeText: false,
+  globalSettings: null,
   uncheckedHooks: []
 };
 

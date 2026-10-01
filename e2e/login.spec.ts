@@ -267,7 +267,7 @@ test('changing the backend URL while signed out probes the new backend', async (
   await expect(page.locator('.rp-login-page')).toHaveCount(0);
   const origin = new URL(page.url()).origin;
   await page.locator('[name=api]').fill(origin + '/two');
-  await Promise.all([page.waitForEvent('load'), page.locator('form button[type=submit]').click()]);
+  await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   await page.goto('/#/activity');
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Create the administrator');
   expect(probed.at(-1)).toBe('two');
