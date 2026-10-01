@@ -55,7 +55,7 @@ export function useNodeTable(input: NodeTableInput) {
   useLinked(input.groupQuery, value => setGroup(value ?? ''));
   const [protocol, setProtocol] = useState('');
   useLinked(JSON.stringify(input.nodeIds), () => {
-    setGroup('');
+    setGroup(input.groupQuery ?? '');
     setProtocol('');
   });
   const [sort, setSort] = useState<TableSort>({column: 'name', direction: 'ascending'});

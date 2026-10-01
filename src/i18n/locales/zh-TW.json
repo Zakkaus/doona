@@ -758,7 +758,6 @@
   "nodes.groups": "所屬群組",
   "nodes.interval": "自動重新整理",
   "nodes.intervalOf": "{name} 的自動重新整理",
-  "nodes.intervalSet": "{name} 的自動重新整理已寫入組態並重載：{interval}",
   "nodes.kind.builtin": "內建",
   "nodes.kind.file": "檔案",
   "nodes.kind.inline": "組態內",

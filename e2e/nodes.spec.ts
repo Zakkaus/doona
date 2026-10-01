@@ -1114,6 +1114,11 @@ test('missing latency names and the remaining count open probeable node rows', a
   await expect(page.getByRole('button', {name: 'Test missing-8', exact: true})).toBeVisible();
   await page.reload();
   await expect(nodeRows(page)).toHaveCount(8);
+  const selectedUrl = page.url();
+  await page.goto('/#/nodes?group=missing-group');
+  await expect(nodeRows(page)).toHaveCount(0);
+  await page.goto(selectedUrl);
+  await expect(nodeRows(page)).toHaveCount(8);
   await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page).not.toHaveURL(/nodes=/);
   await page.locator('.rp-table').first().locator('[role=row][data-key=inline]').click();
