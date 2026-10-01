@@ -151,7 +151,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     }
   }
   // Both SSE feeds resume with Last-Event-ID and honour Retry-After; cursor expiry restarts at the head, a definitive
-  // 4xx stops, and transient failures and silent connections back off to 30 seconds.
+  // 4xx or an oversized frame stops, and transient failures and silent connections back off to 30 seconds.
   async function subscribeStream(
     url: URL,
     lastEventId: string | undefined,
@@ -216,7 +216,9 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
           await wait(retryAfter(response), signal);
         } catch (error) {
           if (signal?.aborted) throw error;
-          if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429) throw error;
+          // An oversized frame would arrive again on resuming, so it ends the stream like a definitive 4xx.
+          if (error instanceof ApiError && ((error.status >= 400 && error.status < 500 && error.status !== 429) || error.code === 'frame_too_large'))
+            throw error;
           onConnectionChange?.(false);
           await wait(Math.max(backoff, pause), signal);
           pause = 0;

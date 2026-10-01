@@ -416,6 +416,35 @@ describe('native transport', () => {
     expect(received).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledTimes(1);
   });
+  it.each(['events', 'logs'] as const)('ends the %s stream on an oversized frame instead of resuming into it', async kind => {
+    vi.useFakeTimers();
+    const huge = new TextEncoder().encode(`data: ${'x'.repeat(64 * 1024)}`);
+    let cancelled = false;
+    const request = vi.fn(
+      async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull: c => c.enqueue(huge),
+            cancel: () => void (cancelled = true)
+          })
+        )
+    );
+    vi.stubGlobal('fetch', request);
+    const api = createApi('https://honk.test');
+    const states: boolean[] = [];
+    const onConnectionChange = (connected: boolean) => states.push(connected);
+    const outcome = (
+      kind === 'events' ? api.subscribeEvents({onEvent: () => {}, onConnectionChange}) : api.subscribeLogs({onRecord: () => {}, onConnectionChange})
+    ).then(
+      () => null,
+      (error: unknown) => error
+    );
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(await outcome).toMatchObject({code: 'frame_too_large'});
+    expect(request).toHaveBeenCalledOnce();
+    expect(cancelled).toBe(true);
+    expect(states.at(-1)).toBe(false);
+  });
   it('sends authenticated uncached requests and exposes structured failures', async () => {
     const request = vi.fn(async (input: Request) => {
       expect(input.url).toBe('https://honk.test/api/v1/runtime');
