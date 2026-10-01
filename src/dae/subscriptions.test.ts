@@ -231,19 +231,29 @@ describe('writeSubscriptionEntry options', () => {
     expect(readSubscriptionEntries(out).map(({ua, interval}) => [ua, interval])).toEqual([['clash.meta', 21600]]);
   });
 
-  it('turns a one-line entry into the options form when it gets an interval or cache', () => {
+  it('turns a one-line entry into the URL-field block form when it gets an interval or cache', () => {
     const out = write(text, 'agent', {interval: 3600});
     expect(out).toBe(
-      text.replace("  agent: 'https://example.net/sub'(honk/1.0 like)", "  agent: 'https://example.net/sub' {\n    ua: 'honk/1.0 like'\n    interval: 1h\n  }")
+      text.replace(
+        "  agent: 'https://example.net/sub'(honk/1.0 like)",
+        "  agent: {\n    url: 'https://example.net/sub'\n    ua: 'honk/1.0 like'\n    interval: 1h\n  }"
+      )
     );
-    expect(readSubscriptionEntries(out).find(entry => entry.tag === 'agent')).toMatchObject({ua: 'honk/1.0 like', interval: 3600, form: 'options'});
+    expect(readSubscriptionEntries(out).find(entry => entry.tag === 'agent')).toMatchObject({ua: 'honk/1.0 like', interval: 3600, form: 'block'});
     expect(write(text, 'short', {cache: false})).toBe(
-      text.replace("  short: 'https://example.com/sub' # keep me", "  short: 'https://example.com/sub' { # keep me\n    cache: false\n  }")
+      text.replace("  short: 'https://example.com/sub' # keep me", "  short: { # keep me\n    url: 'https://example.com/sub'\n    cache: false\n  }")
     );
-    expect(write(text, 'example.org', {interval: 0})).toContain("  example.org: 'https://example.org/no_tag_link' {\n    interval: 0s\n  }");
+    expect(write(text, 'example.org', {interval: 0})).toContain("  example.org: {\n    url: 'https://example.org/no_tag_link'\n    interval: 0s\n  }");
     expect(write("subscription {\n\t'paid:https://example.com/sub'\n}", 'paid', {interval: 60})).toBe(
-      "subscription {\n\tpaid: 'https://example.com/sub' {\n\t\tinterval: 1m\n\t}\n}"
+      "subscription {\n\tpaid: {\n\t\turl: 'https://example.com/sub'\n\t\tinterval: 1m\n\t}\n}"
     );
+  });
+
+  it('keeps a simultaneous rename when converting a scalar entry to an options block', () => {
+    const source = "subscription {\n  old: 'https://example.org/sub' # keep\n}\n";
+    const out = write(source, 'old', {tag: 'new', interval: 3600});
+    expect(out).toBe("subscription {\n  new: { # keep\n    url: 'https://example.org/sub'\n    interval: 1h\n  }\n}\n");
+    expect(readSubscriptionEntries(out)).toMatchObject([{tag: 'new', interval: 3600}]);
   });
 
   it('opens a one-line block before adding an option, and folds an emptied options block back', () => {
@@ -266,17 +276,23 @@ describe('writeSubscriptionEntry options', () => {
 
   it('writes new option lines with the indentation the file already uses', () => {
     const four = "subscription {\n    a: 'https://example.org/a'\n    b: 'https://example.org/b'\n}";
-    expect(write(four, 'a', {interval: 3600})).toBe(four.replace("a'\n", "a' {\n        interval: 1h\n    }\n"));
+    expect(write(four, 'a', {interval: 3600})).toBe(
+      four.replace("a: 'https://example.org/a'\n", "a: {\n        url: 'https://example.org/a'\n        interval: 1h\n    }\n")
+    );
     const nested = "subscription {\n    s: { url: 'https://example.org/one' }\n}";
     expect(write(nested, 's', {cache: true})).toBe("subscription {\n    s: {\n        url: 'https://example.org/one'\n        cache: true\n    }\n}");
     const empty = "subscription {\n    s: 'https://example.org/one' {\n    }\n}";
     expect(write(empty, 's', {cache: false})).toBe("subscription {\n    s: 'https://example.org/one' {\n        cache: false\n    }\n}");
     // Another entry's options set the step even where the section's own is different.
     const mixed = "subscription {\n  a: 'https://example.org/a' {\n      ua: x\n  }\n  b: 'https://example.org/b'\n}";
-    expect(write(mixed, 'b', {interval: 60})).toBe(mixed.replace("b'\n", "b' {\n      interval: 1m\n  }\n"));
+    expect(write(mixed, 'b', {interval: 60})).toBe(
+      mixed.replace("b: 'https://example.org/b'\n", "b: {\n      url: 'https://example.org/b'\n      interval: 1m\n  }\n")
+    );
     // Without a section step, the file's first indented line.
     const flat = "global {\n   log_level: info\n}\nsubscription {\ns: 'https://example.org/one'\n}";
-    expect(write(flat, 's', {interval: 0})).toBe(flat.replace("one'\n", "one' {\n   interval: 0s\n}\n"));
+    expect(write(flat, 's', {interval: 0})).toBe(
+      flat.replace("s: 'https://example.org/one'\n", "s: {\n   url: 'https://example.org/one'\n   interval: 0s\n}\n")
+    );
   });
 
   it('writes nothing when the options do not change and refuses an unquotable agent', () => {
@@ -303,9 +319,9 @@ subscription {
     ['second', null, null]
   ]);
   expect(writeSubscriptionEntry(source, 'first', {interval: 3600})).toBe(source.replace("'2h'", "'1h'"));
-  expect(writeSubscriptionEntry(source, 'second', {interval: 0})).toContain("second: 'https://two.example/#' {\n    interval: 0s\n  }");
+  expect(writeSubscriptionEntry(source, 'second', {interval: 0})).toContain("second: {\n    url: 'https://two.example/#'\n    interval: 0s\n  }");
   const url = 'https://example.org/{#}?token=a\\b';
-  expect(writeSubscriptionEntry(`subscription {\n  paid: '${url}'\n}\n`, 'paid', {interval: 3600})).toContain(`paid: '${url}' {`);
+  expect(writeSubscriptionEntry(`subscription {\n  paid: '${url}'\n}\n`, 'paid', {interval: 3600})).toContain(`paid: {\n    url: '${url}'`);
 });
 
 it('judges a User-Agent against the contract bound, and one written into an entry against quoting too', () => {
@@ -331,7 +347,7 @@ it("reads and writes the download route, replacing the old block form's download
 }
 `;
   expect(readSubscriptionEntries(source).map(entry => entry.route)).toEqual([null, 'direct', 'proxy']);
-  expect(writeSubscriptionEntry(source, 'plain', {route: 'direct'})).toContain("plain: 'https://one.example/sub' {\n    route: direct\n  }");
+  expect(writeSubscriptionEntry(source, 'plain', {route: 'direct'})).toContain("plain: {\n    url: 'https://one.example/sub'\n    route: direct\n  }");
   expect(writeSubscriptionEntry(source, 'plain', {route: 'my group'})).toContain("route: 'my group'\n");
   expect(writeSubscriptionEntry(source, 'opts', {route: 'proxy'})).toContain("    ua: 'clash'\n    route: proxy\n  }");
   expect(writeSubscriptionEntry(source, 'opts', {route: null})).toContain("opts: 'https://two.example/sub' {\n    ua: 'clash'\n  }");
