@@ -310,7 +310,7 @@ const writeInterval = (seconds: number) =>
 /**
  * Changes one entry where it is written: only the fields given, each in place, so its form, its other options, its
  * comments and every other entry stay as they were. A User-Agent of null removes it; an interval or cache on a
- * one-line entry turns it into `tag: 'url' { … }`, the form that holds options, keeping its name.
+ * one-line entry turns it into `tag: { url: … }`, keeping its name.
  */
 export function writeSubscriptionEntry(text: string, tag: string, change: SubscriptionChange): string {
   const entries = readEntries(text);
@@ -338,12 +338,12 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   const block = entry.block;
   if (!block) {
     // A name derived from the link would follow a new link, so a changed one is written out.
-    const named = entry.naming === 'tag' ? writtenTag! : writeTag(next.tag);
+    const named = entry.naming === 'tag' && !changed.tag ? writtenTag! : writeTag(next.tag);
     const header = `${named}: ${quote(next.url)}`;
     if ((changed.interval && next.interval !== null) || (changed.cache && next.cache !== null) || (changed.route && next.route !== null)) {
       const indent = indentAt(text, entry.from);
       const inner = indent + indentStep(text, entries, entry);
-      const lines = [`${header} {${entry.comment ? ' ' + text.slice(entry.comment.from, entry.comment.to) : ''}`];
+      const lines = [`${named}: {${entry.comment ? ' ' + text.slice(entry.comment.from, entry.comment.to) : ''}`, `${inner}url: ${quote(next.url)}`];
       if (next.ua !== null) lines.push(`${inner}ua: ${quote(next.ua)}`);
       if (next.interval !== null) lines.push(`${inner}interval: ${writeInterval(next.interval)}`);
       if (next.cache !== null) lines.push(`${inner}cache: ${next.cache}`);
