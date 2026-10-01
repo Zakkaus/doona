@@ -369,8 +369,10 @@ test('the default member is offered only while the dialog selects manual selecti
   await expect(member).toHaveCount(0);
   await policy.focus();
   await expect(policy).toBeFocused();
-  await policy.click();
-  await page.getByRole('option', {name: /^Manual/}).click();
+  // Use the keyboard so the focus check does not depend on pointer focus during popover teardown.
+  await policy.press('ArrowDown');
+  await page.getByRole('option', {name: /^Manual/}).press('Enter');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
   await expect(member).toBeVisible();
   // Appearing later, the picker leaves focus where it was.
   await expect(policy).toBeFocused();
