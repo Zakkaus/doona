@@ -90,30 +90,27 @@ it('groups held rules by file and says so only when there is more than one', asy
   const {rule} = await held();
   const one = [rule(1, 'r5', 'dip(1.1.1.1)'), rule(2, 'r1', 'dip(2.2.2.2)')];
   expect(byFile(one)).toHaveLength(1);
-  expect(pendingView(one, 'routing', null, [], t)).toMatchObject({
+  expect(pendingView(one, null, [], t)).toMatchObject({
     title: 'Pending: 2',
     files: null,
     rows: [{line: 'dip(1.1.1.1) -> proxy', position: 'Before rule 8'}, {}]
   });
   const two = [...one, rule(3, 'r7', 'dip(3.3.3.3)')];
   expect(byFile(two).map(group => group.map(rule => rule.id))).toEqual([[1, 2], [3]]);
-  expect(pendingView(two, 'routing', null, [], t)!.files).toBe('Writes 2 files');
+  expect(pendingView(two, null, [], t)!.files).toBe('Writes 2 files');
   expect(translate('en', 'rule.applyFiles', {n: 3, files: 1}, 'files')).toBe('Apply (3); writes 1 file');
   expect(translate('en', 'rule.applyFiles', {n: 1, files: 2}, 'files')).toBe('Apply (1); writes 2 files');
-  expect(pendingView([], 'routing', null, [], t)).toBeNull();
-  // Each list shows its own rules and counts the others, which an apply writes too.
+  expect(pendingView([], null, [], t)).toBeNull();
+  // Both kinds remain visible in the workspace.
   const dns: PendingRule = {list: 'response', id: 4, condition: 'ip(1.2.3.4/32)', outbound: 'reject', must: false, before: null, sourceId: 'src-main'};
   const {sources} = await createMockApi().config();
-  expect(pendingView([...one, dns], 'response', null, sources, t)).toMatchObject({
-    title: 'Pending: 1',
-    elsewhere: '2 more held in other lists; applying writes them too',
-    rows: [{line: 'ip(1.2.3.4/32) -> reject', position: 'Last'}]
+  expect(pendingView([...one, dns], null, sources, t)).toMatchObject({
+    title: 'Pending: 3',
+    rows: [{}, {}, {line: 'ip(1.2.3.4/32) -> reject', position: 'Last'}]
   });
   // A list with no block of its own gets one when the rule is written.
   const unlisted = sources.map(source => ({...source, content: source.content?.replace(/ {4}response \{\n[\s\S]*? {4}\}\n/, '')}));
-  expect(pendingView([dns], 'response', null, unlisted, t)!.rows[0].position).toBe('New response block, as its first rule');
-  expect(pendingView([...one, dns], 'routing', null, sources, t)!.elsewhere).toBe('1 more held in another list; applying writes it too');
-  expect(pendingView([dns], 'request', null, sources, t)).toBeNull();
+  expect(pendingView([dns], null, unlisted, t)!.rows[0].position).toBe('New response block, as its first rule');
 });
 
 it('explains a refused write with its diagnostics, restart-only settings or the failure itself', async () => {

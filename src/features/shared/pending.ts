@@ -79,19 +79,15 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   };
 }
 
-// The held rules of one list as that list shows them, or null when it holds none. An apply writes every held rule, so
-// the rules other lists hold are counted too.
-export function pendingView(rules: PendingRule[], list: PendingRule['list'], failure: PendingFailure | null, sources: ConfigSource[], t: Translator) {
+// Routing and DNS additions share one pending list and one apply action.
+export function pendingView(rules: PendingRule[], failure: PendingFailure | null, sources: ConfigSource[], t: Translator) {
   const files = byFile(rules).length;
-  const shown = rules.filter(rule => rule.list === list);
-  const elsewhere = rules.length - shown.length;
-  return shown.length
+  return rules.length
     ? {
-        title: t('rule.pending', {n: shown.length}),
+        title: t('rule.pending', {n: rules.length}),
         files: files > 1 ? t('rule.pendingFiles', {files}, 'files') : null,
-        elsewhere: elsewhere ? t('rule.pendingElsewhere', {n: elsewhere}) : null,
         failure,
-        rows: shown.map(rule => ({
+        rows: rules.map(rule => ({
           id: rule.id,
           line: ruleLine(rule.condition, rule.outbound, rule.must),
           position: heldPlace(rule, sources, t)

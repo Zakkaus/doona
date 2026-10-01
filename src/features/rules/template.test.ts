@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {currentTemplate, refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
+import {currentTemplate, refusalReason, routingSources, templateImpact, templatesView, templateTarget, templateWrites} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -148,14 +148,6 @@ it('reads a quoted group as its own group when listing what a template creates a
     removedIncludes: []
   });
   expect(templateImpact('bypass', main, [main], [], t).reused).toEqual([{name: "'proxy'", pinned: true}]);
-});
-
-it('opens the routing list on the simple view unless the link names a view or points at a rule', () => {
-  expect(ruleViewMode('')).toBe('simple');
-  expect(ruleViewMode('tab=list')).toBe('simple');
-  expect(ruleViewMode('view=advanced')).toBe('advanced');
-  for (const query of ['tab=list&rule=r1', 'edit=r1', 'add=domain%3Aexample.org', 'held=1']) expect(ruleViewMode(query)).toBe('advanced');
-  expect(ruleViewMode('rule=r1&view=simple')).toBe('simple');
 });
 
 it('offers the DNS split while no file has a dns block, and writes it only when asked', () => {

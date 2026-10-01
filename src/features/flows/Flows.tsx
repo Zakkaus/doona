@@ -28,7 +28,6 @@ import Close from '../../ui/icons/Close';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
 import {ruleHref} from '../shared/link';
-import {RuleDialog} from '../shared/RuleDialog';
 import {useFlowsPage} from './useFlowsPage';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
@@ -228,7 +227,6 @@ function FlowRecords(props: PageProps) {
           )}
         </DetailPanel>
       </div>
-      <RuleDialog dialog={view.rule.dialog} />
     </>
   );
 }

@@ -201,7 +201,6 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     addRule: (index: number) => {
       const seed = evaluations[index]?.seed;
       if (seed) quick.open(seed);
-    },
-    ruleDialog: quick.dialog
+    }
   };
 }

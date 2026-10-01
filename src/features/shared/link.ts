@@ -1,6 +1,9 @@
 import type {ConfigSource, Node} from '../../api/model';
 import {nodeOwner} from '../../api/selectors';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
+import {parseConditions} from '../../dae/conditions';
+import {dnsConditionKinds} from '../../dae/groups';
+import {ruleTargets, type QuickRuleSeed, type RuleList} from './rule';
 import {scanConfig} from '../../dae/text';
 import {readTag} from './taggedId';
 import {href, within} from '../../shell/route';
@@ -61,3 +64,16 @@ export function sectionSourceHref(sources: readonly ConfigSource[], name: string
 }
 
 export const dnsSettingsHref = href('rules', {tab: 'dns', section: 'upstreams'});
+export function quickRuleQuery(seed: QuickRuleSeed, list: RuleList): string {
+  const condition = ruleTargets(seed, list)[0]?.condition ?? '';
+  const row = parseConditions(condition, list === 'routing' ? conditionKinds : dnsConditionKinds[list])?.[0];
+  return within('', {
+    tab: list === 'routing' ? 'list' : 'dns',
+    list: list === 'routing' ? null : list,
+    add: row ? `${row.kind}:${row.value}` : null,
+    target: list === 'routing' ? seed.outbound : list === 'request' ? (seed.dns?.upstream ?? null) : 'accept',
+    before: list === 'routing' ? (seed.matched?.id ?? null) : 'end',
+    response: seed.dns ? (ruleTargets(seed, 'response')[0]?.condition ?? null) : null
+  });
+}
+export const ruleSeedParams = {view: null, add: null, edit: null, target: null, before: null, response: null};

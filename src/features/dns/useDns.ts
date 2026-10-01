@@ -54,18 +54,7 @@ export function useDns({go, query}: PageProps) {
       // The failure stays on the page as its banner until the next query; a toast would say it twice.
     }
   };
-  // The add-rule dialog of the log, the query results and the cache. Once a DNS rule is written, Query again, offered
-  // while the backend answers queries, opens the query tab with the name the rule was added from and `run` in the
-  // address; the DNS page on screen then, which may not be this one, runs it.
-  const queryable = offered(resources, 'dns_query', {whileLoading: false}) && view.types.length > 0;
-  const rule = useQuickRule(go, {
-    queryAgain: queryable
-      ? asked => {
-          const type = view.types.includes(asked.type) ? asked.type : 'all';
-          go('dns', within('', {tab: 'query', domain: asked.name.replace(/\.$/, ''), type, run: '1'}));
-        }
-      : undefined
-  });
+  const rule = useQuickRule(go);
   // The query a link asks to run, once, dropping `run` from the address so a reload or Back does not repeat it.
   const runLinked = params.has('run') && resources ? query : null;
   const runLink = useEffectEvent((linked: string) => {

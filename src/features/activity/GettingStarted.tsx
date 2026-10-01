@@ -8,7 +8,7 @@ import type {useGettingStarted} from './useGettingStarted';
 
 const steps: Array<{id: 'nodes' | 'rules' | 'connection'; title: Key; hint: Key; action: Key; href: string}> = [
   {id: 'nodes', title: 'act.setup.nodes', hint: 'act.setup.nodesHint', action: 'nodes.addProvider', href: href('nodes', {add: 'subscription'})},
-  {id: 'rules', title: 'act.setup.rules', hint: 'act.setup.rulesHint', action: 'act.setup.chooseRules', href: href('rules', {view: 'simple'})},
+  {id: 'rules', title: 'act.setup.rules', hint: 'act.setup.rulesHint', action: 'act.setup.chooseRules', href: href('rules', {template: '1'})},
   {id: 'connection', title: 'act.setup.connection', hint: 'act.setup.connectionHint', action: 'act.setup.checkConnection', href: href('policies')}
 ];
 

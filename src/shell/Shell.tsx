@@ -163,7 +163,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         refresh={view.refresh}
         spinning={view.spinning}
         commands={view.commands}
-        apply={view.apply}
+        apply={() => go('rules', 'held=1')}
         reload={view.reload}
         honk={view.honk}
         backend={view.backend}

@@ -1,11 +1,11 @@
 import {useEffect, useEffectEvent, useRef, useState} from 'react';
-import {useConfigEditor} from '../../store';
+import {pendingRules, usePendingRules, useConfigEditor, type HeldRule} from '../../store';
 import {useT} from '../../i18n';
 import type {ConfigSource, RuleSource} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {parseConditions, serializeConditions, type RuleConditionRow} from '../../dae/conditions';
 import type {RuleConditionKind} from '../../dae/groups';
-import {addFallback, addRule, removeRule, replaceRule, type RuleAnchor} from '../../dae/ruleText';
+import {addFallback, removeRule, replaceRule, type RuleAnchor} from '../../dae/ruleText';
 import type {RuleSeed} from '../shared/link';
 import {ruleWritten} from '../shared/rule';
 import {addRuleReason, addRuleTip, removalView, ruleDraftView, type ReasonKeys, type RuleDraftView} from './view';
@@ -14,7 +14,8 @@ import {useDraftGuard} from '../../shell/draft';
 // A rule of either list as the editor needs it: GET /rules and GET /dns/rules entries share these fields.
 export type EditedRule = {rule_id: string; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
 // An edit starts from the located source condition and the listed target.
-export type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
+export type Opened<R> =
+  {kind: 'add'; preset?: RuleSeed; outbound?: string; before?: string} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
 type Dialog<R> = Opened<R> & {
   generation: string;
   sources: ConfigSource[];
@@ -48,6 +49,7 @@ export type RuleEditorModel = {
 };
 export type RuleEditorOptions<R extends EditedRule> = {
   canWrite: boolean;
+  listId: HeldRule['list'];
   // The listed rules and the configuration they were read with; an edit needs both from one generation.
   list: {rules: R[]; generation_id: string} | undefined;
   config: {sources: ConfigSource[]; generation_id: string} | undefined;
@@ -71,6 +73,7 @@ export type RuleEditorOptions<R extends EditedRule> = {
 // and replacing that source whole.
 export function useRuleEditor<R extends EditedRule>({
   canWrite,
+  listId,
   list,
   config,
   retry,
@@ -85,6 +88,7 @@ export function useRuleEditor<R extends EditedRule>({
 }: RuleEditorOptions<R>) {
   const t = useT();
   const editor = useConfigEditor(retry);
+  const applying = usePendingRules().applying;
   const report = useEffectEvent((error: Error) => toastFailure(error, t, t('ui.writeFailed')));
   useEffect(() => {
     if (editor.error) report(editor.error);
@@ -129,7 +133,12 @@ export function useRuleEditor<R extends EditedRule>({
     setConditions(rows);
     setInitialRows(serializeConditions(rows ?? []) ?? '');
     setOriginalCondition(raw);
-    setForm({condition: raw, outbound: edit?.outbound ?? target, must: edit?.must ?? false, before: positions[0]?.id ?? 'end'});
+    setForm({
+      condition: raw,
+      outbound: edit?.outbound ?? (next.kind === 'add' ? next.outbound : undefined) ?? target,
+      must: edit?.must ?? false,
+      before: (next.kind === 'add' ? next.before : undefined) ?? positions[0]?.id ?? 'end'
+    });
     setPick(true);
     setDialog({...next, generation: list.generation_id, sources, rules});
   };
@@ -150,7 +159,7 @@ export function useRuleEditor<R extends EditedRule>({
     initialize(link.open);
   }
   const open = (next: Opened<R>) => {
-    if (pending.current) return;
+    if (pending.current || applying) return;
     if (list?.generation_id !== config?.generation_id) {
       stale();
       return;
@@ -182,7 +191,7 @@ export function useRuleEditor<R extends EditedRule>({
     return true;
   };
   const submit = async (dismiss: () => void) => {
-    if (pending.current) return;
+    if (pending.current || applying) return;
     // Both writes address a line the dialog saw in one generation; a reload since then means starting over.
     if (!dialog || !list || !config || list.generation_id !== dialog.generation || config.generation_id !== dialog.generation) {
       stale();
@@ -201,16 +210,22 @@ export function useRuleEditor<R extends EditedRule>({
       stale();
       return;
     }
+    if (dialog.kind === 'add') {
+      const place = listId === 'routing' ? rule && {list: listId, before: rule} : {list: listId, before: appended ? null : (rule ?? null)};
+      if (!place) return;
+      pendingRules.add({...place, sourceId: source.id, condition: condition!, outbound: form.outbound, must: form.must} as HeldRule);
+      toast('positive', t('rule.held'));
+      dismiss();
+      return;
+    }
     pending.current = true;
     try {
       const written = await write(source, text =>
         dialog.kind === 'remove'
           ? removeRule(text, at)
-          : dialog.kind === 'edit'
-            ? appended
-              ? addFallback(text, at, form.outbound)
-              : replaceRule(text, at, condition ?? '', form.outbound, form.must)
-            : addRule(text, at, condition!, form.outbound, form.must)
+          : appended
+            ? addFallback(text, at, form.outbound)
+            : replaceRule(text, at, condition ?? '', form.outbound, form.must)
       );
       if (written) {
         const notice = ruleWritten(dialog.kind === 'remove' ? 'rule.removed' : dialog.kind === 'edit' ? 'rule.edited' : 'rule.added', t);
@@ -239,13 +254,13 @@ export function useRuleEditor<R extends EditedRule>({
   const noPosition = !!list && !!config && !positions.length;
   const model: RuleEditorModel = {
     canWrite,
-    busy: !!editor.busy,
-    addDisabled: !positions.length || !!editor.busy,
+    busy: !!editor.busy || applying,
+    addDisabled: !positions.length || !!editor.busy || applying,
     addTip: addRuleTip(noPosition, !!editor.busy, t),
     addReason: addRuleTip(noPosition, false, t) ?? null,
     dialog: dialogView,
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
-    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
+    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.hold'),
     close,
     openAdd: () => {
       if (list) open({kind: 'add'});
@@ -278,7 +293,7 @@ export function useRuleEditor<R extends EditedRule>({
         ? addRuleReason(editing ? {...draft, valid: editValid} : draft, form.outbound, t, reasons)
         : null,
     changeMode: (mode: string) => {
-      if (pending.current) return;
+      if (pending.current || applying) return;
       if (mode === 'text' && pick && condition) setForm({...form, condition});
       setPick(mode === 'pick');
     }

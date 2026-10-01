@@ -10,10 +10,10 @@ import {toast, toastFailure} from '../../ui/ui';
 import {fileName} from '../../dae/sources';
 import type {RuleTemplate, TemplateOptions} from '../../dae/templates';
 import type {PageProps} from '../../shell/routes';
-import {within} from '../../shell/route';
+import {href, within} from '../../shell/route';
 import {
+  routingSources,
   refusalReason,
-  ruleViewMode,
   templateChoice,
   templateImpact,
   templatesView,
@@ -21,7 +21,6 @@ import {
   templateWrites,
   templateOptionKeys,
   templateOptionText,
-  type RuleViewMode,
   type TemplateChoice,
   type TemplateImpact,
   type TemplateWrite,
@@ -42,10 +41,12 @@ type Pending = {
 };
 type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null};
 export type RuleTemplatesModel = TemplatesView & {
-  // Whether the routing list offers the simple view: it reads the rules from the configuration text.
+  // Whether the configuration can supply templates.
   available: boolean;
-  mode: RuleViewMode;
-  setMode: (mode: string) => void;
+  shown: boolean;
+  show: () => void;
+  hide: () => void;
+  sourcesHref: string | null;
   // The file a template would be written to.
   file: string | null;
   // The chosen template: the detected one until another is picked, and none for custom routing.
@@ -65,10 +66,9 @@ export type RuleTemplatesModel = TemplatesView & {
   applying: boolean;
 };
 // A write changes the rules, and the groups and DNS rules a template brings, besides the file: every resource on show is
-// read again, so the table the view switch opens holds the new rules and its generation even with no event stream.
+// read again, so the workspace holds the new rules and generation even with no event stream.
 const reread = () => void refetchAll();
-// The routing list's simple view: the template the routing holds, in plain words, and the templates to replace it with.
-// It opens on the simple view, template or custom, and on the rule table for a link to a rule.
+// Template selection and the validated impact preview share the routing workspace.
 export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const t = useT();
   const resources = useCapabilities().data?.resources;
@@ -95,7 +95,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     holdsCredentials: source => engine.holdsCredentials(source),
     denied
   });
-  const setMode = (mode: string) => go('rules', within(query, {view: mode}));
+  const shown = new URLSearchParams(query).has('template');
   const selected = picked ?? view.current?.id ?? null;
   const options: TemplateOptions = {blockAds: view.blockAds, blockQuic: view.blockQuic, networkManagerDirect: view.networkManagerDirect, ...pickedOptions};
   const applying = editor.busy === 'save';
@@ -111,8 +111,10 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     ...options,
     setOption: (option, enabled) => setPickedOptions(current => ({...current, [option]: enabled})),
     available: readable && !!config.data,
-    mode: ruleViewMode(query),
-    setMode,
+    shown,
+    show: () => go('rules', within(query, {template: '1', view: null})),
+    hide: () => go('rules', within(query, {template: null, view: null})),
+    sourcesHref: target.refusal === 'split' ? href('rules', {sources: JSON.stringify(routingSources(sources).map(source => source.id))}) : null,
     file: target.source && fileName(target.source),
     selected,
     select: setPicked,
@@ -171,7 +173,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         setDialog(null);
         setPicked(null);
         setPickedOptions({});
-        go('rules', within(query, {view: 'simple'}));
+        go('rules', within(query, {view: null, template: null}));
       } catch (error) {
         // honk answers 403 when the sign-in lacks control permission or the file sets API listener settings.
         if (error instanceof ApiError && error.status === 403) setDenied(dialog.source.id);

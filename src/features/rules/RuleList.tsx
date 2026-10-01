@@ -1,4 +1,4 @@
-import {useEffect, useId, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
+import {useId, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
@@ -6,7 +6,6 @@ import {
   ActionHelp,
   Badge,
   Button,
-  Card,
   HelpRow,
   DataTable,
   LabeledSelect,
@@ -18,7 +17,6 @@ import {
   Segmented,
   Switch,
   ErrorMessage,
-  InlineAlert,
   TextField,
   TextTooltip,
   type TableColumn
@@ -38,29 +36,28 @@ export function RuleList(props: PageProps) {
   const view = useRuleList(props);
   const templates = useRuleTemplates(props);
   if (view.kind !== 'dictionary') return <Distribution view={view} />;
-  if (!templates.available) return <RuleDictionary view={view} />;
-  // The view switch ends the list's toolbar row in both views, after the rule count and Add rule.
-  const viewSwitch = (
-    <Segmented
-      label={t('rule.viewMode')}
-      items={[
-        ['simple', t('rule.viewSimple')],
-        ['advanced', t('rule.viewAdvanced')]
-      ]}
-      value={templates.mode}
-      onChange={templates.setMode}
-    />
-  );
-  if (templates.mode === 'advanced') return <RuleDictionary view={view} viewSwitch={viewSwitch} />;
   return (
-    <div className="rp-col">
-      <div className="rp-toolbar">
-        {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
-        <span className="rp-grow" />
-        {viewSwitch}
-      </div>
+    <>
+      {view.sourceFocus.length > 0 && (
+        <div className="rp-toolbar">
+          <span className="rp-label">{t('rule.template.focused', {files: view.sourceFocus.join(', ')})}</span>
+          <Button small onPress={view.clearSources}>
+            {t('ui.clear')}
+          </Button>
+        </div>
+      )}
+      <RuleDictionary
+        view={view}
+        actions={
+          templates.available && (
+            <Button small onPress={templates.show}>
+              {t('rule.template.open')}
+            </Button>
+          )
+        }
+      />
       <RuleTemplates model={templates} />
-    </div>
+    </>
   );
 }
 type Row = DictionaryModel['table']['rows'][number];
@@ -75,7 +72,7 @@ const hitsColumn = (t: Translator): TableColumn<Row> => ({
   render: row => row.hits
 });
 // One rule list with its add and remove dialogs; the routing list and each DNS list render through it.
-export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewSwitch?: ReactNode}) {
+export function RuleDictionary({view, actions}: {view: DictionaryModel; actions?: ReactNode}) {
   const t = useT();
   const {form, setForm, draft, dialog} = view;
   const mustHelpId = useId();
@@ -87,12 +84,6 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
   const {canWrite, busy} = view;
   const {target, hits} = view.copy;
   const editable = canWrite && !!view.openEdit;
-  // A link to review the held rules moves focus, and so the view, to their section once it is shown.
-  const heldRef = useRef<HTMLElement>(null);
-  const reviewing = !!view.reviewHeld && !!view.held;
-  useEffect(() => {
-    if (reviewing) heldRef.current?.focus();
-  }, [reviewing]);
   const columns = useMemo(
     (): TableColumn<Row>[] => [
       {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
@@ -258,44 +249,9 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
               {t('rule.add')}
             </Button>
           )}
-          {viewSwitch}
+          {actions}
         </div>
       </ActionHelp>
-      {view.held && (
-        <Card className="rp-list" aria-label={view.held.title} ref={heldRef} tabIndex={-1}>
-          <div className="rp-cluster">
-            <h2 className="rp-h3">{view.held.title}</h2>
-            {view.held.files && <span className="rp-label">{view.held.files}</span>}
-            {view.held.elsewhere && <span className="rp-label">{view.held.elsewhere}</span>}
-            <span className="rp-grow" />
-            {view.applyHeld && (
-              <Button small isPending={view.applying} onPress={view.applyHeld}>
-                {t('rule.applyHeld')}
-              </Button>
-            )}
-          </div>
-          {view.held.failure && (
-            <InlineAlert>
-              {view.held.failure.text}
-              {view.held.failure.lines.map((line, i) => (
-                <span key={i} className="rp-label">
-                  {line}
-                </span>
-              ))}
-            </InlineAlert>
-          )}
-          {view.held.rows.map(row => (
-            <div key={row.id} className="rp-cluster">
-              <DaeCode text={row.line} />
-              <span className="rp-label">{row.position}</span>
-              <span className="rp-grow" />
-              <Button small quiet icon label={t('rule.discard')} isDisabled={view.applying} onPress={() => view.discard(row.id)}>
-                <Close />
-              </Button>
-            </div>
-          ))}
-        </Card>
-      )}
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable
         label={view.copy.label}
@@ -349,7 +305,12 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         )}
         {dialog?.kind === 'add' && (
           <div className="rp-list">
-            <span className="rp-label">{draft.mode === 'pick' ? view.copy.addHelp : t('rule.addExpressionHelp')}</span>
+            <span className="rp-label">{t('rule.holdHelp')}</span>
+            {view.alternate && (
+              <Button small onPress={view.alternate.open}>
+                {view.alternate.label}
+              </Button>
+            )}
             <Segmented
               isDisabled={view.busy}
               label={t('rule.conditionMode')}

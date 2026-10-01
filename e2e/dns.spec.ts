@@ -452,9 +452,10 @@ test('the statistics lead to the DNS configuration, the cache and the log filter
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/dns');
   await page.getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
-  // The link opens the dns section's first line in the main file.
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=22$/);
-  await expect(page.locator('.cm-activeLine')).toContainText('dns {');
+  await expect(page).toHaveURL(/#\/rules\?tab=dns&section=upstreams$/);
+  const upstreams = page.getByRole('region', {name: 'DNS upstreams', exact: true});
+  await expect(upstreams).toBeFocused();
+  await expect(upstreams.getByRole('row').filter({hasText: 'cloudflare'})).toBeVisible();
   await page.goBack();
   await page.getByRole('region', {name: 'Cache', exact: true}).getByRole('link', {name: 'View cache', exact: true}).click();
   await expect(page).toHaveURL(/#\/dns\?tab=cache$/);

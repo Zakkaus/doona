@@ -70,8 +70,9 @@ test('a rule condition is composed from a kind and values, or typed as an expres
   await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
   await expect(dialog.getByRole('textbox', {name: 'Condition'})).toHaveValue('domain(geosite: netflix, geosite: disney)');
   await dialog.getByRole('textbox', {name: 'Condition'}).fill('domain(geosite: netflix, geosite: disney) && l4proto(tcp)');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'in effect'})).toBeVisible();
   const list = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
   await expect(list.filter({hasText: 'domain(geosite: netflix, geosite: disney) && l4proto(tcp)'})).toContainText(
     'domain(geosite: netflix, geosite: disney) && l4proto(tcp)'

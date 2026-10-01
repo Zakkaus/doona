@@ -1,7 +1,6 @@
+import {parseConditions} from '../../dae/conditions';
 import {useMemo} from 'react';
-import {pendingRules, useCapabilities, useConfig, useDnsRules, usePendingRules} from '../../store';
-import {pendingView} from '../shared/pending';
-import {useApplyHeld} from '../shared/usePendingApply';
+import {useCapabilities, useConfig, useDnsRules} from '../../store';
 import {useLang, useT} from '../../i18n';
 import type {DnsRoutingRule} from '../../api/model';
 import {dnsConditionKinds} from '../../dae/groups';
@@ -9,8 +8,9 @@ import type {PageProps} from '../../shell/routes';
 import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, type DnsRuleListId} from '../../dae/ruleText';
 import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
+import {answeredUpstream, dnsUpstreamChoices} from '../shared/rule';
 import {useRuleEditor} from './useRuleEditor';
-import {parseRuleSeed, sectionSourceHref} from '../shared/link';
+import {parseRuleSeed, ruleSeedParams} from '../shared/link';
 import {href, within} from '../../shell/route';
 import type {DictionaryModel} from './useRuleList';
 
@@ -35,14 +35,20 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     () => dnsDictionaryView(list, listed ?? [], rules.data?.generation_id, config.data?.sources ?? [], t, lang),
     [list, listed, rules.data?.generation_id, config.data, t, lang]
   );
-  // A seed from the DNS log prefills a request rule; the response list leaves it alone.
+  // Contextual links select the request or response editor and prefill its condition.
   const params = new URLSearchParams(query);
-  const seed = list === 'request' ? params.get('add') : null;
+  const seed = (params.get('list') ?? 'request') === list ? params.get('add') : null;
   const edit = params.get('list') === list ? params.get('edit') : null;
   const edited = edit ? listed?.find(rule => rule.rule_id === edit) : undefined;
-  const preset = useMemo(() => parseRuleSeed(seed, dnsConditionKinds.request), [seed]);
+  const preset = parseRuleSeed(seed, dnsConditionKinds[list]);
+  const linkedTarget = params.get('target');
+  const target =
+    linkedTarget &&
+    (table.outbounds.find(item => item.id === linkedTarget)?.id ??
+      answeredUpstream(dnsUpstreamChoices(listed ?? [], config.data?.sources ?? []), linkedTarget));
   const editor = useRuleEditor<DnsRoutingRule>({
     canWrite,
+    listId: list,
     list: rules.data && listed ? {rules: listed, generation_id: rules.data.generation_id} : undefined,
     config: config.data,
     retry,
@@ -53,35 +59,45 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     kinds: dnsConditionKinds[list],
     reasons: {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'},
     onClose: () => {
-      if (seed || edit) go('rules', within(query, {add: null, edit: null, list: null}));
+      if (seed || edit) go('rules', within(query, {...ruleSeedParams, list: null}));
     },
     link: edit
       ? {key: `edit:${edit}`, open: edited ? {kind: 'edit', rule: edited, outbound: dnsRuleTarget(edited), must: false} : null}
-      : {key: seed, open: preset && {kind: 'add', preset}}
+      : {
+          key: seed,
+          open: preset && {
+            kind: 'add',
+            preset,
+            outbound: params.has('target') ? (target ?? '') : undefined,
+            before: params.get('before') ?? undefined
+          }
+        }
   });
-  const held = usePendingRules();
-  const applyHeld = useApplyHeld();
-  // A link to review the held rules focuses the first DNS list that holds any.
-  const reviewHeld = new URLSearchParams(query).has('held') && (list === 'request' || !held.rules.some(rule => rule.list === 'request'));
+  const responseSeed = parseConditions(params.get('response') ?? '', dnsConditionKinds.response)?.[0];
   return {
     ...editor.model,
+    alternate:
+      seed && list === 'request' && responseSeed
+        ? {
+            label: t('rule.list.response'),
+            open: () => {
+              editor.model.close();
+              go(
+                'rules',
+                within(query, {list: 'response', add: `${responseSeed.kind}:${responseSeed.value}`, target: 'accept', before: 'end', response: null})
+              );
+            }
+          }
+        : undefined,
     table,
     copy: {
       label: t(list === 'request' ? 'rule.dns.request' : 'rule.dns.response'),
       empty: t('rule.dns.empty'),
       target: t('rule.dns.action'),
       placeholder: list === 'request' ? 'qname(geosite: cn)' : 'ip(geoip: private)',
-      addHelp: t('rule.dns.addHelp'),
       must: false,
       hits: false
     },
-    held: pendingView(held.rules, list, held.failure, config.data?.sources ?? [], t),
-    discard: (id: number) => {
-      if (!held.applying) pendingRules.remove([id]);
-    },
-    applying: held.applying,
-    applyHeld: () => void applyHeld.apply(),
-    reviewHeld,
     loading: rules.loading && !rules.data,
     error: rules.error ?? config.error,
     retry,
@@ -97,12 +113,7 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
 // configuration the rules were read from.
 export function useDnsRuleLinks() {
   const resources = useCapabilities().data?.resources;
-  const readable = offered(resources, 'dns_rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false});
-  const config = useConfig(readable);
-  const sources = config.data?.sources;
-  const configHref = useMemo(() => (readable && sources ? sectionSourceHref(sources, 'dns') : null), [readable, sources]);
   return {
-    logHref: offered(resources, 'dns_log', {whileLoading: false}) ? href('dns', {tab: 'log'}) : null,
-    configHref
+    logHref: offered(resources, 'dns_log', {whileLoading: false}) ? href('dns', {tab: 'log'}) : null
   };
 }

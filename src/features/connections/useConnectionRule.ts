@@ -43,7 +43,6 @@ export function useConnectionRule(connection: Connection | undefined, go: PagePr
       ),
     openAdd: () => {
       if (seed) quick.open(seed);
-    },
-    dialog: quick.dialog
+    }
   };
 }

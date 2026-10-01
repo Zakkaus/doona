@@ -20,7 +20,6 @@ import Download from '../../ui/icons/Download';
 import {SearchSelect} from '../../ui/SearchSelect';
 import {Traffic} from './Traffic';
 import {ConnectionTable} from './ConnectionTable';
-import {RuleDialog} from '../shared/RuleDialog';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
@@ -160,7 +159,6 @@ export function Connections(props: PageProps) {
         </DetailPanel>
       </div>
       {vm.notInSnapshot && <span className="rp-label">{t('conn.notInSnapshot')}</span>}
-      <RuleDialog dialog={vm.ruleAction.dialog} />
     </>
   );
   const content = {

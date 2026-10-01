@@ -189,7 +189,7 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
   changed();
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('changed-generation');
   const before = reads;
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect.poll(() => reads).toBeGreaterThan(before);
   expect(writes).toBe(0);
@@ -716,7 +716,7 @@ test('node creation freezes its submitted draft until the response arrives', asy
   ).toBeVisible();
 });
 
-test('redacted rule labels edit accepted source and freeze the draft through validation', async ({page}) => {
+test('redacted rule labels hold accepted source and freeze the pending list through validation', async ({page}) => {
   const api = await backend(page);
   await page.route('**/api/v1/rules', async route => {
     const rules = await api.rules();
@@ -744,19 +744,19 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
   await dialog.getByRole('textbox', {name: 'Values', exact: true}).fill('accepted.example');
   const validating = page.waitForRequest('**/config/validate');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  const apply = page.getByRole('button', {name: 'Apply held rules', exact: true});
+  await apply.click();
   await validating;
   try {
-    await expect(dialog.getByRole('textbox', {name: 'Values', exact: true})).toBeDisabled();
-    await expect(dialog.getByRole('radio', {name: 'Expression', exact: true})).toBeDisabled();
-    await expect(dialog.getByRole('button', {name: /Match by$/})).toBeDisabled();
-    await expect(dialog.getByRole('button', {name: /Outbound$/})).toBeDisabled();
-    await expect(dialog.getByRole('button', {name: /Insert$/})).toBeDisabled();
-    await expect(dialog.getByRole('switch', {name: 'Lock this outbound must'})).toBeDisabled();
+    await expect(dialog).toHaveCount(0);
+    await expect(apply).toHaveAttribute('data-pending');
+    await expect(page.getByRole('button', {name: 'Add rule', exact: true})).toBeDisabled();
+    await expect(page.getByRole('region', {name: 'Pending: 1'}).getByRole('button', {name: 'Discard'})).toBeDisabled();
   } finally {
     release();
   }
-  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'in effect'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
   const rows = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][data-key]');
   await expect(rows).toHaveCount(22);

@@ -59,17 +59,6 @@ export function templateWrites(
   return {plain: written(false), withDns: holdsDns(sources.map(item => item.content ?? '')) ? null : written(true)};
 }
 
-export type RuleViewMode = 'simple' | 'advanced';
-// The params that point at one rule: a rule to select, a rule to edit, a condition to add, or held rules to review.
-const ruleTargets = ['rule', 'edit', 'add', 'held'];
-// The routing list's view: the one `view` names, else the rule table for a link to a rule and the simple view otherwise.
-export function ruleViewMode(query: string): RuleViewMode {
-  const params = new URLSearchParams(query);
-  const asked = params.get('view');
-  if (asked === 'simple' || asked === 'advanced') return asked;
-  return ruleTargets.some(key => params.has(key)) ? 'advanced' : 'simple';
-}
-
 // The files a person writes whose top level holds a routing block; generated and subscription files hold none.
 export function routingSources(sources: ConfigSource[]): ConfigSource[] {
   return sources.filter(

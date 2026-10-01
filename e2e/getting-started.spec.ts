@@ -68,15 +68,15 @@ for (const failed of [false, true]) {
   });
 }
 
-test('the routing action opens the simple view and applying a template completes the second step', async ({page}) => {
+test('the routing action opens the template dialog and applying completes the second step', async ({page}) => {
   await freshBackend(page);
   await page.goto('/#/activity');
   await card(page).getByRole('link', {name: 'Choose rules', exact: true}).click();
-  await expect(page).toHaveURL(/#\/rules\?view=simple$/);
+  await expect(page).toHaveURL(/#\/rules\?template=1$/);
   const modes = page.getByRole('radiogroup', {name: 'Routing mode'});
   await expect(modes).toBeVisible();
   await modes.getByText('Bypass mainland China', {exact: true}).click();
-  await page.getByRole('region', {name: 'Routing mode'}).getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('dialog', {name: 'Apply template', exact: true}).getByRole('button', {name: 'Preview changes', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Apply Bypass mainland China?'});
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);

@@ -30,7 +30,6 @@ import {
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
-import {RuleDialog} from '../shared/RuleDialog';
 import type {useQuickRule} from '../shared/useQuickRule';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
@@ -121,7 +120,6 @@ export function Dns(props: PageProps) {
   return (
     <div className="rp-page">
       <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
-      <RuleDialog dialog={vm.rule.dialog} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ import {
   type TableColumn
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
-import {RuleDialog} from '../shared/RuleDialog';
+import {PendingRules} from './PendingRules';
 import {DnsRules} from './DnsRules';
 import type {PageProps} from '../../shell/routes';
 import {useRulesPage} from './useRulesPage';
@@ -40,6 +40,7 @@ export function Rules(props: PageProps) {
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
+      <PendingRules review={new URLSearchParams(props.query).has('held')} />
       <Tabs label={t('nav.rules')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
     </div>
   );
@@ -187,7 +188,6 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           ))}
         </section>
       )}
-      <RuleDialog dialog={trace.ruleDialog} />
     </>
   );
 }

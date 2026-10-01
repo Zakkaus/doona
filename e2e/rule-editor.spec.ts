@@ -116,15 +116,19 @@ test('a rule is added before the fallback and removed again through validate, sa
     'youtube',
     'netflix'
   ]);
+  for (const name of ['auto', 'hk', 'jp', 'us', 'gaming', 'office', 'backup']) {
+    await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill(name);
+    await expect(outbounds.getByRole('option', {name, exact: true})).toBeVisible();
+  }
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gam');
   await expect(outbounds.getByRole('option')).toHaveText(['gaming']);
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'in effect'})).toBeVisible();
   await expect(list).toHaveCount(22);
   await expect(list.nth(20)).toContainText('domain(geosite:netflix)');
   await expect(list.nth(20)).toContainText('gaming');
-  await expect(list.nth(21)).toContainText('fallback: proxy');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('generation 41');
   await list.nth(20).getByRole('button', {name: 'Remove rule', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
@@ -162,7 +166,7 @@ test('a consumed rule seed keeps edits across generation misalignment and accept
   await updated;
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(values).toHaveValue('edited.example');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect(values).toHaveValue('edited.example');
   await page.evaluate(() => {
@@ -172,7 +176,7 @@ test('a consumed rule seed keeps edits across generation misalignment and accept
   await expect(values).toHaveValue('2001:db8::1');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   // Closing keeps the rule table the link opened.
-  await expect(page).toHaveURL(/#\/rules\?tab=list&view=advanced$/);
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
   await page.evaluate(() => {
     location.hash = '/rules?tab=list&add=dip:2001:db8::1';
   });
@@ -186,7 +190,8 @@ test('the routing picker writes a domain keyword condition', async ({page}) => {
   await expect(dialog.getByRole('button', {name: /Match by$/})).toContainText('Domain keyword');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'block', exact: true}).click();
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
   await expect(rows(page).filter({hasText: 'domain(keyword: tracker)'})).toContainText('domain(keyword: tracker)');
 });
 
@@ -233,7 +238,7 @@ test('existing routing conditions reconstruct, change kind and values, negate, a
   expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(
     before.replace(original, '!pname(curl, wget) && dport(53) && domain(keyword: tracker) -> direct(must)')
   );
-  await expect(page).toHaveURL(/#\/rules\?tab=list&view=advanced$/);
+  await expect(page).toHaveURL(/#\/rules\?tab=list$/);
 });
 
 test('adding a compound rule uses the same condition rows and previews the serialized AND', async ({page}) => {
@@ -248,7 +253,8 @@ test('adding a compound rule uses the same condition rows and previews the seria
   await page.getByRole('option', {name: 'Destination port', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Values'}).last().fill('443');
   await expect(dialog.locator('.rp-code')).toHaveText('!domain(suffix: example.com) && dport(443)');
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
   await expect(dialog).toBeHidden();
   await expect(rows(page).filter({hasText: '!domain(suffix: example.com) && dport(443)'})).toHaveCount(1);
 });

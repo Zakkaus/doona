@@ -47,8 +47,7 @@ export function useFlowRecords({go, query}: PageProps) {
       canAdd: !!detailView && quick.canAdd(detailView.seed),
       open: () => {
         if (detailView) quick.open(detailView.seed);
-      },
-      dialog: quick.dialog
+      }
     },
     network,
     setNetwork: (value: string) => go('flows', within(query, {network: value === 'all' ? null : value})),

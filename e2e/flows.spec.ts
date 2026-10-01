@@ -77,7 +77,7 @@ test('old rules and flows addresses open the flows page on the matching tab', as
   await expect(tab('Records')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('a flow opens the add-rule dialog for its target on the flows page', async ({page}) => {
+test('a flow opens the shared rules editor with its target', async ({page}) => {
   await page.goto('/#/flows?tab=records&id=flow-1');
   const panel = page.locator('.rp-panel');
   await panel.getByRole('button', {name: 'Add a rule for this target', exact: true}).click();
@@ -85,7 +85,8 @@ test('a flow opens the add-rule dialog for its target on the flows page', async 
   await expect(dialog.locator('.rp-code')).toContainText('domain(full: api.telegram.org)');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
+  await expect(page).toHaveURL(/#\/rules/);
+  await page.goto('/#/flows?tab=records&id=flow-1');
   // Another record opens the dialog with its own target.
   await page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').filter({hasText: 'cdn.bilibili.com'}).first().click();
   await panel.getByRole('button', {name: 'Add a rule for this target', exact: true}).click();

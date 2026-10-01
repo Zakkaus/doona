@@ -2,7 +2,7 @@ import type {ConfigSource, DnsLogRecord, DnsRoutingRule, RoutingRule} from '../.
 import {ruleCondition, type RuleConditionKind} from '../../dae/groups';
 import type {Key, Translator} from '../../i18n';
 import type {PendingRule} from '../../store';
-import {dnsListEnd, dnsRuleAnchor, dnsUpstreams, ruleAnchor, type DnsRuleListId, type RuleAnchor} from '../../dae/ruleText';
+import {dnsUpstreams, ruleAnchor, type DnsRuleListId, type RuleAnchor} from '../../dae/ruleText';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames, isBuiltinOutbound} from '../../dae/vocab';
 import type {SearchSection} from '../../ui/SearchSelect';
@@ -44,7 +44,6 @@ export const ruleKindLabels: Record<RuleConditionKind, Key> = {
 };
 // The list a quick rule goes into: the routing rules, or one of the two DNS lists.
 export type RuleList = PendingRule['list'];
-export const ruleListLabels: Record<RuleList, Key> = {routing: 'rule.list.routing', request: 'rule.list.request', response: 'rule.list.response'};
 
 // The addresses of the A and AAAA records among an answer, as a response rule's `ip` can match them; other records,
 // such as a CNAME, carry names.
@@ -92,94 +91,11 @@ export function ruleLists(seed: QuickRuleSeed, dns: boolean): RuleList[] {
   if (ruleTargets(seed).length) lists.push('routing');
   return lists;
 }
-// A DNS condition narrowed to one record type, when one is chosen.
-export const typedCondition = (condition: string, type: string | null) => {
-  const qtype = type && ruleCondition('qtype', type);
-  return qtype ? `${condition} && ${qtype}` : condition;
-};
-
-// A listed rule's condition without the target the backend may display after it, a bare or quoted outbound with or
-// without `(must)`, and without spaces, so the same condition compares equal however it was spelt. Not a semantic
-// comparison: `dip(1.1.1.1)` and `dip(1.1.1.1/32)` differ.
-export function conditionKey(expression: string): string {
-  return expression
-    .replace(/\s*->\s*("[^"]*"|'[^']*'|[^\s()'"]+)(\(must\))?\s*$/, '')
-    .replace(/\s+/g, '')
-    .replace(/"/g, "'");
-}
-
-// Where a new rule can go, the default first: before the rule the traffic matched, when the origin vouched for the match
-// and the rule still reads as it did, so the new rule takes over that traffic; otherwise before the fallback, where
-// earlier rules may still match first. The earliest place doona can write is offered too. Only a rule doona can locate
-// in a writable source is offered.
-export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: QuickRuleSeed['matched'], t: Translator) {
-  const anchored = (rule: RoutingRule) => ruleWritable(rule, sources);
-  const hit =
-    matched &&
-    rules.find(
-      rule =>
-        rule.rule_id === matched.id && anchored(rule) && (matched.expression === null || conditionKey(matched.expression) === conditionKey(rule.expression))
-    );
-  const end = rules.find(rule => rule.kind === 'fallback' && anchored(rule));
-  const top = rules.find(anchored);
-  const topLabel = (rule: RoutingRule) => (rule === rules[0] ? t('conn.ruleTop') : t('rule.positionBefore', {n: rule.index + 1}));
-  const offered = [
-    ...(hit ? [{rule: hit, label: t('conn.ruleBeforeMatched')}] : []),
-    ...(end ? [{rule: end, label: t('rule.positionEnd')}] : []),
-    ...(top ? [{rule: top, label: topLabel(top)}] : [])
-  ];
-  return offered
-    .filter((item, i) => offered.findIndex(other => other.rule === item.rule) === i)
-    .map(({rule, label}) => ({id: rule.rule_id, label, desc: rule.expression, matched: rule === hit, first: rule === rules[0]}));
-}
-
-// The rule a write added, once the reloaded list shows it: the nearest rule with its condition and outbound before the
-// rule it was placed in front of, in the same source, since another write may have landed between them; else the first
-// with them. Null until the list shows one.
-export function acceptedRule(rules: RoutingRule[], condition: string, outbound: string, before: RoutingRule): string | null {
-  const key = conditionKey(condition);
-  const same = (rule: RoutingRule) => rule.kind === 'rule' && rule.outbound === outbound && conditionKey(rule.expression) === key;
-  const inSource = (rule: RoutingRule) => rule.source?.source_id === before.source?.source_id;
-  const anchor = rules.findIndex(rule => rule.kind === before.kind && inSource(rule) && conditionKey(rule.expression) === conditionKey(before.expression));
-  const placed =
-    anchor < 0
-      ? undefined
-      : rules
-          .slice(0, anchor)
-          .reverse()
-          .find(rule => same(rule) && inSource(rule));
-  return (placed ?? rules.find(same))?.rule_id ?? null;
-}
-
-// A listed rule as the duplicate notice compares it: its condition, and what it writes after its arrow.
-export type ListedTarget = {kind: 'rule' | 'fallback'; index: number; expression: string; target: string};
-// Where the list already holds a rule with this condition and target, or a rule held for it does, as the dialog says
-// it; null when neither does. The accepted rule is named first, since it already applies. DNS upstream names compare
-// without regard to case, as honk resolves them.
-export function duplicateOf(list: RuleList, listed: ListedTarget[], held: PendingRule[], condition: string, target: string, t: Translator): string | null {
-  const key = conditionKey(condition);
-  const fold = (value: string) => (list === 'routing' ? value : value.toLowerCase());
-  const found = listed.find(rule => rule.kind === 'rule' && fold(rule.target) === fold(target) && conditionKey(rule.expression) === key);
-  const dns = list !== 'routing';
-  if (found) return t(dns ? 'rule.dns.duplicateListed' : 'rule.duplicateListed', {n: found.index + 1});
-  return held.some(rule => rule.list === list && fold(rule.outbound) === fold(target) && conditionKey(rule.condition) === key)
-    ? t(dns ? 'rule.dns.duplicateHeld' : 'rule.duplicateHeld')
-    : null;
-}
 
 // Whether doona can locate the rule in a writable source, which placing a rule beside it or editing it needs.
 export function ruleWritable(rule: RoutingRule | undefined, sources: ConfigSource[]): boolean {
   const source = rule && sources.find(source => source.id === rule.source?.source_id);
   return !!source?.writable && ruleAnchor(source, rule!) !== null;
-}
-
-// The position a dialog pinned while it is still offered: the same id in the same generation, or the same id and
-// description after a reload. Otherwise the first position, reported as moved so the dialog says so before writing there.
-export type PositionPin = {generation: string; id: string; desc?: string};
-export function pinnedPosition(positions: Array<{id: string; desc?: string}>, pin: PositionPin | null, generation?: string) {
-  if (!pin) return {before: positions[0]?.id, moved: false};
-  const kept = positions.find(position => position.id === pin.id && (generation === pin.generation || position.desc === pin.desc));
-  return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
 
 // The end of a DNS list that writes no fallback, as a position: last in the list, or first in a new block when the list
@@ -188,34 +104,6 @@ export function dnsEndPosition(anchor: RuleAnchor | undefined, list: DnsRuleList
   return anchor?.open
     ? {label: t('rule.dns.positionNew', {name: list}), desc: t('rule.dns.positionNewHelp', {name: list})}
     : {label: t('rule.positionLast'), desc: undefined};
-}
-// Where a new rule can go in a DNS list, the default first: last, before the fallback when the list writes one, or at
-// the list's end, in a new block when it has none; then the earliest place doona can write. `end` names the list's end.
-export function dnsRulePositions(list: DnsRuleListId, rules: DnsRoutingRule[], sources: ConfigSource[], t: Translator) {
-  const anchored = (rule: DnsRoutingRule) => {
-    const source = sources.find(source => source.id === rule.source?.source_id);
-    return !!source?.writable && dnsRuleAnchor(source, rule, list) !== null;
-  };
-  const fallback = rules.find(rule => rule.kind === 'fallback');
-  const open = fallback?.source ? null : dnsListEnd(sources, list);
-  const top = rules.find(anchored);
-  const offered = [
-    ...(fallback?.source && anchored(fallback)
-      ? [{id: fallback.rule_id, label: t('rule.positionEnd'), desc: fallback.expression, first: fallback === rules[0]}]
-      : []),
-    ...(open ? [{id: 'end', ...dnsEndPosition(open.anchor, list, t), first: false}] : []),
-    ...(top
-      ? [
-          {
-            id: top.rule_id,
-            label: top === rules[0] ? t('conn.ruleTop') : t('rule.positionBefore', {n: top.index + 1}),
-            desc: top.expression,
-            first: top === rules[0]
-          }
-        ]
-      : [])
-  ];
-  return offered.filter((item, i) => offered.findIndex(other => other.id === item.id) === i).map(item => ({...item, matched: false}));
 }
 
 // The upstreams a new DNS rule can name: those the configuration defines, with their addresses, and any the list
@@ -254,49 +142,7 @@ export function answeredUpstream(upstreams: Array<{name: string; address: string
   );
   return found.length === 1 ? found[0].name : null;
 }
-// What the add-rule dialog says beside its choices. `current` is what happens to the item now: the outbound the traffic
-// took, or the upstream that answered a DNS request when the configuration names exactly that one; a cache hit or a
-// response names none. A routing rule to the current outbound changes nothing, so the dialog says so; for DNS the
-// upstream is only context, since the rule may still change which queries reach it. `beforeMatched` holds when the rule
-// goes before the rule the traffic matched, which only a verified, writable match offers.
-export function quickRuleContext({
-  list,
-  seed,
-  upstreams,
-  outbound,
-  position
-}: {
-  list: RuleList;
-  seed: QuickRuleSeed;
-  upstreams: Array<{name: string; address: string | null}>;
-  outbound: string;
-  position: {matched: boolean} | undefined;
-}): {current: string | null; unchanged: boolean; beforeMatched: boolean} {
-  const routing = list === 'routing';
-  const current = routing ? seed.outbound || null : list === 'request' ? answeredUpstream(upstreams, seed.dns?.upstream) : null;
-  return {current, unchanged: routing && !!current && outbound === current, beforeMatched: routing && !!position?.matched};
-}
 const endpoint = (address: string) => (/^[a-z][\w+.-]*:\/\/(?:\[[^\]]*\]|[^/:?#]*)/i.exec(address)?.[0] ?? address).toLowerCase();
-
-// Why the add-rule dialog cannot write: the configuration cannot be written at all, the rules, sources or groups it
-// needs are still being read, or no outbound (for a DNS rule, no action) is chosen. Null while it can write, while a
-// write is in flight, or when a failed read or a missing position is already shown in the dialog.
-export function ruleDialogReason(
-  {
-    readOnly,
-    waiting,
-    outbound,
-    busy,
-    failed,
-    unplaceable,
-    dns = false
-  }: {readOnly: boolean; waiting: boolean; outbound: boolean; busy: boolean; failed: boolean; unplaceable: boolean; dns?: boolean},
-  t: Translator
-): string | null {
-  if (readOnly) return t('rule.copyOnly');
-  if (busy || failed || unplaceable) return null;
-  return waiting ? t('ui.loading') : outbound ? null : t(dns ? 'rule.dns.actionMissing' : 'rule.outboundMissing');
-}
 // What a successful rule write toasts. It is shown once the reload has settled, so the change is in effect, but a
 // connection already open keeps the route it was given until it reconnects.
 export function ruleWritten(key: 'rule.added' | 'rule.edited' | 'rule.removed' | 'rule.applied', t: Translator, n?: number) {

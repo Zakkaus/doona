@@ -61,8 +61,9 @@ test('a DNS request rule is added through the source splice and removed again', 
   await expect(dialog).toContainText('qtype(AAAA)');
   await dialog.getByRole('button', {name: /Action$/}).click();
   await page.getByRole('option', {name: /^reject/}).click();
-  await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+  await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'in effect'})).toBeVisible();
   await expect(request).toHaveCount(6);
   await expect(request.nth(4)).toContainText('qtype(AAAA)');
   await expect(request.nth(4)).toContainText('reject');
@@ -117,8 +118,9 @@ for (const [name, strip, written] of [
     await dialog.getByRole('textbox', {name: 'Values'}).fill('AAAA');
     await dialog.getByRole('button', {name: /Action$/}).click();
     await page.getByRole('option', {name: /^reject/}).click();
-    await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-    await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+    await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
+    await page.getByRole('button', {name: 'Apply held rules', exact: true}).click();
+    await expect(page.locator('.rp-toast.positive', {hasText: 'in effect'})).toBeVisible();
     await expect(response).toHaveCount(before + 1);
     await expect(response.nth(before - 1)).toContainText('qtype(AAAA)');
     await expect(response.last()).toContainText('fallback: accept');

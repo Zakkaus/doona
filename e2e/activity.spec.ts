@@ -917,7 +917,7 @@ test('the notices card says what is missing to route through a proxy until it is
   const routing = card.getByRole('listitem').filter({hasText: 'No routing rules configured'});
   await expect(subscriptions.getByRole('link', {name: 'Add subscription', exact: true})).toHaveAttribute('href', '#/nodes');
   await routing.getByRole('link', {name: 'Choose a routing mode', exact: true}).click();
-  await expect(page).toHaveURL(/#\/rules\?tab=list&view=simple$/);
+  await expect(page).toHaveURL(/#\/rules\?tab=list&template=1$/);
   await expect(page.getByRole('radiogroup', {name: 'Routing mode'})).toBeVisible();
   // Once the backend has both, the notices are gone.
   delete backend.handlers['GET config'];

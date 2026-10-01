@@ -36,7 +36,7 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
     await expect(dialog.getByText(t('rule.editHelp'), {exact: true})).toHaveCount(0);
   });
 
-  test(`routing and DNS add help follows the condition mode in ${lang}`, async ({page}) => {
+  test(`routing and DNS additions explain holding before applying in both condition modes in ${lang}`, async ({page}) => {
     await page.goto('/#/rules?tab=list&view=advanced');
     await setAppearance(page, lang, 'light');
     await page.reload();
@@ -50,15 +50,13 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
       for (const button of await add.all()) {
         await button.click();
         const dialog = page.getByRole('dialog');
-        const visualHelp = t(count === 1 ? 'rule.addHelp' : 'rule.dns.addHelp');
-        await expect(dialog.getByText(visualHelp, {exact: true})).toBeVisible();
+        const holdHelp = t('rule.holdHelp');
+        await expect(dialog.getByText(holdHelp, {exact: true})).toBeVisible();
         await dialog.getByRole('radio', {name: t('rule.expression'), exact: true}).click();
-        await expect(dialog.getByText(t('rule.addExpressionHelp'), {exact: true})).toBeVisible();
-        await expect(dialog.getByText(visualHelp, {exact: true})).toHaveCount(0);
+        await expect(dialog.getByText(holdHelp, {exact: true})).toBeVisible();
         await expect(dialog.locator('.rp-dialog-section')).toHaveCount(0);
         await dialog.getByRole('radio', {name: t('rule.pick'), exact: true}).click();
-        await expect(dialog.getByText(visualHelp, {exact: true})).toBeVisible();
-        await expect(dialog.getByText(t('rule.addExpressionHelp'), {exact: true})).toHaveCount(0);
+        await expect(dialog.getByText(holdHelp, {exact: true})).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(dialog).toBeHidden();
       }

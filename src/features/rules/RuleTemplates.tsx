@@ -1,57 +1,75 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup, Switch} from '../../ui/ui';
+import {Button, Link, ModalDialog, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, Radio, RadioGroup, Switch} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
 
-// The simple view of the routing list: the routing modes as one choice, the detected one selected, and Apply to write
-// another.
+// Template choices lead to the existing impact and source diff confirmation.
 export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
   const t = useT();
-  const headingId = useId();
   const optionHelpId = useId();
   const {current, dialog} = model;
   const radios = (choices: TemplateChoice[]) =>
     choices.map(choice => <Radio key={choice.id} value={choice.id} label={choice.name} description={choice.help} />);
   return (
-    <div className="rp-col">
-      <Card title={t('rule.template.mode')} titleId={headingId} reason={model.refusal}>
-        {!current && <InlineAlert tone="informative">{t('rule.template.customNote', {file: model.file ?? ''})}</InlineAlert>}
-        <RadioGroup
-          aria-labelledby={headingId}
-          description={t('rule.template.common')}
-          value={model.selected}
-          onChange={id => model.select(id as RuleTemplate)}
+    <>
+      {model.available && model.shown && !dialog && (
+        <ModalDialog
+          title={t('rule.template.open')}
+          scrollBody
+          isOpen={model.shown && !dialog}
+          onOpenChange={open => {
+            if (!open) model.hide();
+          }}
+          reason={model.refusal}
+          footer={() => (
+            <>
+              <Button onPress={model.hide}>{t('ui.cancel')}</Button>
+              <Button accent isDisabled={!model.canApply} onPress={model.open}>
+                {t('rule.template.preview')}
+              </Button>
+            </>
+          )}
         >
-          {radios(model.primary)}
-          <Disclosure flush title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
-            {radios(model.more)}
-          </Disclosure>
-        </RadioGroup>
-        <div className="rp-col">
-          {templateOptionKeys.map(option => (
-            <div className="rp-field" key={option}>
-              <Switch
-                isSelected={model[option]}
-                onChange={enabled => model.setOption(option, enabled)}
-                isDisabled={model.applying}
-                aria-describedby={`${optionHelpId}-${option}`}
-              >
-                {t(templateOptionText[option].label)}
-              </Switch>
-              <span id={`${optionHelpId}-${option}`} className="rp-label">
-                {t(templateOptionText[option].help)}
-              </span>
+          <div className="rp-col">
+            {model.sourcesHref && (
+              <Link appearance="button" href={model.sourcesHref}>
+                {t('rule.template.sources')}
+              </Link>
+            )}
+            {!current && <InlineAlert tone="informative">{t('rule.template.customNote', {file: model.file ?? ''})}</InlineAlert>}
+            <RadioGroup
+              label={t('rule.template.mode')}
+              description={t('rule.template.common')}
+              value={model.selected}
+              onChange={id => model.select(id as RuleTemplate)}
+            >
+              {radios(model.primary)}
+              <Disclosure flush title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
+                {radios(model.more)}
+              </Disclosure>
+            </RadioGroup>
+            <div className="rp-col">
+              {templateOptionKeys.map(option => (
+                <div className="rp-field" key={option}>
+                  <Switch
+                    isSelected={model[option]}
+                    onChange={enabled => model.setOption(option, enabled)}
+                    isDisabled={model.applying}
+                    aria-describedby={`${optionHelpId}-${option}`}
+                  >
+                    {t(templateOptionText[option].label)}
+                  </Switch>
+                  <span id={`${optionHelpId}-${option}`} className="rp-label">
+                    {t(templateOptionText[option].help)}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="rp-toolbar">
-          <Button accent isDisabled={!model.canApply} onPress={model.open}>
-            {t('rule.template.apply')}
-          </Button>
-        </div>
-      </Card>
+          </div>
+        </ModalDialog>
+      )}
       <ConfirmDialog
         title={dialog ? t('rule.template.confirmTitle', {name: dialog.choice.name}) : ''}
         isOpen={!!dialog}
@@ -106,7 +124,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
           </>
         )}
       </ConfirmDialog>
-    </div>
+    </>
   );
 }
 

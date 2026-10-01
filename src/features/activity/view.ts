@@ -73,9 +73,7 @@ export function setupNotices({noNodeSources, noRouting}: {noNodeSources: boolean
   });
   return [
     ...(noNodeSources ? [notice('setup:nodes', 'act.noSubscriptions', {label: t('nodes.addProvider'), href: href('nodes')})] : []),
-    ...(noRouting
-      ? [notice('setup:routing', 'act.noRoutingMode', {label: t('act.chooseRoutingMode'), href: href('rules', {tab: 'list', view: 'simple'})})]
-      : [])
+    ...(noRouting ? [notice('setup:routing', 'act.noRoutingMode', {label: t('act.chooseRoutingMode'), href: href('rules', {tab: 'list', template: '1'})})] : [])
   ];
 }
 export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
