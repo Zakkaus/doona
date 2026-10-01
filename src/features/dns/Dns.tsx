@@ -136,13 +136,10 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
       {
         id: 'q',
         label: t('ui.domain'),
-        minWidth: 192,
+        text: 'wrap',
+        minWidth: 320,
         isRowHeader: true,
-        render: entry => (
-          <TextTooltip className="rp-code" text={entry.id}>
-            {entry.domain}
-          </TextTooltip>
-        )
+        render: entry => <span className="rp-code">{entry.domain}</span>
       },
       // Wide enough for a six-letter type, DNSKEY (about 52px), with the cell's padding.
       {id: 't', label: t('ui.type'), minWidth: 88, grow: 0, drop: 3, render: entry => entry.type},
