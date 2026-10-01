@@ -31,6 +31,8 @@ test.describe('390px', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
     for (const name of [/^Time /, /^Level /, /^Module /]) await expect(grid.getByRole('columnheader', {name})).toBeVisible();
     expect((await scroll()).left).toBe(0);
+    // A one-row flow table can sit behind the phone dock; centre it before sending a wheel gesture.
+    await grid.evaluate(el => el.scrollIntoView({block: 'center'}));
     const box = (await grid.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.wheel(2000, 0);

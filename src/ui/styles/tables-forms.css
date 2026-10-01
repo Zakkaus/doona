@@ -355,3 +355,35 @@
 .rp-diff-line[data-kind='del'] .rp-diff-mark {
   color: var(--rp-negative-text);
 }
+
+.rp-table[data-flow] {
+  overflow: visible;
+}
+.rp-table[data-flow] > div[role='grid'] {
+  scrollbar-gutter: auto;
+  border-radius: inherit;
+  overflow: auto hidden;
+  overflow-anchor: none;
+  scroll-padding-top: calc(var(--rp-topbar) + 37px);
+}
+.rp-table[data-flow] > div[role='grid'] > div > div:has(> [role='rowgroup']:first-child [role='columnheader']) {
+  top: var(--rp-flow-heading, 0px) !important;
+}
+
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  .rp-table[data-flow] > div[role='grid'] {
+    scroll-padding-top: 37px;
+  }
+}
+
+.rp-table-detail[data-flow]:not(:empty) {
+  position: sticky;
+  bottom: calc(var(--rp-dock) + 16px);
+  z-index: 1;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 16px;
+  background: var(--rp-surface);
+  border: 1px solid var(--rp-hl-med);
+  border-radius: var(--rp-r-md);
+}

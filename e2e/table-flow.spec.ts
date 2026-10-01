@@ -1,0 +1,120 @@
+import {expect, mockBackend, test} from './fixtures';
+import type {Page} from '@playwright/test';
+
+async function feed(page: Page, kind: 'events' | 'logs', count: number) {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = kind === 'events';
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  const frame = (id: number) =>
+    kind === 'logs'
+      ? {id: `log:${id}`, event: 'log', data: {ts: runtime.observed_at, level: 'info', target: 'honk::dns', message: `Record ${id}`, fields: null}}
+      : {id: `event:${id}`, event: 'stream.ready', data: {...data, instance_id: `Record ${id}`}};
+  await page.addInitScript(
+    ({kind, records}) => {
+      const fetch = window.fetch;
+      const encode = (record: unknown) => {
+        const r = record as {id: string; event: string; data: unknown};
+        return new TextEncoder().encode(`id: ${r.id}\nevent: ${r.event}\ndata: ${JSON.stringify(r.data)}\n\n`);
+      };
+      window.fetch = (input, init) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (!new URL(url, location.href).pathname.endsWith(`/api/v1/${kind}`)) return fetch(input, init);
+        const body = new ReadableStream({
+          start(controller) {
+            for (const record of records) controller.enqueue(encode(record));
+            (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord = record => controller.enqueue(encode(record));
+          }
+        });
+        return Promise.resolve(new Response(body, {headers: {'Content-Type': 'text/event-stream'}}));
+      };
+    },
+    {kind, records: [...(kind === 'logs' ? [{id: 'ready:0', event: 'stream.ready', data}] : []), ...Array.from({length: count}, (_, i) => frame(i + 1))]}
+  );
+  await page.goto(`/#/${kind}`);
+  const grid = page.getByRole('grid', {name: kind === 'logs' ? 'Logs' : 'Events', exact: true});
+  await expect(grid).toHaveAttribute('aria-rowcount', String(Math.min(count, kind === 'logs' ? 1000 : 200) + 1));
+  return {grid, frame};
+}
+
+for (const viewport of [
+  {width: 1440, height: 900},
+  {width: 1700, height: 1150},
+  {width: 768, height: 1024},
+  {width: 390, height: 844}
+]) {
+  test.describe(`${viewport.width}px flow`, () => {
+    test.use({viewport});
+    for (const kind of ['events', 'logs'] as const) {
+      test(`${kind} scroll with the page, keep headings and virtualise rows`, async ({page}) => {
+        const {grid, frame} = await feed(page, kind, kind === 'logs' ? 2000 : 200);
+        const mounted = grid.locator('[role=row][data-key]');
+        const geometry = () => grid.evaluate(el => ({height: el.clientHeight, overflow: el.scrollHeight - el.clientHeight, top: el.scrollTop}));
+        await expect.poll(async () => (await geometry()).height).toBeGreaterThan(viewport.height);
+        await expect.poll(async () => (await geometry()).overflow).toBeLessThanOrEqual(1);
+        expect(await mounted.count()).toBeLessThan(150);
+        await page.evaluate(() => window.scrollTo(0, 2400));
+        await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(2000);
+        const heading = grid.getByRole('columnheader').first();
+        await expect.poll(async () => Math.round((await heading.boundingBox())!.y)).toBe(64);
+        expect((await geometry()).top).toBe(0);
+        expect(await mounted.count()).toBeLessThan(150);
+        const visible = await mounted.evaluateAll(rows =>
+          rows
+            .filter(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)
+            .map(row => ({key: row.getAttribute('data-key')!, top: row.getBoundingClientRect().top, index: Number(row.getAttribute('aria-rowindex'))}))
+        );
+        expect(visible.length).toBeGreaterThan(0);
+        const held = visible[0];
+        await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(2001));
+        await expect(grid.locator(`[data-key="${held.key}"]`)).toHaveAttribute('aria-rowindex', String(held.index + 1));
+        await expect.poll(() => grid.locator(`[data-key="${held.key}"]`).evaluate(el => el.getBoundingClientRect().top)).toBe(held.top);
+        // Keyboard navigation crosses the virtual window without selecting on focus.
+        const row = grid.locator(`[data-key="${held.key}"]`);
+        await row.click();
+        await expect(page.locator('.rp-table-detail')).toBeInViewport();
+        await page.getByRole('button', {name: 'Close', exact: true}).click();
+        await expect(page.locator('.rp-table-detail')).toBeEmpty();
+        await row.focus();
+        await page.keyboard.press('PageDown');
+        await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).not.toBe(held.key);
+        const nextIndex = await page.evaluate(() => Number(document.activeElement?.closest('[data-key]')?.getAttribute('aria-rowindex')));
+        expect(nextIndex - held.index - 1).toBeGreaterThan(1);
+        expect(nextIndex - held.index - 1).toBeLessThanOrEqual(Math.ceil(viewport.height / 40));
+        await page.keyboard.press('End');
+        const last = kind === 'logs' ? 'log:1002' : 'event:2';
+        await expect(grid.locator(`[data-key="${last}"]`)).toBeInViewport();
+        await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).toBe(last);
+        await page.keyboard.press('Enter');
+        await expect(page.locator('.rp-table-detail')).toContainText(kind === 'logs' ? 'Record 1002' : 'Record 2');
+        expect(await mounted.count()).toBeLessThan(150);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      });
+    }
+  });
+}
+
+test('navigation releases hover and press when the pointer leaves after a route change', async ({page}) => {
+  await page.setViewportSize({width: 1700, height: 1150});
+  await mockBackend(page);
+  await page.goto('/#/events');
+  const logs = page.locator('.rp-nav[href="#/logs"]');
+  const events = page.locator('.rp-nav[href="#/events"]');
+  await logs.click();
+  await events.click();
+  await page.locator('.rp-nav[href="#/overview"]').hover();
+  await expect(events).toHaveAttribute('aria-current', 'page');
+  for (const attr of ['data-hovered', 'data-pressed', 'data-focus-visible']) await expect(logs).not.toHaveAttribute(attr);
+});
+
+for (const kind of ['events', 'logs'] as const) {
+  test(`${kind} fit a single row without an empty band`, async ({page}) => {
+    const {grid, frame} = await feed(page, kind, 1);
+    await expect(grid.getByRole('rowheader')).toHaveCount(1);
+    expect((await grid.boundingBox())!.height).toBe(77);
+    expect(await grid.evaluate(el => el.scrollHeight - el.clientHeight)).toBe(0);
+    await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(2));
+    await expect(grid.getByRole('rowheader').first()).toHaveText('Record 2');
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+}
