@@ -165,7 +165,7 @@ export function useNodesPage({go, query}: PageProps) {
     if (!id || !providers.data || !config.data) return;
     const item = list.find(item => item.id === id);
     const action = item ? editAction(item, params.get('focus') === 'interval' ? 'interval' : undefined) : null;
-    if (action?.kind !== 'edit') return;
+    if (!action) return;
     const frame = requestAnimationFrame(() => {
       replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
       action.run();
@@ -291,8 +291,15 @@ export function useNodesPage({go, query}: PageProps) {
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         reload();
-        if (at !== null && shown.current === at && (params.has('node') || params.has('nodes') || params.get('q') === dialog.entry.name))
+        if (
+          session.current === submitted &&
+          at !== null &&
+          shown.current === at &&
+          (params.has('node') || params.has('nodes') || params.get('q') === dialog.entry.name)
+        ) {
+          guard.clear();
           go('nodes', within(at, {q: form.name.trim(), node: null, nodes: null}), {replace: true});
+        }
         toast('positive', t('nodes.edited', {name: form.name.trim()}));
       } else if (dialog.kind === 'editProvider') {
         const from = dialog.entry.tag;
@@ -402,16 +409,16 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'editNode' &&
     form.name.trim() !== dialog.entry.name &&
     ((nodes.data ?? []).some(node => node.name === form.name.trim()) || authored.some(item => item.entry.name === form.name.trim()));
+  const nodeNameError =
+    dialog?.kind === 'editNode' ? (nodeNameTaken ? t('nodes.nameTaken') : !isQuotable(form.name.trim()) ? t('config.unquotable') : null) : null;
   const nodeEditError = nodeRenameBlocked
     ? t('nodes.renameElsewhere')
-    : nodeNameTaken
-      ? t('nodes.nameTaken')
-      : dialog?.kind === 'editNode' && (!isQuotable(form.name.trim()) || !isQuotable(form.value.trim()))
-        ? t('config.unquotable')
-        : null;
+    : dialog?.kind === 'editNode' && !isQuotable(form.value.trim())
+      ? t('config.unquotable')
+      : null;
   const formValid =
     dialog?.kind === 'editNode'
-      ? !!form.name.trim() && isNodeLink(form.value) && !nodeEditError && edited
+      ? !!form.name.trim() && isNodeLink(form.value) && !nodeEditError && !nodeNameError && edited
       : dialog?.kind === 'editProvider'
         ? !!editName &&
           editNameError === null &&
@@ -537,6 +544,7 @@ export function useNodesPage({go, query}: PageProps) {
     removing,
     dialogTitle,
     formValid,
+    nodeNameError,
     formReason:
       dialog?.kind === 'editNode'
         ? (nodeEditError ?? nodeFormReason('node', form.name, form.value, t))

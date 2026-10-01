@@ -29,21 +29,22 @@ function nameReferences(text: string, name: string) {
     .filter(block => block.name === 'group')
     .flatMap(block =>
       block.children.flatMap(group =>
-        blockFields(text, group, tokens)
-          .filter(field => field.name === 'filter')
-          .flatMap(field => {
-            const parts = tokens.filter(token => token.from >= field.valueFrom && token.to <= field.valueTo);
-            const refs: Array<{from: number; to: number; group: string}> = [];
-            const raw = (index: number) => (parts[index] ? text.slice(parts[index].from, parts[index].to) : '');
-            for (let i = 0; i < parts.length - 2; i++) {
-              if (!/^(?:&&)?!?name$/.test(raw(i)) || raw(i + 1) !== '(') continue;
-              for (let j = i + 2; j < parts.length && raw(j) !== ')'; j++) {
-                if ((raw(j - 1) === '(' || raw(j - 1) === ',') && (raw(j + 1) === ',' || raw(j + 1) === ')') && unquote(raw(j)) === name)
-                  refs.push({from: parts[j].from, to: parts[j].to, group: group.name});
-              }
+        blockFields(text, group, tokens).flatMap(field => {
+          if (field.name === 'default' || field.name === 'final')
+            return unquote(field.value) === name ? [{from: field.valueTo - field.value.length, to: field.valueTo, group: group.name}] : [];
+          if (field.name !== 'filter') return [];
+          const parts = tokens.filter(token => token.from >= field.valueFrom && token.to <= field.valueTo);
+          const refs: Array<{from: number; to: number; group: string}> = [];
+          const raw = (index: number) => (parts[index] ? text.slice(parts[index].from, parts[index].to) : '');
+          for (let i = 0; i < parts.length - 2; i++) {
+            if (!/^(?:&&)?!?name$/.test(raw(i)) || raw(i + 1) !== '(') continue;
+            for (let j = i + 2; j < parts.length && raw(j) !== ')'; j++) {
+              if ((raw(j - 1) === '(' || raw(j - 1) === ',') && (raw(j + 1) === ',' || raw(j + 1) === ')') && unquote(raw(j)) === name)
+                refs.push({from: parts[j].from, to: parts[j].to, group: group.name});
             }
-            return refs;
-          })
+          }
+          return refs;
+        })
       )
     );
 }

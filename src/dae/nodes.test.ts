@@ -19,3 +19,14 @@ it('refuses stale, ambiguous and structurally unsafe edits', () => {
   expect(() => writeNodeEntry(text, entry, {name: "can't", link: entry.link})).toThrow();
   expect(readNodeEntries("node {\n 'socks5://127.0.0.1:1080'\n wrapper {\n a: 'socks5://127.0.0.1:1080'\n }\n}\n")).toEqual([]);
 });
+
+it.each(['default', 'final'])('renames exact %s references and detects cross-source blockers', field => {
+  const group = `group {\r\n proxy {\r\n  ${field}: 'old' # keep\r\n  policy: fixed(0)\r\n }\r\n}\r\n`;
+  const input = text + group;
+  const [entry] = readNodeEntries(input);
+  expect(groupsNamingNode(group, 'old')).toEqual(['proxy']);
+  expect(groupsNamingNode(group, 'other')).toEqual([]);
+  expect(writeNodeEntry(input, entry, {name: 'new name', link: entry.link})).toBe(
+    writeNodeEntry(text, entry, {name: 'new name', link: entry.link}) + group.replace("'old'", "'new name'")
+  );
+});
