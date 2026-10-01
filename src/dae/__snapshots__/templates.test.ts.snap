@@ -4,7 +4,10 @@ exports[`template output > writes the complete bypass configuration 1`] = `
 "
 
 group {
-  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+  proxy {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
 }
 
 routing {
@@ -29,7 +32,10 @@ exports[`template output > writes the complete gfw configuration 1`] = `
 "
 
 group {
-  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+  proxy {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
 }
 
 routing {
@@ -54,7 +60,10 @@ exports[`template output > writes the complete global configuration 1`] = `
 "
 
 group {
-  proxy { filter: !name('direct', 'block') policy: min_moving_avg }
+  proxy {
+    filter: !name('direct', 'block')
+    policy: min_moving_avg
+  }
 }
 
 routing {
