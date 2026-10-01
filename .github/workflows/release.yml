@@ -111,7 +111,7 @@ jobs:
           node tools/fetch-honk.mjs release
           cd release
           sha256sum honk-core-debug-*.tar.gz honk-source-*.tar.gz HONK-SOURCE.txt >> SHA256SUMS
-      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true
           prerelease: ${{ env.PRERELEASE != '' }}
