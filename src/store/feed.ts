@@ -1,8 +1,12 @@
+const PROMPT_MS = 100;
+
 export function createFeed<T extends {id: string}, S extends object>(
   limit: number,
   status: S,
   replay: 'replace' | 'ignore',
-  key: (record: T) => string = record => record.id
+  // `every` is the record cadence in milliseconds: a busy stream publishes at most one snapshot per interval, while
+  // status, clearing and resuming still publish within the 100 ms default.
+  {key = record => record.id, every = PROMPT_MS}: {key?: (record: T) => string; every?: number} = {}
 ) {
   const records = new Map<string, T>();
   // Records after which the stream lost history; the list shows a marker above each.
@@ -17,6 +21,7 @@ export function createFeed<T extends {id: string}, S extends object>(
   let held = false;
   let pending = 0;
   let timer: number | undefined;
+  let due = 0;
   const publish = () => {
     timer = undefined;
     if (document.hidden || !dirty) return;
@@ -30,10 +35,16 @@ export function createFeed<T extends {id: string}, S extends object>(
     snapshot = {records: list, gaps: stale ? snapshot.gaps : new Set(gaps), pending, ...status};
     listeners.forEach(notify => notify());
   };
-  const schedule = () => {
+  // A pending publication moves earlier for a prompter change, never later.
+  const schedule = (wait = PROMPT_MS) => {
     dirty = true;
     // Nobody is reading: the first subscriber publishes what accumulated.
-    if (!document.hidden && listeners.size && timer === undefined) timer = window.setTimeout(publish, 100);
+    if (document.hidden || !listeners.size) return;
+    const at = Date.now() + wait;
+    if (timer !== undefined && due <= at) return;
+    clearTimeout(timer);
+    due = at;
+    timer = window.setTimeout(publish, wait);
   };
   const visibility = () => {
     if (document.hidden) {
@@ -47,7 +58,7 @@ export function createFeed<T extends {id: string}, S extends object>(
       listeners.add(notify);
       if (listeners.size === 1) {
         document.addEventListener('visibilitychange', visibility);
-        if (dirty) schedule();
+        if (dirty) schedule(every);
       }
       return () => {
         listeners.delete(notify);
@@ -74,7 +85,7 @@ export function createFeed<T extends {id: string}, S extends object>(
         pending++;
         statusDirty = true;
       }
-      schedule();
+      schedule(every);
     },
     update(change: Partial<S>) {
       if (Object.entries(change).every(([key, value]) => status[key as keyof S] === value)) return;
@@ -96,7 +107,7 @@ export function createFeed<T extends {id: string}, S extends object>(
       if (!newest || gaps.has(newest)) return;
       gaps.add(newest);
       recordsDirty = true;
-      schedule();
+      schedule(every);
     },
     hold(on: boolean) {
       held = on;

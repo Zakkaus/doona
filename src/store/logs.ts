@@ -7,8 +7,11 @@ import {useCapabilities} from './runtime';
 import {createFeed} from './feed';
 
 // A resumed stream's `stream.ready` carries the cursor it resumed from, the id of the last event already listed.
-export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', event => `${event.event} ${event.id}`);
+export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', {key: event => `${event.event} ${event.id}`});
 export const LOG_FEED_LIMIT = 1000;
+// Busy logs arrive every few milliseconds; publishing at most four times a second keeps the list live while
+// re-rendering it less than half as often as the 100 ms default.
+const LOG_PUBLISH_MS = 250;
 // Runtime heartbeats arrive every second and would evict every other kind from one bounded ring, so they get a
 // ring of their own; the page merges both by time.
 const silent = () => () => {};
@@ -61,7 +64,9 @@ export function useLogFeed({level, target, paused}: {level?: LogLevel; target?: 
   // A terminal stream error stays until the person asks again; retry reopens the stream and keeps the records.
   const reopen = useRef<() => void>(() => {});
   const stream = useMemo(() => {
-    const feed = createFeed<LogRecord & {id: string}, {connected: boolean; error: Error | null}>(LOG_FEED_LIMIT, {connected: false, error: null}, 'ignore');
+    const feed = createFeed<LogRecord & {id: string}, {connected: boolean; error: Error | null}>(LOG_FEED_LIMIT, {connected: false, error: null}, 'ignore', {
+      every: LOG_PUBLISH_MS
+    });
     return {
       getSnapshot: feed.getSnapshot,
       clear: feed.clear,
