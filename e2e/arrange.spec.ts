@@ -22,7 +22,8 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await expect(card('office')).toContainText('This group has no filter, so it holds every node.');
   await expect(card('backup')).toContainText('Whole subscriptions');
   await expect(card('hkauto')).toContainText("name(keyword: 'hk')");
-  await expect(card('hkauto')).toContainText('cannot be removed here');
+  await expect(card('hkauto').getByRole('button', {name: 'Edit group', exact: true})).toBeEnabled();
+  await expect(card('hkauto')).not.toContainText('cannot be removed here');
   // The rule is explained by what it selects, with the evaluator honk's filters follow.
   await expect(card('hkauto')).toContainText('Currently selects: hk-01, hk-02');
   // The only filter of a group cannot be removed, since the group would then hold every node.

@@ -91,6 +91,7 @@ test('a group declared in an include is edited there while the main source is re
   await card.scrollIntoViewIfNeeded();
   await moreAction(card, 'Edit group');
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Filter', exact: true}).fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
@@ -107,15 +108,18 @@ test('policy editing discards a cancelled draft and saves filters through the ma
   const edit = () => moreAction(card, 'Edit group');
   await edit();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   const filter = dialog.getByRole('textbox', {name: 'Filter', exact: true});
   const original = await filter.inputValue();
   await filter.fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await edit();
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(filter).toHaveValue(original);
   await filter.fill('name(hk-01)');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await edit();
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(filter).toHaveValue('name(hk-01)');
 });

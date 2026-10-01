@@ -29,6 +29,7 @@ export function traySubscriptions(providers: Provider[], nodes: Node[]): TraySub
 export type ArrangeGroup = {
   name: string;
   isNew: boolean;
+  declared: boolean;
   // Holds every node: honk's reading of a group without any filter line.
   holdsAll: boolean;
   names: Array<{name: string; isNew: boolean; blocked: string | null}>;
@@ -77,6 +78,7 @@ export function arrangeView(text: string, changes: GroupChange[], subscriptions:
     return {
       name: entry.name,
       isNew: !was,
+      declared: true,
       holdsAll: entry.filters.length === 0,
       names: now.names.map(name => ({name, isNew: !!was && !was.names.includes(name), blocked: removalWidens(entry, 'name', name) ? blocked : null})),
       subscriptions: now.subtags.map(tag => ({
@@ -88,11 +90,7 @@ export function arrangeView(text: string, changes: GroupChange[], subscriptions:
       })),
       rules: now.rules,
       liveNestedGroups: liveNestedGroups.get(entry.name) ?? [],
-      ruleNote: now.rules.length
-        ? description.everyNode || description.groups.length
-          ? t('arrange.filterNote')
-          : t('arrange.ruleNote', {n: now.rules.length})
-        : null,
+      ruleNote: now.rules.length ? t('arrange.filterNote') : null,
       ruleNodes: selected.slice(0, RULE_SHOWN),
       ruleMore: Math.max(0, selected.length - RULE_SHOWN),
       stillIn: [...removed].filter(admits).map(node => node.name),
@@ -198,4 +196,24 @@ export function stage(changes: GroupChange[], next: GroupChange): GroupChange[] 
 export function unstage(changes: GroupChange[], index: number): GroupChange[] {
   const change = changes[index];
   return changes.filter((other, i) => i !== index && !(change.kind === 'createGroup' && other.group === change.group));
+}
+
+// A live group without a declaration in the main file can be viewed, but cannot accept staged drops there.
+export function undeclaredGroup(name: string): ArrangeGroup {
+  return {
+    name,
+    isNew: false,
+    declared: false,
+    holdsAll: false,
+    names: [],
+    subscriptions: [],
+    rules: [],
+    liveNestedGroups: [],
+    ruleNote: null,
+    ruleNodes: [],
+    ruleMore: 0,
+    stillIn: [],
+    removedNames: [],
+    removedSubscriptions: []
+  };
 }

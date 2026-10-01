@@ -62,6 +62,7 @@ const templateText = {
 const proxy = selectGroup('proxy', templateText.proxy, ['auto']);
 const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: min_moving_avg']};
 const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1], templateText[id][2]));
+export const regionGroups = [...regions, region('cn', ...templateText.cn)];
 const service = (name: string, label: Key, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
 // honk groups cannot contain direct; {group} names the file's first group.
@@ -72,7 +73,7 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
   homebound: {
     rules: [...preset, '# Mainland China', 'domain(geosite:cn) -> cn', 'dip(geoip:cn) -> cn'],
     fallback: 'direct',
-    groups: [region('cn', ...templateText.cn)]
+    groups: [regionGroups.at(-1)!]
   },
   single: {
     rules: [...preset, ...chinaVendors, ...telegram('proxy'), ...media('proxy'), ...gfw('proxy'), ...china],

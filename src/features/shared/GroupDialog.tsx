@@ -2,7 +2,9 @@ import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
-import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
+import {Button, ContextualHelp, Disclosure, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
+import {CheckboxSet} from '../../ui/CheckboxSet';
+import {SearchMultiSelect} from '../../ui/SearchMultiSelect';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
@@ -93,47 +95,79 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
               </InlineAlert>
             )}
             <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
-            <div
-              className="group-dialog-filters"
-              role="group"
-              aria-label={t('ui.filter')}
-              aria-describedby={m.name || m.filters.length > 0 ? filterHelp : undefined}
-            >
-              <div className="group-dialog-filter-list">
-                {m.filters.map(field => (
-                  <TextField
-                    key={field.id}
-                    label={field.label}
-                    value={field.value}
-                    placeholder="name(keyword: 'HK')"
-                    aria-describedby={filterHelp}
-                    isDisabled={m.busy}
-                    spellCheck={false}
-                    onChange={field.change}
-                    action={
-                      <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
-                        <Close />
-                      </Button>
-                    }
-                  />
-                ))}
-              </div>
-              {m.filters.length > 0 && (
-                <span id={filterHelp} className="group-dialog-filter-help">
-                  {t('policy.filterHelp')}
-                  {m.name ? ` ${m.help}` : ''}
-                </span>
-              )}
-              <Button secondary isDisabled={m.busy} onPress={m.add}>
-                <AddCircle />
-                {t('policy.addFilter')}
-              </Button>
-              {m.filters.length === 0 && m.name && (
-                <span id={filterHelp} className="group-dialog-filter-help">
-                  {m.help}
-                </span>
-              )}
+            <CheckboxSet
+              label={t('policy.regions')}
+              items={m.includes.choices.region}
+              value={m.includes.selected.region}
+              onChange={value => m.includes.change('region', value)}
+              isDisabled={m.busy}
+            />
+            {m.includes.choices.subscription.length > 0 && (
+              <CheckboxSet
+                label={t('arrange.subscriptions')}
+                items={m.includes.choices.subscription}
+                value={m.includes.selected.subscription}
+                onChange={value => m.includes.change('subscription', value)}
+                isDisabled={m.busy}
+              />
+            )}
+            <SearchMultiSelect
+              label={t('arrange.nodes')}
+              searchLabel={t('arrange.search')}
+              summary={m.includes.nodeSummary}
+              items={m.includes.choices.node}
+              value={m.includes.selected.node}
+              onChange={value => m.includes.change('node', value)}
+              isDisabled={m.busy}
+            />
+            <div className="group-dialog-results" role="status">
+              <span>{m.includes.count}</span>
+              {m.includes.names && <span className="rp-note">{m.includes.names}</span>}
+              {m.includes.all && <span className="rp-note">{t('arrange.holdsAll')}</span>}
             </div>
+            <Disclosure title={t('policy.advanced')} defaultExpanded={m.includes.advanced}>
+              <div
+                className="group-dialog-filters"
+                role="group"
+                aria-label={t('ui.filter')}
+                aria-describedby={m.name || m.filters.length > 0 ? filterHelp : undefined}
+              >
+                <div className="group-dialog-filter-list">
+                  {m.filters.map(field => (
+                    <TextField
+                      key={field.id}
+                      label={field.label}
+                      value={field.value}
+                      placeholder="name(keyword: 'HK')"
+                      aria-describedby={filterHelp}
+                      isDisabled={m.busy}
+                      spellCheck={false}
+                      onChange={field.change}
+                      action={
+                        <Button quiet icon isDisabled={m.busy} label={field.removeLabel} onPress={field.remove}>
+                          <Close />
+                        </Button>
+                      }
+                    />
+                  ))}
+                </div>
+                {m.filters.length > 0 && (
+                  <span id={filterHelp} className="group-dialog-filter-help">
+                    {t('policy.filterHelp')}
+                    {m.name ? ` ${m.help}` : ''}
+                  </span>
+                )}
+                <Button secondary isDisabled={m.busy} onPress={m.add}>
+                  <AddCircle />
+                  {t('policy.addFilter')}
+                </Button>
+                {m.filters.length === 0 && m.name && (
+                  <span id={filterHelp} className="group-dialog-filter-help">
+                    {m.help}
+                  </span>
+                )}
+              </div>
+            </Disclosure>
             {m.routes.map(field => (
               <SearchSelect
                 key={field.id}

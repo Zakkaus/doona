@@ -266,7 +266,23 @@ export function Policies(props: PageProps) {
     groups,
     arrange: (
       <Suspense fallback={<Loading />}>
-        <Arrange source={m.source} groups={m.groups} outbounds={m.outbounds} viewGroup={m.viewGroup} />
+        <Arrange
+          text={m.arrangeText}
+          source={m.source}
+          groups={m.groups}
+          outbounds={m.outbounds}
+          viewGroup={m.viewGroup}
+          editors={m.allCards.map(card => ({
+            ...card,
+            source: m.source,
+            outbounds: m.outbounds,
+            health: m.health,
+            refreshGroups: m.refreshGroups,
+            refreshNodes: m.refreshNodes,
+            paused: true,
+            focused: false
+          }))}
+        />
       </Suspense>
     )
   };

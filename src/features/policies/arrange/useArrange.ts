@@ -19,7 +19,8 @@ export const PLACEABLE = 'application/x-doona-placeable';
 export function useArrange(
   source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply' | 'error'>,
   viewGroup: (name: string | null) => void,
-  outbounds: OutboundCatalogue
+  outbounds: OutboundCatalogue,
+  displayedText: string
 ) {
   const t = useT();
   const capabilities = useCapabilities();
@@ -30,7 +31,7 @@ export function useArrange(
   const [changes, setChanges] = useState<GroupChange[]>([]);
   // Leaving the page after confirming the draft guard drops what was staged.
   const guard = useDraftGuard(changes.length > 0, () => setChanges([]));
-  const text = source.main?.content ?? '';
+  const text = source.main?.content ?? displayedText;
   const subscriptions = useMemo(() => traySubscriptions(providers.data?.providers ?? [], nodes ?? []), [providers.data, nodes]);
   const view = useMemo(() => arrangeView(text, changes, subscriptions, nodes ?? [], t), [text, changes, subscriptions, nodes, t]);
   const byGroup = useMemo(() => new Map(view.groups.map(group => [group.name, group])), [view.groups]);

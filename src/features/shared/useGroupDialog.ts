@@ -1,5 +1,8 @@
-import {useRef, useState} from 'react';
-import {useT} from '../../i18n';
+import {useMemo, useRef, useState} from 'react';
+import {formatList, useLang, useT} from '../../i18n';
+import {offered} from '../../api/capabilities';
+import {useCapabilities, useNodes, useProviders} from '../../store';
+import {includeChoices, recogniseInclude, selectedIncludes, setIncludes, type IncludeKind} from './groupIncludes';
 import {nameText, readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../../dae/groups';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
@@ -10,6 +13,7 @@ import {LocalError, noticeText} from '../../api/error';
 import {groupEditSafe, groupNameError, manualPolicy} from './policyText';
 import {newGroupPolicies} from '../../dae/vocab';
 import type {SearchSection} from '../../ui/SearchSelect';
+import type {CheckboxChoice} from '../../ui/CheckboxSet';
 import {
   editBlocked,
   finalSections,
@@ -45,6 +49,16 @@ export type GroupDialogView = {
   policy: string | null;
   membershipFilters: string[] | null;
   filters: Array<{id: number; value: string; label: string; removeLabel: string; change: (value: string) => void; remove: () => void}>;
+  includes: {
+    choices: Record<IncludeKind, CheckboxChoice[]>;
+    nodeSummary: string;
+    selected: Record<IncludeKind, string[]>;
+    change: (kind: IncludeKind, value: string[]) => void;
+    count: string;
+    names: string;
+    all: boolean;
+    advanced: boolean;
+  };
   // The default member and final outbound pickers under the filters, each only when the group offers it.
   routes: Array<{
     id: RouteField;
@@ -70,6 +84,8 @@ export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolea
 // What the default member and final outbound pickers offer: the live group, its members as their tiles show them,
 // and every outbound a final can name.
 export type RouteContext = {g: Group | undefined; members: Parameters<typeof memberSections>[0]; outbounds: OutboundCatalogue};
+const noNodes: Node[] = [];
+const noFilters: string[] = [];
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
@@ -99,6 +115,7 @@ type Input =
     };
 export function useGroupDialog(input: Input): GroupDialogView {
   const t = useT();
+  const lang = useLang();
   const {source} = input;
   const creating = input.mode === 'create';
   const name = creating ? '' : input.name;
@@ -111,6 +128,18 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
+  const resources = useCapabilities().data?.resources;
+  const allNodes = useNodes(!!draft && offered(resources, 'nodes', {whileLoading: false}));
+  const providers = useProviders(!!draft && offered(resources, 'providers', {whileLoading: false}));
+  const nodes = draft ? (allNodes.data ?? (creating ? input.nodes : noNodes)) : noNodes;
+  const filters = draft?.filters ?? noFilters;
+  const selected = {
+    region: selectedIncludes(filters, 'region'),
+    subscription: selectedIncludes(filters, 'subscription'),
+    node: selectedIncludes(filters, 'node')
+  };
+  const choices = useMemo(() => includeChoices(filters, nodes, providers.data?.providers ?? [], lang), [filters, nodes, providers.data, lang]);
+  const selectedNodes = choices.matchedNodes.map(node => node.name);
   const routes: RouteField[] = creating
     ? manualPolicy(draft?.policy ?? null)
       ? ['default_member_id', 'final_outbound']
@@ -208,7 +237,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     editing: !!draft,
     editable: !!draft || (source.writable && blocked === null),
     disabled: busy,
-    tip: source.writable ? (blocked ?? undefined) : t('arrange.readOnly'),
+    tip: blocked ?? (source.writable ? undefined : t('arrange.readOnly')),
     busy,
     problem,
     policy: draft?.policy ?? null,
@@ -221,6 +250,29 @@ export function useGroupDialog(input: Input): GroupDialogView {
       change: (value: string) => edit(prev => ({...prev, filters: prev.filters.map((f, i) => (i === id ? value : f))})),
       remove: () => edit(prev => ({...prev, filters: prev.filters.filter((_, i) => i !== id)}))
     })),
+    includes: {
+      choices: {
+        region: choices.region.map(item => ({id: item.id, label: t('arrange.subscriptionCount', {name: item.label, n: item.count})})),
+        subscription: choices.subscription.map(item => ({
+          id: item.id,
+          label: t('arrange.subscriptionCount', {name: item.label, n: item.count}),
+          isDisabled: item.disabled
+        })),
+        node: choices.node.map(item => ({id: item.id, label: item.label, isDisabled: item.disabled}))
+      },
+      nodeSummary: selected.node.length ? t('arrange.selected', {n: selected.node.length}) : t('ui.none'),
+      selected,
+      change: (kind, value) => edit(prev => ({...prev, filters: setIncludes(prev.filters, kind, value)})),
+      count: t('policy.includesCount', {n: selectedNodes.length}),
+      names:
+        selectedNodes.length > 6
+          ? t('arrange.ruleSelectsMore', {names: formatList(lang, selectedNodes.slice(0, 6)), n: selectedNodes.length - 6})
+          : selectedNodes.length
+            ? t('arrange.ruleSelects', {names: formatList(lang, selectedNodes)})
+            : '',
+      all: filters.every(filter => !filter.trim()),
+      advanced: filters.some(filter => !recogniseInclude(filter))
+    },
     routes: draft
       ? routes.map(id => {
           const key = routeKeys[id];

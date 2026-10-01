@@ -118,6 +118,7 @@ export function usePolicies({go, query}: PageProps) {
     viewGroup: (name: string | null) => (name === null ? go('policies') : openGroup(go, name)),
     setTab: (next: string) => go('policies', tabQuery(query, next, 'groups')),
     cards: kinds.shown,
+    allCards: cards,
     // The kind filter, in the query so a reload and Back keep it. Choosing one ends a link's hold on its group.
     kind: kinds.kind,
     kindItems: kinds.items,
@@ -129,6 +130,7 @@ export function usePolicies({go, query}: PageProps) {
     health: health.map,
     outbounds,
     source,
+    arrangeText: sources?.find(source => source.kind === 'main')?.content ?? '',
     error: groups.error ?? nodes.error,
     // A card's size depends on its members' health as well, so the cards wait for the node list too, and for the
     // capabilities that say whether it is offered.

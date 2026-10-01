@@ -12,7 +12,7 @@ async function expectFormGeometry(dialog: Locator) {
       return {x, y, right: x + width, bottom: y + height, width, height};
     };
     const section = root.querySelector('.rp-dialog-section')!;
-    const blocks = Array.from(section.querySelectorAll(':scope > .rp-field, :scope > .group-dialog-filters, :scope > .rp-alert')).map(box);
+    const blocks = Array.from(section.children).map(box);
     const fields = Array.from(section.querySelectorAll('.rp-field')).map(field => ({
       ...box(field),
       control: box(field.querySelector('.rp-input, .rp-selectbtn')!),
@@ -57,6 +57,7 @@ test('Policies stages all new group fields and writes them on Apply', async ({pa
   await page.getByRole('button', {name: 'New group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await expect(dialog).not.toHaveAttribute('aria-describedby');
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(dialog.getByRole('group', {name: 'Filter', exact: true})).toHaveAccessibleDescription(en['arrange.newGroupNote']);
   const name = dialog.getByRole('textbox', {name: 'Group name'});
   await expect(name).toHaveAttribute('aria-required', 'true');
@@ -124,6 +125,7 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await dialog.getByRole('textbox', {name: 'Group name'}).fill('nodegroup');
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(dialog.getByRole('textbox', {name: 'Filter'})).toHaveValue('name(hk-01)');
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('sg-01');
@@ -155,6 +157,7 @@ for (const entry of ['Nodes', 'Policies'])
       await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
     } else await page.getByRole('button', {name: 'New group', exact: true}).click();
     const dialog = page.getByRole('dialog', {name: 'New group'});
+    await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
     await expect(dialog).toContainText(entry === 'Nodes' ? en['nodes.newGroupHelp'].replace('{name}', 'hk-01') : en['arrange.newGroupNote']);
     await dialog.getByRole('textbox', {name: 'Group name'}).fill('manualgroup');
     if (entry === 'Policies') await dialog.getByRole('button', {name: 'Add filter', exact: true}).click();
@@ -239,6 +242,7 @@ for (const viewport of [
         await page.getByRole('option', {name: labels['ui.none'], exact: true}).click();
         await expect(dialog).toBeVisible();
         await dialog.getByRole('textbox').fill('streaming');
+        await dialog.getByRole('button', {name: labels['policy.advanced'], exact: true}).click();
         await dialog.getByRole('button', {name: labels['policy.addFilter'], exact: true}).click();
         await dialog.getByRole('textbox').nth(1).fill('name(hk-01)');
         await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
@@ -292,6 +296,7 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
         await page.getByRole('button', {name: labels['arrange.newGroup'], exact: true}).click();
         const dialog = page.getByRole('dialog', {name: labels['arrange.newGroup'], exact: true});
         await dialog.getByRole('textbox').fill('streaming');
+        await dialog.getByRole('button', {name: labels['policy.advanced'], exact: true}).click();
         const policy = dialog.getByRole('button', {name: new RegExp(labels['arrange.policy'])});
         await policy.click();
         await page.getByRole('option', {name: new RegExp(`^${labels['policy.kind.selector']}`)}).click();
