@@ -78,7 +78,7 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
   }
   nodes.push(...airport);
   const groups: Group[] = [];
-  activateInventory(configMain, '40', nodes, groups, structuredClone(providers));
+  activateInventory(configMain, '40', nodes, groups, structuredClone(providers), name => name);
   // A manual runtime choice differs by transport, independently of its configured default.
   for (const name of ['proxy', 'office']) {
     const selected = groups.find(group => group.name === name)!;

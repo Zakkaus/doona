@@ -3,7 +3,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
-import {diagnosticMessage, type BackendMessage} from '../../i18n/backend';
+import {diagnosticMessage, refusalMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
@@ -227,18 +227,19 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   refused: {label: 'config.readOnly', note: 'config.refusedNote'},
   redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
 };
-// Why a source cannot be edited, or null when it can. Generated and subscription sources are never writable, whatever
-// the server allows. The contract carries no reason for a main or include file refused on its own, and an engine may
-// refuse one for more than one reason: only the engine's adapter can name the secrets it holds as the reason;
-// otherwise the file is just read-only. A text that does not match its digest (`complete` false) had listener
-// secrets masked by the backend; saving it would write the masks over them.
+// Prefer the backend reason; older backends fall back to source kind and credential detection.
 export function readOnlyBadge(
-  source: Pick<ConfigSource, 'kind' | 'writable' | 'content'>,
+  source: Pick<ConfigSource, 'kind' | 'writable' | 'content' | 'read_only_reason'>,
   configWritable: boolean,
   complete: boolean | undefined,
   engine: Pick<Engine, 'holdsCredentials'>,
   t: Translator
 ): {reason: ReadOnlyReason; label: string; note: string; help?: Help} | null {
+  const reported = !source.writable && refusalMessage({reason: source.read_only_reason}, t);
+  if (reported) {
+    const secret = source.read_only_reason === 'listener_secret_source' || source.read_only_reason === 'listener_secret_in_content';
+    return {reason: secret ? 'secret' : 'refused', label: t(secret ? 'config.secretSource' : 'config.readOnly'), note: reported};
+  }
   const reason: ReadOnlyReason | null =
     source.kind === 'generated' || source.kind === 'subscription'
       ? source.kind

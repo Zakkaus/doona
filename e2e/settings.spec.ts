@@ -290,7 +290,7 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: t('settings.runtime')});
   const recording = card.getByRole('group', {name: t('settings.recording')});
-  await expect(recording.getByText(t('settings.recordingActive'), {exact: true})).toHaveCount(3);
+  await expect(recording.getByText(t('settings.recordingIdle'), {exact: true})).toHaveCount(3);
   const flows = recording.getByRole('button', {name: t('settings.recordFlows')});
   await flows.click();
   await page.getByRole('option', {name: t('settings.record.off'), exact: true}).click();
@@ -298,8 +298,13 @@ test('a recorder can be pinned on or off and the state light follows the backend
   await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
   expect((await saving).postDataJSON()).toEqual({record_flows: 'off'});
   await expect(page.locator('.rp-toast.positive', {hasText: t('settings.runtimeSaved')})).toBeVisible();
-  await expect(recording.getByText(t('settings.recordingIdle'))).toHaveCount(1);
+  await expect(recording.getByText(t('settings.recordingIdle'), {exact: true})).toHaveCount(3);
   expect((await api.runtimeSettings()).recording?.flows?.mode).toBe('off');
+  await flows.click();
+  await page.getByRole('option', {name: t('settings.record.on'), exact: true}).click();
+  await card.getByRole('button', {name: t('settings.apply'), exact: true}).click();
+  await expect(recording.getByText(t('settings.recordingActive'), {exact: true})).toHaveCount(1);
+  await expect(recording.getByText(t('settings.recordingIdle'), {exact: true})).toHaveCount(2);
 });
 
 test('a confirmation removed while its action is pending abandons the action', async ({page}) => {

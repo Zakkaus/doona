@@ -49,3 +49,15 @@ it('resolves native top-level includes in full mode and diagnoses missing depend
     expect.objectContaining({source_id: 'main', code: 'include_not_found', level: 'error'})
   );
 });
+
+it('accepts removed probe allowlists with one warning per key and ignores their values', () => {
+  const text = `experimental { native_api {
+    probe_allowed_cidrs: invalid
+    probe_allowed_ports: '0'
+    probe_allowed_ports: invalid
+  } }`;
+  const diagnostics = diagnose('main', text, new Set(), 'full');
+  expect(diagnostics).toHaveLength(2);
+  expect(diagnostics.every(item => item.level === 'warning' && item.code === 'legacy-config-warning')).toBe(true);
+  expect(diagnostics.map(item => item.line)).toEqual([2, 3]);
+});

@@ -11,10 +11,10 @@ export const runtimeSettings: RuntimeSettings = {
   dns_log: {max_records: 2048},
   flows: {max_flows: 4096, retention_seconds: 300},
   recording: {
-    flows: {allowed: true, mode: 'auto', active: true},
-    logs: {allowed: true, mode: 'auto', active: true},
-    dns_log: {allowed: true, mode: 'auto', active: true},
-    events: {active: true},
+    flows: {allowed: true, mode: 'auto', active: false},
+    logs: {allowed: true, mode: 'auto', active: false},
+    dns_log: {allowed: true, mode: 'auto', active: false},
+    events: {active: false},
     grace_remaining_seconds: 0
   }
 };
@@ -138,6 +138,16 @@ export const configNotes: ConfigDiagnostic[] = [
 export const configSources: Array<Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string}> = [
   {id: 'src-main', path: '/etc/honk/config.dae', kind: 'main', writable: true, loaded_at: ago(3600), content: configMain},
   {id: 'src-rules', path: '/etc/honk/rules.dae', kind: 'include', writable: true, loaded_at: ago(3600), content: configRulesFile},
+  {
+    id: 'src-auth',
+    path: '/etc/honk/config.d/auth.dae',
+    kind: 'include',
+    writable: false,
+    read_only_reason: 'listener_secret_source',
+    loaded_at: ago(3600),
+    content: "experimental { native_api { secret: '<redacted>' } }\n",
+    onDisk: "experimental { native_api { secret: 'demo-listener-secret' } }\n"
+  },
   {
     id: 'src-harbor',
     path: '/var/lib/honk/subscriptions/harbor.dae',

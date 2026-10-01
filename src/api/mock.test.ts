@@ -470,7 +470,7 @@ it('applies a conditional patch asynchronously and revises interrupted flows', a
   const changed = await api.group('proxy');
   expect(changed.config.interrupt_connections).toBe(true);
   expect(changed.config_revision).not.toBe(before.config_revision);
-  await expect(api.patchGroup('proxy', [], '\"' + before.config_revision + '\"')).rejects.toMatchObject({status: 412});
+  await expect(api.patchGroup('proxy', [{op: 'remove', path: '/config/check_url'}], '\"' + before.config_revision + '\"')).rejects.toMatchObject({status: 412});
   const selection = await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});
   expect(selection.connections_interrupted).toBe(true);
   const after = await api.flow('flow-1');

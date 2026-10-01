@@ -44,8 +44,8 @@ export function found<T>(value: T | undefined, kind: string): T {
   if (value === undefined) throw new ApiError(404, 'resource_not_found', `${kind} not found`);
   return value;
 }
-// A display-only URL: userinfo and fragment dropped and any query replaced, as the redacted URL fields require.
-export function redactUrl(value: string): string | null {
+// Ordinary URL credentials remain visible; these demo URLs contain no listener secrets.
+export function displayUrl(value: string): string | null {
   const url = URL.parse(value);
-  return url ? url.origin + url.pathname + (url.search ? '?[redacted]' : '') : null;
+  return url ? value : null;
 }

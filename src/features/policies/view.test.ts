@@ -290,8 +290,10 @@ it('rebases a refused check draft on the group read again, keeping every edit an
   expect(checkRebase({base, value: {...value, idle_timeout: '1800'}, theirs: {}}, current).value.idle_timeout).toBe('600');
 });
 it('accepts only a safe http URL, a positive whole interval and a whole tolerance and idle timeout, or an empty field', () => {
-  for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1']) expect(checkInvalid('check_url', url)).toBe(false);
+  for (const url of ['', 'http://a.example', 'https://a.example:8443/generate_204?x=1', 'http://127.0.0.1:18080/', 'http://[::1]:8080/'])
+    expect(checkInvalid('check_url', url)).toBe(false);
   for (const url of [
+    'http://127.0.0.1:0/',
     'ftp://a.example/',
     'a.example/',
     'http://user@a.example/',
@@ -480,4 +482,13 @@ it('marks a final outbound from the node catalogue while keeping groups and buil
       nodeName: final === 'jp-01'
     });
   }
+});
+
+it('preserves a masked check URL for display without patching its unchanged value', () => {
+  const group = nodeFixtures(0).groups.find(group => group.name === 'auto')!;
+  const url = 'https://<redacted>.example/check';
+  const masked = {...group, config: {...group.config, check_url: url}};
+  const draft = checkDraft(masked);
+  expect(draft.check_url).toBe(url);
+  expect(checkPatch(masked, draft, draft)).toEqual([]);
 });

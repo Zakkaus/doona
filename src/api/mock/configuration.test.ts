@@ -1,7 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
+import {capabilities} from './fixtures/capabilities';
 import type {Node, OperationAccepted, Provider} from '../model';
-import {ruleCondition} from '../../dae/groups';
+import {readGroupEntries, ruleCondition} from '../../dae/groups';
 import {geodataPreset} from '../../dae/geodata';
 import {ApiError, errorText} from '../error';
 import {translate, type Translator} from '../../i18n';
@@ -81,7 +82,7 @@ it('activates node membership and group policy with the accepted source, includi
   expect((await api.providers()).providers.find(provider => provider.id === 'harbor')?.url_redacted).toContain('sub.example.net');
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.operation(reload.operation_id)).status).toBe('succeeded');
-  const fresh = await api.group('fresh');
+  const fresh = await api.group((await api.groups()).find(group => group.name === 'fresh')!.id);
   expect(fresh.policy).toEqual({kind: 'urltest', native: 'min_last_delay'});
   expect(fresh.members.map(member => member.name)).toEqual(['new-node']);
   expect((await api.nodes({group_id: fresh.id})).nodes.map(node => node.name)).toEqual(['new-node']);
@@ -142,7 +143,7 @@ it('writes subscription options as a block, checks them against create_options a
   }
   expect(await main()).toBe(before);
   const created = (await api.createProvider({name: 'optioned', ...base, update_interval: 3600, user_agent: 'clash.meta', cache: false})) as Provider;
-  expect(created).toMatchObject({name: 'optioned', url_redacted: 'https://example.net/sub?[redacted]'});
+  expect(created).toMatchObject({name: 'optioned', url_redacted: 'https://example.net/sub?token=x'});
   expect(await main()).toContain(
     "  optioned: {\n    url: 'https://example.net/sub?token=x'\n    ua: 'clash.meta'\n    interval: '3600s'\n    cache: false\n  }\n"
   );
@@ -274,7 +275,7 @@ it('fails a geodata update whose file lacks a used category the way honk does, k
   expect(data.assets).toEqual(before);
 });
 
-it('shows a custom geodata URL without its query once an update downloads it', async () => {
+it('preserves ordinary credentials in a downloaded geodata URL', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
   await api.patchRuntimeSettings({geodata: {geosite: {urls: ['https://example.com/geosite.dat?token=secret']}}});
@@ -282,8 +283,8 @@ it('shows a custom geodata URL without its query once an update downloads it', a
   await vi.advanceTimersByTimeAsync(1000);
   expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
   const asset = (await api.geodata()).assets.find(item => item.kind === 'geosite')!;
-  expect(asset.source_redacted).toBe('https://example.com/geosite.dat?[redacted]');
-  expect(asset.fetched_url_redacted).toBe('https://example.com/geosite.dat?[redacted]');
+  expect(asset.source_redacted).toBe('https://example.com/geosite.dat?token=secret');
+  expect(asset.fetched_url_redacted).toBe('https://example.com/geosite.dat?token=secret');
 });
 
 it('creates a source an included file loads, and refuses a write over the body limit', async () => {
@@ -364,5 +365,73 @@ it.each([
     const outbound = domains.includes(domain) ? 'block' : 'direct';
     const trace = await api.routingTrace({input: {network: 'tcp', domain, dst_ip: '192.0.2.1', dst_port: 443}, resolve: 'none'});
     expect(trace.evaluations[0]).toMatchObject({decision: 'determinate', outbound});
+  }
+});
+
+it('reports group body errors before a stale revision and requires a source precondition before body limits', async () => {
+  const api = createMockApi();
+  const group = (await api.groups())[0];
+  await expect(api.patchGroup(group.id, [], '"stale"')).rejects.toMatchObject({status: 400});
+  await expect(
+    api.patchGroup(
+      group.id,
+      Array.from({length: 33}, () => ({op: 'remove', path: '/config/check_url'})),
+      '"stale"'
+    )
+  ).rejects.toMatchObject({status: 413});
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await expect(api.replaceConfigSource(main.id, 'x'.repeat(70000), '')).rejects.toMatchObject({status: 428});
+});
+
+it.each(['main', 'include'])('patches the effective duplicate in %s without changing the earlier declaration or ID', async location => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const earlier = 'dup { filter: name(hk-01) policy: fixed(0) final: block tolerance: 11 }';
+  const effective = 'group { dup { filter: name(hk-02) policy: fixed(0) final: direct tolerance: 22 } }';
+  const content = `node {
+  'hk-01': 'socks5://127.0.0.1:1081'
+  'hk-02': 'socks5://127.0.0.1:1082'
+}
+group { ${earlier} }
+${location === 'main' ? effective : 'include { config.d/*.dae }'}
+routing { fallback: dup }`;
+  await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  if (location === 'include') {
+    await api.createConfigSource('config.d/groups.dae', effective);
+    await vi.advanceTimersByTimeAsync(1000);
+  }
+  const before = (await api.groups()).find(group => group.name === 'dup')!;
+  expect(await api.group(before.id)).toMatchObject({config: {final_outbound: 'direct', tolerance: 22}});
+  const operation = await api.patchGroup(
+    before.id,
+    [
+      {op: 'replace', path: '/config/final_outbound', value: 'block'},
+      {op: 'replace', path: '/config/tolerance', value: 33}
+    ],
+    `"${before.config_revision}"`
+  );
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation((operation as OperationAccepted).operation_id)).status).toBe('succeeded');
+  expect(await api.group(before.id)).toMatchObject({id: before.id, config: {final_outbound: 'block', tolerance: 33}, members: [{name: 'hk-02'}]});
+  const written = (await api.config()).sources.find(source => source.id === main.id)!.content;
+  expect(written).toContain(earlier);
+  const target = location === 'main' ? written : (await api.config()).sources.find(source => source.path.endsWith('/groups.dae'))!.content;
+  expect(readGroupEntries(target).at(-1)?.final).toBe('block');
+});
+
+it('checks global write admission before headers, but source permissions after headers and body limits', async () => {
+  const api = createMockApi();
+  const readonly = (await api.config()).sources.find(source => !source.writable)!;
+  await expect(api.replaceConfigSource(readonly.id, '', '')).rejects.toMatchObject({status: 428});
+  await expect(api.replaceConfigSource(readonly.id, 'x'.repeat(70000), '"stale"')).rejects.toMatchObject({status: 413});
+  await expect(api.replaceConfigSource(readonly.id, '', '"stale"')).rejects.toMatchObject({status: 403});
+  const writable = capabilities.resources.config.writable;
+  try {
+    capabilities.resources.config.writable = false;
+    await expect(api.replaceConfigSource(readonly.id, 'x'.repeat(70000), '')).rejects.toMatchObject({status: 403});
+  } finally {
+    capabilities.resources.config.writable = writable;
   }
 });

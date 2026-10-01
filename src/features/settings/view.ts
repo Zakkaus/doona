@@ -17,7 +17,12 @@ export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_lo
   record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
 };
 export const recorderFields = Object.keys(recorderAccess) as Recorder[];
-const recorderChoiceLabel: Record<RecorderChoice, Key> = {auto: 'settings.record.auto', on: 'settings.record.on', off: 'settings.record.off'};
+const recorderAutoLabel: Record<Recorder, Key> = {
+  record_flows: 'settings.record.autoFlows',
+  record_logs: 'settings.record.autoLogs',
+  record_dns_log: 'settings.record.autoDnsLog'
+};
+const recorderChoiceLabel = {on: 'settings.record.on', off: 'settings.record.off'} as const;
 export function recorderView(id: Recorder, choice: RecorderChoice, state: RecorderState | undefined, t: Translator) {
   const forbidden = state ? !state.allowed : false;
   return {
@@ -26,8 +31,7 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
     value: choice,
     items: (['auto', 'on', 'off'] as const).map(mode => ({
       id: mode,
-      // Automatic flow recording follows flow demand, which its label names.
-      label: t(mode === 'auto' && id === 'record_flows' ? 'settings.record.autoFlows' : recorderChoiceLabel[mode])
+      label: t(mode === 'auto' ? recorderAutoLabel[id] : recorderChoiceLabel[mode])
     })),
     disabled: forbidden,
     tone: forbidden ? ('muted' as const) : state?.active ? ('ok' as const) : ('neutral' as const),
@@ -41,11 +45,10 @@ export function recordingNote(recording: RuntimeSettings['recording'] | undefine
   if (!recording.events) return null;
   return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
-// Automatic flow recording follows pages that ask for flows, not every open panel. The backend keeps a client
-// attached for this long after its last flow request or stream.
-const attachmentTailSeconds = 60;
+// honk retains flow demand after the last read or stream; api/mock/recording.ts models the same grace.
+const flowDemandGraceSeconds = 60;
 export const flowRecordingNote = (choice: RecorderChoice, t: Translator) =>
-  choice === 'auto' ? t('settings.recordFlowsAuto', {n: attachmentTailSeconds}) : null;
+  choice === 'auto' ? t('settings.recordFlowsAuto', {n: flowDemandGraceSeconds}) : null;
 export const numericAccess: Record<
   Numeric,
   // read is undefined when the engine omits the section or member.

@@ -24,7 +24,8 @@ import {isBuiltinOutbound} from '../dae/vocab';
 export function safeHttpUrl(value: string): boolean {
   if (new TextEncoder().encode(value).length > 2048 || /[\s,]/.test(value) || !/^https?:\/\/[^/?#@]+(?:[/?#]|$)/i.test(value)) return false;
   try {
-    return !!new URL(value).hostname;
+    const url = new URL(value);
+    return !!url.hostname && url.port !== '0';
   } catch {
     return false;
   }

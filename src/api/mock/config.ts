@@ -9,7 +9,7 @@ import {globMatch, isGlob, resolveIncludePath} from '../../dae/newSource';
 type Draft = Omit<ConfigSource, 'content_sha256' | 'bytes' | 'line_count'> & {content: string; onDisk?: string};
 type Stored = ConfigSource & {content: string};
 
-const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response', 'include']);
+const sections = new Set(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'upstream', 'request', 'response', 'include', 'experimental']);
 const builtinOutbounds = new Set(vocab.builtinOutbounds);
 const globalKeys = new Set(vocab.globalKeys);
 
@@ -71,6 +71,15 @@ export function diagnose(sourceId: string, text: string, groups: Set<string>, mo
     block.children.forEach(checkBlock);
   };
   blocks.forEach(checkBlock);
+  const removed = new Set<string>();
+  for (const block of blocks.filter(block => block.name === 'experimental').flatMap(block => block.children.filter(child => child.name === 'native_api'))) {
+    for (const {code, line} of blockLines(text, block)) {
+      const key = /^(probe_allowed_cidrs|probe_allowed_ports)\s*:/.exec(code)?.[1];
+      if (!key || removed.has(key)) continue;
+      removed.add(key);
+      at(line, 1, 'warning', 'legacy-config-warning', `experimental.native_api.${key} was removed and can be deleted; its value is ignored`);
+    }
+  }
   for (const token of tokens) {
     if (token.kind === 'symbol' && token.depth === 0 && text[token.from] === '}')
       at(token.line + 1, 1, 'error', 'brace_without_section', 'Closing brace without an open section');

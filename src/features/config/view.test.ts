@@ -396,3 +396,19 @@ it('shows one row, the config version, and never the generation id', () => {
   }
   expect(translate('en', 'config.acceptedDiagnostics', {generation: 'gen-3'})).toContain('generation gen-3');
 });
+
+it('prefers reported source reasons over inferred credentials and falls back for an unknown reason', () => {
+  const source = {kind: 'main' as const, writable: false, content: 'clash_api { secret: masked }'};
+  for (const [read_only_reason, key] of [
+    ['writes_disabled', 'ui.refusal.writesDisabled'],
+    ['store_blocked', 'ui.refusal.storeBlocked'],
+    ['listener_secret_source', 'ui.refusal.listenerSecretSource'],
+    ['listener_secret_in_content', 'ui.refusal.listenerSecretInContent']
+  ] as const) {
+    expect(readOnlyBadge({...source, read_only_reason}, true, true, honk, t)).toMatchObject({
+      note: t(key),
+      label: t(read_only_reason.startsWith('listener_secret_') ? 'config.secretSource' : 'config.readOnly')
+    });
+  }
+  expect(readOnlyBadge({...source, read_only_reason: 'future' as never}, true, true, honk, t)?.reason).toBe('secret');
+});

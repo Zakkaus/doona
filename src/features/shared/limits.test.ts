@@ -1,11 +1,13 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities, ReportedCapabilities, Version} from '../../api/model';
-import {capabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
+import {capabilities as demoCapabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, type LimitCause, type LimitGroup} from './limits';
 import {docsHref} from './docs';
 const t: Translator = (key, params) => translate('en', key, params);
 const other = {...version, engine: {...version.engine, name: 'other'}};
+const capabilities = structuredClone(demoCapabilities);
+capabilities.resources.flows.recording = 'on';
 type Resources = Capabilities['resources'];
 const patched = (patch: {[K in keyof Resources]?: Partial<Resources[K]>}): Capabilities => ({
   ...capabilities,

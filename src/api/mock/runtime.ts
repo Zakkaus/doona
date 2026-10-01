@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {Capabilities} from '../model';
+import type {Capabilities, RecorderState} from '../model';
 import {ApiError} from '../error';
 import * as fixtures from './fixtures/runtime';
 import {now as loaded} from './fixtures/clock';
@@ -15,7 +15,7 @@ function memoryValues(at: number) {
     cgroup_current_bytes: String(Math.round(Number(fixtures.runtimeMemory.cgroup!.current_bytes) * drift))
   };
 }
-export function createRuntime(capabilities: Capabilities, big: boolean, faults = false) {
+export function createRuntime(capabilities: Capabilities, big: boolean, flowRecorder: () => RecorderState | undefined, faults = false) {
   const runtime = structuredClone(fixtures.runtime);
   const datapath = structuredClone(fixtures.datapath);
   if (faults) {
@@ -75,7 +75,10 @@ export function createRuntime(capabilities: Capabilities, big: boolean, faults =
     },
     capabilities: async signal => {
       signal?.throwIfAborted();
-      return structuredClone(capabilities);
+      const value = structuredClone(capabilities);
+      const recorder = flowRecorder();
+      if (recorder && value.resources.flows.available) value.resources.flows.recording = recorder.allowed ? recorder.mode : 'off';
+      return value;
     },
     runtime: async signal => {
       signal?.throwIfAborted();

@@ -23,7 +23,7 @@ export async function freshBackend(page: Page) {
   ].join('\n');
   const accepted = await backend.api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
   await backend.api.pollOperation(accepted);
-  for (const include of sources.filter(source => source.kind === 'include'))
+  for (const include of sources.filter(source => source.kind === 'include' && source.writable))
     await backend.api.pollOperation(await backend.api.replaceConfigSource(include.id, '', `"${include.content_sha256}"`));
   return backend;
 }

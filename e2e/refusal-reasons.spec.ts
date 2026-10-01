@@ -12,6 +12,23 @@ for (const {name, lang, viewport} of [
     test.beforeAll(loadCatalogues);
     const t: Translator = (key, params) => translate(lang, key, params);
 
+    test('the demo listener source reports its secret reason and remains read-only', async ({page}) => {
+      await mockBackend(page);
+      await page.goto('/#/config?tab=source&source=src-auth');
+      await expect(page.getByText(t('config.secretSource'), {exact: true})).toBeVisible();
+      await expect(page.getByText(t('ui.refusal.listenerSecretSource'), {exact: true})).toBeVisible();
+      await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+    });
+
+    test('a source shows the reported store refusal instead of guessing from its contents', async ({page}) => {
+      const {api} = await mockBackend(page);
+      const config = await api.config();
+      config.sources = config.sources.map(source => (source.kind === 'main' ? {...source, writable: false, read_only_reason: 'store_blocked'} : source));
+      await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+      await page.goto('/#/config?tab=source&source=src-main');
+      await expect(page.getByText(t('ui.refusal.storeBlocked'), {exact: true})).toBeVisible();
+    });
+
     for (const {status, code, reason} of [
       {status: 403, code: 'permission_denied', reason: 'listener_secret_in_content'},
       ...[

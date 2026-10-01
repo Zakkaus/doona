@@ -90,7 +90,7 @@ export const capabilities: Capabilities = {
     connections: {available: true, can_close: true, max_bulk_close: 200},
     flows: {
       available: true,
-      recording: 'on',
+      recording: 'auto',
       scopes: ['userspace_tcp', 'userspace_udp', 'kernel_direct', 'kernel_block', 'dns_intercept', 'kernel_bypass'],
       min_flows: 64,
       max_flows: 4096,

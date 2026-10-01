@@ -10,6 +10,8 @@ import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
 import {faultRules} from './rules';
 import {dnsRulesOf} from './dnsRules';
+import {createRecording} from './recording';
+import {readGroupEntries} from '../../dae/groups';
 
 type ConfigurationApi = Pick<
   Api,
@@ -37,7 +39,9 @@ export function createConfiguration(
 ) {
   const configured = faults ? fixtures.faultSettings : fixtures.runtimeSettings;
   const settings = structuredClone(configured);
+  const recording = createRecording(settings);
   const withGeodata = () => {
+    recording.refresh();
     const value = structuredClone(settings);
     if (capabilities.resources.geodata.configurable_sources === true) value.geodata = geodata.settings();
     return value;
@@ -94,17 +98,25 @@ export function createConfiguration(
     publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
     return generation;
   }
-  // Mirror management writes into the main source so the configuration page shows the API result.
-  async function editMain(edit: (text: string) => string) {
+  // Node/provider writes target main; a group PATCH targets its last accepted declaration.
+  async function editSource(edit: (text: string) => string, groupName?: string) {
     await loadSources();
-    const main = found(
-      disk.find(item => item.kind === 'main'),
-      'Main source'
+    const id =
+      groupName === undefined
+        ? disk.find(source => source.kind === 'main')?.id
+        : sourceSet()
+            .filter(source => readGroupEntries(source.content).some(group => group.name === groupName))
+            .at(-1)?.id;
+    const source = found(
+      disk.find(source => source.id === id),
+      'Configuration source'
     );
-    const next = await stored({...main, content: edit(main.content), loaded_at: new Date().toISOString()});
+    if (!capabilities.resources.config.writable || !source.writable)
+      throw new ApiError(404, 'capability_not_supported', 'This source is read-only', null, {reason: source.read_only_reason});
+    const next = await stored({...source, content: edit(source.content), loaded_at: new Date().toISOString()});
     return () => {
-      if (disk.find(item => item.id === main.id) !== main) throw new ApiError(412, 'stale_revision', 'The main source changed before activation');
-      disk = disk.map(item => (item.id === main.id ? next : item));
+      if (disk.find(item => item.id === source.id) !== source) throw new ApiError(412, 'stale_revision', 'The source changed before activation');
+      disk = disk.map(item => (item.id === source.id ? next : item));
       return advance();
     };
   }
@@ -201,18 +213,20 @@ export function createConfiguration(
       if (request.mode === 'full') await loadSources();
       return validate(request, String(configRevision), disk.filter(ruleFile));
     },
-    // The editing contract in order: If-Match present and current, full validation clean, then the write and a reload.
+    // Global write admission precedes HTTP checks; source permission and revision checks follow the body limits.
     replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
+      if (!capabilities.resources.config.writable) throw new ApiError(403, 'permission_denied', 'Configuration writes are disabled');
+      if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
+      withinLimits(content, {content});
       await loadSources();
       const list = disk;
       const source = found(
         list.find(item => item.id === sourceId),
         'Configuration source'
       );
-      if (!capabilities.resources.config.writable || !source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only');
-      withinLimits(content, {content});
-      if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
+      if (!source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only', null, {reason: source.read_only_reason});
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
       const check = validate({sources: sourceSet({id: sourceId, content}), mode: 'full'}, String(configRevision));
@@ -308,7 +322,7 @@ export function createConfiguration(
       if (geodataPatch !== undefined && (!allowed.has('geodata') || resources.geodata.configurable_sources !== true))
         throw unsupported('geodata cannot be changed on this backend');
       patch = rest;
-      // Recorder modes sit at the top level; the mock is always attached, so auto behaves like on.
+      // Recorder modes sit at the top level; demand determines whether auto captures.
       const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
       const modes = Object.entries(recorders).flatMap(([field, store]) => {
         const value = patch[field as keyof typeof recorders];
@@ -350,9 +364,8 @@ export function createConfiguration(
         const state = settings.recording?.[store];
         if (!state) continue;
         state.mode = value;
-        state.active = state.allowed && state.mode !== 'off';
       }
-      if (settings.recording?.events) settings.recording.events.active = true;
+      recording.refresh();
       // A smaller ring drops its oldest records at once, not when the next one arrives.
       trimLogs();
       settings.source = 'runtime';
@@ -383,5 +396,14 @@ export function createConfiguration(
       });
     }
   };
-  return {api, ruleSnapshot, advance, editMain, revision: () => String(configRevision), logSettings: () => settings.log};
+  return {
+    api,
+    recording,
+    flowRecorder: () => settings.recording?.flows,
+    ruleSnapshot,
+    advance,
+    editSource,
+    revision: () => String(configRevision),
+    logSettings: () => settings.log
+  };
 }

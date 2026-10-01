@@ -351,3 +351,18 @@ it('keeps inserted filters inside mixed opening and closing lines', () => {
     expect(readGroupEntries(output)[0]).toMatchObject({filters: ['name(c)', 'name(a)', 'name(d)'], policy: 'select'});
   }
 });
+
+it('edits the last declaration across group sections and keeps its own filters when adding a subscription', () => {
+  const earlier = 'dup { filter: name(old) policy: min final: direct }';
+  const source = `group { ${earlier} }
+group { dup { filter: name(current) policy: select final: block } }`;
+  const written = writeGroupEntry(source, 'dup', {filters: ['name(current)'], policy: 'score', final: 'direct'});
+  expect(written).toContain(earlier);
+  expect(readGroupEntries(written).map(entry => entry.policy)).toEqual(['min', 'score']);
+  const reverted = writeGroupEntry(source, 'dup', {filters: ['name(old)'], policy: 'min', final: 'direct'});
+  expect(reverted).toContain(earlier);
+  expect(readGroupEntries(reverted).at(-1)).toMatchObject({filters: ['name(old)'], policy: 'min', final: 'direct'});
+  const added = addSubtagsToGroup(source, 'dup', ['new']);
+  expect(added).toContain(earlier);
+  expect(readGroupEntries(added).at(-1)).toMatchObject({filters: ['name(current)', 'subtag(new)'], policy: 'select', final: 'block'});
+});

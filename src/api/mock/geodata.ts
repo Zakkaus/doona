@@ -1,6 +1,6 @@
 import type {Capabilities, GeoAssetKind, GeoData, GeoDataDownload, GeoDataSettings, GeoDataSettingsPatch} from '../model';
 import {ApiError} from '../error';
-import {redactUrl} from './common';
+import {displayUrl} from './common';
 import {defaultGeodataPreset, geodataPresets, validGeodataUrl} from '../../dae/geodata';
 import {scanConfig} from '../../dae/text';
 import * as fixtures from './fixtures/inventory';
@@ -125,8 +125,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         asset.modified_at = at;
         asset.sha256 = Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
         asset.size_bytes = String((presetAt(asset.kind, url)?.sizes[asset.kind] ?? Number(asset.size_bytes)) + Math.floor(Math.random() * 65536));
-        asset.source_redacted = redactUrl(url);
-        asset.fetched_url_redacted = redactUrl(url);
+        asset.source_redacted = displayUrl(url);
+        asset.fetched_url_redacted = displayUrl(url);
         // With verification off the backend skips the .sha256sum request and loads the file unverified.
         asset.verified = verifyChecksum && publishesChecksum(url);
         asset.download_route = {route: download.route, group_id: download.route === 'group' ? download.group_id : null};
