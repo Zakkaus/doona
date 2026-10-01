@@ -198,3 +198,34 @@ test('an empty search says what it looked through, so a domain with no live conn
     'No matches. Search covers the names of pages, tabs, nodes, groups and node sources, live connections, config file paths, and routing and DNS rule expressions.'
   );
 });
+
+for (const width of [1440, 768, 390]) {
+  test(`search controls and result insets match at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 1000});
+    await page.goto('/#/activity');
+    await page
+      .locator('.rp-top')
+      .getByRole('button', {name: /^Search/})
+      .click();
+    const dialog = page.locator('.rp-dialog');
+    await dialog.locator('input').fill('proxy');
+    await expect(dialog.getByRole('option').first()).toBeVisible();
+    const sizes = await dialog.evaluate(el => {
+      const input = el.querySelector('.rp-input')!.getBoundingClientRect();
+      const close = el.querySelector('.rp-toolbar button.rp-btn')!.getBoundingClientRect();
+      const result = el.querySelector('[role=option]')!.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return {input: input.height, close: close.height, left: result.left - box.left, right: box.right - result.right};
+    });
+    expect(sizes.input).toBe(sizes.close);
+    expect(Math.abs(sizes.left - sizes.right)).toBeLessThanOrEqual(1);
+    await expect(dialog.locator('input')).toHaveAttribute('placeholder', 'Search');
+    await page.keyboard.press('Escape');
+    if (width === 1440) {
+      const heights = await page
+        .locator('.rp-top .rp-brand, .rp-top .rp-search, .rp-top .rp-btn')
+        .evaluateAll(elements => elements.filter(el => el.getBoundingClientRect().width).map(el => el.getBoundingClientRect().height));
+      expect(new Set(heights).size).toBe(1);
+    }
+  });
+}

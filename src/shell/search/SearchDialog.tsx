@@ -1,7 +1,7 @@
 import {Autocomplete, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty} from '../../ui/ui';
-import {NodeName} from '../../ui/NodeName';
+import {ItemText} from '../../ui/Select';
 import Close from '../../ui/icons/Close';
 import type {PageProps} from '../routes';
 import {useSearch} from './useSearch';
@@ -22,7 +22,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
       <Autocomplete inputValue={q} onInputChange={setQ}>
         <div className="rp-toolbar">
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
-          <TextField search large label={t('shell.search')} value={q} onChange={setQ} autoFocus className="rp-grow" />
+          <TextField search label={t('shell.search')} placeholder={t('shell.shortcutSearch')} value={q} onChange={setQ} autoFocus className="rp-grow" />
           <Button quiet icon onPress={onClose} label={t('ui.close')}>
             <Close />
           </Button>
@@ -43,10 +43,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
               <Header className="rp-sec-h">{section.title}</Header>
               {section.items.map(item => (
                 <ListBoxItem key={item.id} id={item.id} className="rp-item plain" textValue={item.label}>
-                  <span className="rp-item-text">
-                    {section.id === 'nodes' ? <NodeName name={item.label} /> : <span>{item.label}</span>}
-                    {item.description && <span className="desc">{item.description}</span>}
-                  </span>
+                  <ItemText i={{...item, desc: item.description, nodeName: section.id === 'nodes'}} />
                 </ListBoxItem>
               ))}
             </ListBoxSection>
