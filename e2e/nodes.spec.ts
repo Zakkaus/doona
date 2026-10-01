@@ -1143,12 +1143,12 @@ test('the interval jump edits the declaring include while the main file is read-
     include = request.postDataJSON().content;
     return api.replaceConfigSource(main.id, main.content, `"${main.content_sha256}"`);
   };
-  await page.goto('/#/nodes');
-  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  await page.goto('/#/nodes?editSubscription=harbor&focus=interval');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const interval = dialog.getByRole('button', {name: 'Auto-update'});
+  await expect(interval).toBeFocused();
   await expect(page).not.toHaveURL(/editSubscription|focus=/);
-  await interval.click();
+  await page.keyboard.press('Enter');
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);

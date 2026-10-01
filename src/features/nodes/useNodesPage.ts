@@ -17,6 +17,7 @@ import {
   isNodeLink,
   editableSource,
   subscriptionPlace,
+  subscriptionActionKind,
   nodeEditState,
   subscriptionRemoval,
   keptOptions,
@@ -24,6 +25,7 @@ import {
   nodeSource,
   ownedNodes,
   providerCreate,
+  providerEdited,
   providerRows,
   renameReferences,
   selectedProvider,
@@ -52,7 +54,8 @@ type NodeDialog =
   | {kind: 'removeNode'; item: Node}
   | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
 
-export function runSubscriptionAction(query: string, action: {run: () => void}) {
+export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
+  if (!action) return;
   replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
   action.run();
 }
@@ -67,14 +70,10 @@ export function useNodesPage({go, query}: PageProps) {
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
+  const intervalSeconds = draftInterval(form.interval);
   const edited =
     dialog?.kind === 'editProvider'
-      ? form.name !== dialog.entry.tag ||
-        form.value !== dialog.entry.url ||
-        form.interval !== '' ||
-        form.agent !== (dialog.entry.ua ?? '') ||
-        form.cache !== null ||
-        form.route !== (dialog.entry.route ?? '')
+      ? providerEdited(form, dialog.entry)
       : dialog?.kind === 'editNode'
         ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
         : !!(form.name || form.value);
@@ -108,7 +107,8 @@ export function useNodesPage({go, query}: PageProps) {
   const refreshAll = useRefreshAll(providers, refreshing);
   const source = useMainSourceEdit();
   // A subscription is edited in whichever source declares it, and only in dae text this page knows how to write.
-  const daeText = engineOf(useVersion().data).daeText;
+  const version = useVersion().data;
+  const daeText = engineOf(version).daeText;
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
@@ -124,14 +124,16 @@ export function useNodesPage({go, query}: PageProps) {
   const editSource = editing?.length === 1 ? editing[0].source : null;
   const editAction = useCallback(
     (item: ProviderRow, focus?: 'interval') => {
+      if (!version || !resources) return null;
       const place = subscriptionPlace(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : [], item, providers.data?.providers ?? []);
       if (!place) return null;
       const {source: origin, entry, unique} = place;
-      if (unique && editableSource(daeText, source.writable, origin, isComplete(origin)))
-        return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry, focus})};
+      const kind = subscriptionActionKind(unique, daeText, source.writable, origin, isComplete(origin));
+      if (kind === null) return null;
+      if (kind === 'edit') return {kind: 'edit' as const, run: () => open({kind: 'editProvider', item, source: origin, entry, focus})};
       return {kind: 'open' as const, run: () => go('config', within('', {tab: 'source', source: origin.id, line: String(entry.line)}))};
     },
-    [declared, providers.data, daeText, source.writable, isComplete, open, go]
+    [version, resources, declared, providers.data, daeText, source.writable, isComplete, open, go]
   );
   const authored = useMemo(
     () =>
@@ -384,7 +386,6 @@ export function useNodesPage({go, query}: PageProps) {
           : null;
   const editRoute = form.route || 'routing';
   const routeChanged = dialog?.kind === 'editProvider' && editRoute !== (dialog.entry.route || 'routing');
-  const intervalSeconds = draftInterval(form.interval);
   const intervalKey = intervalProblem(form.interval);
   const intervalError = intervalKey && t(intervalKey);
   const intervalChanged = dialog?.kind === 'editProvider' && intervalSeconds != null && intervalSeconds !== dialog.entry.interval;

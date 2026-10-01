@@ -47,6 +47,23 @@ const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 export const editableSource = (daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | null | undefined) =>
   daeText && canWrite && source.writable && complete === true;
 
+export function providerEdited(form: ProviderForm, entry: SubscriptionText) {
+  const interval = draftInterval(form.interval);
+  return (
+    form.name !== entry.tag ||
+    form.value !== entry.url ||
+    (form.interval !== '' && (interval === null || interval !== entry.interval)) ||
+    form.agent !== (entry.ua ?? '') ||
+    form.cache !== null ||
+    form.route !== (entry.route ?? '')
+  );
+}
+
+export function subscriptionActionKind(unique: boolean, daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | undefined) {
+  if (unique && daeText && canWrite && source.writable && complete === undefined) return null;
+  return unique && editableSource(daeText, canWrite, source, complete) ? 'edit' : 'open';
+}
+
 export function subscriptionPlace(places: Array<{source: ConfigSource; entry: SubscriptionText}>, item: ProviderRow, providers: Provider[]) {
   if (!places.length) return null;
   // Duplicate tags only open the source, preferring the one on this provider's host.

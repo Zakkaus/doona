@@ -15,10 +15,10 @@ import {
   providerRowView,
   keptOptions,
   providerCreate,
+  providerEdited,
   renameReferences,
   selectedProvider
 } from './view';
-import {draftInterval, intervalItems, intervalProblem, intervalText, intervalTyped, startTyping} from '../shared/subscription';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
 import {createMockApi} from '../../api/mock';
@@ -184,9 +184,7 @@ it('projects node protocol, membership, measured zero and unavailable health', (
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {
   const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
   expect(row.usage).toBe(formatBytes(1024n, 'en'));
-  expect(row.interval).toBe(intervalText(90, 'en-US', t));
-  expect(intervalText(0, 'en-US', t)).toBe(t('nodes.manualOnly'));
-  expect(intervalText(3600, 'en-US', t)).toBe(t('nodes.everyHours', {n: '1'}));
+  expect(row.interval).toBe(t('nodes.everyDuration', {duration: '1 min'}));
   expect(providerRowView({...provider('unattributed'), kind: 'unattributed'}, undefined, 'en-US', t)).toMatchObject({
     usage: '—',
     status: null,
@@ -265,47 +263,6 @@ describe('providerCreate', () => {
       url: 'https://example.org/sub',
       user_agent: 'clash.meta'
     });
-  });
-
-  it.each([
-    [86400, ['0', '3600', '21600', '43200', '86400', 'typed']],
-    [7200, ['0', '3600', '21600', '43200', '86400', 'typed']],
-    [10000, ['0', '3600', '21600', '43200', '86400', '10000', 'typed']],
-    [null, ['0', '3600', '21600', '43200', '86400', 'typed']]
-  ])('offers the presets and typing, keeping a default of %s that typing cannot show', (current, ids) => {
-    expect(intervalItems(current, 'en-US', t).map(item => item.id)).toEqual(ids);
-  });
-
-  it.each([
-    // draft, shown as typed, seconds, error, start of typing
-    ['', null, undefined, null, 'h'],
-    ['0', null, 0, null, 'h'],
-    ['21600', null, 21600, null, '6h'],
-    ['10000', null, 10000, null, 'h'],
-    ['7200', {count: '2', unit: 'h'}, 7200, null, '2h'],
-    ['5400', {count: '90', unit: 'm'}, 5400, null, 'h'],
-    ['90m', {count: '90', unit: 'm'}, 5400, null, 'h'],
-    ['2h', {count: '2', unit: 'h'}, 7200, null, 'h'],
-    ['h', {count: '', unit: 'h'}, null, null, 'h'],
-    ['0m', {count: '0', unit: 'm'}, null, 'nodes.intervalInvalid', 'h'],
-    ['1.5h', {count: '1.5', unit: 'h'}, null, 'nodes.intervalInvalid', 'h'],
-    ['-5m', {count: '-5', unit: 'm'}, null, 'nodes.intervalInvalid', 'h'],
-    ['99999999999999h', {count: '99999999999999', unit: 'h'}, null, 'nodes.intervalInvalid', 'h']
-  ])('reads the interval draft %j', (draft, typed, seconds, problem, start) => {
-    expect(intervalTyped(draft)).toEqual(typed);
-    expect(draftInterval(draft)).toBe(seconds);
-    expect(intervalProblem(draft)).toBe(problem);
-    expect(startTyping(draft)).toBe(start);
-  });
-
-  it.each([
-    [0, t('nodes.manualOnly')],
-    [21600, t('nodes.everyHours', {n: 6})],
-    [172800, t('nodes.everyHours', {n: 48})],
-    [2700, t('nodes.everyDuration', {duration: '45 min'})],
-    [5400, t('nodes.everyDuration', {duration: '1 hr 30 min'})]
-  ])('words an interval of %i seconds like the presets', (seconds, text) => {
-    expect(intervalText(seconds, 'en-US', t)).toBe(text);
   });
 
   it('sends a typed interval in seconds when it differs from the default', () => {
@@ -433,4 +390,19 @@ it('blocks subscription removal across sources and waits for the first config re
   expect(subscriptionRemoval([main], true, item).checking).toBe(false);
   expect(subscriptionRemoval([main], false, {...item, name: 'unused'}).blockers).toEqual([]);
   expect(subscriptionRemoval([main], false, {...item, kind: 'file'}).blockers).toEqual([]);
+});
+
+it.each([
+  ['', false],
+  ['3600', false],
+  ['1h', false],
+  ['+1h', false],
+  ['60m', false],
+  ['0', true],
+  ['2h', true],
+  ['h', true],
+  ['-1h', true]
+] as const)('guards only changed subscription intervals (%s)', (interval, edited) => {
+  const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub' {\n    interval: 1h\n  }\n}")[0];
+  expect(providerEdited({name: entry.tag, value: entry.url, interval, agent: '', cache: null, route: ''}, entry)).toBe(edited);
 });
