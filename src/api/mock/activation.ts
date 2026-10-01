@@ -126,10 +126,8 @@ export function activateInventory(
         selection,
         health: memberNodes.flatMap(node =>
           node.health.map(health => ({
+            // Without a probe of the group's own, honk lists each member node's samples with their averages.
             ...health,
-            // Averages belong to node rows; a group's own samples carry none.
-            moving_avg_ms: null,
-            avg10_ms: null,
             member_id: node.id,
             resolved_leaf_node_id: node.id,
             sorting_latency_ms: health.latency_ms,

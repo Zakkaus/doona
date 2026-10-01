@@ -50,6 +50,46 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await expect(plot.getByRole('region', {name: 'shadowsocks'})).toBeVisible();
 });
 
+test('a long latency group keeps the focus on its node when new data reorders it, and the tip still works', async ({page}) => {
+  const backend = await mockBackend(page);
+  let fastest: string | null = null;
+  backend.handlers['GET nodes'] = async () => {
+    const list = await backend.api.nodes({limit: 1000});
+    const fast = (node: (typeof list.nodes)[number]) => ({...node, health: node.health.map(h => ({...h, latency_ms: 1, moving_avg_ms: 1, avg10_ms: 1}))});
+    return {...list, nodes: list.nodes.map(node => (node.id === fastest ? fast(node) : node))};
+  };
+  await page.goto('/#/nodes?tab=latency');
+  const auto = page.getByRole('group', {name: 'Node latency'}).getByRole('region', {name: 'auto', exact: true});
+  await auto.getByRole('button', {name: /^Show all \d+$/}).click();
+  // Scroll to the middle of the group, past the rows mounted at first, and Tab onto a row there.
+  await auto.evaluate(section => scrollTo(0, section.getBoundingClientRect().top + scrollY + section.getBoundingClientRect().height / 2));
+  await expect
+    .poll(() => auto.evaluate(section => [...section.querySelectorAll('.row')].filter(row => row.getBoundingClientRect().top > 300).length))
+    .toBeGreaterThan(5);
+  await auto.evaluate(section => [...section.querySelectorAll<HTMLElement>('.row .name a')].find(link => link.getBoundingClientRect().top > 300)!.focus());
+  await page.keyboard.press('Tab');
+  const focusedRow = () => page.evaluate(() => document.activeElement?.closest<HTMLElement>('.row')?.dataset.row ?? null);
+  const id = await focusedRow();
+  const rowIds = await auto.evaluate(section => [...section.querySelectorAll<HTMLElement>('.row[data-row]')].map(row => row.dataset.row));
+  expect(rowIds.indexOf(id!)).toBeGreaterThan(0);
+  // New data makes that node the fastest, moving its row to the top of the group, far outside the window.
+  fastest = id;
+  const read = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/api/v1/nodes'));
+  await page.evaluate(() => {
+    for (const hidden of [true, false]) {
+      Object.defineProperty(document, 'hidden', {configurable: true, get: () => hidden});
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+  });
+  await read;
+  await expect(auto.locator('.row').first()).toHaveAttribute('data-row', id!);
+  await expect.poll(focusedRow).toBe(id);
+  const row = auto.locator(`.row[data-row="${id}"]`);
+  await row.scrollIntoViewIfNeeded();
+  await row.locator('.track').hover();
+  await expect(page.locator('.rp-charttip')).toContainText('Latest latency: 1 ms');
+});
+
 test('traffic is the first connections tab, and a point opens its connection in the list', async ({page}) => {
   await page.goto('/#/connections');
   await expect(page.getByRole('tab', {name: 'Traffic'})).toHaveAttribute('aria-selected', 'true');

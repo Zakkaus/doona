@@ -151,7 +151,9 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
 
 // Table rows, card dividers, hover and empty cells draw --rp-line and --rp-fill on a card. Several palettes set
 // highlight low to their own surface, where both vanished; the palette points them at a step that shows instead.
-test('lines and quiet fills show on a card in every palette', async ({page}) => {
+// Lines and quiet fills only need to show; chart marks that carry a value (the latency ring and range line read
+// --rp-subtle) are non-text graphics and need 3:1 on the card and the page.
+test('lines and quiet fills show on a card, and chart marks reach 3:1, in every palette', async ({page}) => {
   await page.goto('/#/activity');
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
@@ -177,16 +179,17 @@ test('lines and quiet fills show on a card in every palette', async ({page}) => 
               .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
             return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
           };
-          const surface = rgb('var(--rp-surface)');
-          const on = (token: string) => {
-            const [hi, lo] = [luminance(rgb(`var(${token})`), surface), luminance(surface, surface)].sort((x, y) => y - x);
+          const on = (token: string, ground = '--rp-surface') => {
+            const below = rgb(`var(${ground})`);
+            const [hi, lo] = [luminance(rgb(`var(${token})`), below), luminance(below, below)].sort((x, y) => y - x);
             return (hi + 0.05) / (lo + 0.05);
           };
-          return {line: on('--rp-line'), fill: on('--rp-fill')};
+          return {line: on('--rp-line'), fill: on('--rp-fill'), mark: on('--rp-subtle'), 'mark on base': on('--rp-subtle', '--rp-base')};
         },
         [palette, scheme] as const
       );
-      for (const [token, value] of Object.entries(ratios)) if (value < 1.1) failures.push(`${palette} ${scheme} ${token} on surface: ${value.toFixed(3)}`);
+      for (const [token, value] of Object.entries(ratios))
+        if (value < (token.startsWith('mark') ? 3 : 1.1)) failures.push(`${palette} ${scheme} ${token}: ${value.toFixed(3)}`);
     }
   }
   expect(failures).toEqual([]);

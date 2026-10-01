@@ -1,13 +1,13 @@
-import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
+import {useLayoutEffect, useRef, useState, type FocusEvent, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {NodeName} from '../NodeName';
 import {Button, Link} from '../Button';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';
-import {lineSpan, visibleRows} from './layout';
+import {lineSpan, mountedRanges, visibleRows} from './layout';
 
-// `value` is the row's solid dot, coloured by `tone`; `average` its hollow ring and `range` the line joining them, both
+// `value` is the row's solid dot, in the `tone` colour when set; `average` its hollow ring and `range` the line joining them, both
 // left out when null. `details` are the hover tip's lines under the row's name, and joined, what the row says to a
 // screen reader; they are built only for the rows on screen. With `href` the name opens what it names.
 export type MarkerRow = {
@@ -20,14 +20,14 @@ export type MarkerRow = {
   range: [number, number] | null;
   text: string;
   details: () => string[];
-  tone?: string;
+  tone?: 'notice';
 };
 // `notes` are the rows that have no value to draw, summed up in a sentence each (say, which nodes are unavailable).
 export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
-export type MarkerLegend = {kind: 'dot' | 'ring' | 'line'; label: string; color?: string};
+export type MarkerLegend = {kind: 'dot' | 'ring' | 'line'; label: string; tone?: 'notice'};
 
-function Marker({kind, color}: {kind: MarkerLegend['kind']; color?: string}) {
-  return <i className={'rp-marker ' + kind} style={color ? {color} : undefined} aria-hidden="true" />;
+function Marker({kind, tone}: {kind: MarkerLegend['kind']; tone?: 'notice'}) {
+  return <i className={'rp-marker ' + kind + (tone ? ' ' + tone : '')} aria-hidden="true" />;
 }
 
 // An expanded group longer than this mounts only the rows near the viewport, so a group of thousands of node
@@ -35,20 +35,22 @@ function Marker({kind, color}: {kind: MarkerLegend['kind']; color?: string}) {
 const windowFrom = 40;
 const overscan = 10;
 
-// The rows of a long expanded group from the first to the last near the viewport, with spacers standing in for the
-// rest so the page keeps its height. Rows just past the viewport are mounted too, so Tab reaches them and the focus
-// scroll moves the window along; printing mounts every row.
-function RowWindow({rows, render}: {rows: MarkerRow[]; render: (row: MarkerRow) => ReactNode}) {
+// The rows of a long expanded group near the viewport, with spacers standing in for the rest so the page keeps its
+// height. Rows just past the viewport are mounted too, so Tab reaches them and the focus scroll moves the window along.
+// The focused row stays mounted wherever it is, and printing mounts every row.
+function RowWindow({rows, focused, render}: {rows: MarkerRow[]; focused: string | null; render: (row: MarkerRow) => ReactNode}) {
   const box = useRef<HTMLDivElement>(null);
+  const update = useRef(() => {});
   const [span, setSpan] = useState({start: 0, end: Math.min(rows.length, windowFrom), height: 0});
   const [printing, setPrinting] = useState(false);
   useLayoutEffect(() => {
     let frame = 0;
-    const update = () => {
+    update.current = () => {
+      cancelAnimationFrame(frame);
       frame = 0;
       const element = box.current;
       if (!element) return;
-      // Every row has one height; measure a mounted one, keeping the last height while none is.
+      // Every row has one height, measured again on each pass (a breakpoint changes it); one row is always mounted.
       const height = element.querySelector<HTMLElement>(':scope > .row')?.getBoundingClientRect().height;
       setSpan(current => {
         const rowHeight = height || current.height;
@@ -58,11 +60,11 @@ function RowWindow({rows, render}: {rows: MarkerRow[]; render: (row: MarkerRow) 
       });
     };
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
+      if (!frame) frame = requestAnimationFrame(update.current);
     };
     const print = () => flushSync(() => setPrinting(true));
     const printed = () => setPrinting(false);
-    update();
+    update.current();
     addEventListener('scroll', schedule, {capture: true, passive: true});
     addEventListener('resize', schedule);
     addEventListener('beforeprint', print);
@@ -75,13 +77,24 @@ function RowWindow({rows, render}: {rows: MarkerRow[]; render: (row: MarkerRow) 
       removeEventListener('afterprint', printed);
     };
   }, [rows.length]);
-  const start = printing ? 0 : Math.min(span.start, rows.length);
-  const end = printing ? rows.length : Math.min(span.end, rows.length);
+  const shown = printing ? {start: 0, end: rows.length} : {start: Math.min(span.start, rows.length), end: Math.min(span.end, rows.length)};
+  const ranges = mountedRanges(
+    shown,
+    rows.findIndex(row => row.id === focused)
+  );
+  const children: ReactNode[] = [];
+  let next = 0;
+  const gap = (until: number) => until > next && children.push(<div key={'gap-' + next} style={{height: (until - next) * span.height}} aria-hidden="true" />);
+  for (const range of ranges) {
+    gap(range.start);
+    children.push(...rows.slice(range.start, range.end).map(render));
+    next = range.end;
+  }
+  gap(rows.length);
+  // A focus moved by Tab or Shift+Tab places the window at once, so the spacers never jump under the focus scroll.
   return (
-    <div ref={box}>
-      {start > 0 && <div style={{height: start * span.height}} aria-hidden="true" />}
-      {rows.slice(start, end).map(render)}
-      {end < rows.length && <div style={{height: (rows.length - end) * span.height}} aria-hidden="true" />}
+    <div ref={box} onFocus={() => update.current()}>
+      {children}
     </div>
   );
 }
@@ -111,12 +124,37 @@ export function MarkerPlot({
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  // The row holding the focus. A row unmounted or moved under the focus (new data reordering a group, a window
+  // passing it) gives the focus back to that node's row once the page settles; a reader moving on clears it.
+  const [focusedRow, setFocusedRow] = useState<string | null>(null);
+  const focused = useRef<{id: string; element: HTMLElement} | null>(null);
+  const onFocus = (event: FocusEvent<HTMLDivElement>) => {
+    const id = event.target.closest<HTMLElement>('[data-row]')?.dataset.row;
+    focused.current = id ? {id, element: event.target} : null;
+    setFocusedRow(id ?? null);
+  };
+  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const element = event.target;
+    queueMicrotask(() => {
+      if (focused.current?.element !== element || document.activeElement === element) return;
+      focused.current = null;
+      setFocusedRow(null);
+    });
+  };
+  useLayoutEffect(() => {
+    const last = focused.current;
+    if (!last || document.activeElement === last.element || (document.activeElement && document.activeElement !== document.body)) return;
+    const element = tipRef.current?.querySelector<HTMLElement>(`[data-row="${CSS.escape(last.id)}"] a`);
+    if (!element) return;
+    focused.current = {id: last.id, element};
+    element.focus({preventScroll: true});
+  });
   const ticks = [0, max / 4, max / 2, (3 * max) / 4, max];
   const at = (value: number) => Math.min(100, (value / max) * 100);
   const renderRow = (row: MarkerRow) => {
     const line = row.range && lineSpan(row.range, max);
     return (
-      <div key={row.id} className="row" onPointerMove={event => showTip(event, [row.label, ...row.details()], row.nodeName)}>
+      <div key={row.id} className="row" data-row={row.id} onPointerMove={event => showTip(event, [row.label, ...row.details()], row.nodeName)}>
         <span className="name">
           {row.href ? (
             <Link appearance="link" href={row.href}>
@@ -139,7 +177,7 @@ export function MarkerPlot({
             </span>
           )}
           <span className={'at' + (row.value > max ? ' over' : '')} style={{insetInlineStart: `${at(row.value)}%`}}>
-            <Marker kind="dot" color={row.tone} />
+            <Marker kind="dot" tone={row.tone} />
           </span>
         </div>
         <span className="value">{row.text}</span>
@@ -147,11 +185,20 @@ export function MarkerPlot({
     );
   };
   return (
-    <div className="rp-markerplot rp-chart-hover" ref={tipRef} onPointerLeave={hideTip} role="group" aria-label={label} aria-describedby={describedBy}>
+    <div
+      className="rp-markerplot rp-chart-hover"
+      ref={tipRef}
+      onPointerLeave={hideTip}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      role="group"
+      aria-label={label}
+      aria-describedby={describedBy}
+    >
       <ul className="legend">
         {legend.map(item => (
           <li key={item.label}>
-            <Marker kind={item.kind} color={item.color} />
+            <Marker kind={item.kind} tone={item.tone} />
             {item.label}
           </li>
         ))}
@@ -173,7 +220,7 @@ export function MarkerPlot({
           {!expanded.has(group.id) ? (
             group.rows.slice(0, limit).map(renderRow)
           ) : group.rows.length > windowFrom ? (
-            <RowWindow rows={group.rows} render={renderRow} />
+            <RowWindow rows={group.rows} focused={focusedRow} render={renderRow} />
           ) : (
             group.rows.map(renderRow)
           )}

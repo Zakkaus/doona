@@ -3,7 +3,7 @@ import {NodeName} from '../../ui/NodeName';
 import {formatLatency} from '../../i18n/format';
 import {formatList, useLang, useT, type Lang, type Translator} from '../../i18n';
 import {Card, Empty, ErrorMessage, Loading, Segmented, Link} from '../../ui/ui';
-import {usePalette, FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
+import {FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
@@ -48,7 +48,6 @@ export function missingNames(rows: LatencyMissing[], lang: Lang, t: Translator, 
 export function NodeLatency() {
   const t = useT();
   const lang = useLang();
-  const p = usePalette();
   const {nodes, by, setBy, view, hrefs} = useLatencyTab();
   if (nodes.error && !nodes.data) return <ErrorMessage error={nodes.error} onRetry={nodes.refetch} />;
   if (!nodes.data) return <Loading />;
@@ -128,7 +127,7 @@ export function NodeLatency() {
               ? [
                   {kind: 'ring' as const, label: t('nodes.latency.average')},
                   {kind: 'line' as const, label: t('nodes.latency.range')},
-                  {kind: 'dot' as const, label: t('nodes.latency.slower'), color: p.notice}
+                  {kind: 'dot' as const, label: t('nodes.latency.slower'), tone: 'notice' as const}
                 ]
               : [])
           ]}
@@ -146,7 +145,7 @@ export function NodeLatency() {
                 average: latencyAverage(row),
                 range: latencyRange(row),
                 text: formatLatency(row.latest, t),
-                tone: slower ? p.notice : undefined,
+                tone: slower ? ('notice' as const) : undefined,
                 details: () => [
                   t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
                   ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),

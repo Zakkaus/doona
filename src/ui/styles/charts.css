@@ -250,14 +250,15 @@
   font-size: var(--rp-text-sm);
   font-variant-numeric: tabular-nums;
 }
-/* The range line and the average ring take the muted token, so the solid dot stays the row's one strong mark. */
+/* The range line and the average ring take the subtle token: quieter than the solid dot, and at least 3:1 on a card
+   in every palette. */
 .rp-markerplot .track .line {
   position: absolute;
   top: 50%;
   height: 2px;
   translate: 0 -50%;
   border-radius: 1px;
-  background: var(--rp-muted);
+  background: var(--rp-subtle);
 }
 .rp-markerplot .track .at.over .rp-marker.dot {
   border-radius: 50%;
@@ -310,7 +311,7 @@
   box-sizing: border-box;
   width: 10px;
   height: 10px;
-  border: 2px solid var(--rp-muted);
+  border: 2px solid var(--rp-subtle);
   border-radius: 50%;
   background: var(--rp-base);
 }
@@ -318,7 +319,10 @@
   width: 14px;
   height: 2px;
   border-radius: 1px;
-  background: var(--rp-muted);
+  background: var(--rp-subtle);
+}
+.rp-marker.dot.notice {
+  color: var(--rp-notice);
 }
 
 /* ---- Heatmap ---- */
