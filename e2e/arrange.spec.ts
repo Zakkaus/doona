@@ -19,14 +19,14 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await expect(page.getByRole('tab', {name: 'Group membership', exact: true})).toHaveAttribute('aria-selected', 'true');
   const card = (name: string) => page.locator('.rp-drop').filter({has: page.getByRole('heading', {name, exact: true})});
   // Why each group holds what it holds, in words.
-  await expect(card('proxy')).toContainText('This group has no filter, so it holds every node.');
-  await expect(card('skylink')).toContainText('Whole subscriptions');
+  await expect(card('office')).toContainText('This group has no filter, so it holds every node.');
+  await expect(card('backup')).toContainText('Whole subscriptions');
   await expect(card('hkauto')).toContainText("name(keyword: 'hk')");
   await expect(card('hkauto')).toContainText('cannot be removed here');
   // The rule is explained by what it selects, with the evaluator honk's filters follow.
   await expect(card('hkauto')).toContainText('Currently selects: hk-01, hk-02');
   // The only filter of a group cannot be removed, since the group would then hold every node.
-  await expect(card('skylink').getByRole('button', {name: /^Remove /})).toBeDisabled();
+  await expect(card('backup').getByRole('button', {name: /^Remove /})).toBeDisabled();
 
   // Selection path: tick rows, then add them together from the bar under the tray.
   const tray = page.getByRole('grid', {name: 'Nodes and subscriptions'});
@@ -49,19 +49,19 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('button', {name: 'Drag us-01'})).toBeFocused();
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 10 && (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) !== 'Drop into group gaming'; i++)
+  for (let i = 0; i < 25 && (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) !== 'Drop into group hkauto'; i++)
     await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');
-  await expect(card('gaming')).toContainText('us-01');
+  await expect(card('hkauto')).toContainText('us-01');
 
   // Remove an explicit member.
-  await card('resilient').getByRole('button', {name: 'Remove hk-01 from resilient'}).click();
+  await card('gaming').getByRole('button', {name: 'Remove hk-02 from gaming'}).click();
   // A staged removal stays in view, marked, until it is applied or undone.
-  const undo = card('resilient').getByRole('button', {name: 'Undo removing hk-01'});
+  const undo = card('gaming').getByRole('button', {name: 'Undo removing hk-02'});
   await expect(undo).toBeVisible();
   await undo.click();
   await expect(undo).toHaveCount(0);
-  await card('resilient').getByRole('button', {name: 'Remove hk-01 from resilient'}).click();
+  await card('gaming').getByRole('button', {name: 'Remove hk-02 from gaming'}).click();
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toContainText('3 changes not applied');
 
   // Review lists each change in words; one write carries them all.
@@ -71,7 +71,7 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   const preview = review.locator('pre.rp-arrange-preview').first();
   await expect(preview.locator('.rp-dae-punctuation').first()).toBeVisible();
   expect(await preview.textContent()).toContain('{');
-  await expect(review.getByRole('listitem')).toHaveText(['Add node sg-01 to gaming', 'Add node us-01 to gaming', 'Remove node hk-01 from resilient']);
+  await expect(review.getByRole('listitem')).toHaveText(['Add node sg-01 to gaming', 'Add node us-01 to hkauto', 'Remove node hk-02 from gaming']);
   const writes: string[] = [];
   page.on('request', request => {
     if (request.method() === 'PUT' && request.url().includes('/config/sources/')) writes.push(request.postDataJSON().content);
@@ -81,9 +81,8 @@ test('arranging explains membership, stages edits by menu and drag, and applies 
   await expect(applied).toBeVisible();
   expect(writes).toHaveLength(1);
   const written = (await backend.api.config()).sources.find(source => source.kind === 'main')!.content!;
-  expect(written).toContain('filter: name(jp-01, hk-02, sg-01, us-01)');
-  expect(written).toContain('filter: name(sg-01, us-01)');
-  expect(written).toContain("hkauto { filter: name(keyword: 'hk') policy: min_moving_avg }");
+  expect(written).toContain('filter: name(jp-01, sg-01)');
+  expect(written).toContain("filter: name(keyword: 'hk')\n    filter: name(us-01)");
   await expect(page.getByRole('region', {name: 'Changes not applied'})).toHaveCount(0);
   // Two groups changed, so the toast opens the group list.
   await applied.getByRole('button', {name: 'View groups', exact: true}).click();

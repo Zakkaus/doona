@@ -25,7 +25,7 @@ test.describe('translated configuration text', () => {
     await page.goto('/#/config');
     const routing = page.getByRole('region', {name: 'routing', exact: true});
     await routing.getByRole('button', {name: translate('zh-TW', 'config.edit'), exact: true}).click();
-    await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: resilient\n}');
+    await routing.locator('.cm-content').fill('routing {\n  domain(example.org) -> nowhere\n  fallback: proxy\n}');
     const traditional = translate('zh-TW', 'config.diagnostic.unknownOutbound', {name: 'nowhere'});
     await expect(routing.getByRole('list', {name: translate('zh-TW', 'config.diagnostics')})).toContainText(traditional);
     await routing.locator('.cm-lintRange-error').hover();

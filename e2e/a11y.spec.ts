@@ -62,8 +62,8 @@ for (const [palette, scheme] of looks)
 // Each panel's More menu, open, passes the same rules as the page.
 const menus = [
   ['connections?id=1', (page: import('@playwright/test').Page) => detail(page), 'More actions'],
-  ['policies', (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'resilient', exact: true}), 'More actions'],
-  ['nodes?tab=list', (page: import('@playwright/test').Page) => page.locator('body'), 'More actions for sub-c']
+  ['policies', (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'auto', exact: true}), 'More actions'],
+  ['nodes?tab=list', (page: import('@playwright/test').Page) => page.locator('body'), 'More actions for harbor']
 ] as const;
 for (const [route, scope, name] of menus)
   test(`the More menu on ${route.split('?')[0]} passes axe`, async ({page}) => {

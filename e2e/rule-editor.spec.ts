@@ -1,4 +1,4 @@
-import {expect, setAppearance, test} from './fixtures';
+import {expect, mockBackend, setAppearance, test} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 const rows = (page: import('@playwright/test').Page) =>
@@ -47,19 +47,20 @@ test('the insert position is searchable by the rule it goes before', async ({pag
 test('the rule list shows the dictionary in evaluation order with its source lines', async ({page}) => {
   await page.goto('/#/rules?tab=list&view=advanced');
   const list = rows(page);
-  await expect(list).toHaveCount(9);
-  await expect(list.first()).toContainText('pname(NetworkManager, systemd-resolved)');
-  await expect(list.first()).toContainText('config.dae:51');
-  await expect(list.nth(5)).toContainText('rules.dae:3');
-  await expect(list.last()).toContainText('fallback: resilient');
-  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('9 rules, generation 40');
+  await expect(list).toHaveCount(21);
+  await expect(list.first()).toContainText('pname(NetworkManager)');
+  await expect(list.first()).toContainText('config.dae:149');
+  await expect(list.nth(7)).toContainText('domain(geosite:telegram)');
+  await expect(list.last()).toContainText('fallback: proxy');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('21 rules, generation 40');
   await list.first().getByRole('button', {name: 'Open config file', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=51$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=149$/);
 });
 
 test('a rule from an include file says why it cannot be changed here and opens its file at the line', async ({page}) => {
+  await mockBackend(page, {includedRule: true});
   await page.goto('/#/rules?tab=list&view=advanced');
-  const row = rows(page).nth(6);
+  const row = rows(page).filter({hasText: 'domain(geosite:openai)'});
   await expect(row).toContainText('rules.dae:6');
   const reason =
     'This rule is in the include file rules.dae, outside a routing section, so it cannot be changed here. Use Open config file to edit it in the file.';
@@ -75,7 +76,7 @@ test('a rule from an include file says why it cannot be changed here and opens i
     await expect(page.getByRole('tooltip')).toHaveText(reason, {timeout: 1500});
   }).toPass();
   // The fallback has nothing to remove, so it shows no remove control.
-  await expect(rows(page).last().getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
+  await expect(rows(page).filter({hasText: 'fallback: proxy'}).getByRole('button', {name: 'Remove rule', exact: true})).toHaveCount(0);
   await row.getByRole('button', {name: 'Open config file', exact: true}).click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-rules&line=6$/);
 });
@@ -83,7 +84,7 @@ test('a rule from an include file says why it cannot be changed here and opens i
 test('a rule is added before the fallback and removed again through validate, save and reload', async ({page}) => {
   await page.goto('/#/rules?tab=list&view=advanced');
   const list = rows(page);
-  await expect(list).toHaveCount(9);
+  await expect(list).toHaveCount(21);
   await page.getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
@@ -92,20 +93,33 @@ test('a rule is added before the fallback and removed again through validate, sa
   // The outbound picker is a group's final outbound picker without None and the nodes, which a rule cannot name.
   const outbounds = page.getByRole('listbox');
   await expect(outbounds.getByRole('group', {name: 'Built-in'}).getByRole('option')).toHaveText(['direct', 'block']);
-  await expect(outbounds.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText(['proxy', 'resilient', 'gaming', 'skylink']);
+  await expect(outbounds.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText([
+    'proxy',
+    'auto',
+    'hk',
+    'jp',
+    'us',
+    'tw',
+    'sg',
+    'kr',
+    'telegram',
+    'ai',
+    'youtube',
+    'netflix'
+  ]);
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gam');
   await expect(outbounds.getByRole('option')).toHaveText(['gaming']);
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
-  await expect(list).toHaveCount(10);
-  await expect(list.nth(8)).toContainText('domain(geosite:netflix)');
-  await expect(list.nth(8)).toContainText('gaming');
+  await expect(list).toHaveCount(22);
+  await expect(list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'})).toContainText('domain(geosite:netflix)');
+  await expect(list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'})).toContainText('gaming');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('generation 41');
-  await list.nth(8).getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await list.filter({hasText: 'gaming'}).filter({hasText: 'domain(geosite:netflix)'}).getByRole('button', {name: 'Remove rule', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
-  await expect(list).toHaveCount(9);
+  await expect(list).toHaveCount(21);
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('generation 42');
 });
 
@@ -163,7 +177,7 @@ test('the routing picker writes a domain keyword condition', async ({page}) => {
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('option', {name: 'block', exact: true}).click();
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(rows(page).nth(8)).toContainText('domain(keyword: tracker)');
+  await expect(rows(page).filter({hasText: 'domain(keyword: tracker)'})).toContainText('domain(keyword: tracker)');
 });
 
 for (const lang of ['en', 'zh-CN']) {

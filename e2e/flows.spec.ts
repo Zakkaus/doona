@@ -33,7 +33,7 @@ test.describe(() => {
 test('a pinned tree item carries into the records', async ({page}) => {
   await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
-  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip: private)'});
+  const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip:private)'});
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar2$/);
@@ -50,9 +50,9 @@ test('a pinned tree item carries into the records', async ({page}) => {
     return virtualCount ? Number(virtualCount) - 1 : rows.count();
   };
   await expect.poll(count).toBe(matching);
-  await expect(rows.first()).toContainText('dip(geoip: private)');
-  const clearPath = page.getByRole('button', {name: 'Clear path filter: Path: dip(geoip: private)', exact: true});
-  await expect(clearPath).toHaveText('Path: dip(geoip: private)');
+  await expect(rows.first()).toContainText('dip(geoip:private)');
+  const clearPath = page.getByRole('button', {name: 'Clear path filter: Path: dip(geoip:private)', exact: true});
+  await expect(clearPath).toHaveText('Path: dip(geoip:private)');
   await clearPath.click();
   await expect(page).not.toHaveURL(/path=/);
   await expect.poll(count).toBeGreaterThan(matching);
@@ -148,19 +148,19 @@ test('the tree draws every configured rule, follows a hover along its branch and
   }
   // Every configured rule is drawn, unused ones included, grouped under its outbound.
   const rules = topology.locator('[data-stage="rule"]');
-  await expect(rules).toHaveCount(10);
-  await expect(rules.filter({hasText: 'sip(10.0.0.0/24) && dport(25)'})).toContainText('0');
-  await expect(rules.filter({hasText: 'fallback: resilient'})).toHaveCount(1);
+  await expect(rules).toHaveCount(22);
+  await expect(rules.filter({hasText: 'domain(geosite:netease)'})).toContainText('0');
+  await expect(rules.filter({hasText: 'fallback: proxy'})).toHaveCount(1);
   // Groups nothing routes to are still drawn, with a dashed connector to the node they select.
-  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'skylink'})).toBeVisible();
+  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'backup'})).toBeVisible();
   const links = topology.locator('.rp-tree-links path');
   expect(await links.count()).toBeGreaterThan(8);
   await expect(topology.locator('.rp-tree-links path[stroke-dasharray]').first()).toBeAttached();
   // Hovering a rule lights its branch and dims the rest.
-  const item = topology.locator('[data-stage="rule"]').filter({hasText: 'domain(suffix: doubleclick.net)'});
+  const item = topology.locator('[data-stage="rule"]').filter({hasText: 'l4proto(udp) && dport(443)'});
   await item.hover();
   await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'block'})).not.toHaveClass(/dim/);
-  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).toHaveClass(/dim/);
+  await expect(topology.locator('[data-stage="outbound"][data-id="outbound:proxy"]')).toHaveClass(/dim/);
   await expect(topology.locator('.rp-tree-links path[data-state="active"]').first()).toBeAttached();
   await expect(topology.locator('.rp-tree-links path[data-state="dim"]').first()).toBeAttached();
   // A node pins too, and lights the groups and rules that reach it.
@@ -168,7 +168,7 @@ test('the tree draws every configured rule, follows a hover along its branch and
   await node.click();
   await expect(page).toHaveURL(/path=node%3Ahk-01/);
   await expect(node).toHaveAttribute('aria-pressed', 'true');
-  await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'proxy'})).not.toHaveClass(/dim/);
+  await expect(topology.locator('[data-stage="outbound"][data-id="outbound:proxy"]')).not.toHaveClass(/dim/);
   await node.press('Escape');
   await expect(page).not.toHaveURL(/path=/);
   await expect(node).toHaveAttribute('aria-pressed', 'false');

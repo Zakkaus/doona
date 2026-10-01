@@ -209,7 +209,7 @@ test('Escape on a menu or dialog opened from a table row returns focus to its tr
     return trigger;
   };
   await page.goto('/#/nodes');
-  const menu = await reach(page.getByRole('row', {name: /sub-c/}), 'More actions for sub-c');
+  const menu = await reach(page.getByRole('row', {name: /harbor/}), 'More actions for harbor');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menu')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -217,7 +217,7 @@ test('Escape on a menu or dialog opened from a table row returns focus to its tr
   await expect(menu).toBeFocused();
 
   await page.goto('/#/rules?tab=list&view=advanced');
-  const edit = await reach(page.getByRole('row', {name: /domain\(geosite: telegram\)/}), 'Edit outbound settings');
+  const edit = await reach(page.getByRole('row', {name: /domain\(geosite:telegram\)/}), 'Edit outbound settings');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', {name: 'Edit outbound settings'})).toBeVisible();
   await page.keyboard.press('Escape');

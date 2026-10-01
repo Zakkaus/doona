@@ -5,11 +5,11 @@ test.use({viewport: {width: 1440, height: 1000}});
 
 test('Test all completes a group larger than the advertised job ceiling', async ({page}) => {
   const {api, requests} = await mockBackend(page);
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   await page.goto('/#/policies');
-  const card = page.getByRole('region', {name: 'skylink', exact: true});
+  const card = page.getByRole('region', {name: 'backup', exact: true});
   await moreAction(card, 'Test all');
-  await expect(page.locator('.rp-toast.positive').filter({hasText: /skylink.*available.*selection/})).toBeVisible();
+  await expect(page.locator('.rp-toast.positive').filter({hasText: /backup.*available.*selection/})).toBeVisible();
   const jobs = requests
     .filter(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/probes'))
     .map(request => request.postDataJSON());
@@ -21,14 +21,14 @@ test('Test all completes a group larger than the advertised job ceiling', async 
 
 test('a failed second probe batch reports partial completion instead of success', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  const group = await api.group('skylink');
+  const group = await api.group('backup');
   let jobs = 0;
   handlers['POST probes'] = request => {
     if (++jobs === 2) throw new ApiError(422, 'unsupported_value', 'Batch refused');
     return api.startProbe(request.postDataJSON());
   };
   await page.goto('/#/policies');
-  const card = page.getByRole('region', {name: 'skylink', exact: true});
+  const card = page.getByRole('region', {name: 'backup', exact: true});
   await moreAction(card, 'Test all');
   await expect(page.locator('.rp-toast.negative')).toContainText(`Tested 64 of ${group.members.length} members`);
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);
@@ -123,12 +123,13 @@ test('an open Policies page shows a selection made elsewhere and stops polling w
   await page.clock.install();
   await page.goto('/#/policies');
   const card = page.getByRole('region', {name: 'proxy', exact: true});
+  await card.getByRole('searchbox', {name: 'Filter nodes'}).fill('-0');
   // TCP and UDP start on different members, so no member is the selection yet.
-  const member = card.getByRole('button', {name: /^sg-01 /});
-  await expect(member).toHaveAttribute('aria-pressed', 'false');
+  const member = card.getByRole('row', {name: 'sg-01', exact: true});
+  await expect(member).toHaveAttribute('aria-selected', 'false');
   await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});
   await page.clock.fastForward(5500);
-  await expect(member).toHaveAttribute('aria-pressed', 'true');
+  await expect(member).toHaveAttribute('aria-selected', 'true');
   const listReads = () => requests.filter(request => request.method() === 'GET' && new URL(request.url()).pathname === '/api/v1/groups').length;
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});

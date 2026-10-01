@@ -51,9 +51,17 @@ for (const how of Object.keys(failures) as Failure[])
   test.describe(`on ${how === 'network' ? 'a network failure' : how}`, () => {
     test('selecting a group member reports the failure and can be pressed again', async ({page}) => {
       const {api, handlers} = await mockBackend(page);
-      const counted = await failOnce(page, handlers, 'PUT', 'groups/proxy/selection', how, request => api.selectGroup('proxy', request.postDataJSON()));
-      await page.goto('/#/policies');
-      const member = page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: /^sg-01\b/});
+      const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+      await api.pollOperation(
+        await api.replaceConfigSource(
+          main.id,
+          main.content!.replace('office {\n', 'office {\n    filter: name(hk-01, hk-02, sg-01)\n'),
+          `"${main.content_sha256}"`
+        )
+      );
+      const counted = await failOnce(page, handlers, 'PUT', 'groups/office/selection', how, request => api.selectGroup('office', request.postDataJSON()));
+      await page.goto('/#/policies?group=office');
+      const member = page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: /^sg-01\b/});
       await member.click();
       await expect(shown(page)).toBeVisible();
       await expect(member).toHaveAttribute('aria-pressed', 'false');
@@ -66,12 +74,12 @@ for (const how of Object.keys(failures) as Failure[])
 
     test('releasing a pinned member reports the failure and can be pressed again', async ({page}) => {
       const {api, handlers} = await mockBackend(page);
-      await api.selectGroup('resilient', {member_id: 'us-01', network: 'tcp'});
-      const counted = await failOnce(page, handlers, 'DELETE', 'groups/resilient/selection', how, request =>
-        api.clearGroupOverride('resilient', new URL(request.url()).searchParams.get('network') as 'tcp')
+      await api.selectGroup('auto', {member_id: 'us-01', network: 'tcp'});
+      const counted = await failOnce(page, handlers, 'DELETE', 'groups/auto/selection', how, request =>
+        api.clearGroupOverride('auto', new URL(request.url()).searchParams.get('network') as 'tcp')
       );
       await page.goto('/#/policies');
-      const group = page.getByRole('region', {name: 'resilient', exact: true});
+      const group = page.getByRole('region', {name: 'auto', exact: true});
       await group.getByRole('radio', {name: 'TCP', exact: true}).click();
       await moreAction(group, 'Back to automatic');
       await expect(shown(page)).toBeVisible();

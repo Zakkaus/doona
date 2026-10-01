@@ -1,5 +1,6 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
+import {editorText} from './fixtures';
 import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
@@ -92,20 +93,20 @@ test('a subscription a group filters on cannot be removed until the group change
   handlers['GET config'] = async () => {
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    const content = 'group {\n  roaming { filter: subtag(sub-c) && !name(keyword: HK) policy: min_moving_avg }\n}\n';
+    const content = 'group {\n  roaming { filter: subtag(harbor) && !name(keyword: HK) policy: min_moving_avg }\n}\n';
     config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
     return config;
   };
   let deleted = false;
-  handlers['DELETE providers/sub-c'] = async () => {
+  handlers['DELETE providers/harbor'] = async () => {
     deleted = true;
-    return api.deleteProvider('sub-c');
+    return api.deleteProvider('harbor');
   };
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Remove sub-c', 'More actions for sub-c');
+  await moreAction(page.locator('body'), 'Remove harbor', 'More actions for harbor');
   const confirmation = page.getByRole('alertdialog');
-  await expect(confirmation).toContainText('Groups that filter on sub-c: skylink, roaming. Change their filters on the Policies page first.');
-  await expect(confirmation.getByRole('button', {name: 'Remove sub-c', exact: true})).toHaveCount(0);
+  await expect(confirmation).toContainText('Groups that filter on harbor: backup, roaming. Change their filters on the Policies page first.');
+  await expect(confirmation.getByRole('button', {name: 'Remove harbor', exact: true})).toHaveCount(0);
   await expect(confirmation.getByRole('button')).toHaveText(['Close']);
   await confirmation.getByRole('link', {name: 'Open Policies', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies/);
@@ -301,7 +302,7 @@ test('an unknown probe result gives its reason in words', async ({page}) => {
 test.describe('long lists', () => {
   test.use({storage: {'doona-mock-big': '3000'}});
   test('a node list of thousands renders only the visible rows', async ({page}) => {
-    await page.goto('/#/nodes?provider=sub-c');
+    await page.goto('/#/nodes?provider=harbor');
     await expect(page.locator('.rp-toolbar').nth(1)).toContainText('3,000 / 3,000');
     const list = rows(page.locator('.rp-table').nth(1));
     await expect(list.first()).toBeVisible();
@@ -313,15 +314,15 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources).toHaveCount(2);
-  await expect(sources.first()).toContainText('sub-c');
+  await expect(sources.first()).toContainText('harbor');
   const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(nodes.first()).toBeVisible();
   expect(await nodes.count()).toBeGreaterThan(10);
   await sources.nth(1).click();
   await expect(page).toHaveURL(/provider=inline$/);
   await expect(nodes).toHaveCount(5);
-  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('sub-c refreshed, 120 nodes');
+  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('harbor refreshed, 120 nodes');
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
@@ -330,8 +331,8 @@ test('a subscription refresh interval is written into the configuration', async 
   const original = (await createMockApi().config()).sources.find(source => source.kind === 'main')!.content!;
   await editor.fill(
     original.replace(
-      "sub-c: 'https://sub.example.net/api/v1/client/subscribe?token=demo'",
-      "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '86400s'\n  }"
+      "harbor: 'https://sub.example.net/api/v1/client/subscribe?token=demo'",
+      "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '86400s'\n  }"
     )
   );
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
@@ -340,16 +341,18 @@ test('a subscription refresh interval is written into the configuration', async 
   const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
-  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
+  await expect(
+    page.getByRole('alertdialog', {name: 'harbor auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})
+  ).toBeVisible();
   await expect(sources.first()).toContainText('Every 6 hours');
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText(
-    "sub-c: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
+    "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '6h'\n  }"
   );
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Manual only', exact: true}).click();
   await expect(sources.first()).toContainText('Manual only');
 });
@@ -397,11 +400,11 @@ test('built-in and unattributed provenance stay separate without granting inline
 
 test('an unspecified subscription interval claims neither manual-only nor an engine default but can be set', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
+  const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'});
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
-  await expect(subscription.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true})).toHaveText('—');
+  await expect(subscription.getByRole('button', {name: 'Auto-refresh of harbor', exact: true})).toHaveText('—');
 });
 
 test('without a node list the page shows providers alone, with no latency tab', async ({page}) => {
@@ -517,7 +520,7 @@ test.describe('in Traditional Chinese', () => {
 test('a refresh whose nodes were applied to a degraded runtime reads as applied with a warning', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const runtime = await api.runtime();
-  handlers['POST providers/sub-c/refresh'] = async () => ({
+  handlers['POST providers/harbor/refresh'] = async () => ({
     operation_id: 'refresh-degraded',
     kind: 'provider_refresh',
     status: 'queued',
@@ -535,8 +538,8 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
     error: {code: 'publication_degraded', message: 'Provider nodes were committed but the runtime is degraded.', details: {committed: true}}
   });
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Refresh sub-c', exact: true}).click();
-  await expect(page.locator('.rp-toast.info')).toContainText('sub-c: nodes applied, but the datapath did not recover');
+  await page.getByRole('button', {name: 'Refresh harbor', exact: true}).click();
+  await expect(page.locator('.rp-toast.info')).toContainText('harbor: nodes applied, but the datapath did not recover');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
 });
 
@@ -555,7 +558,7 @@ test('a latency row opens its node in the list', async ({page}) => {
   const row = page.locator('.rp-markerplot .row .name').getByRole('link').first();
   const name = (await row.innerText()).trim();
   await row.click();
-  await expect(page).toHaveURL(new RegExp(`#/nodes\\?provider=[^&]+&q=${encodeURIComponent(name)}$`));
+  await expect(page).toHaveURL(url => url.hash.includes(`q=${encodeURIComponent(name).replaceAll('%20', '+')}`));
   await expect(page.getByRole('tab', {name: 'Nodes', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(name);
   await expect(page.getByRole('grid').last()).toContainText(name);
@@ -572,7 +575,7 @@ test('adding a node to a group offers the group on the policies page', async ({p
 });
 
 test('a node search looks through every source and names the source of each result', async ({page}) => {
-  await page.goto('/#/nodes?provider=sub-c');
+  await page.goto('/#/nodes?provider=harbor');
   const table = page.locator('.rp-table').nth(1);
   const list = rows(table);
   const source = table.getByRole('columnheader', {name: /^Node source/});
@@ -623,24 +626,24 @@ test('a node write conflict names its cause, and only a delete without groups re
 
 test("a subscription's URL is edited where its entry is written", async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
-  await expect(dialog.getByRole('textbox', {name: 'Name', exact: true})).toHaveValue('sub-c');
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
+  await expect(dialog.getByRole('textbox', {name: 'Name', exact: true})).toHaveValue('harbor');
   await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub?token=new');
   // The URL alone changed, so the groups citing the tag are not offered.
   await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator('.rp-toast.positive')).toContainText('Saved sub-c');
+  await expect(page.locator('.rp-toast.positive')).toContainText('Saved harbor');
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText("sub-c: 'https://updated.example.net/sub?token=new'");
+  await expect(page.locator('.cm-content')).toContainText("harbor: 'https://updated.example.net/sub?token=new'");
 });
 
 test("a subscription's User-Agent is set and removed where its entry is written", async ({page}) => {
   const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  let dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  let dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const agent = dialog.getByRole('textbox', {name: 'User-Agent', exact: true});
   await expect(agent).toHaveValue('');
   await expect(dialog.getByText('Leave empty to use the engine default.', {exact: true})).toBeVisible();
@@ -648,10 +651,10 @@ test("a subscription's User-Agent is set and removed where its entry is written"
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'(clash.meta)`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}'(clash.meta)`);
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
   // The User-Agent has its own field, so it is not listed again among the options kept as written.
   await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
@@ -659,15 +662,15 @@ test("a subscription's User-Agent is set and removed where its entry is written"
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}'`);
   await expect(page.locator('.cm-content')).not.toContainText('clash.meta');
 });
 
 test("a subscription's download route is written into its entry and removed again", async ({page}) => {
   const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  let dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  let dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const route = dialog.getByRole('button', {name: 'Download route'});
   await expect(route).toContainText('By routing rules');
   await route.click();
@@ -675,10 +678,10 @@ test("a subscription's download route is written into its entry and removed agai
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}' {\n    route: direct\n  }`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}' {\n    route: direct\n  }`);
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('button', {name: 'Download route'})).toContainText('Direct');
   await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
   await dialog.getByRole('button', {name: 'Download route'}).click();
@@ -686,7 +689,7 @@ test("a subscription's download route is written into its entry and removed agai
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(`sub-c: '${url}'`);
+  await expect(page.locator('.cm-content')).toContainText(`harbor: '${url}'`);
   await expect(page.locator('.cm-content')).not.toContainText('route: direct');
 });
 
@@ -697,8 +700,8 @@ test('an engine that fetches subscriptions only directly offers no download rout
     return {...list, providers: list.providers.map(({download: _download, ...provider}) => provider)};
   };
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Download route'})).toHaveCount(0);
 });
@@ -707,18 +710,20 @@ test('changing the interval of a block-form subscription keeps its User-Agent', 
   const {api} = await mockBackend(page);
   const url = 'https://sub.example.net/api/v1/client/subscribe?token=demo';
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const block = main.content!.replace(`sub-c: '${url}'`, `sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
+  const block = main.content!.replace(`harbor: '${url}'`, `harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 1h\n  }`);
   await api.pollOperation(await api.replaceConfigSource(main.id, block, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  await page.getByRole('button', {name: 'Auto-refresh of sub-c', exact: true}).click();
+  await page.getByRole('button', {name: 'Auto-refresh of harbor', exact: true}).click();
   await page.getByRole('menuitemradio', {name: 'Every 6 hours', exact: true}).click();
-  await expect(page.getByRole('alertdialog', {name: 'sub-c auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})).toBeVisible();
+  await expect(
+    page.getByRole('alertdialog', {name: 'harbor auto-refresh written to the configuration and reloaded: Every 6 hours', exact: true})
+  ).toBeVisible();
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
-  await expect(editor).toContainText(`sub-c: '${url}' {\n    ua: 'clash.meta'\n    interval: 6h\n  }`);
+  await expect(editor).toContainText(`harbor: '${url}' {\n    ua: 'clash.meta'\n    interval: 6h\n  }`);
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await expect(dialog.getByRole('textbox', {name: 'User-Agent', exact: true})).toHaveValue('clash.meta');
   // The interval belongs to the Auto-refresh picker, so it is not listed among the options kept as written either.
   await expect(dialog.getByText('Other options, kept as written', {exact: true})).toHaveCount(0);
@@ -730,23 +735,23 @@ test('renaming a subscription carries the groups whose subtag filter names it', 
   const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://other.example.org/sub'\n");
   await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const name = dialog.getByRole('textbox', {name: 'Name', exact: true});
   // A tag another subscription uses is refused.
   await name.fill('sub-d');
   // The clash is named once, on the field.
   await expect(dialog.getByText('Another subscription already uses this name', {exact: true})).toHaveCount(1);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  await name.fill('skylink-sub');
-  await expect(dialog.getByRole('switch', {name: 'Also update the subscription filter in skylink', exact: true})).toBeChecked();
+  await name.fill('backup-sub');
+  await expect(dialog.getByRole('switch', {name: 'Also update the subscription filter in backup', exact: true})).toBeChecked();
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  const editor = page.locator('.cm-content');
-  await expect(editor).toContainText("skylink-sub: 'https://sub.example.net/api/v1/client/subscribe?token=demo'");
-  await expect(editor).toContainText('filter: subtag(skylink-sub)');
-  await expect(editor).not.toContainText('subtag(sub-c)');
+  const editor = await editorText(page);
+  expect(editor).toContain("backup-sub: 'https://sub.example.net/api/v1/client/subscribe?token=demo'");
+  expect(editor).toContain('filter: subtag(backup-sub)');
+  expect(editor).not.toContain('subtag(harbor)');
 });
 
 test('a subscription in a read-only source offers its source file instead of an edit', async ({page}) => {
@@ -758,8 +763,8 @@ test('a subscription in a read-only source offers its source file instead of an 
   };
   await page.goto('/#/nodes?tab=list');
   const sources = page.locator('.rp-table').first();
-  const open = await moreItem(sources, 'Open config file', 'More actions for sub-c');
-  await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
+  const open = await moreItem(sources, 'Open config file', 'More actions for harbor');
+  await expect(page.getByRole('menu', {name: 'More actions for harbor'}).getByRole('menuitem', {name: 'Edit harbor', exact: true})).toHaveCount(0);
   await open.click();
   await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=\d+/);
 });
@@ -798,20 +803,20 @@ test('a group in another source naming the tag blocks a rename but not a URL edi
   handlers['GET config'] = async () => {
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    const content = 'group {\n  roaming { filter: subtag(sub-c) policy: min_moving_avg }\n}\n';
+    const content = 'group {\n  roaming { filter: subtag(harbor) policy: min_moving_avg }\n}\n';
     config.sources.push({...main, id: 'extra-groups', kind: 'include', path: 'groups.dae', content});
     return config;
   };
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
-  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('skylink-sub');
-  await expect(dialog.getByText('Groups that filter on sub-c: skylink, roaming. Change their filters on the Policies page first.')).toBeVisible();
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
+  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('backup-sub');
+  await expect(dialog.getByText('Groups that filter on harbor: backup, roaming. Change their filters on the Policies page first.')).toBeVisible();
   await expect(dialog.getByRole('link', {name: 'Open Policies', exact: true})).toHaveAttribute('href', '#/policies');
   await expect(dialog.getByRole('switch', {name: /^Also update/})).toHaveCount(0);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   // Keeping the name leaves a URL edit free.
-  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('sub-c');
+  await dialog.getByRole('textbox', {name: 'Name', exact: true}).fill('harbor');
   await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub');
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
 });
@@ -820,19 +825,19 @@ test('two subscriptions sharing a name offer their source file instead of an edi
   const {api, handlers} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   // An untagged entry honk names after its host, beside a tagged entry of that name pointing elsewhere.
-  const added = main.content!.replace('subscription {\n', "subscription {\n  'https://sub-c/sub'\n");
+  const added = main.content!.replace('subscription {\n', "subscription {\n  'https://harbor/sub'\n");
   await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
   handlers['GET providers'] = async () => {
     const list = await api.providers();
-    const tagged = list.providers.find(provider => provider.id === 'sub-c')!;
-    return {...list, providers: [...list.providers, {...tagged, id: 'sub-c-untagged', url_redacted: 'https://sub-c/sub'}]};
+    const tagged = list.providers.find(provider => provider.id === 'harbor')!;
+    return {...list, providers: [...list.providers, {...tagged, id: 'harbor-untagged', url_redacted: 'https://harbor/sub'}]};
   };
   await page.goto('/#/nodes?tab=list');
-  const named = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-c'});
+  const named = rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'});
   await expect(named).toHaveCount(2);
   for (const row of [named.first(), named.last()]) {
-    await expect(await moreItem(row, 'Open config file', 'More actions for sub-c')).toBeVisible();
-    await expect(page.getByRole('menu', {name: 'More actions for sub-c'}).getByRole('menuitem', {name: 'Edit sub-c', exact: true})).toHaveCount(0);
+    await expect(await moreItem(row, 'Open config file', 'More actions for harbor')).toBeVisible();
+    await expect(page.getByRole('menu', {name: 'More actions for harbor'}).getByRole('menuitem', {name: 'Edit harbor', exact: true})).toHaveCount(0);
     await page.keyboard.press('Escape');
   }
 });
@@ -842,7 +847,7 @@ test('a subscription in a writable include is edited while the main source is re
   handlers['GET config'] = async () => {
     const config = await api.config();
     const main = config.sources.find(source => source.kind === 'main')!;
-    const entry = main.content!.match(/^\s*sub-c:.*$/m)![0];
+    const entry = main.content!.match(/^\s*harbor:.*$/m)![0];
     main.content = main.content!.replace(entry + '\n', '');
     main.content_sha256 = await sha256(main.content);
     main.writable = false;
@@ -851,17 +856,17 @@ test('a subscription in a writable include is edited while the main source is re
     return config;
   };
   await page.goto('/#/nodes?tab=list');
-  const edit = await moreItem(page.locator('.rp-table').first(), 'Edit sub-c', 'More actions for sub-c');
+  const edit = await moreItem(page.locator('.rp-table').first(), 'Edit harbor', 'More actions for harbor');
   await expect(edit).toBeEnabled();
   await edit.click();
-  await expect(page.getByRole('dialog', {name: 'Edit subscription sub-c'})).toBeVisible();
+  await expect(page.getByRole('dialog', {name: 'Edit subscription harbor'})).toBeVisible();
 });
 
 test('an edit refused because the file changed saves over the file as it is now, keeping what was typed', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const url = dialog.getByRole('textbox', {name: 'Subscription URL', exact: true});
   await url.fill('https://updated.example.net/sub');
   // Another editor changes the file while the dialog is open.
@@ -878,17 +883,17 @@ test('an edit refused because the file changed saves over the file as it is now,
   expect(writes).toHaveLength(2);
   const saved = (await api.config()).sources.find(source => source.id === main.id)!.content!;
   expect(saved.startsWith('# edited elsewhere\n')).toBe(true);
-  expect(saved).toContain("sub-c: 'https://updated.example.net/sub'");
+  expect(saved).toContain("harbor: 'https://updated.example.net/sub'");
 });
 
 test('an edit refused because the entry left its file says so on the next save', async ({page}) => {
   const {api} = await mockBackend(page);
   await page.goto('/#/nodes?tab=list');
-  await moreAction(page.locator('body'), 'Edit sub-c', 'More actions for sub-c');
-  const dialog = page.getByRole('dialog', {name: 'Edit subscription sub-c'});
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('https://updated.example.net/sub');
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  const removed = main.content!.replace(/^\s*sub-c:.*\n/m, '');
+  const removed = main.content!.replace(/^\s*harbor:.*\n/m, '');
   await api.pollOperation(await api.replaceConfigSource(main.id, removed, `"${main.content_sha256}"`));
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
   await apply.click();

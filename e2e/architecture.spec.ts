@@ -749,8 +749,12 @@ test('redacted rule labels edit accepted source and freeze the draft through val
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain('domain(suffix: accepted.example)');
   const rows = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][data-key]');
-  await expect(rows).toHaveCount(10);
-  await rows.nth(8).getByRole('button', {name: 'Remove rule', exact: true}).click();
+  await expect(rows).toHaveCount(22);
+  const added = (await api.rules()).rules.find(rule => rule.expression.includes('accepted.example'))!;
+  await rows
+    .and(page.locator(`[data-key="${added.rule_id}"]`))
+    .getByRole('button', {name: 'Remove rule', exact: true})
+    .click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule removed'})).toBeVisible();
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(original);
@@ -759,7 +763,12 @@ test('redacted rule labels edit accepted source and freeze the draft through val
 test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {
   const api = await backend(page);
   const dictionary = await api.rules();
-  dictionary.rules = Array.from({length: 4096}, (_, i) => ({...dictionary.rules[0], rule_id: String(i), expression: `rule-${i}`, outbound: 'direct'}));
+  dictionary.rules = Array.from({length: 4096}, (_, i) => ({
+    ...dictionary.rules[0],
+    rule_id: String(i),
+    expression: `rule-${i}`,
+    outbound: i === 0 ? 'proxy' : 'direct'
+  }));
   const groups = await api.groups();
   groups[0].policy = {...groups[0].policy, kind: 'urltest', native: 'min_avg10'};
   const flows = {...(await api.flows({detail: 'full', limit: 1000})), flows: []};
@@ -769,7 +778,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
   await page.goto('/#/flows?tab=map');
   const leaves = page.locator('.rp-tree-tile[data-stage="rule"]');
   await expect(leaves).toHaveCount(30);
-  await expect(page.locator('.rp-tree-tile[data-stage="outbound"]').filter({hasText: groups[0].name})).toContainText('Fastest on average');
+  await expect(page.locator(`.rp-tree-tile[data-stage="outbound"][data-id="outbound:${groups[0].id}"]`)).toContainText('Fastest on average');
   const first = await leaves.first().boundingBox();
   await page.getByRole('button', {name: 'Show 30 more items', exact: true}).click();
   await expect(leaves).toHaveCount(60);

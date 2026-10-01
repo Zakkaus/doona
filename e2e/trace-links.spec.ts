@@ -47,7 +47,7 @@ test('a connection traces with its source port and process, so process rules are
 });
 
 const runTrace = async (page: import('@playwright/test').Page, query: string) => {
-  await page.goto('/#/rules?tab=trace&' + query);
+  await page.goto('/#/rules?tab=trace&' + query + '&pname=curl');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
 };
 const evaluation = (page: import('@playwright/test').Page) =>
@@ -55,9 +55,9 @@ const evaluation = (page: import('@playwright/test').Page) =>
 
 test('a trace result opens its matched rule in the rule list', async ({page}) => {
   await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
-  await evaluation(page).getByRole('link', {name: 'Open domain(geosite: telegram) -> proxy in the rule list', exact: true}).click();
+  await evaluation(page).getByRole('link', {name: 'Open domain(geosite:telegram) -> telegram in the rule list', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
-  await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(geosite: telegram)');
+  await expect(page.locator('.rp-table [aria-selected="true"]')).toContainText('domain(geosite:telegram)');
   await page.goBack();
   await expect(page).toHaveURL(/#\/rules\?tab=trace&/);
 });
@@ -68,15 +68,15 @@ test('a trace result from another generation does not link its rules', async ({p
   handlers['GET rules'] = async () => ({...(await api.rules()), generation_id: 'next'});
   handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
   await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
-  await expect(evaluation(page).getByText('domain(geosite: telegram) -> proxy', {exact: true})).toBeVisible();
+  await expect(evaluation(page).getByText('domain(geosite:telegram) -> telegram', {exact: true})).toBeVisible();
   await expect(evaluation(page).getByRole('link', {name: /in the rule list$/})).toHaveCount(0);
 });
 
 test('a trace result opens the group and the node it selects', async ({page}) => {
   await runTrace(page, 'domain=api.telegram.org&dst_ip=149.154.167.220&dst_port=443');
-  await evaluation(page).getByRole('link', {name: 'View group proxy', exact: true}).click();
+  await evaluation(page).getByRole('link', {name: 'View group telegram', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies\?group=/);
-  await expect(page.getByRole('region', {name: 'proxy'})).toBeInViewport();
+  await expect(page.getByRole('region', {name: 'telegram', exact: true})).toBeInViewport();
   await page.goBack();
   await expect(page).toHaveURL(/#\/rules\?tab=trace&/);
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();

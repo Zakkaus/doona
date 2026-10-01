@@ -42,7 +42,7 @@ test('node latency groups two ways, shortens long groups and shows a tip on hove
   await row.hover();
   await expect(page.locator('.rp-charttip')).toContainText('Latest latency');
   await expect(page.locator('.rp-charttip')).not.toContainText('Moving average');
-  const showAll = plot.getByRole('button', {name: /^Show all \d+$/});
+  const showAll = plot.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: /^Show all \d+$/});
   await expect(showAll).toBeVisible();
   const before = await plot.getByRole('img').count();
   await showAll.click();

@@ -71,7 +71,13 @@ test('a failed update keeps the old files and shows the reason in the status row
   // Choosing it asks first; cancelling stores nothing and keeps the source shown.
   const lite = t('settings.geodataPreset.metacubexLite');
   const dialog = page.getByRole('dialog', {name: t('settings.geodataLackingTitle', {preset: lite})});
-  await expect(dialog).toContainText(t('settings.geodataLackingHelp', {preset: lite, codes: 'geosite:category-ads-all'}));
+  await expect(dialog).toContainText(
+    t('settings.geodataLackingHelp', {
+      preset: lite,
+      codes:
+        'geosite:category-ads-all, geosite:category-games, geosite:disney, geosite:gfw, geosite:google-cn, geosite:hbo, geosite:netease, geosite:primevideo, geosite:twitch'
+    })
+  );
   await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(

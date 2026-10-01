@@ -1,5 +1,6 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
+import {demoRouting, demoRoutingInclude} from '../src/dae/startingRouting';
 import {expect, isLive, mockBackend, routes, scrollTableToEnd, test} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
@@ -62,7 +63,13 @@ test('another page opens at its top, while a change within the page keeps the sc
     const backend = await mockBackend(page);
     backend.handlers['GET config'] = async () => {
       await new Promise(resolve => setTimeout(resolve, 800));
-      return backend.api.config();
+      const config = await backend.api.config();
+      return {
+        ...config,
+        sources: config.sources.map(source =>
+          source.kind === 'main' ? {...source, content: demoRouting} : source.kind === 'include' ? {...source, content: demoRoutingInclude} : source
+        )
+      };
     };
   }
   await page.goto('/#/activity');
@@ -546,8 +553,8 @@ test.describe('on a touch screen', () => {
   test.use({hasTouch: true, isMobile: true});
   test('a tap into a read-only source draws no caret or active line and shows the read-only notice', async ({page}) => {
     await page.goto('/#/config?tab=source&source=src-generated');
-    const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/skylink.dae"]');
-    await expect(editor).toContainText('skylink');
+    const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/backup.dae"]');
+    await expect(editor).toContainText('backup');
     await editor.tap();
     await expect(page.locator('.rp-toast.info', {hasText: 'This file is read-only'})).toBeVisible();
     await expect(page.locator('.cm-cursorLayer')).toHaveCount(0);
@@ -620,16 +627,17 @@ for (const [width, columns] of [
   test.describe(`${width}px node grids`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
     test('a large group lines up with a small one and keeps its tiles off the scrollbar', async ({page}) => {
-      await page.goto('/#/policies');
-      const large = page.getByRole('region', {name: 'skylink'});
+      await page.goto('/#/policies?group=gaming');
+      await expect(page.getByRole('region', {name: 'gaming', exact: true}).locator('.rp-node').first()).toBeVisible();
+      const large = page.getByRole('region', {name: 'backup'});
       await large.scrollIntoViewIfNeeded();
       // An automatic group shows its members once opened.
       await large.getByRole('button', {name: /^目前/}).click();
       const panel = large.locator('.rp-nodegrid');
       await expect(panel.locator('.rp-node').first()).toBeVisible();
       const m = await page.evaluate(() => {
-        const panel = document.querySelector('.rp-nodegrid')!;
-        const small = document.querySelector('.rp-nodes')!;
+        const panel = document.querySelector('[aria-label="backup"] .rp-nodegrid')!;
+        const small = document.querySelector('[aria-label="gaming"] .rp-nodes')!;
         const edges = (tiles: NodeListOf<Element>) => {
           const boxes = [...tiles].map(t => t.getBoundingClientRect());
           const top = Math.min(...boxes.map(b => b.top));

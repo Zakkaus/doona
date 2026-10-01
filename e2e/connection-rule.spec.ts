@@ -38,6 +38,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await dialog.getByRole('button', {name: /Match by$/}).click();
   await page.getByRole('option', {name: 'Domain suffix', exact: true}).click();
   await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gaming');
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toHaveText('domain(suffix: api.telegram.org) -> gaming');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
@@ -49,7 +50,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   expect(writes[0].headers()['if-match']).toBe(`"${main.content_sha256}"`);
   expect(writes[0].headers()['idempotency-key']).toBeTruthy();
   const lines = main.content!.split('\n');
-  const matched = lines.findIndex(line => line.includes('domain(geosite: telegram)'));
+  const matched = lines.findIndex(line => line.includes('domain(geosite:telegram)'));
   const indent = lines[matched].match(/^\s*/)![0];
   lines.splice(matched, 0, `${indent}domain(suffix: api.telegram.org) -> gaming`);
   expect(writes[0].postDataJSON()).toEqual({content: lines.join('\n')});
@@ -83,7 +84,7 @@ test('show matched rule opens the rule list on that rule', async ({page}) => {
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=r5$/);
   const selected = page.getByRole('tabpanel', {name: 'Routing rules'}).locator('[role=row][aria-selected=true]');
   await expect(selected).toHaveCount(1);
-  await expect(selected).toContainText('domain(geosite: telegram)');
+  await expect(selected).toContainText('domain(geosite:telegram)');
 });
 
 test('a connection with no recorded rule adds before the fallback and says earlier rules may match first', async ({page}) => {
@@ -357,7 +358,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
 });
 
 test('an apply that fails in a later file keeps what it could not write and says what it wrote', async ({page}) => {
-  const {api, handlers, requests} = await mockBackend(page);
+  const {api, handlers, requests} = await mockBackend(page, {includedRule: true});
   // The mock's include holds bare rules, which doona cannot place; give it a routing section so both files take rules.
   const wrap = (text: string) => 'routing {\n' + text + '}\n';
   handlers['GET config'] = async () => {
@@ -443,7 +444,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   read.open();
   // The rule list is read again after the close; a write would come before that settles.
   await page.goto('/#/rules?tab=list&view=advanced');
-  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite: telegram)');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite:telegram)');
   await page.waitForTimeout(500);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
 });
@@ -570,7 +571,7 @@ test('a rule written whose operation poll kept failing is not held again', async
 });
 
 test('an apply whose later file is written but not reloaded counts every rule written', async ({page}) => {
-  const {api, handlers} = await mockBackend(page);
+  const {api, handlers} = await mockBackend(page, {includedRule: true});
   // As in the later-file test above: the include takes rules once it has a routing section.
   const wrap = (text: string) => 'routing {\n' + text + '}\n';
   handlers['GET config'] = async () => {
@@ -685,8 +686,9 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   await moreAction(detail(page), "Edit matched rule's outbound settings");
   await expect(page).toHaveURL(/#\/rules\?.*edit=/);
   const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});
-  await expect(dialog.locator('.rp-code')).toContainText('domain(geosite: telegram)');
+  await expect(dialog.locator('.rp-code')).toContainText('domain(geosite:telegram)');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gaming');
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
@@ -695,25 +697,26 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
   expect(writes[0].url()).toMatch(/\/api\/v1\/config\/sources\/src-main$/);
-  expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite: telegram) -> proxy', 'domain(geosite: telegram) -> gaming')});
-  await expect(page.getByRole('row', {name: /domain\(geosite: telegram\)/})).toContainText('gaming');
+  expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite:telegram) -> telegram', 'domain(geosite:telegram) -> gaming')});
+  await expect(page.getByRole('row', {name: /domain\(geosite:telegram\)/})).toContainText('gaming');
 });
 
 test('a routing rule edits its outbound from its own row, and a read-only file disables that with the reason', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   const before = (await api.config()).sources.find(source => source.id === 'src-main')!.content!;
   await page.goto('/#/rules?tab=list&view=advanced');
-  const row = page.getByRole('row', {name: /domain\(geosite: telegram\)/});
+  const row = page.getByRole('row', {name: /domain\(geosite:telegram\)/});
   await row.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit outbound settings'});
-  await expect(dialog.locator('.rp-code')).toContainText('domain(geosite: telegram)');
+  await expect(dialog.locator('.rp-code')).toContainText('domain(geosite:telegram)');
   await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gaming');
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await dialog.getByRole('button', {name: 'Edit outbound settings', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);
-  expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite: telegram) -> proxy', 'domain(geosite: telegram) -> gaming')});
+  expect(writes[0].postDataJSON()).toEqual({content: before.replace('domain(geosite:telegram) -> telegram', 'domain(geosite:telegram) -> gaming')});
   // The same row in a file honk will not write keeps the action, disabled, and says why.
   const config = await api.config();
   handlers['GET config'] = async () => ({...config, sources: config.sources.map(source => ({...source, writable: false}))});
