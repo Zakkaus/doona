@@ -1,6 +1,7 @@
 import {createRoot} from 'react-dom/client';
 import {StrictMode, useEffect, useLayoutEffect, useState} from 'react';
 import './fonts.css';
+import './ui/flags.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';

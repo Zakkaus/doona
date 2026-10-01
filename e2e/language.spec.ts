@@ -67,7 +67,7 @@ for (const [lang] of LANGS) {
       await page.goto('/#/activity');
       await expect(page.locator('.rp-nav').first()).toBeVisible();
       const [family, warm] = fonts[lang];
-      expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toBe(family);
+      expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toBe(`"Twemoji Country Flags", ${family}`);
       await expect.poll(() => page.evaluate(() => (window as unknown as {warmed: string[]}).warmed)).toContain(warm);
     });
     test('shows shortcut key names from the selected catalogue', async ({page}) => {

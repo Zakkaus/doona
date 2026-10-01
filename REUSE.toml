@@ -100,3 +100,9 @@ path = ["src/ui/styles/palettes/qiangguo/flag-*.svg"]
 precedence = "override"
 SPDX-FileCopyrightText = "NOASSERTION"
 SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["src/ui/assets/TwemojiCountryFlags.woff2"]
+precedence = "override"
+SPDX-FileCopyrightText = ["Twitter and other contributors", "2016-2018 Mozilla Foundation"]
+SPDX-License-Identifier = "CC-BY-4.0"
