@@ -53,7 +53,7 @@ export type DictionaryModel = RuleEditorModel & {
   error: Error | null;
   retry: () => void;
   openSource: (query: string) => void;
-  // Only the routing list edits a rule's outbound from its row.
+  // Each list edits a rule from its row.
   openEdit?: (id: string) => void;
 };
 export type RuleListModel = DictionaryModel & {
@@ -97,7 +97,7 @@ export function useRuleList({go, query}: PageProps): RuleListModel {
     () => (dictionary ? noDistribution : distributionView(flows.data, source, t, lang, recorder)),
     [dictionary, flows.data, source, t, lang, recorder]
   );
-  // `add` prefills a new rule's condition; `edit`, which Connections links to, changes a rule's outbound.
+  // `add` prefills a new rule's condition; `edit`, which Connections links to, opens an existing rule.
   const seed = params.get('add');
   const edit = params.get('edit');
   const edited = edit ? rules.data?.rules.find(rule => rule.rule_id === edit) : undefined;

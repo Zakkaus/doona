@@ -241,6 +241,12 @@ h3.rp-label {
   min-width: 0;
   max-width: 100%;
 }
+.rp-action-slot {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 var(--rp-control);
+}
+
 [data-focus-visible],
 .rp-truncate:focus-visible,
 .rp-tipwrap:focus-visible {

@@ -6,7 +6,7 @@ import {useLang, useT} from '../../i18n';
 import type {DnsRoutingRule} from '../../api/model';
 import {dnsConditionKinds} from '../../dae/groups';
 import type {PageProps} from '../../shell/routes';
-import {dnsListEnd, dnsRuleAnchor, type DnsRuleListId} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, type DnsRuleListId} from '../../dae/ruleText';
 import {dnsDictionaryView} from './view';
 import {offered} from '../../api/capabilities';
 import {useRuleEditor} from './useRuleEditor';
@@ -36,7 +36,10 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     [list, listed, rules.data?.generation_id, config.data, t, lang]
   );
   // A seed from the DNS log prefills a request rule; the response list leaves it alone.
-  const seed = list === 'request' ? new URLSearchParams(query).get('add') : null;
+  const params = new URLSearchParams(query);
+  const seed = list === 'request' ? params.get('add') : null;
+  const edit = params.get('list') === list ? params.get('edit') : null;
+  const edited = edit ? listed?.find(rule => rule.rule_id === edit) : undefined;
   const preset = useMemo(() => parseRuleSeed(seed, dnsConditionKinds.request), [seed]);
   const editor = useRuleEditor<DnsRoutingRule>({
     canWrite,
@@ -50,9 +53,11 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     kinds: dnsConditionKinds[list],
     reasons: {conditionInvalid: 'rule.dns.conditionInvalid', targetMissing: 'rule.dns.actionMissing'},
     onClose: () => {
-      if (seed) go('rules', within(query, {add: null}));
+      if (seed || edit) go('rules', within(query, {add: null, edit: null, list: null}));
     },
-    link: {key: seed, open: preset && {kind: 'add', preset}}
+    link: edit
+      ? {key: `edit:${edit}`, open: edited ? {kind: 'edit', rule: edited, outbound: dnsRuleTarget(edited), must: false} : null}
+      : {key: seed, open: preset && {kind: 'add', preset}}
   });
   const held = usePendingRules();
   const applyHeld = useApplyHeld();
@@ -80,7 +85,11 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
     loading: rules.loading && !rules.data,
     error: rules.error ?? config.error,
     retry,
-    openSource: (query: string) => go('config', query)
+    openSource: (query: string) => go('config', query),
+    openEdit: id => {
+      const rule = listed?.find(rule => rule.rule_id === id);
+      if (rule) editor.open({kind: 'edit', rule, outbound: dnsRuleTarget(rule), must: false});
+    }
   };
 }
 

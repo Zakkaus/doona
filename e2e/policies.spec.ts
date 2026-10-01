@@ -442,7 +442,7 @@ test('a long group name truncates with a tooltip and keeps the More menu on its 
   const card = page.getByRole('region').filter({has: title});
   await expect(title).toBeVisible();
   const cut = title.locator('.rp-truncate');
-  expect(await cut.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect.poll(() => cut.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
   const more = card.getByRole('button', {name: 'More actions', exact: true});
   const [titleBox, moreBox] = [await title.boundingBox(), await more.boundingBox()];
   expect(moreBox!.y).toBeLessThan(titleBox!.y + titleBox!.height);
