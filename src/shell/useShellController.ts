@@ -12,7 +12,7 @@ import {features, warmAllPages} from './registry';
 import {searchDialog} from './search/load';
 import {parseHash, useRoute} from './route';
 import {useAppearance} from './useAppearance';
-import {paletteMenu} from './view';
+import {appearanceMenu, paletteMenu} from './view';
 
 // `initial` is the language startup actually loaded, which may be the fallback rather than the saved one.
 export function useShellController(initial: Lang) {
@@ -121,10 +121,11 @@ export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: No
     [t]
   );
   const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections, startPageItems}), [lang, pickLang, ap, paletteSections, startPageItems]);
+  const menu = useMemo(() => appearanceMenu(t, ap.scheme, ap.dark), [t, ap.scheme, ap.dark]);
   const [navRef, navPos] = useSlider(route, '[aria-current="page"]');
   // One object per measured position: a fresh one on every render would re-render the memoised navigation.
   const navStyle = useMemo(() => (navPos ? {translate: `0 ${navPos.y}px`, height: navPos.h} : undefined), [navPos]);
-  return {settingsValue, navRef, navStyle};
+  return {paletteSections, settingsValue, menu, navRef, navStyle};
 }
 
 export function useStartupToasts() {

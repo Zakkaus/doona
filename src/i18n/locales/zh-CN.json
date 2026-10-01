@@ -1761,6 +1761,7 @@
   "ui.state": "状态",
   "ui.target": "目标",
   "ui.tcp": "TCP",
+  "ui.theme": "主题",
   "ui.time": "时间",
   "ui.type": "类型",
   "ui.udp": "UDP",

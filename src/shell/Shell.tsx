@@ -127,8 +127,7 @@ function ShellFrame(props: FrameProps) {
 }
 function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
-  const {settingsValue, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
-  const openAppearance = useCallback(() => go('settings', 'card=appearance'), [go]);
+  const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
   const Page = view.current.Page;
   const hub = view.groups.find(group => group.items.some(item => item.current));
   // Signing in takes the whole page: the shell around it would offer nothing that works yet.
@@ -150,8 +149,9 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
   return (
     <div className="rp-shell">
       <TopBar
+        lang={lang}
+        pickLang={pickLang}
         ap={ap}
-        openAppearance={openAppearance}
         mac={mac}
         openSearch={openSearch}
         refresh={view.refresh}
@@ -163,6 +163,8 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         backend={view.backend}
         wordmark={view.wordmark}
         versionText={view.about.versionText}
+        paletteSections={paletteSections}
+        menu={menu}
       />
       <SideNav groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
       <main className="rp-main">

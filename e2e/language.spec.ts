@@ -38,7 +38,10 @@ test.describe('translated configuration text', () => {
       .getByRole('alertdialog')
       .getByRole('button', {name: translate('zh-TW', 'config.discard'), exact: true})
       .click();
-    await page.getByRole('button', {name: new RegExp(translate('zh-TW', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('zh-TW', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: 'English', exact: true}).click();
     await checkDiagnostic('en');
   });
@@ -159,7 +162,10 @@ test.describe('language loading', () => {
     await page.route(localeChunk('zh-CN'), route => route.abort());
     await page.goto('/#/settings?card=appearance');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
-    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.getByText(translate('en', 'shell.langUnavailable', {name: '简体中文'}))).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
@@ -180,7 +186,10 @@ test.describe('language loading', () => {
         observer.disconnect();
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
     });
-    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
     expect(Number(await page.locator('html').getAttribute('data-sc-faces'))).toBeGreaterThan(0);
@@ -203,7 +212,10 @@ test.describe('language loading', () => {
       }).observe(html, {attributes: true, attributeFilter: ['lang']});
       return count();
     });
-    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     expect(Number(await page.locator('html').getAttribute('data-tc-faces'))).toBeGreaterThan(latin + 50);
@@ -212,10 +224,16 @@ test.describe('language loading', () => {
   test('zh-TW renders the same after zh-CN in one session as after a reload', async ({page}) => {
     const family = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
     await page.goto('/#/settings?card=appearance');
-    await page.getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('en', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: '简体中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    await page.getByRole('button', {name: new RegExp(translate('zh-CN', 'ui.lang') + '$')}).click();
+    await page
+      .locator('.rp-content')
+      .getByRole('button', {name: new RegExp(translate('zh-CN', 'ui.lang') + '$')})
+      .click();
     await page.getByRole('option', {name: '繁體中文'}).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
     const switched = await family();

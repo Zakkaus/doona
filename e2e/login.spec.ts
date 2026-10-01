@@ -87,7 +87,7 @@ test.describe('the demo', () => {
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
     // Backend settings remain reachable before sign-in.
     await page.locator('.rp-login-page').getByRole('link', {name: 'Change backend URL'}).click();
-    await expect(page.locator('.rp-top').getByRole('link', {name: 'Appearance', exact: true})).toBeVisible();
+    await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
   });
 
   test('fits a 360px screen without the showcase, and shows the showcase panel from 1024px', async ({page}) => {

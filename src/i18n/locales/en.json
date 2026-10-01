@@ -1962,6 +1962,7 @@
   "ui.state": "State",
   "ui.target": "Target",
   "ui.tcp": "TCP",
+  "ui.theme": "Theme",
   "ui.time": "Time",
   "ui.type": "Type",
   "ui.udp": "UDP",
