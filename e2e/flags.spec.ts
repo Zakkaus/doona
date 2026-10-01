@@ -382,6 +382,8 @@ test('Policies member lists, folded selection, default members and member picker
     return {...group, config: {...group.config, default_member_id: 'hk-01', final_outbound: 'hk-01'}};
   };
   await page.goto('/#/policies?tab=arrange');
+  await page.getByRole('searchbox', {name: 'Search nodes or subscriptions', exact: true}).fill('hk-01');
+  await expect(page.locator('.rp-tray-row[data-key="node:hk-01"] .rp-node-flag')).toHaveAttribute('data-flag', '🇹🇼');
   const resilient = page.locator('.rp-drop').filter({has: page.getByRole('heading', {name: 'resilient', exact: true})});
   await expect(resilient.getByRole('heading').locator('.rp-node-flag')).toHaveCount(0);
   await expect(

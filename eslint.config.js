@@ -156,14 +156,7 @@ export default [
   },
   {
     // Single-consumer collection compositions; one moves into src/ui when a second consumer appears.
-    files: ['src/features/policies/arrange/Arrange.tsx', 'src/features/flows/Tree.tsx', 'src/shell/search/SearchDialog.tsx'],
-    rules: {'@typescript-eslint/no-restricted-imports': 'off'}
-  },
-  {
-    // Raw compositions whose kit move would change the page, so they wait on a design call.
-    files: [
-      'src/features/policies/Nodes.tsx' // a kit TileGrid would change the grid's keyboard interaction
-    ],
+    files: ['src/features/flows/Tree.tsx', 'src/shell/search/SearchDialog.tsx'],
     rules: {'@typescript-eslint/no-restricted-imports': 'off'}
   },
   {

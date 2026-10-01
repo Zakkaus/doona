@@ -342,3 +342,42 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
         }
       });
     });
+
+for (const width of [390, 1440])
+  for (const lang of ['en', 'zh-TW', 'zh-CN'])
+    test.describe(`contextual-help-${width}-${lang}`, () => {
+      test.use({viewport: {width, height: 1000}, storage: {'doona-lang': lang}});
+      test('Edit group keeps write details in title help and restores focus after Escape', async ({page}) => {
+        const labels = lang === 'en' ? en : lang === 'zh-TW' ? tw : zh;
+        await mockBackend(page);
+        await page.goto('/#/policies');
+        await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), labels['policy.edit'], labels['ui.moreActions']);
+        const title = labels['policy.editTitle'].replace('{name}', 'gaming');
+        const dialog = page.getByRole('dialog', {name: title, exact: true});
+        await expect(dialog).toHaveAccessibleDescription(labels['policy.editHelp']);
+        const heading = await dialog.getByRole('heading', {name: title, exact: true}).boundingBox();
+        const content = await dialog.locator('.rp-dialog-content').boundingBox();
+        expect(heading!.x).toBeCloseTo(content!.x, 1);
+        const add = dialog.getByRole('button', {name: labels['policy.addFilter'], exact: true});
+        await expect(add).toHaveClass(/\bsecondary\b/);
+        await expect(add.locator('svg')).toHaveCount(1);
+        const help = dialog.getByRole('button', {name: labels['ui.helpFor'].replace('{name}', title), exact: true});
+        await expect(page.getByText(labels['policy.editDetails'], {exact: true})).toHaveCount(0);
+        await help.focus();
+        await expect(help).toBeFocused();
+        await help.press('Enter');
+        const popover = page.locator('.rp-popover-dialog');
+        await expect(popover).toContainText(labels['policy.editDetails']);
+        await expect(popover.getByRole('dialog')).toBeFocused();
+        expect(
+          await popover.evaluate(element => {
+            const box = element.getBoundingClientRect();
+            return box.left >= 0 && box.right <= innerWidth;
+          })
+        ).toBe(true);
+        await page.keyboard.press('Escape');
+        await expect(popover).toHaveCount(0);
+        await expect(help).toBeFocused();
+        await expect(dialog).toBeVisible();
+      });
+    });

@@ -2,7 +2,7 @@ import {useId} from 'react';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
 import AddCircle from '../../ui/icons/AddCircle';
-import {Button, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
+import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
@@ -40,6 +40,7 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
   return (
     <ModalDialog
       title={m.title}
+      titleHelp={m.editing && !m.name ? <ContextualHelp title={m.title} text={t('policy.editDetails')} /> : undefined}
       description={m.editing && !m.name ? m.help : undefined}
       narrow
       scrollBody
