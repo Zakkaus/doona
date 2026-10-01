@@ -118,8 +118,9 @@ test.describe('mirrored layout at 390px', () => {
     await expect(menu).toBeVisible();
     await expect(page.locator('.rp-popover').filter({has: menu})).toHaveAttribute('dir', 'rtl');
     const rows = page.locator('.rp-subitem');
-    // Four submenu rows, then Reload honk and Backend, which open a dialog and a popover and have no chevron.
-    await expect(rows).toHaveCount(6);
+    // Three submenu rows, then Reload honk and Backend, which open a dialog and a popover and have no chevron.
+    await expect(rows).toHaveCount(5);
+    await expect(menu.getByRole('menuitem')).toHaveText(['LanguageEnglish', 'ThemeLight', 'PaletteRosé Pine Moon', 'Reload honk', 'Backend']);
     for (const row of await rows.all()) {
       const {x, width} = await box(row);
       expect(x).toBeGreaterThanOrEqual(0);
@@ -129,7 +130,7 @@ test.describe('mirrored layout at 390px', () => {
     }
     // Each submenu's chevron points left.
     const chevrons = rows.locator('.rp-chev-end');
-    await expect(chevrons).toHaveCount(4);
+    await expect(chevrons).toHaveCount(3);
     for (const chevron of await chevrons.all()) expect(await turn(chevron)).toBe(1);
     await page.getByRole('menuitem', {name: 'Theme'}).focus();
     await page.keyboard.press('ArrowLeft');
