@@ -112,7 +112,7 @@
   "config.atFile": "{file} line {line}: {message}",
   "config.atLine": "Line {line}: {message}",
   "config.backendDetail": "{text}. Backend message: {message}",
-  "config.backendText": "Backend message",
+  "config.backendText": "Details",
   "config.changedMeanwhile": "The configuration changed or another write was still in progress, so nothing was written. Refresh and try again",
   "config.changedOnDisk": "The file changed on disk while you were editing; applying would replace that change.",
   "config.clean": "No diagnostics",

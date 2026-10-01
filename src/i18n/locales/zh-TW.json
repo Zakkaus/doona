@@ -106,7 +106,7 @@
   "config.atFile": "{file} 第 {line} 行：{message}",
   "config.atLine": "第 {line} 行：{message}",
   "config.backendDetail": "{text}。後端訊息：{message}",
-  "config.backendText": "後端訊息",
+  "config.backendText": "詳細",
   "config.changedMeanwhile": "組態已被變更或另一次寫入尚未完成，因此未寫入。請重新整理後重試",
   "config.changedOnDisk": "編輯期間磁碟上的檔案已變更，套用會覆蓋該變更。",
   "config.clean": "沒有診斷",

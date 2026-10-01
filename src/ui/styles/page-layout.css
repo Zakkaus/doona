@@ -88,7 +88,8 @@
   --rp-code-operator: var(--rp-subtle);
 }
 /* Code shows what was typed: a programming font's ligatures would draw `->` or `!=` as one glyph. */
-.rp-code {
+.rp-code,
+.rp-config-diagnostic code {
   font-family:
     'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono',
     monospace;
@@ -337,30 +338,65 @@
   flex: 0 1 auto;
   min-width: 0;
 }
+/* One block of rows under the summary, after the kit's labelled list: the message column fits its longest message
+   so each row's action sits just after it, in one column, and the block is as wide as its rows. Past about six rows the block scrolls; like the dialog body,
+   it keeps its scrollbar's gutter and clear of it. */
 .rp-config-diagnostic-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
-  gap: var(--rp-space-2) var(--rp-space-3);
-  max-height: min(16rem, 35vh);
-  overflow: auto;
+  grid-template-columns: minmax(0, max-content) max-content max-content;
+  column-gap: var(--rp-space-3);
+  width: fit-content;
+  max-width: 100%;
+  max-height: 16.5rem;
+  overflow: hidden auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-inline: var(--rp-space-3) var(--rp-space-2);
+  margin-block-end: var(--rp-space-2);
+  border: 1px solid var(--rp-hl-low);
+  border-radius: var(--rp-r-md);
 }
+/* A row: severity and message, the details toggle and the action on one centred line, the details under it. */
 .rp-config-diagnostic {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  align-items: start;
+  align-items: center;
+  padding-block: var(--rp-space-1);
 }
-.rp-config-diagnostic > :only-child {
-  grid-column: 1 / -1;
+.rp-config-diagnostic + .rp-config-diagnostic {
+  border-top: 1px solid var(--rp-hl-low);
 }
-.rp-config-diagnostic .rp-light {
+.rp-config-diagnostic > .rp-light {
+  grid-area: 1 / 1;
   white-space: normal;
 }
-/* The backend's words open in the row's small type, under its message. */
+.rp-config-diagnostic-go {
+  grid-area: 1 / 3;
+  justify-self: start;
+}
+.rp-config-diagnostic .rp-disclosure,
+.rp-config-diagnostic .rp-disclosure > h3 {
+  display: contents;
+}
 .rp-config-diagnostic .rp-disclosure-trigger {
+  grid-area: 1 / 2;
+  height: auto;
+  padding-block: var(--rp-space-half);
   font-size: var(--rp-text-xs);
   line-height: 16px;
+}
+/* The backend's words open under the message, past the severity dot, and wrap in the row's width rather than
+   widening the columns. */
+.rp-config-diagnostic .rp-disclosure-panel {
+  grid-area: 2 / 1 / 3 / -1;
+  contain: inline-size;
+}
+.rp-config-diagnostic .rp-disclosure-content {
+  padding: var(--rp-space-1) 0 var(--rp-space-1) 18px;
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-xs);
+  overflow-wrap: anywhere;
 }
 /* The group's basis decides whether the action buttons share its line. Inside it, the picker keeps the basename
    and chevron together while the badge and facts wrap on phones when they no longer fit. */

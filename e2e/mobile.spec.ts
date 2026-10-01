@@ -360,7 +360,7 @@ for (const [scheme, palette] of [
     test('diagnostic prose wraps and empty tables stay centered while scrolled', async ({page}) => {
       const backend = await mockBackend(page);
       const config = await backend.api.config();
-      const message = 'duplicate endpoint identity; retaining the first usable entry';
+      const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(12);
       config.diagnostics = [
         {level: 'warning', message, source_id: config.sources[0].id, line: null, column: null, span: null, code: 'duplicate-subscription-entry'}
       ];
@@ -373,13 +373,13 @@ for (const [scheme, palette] of [
         .getByRole('button', {name: /Warnings 1/})
         .click();
       const list = page.getByRole('list', {name: 'Diagnostics'});
-      await list.getByRole('button', {name: 'Backend message', exact: true}).click();
+      await list.getByRole('button', {name: 'Details', exact: true}).click();
       const backendText = list.getByText(message, {exact: true});
       await expect(backendText).toBeVisible();
       const prose = await backendText.evaluate(el => {
         const range = document.createRange();
         range.selectNodeContents(el);
-        const box = el.closest('.rp-card')!.getBoundingClientRect();
+        const box = el.closest('[role=listitem]')!.getBoundingClientRect();
         return {lines: range.getClientRects().length, contained: [...range.getClientRects()].every(rect => rect.left >= box.left && rect.right <= box.right)};
       });
       expect(prose.lines).toBeGreaterThan(1);
