@@ -1,5 +1,7 @@
 import {expect, it} from 'vitest';
-import {cardGroup, chartedRates, shareRows} from './Contents';
+import {cardGroup} from './ContentPolicies';
+import {chartedRates} from './ContentRuntime';
+import {shareRows} from './ContentShares';
 const groups = [
   {id: 'auto', policy: {kind: 'urltest'}},
   {id: 'proxy', policy: {kind: 'selector'}},
