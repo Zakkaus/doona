@@ -152,6 +152,8 @@ export default defineConfig({
     assetsInlineLimit: file => (/noto-sans-(tc|sc)-.*\.woff2$/.test(file) ? false : undefined),
     manifest: true,
     target: ['es2022'],
+    // Terser reduces total gzip size without moving lazy modules into the shell.
+    minify: 'terser',
     cssTarget: ['chrome120', 'safari17', 'firefox121', 'edge120'],
     cssMinify,
     rollupOptions: {
