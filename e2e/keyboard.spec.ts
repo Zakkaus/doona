@@ -202,6 +202,7 @@ test('Tab leaves an empty resizable table in flat mode', async ({page}) => {
 });
 
 test('Escape on a menu or dialog opened from a table row returns focus to its trigger', async ({page}) => {
+  test.skip(isLive, 'The rows are the demo’s nodes and rules');
   const reach = async (row: import('@playwright/test').Locator, name: string) => {
     await row.focus();
     const trigger = row.getByRole('button', {name, exact: true});
@@ -246,6 +247,7 @@ test('segmented and table wrappers leave the ring on the focused control', async
   await expect(group).toHaveCSS('outline-style', 'none');
   const grid = page.getByRole('treegrid', {name: 'Connections'});
   const row = grid.locator('[role=row][data-key]:not([data-disabled])').first();
+  if (isLive) test.skip((await row.waitFor({timeout: 5000}).catch(() => 'none')) === 'none', 'The live backend has no connection to focus');
   await row.focus();
   await page.keyboard.press('ArrowRight');
   const focused = grid.locator(':focus');
