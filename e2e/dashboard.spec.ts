@@ -93,7 +93,6 @@ test('the group card shows the first manual group and changes group in place', a
 
 test('packs short cards beside a tall one, ends columns level and lines columns up across sections', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
-  await page.goto('/#/activity');
   const extensions = [
     {id: 'nodeLatency', form: 'dots', size: 'large'},
     {id: 'dnsAnswers', form: 'donut', size: 'medium'},
@@ -108,8 +107,11 @@ test('packs short cards beside a tall one, ends columns level and lines columns 
       {id: 'extensions', items: extensions}
     ]
   };
-  await page.evaluate(value => localStorage.setItem('doona-dashboard', value), JSON.stringify(saved));
-  await page.reload();
+  // Seeded before the first load: a reload after it would cancel the card chunks still in flight and log them as errors.
+  await page.addInitScript(value => {
+    if (localStorage.getItem('doona-dashboard') === null) localStorage.setItem('doona-dashboard', value);
+  }, JSON.stringify(saved));
+  await page.goto('/#/activity');
   await expect(tile(page, 'policyGroups').locator('.rp-card')).toBeVisible();
   const boxes = () =>
     page.locator('.rp-dashboard-cell').evaluateAll(cells =>
