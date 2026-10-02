@@ -15,7 +15,6 @@
   /* More tabs than a phone is wide scroll within the bar, not the page; the slider scrolls with them. */
   overflow-x: auto;
   scrollbar-width: none;
-  padding: var(--rp-control-block-inset) var(--rp-control-inset);
   border-radius: var(--rp-r-lg);
   background: var(--rp-overlay);
 }
@@ -33,6 +32,13 @@
 }
 .rp-tabbar[data-fade~='end'] {
   --fade-end: 24px;
+}
+/* The marker fills a tab's whole box: the bar has no inset, as S2's segmented control has none. */
+/* The slider fills the tab flush with the bar's edge, so it takes the bar's radius, as S2's does. */
+.rp-tabbar > .rp-slider {
+  top: 0;
+  bottom: 0;
+  border-radius: var(--rp-r-lg);
 }
 /* A tab row with controls at its end (Tabs' actions): they wrap under the tabs when the row is too narrow. */
 .rp-tabhead {
@@ -52,14 +58,14 @@
   max-width: 100%;
   /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
      panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
-  min-height: calc(var(--rp-control) - 2 * var(--rp-control-block-inset));
+  min-height: var(--rp-control);
 }
 .rp-tab {
   position: relative;
   z-index: 1;
   flex: none;
   white-space: nowrap;
-  min-height: calc(var(--rp-control) - 2 * var(--rp-control-block-inset));
+  min-height: var(--rp-control);
   padding: 0 var(--rp-space-3);
   border-radius: var(--rp-r-md);
   display: inline-flex;

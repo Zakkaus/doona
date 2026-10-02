@@ -23,6 +23,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - A runtime setting or a subscription edit put back to its stored value no longer counts as unsaved, so leaving the form does not ask to discard it. (#303)
 - Chinese translations distinguish backend profiles from configuration files, use subscription update labels that fit any count, and clarify that saving backend settings creates a profile. The sign-in game's accessible name uses a neutral term for the duck. (#302)
 - The demo applies DNS log and flow capacities and terminal-flow retention, bounds completed operations, and disables group configuration edits in its base profile. (#305)
+- The page tab bars on Nodes, Connections, Flows, Rules, DNS and Config are 32px tall again on desktop, like the controls beside them: the tabs fill the bar instead of sitting 2px inside it. Other controls are unchanged. (#299)
 - On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
 
 ## [0.1.0-beta.12] - 2026-09-30
