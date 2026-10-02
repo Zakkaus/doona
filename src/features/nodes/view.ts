@@ -1,8 +1,8 @@
 import {isNodeLink} from '../../dae/nodes';
 export {isNodeLink} from '../../dae/nodes';
-import type {Capabilities, ConfigSource, Node, Provider, ProviderCreate} from '../../api/model';
+import type {Capabilities, ConfigSource, HealthObservation, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
-import {compareLatency, healthMillis, nodeOwner, preferredHealth, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
+import {compareLatency, healthMillis, nodeOwner, preferredHealth, probeKinds, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import {isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
@@ -10,7 +10,7 @@ import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64} from '../../api/u64';
 import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/format';
-import {backendMessage, oneLine} from '../../i18n/backend';
+import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
 import {groupsNamingNode, readNodeEntries, type NodeEntry} from '../../dae/nodes';
@@ -19,23 +19,45 @@ import {groupOwners} from '../shared/groupText';
 import {draftInterval, intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
-  const health = preferredHealth(node);
-  const measured = health?.state === 'healthy' && health.latency_ms != null;
+  const latency = healthView(preferredHealth(node), t);
+  const kinds = probeKindLines(node, t);
   return {
     id: node.id,
     name: node.name,
     protocol: node.protocol ?? '—',
-    latency: measured ? formatLatency(health.latency_ms!, t) : health?.state === 'unavailable' ? t('ui.unavailable') : '—',
-    latencyClass: measured ? `ms ${latencyTone(health.latency_ms!)}` : health?.state === 'unavailable' ? 'ms err' : 'ms',
+    latency: latency.value,
+    latencyClass: latency.tone,
     groups: node.group_ids.length
       ? formatList(
           lang,
           node.group_ids.map(id => names.get(id) ?? id)
         )
       : '—',
+    probeKinds: kinds,
+    showProbeKinds: kinds.length > 1,
     probeLabel: t('nodes.probe', {name: node.name}),
     removeLabel: t('nodes.remove', {name: node.name})
   };
+}
+
+function healthView(health: HealthObservation | undefined, t: Translator, failure?: string) {
+  const ms = healthMillis(health);
+  return {
+    value: ms !== undefined ? formatLatency(ms, t) : health?.state === 'unavailable' ? (failure ?? t('ui.unavailable')) : '—',
+    tone: ms !== undefined ? `ms ${latencyTone(ms)}` : health?.state === 'unavailable' ? 'ms err' : 'ms'
+  };
+}
+
+// One line per probe kind the node reports: its latency, or why the probe failed. A kind seen over both transports
+// names the transport on each line.
+export function probeKindLines(node: Pick<Node, 'health'>, t: Translator) {
+  const kinds = probeKinds(node.health);
+  return kinds.map(({kind, transport, observation: h}) => {
+    return {
+      label: kinds.some(other => other.kind === kind && other.transport !== transport) ? t('ui.aside', {text: kind, note: transport.toUpperCase()}) : kind,
+      ...healthView(h, t, h.error ? backendCode(h.error, t) : undefined)
+    };
+  });
 }
 
 export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {

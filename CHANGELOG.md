@@ -13,6 +13,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - The DNS query tab can send a query to one of the upstreams the configuration's `dns.upstream` defines instead of the one `dns.routing` picks. The picker appears when the configuration is readable and names at least one upstream. (#330)
 - The floating widget panel's menu adds Hide at edge: an unpinned, undocked panel hides at its nearest screen edge behind a summary sized to its backend light and speed text, with square corners and no border against that edge. Hovering, focusing or tapping the summary reveals the panel. Edit widgets stays in the menu so the collapsed header has room for both speeds. (#322)
 - The Geodata card on Settings has a Reset to defaults button beside Update now that, after a confirmation, removes every geodata override and every value taken from the configuration file, so the built-in sources and defaults apply again. (#331)
+- Node details on the Nodes page list the latest result of each probe kind the backend reports, TCP, HTTP, UDP or DNS, as its latency or the reason it failed. (#329)
 
 ### Changed
 

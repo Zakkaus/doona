@@ -897,6 +897,7 @@
   "nodes.probe": "測試 {name}",
   "nodes.probeError": "無法測試 {name}",
   "nodes.probeFailed": "{name}：無法連線",
+  "nodes.probeKinds": "探測方式",
   "nodes.probeUnknown": "{name}：結果不明",
   "nodes.probeUnknownWhy": "{name}：結果不明（{error}）",
   "nodes.probed": "{name}：{n} ms",

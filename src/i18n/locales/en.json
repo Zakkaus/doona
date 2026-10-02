@@ -1044,6 +1044,7 @@
   "nodes.probe": "Test {name}",
   "nodes.probeError": "Could not test {name}",
   "nodes.probeFailed": "{name}: unreachable",
+  "nodes.probeKinds": "Probe kinds",
   "nodes.probeUnknown": "{name}: result unknown",
   "nodes.probeUnknownWhy": "{name}: result unknown ({error})",
   "nodes.probed": "{name}: {n} ms",

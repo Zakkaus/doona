@@ -60,6 +60,9 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless', [0.86, 0.9]),
     node('us-01', 188, 201, true, 'inline', 'anytls', [0.62, 0.7])
   ];
+  // A UDP data probe besides the TCP and DNS ones on hk-01 and sg-01; the faults scenario fails sg-01's.
+  nodes[0].health.push({...health('udp', 97, [1, 1]), purpose: 'data', measurement: 'quic_handshake'});
+  nodes[2].health.push({...health('udp', faults ? null : 76, [1, 1]), purpose: 'data', measurement: 'quic_handshake'});
   const regions: Array<[string, number]> = [
     ['香港', 60],
     ['台灣', 40],

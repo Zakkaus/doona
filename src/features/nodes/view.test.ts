@@ -13,6 +13,7 @@ import {
   ownedNodes,
   providerRows,
   nodeRowView,
+  probeKindLines,
   providerRowView,
   keptOptions,
   providerCreate,
@@ -181,6 +182,99 @@ it('projects node protocol, membership, measured zero and unavailable health', (
   expect(view.groups).toContain('unknown');
   expect(view.latency).toBe('0 ms');
   expect(nodeRowView(node('down', {health: [{...sample, state: 'unavailable'}]}), new Map(), 'en', t).latency).toBe(t('ui.unavailable'));
+});
+
+const probe = (overrides: Partial<Node['health'][number]>): Node['health'][number] => ({
+  transport: 'tcp',
+  purpose: 'data',
+  ip_version: 'ipv4',
+  warmth: 'warm',
+  measurement: 'tcp_connect',
+  sample_source: 'probe',
+  state: 'healthy',
+  latency_ms: 40,
+  moving_avg_ms: null,
+  avg10_ms: null,
+  observed_at: '2026-01-01T00:00:00Z',
+  error: null,
+  ...overrides
+});
+const down = {state: 'unavailable', latency_ms: null} as const;
+it.each([
+  ['no results', [], []],
+  ...(['dns_round_trip', 'quic_handshake'] as const).map(
+    measurement =>
+      [
+        `a newer ${measurement} failure replaces an older success`,
+        [
+          probe({transport: 'udp', purpose: measurement === 'dns_round_trip' ? 'dns' : 'data', measurement}),
+          probe({transport: 'udp', purpose: measurement === 'dns_round_trip' ? 'dns' : 'data', measurement, observed_at: '2026-01-01T00:01:00Z', ...down})
+        ],
+        [[measurement === 'dns_round_trip' ? 'DNS' : 'UDP', 'Unavailable']]
+      ] as const
+  ),
+  [
+    'HTTP headers preferred over a round trip at equal warmth',
+    [probe({measurement: 'http_round_trip'}), probe({measurement: 'http_headers', ...down})],
+    [['HTTP', 'Unavailable']]
+  ],
+  [
+    'one line per kind in a fixed order',
+    [probe({transport: 'udp', purpose: 'dns', measurement: 'dns_round_trip', latency_ms: 30}), probe({measurement: 'http_headers', latency_ms: 50}), probe({})],
+    [
+      ['TCP', '40 ms'],
+      ['HTTP', '50 ms'],
+      ['DNS', '30 ms']
+    ]
+  ],
+  [
+    'a failed probe by its reason, unavailable without one, unknown as a dash',
+    [
+      probe({transport: 'udp', measurement: 'quic_handshake', ...down, error: 'probe_failed'}),
+      probe({...down}),
+      probe({transport: 'udp', purpose: 'dns', state: 'unknown', latency_ms: null})
+    ],
+    [
+      ['TCP', 'Unavailable'],
+      ['UDP', 'The probe failed'],
+      ['DNS', '—']
+    ]
+  ],
+  [
+    'the IPv4 and IPv6 rows folded, the warmest sample kept',
+    [probe({...down}), probe({ip_version: 'ipv6', latency_ms: 70}), probe({warmth: 'cold', latency_ms: 10})],
+    [['TCP', '70 ms']]
+  ],
+  [
+    'one kind over both transports named by transport',
+    [
+      probe({purpose: 'dns', measurement: 'dns_round_trip', latency_ms: 60}),
+      probe({transport: 'udp', purpose: 'dns', measurement: 'dns_round_trip', latency_ms: 30})
+    ],
+    [
+      ['DNS (TCP)', '60 ms'],
+      ['DNS (UDP)', '30 ms']
+    ]
+  ]
+] as const)('lists probe kinds: %s', (_, health, lines) => {
+  for (const rows of [[...health], [...health].reverse()]) expect(probeKindLines({health: rows}, t).map(line => [line.label, line.value])).toEqual(lines);
+});
+
+it.each([
+  [probe({latency_ms: 0}), '0 ms', 'ms ok'],
+  [probe({latency_ms: null}), '—', 'ms'],
+  [probe({state: 'unknown'}), '—', 'ms'],
+  [probe({...down, error: 'probe_failed'}), 'Unavailable', 'ms err']
+] as const)('preserves the latency row for %j', (health, latency, latencyClass) => {
+  expect(nodeRowView(node('a', {health: [health]}), new Map(), 'en', t)).toMatchObject({latency, latencyClass});
+});
+
+it.each([
+  ['no kinds', [], false],
+  ['a single kind', [probe({}), probe({ip_version: 'ipv6'})], false],
+  ['two kinds', [probe({}), probe({transport: 'udp', measurement: 'quic_handshake'})], true]
+] as const)('shows the probe-kinds section for %s', (_, health, visible) => {
+  expect(nodeRowView(node('a', {health: [...health]}), new Map(), 'en', t).showProbeKinds).toBe(visible);
 });
 
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {

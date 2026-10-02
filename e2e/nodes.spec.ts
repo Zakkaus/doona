@@ -265,6 +265,33 @@ test('a node can be tested on its own', async ({page}) => {
   await expect(page.locator('.rp-toast.positive')).toContainText(/hk-01: \d+ ms/);
 });
 
+test('node details list multiple probe kinds, and hide the list for a node with a single kind', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET nodes'] = async request => {
+    const list = await api.nodes(query(request));
+    return {
+      ...list,
+      nodes: list.nodes.map(node => (node.id === 'hk-02' ? {...node, health: node.health.filter(h => h.transport === 'tcp' && h.purpose === 'data')} : node))
+    };
+  };
+  await page.goto('/#/nodes?provider=inline');
+  const details = page.getByRole('region', {name: 'Node details', exact: true});
+  const kinds = details
+    .locator('.rp-list')
+    .filter({has: page.getByText('Probe kinds', {exact: true})})
+    .last();
+  for (const [name, lines] of [
+    ['hk-01', ['TCP84 ms', 'UDP97 ms', 'DNS91 ms']],
+    ['sg-01', ['TCP63 ms', 'UDP76 ms', 'DNS70 ms']]
+  ] as const) {
+    await page.getByRole('rowheader', {name, exact: true}).click();
+    await expect(kinds.locator('.rp-kv > div')).toHaveText([...lines]);
+  }
+  await page.getByRole('rowheader', {name: 'hk-02', exact: true}).click();
+  await expect(details.getByText('hk-02', {exact: true})).toBeVisible();
+  await expect(details.getByText('Probe kinds', {exact: true})).toHaveCount(0);
+});
+
 // A Hysteria2 node listens on UDP only: a connect to its server endpoint fails while the node carries traffic, so the
 // latency test must measure through the node over HTTP. `rows` rewrites the node's probe rows once the probe finishes.
 async function udpOnlyNode(page: Parameters<typeof mockBackend>[0], rows: (row: ProbeResultItem) => ProbeResultItem) {
