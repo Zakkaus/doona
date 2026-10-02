@@ -28,6 +28,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Disabled page and card actions show their reasons without hovering, including on touch devices. (#340)
+- Small action buttons size their icons to the text line height, so the edit pencil fits beside the policy group menu.
+- Small action buttons size their icons to the text line height, so the edit pencil fits beside the policy group menu. (#349)
 
 - Connection group headings span the empty columns before their totals, keeping the connection count readable on phones. (#339)
 - Table headers and cells use start alignment, including numeric columns with tabular digits. Action headers align with the first action slot's icon inset. Rule actions keep their source, edit and remove slots when a button is absent. (#320)
