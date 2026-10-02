@@ -1,6 +1,7 @@
 import type {useProviderRefresh, useProviders} from '../../store';
 import {useT} from '../../i18n';
-import {toast, toastErrorDetail} from '../../ui/ui';
+import {failureNotice} from '../../api/error';
+import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
 import {refreshAllReason} from './refreshAll';
 
 // A single subscription refresh and the batch share the Nodes page's busy state.
@@ -23,12 +24,14 @@ export function useRefreshAll(providers: Pick<ReturnType<typeof useProviders>, '
           // Undefined: the batch was cancelled (the page was left), so there is nothing to report.
           if (done === undefined) return;
           const counts = {n: done, total: subscriptions.length};
-          const kind = done === subscriptions.length ? 'positive' : done ? 'info' : 'negative';
+          // Nothing refreshed is a failure, unless every refresh only left its outcome unknown.
+          const unknown = failures.length > 0 && failures.every(error => failureNotice(error, t, '').kind === 'neutral');
+          const kind = done === subscriptions.length ? 'positive' : done ? 'info' : unknown ? 'neutral' : 'negative';
           if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), toastErrorDetail(failures[0], t));
           else toast(kind, t('settings.refreshedAll', counts));
           if (degraded) toast('info', t('settings.refreshedDegraded'));
         },
-        error => toast('negative', t('settings.refreshAllFailed'), toastErrorDetail(error, t))
+        error => toastFailure(error, t, t('settings.refreshAllFailed'))
       );
   };
   return {

@@ -12,7 +12,8 @@ import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
-import {requestIdOf} from '../../api/error';
+import {failureNotice, requestIdOf} from '../../api/error';
+import {selectMember} from '../shared/selectMember';
 export type PolicyGroupInput = {
   nodes?: Node[];
   providers?: Provider[];
@@ -41,12 +42,13 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const t = useT();
   const lang = useLang();
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused && !focused);
-  // A language switch does not repeat the toast.
-  const report = useEffectEvent((error: Error) =>
-    toast('negative', t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t, false)}), {
-      requestId: requestIdOf(error)
-    })
-  );
+  // A language switch does not repeat the toast. The notice decides its kind, so an unknown outcome stays neutral; the
+  // group's own summary already carries the error and adds no detail.
+  const report = useEffectEvent((error: Error) => {
+    const summary = t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t, false)});
+    const notice = failureNotice(error, t, summary);
+    toast(notice.kind, notice.text, {detail: notice.text === summary ? undefined : notice.detail, requestId: requestIdOf(error)});
+  });
   useEffect(() => {
     if (control.actionError) report(control.actionError);
   }, [control.actionError]);
@@ -153,20 +155,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   };
   const select =
     card && (card.selectable || card.overridable)
-      ? (memberId: string) => {
-          // Pressing the member already in place would only repeat the request.
-          if (memberId === card.selected) return;
-          void control.select(memberId).then(result => {
-            if (result && g)
-              toast(
-                'positive',
-                t(result.source === 'override' ? 'policy.pinned' : result.connections_interrupted ? 'policy.selectedInterrupted' : 'policy.selectedKept', {
-                  name: g.name,
-                  member: memberName(result.member_id)
-                })
-              );
-          });
-        }
+      ? (memberId: string) => selectMember(control.select, memberId, card.selected, g?.name, memberName, t)
       : undefined;
   return {
     includes,

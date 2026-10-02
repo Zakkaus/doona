@@ -1,10 +1,10 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
-import {ApiError} from '../../api/error';
+import {ApiError, LocalError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {PendingRule} from '../../store';
-import {byFile, insertRules, partialFailure, pendingView, ruleFailure} from './pending';
+import {byFile, failureToast, insertRules, partialFailure, pendingView, ruleFailure} from './pending';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 async function held() {
@@ -149,4 +149,17 @@ it('says what an apply wrote before a later file failed, and what is still held'
     text: '2 rules written; 1 still held',
     lines: ['Validation found 1 error; nothing written', 'rules.dae line 7: x']
   });
+});
+
+it.each([
+  ['an unknown outcome', new LocalError('ui.operationUnknown'), 'neutral'],
+  ['a written file that did not apply', new LocalError('ui.writtenNotApplied'), 'negative'],
+  ['a refusal', new ApiError(503, 'backend_unavailable', 'Try later'), 'negative']
+] as const)('toasts %s with the kind its notice has', async (_, error, kind) => {
+  const {sources} = await createMockApi().config();
+  const failure = ruleFailure(error, null, sources, t);
+  expect(failureToast(failure)[0]).toBe(kind);
+  // Rules still held make a partial apply a failure; with none left it keeps the last file's kind.
+  expect(failureToast(partialFailure(failure, 1, 1, t))[0]).toBe('negative');
+  expect(failureToast(partialFailure(failure, 1, 0, t))[0]).toBe(kind);
 });

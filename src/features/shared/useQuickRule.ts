@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useDnsRules, useGroups, usePendingRules, useRules, type HeldRule, type PendingPlace} from '../../store';
 import {offered} from '../../api/capabilities';
 import {getApi} from '../../api/index';
@@ -6,6 +6,7 @@ import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {dnsListEnd, dnsRuleAnchor, dnsRuleTarget, ruleAnchor, ruleLine} from '../../dae/ruleText';
 import {usePendingApply} from './usePendingApply';
+import {failureToast} from './pending';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {copyText} from './copy';
@@ -64,6 +65,12 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
     if (hasGroups && draft?.lists.includes('routing')) groups.refetch();
   };
   const pending = usePendingApply();
+  // An apply outlives the page that started it; once the dialog is gone a failure cannot show inline.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => void (mounted.current = false);
+  }, []);
   const sources = config.data?.sources ?? [];
   const listedDns = dnsList ? dnsRules.data?.[dnsList] : undefined;
   const generation = routing ? rules.data?.generation_id : dnsRules.data?.generation_id;
@@ -102,6 +109,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
     if (draft && !pending.busy) setDraft({...draft, ...patch});
   };
   const close = () => {
+    // Closing the dialog withdraws this rule, so its write is cancelled; leaving the page only lets the write finish.
     // The abandoned write may still land, so the rules and sources are read again.
     if (pending.busy) {
       pending.cancel();
@@ -156,13 +164,14 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
     const outcome = await pending.apply([{...rule, id: 0}]);
     if (!outcome) return;
     if (!outcome.written) {
-      setFailure(current => ({id: (current?.id ?? 0) + 1, ...outcome.failure!}));
+      if (mounted.current) setFailure(current => ({id: (current?.id ?? 0) + 1, ...outcome.failure!}));
+      else toast(...failureToast(outcome.failure!));
       return;
     }
     // A rule in its file closes the dialog even when the reload failed, so it is not inserted twice.
     setDraft(null);
     if (outcome.failure) {
-      toast('negative', outcome.failure.toastText ?? outcome.failure.text, {requestId: outcome.failure.requestId});
+      toast(...failureToast(outcome.failure));
       return;
     }
     if (rule.list !== 'routing') {

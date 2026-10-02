@@ -1,6 +1,6 @@
 import {useCapabilities, useGeodata, useVersion} from '../../store';
 import {LOCALE, useLang, useT} from '../../i18n';
-import {toast, toastErrorDetail} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {backendActionsVisible, geodataConfigurable} from './nav';
 export function useBackendActions() {
@@ -38,7 +38,7 @@ export function useBackendActions() {
         result => {
           if (result) toast('positive', t('settings.geodataUpdated'));
         },
-        error => toast('negative', t('settings.geodataFailed'), toastErrorDetail(error, t))
+        error => toastFailure(error, t, t('settings.geodataFailed'))
       )
   };
 }
