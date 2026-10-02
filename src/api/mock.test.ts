@@ -604,3 +604,22 @@ it('bypasses a cached DNS answer without removing or changing the entry', async 
   expect(await api.dnsCache()).toEqual(before);
   expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: true, cache_entry_id: entry.entry_id});
 });
+
+it.each([undefined, ['A'], ['AAAA'], ['A', 'AAAA']])('deletes only an exact canonical DNS name and selected types %j', async types => {
+  const api = createMockApi();
+  const before = (await api.dnsCache({limit: 1000})).entries;
+  const name = before.find(entry => entry.type === 'AAAA')!.domain;
+  const selected = before.filter(entry => entry.domain === name && (!types || types.includes(entry.type)));
+  const query = {name: name.toUpperCase().replace(/\.$/, ''), type: types};
+  await expect(api.deleteDnsCacheByName(query)).resolves.toEqual({matched: selected.length, deleted: selected.length});
+  const after = (await api.dnsCache({limit: 1000})).entries;
+  expect(after).toEqual(before.filter(entry => !selected.includes(entry)));
+  await expect(api.deleteDnsCacheByName(query)).resolves.toEqual({matched: 0, deleted: 0});
+});
+
+it.each(['', '   '])('refuses an empty DNS deletion name %j without flushing', async name => {
+  const api = createMockApi();
+  const before = await api.dnsCache();
+  await expect(api.deleteDnsCacheByName({name})).rejects.toMatchObject({status: 400});
+  expect(await api.dnsCache()).toEqual(before);
+});

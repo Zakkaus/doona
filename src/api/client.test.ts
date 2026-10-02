@@ -776,3 +776,16 @@ it('fills resource keys a backend on an older contract pin leaves out as unavail
   expect(capabilities.unreported).toContain('geodata');
   expect(capabilities.unreported).not.toContain('connections');
 });
+
+it.each([undefined, ['A', 'AAAA']])('sends exact-name DNS deletion with repeated type parameters %j', async type => {
+  const request = vi.fn().mockResolvedValue(json({matched: 2, deleted: 2}));
+  vi.stubGlobal('fetch', request);
+  const signal = new AbortController().signal;
+  await expect(createApi('https://honk.test').deleteDnsCacheByName({name: 'example.org.', type}, signal)).resolves.toEqual({matched: 2, deleted: 2});
+  const sent = request.mock.calls[0][0] as Request;
+  const url = new URL(sent.url);
+  expect(sent.method).toBe('DELETE');
+  expect(url.pathname).toBe('/api/v1/dns/cache');
+  expect(url.searchParams.get('name')).toBe('example.org.');
+  expect(url.searchParams.getAll('type')).toEqual(type ?? []);
+});

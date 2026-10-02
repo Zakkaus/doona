@@ -103,6 +103,7 @@ export interface Api {
   createConfigSource(path: string, content: string, signal?: AbortSignal): Promise<OperationAccepted>;
   patchRuntimeSettings(patch: RuntimeSettingsPatch, signal?: AbortSignal): Promise<RuntimeSettings>;
   deleteDnsEntry(entryId: string, signal?: AbortSignal): Promise<DeleteCount>;
+  deleteDnsCacheByName(query: {name: string; type?: DnsRecordType[]}, signal?: AbortSignal): Promise<DeleteMatchingCount>;
   flushDnsCache(signal?: AbortSignal): Promise<DeleteMatchingCount>;
   routingTrace(request: RoutingTraceRequest, signal?: AbortSignal): Promise<RoutingTraceResponse>;
   startReload(signal?: AbortSignal): Promise<OperationAccepted>;

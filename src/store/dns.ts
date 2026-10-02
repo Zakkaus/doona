@@ -103,6 +103,9 @@ export function flushCache(api: Api, signal: AbortSignal) {
 export function deleteCacheEntry(api: Api, id: string, signal: AbortSignal) {
   return api.deleteDnsEntry(id, signal).finally(() => changed(api));
 }
+export function deleteCacheName(api: Api, query: Parameters<Api['deleteDnsCacheByName']>[0], signal: AbortSignal) {
+  return api.deleteDnsCacheByName(query, signal).finally(() => changed(api));
+}
 // Otherwise one entry is enough to read the usage and coverage.
 export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {
   const recent = walks.get(api);
@@ -144,6 +147,15 @@ export function useDnsControl(paused = false) {
       (id: string) =>
         run(id, async signal => {
           const value = await deleteCacheEntry(api, id, signal);
+          refetch();
+          return value;
+        }),
+      [api, run, refetch]
+    ),
+    removeName: useCallback(
+      (query: Parameters<Api['deleteDnsCacheByName']>[0]) =>
+        run('delete-name', async signal => {
+          const value = await deleteCacheName(api, query, signal);
           refetch();
           return value;
         }),

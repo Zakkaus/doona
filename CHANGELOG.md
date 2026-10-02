@@ -4,6 +4,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
+
 ### Changed
 
 - The runtime overrides card on Settings links to the persistent settings in Config with a button instead of a plain text link. (#294)

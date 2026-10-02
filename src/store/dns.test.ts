@@ -4,7 +4,7 @@ import {capabilities} from '../api/mock/fixtures';
 import type {Api} from '../api/api';
 import type {DnsCacheList, DnsCacheQuery} from '../api/model';
 import {createMockApi} from '../api/mock';
-import {deleteCacheEntry, dnsCacheListing, dnsLogLimit, flushCache, readCacheUsage, smallerOnRefusal, walkCache, queryTypes} from './dns';
+import {deleteCacheName, deleteCacheEntry, dnsCacheListing, dnsLogLimit, flushCache, readCacheUsage, smallerOnRefusal, walkCache, queryTypes} from './dns';
 
 afterEach(() => void vi.useRealTimers());
 const budget = (retryAfter: number | null = 1) =>
@@ -127,6 +127,12 @@ it('reads cache usage afresh after a flush or a deletion instead of reusing the 
   await deleteCacheEntry(api, walked.entries[0].entry_id, signal);
   let calls = listing.mock.calls.length;
   expect((await readCacheUsage(api, signal)).total).toBe(walked.total - 1);
+  expect(listing).toHaveBeenCalledTimes(calls + 1);
+  await walkCache(api, signal);
+  const name = walked.entries.at(-1)!.domain;
+  await deleteCacheName(api, {name}, signal);
+  calls = listing.mock.calls.length;
+  expect((await readCacheUsage(api, signal)).total).toBeLessThan(walked.total - 1);
   expect(listing).toHaveBeenCalledTimes(calls + 1);
   await walkCache(api, signal);
   await flushCache(api, signal);

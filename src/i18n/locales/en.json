@@ -499,6 +499,9 @@
   "dns.chart.usageFacts": "Entries: {entries}",
   "dns.deleteEntry": "Delete the {type} cache entry for {domain}",
   "dns.deleteFailed": "Could not delete the cache entry",
+  "dns.deleteName": "Delete by name",
+  "dns.deleteNameConfirm": "Delete the {type} cache entries for {domain}? This cannot be undone.",
+  "dns.deleteNameConfirmAll": "Delete all cache entries for {domain}? This cannot be undone.",
   "dns.deleteUnsupported": "This backend does not support deleting cache entries",
   "dns.deleted": {
     "one": "Deleted {n} cache entry",
@@ -506,6 +509,7 @@
   },
   "dns.empty": "No cache entries",
   "dns.entries": "Cache entries",
+  "dns.exactName": "Exact name",
   "dns.expires": "Expires",
   "dns.exportLog": "Export CSV",
   "dns.flushAll": "Clear all cache",

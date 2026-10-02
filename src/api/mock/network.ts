@@ -69,6 +69,7 @@ type NetworkApi = Pick<
   | 'closeConnection'
   | 'closeConnections'
   | 'deleteDnsEntry'
+  | 'deleteDnsCacheByName'
   | 'flushDnsCache'
 >;
 export function createNetwork(
@@ -319,6 +320,16 @@ export function createNetwork(
       if (index < 0) return {deleted: 0};
       dnsCache.entries.splice(index, 1);
       return {deleted: 1};
+    },
+    deleteDnsCacheByName: async (query, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.dns_cache.available || !capabilities.resources.dns_cache.delete_name)
+        throw new ApiError(404, 'capability_not_supported', 'Deleting DNS names is unavailable');
+      if (!query.name.trim()) throw new ApiError(400, 'invalid_request', 'A DNS name is required');
+      const name = query.name.trim().toLowerCase().replace(/\.$/, '') + '.';
+      const matches = dnsCache.entries.filter(entry => entry.domain.toLowerCase() === name && (!query.type || query.type.includes(entry.type)));
+      for (const entry of matches) dnsCache.entries.splice(dnsCache.entries.indexOf(entry), 1);
+      return {matched: matches.length, deleted: matches.length};
     },
     flushDnsCache: async signal => {
       signal?.throwIfAborted();
