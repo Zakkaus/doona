@@ -1,6 +1,7 @@
 import {useT} from '../../i18n';
 import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
+import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
 
 export function GlobalSettings(props: PageProps) {
@@ -24,6 +25,7 @@ export function GlobalSettings(props: PageProps) {
       <span className="rp-label">{t('config.globalNote')}</span>
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.failure && <InlineAlert>{m.failure}</InlineAlert>}
+      {m.restart.length > 0 && <RestartNotice settings={m.restart} sources={m.sources} />}
       {m.conflict && <InlineAlert>{t('config.changedOnDisk')}</InlineAlert>}
       {m.source && !m.writable && <InlineAlert>{t('config.readOnly')}</InlineAlert>}
       {m.groups.map(group => (

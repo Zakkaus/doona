@@ -28,6 +28,11 @@ export function validationSources(sources: ConfigSource[], replacement?: {id: st
 }
 
 // honk refuses a write that changes a setting only a restart applies, one error per setting, and names the setting in
-// the message; nothing was written, so the draft and every later write stay valid.
-export const restartRequired = (diagnostics: ConfigDiagnostic[]) =>
-  diagnostics.filter(item => item.level === 'error' && item.code === 'restart-required').length;
+// the message ("Changing global.log_level requires restarting honk"); nothing was written, so the draft and every
+// later write stay valid.
+export type RestartSetting = {key: string | null; sourceId: string; line: number | null};
+export const restartSettings = (diagnostics: ConfigDiagnostic[]): RestartSetting[] =>
+  diagnostics
+    .filter(item => item.level === 'error' && item.code === 'restart-required')
+    .map(item => ({key: /\b[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\b/.exec(item.message)?.[0] ?? (item.message || null), sourceId: item.source_id, line: item.line}));
+export const restartRequired = (diagnostics: ConfigDiagnostic[]) => restartSettings(diagnostics).length;

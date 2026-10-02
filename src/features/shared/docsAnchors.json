@@ -5,6 +5,7 @@
   "doona": "install",
   "other-origin": "install",
   "operation": "install",
+  "reload-and-restart": "install",
   "config": "configuration",
   "features": "features",
   "still-missing": "features",

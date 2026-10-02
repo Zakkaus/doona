@@ -211,7 +211,7 @@ export function createConfiguration(
       if (!capabilities.resources.config_validate.modes?.includes(request.mode))
         throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
       if (request.mode === 'full') await loadSources();
-      return validate(request, String(configRevision), disk.filter(ruleFile));
+      return validate(request, String(configRevision), {local: disk.filter(ruleFile), active: sourceSet()});
     },
     // Global write admission precedes HTTP checks; source permission and revision checks follow the body limits.
     replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
@@ -229,7 +229,8 @@ export function createConfiguration(
       if (!source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only', null, {reason: source.read_only_reason});
       if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
-      const check = validate({sources: sourceSet({id: sourceId, content}), mode: 'full'}, String(configRevision));
+      const candidate = sourceSet({id: sourceId, content});
+      const check = validate({sources: candidate, mode: 'full'}, String(configRevision), {active: sourceSet()});
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
       // A concurrent write may have landed while this one was stored.
@@ -281,7 +282,7 @@ export function createConfiguration(
       }
       const next = await stored({id: `src-new-${++created}`, path: target, kind: 'include', writable: true, loaded_at: new Date().toISOString(), content});
       vacant();
-      const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision));
+      const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision), {active: sourceSet()});
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       disk = [...disk, next];
       log('info', 'honk::config', 'Configuration source created; reloading.', {source_id: next.id});

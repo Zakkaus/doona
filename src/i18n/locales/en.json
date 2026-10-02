@@ -275,6 +275,18 @@
   "config.redactedSource": "Redacted",
   "config.refusedNote": "The backend does not accept writes to this file, so it can only be viewed.",
   "config.repeated": "{text} ({n} times)",
+  "config.restart.body": "Nothing was written. A reload cannot apply the change.",
+  "config.restart.copied": "Command copied",
+  "config.restart.copy": "Copy",
+  "config.restart.copyFailed": "Could not copy the command; select its text and copy it.",
+  "config.restart.docs": "Reload and restart",
+  "config.restart.effect": "takes effect only after a restart",
+  "config.restart.next": "To apply it, edit the config file on the host, then restart honk there. The command is for systemd; the install guide covers other init systems.",
+  "config.restart.planned": "Writing such a change directly, with a prompt to restart, is planned for the next version.",
+  "config.restart.title": {
+    "one": "{n} setting needs a restart",
+    "other": "{n} settings need a restart"
+  },
   "config.revision": "Config version",
   "config.revisionHelp": "Identifies the version of the configuration in effect. It changes when changed content takes effect.",
   "config.save": "Apply",
@@ -308,8 +320,8 @@
   },
   "config.writeHelp": "If the file changed on disk since loading, honk refuses the write.",
   "config.writeRestart": {
-    "one": "{n} setting takes effect only after a restart; nothing written. Change it in the file, then restart honk",
-    "other": "{n} settings take effect only after a restart; nothing written. Change them in the file, then restart honk"
+    "one": "{n} setting takes effect only after a restart; nothing written",
+    "other": "{n} settings take effect only after a restart; nothing written"
   },
   "conn.activeCount": {
     "one": "{n} active connection",

@@ -7,7 +7,7 @@ import {engineOf} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {blockFields, scanConfig} from '../../dae/text';
 import {serializeSetting, settingGroups, settingValue, writeSettings, type SettingField} from '../../dae/settings';
-import {fileName, restartRequired, validationSources} from '../../dae/sources';
+import {fileName, restartSettings, validationSources} from '../../dae/sources';
 import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
@@ -44,7 +44,8 @@ export function useGlobalSettings({query, go}: PageProps) {
   const source = chosen?.source;
   const editor = useConfigEditor(config.refetch);
   const [draft, setDraft] = useState<{source: ConfigSource; id: string; patch: Record<string, string>} | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  // A message, or the diagnostics that refused the write.
+  const [failure, setFailure] = useState<string | ConfigDiagnostic[] | null>(null);
   const guard = useDraftGuard(!!draft, () => {
     setDraft(null);
     setFailure(null);
@@ -107,12 +108,11 @@ export function useGlobalSettings({query, go}: PageProps) {
     !engine.holdsCredentials(source);
   const busy = !!editor.busy;
   const blocked = !draft || !writable || conflict || fields.some(field => field.key in patch && field.invalid);
-  const invalid = (diagnostics: ConfigDiagnostic[]) => {
-    const restart = restartRequired(diagnostics);
-    return restart ? t('config.writeRestart', {n: restart}) : t('config.invalid', {n: diagnostics.filter(item => item.level === 'error').length});
-  };
   const rejected =
     editor.error instanceof ApiError && editor.error.status === 422 ? (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics : null;
+  const refusal = failure ?? rejected ?? null;
+  // Shown while the draft that was refused is still open, as the source editor shows it.
+  const restart = draft && Array.isArray(refusal) ? restartSettings(refusal) : [];
   const save = async () => {
     if (blocked || busy || !schema || !chosen) return;
     const content = writeSettings(draft.source.content, schema, chosen.index, patch);
@@ -128,14 +128,14 @@ export function useGlobalSettings({query, go}: PageProps) {
       const result = await editor.validate({sources: candidates, mode: 'full'});
       if (!result) return;
       if (!result.valid) {
-        setFailure(invalid(result.diagnostics));
+        setFailure(result.diagnostics);
         return;
       }
     }
     const result = await editor.apply(draft.source, content);
     if (!result) return;
     if (result.diagnostics) {
-      setFailure(invalid(result.diagnostics));
+      setFailure(result.diagnostics);
       return;
     }
     guard.clear();
@@ -163,7 +163,9 @@ export function useGlobalSettings({query, go}: PageProps) {
     writable,
     dirty: !!draft,
     conflict,
-    failure: failure ?? (rejected ? invalid(rejected) : null),
+    failure: Array.isArray(refusal) ? (restart.length ? null : t('config.invalid', {n: refusal.filter(item => item.level === 'error').length})) : refusal,
+    restart,
+    sources,
     error: (rejected ? null : editor.error) ?? config.error,
     retry: config.refetch,
     save,
