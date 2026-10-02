@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import type {Provider} from '../../api/model';
 import {nodeFixtures} from '../../api/mock/fixtures';
 import {compileFilters, readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {flagChoices, regionFlag} from '../../dae/flags';
@@ -8,6 +9,7 @@ import {regionGroups} from '../../dae/templates';
 import {
   includeChoices,
   includeMatches,
+  selectedIncludeLabels,
   retainedIncludes,
   recogniseInclude,
   regionFilters,
@@ -92,6 +94,23 @@ describe('visual group includes', () => {
     expect(choices.node).toContainEqual({id: 'offline node', label: 'offline node', count: 0, disabled: false});
     expect(setIncludes([], 'node', ["O'Hare"])).toEqual([]);
   });
+});
+
+it("names a card's selected includes as the full choices do", () => {
+  const {nodes} = nodeFixtures(120, true);
+  const providers = [{id: 'p', kind: 'subscription', name: 'Harbor Co'}] as Provider[];
+  const owned = nodes.map(node => ({...node, subscription_tag: 'harbor', provider_id: 'p'}));
+  for (const filters of [[], [hk], [hk, 'subtag(harbor)', 'subtag(missing)'], [regionFilters.find(region => region.id === 'JP')!.legacy!, 'name(x)']]) {
+    const full = includeChoices(filters, owned, providers, 'en');
+    const named = selectedIncludeLabels(filters, owned, providers, 'en');
+    expect([...named.regions]).toEqual(
+      selectedIncludes(filters, 'region').map(id => {
+        const choice = full.region.find(region => region.id === id)!;
+        return [id, {label: choice.label, count: choice.count}];
+      })
+    );
+    expect([...named.subscriptions]).toEqual(selectedIncludes(filters, 'subscription').map(id => [id, full.subscription.find(item => item.id === id)!.label]));
+  }
 });
 
 it('warns only about removed selections retained by another filter', () => {
