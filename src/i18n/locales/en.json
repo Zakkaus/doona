@@ -19,7 +19,7 @@
   "act.domains": "Domains",
   "act.download": "Download",
   "act.emptyHistory": "No history samples yet",
-  "act.global": "Global mode outbound",
+  "act.global": "Global outbound",
   "act.globalMissing": "Global mode needs an outbound",
   "act.groupFollow": "Automatic",
   "act.groupPickHelp": "By default, this card follows the group with the most connections; choosing a group changes only this card.",

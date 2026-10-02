@@ -270,15 +270,15 @@ test('global target cannot change during a pending mode apply', async ({page}) =
   await page.goto('/#/activity');
   await page.getByRole('radio', {name: 'Global', exact: true}).click();
   const validating = page.waitForRequest('**/config/validate');
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;
   try {
-    await expect(page.getByRole('button', {name: 'Global mode outbound', exact: true})).toBeDisabled();
+    await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toBeDisabled();
   } finally {
     release();
   }
   await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Global');
-  await expect(page.getByRole('button', {name: 'Global mode outbound', exact: true})).toBeEnabled();
+  await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toBeEnabled();
 });
 
 test('trace headings and selected leaves retain the submitted domain and network', async ({page}) => {

@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import {useGroups, useGroupControl} from '../../store';
 import {useMode} from '../../features/shared/useMode';
-import {ModeSwitch} from '../../features/activity/widgets';
+import {ModeSwitch, ModeApply} from '../../features/activity/widgets';
 import {selectMember} from '../../features/shared/selectMember';
 import {Button, ChoiceMenu, Empty, ErrorMessage, Kv, Link, Segmented} from '../../ui/ui';
 import {WidgetRow} from '../../ui/WidgetPanel';
@@ -12,23 +12,27 @@ import {Reading} from './Reading';
 export function ModeWidget({preview, targetOnly}: {preview: boolean; targetOnly: boolean}) {
   const t = useT();
   const m = useMode();
+  const model = {...m, writable: !preview && m.writable};
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
-      {!targetOnly && <ModeSwitch model={{...m, writable: !preview && m.writable}} />}
+      {!targetOnly && <ModeSwitch model={model} />}
       {(targetOnly || m.mode === 'global') && (
         <WidgetRow label={t('act.global')}>
-          <ChoiceMenu
-            quiet
-            label={t('act.global')}
-            value={m.target}
-            onChange={m.pickTarget}
-            isDisabled={preview || m.busy || !m.writable}
-            items={m.targets}
-            searchLabel={t('ui.filterOutbounds')}
-          >
-            {m.targetText}
-          </ChoiceMenu>
+          <span className={targetOnly ? 'rp-cluster rp-global-controls' : 'rp-cluster'}>
+            <ChoiceMenu
+              quiet
+              label={t('act.global')}
+              value={m.target}
+              onChange={m.pickTarget}
+              isDisabled={preview || m.busy || !m.writable}
+              items={m.targets}
+              searchLabel={t('ui.filterOutbounds')}
+            >
+              {m.targetText}
+            </ChoiceMenu>
+            {targetOnly && <ModeApply model={model} small={false} />}
+          </span>
         </WidgetRow>
       )}
       {m.incomplete && <span className="rp-label">{t('act.globalMissing')}</span>}

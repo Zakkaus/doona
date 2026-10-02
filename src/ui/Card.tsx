@@ -20,7 +20,7 @@ export function TileHead({icon, tint, kind, layout, label, children}: TileHeader
   return (
     <span className={`${kind === 'metric' ? 'rp-tile-head' : 'rp-qlabel'} rp-tint-c${tint}`} data-layout={layout}>
       {icon}
-      {kind === 'metric' ? <span className="rp-tile-caption">{label}</span> : label}
+      <span className={kind === 'metric' ? 'rp-tile-caption' : 'rp-truncate'}>{label}</span>
       {kind === 'metric' && children ? <span className="rp-tile-controls">{children}</span> : children}
     </span>
   );

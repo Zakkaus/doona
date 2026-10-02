@@ -219,6 +219,20 @@
   flex-wrap: wrap;
   min-width: 0;
 }
+.rp-global-controls {
+  flex: none;
+  gap: var(--rp-space-2);
+  flex-wrap: nowrap;
+}
+:is(.rp-control-card > .rp-row, .rp-widget-row):has(> .rp-global-controls) {
+  gap: var(--rp-space-2);
+}
+.rp-widget-row:has(> .rp-global-controls) > .rp-kv-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* A header that must keep its height: the title gives way (truncating) instead of the row wrapping. */
 .rp-row.nowrap,
 .rp-cluster.nowrap {

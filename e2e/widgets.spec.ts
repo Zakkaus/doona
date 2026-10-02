@@ -101,7 +101,7 @@ test('a pending mode write blocks both hosts and a failed write keeps their shar
   await widget.getByRole('button', {name: 'Apply', exact: true}).click();
   await request;
   await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeDisabled();
-  await expect(page.locator('main').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+  await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   release();
   await expect(page.locator('.rp-toast.negative', {hasText: 'Mode storage unavailable'})).toBeVisible();
   await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeEnabled();
