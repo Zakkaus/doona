@@ -1401,28 +1401,39 @@ for (const available of [false, true]) {
   });
 }
 
-test('node Probe uses the latency preference and options preselect it', async ({page}) => {
-  const {api} = await mockBackend(page);
-  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
-  await page.goto('/#/settings');
-  await page
-    .getByRole('region', {name: 'Latency probes', exact: true})
-    .getByRole('button', {name: /Probe method/})
-    .click();
-  await page.getByRole('option', {name: 'DNS (UDP)', exact: true}).click();
-  await page.evaluate(() => {
-    location.hash = '#/nodes';
+for (const protocol of ['hysteria2', 'trojan', 'anytls', 'vless']) {
+  test(`node Probe preserves DNS UDP and options preselect it for ${protocol}`, async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
+    handlers['GET nodes'] = async request => {
+      const inventory = await api.nodes(query(request));
+      return {...inventory, nodes: inventory.nodes.map(item => (item.id === node.id ? {...item, protocol} : item))};
+    };
+    if (protocol === 'vless')
+      handlers['POST probes'] = async () => {
+        throw new ApiError(422, 'unsupported_value', 'UDP is disabled for this node');
+      };
+    await page.goto('/#/settings');
+    await page
+      .getByRole('region', {name: 'Latency probes', exact: true})
+      .getByRole('button', {name: /Probe method/})
+      .click();
+    await page.getByRole('option', {name: 'DNS (UDP)', exact: true}).click();
+    await page.evaluate(() => {
+      location.hash = '#/nodes';
+    });
+    await page.getByRole('searchbox', {name: 'Search nodes'}).fill(node.name);
+    const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/probes'));
+    await page.getByRole('button', {name: `Test ${node.name}`, exact: true}).click();
+    expect((await request).postDataJSON()).toMatchObject({kind: 'dns', transport: ['udp'], target: {type: 'node', node_id: node.id}});
+    await expect(page.getByRole('button', {name: `Test ${node.name}`, exact: true})).toBeEnabled();
+    if (protocol === 'vless') await expect(page.locator('.rp-toast.negative')).toContainText('UDP is disabled for this node');
+    const row = nodeRows(page).filter({hasText: node.name});
+    await moreAction(row, 'Probe with options…', 'Node actions');
+    await expect(page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: /Kind/})).toContainText('DNS (UDP)');
+    await page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: 'Cancel', exact: true}).click();
   });
-  await page.getByRole('searchbox', {name: 'Search nodes'}).fill(node.name);
-  const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/probes'));
-  await page.getByRole('button', {name: `Test ${node.name}`, exact: true}).click();
-  expect((await request).postDataJSON()).toMatchObject({kind: 'dns', transport: ['udp'], target: {type: 'node', node_id: node.id}});
-  await expect(page.getByRole('button', {name: `Test ${node.name}`, exact: true})).toBeEnabled();
-  const row = nodeRows(page).filter({hasText: node.name});
-  await moreAction(row, 'Probe with options…', 'Node actions');
-  await expect(page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: /Kind/})).toContainText('DNS (UDP)');
-  await page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: 'Cancel', exact: true}).click();
-});
+}
 
 test('QUIC nodes fall back to HTTP once and omit TCP connect from options', async ({page}) => {
   const {api, handlers} = await mockBackend(page);

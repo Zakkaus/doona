@@ -131,9 +131,9 @@ it.each([
   ['tuic', 'http', 'http'],
   ['juicity', 'dns_udp', 'dns_udp'],
   ['vmess', 'dns_udp', 'http'],
-  ['vless', 'dns_both', 'http'],
-  ['trojan', 'dns_udp', 'http'],
-  ['anytls', 'dns_udp', 'http'],
+  ['vless', 'dns_both', 'dns_both'],
+  ['trojan', 'dns_udp', 'dns_udp'],
+  ['anytls', 'dns_udp', 'dns_udp'],
   ['ss', 'tcp_connect', 'tcp_connect'],
   ['direct', 'tcp_connect', 'http'],
   ['block', 'http', undefined],
@@ -155,4 +155,15 @@ it('uses one common group kind and respects UDP-only groups', () => {
   group.capabilities.probe_transports = ['udp'];
   expect(optionsProbe(caps, {type: 'group', group_id: 'g'}, pick(), group, ['hysteria2'])?.kind).toBe('dns');
   expect(optionsProbe(caps, {type: 'group', group_id: 'g'}, pick(), group, protocols)).toBeNull();
+});
+
+it('offers unknown UDP paths for groups but excludes a proven unsupported member', () => {
+  const group = {capabilities: {probe_transports: ['tcp', 'udp']}} as Group;
+  const protocols = ['trojan', 'anytls', 'vless'];
+  expect(probeChoices(caps, 'group', group, protocols).map(choice => choice.id)).toContain('dns_both');
+  expect(optionsProbe(caps, {type: 'group', group_id: 'g'}, pick({choice: 'dns_udp'}), group, protocols)).toMatchObject({
+    kind: 'dns',
+    transport: ['udp']
+  });
+  expect(probeChoices(caps, 'group', group, [...protocols, 'vmess']).map(choice => choice.id)).not.toContain('dns_udp');
 });
