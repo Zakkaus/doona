@@ -1,7 +1,7 @@
 import {useCallback, useMemo} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
-import type {Capabilities, Group, Node, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
+import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
@@ -56,18 +56,12 @@ export async function probeGroup(
   return result!;
 }
 // Include descendants because options can expand leaves and a child's selected node can change.
-export async function groupProbeProtocols(api: Pick<Api, 'group'>, group: Group, nodes: Node[], signal?: AbortSignal): Promise<Array<string | null>> {
+export async function groupProbeMembers(api: Pick<Api, 'group'>, group: Group, signal?: AbortSignal): Promise<string[]> {
   const seen = new Set<string>();
-  const visit = async (current: Group): Promise<Array<string | null>> => {
+  const visit = async (current: Group): Promise<string[]> => {
     if (seen.has(current.id)) return [];
     seen.add(current.id);
-    return (
-      await Promise.all(
-        current.members.map(async member =>
-          member.kind === 'node' ? [nodes.find(node => node.id === member.id)?.protocol ?? null] : visit(await api.group(member.id, signal))
-        )
-      )
-    ).flat();
+    return (await Promise.all(current.members.map(async member => (member.kind === 'node' ? [member.id] : visit(await api.group(member.id, signal)))))).flat();
   };
   return visit(group);
 }
@@ -133,20 +127,21 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
   const nested = resource.data?.members.some(member => member.kind === 'group') ?? false;
   const {data: leaves} = useResource(
     {
-      key: ['groupProbeProtocols', {id, revision: resource.data?.config_revision}],
+      key: ['groupProbeMembers', {id, revision: resource.data?.config_revision}],
       every: poll.inventory,
-      fetch: signal => groupProbeProtocols(api, resource.data!, nodes!, signal)
+      fetch: signal => groupProbeMembers(api, resource.data!, signal)
     },
-    {enabled: nested && !!nodes, paused}
+    {enabled: nested, paused}
   );
-  const direct = useMemo(
+  const protocols = useMemo(
     () =>
       resource.data && nodes
-        ? resource.data.members.filter(member => member.kind === 'node').map(member => nodes.find(node => node.id === member.id)?.protocol ?? null)
+        ? ((nested && leaves) || resource.data.members.filter(member => member.kind === 'node').map(member => member.id)).map(
+            id => nodes.find(node => node.id === id)?.protocol ?? null
+          )
         : [null],
-    [resource.data, nodes]
+    [resource.data, nodes, nested, leaves]
   );
-  const protocols = (nested && leaves) || direct;
   const request = optionsProbe(capabilities, {type: 'group', group_id: id}, stored, resource.data, protocols);
   const limits = capabilities?.resources.probes.limits;
   const canProbe =
