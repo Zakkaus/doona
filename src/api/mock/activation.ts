@@ -1,7 +1,8 @@
 import type {Group, Node, Provider} from '../model';
 import {uuid} from '../hash';
 import {blockFields, quote, scanConfig, unquote} from '../../dae/text';
-import {groupAdmits, nestedIn, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {nestedIn, nameText, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {groupAdmits} from '../../dae/groupFilters';
 import {policyKind} from '../../dae/vocab';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {displayUrl} from './common';

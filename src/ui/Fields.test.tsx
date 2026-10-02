@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {StaticField} from './Fields';
-import {LabeledSelect} from './Select';
+import {LabeledSelect} from './Picker';
 
 it('shows a single choice as text with its help below, not as a picker', () => {
   const item = {id: 'end', label: 'New response block, as its first rule', desc: 'The dns section has no response block yet.'};

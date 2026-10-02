@@ -1,8 +1,9 @@
+import {dnsEndPosition} from './ruleNotice';
 import type {ConfigSource, DnsLogRecord, DnsRoutingRule, RoutingRule} from '../../api/model';
 import {ruleCondition, type RuleConditionKind} from '../../dae/groups';
 import type {Key, Translator} from '../../i18n';
 import type {PendingRule} from '../../store';
-import {dnsListEnd, dnsRuleAnchor, dnsUpstreams, ruleAnchor, type DnsRuleListId, type RuleAnchor} from '../../dae/ruleText';
+import {dnsListEnd, dnsRuleAnchor, dnsUpstreams, ruleAnchor, type DnsRuleListId} from '../../dae/ruleText';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames, isBuiltinOutbound} from '../../dae/vocab';
 import type {SearchSection} from '../../ui/SearchSelect';
@@ -185,13 +186,6 @@ export function pinnedPosition(positions: Array<{id: string; desc?: string}>, pi
   return kept ? {before: kept.id, moved: false} : {before: positions[0]?.id, moved: true};
 }
 
-// The end of a DNS list that writes no fallback, as a position: last in the list, or first in a new block when the list
-// has none.
-export function dnsEndPosition(anchor: RuleAnchor | undefined, list: DnsRuleListId, t: Translator): {label: string; desc: string | undefined} {
-  return anchor?.open
-    ? {label: t('rule.dns.positionNew', {name: list}), desc: t('rule.dns.positionNewHelp', {name: list})}
-    : {label: t('rule.positionLast'), desc: undefined};
-}
 // Where a new rule can go in a DNS list, the default first: last, before the fallback when the list writes one, or at
 // the list's end, in a new block when it has none; then the earliest place doona can write. `end` names the list's end.
 export function dnsRulePositions(list: DnsRuleListId, rules: DnsRoutingRule[], sources: ConfigSource[], t: Translator) {
@@ -299,9 +293,4 @@ export function ruleDialogReason(
   if (readOnly) return t('rule.copyOnly');
   if (busy || failed || unplaceable) return null;
   return waiting ? t('ui.loading') : outbound ? null : t(dns ? 'rule.dns.actionMissing' : 'rule.outboundMissing');
-}
-// What a successful rule write toasts. It is shown once the reload has settled, so the change is in effect, but a
-// connection already open keeps the route it was given until it reconnects.
-export function ruleWritten(key: 'rule.added' | 'rule.edited' | 'rule.removed' | 'rule.applied', t: Translator, n?: number) {
-  return {text: n === undefined ? t(key) : t(key, {n}), detail: t('rule.keepsRoute')};
 }

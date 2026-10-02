@@ -1,5 +1,6 @@
 import type {ConfigSource, Group, HealthObservation, Node} from '../../api/model';
-import {compileFilters, isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
+import {isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
+import {compileFilters} from '../../dae/groupFilters';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {formatLatency} from '../../i18n/format';

@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 import {
   addSubtagsToGroup,
   removeSubtagsFromGroup,
-  groupAdmits,
   groupsNamingTag,
   groupNameProblem,
   classifyFilters,
@@ -14,6 +13,7 @@ import {
   nameText,
   nestedIn
 } from './groups';
+import {groupAdmits} from './groupFilters';
 
 const text = `global {
   lan_interface: br-lan

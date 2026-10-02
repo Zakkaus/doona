@@ -6,7 +6,7 @@ import {pendingRules, readConfigFresh, refetchAll, useConfigEditor, usePendingRu
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
 import {byFile, failureToast, insertRules, partialFailure, ruleFailure} from './pending';
-import {ruleWritten} from './rule';
+import {ruleWritten} from './ruleNotice';
 
 // How many rules reached their files, and the failure that stopped the rest, if any.
 export type ApplyOutcome = {written: number; failure: PendingFailure | null};

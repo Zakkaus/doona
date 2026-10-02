@@ -1,24 +1,8 @@
-import {
-  createContext,
-  useContext,
-  useDeferredValue,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactElement,
-  type ReactNode,
-  type RefObject
-} from 'react';
+import {useEffect, useId, useRef, useState, type ComponentProps, type ReactElement, type ReactNode, type RefObject} from 'react';
 import {
   Button as RButton,
   Disclosure as RDisclosure,
   DisclosurePanel,
-  Tabs as RTabs,
-  TabList,
-  Tab,
-  TabPanel,
   DialogTrigger,
   Modal,
   ModalOverlay,
@@ -28,6 +12,7 @@ import {
   Popover,
   type PopoverProps
 } from 'react-aria-components';
+import {useTabShown} from './useTabShown';
 import ChevronDown from './icons/ChevronDown';
 import Close from './icons/Close';
 import {useT} from '../i18n';
@@ -35,7 +20,7 @@ import {errorText} from '../api/error';
 import {cx} from './cx';
 import {ActionHelp, Button} from './Button';
 import {ProblemAlert, type Problem} from './Feedback';
-import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
+import {useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
 // `flush` aligns the chevron with the content; `aside` keeps a status beside the trigger.
 export function Disclosure({
@@ -429,78 +414,6 @@ export function ConfirmButton({
   );
 }
 
-// Tabs: the selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
-export function Tabs({
-  label,
-  items,
-  value,
-  onChange,
-  keepMounted,
-  actions
-}: {
-  label: string;
-  items: Array<{id: string; label: string; content: ReactNode}>;
-  value: string;
-  onChange: (id: string) => void;
-  // Keep a panel mounted once opened, hidden while another is chosen, so coming back is instant. For panels that
-  // browse data; a panel with drafts or editors unmounts, so nothing of it keeps running out of sight.
-  keepMounted?: boolean;
-  // Controls at the end of the tab row, such as a filter for the panel shown; they wrap under the tabs on a phone.
-  // Passing the prop, even as null, keeps the row, so the tab bar is not remounted when the controls come and go.
-  actions?: ReactNode;
-}) {
-  // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
-  const [ref, pos] = useSlider(value, '[data-selected]');
-  // On a phone the bar scrolls: the selected tab stays in view and a faded end shows there are more tabs.
-  useScrollStrip(ref, value);
-  // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
-  // table of log rows) mounts in the deferred one, so the click never waits for it.
-  const shown = useDeferredValue(value);
-  // Until a new panel has mounted, the one before it stays on screen in its own panel, neither moved nor remounted:
-  // an empty panel for a frame would collapse the page, and a remount would redraw its placeholders. With
-  // `keepMounted`, opened panels also stay mounted, hidden, while another is chosen.
-  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set([value]));
-  const kept = keepMounted ? opened : new Set([shown]);
-  if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
-  const visible = kept.has(value) ? value : shown;
-  const bar = (
-    <div className="rp-tabbar" ref={ref}>
-      {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
-      <TabList aria-label={label} className="rp-tablist">
-        {items.map(item => (
-          <Tab key={item.id} id={item.id} className="rp-tab">
-            {item.label}
-          </Tab>
-        ))}
-      </TabList>
-    </div>
-  );
-  return (
-    <RTabs className="rp-tabs" selectedKey={value} onSelectionChange={key => onChange(String(key))}>
-      {actions === undefined ? (
-        bar
-      ) : (
-        <div className="rp-tabhead">
-          {bar}
-          {actions}
-        </div>
-      )}
-      {items
-        .filter(item => kept.has(item.id) || item.id === shown)
-        .map(item => (
-          <TabPanel key={item.id} id={item.id} shouldForceMount className="rp-tabpanel" data-shown={item.id === visible || undefined}>
-            <TabShown.Provider value={item.id === visible}>{item.content}</TabShown.Provider>
-          </TabPanel>
-        ))}
-    </RTabs>
-  );
-}
-
-// Whether the tab panel around a component is the one on screen. A kept panel stays mounted while hidden, so what
-// it renders outside itself (a drawer, a document-wide key handler) must follow this rather than its own state.
-const TabShown = createContext(true);
-export const useTabShown = () => useContext(TabShown);
-
 // The last child of rp-with-panel is a side panel on wide screens and a drawer below the breakpoint.
 export function DetailPanel({
   open,
@@ -523,7 +436,7 @@ export function DetailPanel({
 }) {
   const t = useT();
   const wide = useMediaQuery(panelQuery);
-  const showing = useContext(TabShown) && open;
+  const showing = useTabShown() && open;
   // Shown before in this opening: a kept tab coming back brings its drawer back as it was, without the entrance.
   const [was, setWas] = useState({showing, open, seen: false});
   if (was.showing !== showing || was.open !== open) setWas({showing, open, seen: open && (was.seen || was.showing)});

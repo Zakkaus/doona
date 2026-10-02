@@ -20,10 +20,10 @@ import {
   rulePositions,
   ruleTargets,
   ruleWritable,
-  ruleWritten,
   typedCondition,
   type QuickRuleSeed
 } from './rule';
+import {ruleWritten} from './ruleNotice';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers the exact domain first, then its subdomains and keyword, the destination IP and the source IP as one host', () => {

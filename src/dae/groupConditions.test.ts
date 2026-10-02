@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {compileFilters} from './groups';
+import {compileFilters} from './groupFilters';
 import {
   conditionValues,
   groupFilterDraft,

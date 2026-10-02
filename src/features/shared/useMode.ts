@@ -5,7 +5,7 @@ import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {useAction} from '../../store/action';
-import {useSharedControl} from '../../store/sharedControl';
+import {useModeDraft} from './useModeDraft';
 import {readMode, writeMode, sameMode, type OutboundMode} from '../../dae/outboundMode';
 import {modeLabels, modeReasons, modeView} from './modeView';
 import {offered} from '../../api/capabilities';
@@ -66,5 +66,3 @@ export function useMode() {
     apply: () => void apply()
   };
 }
-
-export const useModeDraft = () => useSharedControl<OutboundMode | null>('mode-draft', null);
