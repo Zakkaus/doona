@@ -618,6 +618,7 @@
   "flow.map": "Traffic path",
   "flow.mapEmpty": "No rules, policy groups or retained flows are available to display",
   "flow.mapFilter": "Path: {label}",
+  "flow.mapFilterHint": "Select a path to filter flows",
   "flow.mapNode": "Node",
   "flow.mapOutbound": "Outbound",
   "flow.mapRule": "Rule",

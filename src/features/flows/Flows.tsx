@@ -52,6 +52,19 @@ function RoutingMap(props: PageProps) {
   const view = useRoutingMap(props);
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
+      <div className="rp-toolbar">
+        {view.pinLabel ? (
+          <Button small onPress={view.viewPinned}>
+            {view.pinLabel}
+          </Button>
+        ) : (
+          <span className="rp-label">{t('flow.mapFilterHint')}</span>
+        )}
+        <span className="rp-grow" />
+        <Button small quiet isDisabled={!view.pinLabel} onPress={() => view.pin(null)}>
+          {t('flow.clearMapFilter')}
+        </Button>
+      </div>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <Card
         title={t('flow.topology')}
@@ -78,16 +91,6 @@ function RoutingMap(props: PageProps) {
           </>
         )}
       </Card>
-      {view.pinLabel && (
-        <div className="rp-toolbar">
-          <Button small onPress={view.viewPinned}>
-            {view.pinLabel}
-          </Button>
-          <Button small quiet onPress={() => view.pin(null)}>
-            {t('flow.clearMapFilter')}
-          </Button>
-        </div>
-      )}
     </section>
   );
 }
