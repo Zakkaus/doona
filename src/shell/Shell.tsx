@@ -173,7 +173,7 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
         paletteSections={paletteSections}
         menu={menu}
       />
-      <SideNav groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
+      <SideNav route={route} groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">

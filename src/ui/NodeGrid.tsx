@@ -1,5 +1,5 @@
 import {GridLayout, GridList, GridListItem, Size, ToggleButton, Virtualizer} from 'react-aria-components';
-import {useState, type ReactNode} from 'react';
+import {useCallback, useState, type ReactNode} from 'react';
 import {NodeTile, type NodeStatus} from './Tile';
 import {Empty} from './Feedback';
 import {cx} from './cx';
@@ -30,9 +30,23 @@ type NodeGridProps = {
   isDisabled?: boolean;
 };
 
-export function NodeGrid({nodes, label, empty, virtual, selected, current, marks = {}, onSelect, isDisabled}: NodeGridProps) {
-  const tile = (n: GridNode) => (
-    <NodeTile nodeName={n.nodeName} name={n.name} status={n.status} description={n.description} current={!onSelect && current === n.id} mark={marks[n.id]} />
+// A stable default, so a grid without marks keeps its collection cache between renders.
+const noMarks: Record<string, string> = {};
+
+export function NodeGrid({nodes, label, empty, virtual, selected, current, marks = noMarks, onSelect, isDisabled}: NodeGridProps) {
+  const selectable = !!onSelect;
+  const tile = useCallback(
+    (n: GridNode) => (
+      <NodeTile
+        nodeName={n.nodeName}
+        name={n.name}
+        status={n.status}
+        description={n.description}
+        current={!selectable && current === n.id}
+        mark={marks[n.id]}
+      />
+    ),
+    [selectable, current, marks]
   );
   if (!virtual)
     return (
@@ -77,7 +91,7 @@ function VirtualNodeGrid({
   empty,
   selected,
   current,
-  marks = {},
+  marks = noMarks,
   onSelect,
   isDisabled,
   renderTile
@@ -96,6 +110,8 @@ function VirtualNodeGrid({
         data-fit={size.overflows ? undefined : true}
         aria-label={label}
         items={nodes}
+        // The collection caches each row's rendering by item; what a row reads besides the item is declared here.
+        dependencies={[current, marks, onSelect, renderTile]}
         selectionMode={onSelect ? 'single' : 'none'}
         disabledKeys={isDisabled ? nodes.map(node => node.id) : []}
         disallowEmptySelection

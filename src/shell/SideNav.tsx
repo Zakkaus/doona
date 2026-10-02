@@ -7,6 +7,7 @@ import {warmPage} from './registry';
 import type {BackendView, NavGroup} from './view';
 
 type SideNavProps = {
+  route: string;
   groups: NavGroup[];
   busy: boolean;
   backend: BackendView;
@@ -16,7 +17,7 @@ type SideNavProps = {
 };
 
 // Navigation follows the open page, not its query: a tab or filter change leaves it alone.
-export const SideNav = memo(function SideNav({groups, busy, backend, honk, navRef, navStyle}: SideNavProps) {
+export const SideNav = memo(function SideNav({route, groups, busy, backend, honk, navRef, navStyle}: SideNavProps) {
   const [collapsed, setCollapsed] = useState(readNavGroups);
   useMoreBelow(navRef);
   return (
@@ -54,7 +55,7 @@ export const SideNav = memo(function SideNav({groups, busy, backend, honk, navRe
           </div>
         ))}
       </div>
-      <SidebarWidgets backend={backend} honk={honk} />
+      <SidebarWidgets route={route} backend={backend} honk={honk} />
     </nav>
   );
 });

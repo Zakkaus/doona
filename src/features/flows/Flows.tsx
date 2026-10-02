@@ -126,7 +126,7 @@ function FlowRecords(props: PageProps) {
         render: row => (
           <span className="rp-rule">
             <RuleRef expression={row.expression} href={ruleHref(row.ruleId, view.rulesListed)} />
-            {row.recomputed && <small className="rp-provenance">{t('conn.recomputed')}</small>}
+            {row.recomputed && <Badge>{t('conn.recomputed')}</Badge>}
           </span>
         )
       },

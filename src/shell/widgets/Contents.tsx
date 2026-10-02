@@ -225,7 +225,7 @@ function TrafficChart({runtime, connections, direction, ...props}: ChartProps & 
       fmt={n => (connections ? (n == null ? '—' : formatNumber(n, locale)) : formatRate(n == null ? null : n * 1000, locale))}
       series={
         connections
-          ? [{label: t('act.active'), color: p.cat[0], values: series.connections}]
+          ? [{label: t('act.active'), color: p.cat[2], values: series.connections}]
           : [
               ...(direction === 'upload' ? [] : [{label: t('ui.download'), color: p.cat[0], values: series.down}]),
               ...(direction === 'download' ? [] : [{label: t('ui.upload'), color: p.cat[3], values: series.up}])

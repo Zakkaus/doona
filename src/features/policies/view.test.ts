@@ -61,7 +61,7 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   expect(policyCardView(g, members, 'both', t).selected).toBeUndefined();
   // Both networks, two members: each is marked with the network it carries.
   expect(policyCardView(g, members, 'both', t).marks).toEqual({'hk-01': 'TCP', 'hk-02': 'UDP'});
-  expect(policyCardView(g, members, 'tcp', t).marks).toEqual({});
+  expect(policyCardView(g, members, 'tcp', t).marks).toBeUndefined();
   expect(policyCardView(g, members, 'tcp', t).selected).toBe('hk-01');
   expect(policyCardView(g, members, 'udp', t).selected).toBe('hk-02');
   expect(policyCardView(g, members, 'both', t).fields.some(field => !Array.isArray(field) && field.label === t('policy.cfg.interruptConnections'))).toBe(false);

@@ -7,7 +7,6 @@ import {WidgetHeader, WidgetPanel} from '../../ui/WidgetPanel';
 import {WidgetGrid, WidgetCell} from '../../ui/WidgetGrid';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import Pin from '../../ui/icons/Pin';
-import {parseHash} from '../route';
 import {BackendIndicator} from '../Backend';
 import type {BackendView} from '../view';
 import {patchLayout, saveLayout, useWidgetLayout} from './settings';
@@ -19,7 +18,19 @@ import {arriveFromDock, rememberDock} from './dockMotion';
 
 // The panel above phone width, over the content at the viewport's bottom corner, or, where the sidebar shows
 // (`dockable`), docked as its last section; loaded once the panel is shown.
-export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendView; honk: () => void; dockable: boolean; onDock: (docked: boolean) => void}) {
+export function PanelHost({
+  route,
+  backend,
+  honk,
+  dockable,
+  onDock
+}: {
+  route: string;
+  backend: BackendView;
+  honk: () => void;
+  dockable: boolean;
+  onDock: (docked: boolean) => void;
+}) {
   const layout = useWidgetLayout();
   const t = useT();
   const collapsed = layout.collapsed;
@@ -31,17 +42,11 @@ export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendVi
     onDock(next);
   };
   // An unpinned floating panel collapses to its header when the reader moves to another page.
+  const page = useRef(route);
   useEffect(() => {
-    if (layout.pinned || docked) return;
-    let page = parseHash(location.hash).route;
-    const follow = () => {
-      const next = parseHash(location.hash).route;
-      if (next !== page) patchLayout({collapsed: true});
-      page = next;
-    };
-    addEventListener('hashchange', follow);
-    return () => removeEventListener('hashchange', follow);
-  }, [layout.pinned, docked]);
+    if (page.current !== route && !layout.pinned && !docked) patchLayout({collapsed: true});
+    page.current = route;
+  }, [route, layout.pinned, docked]);
   // Docked, the divider above the section is its height's handle: from a header and one widget row up to the height
   // that still shows every link above it, or the section's default share when the links overflow anyway.
   const section = useRef<HTMLElement>(null);

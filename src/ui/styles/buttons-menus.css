@@ -282,6 +282,9 @@ section:not(:first-child) > .rp-sec-h {
   row-gap: var(--rp-space-1);
   min-width: 0;
 }
+.rp-item-text > [slot='label'] {
+  display: contents;
+}
 .rp-item-text > .desc {
   min-width: 0;
   overflow-wrap: anywhere;

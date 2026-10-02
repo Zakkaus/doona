@@ -30,7 +30,7 @@ export function WidgetDraftGuard() {
 // The sidebar keeps main's backend indicator at its foot; above phone width the panel opens over the content, and
 // where the sidebar shows it docks in the indicator's place as the sidebar's last section, which stays at the foot
 // while the links scroll above it. The sidebar renders, hidden, below its width too, so it hosts the panel there.
-export function SidebarWidgets({backend, honk}: {backend: BackendView; honk: () => void}) {
+export function SidebarWidgets({route, backend, honk}: {route: string; backend: BackendView; honk: () => void}) {
   const t = useT();
   const sidebar = useMediaQuery(sidebarQuery);
   const phone = useMediaQuery(phoneQuery);
@@ -41,6 +41,7 @@ export function SidebarWidgets({backend, honk}: {backend: BackendView; honk: () 
   const indicator = <BackendIndicator backend={backend} honk={honk} />;
   const panel = (
     <PanelHost
+      route={route}
       backend={backend}
       honk={honk}
       dockable={sidebar}

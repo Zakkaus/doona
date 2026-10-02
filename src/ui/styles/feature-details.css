@@ -84,15 +84,6 @@
   max-height: 40vh;
 }
 
-.rp-provenance {
-  margin-inline-start: 4px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: var(--rp-hl-med);
-  color: var(--rp-subtle);
-  font-size: var(--rp-text-2xs);
-  white-space: nowrap;
-}
 .rp-rule {
   display: flex;
   align-items: center;
@@ -109,7 +100,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.rp-rule > .rp-provenance {
-  flex-shrink: 0;
 }
