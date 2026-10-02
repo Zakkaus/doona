@@ -82,7 +82,7 @@ are evaluation assets only and do not ship.
 `e2e/flag-font.spec.ts` checks an actual custom-font glyph in Chromium.
 `e2e/flags.spec.ts` proves
 that decoration leaves copied names, accessible names, overflow tooltips,
-searches and configuration writes unchanged. It also covers Flows records and
+searches and configuration writes unchanged. It also covers Routing log flow records and
 node-name chart tooltips, flag editing, browser persistence and kit control sizes.
 `src/features/shared/countryFlags.test.ts` covers override resolution, both scripts, English,
 letter boundaries, ambiguous codes, existing flags and bounded cache behavior.
