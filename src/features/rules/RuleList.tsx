@@ -31,8 +31,8 @@ export function RuleList(props: PageProps) {
   const t = useT();
   const templates = useRuleTemplates(props);
   const view = useRuleList(props, templates.available && templates.mode === 'simple');
-  if (view.kind !== 'dictionary') return <Distribution view={view} />;
-  if (!templates.available) return <RuleDictionary view={view} />;
+  const dictionary = view.kind === 'dictionary';
+  if (!templates.available) return dictionary ? <RuleDictionary view={view} /> : <Distribution view={view} />;
   // The view switch ends the list's toolbar row in both views, after the rule count and Add rule.
   const viewSwitch = (
     <Segmented
@@ -45,7 +45,8 @@ export function RuleList(props: PageProps) {
       onChange={templates.setMode}
     />
   );
-  if (templates.mode === 'advanced') return <RuleDictionary view={view} viewSwitch={viewSwitch} />;
+  if (templates.mode === 'advanced')
+    return dictionary ? <RuleDictionary view={view} viewSwitch={viewSwitch} /> : <Distribution view={view} viewSwitch={viewSwitch} />;
   return (
     <div className="rp-col">
       <div className="rp-toolbar">
@@ -234,7 +235,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
     </div>
   );
 }
-function Distribution({view}: {view: Model}) {
+function Distribution({view, viewSwitch}: {view: Model; viewSwitch?: ReactNode}) {
   const t = useT();
   const table = view.distribution;
   const columns = useMemo(
@@ -272,6 +273,8 @@ function Distribution({view}: {view: Model}) {
             {t('rule.droppedUnknown')}
           </Light>
         )}
+        <span className="rp-grow" />
+        {viewSwitch}
       </div>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={table.empty} cols={columns} />

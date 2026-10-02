@@ -59,6 +59,23 @@ test('the demo detects the regions template and its default options without appl
   await expect(applyButton(page)).toBeDisabled();
 });
 
+test('routing templates apply without the rules API and retain the distribution view', async ({page}) => {
+  const {api, capabilities, requests} = await mockBackend(page);
+  capabilities.resources.rules.available = false;
+  await page.goto('/#/rules');
+  await choose(page, 'Bypass mainland China');
+  await applyButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  expect(main.content).toContain('domain(geosite:cn) -> direct');
+  await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China', exact: true})).toBeChecked();
+  await page.getByRole('radiogroup', {name: 'Rules view'}).getByRole('radio', {name: 'Advanced', exact: true}).click();
+  await expect(page.locator('.rp-table')).toBeVisible();
+  expect(requests.filter(request => new URL(request.url()).pathname.endsWith('/rules'))).toEqual([]);
+});
+
 test('ads are off by default and switching them alone can be applied in both directions', async ({page}) => {
   const {main, write} = await backend(page);
   await write(oneFile);

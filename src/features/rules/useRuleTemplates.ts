@@ -72,7 +72,7 @@ const reread = () => void refetchAll();
 export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const t = useT();
   const resources = useCapabilities().data?.resources;
-  const readable = offered(resources, 'rules', {whileLoading: false}) && offered(resources, 'config', {whileLoading: false});
+  const readable = offered(resources, 'config', {whileLoading: false});
   const config = useConfig(readable);
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const view = useMemo(() => templatesView(sources, t), [sources, t]);
@@ -110,7 +110,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     ...view,
     ...options,
     setOption: (option, enabled) => setPickedOptions(current => ({...current, [option]: enabled})),
-    available: readable && !!config.data,
+    available: readable && engine.daeText && !!config.data,
     mode: ruleViewMode(query),
     setMode,
     file: target.source && fileName(target.source),
