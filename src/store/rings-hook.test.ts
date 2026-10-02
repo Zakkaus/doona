@@ -7,7 +7,8 @@ vi.mock('react', () => ({
     return snapshot();
   }
 }));
-import {record, resetRings, useRings, type Fold} from './rings';
+import type {Fold} from '../api/rings';
+import {record, resetRings, useRings} from './rings';
 type Sample = {time: number; value: number};
 const fold: Fold<Sample> = (samples, time) => ({time, value: samples[0].value});
 afterEach(() => {

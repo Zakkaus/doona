@@ -5,7 +5,7 @@ import './ui/flags.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
-import {pruneRings} from './api/rings';
+import {pruneRings} from './store/rings';
 import {initializeApi, startedOnMock} from './api';
 import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
