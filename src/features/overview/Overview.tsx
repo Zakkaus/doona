@@ -20,7 +20,7 @@ import {
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import InfoCircle from '../../ui/icons/InfoCircle';
-import {tableLayout} from '../../ui/Table';
+import {tableLayout} from '../../ui/tableHooks';
 import type {LimitGroup, LimitHelp} from '../shared/limits';
 import {ReloadConfirm} from '../shared/ReloadConfirm';
 import {DaeCode} from '../../ui/DaeCode';

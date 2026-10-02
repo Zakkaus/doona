@@ -28,7 +28,7 @@ import {toDiagnostics} from './diagnostics';
 import type {GroupEntry} from '../../dae/groups';
 import {readOnlyAttempts} from './readOnlyAttempt';
 import {Button} from '../Button';
-import {MenuButton} from '../Select';
+import {MenuButton} from '../Menu';
 import {ActionGroup, MoreMenu, type Action} from '../ActionGroup';
 import {useOverflow} from '../hooks';
 

@@ -4,7 +4,7 @@ import {Check} from './Check';
 import MoreVertical from './icons/MoreVertical';
 import {useT} from '../i18n';
 import {Button} from './Button';
-import {MenuButton} from './Select';
+import {MenuButton} from './Menu';
 import {cx} from './cx';
 
 export type Action = {
