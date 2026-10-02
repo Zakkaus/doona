@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Provider} from '../../api/model';
 import {nodeFixtures} from '../../api/mock/fixtures';
+import {groupFilterDraft, groupFilterTexts, newGroupFilter} from '../../dae/groupConditions';
 import {readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {compileFilters} from '../../dae/groupFilters';
 import {flagChoices, regionFlag} from '../../dae/flags';
@@ -8,6 +9,8 @@ import {regions} from '../../dae/regions';
 import {flagForName} from './countryFlags';
 import {regionGroups} from '../../dae/templates';
 import {
+  advancedFilter,
+  editMembership,
   includeChoices,
   includeMatches,
   selectedIncludeLabels,
@@ -257,4 +260,38 @@ it('counts the kept legacy region and its replacement from the same explicit mat
   const realistic = ['hk-01', 'HK 01', 'AUS 01', 'CN2 回国 HK'].map(name => ({...nodes[0], name}));
   expect(includeMatches([legacy], realistic).selected.map(node => node.name)).toEqual(['HK 01', 'CN2 回国 HK']);
   expect(includeMatches([hk], realistic).selected.map(node => node.name)).toEqual(['hk-01', 'HK 01', 'CN2 回国 HK']);
+});
+
+it.each([
+  ['quick region', hk, false, false],
+  ['hand-written regex', "name(regex: '^custom')", false, true],
+  ['group include', 'group(auto)', false, false],
+  ['explicit advanced', 'name(kept)', true, true],
+  ['explicit advanced group include', 'group(auto)', true, false]
+] as const)('classifies %s filters', (_name, source, advanced, expected) => {
+  expect(advancedFilter(groupFilterDraft(source, advanced))).toBe(expected);
+});
+
+it.each([
+  {name: 'adds a quick value', sources: ['name(kept)'], selected: ['kept', 'new'], expected: ['name(kept)', 'name(new)']},
+  {name: 'removes a quick value', sources: ['name(old, kept)'], selected: ['kept'], expected: ['name(kept)']},
+  {
+    name: 'keeps an advanced filter in position',
+    sources: ['name(kept)', "name(regex: '^custom')", 'name(old)'],
+    selected: ['kept', 'new'],
+    expected: ['name(kept)', "name(regex: '^custom')", 'name(new)']
+  },
+  {name: 'drops a new placeholder beside advanced text', sources: ['name(old)', "name(regex: '^custom')"], selected: [], expected: ["name(regex: '^custom')"]},
+  {name: 'keeps a new placeholder without advanced text', sources: ['name(old)'], selected: [], expected: [noNodes]},
+  {name: 'keeps a new placeholder beside an unfinished advanced filter', sources: ['name(old)'], selected: [], unfinished: true, expected: [noNodes, '']},
+  {name: 'keeps an existing placeholder', sources: [noNodes, "name(regex: '^custom')"], selected: [], expected: [noNodes, "name(regex: '^custom')"]}
+])('$name', ({sources, selected, expected, unfinished}) => {
+  const filters = sources.map(source => groupFilterDraft(source));
+  if (unfinished) filters.push(newGroupFilter());
+  const original = structuredClone(filters);
+  const result = editMembership(filters, values => setIncludes(values, 'node', selected));
+  expect(groupFilterTexts(result)).toEqual(expected);
+  for (const filter of filters.filter(advancedFilter)) expect(result.find(item => item.id === filter.id)).toBe(filter);
+  if (sources.includes(noNodes)) expect(result.find(item => item.source === noNodes)).toBe(filters.find(item => item.source === noNodes));
+  expect(filters).toEqual(original);
 });

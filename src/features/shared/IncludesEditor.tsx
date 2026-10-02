@@ -1,7 +1,7 @@
 import {Fragment} from 'react';
 import {NodeName} from '../../ui/NodeName';
 import {ConditionActions, ConditionRow} from '../../ui/ConditionRow';
-import {conditionFamily, newGroupCondition, groupConditionKinds, type GroupConditionKind} from '../../dae/groupConditions';
+import type {GroupConditionKind} from '../../dae/groupConditions';
 import {useT} from '../../i18n';
 import {Button, DialogSection, Disclosure, InlineAlert, LabeledSelect, Link, Switch, Tag, Tags, TextField} from '../../ui/ui';
 import Close from '../../ui/icons/Close';
@@ -9,15 +9,6 @@ import AddCircle from '../../ui/icons/AddCircle';
 import {CheckboxSet} from '../../ui/CheckboxSet';
 import {SearchMultiSelect} from '../../ui/SearchMultiSelect';
 import type {GroupDialogView} from './useGroupDialog';
-
-const conditionLabels = {
-  nameKeyword: 'group.filterKind.nameKeyword',
-  nameRegex: 'group.filterKind.nameRegex',
-  nameExact: 'group.filterKind.nameExact',
-  subtag: 'group.filterKind.subtag',
-  subtagKeyword: 'group.filterKind.subtagKeyword',
-  subtagRegex: 'group.filterKind.subtagRegex'
-} as const;
 
 export function IncludesEditor({model: m}: {model: GroupDialogView}) {
   const t = useT();
@@ -118,65 +109,47 @@ export function IncludesEditor({model: m}: {model: GroupDialogView}) {
                           )}
                           <ConditionRow
                             negate={row.negate}
-                            onNegate={negate => field.changeRow({...row, negate})}
+                            onNegate={row.setNegate}
                             negateLabel={t('rule.negate')}
                             removeLabel={t('rule.removeCondition')}
-                            onRemove={() => field.removeRow(row.id)}
-                            removeDisabled={field.rows!.length === 1}
+                            onRemove={row.remove}
+                            removeDisabled={!row.removable}
                             isDisabled={m.busy}
                           >
-                            {[row, ...(row.alternatives ?? [])].map((term, termIndex) => {
-                              const change = (value: typeof term) =>
-                                field.changeRow(
-                                  termIndex === 0
-                                    ? {...row, kind: value.kind, value: value.value}
-                                    : {...row, alternatives: row.alternatives!.map(item => (item.id === term.id ? value : item))}
-                                );
-                              return (
-                                <Fragment key={term.id}>
-                                  {termIndex > 0 && (
-                                    <Tags label={t('group.filterOr')}>
-                                      <Tag>{t('group.filterOr')}</Tag>
-                                    </Tags>
-                                  )}
-                                  <LabeledSelect
-                                    label={t('rule.kind')}
-                                    value={term.kind}
-                                    onChange={kind => change({...term, kind: kind as GroupConditionKind})}
-                                    items={groupConditionKinds
-                                      .filter(kind => kind !== 'group' && (!row.alternatives?.length || conditionFamily(kind) === conditionFamily(row.kind)))
-                                      .map(kind => ({id: kind, label: t(conditionLabels[kind as keyof typeof conditionLabels])}))}
-                                    isDisabled={m.busy}
-                                  />
-                                  <TextField
-                                    label={t('rule.values')}
-                                    value={term.value}
-                                    onChange={value => change({...term, value})}
-                                    description={t('group.filterValuesHelp')}
-                                    error={field.error ? t('group.filterValuesInvalid') : undefined}
-                                    spellCheck={false}
-                                    isDisabled={m.busy}
-                                  />
-                                  {termIndex > 0 && (
-                                    <ConditionActions>
-                                      <Button
-                                        small
-                                        isDisabled={m.busy}
-                                        onPress={() => field.changeRow({...row, alternatives: row.alternatives!.filter(item => item.id !== term.id)})}
-                                      >
-                                        {t('group.removeAlternative')}
-                                      </Button>
-                                    </ConditionActions>
-                                  )}
-                                </Fragment>
-                              );
-                            })}
+                            {row.terms.map(term => (
+                              <Fragment key={term.id}>
+                                {!term.first && (
+                                  <Tags label={t('group.filterOr')}>
+                                    <Tag>{t('group.filterOr')}</Tag>
+                                  </Tags>
+                                )}
+                                <LabeledSelect
+                                  label={t('rule.kind')}
+                                  value={term.kind}
+                                  onChange={kind => term.setKind(kind as GroupConditionKind)}
+                                  items={term.kinds}
+                                  isDisabled={m.busy}
+                                />
+                                <TextField
+                                  label={t('rule.values')}
+                                  value={term.value}
+                                  onChange={term.setValue}
+                                  description={t('group.filterValuesHelp')}
+                                  error={field.error ? t('group.filterValuesInvalid') : undefined}
+                                  spellCheck={false}
+                                  isDisabled={m.busy}
+                                />
+                                {term.remove && (
+                                  <ConditionActions>
+                                    <Button small isDisabled={m.busy} onPress={term.remove}>
+                                      {t('group.removeAlternative')}
+                                    </Button>
+                                  </ConditionActions>
+                                )}
+                              </Fragment>
+                            ))}
                             <ConditionActions>
-                              <Button
-                                small
-                                isDisabled={m.busy}
-                                onPress={() => field.changeRow({...row, alternatives: [...(row.alternatives ?? []), {...newGroupCondition(), kind: row.kind}]})}
-                              >
+                              <Button small isDisabled={m.busy} onPress={row.addAlternative}>
                                 {t('group.addAlternative')}
                               </Button>
                             </ConditionActions>

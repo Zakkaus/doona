@@ -10,18 +10,18 @@ import {
   groupFilterTexts,
   newGroupCondition,
   newGroupFilter,
-  reconcileGroupFilters,
   type GroupFilterDraft,
-  type GroupConditionRow
+  type GroupConditionRow,
+  type GroupConditionKind
 } from '../../dae/groupConditions';
 import {describeFilters, isWritableName} from '../../dae/groups';
 import {
   includeChoices,
   includesEveryNode,
-  noNodes as noNodeFilter,
   setEveryNode,
   retainedIncludes,
-  recogniseInclude,
+  advancedFilter,
+  editMembership,
   selectedIncludes,
   setIncludes,
   type IncludeKind
@@ -54,6 +54,17 @@ import {
   type OutboundCatalogue,
   type RouteField
 } from './groupText';
+import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
+
+const conditionLabels = {
+  nameKeyword: 'group.filterKind.nameKeyword',
+  nameRegex: 'group.filterKind.nameRegex',
+  nameExact: 'group.filterKind.nameExact',
+  subtag: 'group.filterKind.subtag',
+  subtagKeyword: 'group.filterKind.subtagKeyword',
+  subtagRegex: 'group.filterKind.subtagRegex'
+} as const;
+
 export type GroupDialogView = {
   title: string;
   name: {value: string; error: string | null; change: (value: string) => void} | null;
@@ -75,15 +86,30 @@ export type GroupDialogView = {
   filters: Array<{
     id: number;
     value: string;
-    rows: GroupConditionRow[] | null;
+    rows: Array<{
+      id: number;
+      negate: boolean;
+      removable: boolean;
+      setNegate: (negate: boolean) => void;
+      remove: () => void;
+      addAlternative: () => void;
+      terms: Array<{
+        id: number;
+        kind: GroupConditionKind;
+        value: string;
+        first: boolean;
+        kinds: Array<{id: GroupConditionKind; label: string}>;
+        setKind: (kind: GroupConditionKind) => void;
+        setValue: (value: string) => void;
+        remove: (() => void) | null;
+      }>;
+    }> | null;
     error: boolean;
     label: string;
     removeLabel: string;
     change: (value: string) => void;
     remove: () => void;
-    changeRow: (row: GroupConditionRow) => void;
     addRow: () => void;
-    removeRow: (id: number) => void;
   }>;
   includes: {
     choices: Record<IncludeKind, CheckboxChoice[]>;
@@ -144,17 +170,6 @@ type Draft = {
   final: string | null;
   interrupt: string | null;
 };
-const advancedFilter = (filter: GroupFilterDraft) =>
-  recogniseInclude(groupFilterText(filter) ?? filter.source)?.kind !== 'group' &&
-  (filter.advanced || (filter.source !== noNodeFilter && !recogniseInclude(filter.source) && !describeFilters([filter.source]).everyNode));
-function editMembership(filters: GroupFilterDraft[], change: (values: string[]) => string[]): GroupFilterDraft[] {
-  const quick = filters.filter(filter => !advancedFilter(filter));
-  const hasAdvanced = filters.some(filter => advancedFilter(filter) && groupFilterText(filter)?.trim());
-  const next = reconcileGroupFilters(quick, change(groupFilterTexts(quick))).filter(
-    filter => filter.source !== noNodeFilter || !hasAdvanced || filters.some(previous => previous.id === filter.id)
-  );
-  return [...filters.flatMap(filter => (advancedFilter(filter) ? [filter] : next.length ? [next.shift()!] : [])), ...next];
-}
 type Input =
   | {mode: 'edit'; name: string; source: MainSourceEdit; declaration: PolicyDeclaration; context: RouteContext}
   | {
@@ -308,18 +323,33 @@ export function useGroupDialog(input: Input): GroupDialogView {
     filters: (draft?.filters ?? []).filter(advancedFilter).map((filter, index, fields) => {
       const update = (change: (filter: GroupFilterDraft) => GroupFilterDraft) =>
         edit(prev => ({...prev, filters: prev.filters.map(item => (item.id === filter.id ? change(item) : item))}));
+      const changeRow = (row: GroupConditionRow) => update(item => ({...item, rows: item.rows!.map(value => (value.id === row.id ? row : value))}));
       return {
         id: filter.id,
         value: filter.source,
-        rows: filter.rows,
+        rows:
+          filter.rows?.map(row => ({
+            id: row.id,
+            negate: row.negate,
+            removable: filter.rows!.length !== 1,
+            setNegate: (negate: boolean) => changeRow({...row, negate}),
+            remove: () => update(item => ({...item, rows: item.rows!.filter(value => value.id !== row.id)})),
+            addAlternative: () => changeRow(addAlternative(row)),
+            terms: conditionTerms(row).map((term, index) => ({
+              ...term,
+              first: index === 0,
+              kinds: kindChoices(row).map(kind => ({id: kind, label: t(conditionLabels[kind as keyof typeof conditionLabels])})),
+              setKind: (kind: GroupConditionKind) => changeRow(changeTerm(row, term.id, {kind})),
+              setValue: (value: string) => changeRow(changeTerm(row, term.id, {value})),
+              remove: index === 0 ? null : () => changeRow(removeAlternative(row, term.id))
+            }))
+          })) ?? null,
         error: groupFilterText(filter) === null,
         label: fields.length === 1 ? t('ui.filter') : t('policy.filterN', {n: index + 1}),
         removeLabel: t('policy.removeFilter', {n: index + 1}),
         change: (value: string) => update(item => ({...groupFilterDraft(value, true), id: item.id})),
         remove: () => edit(prev => ({...prev, filters: prev.filters.filter(item => item.id !== filter.id)})),
-        changeRow: (row: GroupConditionRow) => update(item => ({...item, rows: item.rows!.map(value => (value.id === row.id ? row : value))})),
-        addRow: () => update(item => ({...item, rows: [...item.rows!, newGroupCondition()]})),
-        removeRow: (id: number) => update(item => ({...item, rows: item.rows!.filter(row => row.id !== id)}))
+        addRow: () => update(item => ({...item, rows: [...item.rows!, newGroupCondition()]}))
       };
     }),
     includes: {

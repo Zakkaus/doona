@@ -1,3 +1,4 @@
+import {groupFilterText, groupFilterTexts, reconcileGroupFilters, type GroupFilterDraft} from '../../dae/groupConditions';
 import type {Node, Provider} from '../../api/model';
 import {describeFilters, exactTokens, isWritableName, quoteName} from '../../dae/groups';
 import {compileFilters} from '../../dae/groupFilters';
@@ -198,4 +199,16 @@ export function retainedIncludes(before: string[], after: string[], nodes: Node[
       );
   });
   return [...new Set(removed.filter(compileFilters(after)).map(node => node.name))];
+}
+
+export const advancedFilter = (filter: GroupFilterDraft) =>
+  recogniseInclude(groupFilterText(filter) ?? filter.source)?.kind !== 'group' &&
+  (filter.advanced || (filter.source !== noNodes && !recogniseInclude(filter.source) && !describeFilters([filter.source]).everyNode));
+export function editMembership(filters: GroupFilterDraft[], change: (values: string[]) => string[]): GroupFilterDraft[] {
+  const quick = filters.filter(filter => !advancedFilter(filter));
+  const hasAdvanced = filters.some(filter => advancedFilter(filter) && groupFilterText(filter)?.trim());
+  const next = reconcileGroupFilters(quick, change(groupFilterTexts(quick))).filter(
+    filter => filter.source !== noNodes || !hasAdvanced || filters.some(previous => previous.id === filter.id)
+  );
+  return [...filters.flatMap(filter => (advancedFilter(filter) ? [filter] : next.length ? [next.shift()!] : [])), ...next];
 }

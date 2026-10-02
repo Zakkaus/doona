@@ -2,16 +2,8 @@ import {useMemo, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {NodeName} from '../../ui/NodeName';
 import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef} from '../../ui/ui';
-import {
-  columns,
-  connectionId,
-  connectionKey,
-  isCollapsed,
-  type ConnectionView,
-  type ConnectionRowView,
-  type ConnectionTableRow,
-  type GroupCollapse
-} from './view';
+import {columns, connectionId, connectionKey, isCollapsed, type ConnectionView, type GroupCollapse} from './viewState';
+import type {ConnectionRowView, ConnectionTableRow} from './tableRows';
 
 type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
   view: ConnectionView;
