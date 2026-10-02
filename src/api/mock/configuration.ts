@@ -27,11 +27,11 @@ type ConfigurationApi = Pick<
   | 'startSuspend'
   | 'startResume'
 >;
-type Effects = Pick<MockLifecycle, 'enqueue' | 'log' | 'publish' | 'eventData' | 'trimLogs'>;
+type Effects = Pick<MockLifecycle, 'enqueue' | 'log' | 'publish' | 'eventData'> & {trimRecords(): void};
 export function createConfiguration(
   capabilities: Capabilities,
   runtime: Pick<Runtime, 'generation' | 'lifecycle'>,
-  {enqueue, log, publish, eventData, trimLogs}: Effects,
+  {enqueue, log, publish, eventData, trimRecords}: Effects,
   groupNames: () => Set<string>,
   activateInventory: (text: string, revision: string) => void,
   geodata: MockGeodataState,
@@ -368,7 +368,7 @@ export function createConfiguration(
       }
       recording.refresh();
       // A smaller ring drops its oldest records at once, not when the next one arrives.
-      trimLogs();
+      trimRecords();
       settings.source = 'runtime';
       settings.observed_at = new Date().toISOString();
       log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});
@@ -405,6 +405,7 @@ export function createConfiguration(
     advance,
     editSource,
     revision: () => String(configRevision),
+    networkSettings: () => settings,
     logSettings: () => settings.log
   };
 }

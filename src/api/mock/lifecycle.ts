@@ -20,6 +20,8 @@ import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
 import type {MockRecording} from './recording';
 
+const MAX_FINISHED_OPERATIONS = 128;
+
 // `operation` answers GET /operations/{id} for the e2e backend and the tests; doona itself only polls.
 export type OperationReader = {operation(id: string, signal?: AbortSignal): Promise<OperationState>};
 type LifecycleApi = Pick<Api, 'pollOperation' | 'subscribeEvents' | 'subscribeLogs'> & OperationReader;
@@ -35,6 +37,7 @@ export interface MockLifecycle {
 export function createLifecycle(
   logsCapability: Capabilities['resources']['logs'],
   eventsCapability: Capabilities['resources']['events'],
+  operationsCapability: Capabilities['resources']['operations'],
   runtime: Pick<Runtime, 'observed_at' | 'last_reload'>,
   logSettings: () => RuntimeSettings['log'],
   revision: () => string,
@@ -43,6 +46,16 @@ export function createLifecycle(
   faults = false
 ): MockLifecycle {
   const operations = new Map<string, OperationState>();
+  let operationSequence = 0;
+  const pruneOperations = () => {
+    const finished = [...operations].filter(([, operation]) => operation.finished_at !== null);
+    for (const [index, [id, operation]] of finished.entries())
+      if (
+        index < finished.length - MAX_FINISHED_OPERATIONS ||
+        Date.now() - Date.parse(operation.finished_at!) >= (operationsCapability.retention_seconds ?? 300) * 1000
+      )
+        operations.delete(id);
+  };
   let sequence = 0;
   const listeners = new Set<(event: ApiEvent) => void>();
   const history: ApiEvent[] = [];
@@ -93,7 +106,8 @@ export function createLifecycle(
     publish({id: '', event: 'runtime.updated', data: {...eventData(), href: '/api/v1/runtime'}});
   }
   const enqueue: MockLifecycle['enqueue'] = (kind, finish) => {
-    const operation_id = 'op-' + (operations.size + 1);
+    pruneOperations();
+    const operation_id = 'op-' + ++operationSequence;
     const created_at = new Date().toISOString();
     const common = {operation_id, kind, created_at, started_at: created_at};
     operations.set(operation_id, {...common, finished_at: null, status: 'running', result: null, error: null, retryAfter: 1});
@@ -127,12 +141,14 @@ export function createLifecycle(
         data: {...eventData(), resource_id: operation_id, status: terminal.status, href: '/api/v1/operations/' + operation_id}
       });
       runtimeUpdated();
+      pruneOperations();
     }, 1000);
     const href = '/api/v1/operations/' + operation_id;
     return {operation_id, kind, status: 'queued', href, retryAfter: 1};
   };
   const operation = async (id: string, signal?: AbortSignal): Promise<OperationState> => {
     signal?.throwIfAborted();
+    pruneOperations();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
   // Keep a bounded replay ring fed by mock activity and quiet background records.

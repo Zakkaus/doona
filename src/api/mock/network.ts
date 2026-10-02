@@ -1,5 +1,5 @@
 import type {Api} from '../api';
-import type {Capabilities, DnsLogRecord, FlowDetail, RuleList, RuntimeOutbounds} from '../model';
+import type {Capabilities, DnsLogRecord, FlowDetail, RuleList, RuntimeOutbounds, RuntimeSettings} from '../model';
 import {ApiError} from '../error';
 import {ipLiteral, sourceIp} from '../selectors';
 import * as fixtures from './fixtures/network';
@@ -8,13 +8,6 @@ import {found, createPager, pageLimit} from './common';
 import {routingTrace} from './routing';
 import type {MockRecording} from './recording';
 
-const dnsRings = new WeakMap<FlowDetail[], DnsLogRecord[]>();
-// Derived once per flows array; a real backend keeps its ring, so the mock should not re-sort on every poll.
-function dnsLogRecords(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
-  let ring = dnsRings.get(flows);
-  if (!ring) dnsRings.set(flows, (ring = buildDnsLog(flows, faults)));
-  return ring;
-}
 // Refused ad lookups, upstream timeouts and server failures belong to the faults scenario: the demo's dns section
 // rejects nothing, and its upstreams answer. NXDOMAIN is an answer.
 function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
@@ -86,6 +79,7 @@ export function createNetwork(
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>,
   recording: MockRecording,
+  settings: () => Pick<RuntimeSettings, 'dns_log' | 'flows'>,
   busy = false,
   faults = false
 ) {
@@ -100,6 +94,30 @@ export function createNetwork(
   // honk's first release observes userspace only; the mock says so the same way.
   if (profile === 'm1') connections.visibility = 'partial';
   const dnsCache = structuredClone(fixtures.dnsCache);
+  const dnsLog = buildDnsLog(flows, faults);
+  function trimRecords() {
+    const limits = settings();
+    const expired = new Set(
+      flows
+        .filter(flow => flow.ended_at !== null && Date.now() - Date.parse(flow.ended_at) >= (limits.flows?.retention_seconds ?? Infinity) * 1000)
+        .map(flow => flow.id)
+    );
+    const remaining = flows.filter(flow => !expired.has(flow.id));
+    const excess = remaining.length - (limits.flows?.max_flows ?? Infinity);
+    if (excess > 0) {
+      remaining.sort(
+        (a, b) =>
+          Number(a.ended_at === null) - Number(b.ended_at === null) ||
+          Date.parse(a.ended_at ?? a.started_at ?? observedAt) - Date.parse(b.ended_at ?? b.started_at ?? observedAt)
+      );
+      remaining.slice(0, excess).forEach(flow => expired.add(flow.id));
+    }
+    for (let i = flows.length - 1; i >= 0; i--) if (expired.has(flows[i].id)) flows.splice(i, 1);
+    flowPage.invalidate(expired);
+    const evicted = dnsLog.splice(limits.dns_log?.max_records ?? dnsLog.length);
+    logPage.invalidate(new Set(evicted.map(record => record.id)));
+  }
+  trimRecords();
   // Ends a live connection the userspace datapath owns: the row, its outbound counter and its recorded flow.
   function closeLive(connection: (typeof connections.tcp)[number], reason: string) {
     if (connection.state === 'active') {
@@ -153,6 +171,7 @@ export function createNetwork(
     flows: async (query, signal) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.flows.available) throw new ApiError(404, 'capability_not_supported', 'Flows are unavailable');
+      trimRecords();
       const result = flowPage(
         flows.filter(
           f =>
@@ -182,6 +201,7 @@ export function createNetwork(
     flow: async (id, signal) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.flows.available) throw new ApiError(404, 'capability_not_supported', 'Flows are unavailable');
+      trimRecords();
       const result = structuredClone(
         found(
           flows.find(f => f.id === id),
@@ -216,7 +236,8 @@ export function createNetwork(
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
-      const ring = dnsLogRecords(flows, faults);
+      trimRecords();
+      const ring = dnsLog;
       const records = ring.filter(
         r =>
           (!needle || r.question.name.toLowerCase().includes(needle)) &&
@@ -315,5 +336,5 @@ export function createNetwork(
     }
     return interrupted;
   }
-  return {api, interrupt};
+  return {api, interrupt, trimRecords};
 }
