@@ -56,6 +56,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - DNS cache regex matching runs in a worker with a time limit, so backtracking cannot block the interface. (#355)
 - Exact-name DNS cache deletion works without cache listing and confirms the requested name and record type. (#355)
 - Standalone Global outbound controls in the widget panel and Activity dashboard keep Apply beside the picker, disabled until there is an unapplied change, without adding a row or changing the card height. Apply writes and reloads the selected outbound. (#354)
+- Routing templates remain available with readable dae configuration when the backend does not provide the rules API.
 - Retrying a group save refused because the configuration changed writes only the fields changed in the dialog, so another client's edits to other fields stay; a field changed on both sides to different values is not written and the dialog asks to be reopened. (#362)
 - Disabled page and card actions show their reasons without hovering, including on touch devices. (#340)
 - Small action buttons size their icons to the text line height, so the edit pencil fits beside the policy group menu.

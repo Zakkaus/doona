@@ -17,6 +17,7 @@ test('the rule list filters by source without accumulating polls, sorted in conf
   await page.route('**/api/v1/runtime/traffic/history?*', async route => route.fulfill({json: await api.trafficHistory()}));
   await page.route('**/api/v1/config', async route => route.fulfill({json: await api.config()}));
   await page.route('**/api/v1/groups', async route => route.fulfill({json: await api.groups()}));
+  await page.route('**/api/v1/nodes?*', async route => route.fulfill({json: await api.nodes({limit: 1000})}));
   await page.route('**/api/v1/runtime', async route => route.fulfill({json: await api.runtime()}));
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: flows}));
@@ -74,6 +75,7 @@ test('the rule list keeps exact loss counts and replaces an empty snapshot', asy
   await page.route('**/api/v1/runtime/traffic/history?*', async route => route.fulfill({json: await api.trafficHistory()}));
   await page.route('**/api/v1/config', async route => route.fulfill({json: await api.config()}));
   await page.route('**/api/v1/groups', async route => route.fulfill({json: await api.groups()}));
+  await page.route('**/api/v1/nodes?*', async route => route.fulfill({json: await api.nodes({limit: 1000})}));
   await page.route('**/api/v1/runtime', async route => route.fulfill({json: await api.runtime()}));
   await page.route('**/api/v1/runtime/settings', async route => route.fulfill({json: await api.runtimeSettings()}));
   await page.route('**/api/v1/flows?*', route => route.fulfill({json: snapshot}));
