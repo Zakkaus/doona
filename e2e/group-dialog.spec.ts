@@ -363,6 +363,9 @@ for (const width of [390, 1440])
         const title = labels['policy.editTitle'].replace('{name}', 'office');
         const dialog = page.getByRole('dialog', {name: title, exact: true});
         await expect(dialog).toHaveAccessibleDescription(labels['policy.editHelp']);
+        // React Aria's dialog refocuses itself 500ms after mounting if focus is on it or the body: a popover closing in that
+        // frame would lose its focus return. A timer queued now runs after that one.
+        await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
         const heading = await dialog.getByRole('heading', {name: title, exact: true}).boundingBox();
         const content = await dialog.locator('.rp-dialog-content').boundingBox();
         expect(heading!.x).toBeCloseTo(content!.x, 1);
