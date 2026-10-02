@@ -1,8 +1,21 @@
 import {expect, it} from 'vitest';
 import type {HealthObservation, Node} from '../../api/model';
-import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyGroups, latencyMax, latencyRange, usualRange, type LatencyRow} from './latencyGroups';
+import {translate, type Translator} from '../../i18n';
+import {
+  isSlowerThanUsual,
+  latencyAverage,
+  latencyAverages,
+  latencyGroups,
+  latencyMax,
+  latencyPlotRow,
+  latencyRange,
+  latencySummary,
+  usualRange,
+  type LatencyRow
+} from './latencyGroups';
 
 const locale = 'en-US';
+const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 const observation = (patch: Partial<HealthObservation>): HealthObservation =>
   ({
@@ -22,6 +35,65 @@ const observation = (patch: Partial<HealthObservation>): HealthObservation =>
   }) as HealthObservation;
 const node = (id: string, group_ids: string[], health: HealthObservation[], protocol = 'vless'): Node =>
   ({id, name: id, protocol, subscription_tag: null, provider_id: null, group_ids, health}) as unknown as Node;
+
+it.each([
+  {name: 'no nodes', nodes: [], measured: [], missing: [], down: 0},
+  {
+    name: 'a measured node in two groups and values across groups',
+    nodes: [node('slow', ['a'], [observation({latency_ms: 90})]), node('fast', ['b', 'c'], [observation({latency_ms: 20})])],
+    measured: [
+      ['fast', 20],
+      ['slow', 90]
+    ],
+    missing: [],
+    down: 0
+  },
+  {
+    name: 'unavailable and unmeasured nodes in two groups',
+    nodes: [node('down', ['a', 'b'], [observation({state: 'unavailable', latency_ms: null})]), node('new', ['a', 'b'], [])],
+    measured: [],
+    missing: [
+      {id: 'down', name: 'down', state: 'unavailable'},
+      {id: 'new', name: 'new', state: 'unmeasured'}
+    ],
+    down: 1
+  }
+])('summarizes $name', ({nodes, measured, missing, down}) => {
+  const summary = latencySummary(latencyGroups(nodes, [], 'group', locale));
+  expect(summary.measured.map(row => [row.id, row.latest])).toEqual(measured);
+  expect(summary.missing).toEqual(missing);
+  expect(summary.down).toBe(down);
+});
+
+it.each([
+  {moving: null, avg10: null, latest: 10, average: null, range: null, details: ['Latest latency: 10 ms'], tone: undefined},
+  {moving: 5, avg10: null, latest: 10, average: 5, range: [5, 10], details: ['Latest latency: 10 ms', 'Moving average: 5 ms'], tone: undefined},
+  {moving: null, avg10: 7, latest: 10, average: 7, range: [7, 10], details: ['Latest latency: 10 ms', 'Average of the last 10: 7 ms'], tone: undefined},
+  {
+    moving: 5,
+    avg10: 7,
+    latest: 10,
+    average: 7,
+    range: [5, 10],
+    details: ['Latest latency: 10 ms', 'Moving average: 5 ms', 'Average of the last 10: 7 ms'],
+    tone: undefined
+  },
+  {
+    moving: 5,
+    avg10: 7,
+    latest: 30,
+    average: 7,
+    range: [5, 30],
+    details: ['Latest latency: 30 ms', 'Moving average: 5 ms', 'Average of the last 10: 7 ms', 'Slower than usual'],
+    tone: 'notice'
+  }
+])('projects latest $latest with moving $moving and avg10 $avg10', ({moving, avg10, latest, average, range, details, tone}) => {
+  const row: LatencyRow = {id: 'a', name: 'Node A', latest, moving, avg10};
+  const plot = latencyPlotRow(row, t, '#/nodes?node=a');
+  expect(plot).toMatchObject({id: 'a', label: 'Node A', nodeName: true, href: '#/nodes?node=a', value: latest, average, range, text: `${latest} ms`, tone});
+  expect(plot.details()).toEqual(details);
+  expect(latencyPlotRow(row, t).href).toBeUndefined();
+});
 
 it('reads the preferred observation and keeps a latest value outside both averages', () => {
   const nodes = [node('a', ['g1'], [observation({transport: 'udp', latency_ms: 1}), observation({latency_ms: 200, moving_avg_ms: 40, avg10_ms: 45})])];

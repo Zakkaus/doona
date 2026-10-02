@@ -30,7 +30,7 @@ import {connectionRanking} from '../../features/shared/ranking';
 import {engineStatus} from '../../features/shared/engineStatus';
 import {useMode} from '../../features/shared/useMode';
 import {ModeSwitch, NoticeList, noticeRows, activityGroupView, nodeView, useActivityNode, GroupMenu, outboundColor} from '../../features/activity/widgets';
-import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyGroups, latencyMax, latencyRange, providerRowView} from '../../features/nodes/widgets';
+import {latencyAverages, latencyGroups, latencyMax, latencyPlotRow, latencySummary, providerRowView} from '../../features/nodes/widgets';
 import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
 import {selectMember} from '../../features/shared/selectMember';
@@ -592,8 +592,7 @@ function Latency({item}: {item: Widget}) {
     () => latencyGroups(nodes.data ?? [], groups.data, 'group', locale).filter(group => !item.group || group.id === `group:${item.group}`),
     [nodes.data, groups.data, item.group, locale]
   );
-  const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
-  const missing = [...new Map(view.flatMap(group => group.missing).map(row => [row.id, row])).values()];
+  const {measured, missing} = latencySummary(view);
   const averages = latencyAverages(view);
   // A gallery preview shows the summary and the first rows whole inside its frame.
   const limit = useContext(ResourceSamples) ? 3 : contentLimit(item.size, [3, 6, 12]);
@@ -632,25 +631,7 @@ function Latency({item}: {item: Widget}) {
               {
                 id: 'nodes',
                 label: item.group ? (view[0]?.label ?? t('nodes.latency.noGroup')) : t('dashboard.allGroups'),
-                rows: measured.map(row => {
-                  const slower = isSlowerThanUsual(row);
-                  return {
-                    id: row.id,
-                    label: row.name,
-                    nodeName: true,
-                    value: row.latest,
-                    average: latencyAverage(row),
-                    range: latencyRange(row),
-                    text: formatLatency(row.latest, t),
-                    tone: slower ? ('notice' as const) : undefined,
-                    details: () => [
-                      t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
-                      ...(row.moving !== null ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
-                      ...(row.avg10 !== null ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
-                      ...(slower ? [t('nodes.latency.slower')] : [])
-                    ]
-                  };
-                }),
+                rows: measured.map(row => latencyPlotRow(row, t)),
                 notes: missing.map(row => t('ui.valuePair', {label: row.name, value: t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')}))
               }
             ]}
