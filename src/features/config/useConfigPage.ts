@@ -41,7 +41,7 @@ export type ConfigEditor = {
   validate: (request: ConfigValidationRequest) => Promise<ConfigValidationResult | undefined>;
   apply: (source: ConfigSource, content: string) => Promise<{diagnostics?: ConfigDiagnostic[]} | undefined>;
 };
-function useConfigEditorController(refetch: () => void) {
+function useConfigEditorController(refetch: () => unknown) {
   const t = useT();
   const editor = useConfigEditor(refetch);
   const diagnostics = useMemo(() => {

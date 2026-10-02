@@ -102,6 +102,9 @@ export const defaults = (): Layout => ({
 });
 // Restore defaults puts the panel where a fresh profile has it: floating at its corner, at its own size.
 export const restoredPanel = {size: undefined, offset: undefined, docked: undefined, dockHeight: undefined} satisfies Partial<Layout>;
+// Whether restoring the panel would change this layout: any of its placement fields is set.
+export const changesPanel = (layout: Partial<Layout>) =>
+  (Object.keys(restoredPanel) as Array<keyof typeof restoredPanel>).some(key => layout[key] !== undefined);
 export const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const widgetId = (value: string): value is WidgetId => Object.hasOwn(registry, value);
 export function parseItems(values: unknown[], surface: Surface, legacy = false): Widget[] {

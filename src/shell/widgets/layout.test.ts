@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {defaults, parseItems, parseLayout, restoredPanel} from './layout';
+import {changesPanel, defaults, parseItems, parseLayout, restoredPanel} from './layout';
 import {moveWidget} from './instances';
 it('defaults corrupt roots to a visible panel and preserves empty layouts', () => {
   for (const value of [null, {}, {version: 9, items: []}, {version: 1, items: 'bad'}]) expect(parseLayout(value)).toEqual(defaults());
@@ -105,3 +105,9 @@ it('restoring defaults floats a docked panel at its own size', () => {
   const restored = parseLayout(JSON.parse(JSON.stringify({...saved, ...restoredPanel})));
   for (const key of ['docked', 'dockHeight', 'size', 'offset']) expect(restored).not.toHaveProperty(key);
 });
+it.each([
+  ['a panel at its default', {}, false],
+  ['a moved panel', {offset: {x: -20, y: -40}}, true],
+  ['a resized panel', {size: {width: 400, height: 300}}, true],
+  ['a docked panel', {docked: true, dockHeight: 300}, true]
+])('%s: restoring it changes the layout: %s', (_name, value, changes) => expect(changesPanel({...defaults(), ...value})).toBe(changes));

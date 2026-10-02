@@ -13,6 +13,7 @@ it('reports a failure under the summary of its action, and an unknown operation 
   const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
   const summary = t('ov.operationError');
   expect(failureNotice(new LocalError('ui.operationUnknown'), t, summary)).toMatchObject({kind: 'neutral', text: t('ui.operationUnknown')});
+  expect(failureNotice(new LocalError('ui.writtenNotRead'), t, summary)).toMatchObject({kind: 'neutral', text: t('ui.writtenNotRead')});
   expect(failureNotice(new LocalError('ui.operationFailed'), t, summary)).toMatchObject({kind: 'negative', text: summary, detail: t('ui.operationFailed')});
   expect(noticeText(failureNotice(new Error('offline'), t, summary), t)).toBe('Could not run the operation: offline');
 });

@@ -1,4 +1,4 @@
-import {test as browserTest} from '@playwright/test';
+import {test as browserTest, type Page} from '@playwright/test';
 import {expect, expectLoadFailures, loadCatalogues, mockBackend, test} from './fixtures';
 import {translate} from '../src/i18n';
 import {capabilities} from '../src/api/mock/fixtures';
@@ -254,7 +254,7 @@ test('an unknown stored palette falls back to the supported moon palette', async
   await expect(page.getByRole('option', {name: /Moon/})).toHaveAttribute('aria-selected', 'true');
 });
 
-test('profile switching confirms draft loss without saving edits to the profile being left', async ({page}) => {
+async function twoProfiles(page: Page) {
   await mockBackend(page);
   const origin = new URL(test.info().project.use.baseURL!).origin;
   const profiles = [
@@ -266,6 +266,11 @@ test('profile switching confirms draft loss without saving edits to the profile 
     localStorage.setItem('doona-profiles', JSON.stringify(profiles));
     localStorage.setItem('doona-profile', 'a');
   }, profiles);
+  return profiles;
+}
+
+test('profile switching confirms draft loss without saving edits to the profile being left', async ({page}) => {
+  const profiles = await twoProfiles(page);
   await page.goto('/#/settings');
   await page.getByLabel('Backend URL', {exact: true}).fill('https://unsaved.example');
   await page.locator('[name=token]').fill('unsaved-token');
@@ -288,6 +293,29 @@ test('profile switching confirms draft loss without saving edits to the profile 
   await page.locator('[name=token]').fill('explicitly-saved');
   await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!))).toEqual([{...profiles[0], token: 'explicitly-saved'}, profiles[1]]);
+});
+
+test('a draft in another settings form is answered for before the saved profile changes', async ({page}) => {
+  await twoProfiles(page);
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: t('settings.runtime')});
+  await card
+    .getByRole('group', {name: t('settings.recording')})
+    .getByRole('button', {name: t('settings.recordFlows')})
+    .click();
+  await page.getByRole('option', {name: t('settings.record.off'), exact: true}).click();
+  const picker = page.getByRole('button', {name: /Profile$/});
+  await picker.click();
+  await page.getByRole('option', {name: /Backend B/}).click();
+  const confirm = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
+  await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
+  // Declining changes nothing: the saved profile is the old one and the page took no reload.
+  expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');
+  await expect(picker).toBeEnabled();
+  await picker.click();
+  await page.getByRole('option', {name: /Backend B/}).click();
+  await Promise.all([page.waitForEvent('load'), confirm.getByRole('button', {name: 'Discard changes', exact: true}).click()]);
+  expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('b');
 });
 
 test('a recorder can be pinned on or off and the state light follows the backend', async ({page}) => {

@@ -37,7 +37,7 @@ export function stampAppearance() {
 }
 
 export function Shell({lang: initial}: {lang: Lang}) {
-  const {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac} =
+  const {settings, lang, ap, route, query, go, confirming, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac} =
     useShellController(initial);
   const [flagTarget, setFlagTarget] = useState<{name: string} | null>(null);
   const editFlag = useCallback((name: string) => setFlagTarget({name}), []);
@@ -63,7 +63,7 @@ export function Shell({lang: initial}: {lang: Lang}) {
                     mac={mac}
                   />
                 </DraftContext.Provider>
-                <DiscardDialog isOpen={pending !== null} discard={discard} cancel={cancel} />
+                <DiscardDialog isOpen={confirming} discard={discard} cancel={cancel} />
                 {searchOpen && (
                   <LoadBoundary>
                     <Suspense fallback={null}>

@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
 import {refusalDetails} from '../shared/pending';
+import {LocalError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
@@ -109,6 +110,7 @@ export function useGlobalSettings({query, go}: PageProps) {
   const busy = !!editor.busy;
   const blocked = !draft || !writable || conflict || fields.some(field => field.key in patch && field.invalid);
   const rejected = refusalDetails(editor.error)?.diagnostics ?? null;
+  const unread = editor.error instanceof LocalError && editor.error.key === 'ui.writtenNotRead';
   const refusal = failure ?? rejected ?? null;
   // Shown while the draft that was refused is still open, as the source editor shows it.
   const restart = draft && Array.isArray(refusal) ? restartSettings(refusal) : [];
@@ -165,7 +167,9 @@ export function useGlobalSettings({query, go}: PageProps) {
     failure: Array.isArray(refusal) ? (restart.length ? null : t('config.invalid', {n: refusal.filter(item => item.level === 'error').length})) : refusal,
     restart,
     sources,
-    error: (rejected ? null : editor.error) ?? config.error,
+    // A write that landed but could not be read back is told on its own; the failed read is `config.error`, with Retry.
+    unread: unread ? t('ui.writtenNotRead') : null,
+    error: (rejected || unread ? null : editor.error) ?? config.error,
     retry: config.refetch,
     save,
     cancel: () => {

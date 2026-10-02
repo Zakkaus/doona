@@ -160,3 +160,56 @@ it.each([
     expect((await api.config()).sources.find(item => item.id === source.id)?.content).toBe(main.content);
   }
 });
+
+// The write settles only once the configuration is read back, and a read that fails leaves the caller its draft.
+it.each([
+  {name: 'a delayed read-back', outcome: {ok: true as const}, operationFails: false, errorKey: null},
+  {name: 'a failed read-back', outcome: {ok: false as const, error: new Error('offline')}, operationFails: false, errorKey: 'ui.writtenNotRead'},
+  {
+    name: 'a failed apply and read-back',
+    outcome: {ok: false as const, error: new Error('offline')},
+    operationFails: true,
+    errorKey: 'ui.writtenNotApplied'
+  },
+  {
+    name: 'a read-back cut off by its resource leaving',
+    outcome: {ok: false as const, error: new DOMException('left', 'AbortError')},
+    operationFails: false,
+    errorKey: null
+  }
+])('settles a write only after $name', async ({outcome, operationFails, errorKey}) => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+  });
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const main = (await api.config()).sources.find(item => item.kind === 'main')!;
+  if (operationFails) {
+    const pollOperation = api.pollOperation.bind(api);
+    vi.spyOn(api, 'pollOperation').mockImplementation(async (...args) => ({
+      ...(await pollOperation(...args)),
+      status: 'failed',
+      finished_at: '2026-09-25T00:00:01Z',
+      result: null,
+      error: {code: 'reload_rejected', message: 'Reload rejected', details: null}
+    }));
+  }
+  let release!: () => void;
+  const refetch = vi.fn(() => new Promise(resolve => (release = () => resolve({key: 'config', ...outcome}))));
+  const editor = hookHarness.render(() => useConfigEditor(refetch, {rethrow: true}));
+  hookHarness.runEffects();
+  let settled = false;
+  const applied = editor.apply(main, main.content! + '\n# updated\n').then(
+    value => ((settled = true), value),
+    error => ((settled = true), error)
+  );
+  await vi.waitUntil(() => refetch.mock.calls.length > 0, {timeout: 10000});
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect(settled).toBe(false);
+  release();
+  const result = await applied;
+  if (errorKey) expect(result).toMatchObject({name: 'LocalError', key: errorKey});
+  else expect(result).toHaveProperty('result');
+});

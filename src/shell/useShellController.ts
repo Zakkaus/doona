@@ -37,7 +37,7 @@ export function useShellController(initial: Lang) {
     addEventListener('scroll', mark, {passive: true});
     return () => removeEventListener('scroll', mark);
   }, []);
-  const {route, query, go, setDirty, revision, pending, discard, cancel} = useRoute(settings.api, settings.startPage);
+  const {route, query, go, setDirty, ask, revision, confirming, discard, cancel} = useRoute(settings.api, settings.startPage);
   // Another page opens at its top; a tab or filter change within the page keeps the reader's place.
   const shownRoute = useRef(route);
   useLayoutEffect(() => {
@@ -96,7 +96,7 @@ export function useShellController(initial: Lang) {
     },
     [go]
   );
-  const draft = useMemo(() => ({setDirty, revision}), [setDirty, revision]);
+  const draft = useMemo(() => ({setDirty, revision, ask}), [setDirty, revision, ask]);
   // Warm accented menu glyphs to avoid a font swap when opening a menu.
   useEffect(() => {
     const sample = 'Rosé Pine Frappé Macchiato Mocha Catppuccin Nord Glass';
@@ -110,7 +110,7 @@ export function useShellController(initial: Lang) {
   useEffect(() => {
     runAfterTransition(() => {});
   }, [route]);
-  return {settings, lang, ap, route, query, go, pending, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac: isMac};
+  return {settings, lang, ap, route, query, go, confirming, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac: isMac};
 }
 
 export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap'], route: string) {
