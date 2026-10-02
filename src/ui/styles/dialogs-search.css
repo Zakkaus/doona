@@ -21,7 +21,7 @@
   background: var(--rp-surface);
   border-radius: var(--rp-r-xl);
   width: min(720px, 90vw);
-  max-height: calc(100vh - 12vh - 24px);
+  max-height: calc(100dvh - 12dvh - 24px - env(safe-area-inset-bottom, 0px));
   display: flex;
   overflow: hidden;
 }
@@ -53,7 +53,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 12vh;
+  padding-top: 12dvh;
   z-index: 10;
 }
 .rp-input {

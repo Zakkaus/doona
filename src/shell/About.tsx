@@ -1,5 +1,5 @@
 import type {ReactElement} from 'react';
-import {Button, Kv, Link, ModalDialog, cx} from '../ui/ui';
+import {Button, Kv, Link, ModalDialog, cx, phoneQuery, useMediaQuery} from '../ui/ui';
 import logo from '../logo.svg';
 import night from '../duck-night.webp';
 import GitHub from '../ui/icons/GitHub';
@@ -19,10 +19,13 @@ export function About({
   onHonk?: () => void;
 }) {
   const view = useAbout(onHonk);
+  const phone = useMediaQuery(phoneQuery);
   return (
     <ModalDialog
       title={view.title}
       narrow
+      // On a phone the content scrolls between the title and Close; wider, the dialog keeps its own anatomy.
+      scrollBody={phone}
       trigger={trigger}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
@@ -45,7 +48,7 @@ export function About({
         <Kv items={view.items} />
         <p className="rp-label">{view.credits}</p>
         <p className="rp-label">{view.privacy}</p>
-        <div className="rp-cluster">
+        <div className="rp-cluster rp-about-links">
           <Link appearance="link" href={view.guide.href} external>
             <FileText />
             {view.guide.label}
