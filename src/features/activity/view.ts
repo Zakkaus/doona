@@ -147,6 +147,9 @@ export function activityView(runtime: Runtime | undefined, t: LabelFn, runtimeAv
   };
 }
 
+export const outboundColor = (row: {name: string; kind: string}, index: number, colors: {cat: string[]; love: string}) =>
+  row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[index % colors.cat.length];
+
 export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, locale: string, colors: {cat: string[]; love: string}, t: LabelFn) {
   const usage = outboundUsage(outbounds);
   return {
@@ -158,7 +161,7 @@ export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, local
       text: formatBytes(row.bytes, locale),
       // The connections through this outbound now; the usage counts since the counters started.
       href: href('connections', {out: row.name}),
-      color: row.kind === 'builtin' && row.name === 'block' ? colors.love : colors.cat[i % colors.cat.length]
+      color: outboundColor(row, i, colors)
     }))
   };
 }

@@ -13,11 +13,21 @@ import {
   activityGroupView,
   nodeView,
   noticeRows,
+  outboundColor,
   setupNotices,
   trafficState
 } from './view';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const colors = {cat: ['blue', 'green'], love: 'red'};
+
+it.each([
+  {kind: 'builtin', name: 'block', index: 0, color: 'red'},
+  {kind: 'node', name: 'block', index: 1, color: 'green'},
+  {kind: 'node', name: 'proxy', index: 3, color: 'green'},
+  {kind: 'builtin', name: 'direct', index: 0, color: 'blue'}
+])('colors $kind $name at index $index', ({kind, name, index, color}) => {
+  expect(outboundColor({kind, name}, index, colors)).toBe(color);
+});
 
 it('distinguishes missing metrics from zero and keeps block traffic separate from named groups', () => {
   const missing = activityView(undefined, t);
