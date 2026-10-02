@@ -1340,7 +1340,7 @@
   "policy.editNoConfig": "The configuration is not ready for editing yet",
   "policy.editNoEntry": "No loaded configuration file defines this group",
   "policy.editReadOnly": "This group is defined in {file}, which is read-only",
-  "policy.editReopen": "The same field was changed to a different value in the configuration, so nothing was written. Close and reopen this dialog to edit the current configuration.",
+  "policy.editReopen": "The group changed in the configuration in a way that conflicts with this edit, so nothing was written. Close and reopen this dialog to edit the current configuration.",
   "policy.editTitle": "Edit group {name}",
   "policy.editUnsafe": "Filters and the policy must stay on one line with balanced parentheses and no comment or brace.",
   "policy.empty": "No groups",

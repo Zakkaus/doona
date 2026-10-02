@@ -251,6 +251,11 @@ export function useGroupDialog(input: Input): GroupDialogView {
     if (!draft || source.busy || saving.current) return;
     setTried(true);
     if (nameProblem || invalid) return;
+    // A retry merges into the group as read again; when it is gone or declared twice, there is nothing to merge into.
+    if (draft.refused && draft.opened && !entry) {
+      refuse(t('policy.editReopen'));
+      return;
+    }
     const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
     const written = {default: entry?.default ?? null, final: entry?.final ?? null};
     if (
@@ -269,10 +274,15 @@ export function useGroupDialog(input: Input): GroupDialogView {
       // a field changed both here and on disk, to different values, is not written.
       const {opened} = draft;
       const keys = ['filters', 'policy', 'interrupt', ...routes.map(id => routeKeys[id])] as const;
-      const read = (from: GroupEntry, key: (typeof keys)[number]) => JSON.stringify(key === 'default' || key === 'final' ? routeValue(from[key]) : from[key]);
-      const mine = (key: (typeof keys)[number]) => JSON.stringify(key === 'filters' ? filters : draft[key]);
-      const changed = keys.filter(key => mine(key) !== read(opened, key));
-      if (changed.some(key => read(entry, key) !== read(opened, key) && read(entry, key) !== mine(key))) {
+      type Key = (typeof keys)[number];
+      // Interruption compares as a flag, so `'true'` and `true` agree.
+      const flag = (value: string | null) => (value === null ? null : unquote(value) === 'true');
+      const read = (from: GroupEntry, key: Key) =>
+        JSON.stringify(key === 'default' || key === 'final' ? routeValue(from[key]) : key === 'interrupt' ? flag(from[key]) : from[key]);
+      const mine = (key: Key) => JSON.stringify(key === 'filters' ? filters : key === 'interrupt' ? flag(draft[key]) : draft[key]);
+      // A field already holding the value read again is not written, so it keeps the spelling there.
+      const changed = keys.filter(key => mine(key) !== read(opened, key) && mine(key) !== read(entry, key));
+      if (changed.some(key => read(entry, key) !== read(opened, key))) {
         refuse(t('policy.editReopen'));
         return;
       }
