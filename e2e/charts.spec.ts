@@ -367,8 +367,11 @@ const filledCards: Array<[string, string, string, (card: import('@playwright/tes
 for (const width of [1440, 390]) {
   test(`cards fill their width and height at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
+    let shown = '';
     for (const [route, name, content, prepare] of filledCards) {
-      await page.goto(`/#/${route}`);
+      // Going to the address the page already shows reloads it, which cancels the chunks still loading and logs them.
+      if (route !== shown) await page.goto(`/#/${route}`);
+      shown = route;
       const card = page.getByRole('region', {name, exact: true});
       await card.scrollIntoViewIfNeeded();
       await prepare(card);
