@@ -6,6 +6,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Search finds Settings fields and actions, persistent global settings, configuration sections and feature entry points such as Add subscription, New group, export and import, and the widget editor. Labels match in every interface language, so 配色 and palette both find the palette field, and common words such as subscription, geoip, flags and history work too. A result opens the page, tab or dialog without running anything; a Settings field result focuses that field, a node result selects that node, and a DNS rule result selects and briefly marks its row. Exact matches rank before prefix and partial matches.
 - Routing traces accept an optional DSCP value from 0 to 63 to evaluate `dscp(...)` rules. (#332)
 - A Latency probes card on Settings, saved in this browser, sets the probe method, IP family, warm or cold measurement and the members a group probe covers. Node and group Probe buttons use these settings, the probe options dialog starts from them, and the card links to the background health checks in Configuration. (#334)
 - Nodes and policy groups offer probe options for HTTP, TCP connect and DNS over TCP or UDP, cold probes, and nodes in nested groups. (#334)

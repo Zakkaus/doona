@@ -5,12 +5,11 @@ import {localTime, formatBytes} from '../../i18n/format';
 import {formatNumber, type Translator} from '../../i18n';
 import {diagnosticMessage, refusalMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
-import {fileName, redacted} from '../../dae/sources';
+import {fileName, redacted, sourceKinds} from '../../dae/sources';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 import type {Help, KvItem} from '../../ui/ui';
-import {sourceKinds} from './nav';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
 type SectionKind = (typeof sectionKinds)[number];

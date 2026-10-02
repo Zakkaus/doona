@@ -1,4 +1,5 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../api/model';
+import type {Key} from '../i18n';
 import {readGroupEntries, type GroupEntry} from './groups';
 
 // The groups a rule in any source may name: every loaded source's, with the one being edited read from its draft.
@@ -36,3 +37,11 @@ export const restartSettings = (diagnostics: ConfigDiagnostic[]): RestartSetting
     .filter(item => item.level === 'error' && item.code === 'restart-required')
     .map(item => ({key: /\b[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\b/.exec(item.message)?.[0] ?? (item.message || null), sourceId: item.source_id, line: item.line}));
 export const restartRequired = (diagnostics: ConfigDiagnostic[]) => restartSettings(diagnostics).length;
+
+// The label of each kind of configuration source.
+export const sourceKinds: Record<ConfigSource['kind'], Key> = {
+  main: 'config.kind.main',
+  include: 'config.kind.include',
+  subscription: 'config.kind.subscription',
+  generated: 'config.kind.generated'
+};

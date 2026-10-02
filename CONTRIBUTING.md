@@ -43,7 +43,7 @@ src/features/dns/
   nav.ts        tabs
 ```
 
-`view.ts`, `cache.ts` and `stats.ts` each have a `.test.ts` beside them, and the shell's search reads the tabs in `nav.ts`. New features follow the same shape; a small page may leave pieces out. The folder table under the layer diagram says what each part of `src/` owns.
+`view.ts`, `cache.ts` and `stats.ts` each have a `.test.ts` beside them, and the shell's search reads the tabs in `nav.ts`. A field or entry point search should find goes beside that registry too: a `SearchTarget` list in `nav.ts`, a Settings control in `settingsFields` with a matching `data-setting` mark; search builds its entries from these, never from a separate list. New features follow the same shape; a small page may leave pieces out. The folder table under the layer diagram says what each part of `src/` owns.
 
 ### Layers
 

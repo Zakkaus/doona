@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {recordingLimitsHref} from '../shared/link';
-import {settingsCard} from './nav';
+import {runtimeFieldLabels, settingsCard} from './nav';
 
 const card = settingsCard('runtime');
 
@@ -47,25 +47,30 @@ export function RuntimeSettingsCard() {
           {m.hasBaseline && (
             <>
               <div className="rp-toolbar top rp-fieldgrid">
-                {m.hasLevel && <LabeledSelect label={t('settings.logLevel')} value={m.level} onChange={m.setLevel} items={m.levels} isDisabled={m.busy} />}
+                {m.hasLevel && (
+                  <div className="rp-contents" data-setting="log.level">
+                    <LabeledSelect label={t(runtimeFieldLabels['log.level'])} value={m.level} onChange={m.setLevel} items={m.levels} isDisabled={m.busy} />
+                  </div>
+                )}
                 {m.numeric.map(field => (
-                  <TextField
-                    key={field.id}
-                    width={180}
-                    type="text"
-                    label={field.label}
-                    value={field.value}
-                    isDisabled={m.busy}
-                    isInvalid={field.invalid}
-                    onChange={field.change}
-                    description={field.description}
-                  />
+                  <div key={field.id} className="rp-contents" data-setting={field.id}>
+                    <TextField
+                      width={180}
+                      type="text"
+                      label={field.label}
+                      value={field.value}
+                      isDisabled={m.busy}
+                      isInvalid={field.invalid}
+                      onChange={field.change}
+                      description={field.description}
+                    />
+                  </div>
                 ))}
               </div>
               {m.recorders.length > 0 && (
                 <div className="rp-toolbar top rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
                   {m.recorders.map(recorder => (
-                    <div key={recorder.id} className="rp-field">
+                    <div key={recorder.id} className="rp-field" data-setting={recorder.id}>
                       <LabeledSelect
                         label={recorder.label}
                         value={recorder.value}

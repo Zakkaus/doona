@@ -1,5 +1,6 @@
 import {outboundModeHref} from '../shared/link';
 import {useEffect, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
+import {useLandingHighlight} from '../../ui/hooks';
 import {useT, type Translator} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {
@@ -78,6 +79,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
     latest.current = view;
   });
   const {canWrite, busy} = view;
+  const highlighted = useLandingHighlight(view.landed);
   const {target, hits} = view.copy;
   const editable = canWrite && !!view.openEdit;
   // A link to review the held rules moves focus, and so the view, to their section once it is shown.
@@ -225,6 +227,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         rows={view.table.rows}
         selected={view.selected}
         reveal
+        highlighted={highlighted ? view.landed : null}
         onSelect={view.select}
         height={560}
         fit

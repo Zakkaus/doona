@@ -206,6 +206,17 @@ export function useDebounced<T>(value: T, ms = 300): T {
   return settled;
 }
 
+// Whether the place a link landed on is still marked: from when `target` turns up or changes, for three seconds.
+export function useLandingHighlight(target: string | boolean | null | undefined): boolean {
+  const [highlight, setHighlight] = useState({target, active: !!target});
+  if (highlight.target !== target) setHighlight({target, active: !!target});
+  useEffect(() => {
+    const timer = setTimeout(() => setHighlight(previous => ({...previous, active: false})), 3000);
+    return () => clearTimeout(timer);
+  }, [target]);
+  return highlight.active;
+}
+
 // The value while `shown`, and the last one it had then while hidden, so what is derived from it does not recompute
 // for a kept tab that is out of sight. Undefined until first shown.
 export function useWhileShown<T>(value: T | undefined, shown: boolean): T | undefined {

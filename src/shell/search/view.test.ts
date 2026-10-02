@@ -1,21 +1,27 @@
-import {expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {createMockApi} from '../../../mock';
 import {translate} from '../../i18n';
 import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {
   connectionEntries,
   dnsRuleEntries,
+  featureEntries,
+  globalSettingEntries,
   groupEntries,
+  moduleEntries,
   nodeEntries,
   pageEntries,
   providerEntries,
   ruleEntries,
   searchSections,
   searchView as project,
+  settingsEntries,
   sourceEntries,
   type SearchIndex
 } from './view';
-import {sourceKinds} from '../../features/config/nav';
+import {sourceKinds} from '../../dae/sources';
+import {runtimeFieldLabels, settingsFields} from '../../features/settings/nav';
+import {engineOf, type Engine} from '../../api/engines';
 import type {Lang, Translator} from '../../i18n';
 
 type SearchSources = {
@@ -27,17 +33,22 @@ type SearchSources = {
   config: {data: EffectiveConfig | undefined};
   rules: {data: RuleList | undefined};
   dnsRules?: {data: DnsRuleList | undefined};
+  version?: Engine;
 };
 // Every dataset projected at once, as useSearch does one memo at a time.
 function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
   return searchSections(
     {
       pages: pageEntries(sources.capabilities.data, t, true),
+      settings: settingsEntries(sources.capabilities.data, t),
+      globals: globalSettingEntries(sources.version?.globalSettings ?? null, sources.capabilities.data, t),
+      features: featureEntries(sources.capabilities.data, t),
       conns: connectionEntries(sources.connections.data, t),
       nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang),
       groups: groupEntries(sources.groups.data),
       providers: providerEntries(sources.providers.data, t),
       sources: sourceEntries(sources.config.data, t),
+      modules: moduleEntries(sources.config.data, engineOf(undefined), t),
       rules: ruleEntries(sources.rules.data, lang),
       dnsRules: dnsRuleEntries(sources.dnsRules?.data, lang, t)
     },
@@ -203,8 +214,175 @@ it('finds DNS rules by expression and target, with their list and position, and 
   const t = translate.bind(null, 'en');
   const hit = searchView(rule.expression, sources, t).byId.get(`dns-rule:${rule.rule_id}`)!;
   expect(hit.route).toBe('rules');
-  expect(hit.query).toBe('tab=dns');
+  expect(hit.query).toBe(`tab=dns&list=request&rule=${encodeURIComponent(rule.rule_id)}`);
   expect(hit.description).toBe(`Request rules #1,234 → ${rule.upstream}`);
   expect(searchView(rule.upstream!, sources, t).byId.has(hit.id)).toBe(true);
   expect(project('', searchIndex(sources, 'en', t)).byId.has(`dns-rule:${fallback.rule_id}`)).toBe(false);
+});
+
+const runtimeIds = Object.keys(runtimeFieldLabels) as Array<keyof typeof runtimeFieldLabels>;
+// Every capability that gates a field, feature or tab, offered.
+async function everything(): Promise<SearchSources> {
+  const api = createMockApi();
+  const capabilities = await api.capabilities();
+  const resources = capabilities.resources;
+  resources.geodata.available = true;
+  resources.geodata.configurable_sources = true;
+  resources.runtime_settings.available = true;
+  resources.runtime_settings.fields = [...runtimeIds, 'geodata'];
+  resources.config.writable = true;
+  resources.providers.can_manage = true;
+  resources.nodes.can_manage = true;
+  capabilities.extensions = {
+    ...capabilities.extensions,
+    'x-honk': {config_export: {available: true}, config_import: {available: true}, config_revisions: {available: true}}
+  };
+  return {
+    capabilities: {data: capabilities},
+    connections: {data: undefined},
+    nodes: {data: await api.nodes().then(list => list.nodes)},
+    groups: {data: undefined},
+    providers: {data: await api.providers()},
+    config: {data: await api.config()},
+    rules: {data: undefined},
+    version: engineOf(await api.version())
+  };
+}
+
+describe('settings, features and aliases', () => {
+  it('offers every Settings control the page registers, focused on its card', async () => {
+    const index = searchIndex(await everything(), 'en', translate.bind(null, 'en'));
+    const settings = index.sections.find(section => section.id === 'settings')!.entries.map(entry => entry.hit);
+    const ids = [...settingsFields.map(field => field.id), ...runtimeIds];
+    expect(settings.map(hit => hit.id).sort()).toEqual(ids.map(id => `setting:${id}`).sort());
+    for (const field of settingsFields) {
+      const hit = settings.find(item => item.id === `setting:${field.id}`)!;
+      expect([hit.route, new URLSearchParams(hit.query).get('card'), new URLSearchParams(hit.query).get('field')]).toEqual(['settings', field.card, field.id]);
+    }
+  });
+
+  // The cards mark each control with `data-setting`; a marked control the registry lacks, or a registered one no card
+  // marks, has no search entry or a dead one.
+  it('matches the controls the Settings cards mark', () => {
+    const cards = import.meta.glob<string>('../../features/settings/*Settings.tsx', {query: '?raw', import: 'default', eager: true});
+    const marked = Object.values(cards).flatMap(source => [...source.matchAll(/data-setting="([^"]+)"/g)].map(match => match[1]));
+    // The runtime card marks its numeric and recorder fields by their registry ids; log level is its one literal.
+    expect(marked.sort()).toEqual([...settingsFields.map(field => field.id), 'log.level'].sort());
+  });
+
+  it.each([
+    ['zh-TW', '配色', 'setting:palette'],
+    ['en', '配色', 'setting:palette'],
+    ['zh-CN', 'palette', 'setting:palette'],
+    ['en', '  Palette ', 'setting:palette'],
+    ['zh-TW', '訂閱', 'feature:nodes:add-subscription'],
+    ['en', '订阅', 'feature:nodes:add-subscription'],
+    ['zh-TW', 'subscription', 'feature:nodes:sources'],
+    ['zh-TW', 'dns cache', 'page:dns?tab=cache'],
+    ['zh-TW', 'geoip', 'page:settings?card=geodata'],
+    ['en', 'geosite', 'page:settings?card=geodata'],
+    ['zh-CN', 'geodata', 'page:settings?card=geodata'],
+    ['en', 'start page', 'setting:startPage'],
+    ['zh-TW', '國旗', 'setting:countryFlags'],
+    ['en', 'flags', 'setting:countryFlags'],
+    ['zh-TW', '匯出', 'feature:config:export'],
+    ['en', 'import', 'feature:config:import'],
+    ['en', 'history', 'page:config?tab=history'],
+    ['zh-TW', 'revision', 'page:config?tab=history'],
+    ['zh-TW', 'dial_mode', 'global:dial_mode'],
+    ['en', 'log level', 'setting:log.level'],
+    ['en', 'new group', 'feature:policies:new'],
+    ['zh-TW', 'template', 'feature:rules:modes'],
+    ['en', 'share link', 'feature:nodes:link'],
+    ['en', 'edit dashboard', 'feature:dashboard:edit'],
+    ['en', 'widget panel', 'feature:widgets:edit']
+  ] as const)('in %s, %j finds %s', async (lang, query, id) => {
+    expect(project(query, searchIndex(await everything(), lang, translate.bind(null, lang))).byId.has(id)).toBe(true);
+  });
+
+  it('opens entry points without running their action', async () => {
+    const index = searchIndex(await everything(), 'en', translate.bind(null, 'en'));
+    const hit = (q: string, id: string) => project(q, index).byId.get(id)!;
+    expect([hit('subscription', 'feature:nodes:add-subscription').route, hit('subscription', 'feature:nodes:add-subscription').query]).toEqual([
+      'nodes',
+      'add=subscription'
+    ]);
+    expect([hit('export', 'feature:config:export').route, hit('export', 'feature:config:export').query]).toEqual(['config', 'tab=history']);
+    expect(hit('widget panel', 'feature:widgets:edit').route).toBeNull();
+    expect(hit('widget panel', 'feature:widgets:edit').open).toBeTypeOf('function');
+  });
+
+  it('withholds entry points the backend does not offer', async () => {
+    const sources = await everything();
+    const resources = sources.capabilities.data!.resources;
+    resources.config.writable = false;
+    resources.providers.can_manage = false;
+    resources.geodata.configurable_sources = false;
+    resources.runtime_settings.fields = ['log.level'];
+    sources.capabilities.data!.extensions = {};
+    const index = searchIndex(sources, 'en', translate.bind(null, 'en'));
+    const all = index.sections.flatMap(section => section.entries.map(entry => entry.hit.id));
+    for (const id of [
+      'feature:rules:add',
+      'feature:policies:new',
+      'feature:nodes:add-subscription',
+      'feature:config:export',
+      'setting:geodataSource',
+      'setting:flows.max_flows'
+    ])
+      expect(all).not.toContain(id);
+    expect(all).toContain('setting:log.level');
+    expect(all).toContain('setting:geodataUpdate');
+  });
+
+  it('lands nodes on their exact row and configuration sections on their first line', async () => {
+    const sources = await everything();
+    const node = sources.nodes.data![0];
+    const hit = project(node.name, searchIndex(sources, 'en', translate.bind(null, 'en'))).byId.get(`node:${node.id}`)!;
+    expect(new URLSearchParams(hit.query).get('node')).toBe(node.id);
+    const index = searchIndex(sources, 'en', translate.bind(null, 'en'));
+    const module = index.sections.find(section => section.id === 'modules')!.entries[0].hit;
+    expect(module.route).toBe('config');
+    expect(new URLSearchParams(module.query).get('tab')).toBe('source');
+    expect(Number(new URLSearchParams(module.query).get('line'))).toBeGreaterThan(0);
+  });
+});
+
+describe('ranking', () => {
+  const groups = (names: string[]) => names.map((name, i) => ({id: `g${i}`, name, policy: {native: 'min'}}) as GroupSummary);
+  const ranked = (names: string[], q: string) =>
+    project(
+      q,
+      searchSections(
+        {
+          pages: [],
+          settings: [],
+          globals: [],
+          features: [],
+          conns: [],
+          nodes: [],
+          groups: groupEntries(groups(names)),
+          providers: [],
+          sources: [],
+          modules: [],
+          rules: [],
+          dnsRules: []
+        },
+        undefined,
+        translate.bind(null, 'en')
+      )
+    ).sections[0]?.items.map(item => item.label) ?? [];
+  it.each([
+    ['exact before substring', ['hk-telegram', 'telegram'], 'telegram', ['telegram', 'hk-telegram']],
+    ['prefix before substring', ['my-tele', 'tele-x'], 'tele', ['tele-x', 'my-tele']],
+    ['ties keep the section order', ['b-tele', 'a-tele'], 'tele', ['b-tele', 'a-tele']],
+    [
+      'an exact match past the limit still shows',
+      [...Array.from({length: 9}, (_, i) => `x-${i}-hk`), 'hk'],
+      'hk',
+      ['hk', 'x-0-hk', 'x-1-hk', 'x-2-hk', 'x-3-hk', 'x-4-hk', 'x-5-hk', 'x-6-hk']
+    ]
+  ])('%s', (_, names, q, expected) => {
+    expect(ranked(names, q)).toEqual(expected);
+  });
 });

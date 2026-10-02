@@ -36,40 +36,48 @@ export function ProbeSettingsCard() {
         <>
           <span className="rp-label">{t('settings.probesNote')}</span>
           <div className="rp-toolbar top rp-fieldgrid">
-            <LabeledSelect
-              label={t('settings.probeMethod')}
-              description={t('settings.probeMethodHelp')}
-              value={latencyProbeChoice(choices, options.choice)!.id}
-              onChange={choice => saveProbeOptions({choice})}
-              items={choices.map(choice => ({id: choice.id, label: t(choice.label)}))}
-            />
-            <LabeledSelect
-              label={t('settings.probeFamily')}
-              description={t('settings.probeFamilyHelp')}
-              value={options.family !== 'auto' && versions.includes(options.family) ? options.family : 'auto'}
-              onChange={family => saveProbeOptions({family: family as ProbeFamily})}
-              items={[{id: 'auto', label: t('settings.probeFamilyAuto')}, ...versions.map(id => ({id, label: id === 'ipv4' ? 'IPv4' : 'IPv6'}))]}
-            />
-            <LabeledSelect
-              label={t('settings.probeWarmth')}
-              description={t('settings.probeWarmthHelp')}
-              value={options.cold ? 'cold' : 'warm'}
-              onChange={warmth => saveProbeOptions({cold: warmth === 'cold'})}
-              items={[
-                {id: 'warm', label: t('settings.probeWarm')},
-                {id: 'cold', label: t('settings.probeCold')}
-              ]}
-            />
-            <LabeledSelect
-              label={t('settings.probeMembers')}
-              description={t('settings.probeMembersHelp')}
-              value={options.leaves ? 'leaves' : 'direct'}
-              onChange={members => saveProbeOptions({leaves: members === 'leaves'})}
-              items={[
-                {id: 'direct', label: t('settings.probeDirect')},
-                {id: 'leaves', label: t('settings.probeLeaves')}
-              ]}
-            />
+            <div className="rp-contents" data-setting="probeMethod">
+              <LabeledSelect
+                label={t('settings.probeMethod')}
+                description={t('settings.probeMethodHelp')}
+                value={latencyProbeChoice(choices, options.choice)!.id}
+                onChange={choice => saveProbeOptions({choice})}
+                items={choices.map(choice => ({id: choice.id, label: t(choice.label)}))}
+              />
+            </div>
+            <div className="rp-contents" data-setting="probeFamily">
+              <LabeledSelect
+                label={t('settings.probeFamily')}
+                description={t('settings.probeFamilyHelp')}
+                value={options.family !== 'auto' && versions.includes(options.family) ? options.family : 'auto'}
+                onChange={family => saveProbeOptions({family: family as ProbeFamily})}
+                items={[{id: 'auto', label: t('settings.probeFamilyAuto')}, ...versions.map(id => ({id, label: id === 'ipv4' ? 'IPv4' : 'IPv6'}))]}
+              />
+            </div>
+            <div className="rp-contents" data-setting="probeWarmth">
+              <LabeledSelect
+                label={t('settings.probeWarmth')}
+                description={t('settings.probeWarmthHelp')}
+                value={options.cold ? 'cold' : 'warm'}
+                onChange={warmth => saveProbeOptions({cold: warmth === 'cold'})}
+                items={[
+                  {id: 'warm', label: t('settings.probeWarm')},
+                  {id: 'cold', label: t('settings.probeCold')}
+                ]}
+              />
+            </div>
+            <div className="rp-contents" data-setting="probeMembers">
+              <LabeledSelect
+                label={t('settings.probeMembers')}
+                description={t('settings.probeMembersHelp')}
+                value={options.leaves ? 'leaves' : 'direct'}
+                onChange={members => saveProbeOptions({leaves: members === 'leaves'})}
+                items={[
+                  {id: 'direct', label: t('settings.probeDirect')},
+                  {id: 'leaves', label: t('settings.probeLeaves')}
+                ]}
+              />
+            </div>
           </div>
         </>
       )}

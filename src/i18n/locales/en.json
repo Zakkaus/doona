@@ -1718,13 +1718,14 @@
   "rule.viewNode": "View node {name}",
   "rule.viewSimple": "Simple",
   "rule.where": "Where",
+  "search.features": "Features",
   "search.groups": "Groups",
   "search.nodeCount": {
     "one": "{n} node",
     "other": "{n} nodes"
   },
   "search.nodes": "Nodes",
-  "search.none": "No matches. Search covers the names of pages, tabs, nodes, groups and node sources, live connections, config file paths, and routing and DNS rule expressions.",
+  "search.none": "No matches. Search covers the names of pages, tabs, settings, features, nodes, groups and node sources, live connections, config file paths and sections, and routing and DNS rule expressions.",
   "search.pages": "Pages",
   "search.providers": "Node sources",
   "search.sources": "Config files",

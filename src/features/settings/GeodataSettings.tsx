@@ -39,7 +39,7 @@ export function GeodataSettingsCard() {
       )}
       {m.ready && (
         <div className="rp-ops">
-          <div className="rp-ops-group">
+          <div className="rp-ops-group" data-setting="geodataSource">
             <span className="rp-label">{t('settings.geodataSource')}</span>
             <div className="rp-cluster">
               <LabeledSelect
@@ -54,7 +54,7 @@ export function GeodataSettingsCard() {
             </div>
           </div>
           {m.customHosts && (
-            <div className="rp-ops-group">
+            <div className="rp-ops-group" data-setting="geodataCustomUrls">
               <span className="rp-label">{t('settings.geodataCustomUrls')}</span>
               <div className="rp-cluster">
                 <Button isDisabled={m.busy} onPress={m.editCustom}>
@@ -65,7 +65,7 @@ export function GeodataSettingsCard() {
             </div>
           )}
           {m.route && (
-            <div className="rp-ops-group">
+            <div className="rp-ops-group" data-setting="geodataRoute">
               <span className="rp-label">{t('settings.geodataRoute')}</span>
               <div className="rp-cluster">
                 <LabeledSelect
@@ -91,7 +91,7 @@ export function GeodataSettingsCard() {
             </div>
           )}
           {m.checksum && (
-            <div className="rp-ops-group">
+            <div className="rp-ops-group" data-setting="geodataChecksum">
               <span className="rp-label">{t('settings.geodataVerifyChecksum')}</span>
               <div className="rp-cluster">
                 <Switch aria-label={t('settings.geodataVerifyChecksum')} isSelected={m.checksum.enabled} isDisabled={m.busy} onChange={m.checksum.toggle} />
@@ -99,7 +99,7 @@ export function GeodataSettingsCard() {
               </div>
             </div>
           )}
-          <div className="rp-ops-group">
+          <div className="rp-ops-group" data-setting="geodataAutoUpdate">
             <span className="rp-label">{t('settings.geodataAutoUpdate')}</span>
             <div className="rp-cluster">
               <Switch aria-label={t('settings.geodataAutoUpdate')} isSelected={m.auto.enabled} isDisabled={m.busy} onChange={m.auto.toggle} />
@@ -127,14 +127,18 @@ export function GeodataSettingsCard() {
               </span>
               {m.status.help && <ContextualHelp {...m.status.help} />}
               {m.canUpdate && (
-                <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
-                  {t('settings.geodataUpdateNow')}
-                </Button>
+                <div className="rp-contents" data-setting="geodataUpdate">
+                  <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
+                    {t('settings.geodataUpdateNow')}
+                  </Button>
+                </div>
               )}
               {m.ready && (
-                <Button isDisabled={m.busy} onPress={m.reset.ask}>
-                  {t('settings.geodataReset')}
-                </Button>
+                <div className="rp-contents" data-setting="geodataReset">
+                  <Button isDisabled={m.busy} onPress={m.reset.ask}>
+                    {t('settings.geodataReset')}
+                  </Button>
+                </div>
               )}
             </div>
           </ActionHelp>
