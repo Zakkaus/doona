@@ -531,6 +531,7 @@
   "flow.map": "流量路径",
   "flow.mapEmpty": "暂无可供绘制的规则、策略组或保留流程",
   "flow.mapFilter": "路径：{label}",
+  "flow.mapFilterHint": "点击拓扑图中的路径以筛选流程",
   "flow.mapNode": "节点",
   "flow.mapOutbound": "出站",
   "flow.mapRule": "规则",

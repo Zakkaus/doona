@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, setAppearance, test, moreAction} from './fixtures';
+import {box, expect, faults, mockBackend, setAppearance, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -34,12 +34,24 @@ test('a pinned tree item carries into the records', async ({page}) => {
   await page.goto('/#/flows?tab=map');
   const topology = page.getByRole('region', {name: 'Connection topology', exact: true});
   const rule = topology.locator('[data-stage="rule"]').filter({hasText: 'dip(geoip:private)'});
+  // The filter row is there before anything is pinned, so pinning never moves the map.
+  const clearButton = page.getByRole('button', {name: 'Clear path filter', exact: true});
+  await expect(clearButton).toBeDisabled();
+  await expect(page.getByText('Select a path to filter flows', {exact: true})).toBeVisible();
+  const restingTop = (await box(topology)).y;
   await rule.click();
   // A rule is pinned by its id, so the address survives a rewording of the expression.
   await expect(page).toHaveURL(/path=rule%3Ar2$/);
   await expect(rule).toHaveAttribute('aria-pressed', 'true');
   const showFlows = page.getByRole('button', {name: /^Show the \d+ flows? on this path$/});
   const matching = Number((await showFlows.innerText()).match(/\d+/)?.[0]);
+  // The filter row sits between the tabs and the map, with the clear action at its far end.
+  const filterRow = page.locator('.rp-toolbar', {has: showFlows});
+  const [tabs, row, card, clear] = await Promise.all([page.getByRole('tablist'), filterRow, topology, clearButton].map(box));
+  expect(card.y).toBe(restingTop);
+  expect(row.y).toBeGreaterThanOrEqual(tabs.y + tabs.height);
+  expect(row.y + row.height).toBeLessThanOrEqual(card.y);
+  expect(clear.x + clear.width).toBeGreaterThan(row.x + row.width - 2);
   expect(matching).toBeGreaterThan(0);
   await showFlows.click();
   await expect(page).toHaveURL(/tab=records/);
