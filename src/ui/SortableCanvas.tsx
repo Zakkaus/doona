@@ -1,5 +1,6 @@
 import {useRef, type ReactNode} from 'react';
-import {Button as RButton, DropIndicator, GridList, GridListItem, useDragAndDrop, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
+import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
+import {useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
 import {cx} from './cx';
 import {tileAttributes, usePacking, type TileProps} from './DashboardTile';
