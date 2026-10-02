@@ -10,7 +10,7 @@ pnpm install --frozen-lockfile
 
 ## Run the gate
 
-Before opening a pull request, run the same gates as CI from the repository root: `pnpm check`, `pnpm test:coverage`, `pnpm build`, `pnpm check:size`, and `pnpm e2e` after the one-time `pnpm e2e:install --with-deps`. `pnpm check` runs `typecheck`, `lint`, `check:i18n`, `format:check`, `test`, and `check:gen`.
+Run the gates for the CI lane selected by `tools/ci-changes.mjs`, from the repository root. Documentation-only changes run `pnpm format:check` and `pnpm check:i18n`. The full lane runs `pnpm check`, `pnpm test:coverage`, `pnpm build`, `pnpm check:size`, and `DOONA_E2E_WEBKIT=1 pnpm e2e` after the one-time `pnpm e2e:install --with-deps`. `pnpm check` runs `typecheck`, `lint`, `check:i18n`, `format:check`, `test`, and `check:gen`.
 
 `REUSE.toml` handles license headers; preserve its third-party annotations when adding or moving files. From the repository root, run `reuse lint` if you have REUSE, and run `pnpm test:coverage` to print coverage totals and write `coverage/lcov.info`.
 
@@ -23,9 +23,9 @@ Before opening a pull request, run the same gates as CI from the repository root
 - `e2e/`: Playwright tests.
 - `tools/`: build, check and release scripts.
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
-- `public/`: icons and the logo, served as they are. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
+- `public/`: app icons, logo, manifest and service-worker template. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
 - `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
-- `docs/`: the README's screenshots.
+- `docs/`: font and country-flag documentation, and the duck artwork. README screenshots live in doona-docs.
 - `patches/`: pnpm patches to dependencies.
 - `LICENSES/`: license texts for REUSE.
 - `.github/`: CI workflows and the issue and pull request templates.
@@ -100,7 +100,7 @@ Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`. `
 
 The visual editor keeps changes in a draft until Save. Gallery and canvas previews reuse cached readings without acquiring polling or event subscriptions. Gallery items fall back to typed snapshots in `samples.ts` when cached data is absent or empty; every item has its name as a heading, one preview frame at one scale and no sample badge. Sample charts never write to live history rings. Its gallery allows three instances per module, each with its own size, compatible form and options. The panel canvas uses the live panel content width with two columns. Small widgets occupy one column, medium widgets use both columns, and large widgets use two rows. The inspector's size choice and React Aria reorder share the same saved item schema. Cancel confirms before discarding a changed draft. Panel layout versions 1 and 2 migrate to version 3 on read; the old Version widget and sidebar position are discarded.
 
-Activity uses the same registry with a version 2 dashboard layout: five ordered sections, quick, metrics, traffic, details and extensions, each with a fixed profile in `dashboard.css`. The four main profiles reproduce origin/main's Activity grids, except that from 1280px traffic, details and extensions share twelve tracks so their columns line up (main's traffic pair moves by 4px), and the default places main's 13 cards in them unchanged, then four modules in extensions. A card's size is a preset (medium, large, full row; small only in extensions) that sets its own span and nothing else. Main's position rules are footprints on the first instance of mode, latency, CPU and notices, never on whichever card holds a position. The renderer follows a card's kind and display, never its size. Every section packs like masonry (`usePacking` in `src/ui/packing.ts`): rows are 1px, a card spans its content and one gap, so a short card sits under the card above it in its column, and the last card of each column grows to the next card below or to the section's end, so columns end level. Edit mode renders the same cells in a React Aria GridList per section, packed the same way, inside `ResourcePreview`: the drag handle and settings button sit in the card's header row at its inline end, the drop indicator is a line in the gap, and every drop is a move, within or across sections, applied as one transaction. The settings popover holds size, display, options, move earlier or later and remove, a complete alternative to dragging. The gallery is a dialog. Done saves; Cancel confirms before discarding a changed draft and restores the saved layout; Reset changes only the draft. Version 1 migrates on read: an untouched layout maps into main's sections, a rearranged one keeps its order in extensions. Without the status card, the page shows the runtime read's error and retry above the cards that read runtime. Each visible module leases existing resources; offscreen bodies and gallery previews retain cached values without polling. Feature `widgets.ts` files expose existing projections and card renderers to the shell without adding cross-feature imports.
+Activity uses the same registry with a version 2 dashboard layout: five ordered sections, quick, metrics, traffic, details and extensions, each with a fixed profile in `dashboard.css`. From 1280px, traffic, details and extensions share twelve tracks so their columns line up. The default places 13 cards in the first four sections, then four modules in extensions. A card's size is a preset (medium, large, full row; small only in extensions) that sets its own span and nothing else. Special footprints apply to the first instance of mode, latency, CPU and notices, never to whichever card holds a position. The renderer follows a card's kind and display, never its size. Every section packs like masonry (`usePacking` in `src/ui/packing.ts`): rows are 1px, a card spans its content and one gap, so a short card sits under the card above it in its column, and the last card of each column grows to the next card below or to the section's end, so columns end level. Edit mode renders the same cells in a React Aria GridList per section, packed the same way, inside `ResourcePreview`: the drag handle and settings button sit in the card's header row at its inline end, the drop indicator is a line in the gap, and every drop is a move, within or across sections, applied as one transaction. The settings popover holds size, display, options, move earlier or later and remove, a complete alternative to dragging. The gallery is a dialog. Done saves; Cancel confirms before discarding a changed draft and restores the saved layout; Reset changes only the draft. Version 1 migrates on read: an untouched layout maps into the default sections, a rearranged one keeps its order in extensions. Without the status card, the page shows the runtime read's error and retry above the cards that read runtime. Each visible module leases existing resources; offscreen bodies and gallery previews retain cached values without polling. Feature `widgets.ts` files expose existing projections and card renderers to the shell without adding cross-feature imports.
 
 The kit owns `FloatingPanel` with `panelSize.ts`, `WidgetPanel`, `WidgetGrid`, `WidgetGalleryTile`, `DashboardTile`, `SortableCanvas` (the one drag-and-drop path, for the dashboard's sections and the panel editor's grid) and `PageActions`. Components expose typed variants and own their styles. Compact charts reuse Activity's legend and series order. Keep projections shared with Activity in `src/features/shared`, and reads and action state in `src/store`. Shared resource subscribers negotiate the fastest requested cadence. Hidden panels mount no widget reads; collapsed panels mount only the speed summary. Mode drafts and group control state remain shared with their full pages and survive closing the panel.
 
@@ -140,11 +140,11 @@ A small page need not have every piece; one with nothing to project has no `view
 
 ### Engines
 
-The native API contract is shared by any engine that implements it; honk is the only one today. Engine-specific knowledge lives only in `src/api/engines`: setting names, section names, why a capability is off, which sources hold credentials. `engineOf(version)` picks the engine by the API name, and a feature asks the returned `Engine` for neutral data and reasons (`EngineReason`), then maps them to its own messages. An engine doona does not know gives no reasons, so the page falls back to what the contract says.
+The native API contract is shared by any engine that implements it; honk is the only one today. Engine-specific knowledge lives only in `src/api/engines`: setting names, section names, why a capability is off, which sources hold credentials. `engineOf(version)` picks the adapter by `version.engine.name`, and a feature asks the returned `Engine` for neutral data and reasons (`EngineReason`), then maps them to its own messages. An engine doona does not know gives no reasons, so the page falls back to what the contract says.
 
 Features, the shell and the store never compare the engine or API name, or an `Engine`'s `id`. Comments may cite honk's source to explain a contract behaviour a feature handles.
 
-To add an engine, add `src/api/engines/<engine>.ts` that implements `Engine`, add its id to `Engine['id']`, map its API name in `engineOf`, and extend `index.test.ts`. When a feature needs an explanation the adapter does not offer, add a neutral method or reason code to `types.ts`, with an answer for the unknown engine.
+To add an engine, add `src/api/engines/<engine>.ts` that implements `Engine`, add its id to `Engine['id']`, map its engine name in `engineOf`, and extend `index.test.ts`. When a feature needs an explanation the adapter does not offer, add a neutral method or reason code to `types.ts`, with an answer for the unknown engine.
 
 ### Single-source lists
 
@@ -228,6 +228,8 @@ Each role has one kit component in `src/ui`. Variants are typed props, never cla
 | TableView                         | `DataTable`                                       |
 | InlineAlert, IllustratedMessage   | `InlineAlert`, `Empty`, `ErrorMessage`            |
 | TagGroup                          | `Tags`, `Tag`                                     |
+
+Searchable pickers keep the search field fixed; only the option list scrolls. The popover and dialog shrink to the available height rather than adding another scrollbar.
 
 What this leaves out, on purpose:
 

@@ -1,6 +1,6 @@
 # Country flags
 
-Doona uses the self-hosted Twemoji Country Flags font for every flag in UI text,
+doona uses the self-hosted Twemoji Country Flags font for every flag in UI text,
 including node, group and source names, menus and tooltips. The font comes first
 in the body and monospace stacks. Its Unicode range contains regional indicators,
 the black flag and subdivision tags; all other characters retain the language's
@@ -71,9 +71,7 @@ The font is vendored unchanged from `country-flag-emoji-polyfill@0.1.10`:
 - Font build: Mozilla Foundation, Apache-2.0.
 
 `NOTICE`, `REUSE.toml` and `tools/notices.mjs` retain the attribution and stage the
-licence texts in the program archive. The honk-lab notices/provenance helpers
-cover dependency closures and tagged embedded releases; this vendored asset uses
-doona's existing release tooling. The comparison uses flag-icons 7.5.0 by
+licence texts in the program archive. The comparison uses flag-icons 7.5.0 by
 Panayiotis Lipiridis, MIT, from <https://github.com/lipis/flag-icons>; those SVGs
 are evaluation assets only and do not ship.
 

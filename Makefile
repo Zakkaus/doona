@@ -36,7 +36,7 @@ install-fonts:
 	find dist/fonts -type f | while read -r f; do \
 		$(INSTALL) -Dm644 "$$f" "$(DATADIR)/$${f#dist/}" || exit 1; \
 	done
-	$(INSTALL) -Dm644 public/fonts/OFL.txt "$(DOCDIR)/OFL.txt"
+	$(INSTALL) -Dm644 dist/fonts/OFL.txt "$(DOCDIR)/OFL.txt"
 
 package:
 	tools/package.sh

@@ -45,7 +45,7 @@ endef
 
 define Package/doona/description
   Static files for the doona web interface, installed under /usr/share/doona.
-  Point the engine's ui setting at that directory.
+  Point the engine's native API ui setting (honk: experimental.native_api.ui) at that directory, or serve it with a web server.
 endef
 
 define Package/doona-fonts

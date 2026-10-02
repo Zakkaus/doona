@@ -19,7 +19,7 @@ Closes #
 - [ ] 我理解此修改，并愿意为每一行内容负责。AI 无法代我答复。
 - [ ] 此分支基于当前的 `main`。
 - [ ] 每个提交只包含一项完整修改，标题采用英文 `type(scope): subject`，并附简短英文正文。
-- [ ] 我已执行 `pnpm check`、`pnpm build`、`pnpm check:size` 和 `pnpm e2e`，并在验证部分记录结果。
+- [ ] 我已执行 `CONTRIBUTING.md` 中适用的 CI 检查，并在验证部分记录命令、结果及未能完成的检查。
 - [ ] 如果修改了界面文字，我已更新 `en.json` 以及每种标记为 `complete` 的语言的字符串。
 - [ ] 如果修改了界面外观，我已附上浅色和深色模式的截图。
 - [ ] 如果修改了 API 契约，我已执行 `pnpm gen:api` 和 `pnpm check:gen`。
