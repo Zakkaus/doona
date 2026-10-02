@@ -15,7 +15,8 @@ export function probeMembers(request: ProbeRequest, nodes: Node[], groups: Group
   const target = request.target;
   const group = target.type === 'group' ? groups.find(g => g.id === target.group_id) : undefined;
   let ids = target.type === 'node' ? [target.node_id] : group!.members.map(m => m.id);
-  if (Array.isArray(request.members)) ids = ids.filter(id => request.members.includes(id));
+  const members = request.members;
+  if (Array.isArray(members)) ids = ids.filter(id => members.includes(id));
   if (request.members === 'leaves') {
     const leaves = new Set<string>();
     const visited = new Set<string>();
@@ -47,6 +48,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
         const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
         const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
         const state = latency_ms === null ? 'unavailable' : 'healthy';
+        const warmth = latency_ms === null ? 'unknown' : request.kind === 'http' ? request.warmth : 'cold';
         // A success folds into both averages, the 10-sample one as a tenth so the mock keeps no window; a failure
         // reports neither.
         const fold = (average: number | null | undefined, weight: number) =>
@@ -56,7 +58,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           transport,
           purpose,
           ip_version,
-          warmth: request.warmth,
+          warmth,
           measurement: request.kind === 'http' ? 'http_headers' : request.kind === 'dns' ? 'dns_round_trip' : 'tcp_connect',
           sample_source: 'probe',
           state,
@@ -72,7 +74,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
               h.transport === transport &&
               h.purpose === purpose &&
               h.ip_version === ip_version &&
-              h.warmth === request.warmth &&
+              h.warmth === warmth &&
               h.measurement === observation.measurement
           );
           if (index < 0) node.health.push(observation);
@@ -95,7 +97,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
               h.transport === transport &&
               h.purpose === purpose &&
               h.ip_version === ip_version &&
-              h.warmth === request.warmth &&
+              h.warmth === warmth &&
               h.measurement === observation.measurement
           );
           if (index < 0) group.runtime.health.push(health);
@@ -108,7 +110,7 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
           purpose,
           transport,
           ip_version,
-          warmth: request.warmth,
+          warmth,
           state,
           latency_ms,
           health_updated: !!node,

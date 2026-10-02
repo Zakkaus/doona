@@ -1,5 +1,5 @@
 import createClient, {type Middleware} from 'openapi-fetch';
-import type {paths} from './types';
+import type {components, paths} from './types';
 import type {Api} from './api';
 import {
   operationDone,
@@ -289,7 +289,8 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
       });
       return resultOrAccepted(result);
     },
-    startProbe: async (body, signal) => accepted(await starts.POST('/api/v1/probes', {body, signal})),
+    // The generated default requires members, but the contract forbids it on node targets.
+    startProbe: async (body, signal) => accepted(await starts.POST('/api/v1/probes', {body: body as components['schemas']['ProbeRequest'], signal})),
     connections: async (query, signal) => read(await client.GET('/api/v1/connections', {params: {query}, signal})),
     flows: async (query, signal) => read(await client.GET('/api/v1/flows', {params: {query}, signal})),
     // Readable in openapi-fetch drops required null fields from composed schemas.

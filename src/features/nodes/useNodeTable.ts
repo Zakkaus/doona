@@ -4,6 +4,8 @@ import {isBuiltinOutbound} from '../../dae/vocab';
 import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
+import type {ProbeOptions} from '../../store/probeOptions';
+import type {ProbeOptionsDialogModel} from '../shared/ProbeOptionsDialog';
 import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
 import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
@@ -52,6 +54,7 @@ export function useNodeTable(input: NodeTableInput) {
   const lang = useLang();
   const locale = LOCALE[lang];
   const probe = useNodeProbe(reload);
+  const [probeTarget, setProbeTarget] = useState<Node | null>(null);
   const [search, setSearch] = useState(query ?? '');
   useLinked(query, value => setSearch(value ?? ''));
   const [group, setGroup] = useState(input.groupQuery ?? '');
@@ -107,8 +110,10 @@ export function useNodeTable(input: NodeTableInput) {
       source: sourceOf(node),
       groupLinks: node.group_ids.map(id => ({id, label: names.get(id) ?? id, href: href('policies', {group: id})})),
       canProbe: canProbe && !isBuiltinOutbound(node.protocol),
-      probe: () =>
-        void runProbe(node.id).then(
+      probeOptions: () => setProbeTarget(node),
+      canProbeOptions: probe.choices.length > 0 && !isBuiltinOutbound(node.protocol),
+      probe: (options?: ProbeOptions) =>
+        void runProbe(node.id, options).then(
           result => {
             if (!result) return;
             const {kind, text} = probeToast(result, node.id, node.name, t);
@@ -124,13 +129,26 @@ export function useNodeTable(input: NodeTableInput) {
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
+    [names, lang, sourceOf, canProbe, probe.choices.length, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
   return {
     rows,
     probeBusy,
+    probeOptions: probeTarget
+      ? {
+          name: probeTarget.name,
+          group: false,
+          choices: probe.choices,
+          busy: !!probeBusy,
+          close: () => setProbeTarget(null),
+          submit: (options: ProbeOptions) => {
+            build(probeTarget).probe(options);
+            setProbeTarget(null);
+          }
+        }
+      : null,
     search,
     setSearch,
     group: activeGroup,
@@ -180,7 +198,9 @@ export type NodeTableView = {
     probeLabel: string;
     removeLabel: string;
     canProbe: boolean;
-    probe: () => void;
+    probe: (options?: ProbeOptions) => void;
+    canProbeOptions: boolean;
+    probeOptions: () => void;
     menu: () => Array<{id: string; label: string}>;
     join: (key: string) => void;
     removable: boolean;
@@ -190,6 +210,7 @@ export type NodeTableView = {
   }>;
   // The node whose probe is running; while one runs, every probe button waits.
   probeBusy: string | null;
+  probeOptions: ProbeOptionsDialogModel | null;
   search: string;
   setSearch: (value: string) => void;
   group: string;

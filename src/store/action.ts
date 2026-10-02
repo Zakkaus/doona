@@ -168,7 +168,5 @@ export function latencyProbe(capabilities: Capabilities | undefined, target: Pro
     ip_version: ipv4 && ipv6 ? 'any' : ipv6 ? 'ipv6' : 'ipv4'
   };
   if (target.type === 'group') request.members = 'direct';
-  // The generated type reads the contract's `default: direct` as "always present"; the contract itself forbids
-  // the field on a node target.
-  return request as ProbeRequest;
+  return request;
 }

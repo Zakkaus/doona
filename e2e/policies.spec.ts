@@ -230,6 +230,7 @@ test('a disabled Test all does not blame TCP support when the probe limits rule 
   await page.goto('/#/policies');
   const probe = await moreItem(page.getByRole('region', {name: 'auto', exact: true}), 'Test all');
   await expect(probe).toBeDisabled();
+  await expect(page.getByRole('menuitem', {name: 'Probe with options…', exact: true})).toBeDisabled();
   // The lock opens the same reason as the menu item's description.
   const reason = 'Test all is not available for this group';
   await expect(probe).toHaveAccessibleDescription(reason);
@@ -555,4 +556,48 @@ test('a group remeasures across 12 and 13 members and viewport resizes', async (
         .toBe(true);
     }
   }
+});
+
+test('policy probe entries share the busy state', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  handlers['POST probes'] = async request => {
+    await pending;
+    return api.startProbe(request.postDataJSON());
+  };
+  await page.goto('/#/policies');
+  const group = page.getByRole('region', {name: 'gaming', exact: true});
+  await moreAction(group, 'Test all');
+  try {
+    await expect(await moreItem(group, 'Testing…')).toBeDisabled();
+    await expect(page.getByRole('menuitem', {name: 'Probe with options…', exact: true})).toBeDisabled();
+  } finally {
+    release();
+  }
+});
+
+for (const available of [false, true]) {
+  test(`policy options follow advertised choices with DNS-only probes (${available})`, async ({page}) => {
+    const {capabilities} = await mockBackend(page);
+    capabilities.resources.probes.available = available;
+    capabilities.resources.probes.kinds = ['dns'];
+    await page.goto('/#/policies');
+    const group = page.getByRole('region', {name: 'gaming', exact: true});
+    await expect(await moreItem(group, 'Test all')).toBeDisabled();
+    const options = page.getByRole('menuitem', {name: 'Probe with options…', exact: true});
+    if (available) await expect(options).toBeDisabled();
+    else await expect(options).toHaveCount(0);
+  });
+}
+
+test('an empty group still shows offered probe options in the disabled state', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET groups/gaming'] = async () => ({...(await api.group('gaming')), members: []});
+  await page.goto('/#/policies');
+  const group = page.getByRole('region', {name: 'gaming', exact: true});
+  await expect(await moreItem(group, 'Test all')).toBeDisabled();
+  await expect(page.getByRole('menuitem', {name: 'Probe with options…', exact: true})).toBeDisabled();
 });

@@ -7,6 +7,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Added
 
 - Routing traces accept an optional DSCP value from 0 to 63 to evaluate `dscp(...)` rules. (#332)
+- Nodes and policy groups offer probe options for HTTP, TCP connect and DNS over TCP or UDP, cold probes, and nodes in nested groups. (#334)
 - The DNS cache tab deletes entries by full name, suffix, keyword or regex, by record type, or both, after showing how many match, when the backend supports it. (#306, #314)
 - The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
 - A failure toast, and the notice for an operation with an unknown result, has a Copy error action on its button row, after the toast's own button if it has one. It copies the request, status, error code, backend message, request ID and operation for a bug report, so the browser console is no longer needed. Settings > About has a Copy recent errors button for the last 20, kept in memory only, with secrets and request bodies left out. (#304)

@@ -727,7 +727,7 @@ test('adding a node to a group opens its staged editor on the policies page', as
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
   const menu = page.getByRole('menu', {name: 'Node actions', exact: true});
-  await expect(menu.getByRole('menuitem')).toHaveText(['Edit…', 'Add to group', 'Change flag…']);
+  await expect(menu.getByRole('menuitem')).toHaveText(['Edit…', 'Probe with options…', 'Add to group', 'Change flag…']);
   await menu.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
   await expect(submenu.locator('[slot=description]')).toHaveCount(0);
@@ -1288,3 +1288,87 @@ test('the interval jump edits the declaring include while the main file is read-
   expect(include).toBe("subscription {\n  harbor: { # keep\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: 6h\n  }\n}\n");
   expect(requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname)).toEqual(['/api/v1/config/sources/subs']);
 });
+
+test('node probe options send DNS over UDP with a cold session', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let body: unknown;
+  handlers['POST probes'] = async request => {
+    body = request.postDataJSON();
+    return api.startProbe(request.postDataJSON());
+  };
+  await page.goto('/#/nodes?provider=inline');
+  const row = nodeRows(page).filter({hasText: 'hk-01'});
+  await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Probe with options…', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Probe options'});
+  await expect(dialog.getByRole('switch', {name: 'Cold', exact: true})).not.toBeChecked();
+  await expect(dialog.getByRole('switch', {name: 'Include nodes in nested groups'})).toHaveCount(0);
+  await dialog.getByRole('button', {name: /Kind/}).click();
+  await page.getByRole('option', {name: 'DNS (UDP)', exact: true}).click();
+  await dialog.getByRole('switch', {name: 'Cold', exact: true}).press('Space');
+  await dialog.getByRole('button', {name: 'Probe', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(() => body).toEqual({target: {type: 'node', node_id: 'hk-01'}, kind: 'dns', transport: ['udp'], ip_version: 'any', warmth: 'cold'});
+  await expect(page.locator('.rp-toast.positive')).toContainText('hk-01');
+  expect((await api.nodes()).nodes.find(node => node.id === 'hk-01')?.health).toContainEqual(
+    expect.objectContaining({purpose: 'dns', measurement: 'dns_round_trip', transport: 'udp', warmth: 'cold', sample_source: 'probe'})
+  );
+});
+
+test('group probe options submit leaves through the existing result handling', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let body: unknown;
+  handlers['POST probes'] = async request => {
+    body = request.postDataJSON();
+    return api.startProbe(request.postDataJSON());
+  };
+  await page.goto('/#/policies');
+  const group = page.getByRole('region', {name: 'gaming', exact: true});
+  await moreAction(group, 'Probe with options…');
+  const dialog = page.getByRole('dialog', {name: 'Probe options'});
+  await expect(dialog.getByRole('switch', {name: 'Include nodes in nested groups'})).not.toBeChecked();
+  await dialog.getByRole('switch', {name: 'Include nodes in nested groups'}).press('Space');
+  await dialog.getByRole('button', {name: 'Probe', exact: true}).click();
+  await expect
+    .poll(() => body)
+    .toEqual({target: {type: 'group', group_id: 'gaming'}, kind: 'http', transport: ['tcp'], ip_version: 'any', warmth: 'warm', members: 'leaves'});
+  await expect(page.locator('.rp-toast.positive')).toContainText('gaming');
+});
+
+test('node probe entries share the busy state', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  handlers['POST probes'] = async request => {
+    await pending;
+    return api.startProbe(request.postDataJSON());
+  };
+  await page.goto('/#/nodes?provider=inline');
+  const row = nodeRows(page).filter({hasText: 'hk-01'});
+  const probe = row.getByRole('button', {name: 'Test hk-01', exact: true});
+  await probe.click();
+  try {
+    await expect(probe).toBeDisabled();
+    await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+    await expect(page.getByRole('menuitem', {name: 'Probe with options…', exact: true})).toHaveCount(0);
+  } finally {
+    release();
+  }
+});
+
+for (const available of [false, true]) {
+  test(`node options follow advertised choices with DNS-only probes (${available})`, async ({page}) => {
+    const {capabilities} = await mockBackend(page);
+    capabilities.resources.probes.available = available;
+    capabilities.resources.probes.kinds = ['dns'];
+    await page.goto('/#/nodes?provider=inline');
+    const row = nodeRows(page).filter({hasText: 'hk-01'});
+    await expect(row.getByRole('button', {name: 'Test hk-01', exact: true})).toHaveCount(0);
+    await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+    const options = page.getByRole('menuitem', {name: 'Probe with options…', exact: true});
+    if (available) await expect(options).toBeDisabled();
+    else await expect(options).toHaveCount(0);
+  });
+}

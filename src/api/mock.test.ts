@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './mock';
 import {chainLabel, ipLiteral, memoryTone, outboundUsage, preferredHealth, sourceIp} from './selectors';
 import {addU64} from './u64';
-import type {ApiEvent} from './model';
+import type {ApiEvent, ProbeRequest} from './model';
 import {connectionFixtures, trafficHistory} from './mock/fixtures';
 import {faultMemoryLimit, runtimeMemory} from './mock/fixtures/runtime';
 import {geodataPresets} from '../dae/geodata';
@@ -643,4 +643,46 @@ it.each(['', '   '])('refuses an empty DNS deletion name %j without flushing', a
   const before = await api.dnsCache();
   await expect(api.deleteDnsCacheByName({name})).rejects.toMatchObject({status: 400});
   expect(await api.dnsCache()).toEqual(before);
+});
+
+it.each([
+  {kind: 'http', measurement: 'http_headers', purpose: 'data', transport: 'tcp'},
+  {kind: 'tcp_connect', measurement: 'tcp_connect', purpose: 'data', transport: 'tcp'},
+  {kind: 'dns', measurement: 'dns_round_trip', purpose: 'dns', transport: 'tcp'},
+  {kind: 'dns', measurement: 'dns_round_trip', purpose: 'dns', transport: 'udp'}
+] as const)('publishes measured warmth for $kind over $transport with both request values', async ({kind, measurement, purpose, transport}) => {
+  for (const warmth of ['warm', 'cold'] as const) {
+    vi.useFakeTimers();
+    const api = createMockApi();
+    const request: ProbeRequest = {
+      target: {type: 'group', group_id: 'gaming'},
+      kind,
+      transport: [transport],
+      warmth,
+      ip_version: 'any',
+      members: 'leaves'
+    };
+    const accepted = await api.startProbe(request);
+    const terminal = api.pollOperation(accepted);
+    await vi.runAllTimersAsync();
+    const result = await terminal;
+    if (result.status !== 'succeeded' || result.kind !== 'probe') throw new Error('Probe did not succeed');
+    const nodes = (await api.nodes()).nodes;
+    expect(result.result.results.length).toBeGreaterThan(0);
+    expect(result.result.results.some(row => row.state === 'healthy')).toBe(true);
+    for (const row of result.result.results) {
+      const measuredWarmth = row.state === 'healthy' ? (kind === 'http' ? warmth : 'cold') : 'unknown';
+      expect(row).toMatchObject({kind: request.kind, transport, purpose, warmth: measuredWarmth, resolved_leaf_node_id: row.member_id});
+      expect(nodes.find(node => node.id === row.member_id)?.health).toContainEqual(
+        expect.objectContaining({measurement, purpose, transport, ip_version: row.ip_version, warmth: measuredWarmth, observed_at: row.observed_at})
+      );
+    }
+  }
+});
+
+it('rejects a node probe that specifies members', async () => {
+  const api = createMockApi();
+  await expect(
+    api.startProbe({target: {type: 'node', node_id: 'hk-01'}, kind: 'http', transport: ['tcp'], ip_version: 'ipv4', warmth: 'warm', members: 'direct'})
+  ).rejects.toMatchObject({status: 400, code: 'invalid_request'});
 });

@@ -1,4 +1,5 @@
-import {createContext, useContext, useMemo} from 'react';
+import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
+import {createContext, useContext, useMemo, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
 import {Button, ChoiceMenu, DataTable, FitTags, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
 import {NodeName, FlagEditingContext} from '../../ui/NodeName';
@@ -14,16 +15,37 @@ import SpeedFast from '../../ui/icons/SpeedFast';
 import {primaryFirst} from './tableColumns';
 import type {NodeTableView} from './useNodeTable';
 
-// The node whose probe is running, read by the probe buttons alone, so a probe starting or ending re-renders the
-// buttons on screen rather than the rows or columns.
+// Probe controls read the running node without rebuilding the table rows or columns.
 const ProbeBusy = createContext<string | null>(null);
+function useProbeDisabled(row: NodeTableView['rows'][number]) {
+  return !!useContext(ProbeBusy) || !row.canProbe;
+}
 function ProbeButton({row}: {row: NodeTableView['rows'][number]}) {
   const busy = useContext(ProbeBusy);
+  const disabled = useProbeDisabled(row);
   return (
-    <Button small quiet icon isPending={busy === row.id} isDisabled={!!busy} label={row.probeLabel} onPress={row.probe}>
+    <Button small quiet icon isPending={busy === row.id} isDisabled={disabled} label={row.probeLabel} onPress={row.probe}>
       <SpeedFast />
     </Button>
   );
+}
+// The menu's probe entry follows the probe button: it is left out while a probe runs or the node cannot be probed,
+// and a menu with nothing else in it is left out with it.
+type RowMenuProps = Extract<ComponentProps<typeof ChoiceMenu>, {submenus: unknown}>;
+function ProbeMenu({
+  row,
+  hasOthers,
+  submenus,
+  ...props
+}: Omit<RowMenuProps, 'submenus'> & {
+  row: NodeTableView['rows'][number];
+  hasOthers: boolean;
+  submenus: (probeOptions: Array<{label: string; onAction: () => void}>) => Exclude<RowMenuProps['submenus'], () => unknown>;
+}) {
+  const t = useT();
+  const disabled = useProbeDisabled(row);
+  const probeOptions = row.canProbeOptions && !disabled ? [{label: t('probe.options'), onAction: row.probeOptions}] : [];
+  return hasOthers || probeOptions.length ? <ChoiceMenu {...props} submenus={() => submenus(probeOptions)} /> : null;
 }
 export function NodeTable({model: m}: {model: NodeTableView}) {
   const t = useT();
@@ -85,31 +107,32 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         render: row => (
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
-            {(canJoin || editFlag || row.edit) && (
-              <ChoiceMenu
-                quiet
-                small
-                chevron={false}
-                label={t('nodes.actions')}
-                submenus={() => [
-                  ...(row.edit ? [{label: t('nodes.editAction'), onAction: row.edit}] : []),
-                  ...(canJoin
-                    ? [
-                        {
-                          label: t('nodes.addToGroup'),
-                          sections: [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}],
-                          onAction: row.join,
-                          actions: canCreate ? [{label: t('nodes.newGroup'), onAction: () => row.join('/new')}] : [],
-                          searchLabel: t('ui.filterGroups')
-                        }
-                      ]
-                    : []),
-                  ...(editFlag ? [{label: t('flags.edit'), onAction: () => editFlag(row.name)}] : [])
-                ]}
-              >
-                <MoreHorizontal />
-              </ChoiceMenu>
-            )}
+            <ProbeMenu
+              row={row}
+              hasOthers={!!(canJoin || editFlag || row.edit)}
+              quiet
+              small
+              chevron={false}
+              label={t('nodes.actions')}
+              submenus={probeOptions => [
+                ...(row.edit ? [{label: t('nodes.editAction'), onAction: row.edit}] : []),
+                ...probeOptions,
+                ...(canJoin
+                  ? [
+                      {
+                        label: t('nodes.addToGroup'),
+                        sections: [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}],
+                        onAction: row.join,
+                        actions: canCreate ? [{label: t('nodes.newGroup'), onAction: () => row.join('/new')}] : [],
+                        searchLabel: t('ui.filterGroups')
+                      }
+                    ]
+                  : []),
+                ...(editFlag ? [{label: t('flags.edit'), onAction: () => editFlag(row.name)}] : [])
+              ]}
+            >
+              <MoreHorizontal />
+            </ProbeMenu>
             {row.removable && (
               <Button small quiet icon isDisabled={busy || !!row.removeReason} tip={row.removeReason ?? undefined} label={row.removeLabel} onPress={row.remove}>
                 <Close />
@@ -124,6 +147,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
   return (
     <>
+      {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
       {m.scope && <p className="rp-label">{m.scope}</p>}
       <div className="rp-toolbar">
