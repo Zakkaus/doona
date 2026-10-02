@@ -5,7 +5,7 @@ import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult}
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
-import {activationError, etag, finished, settle, latencyProbe, useAction} from './action';
+import {activationError, etag, finished, settle, latencyProbe, readBackUnconfirmed, useAction} from './action';
 import {useSharedControl} from './sharedControl';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
@@ -81,7 +81,7 @@ export function useGroups(enabled = true, every: number = poll.inventory) {
   const api = getApi();
   return useResource({key: ['groups'], every, fetch: signal => api.groups(signal)}, {enabled});
 }
-export function useGroupControl(id: string, refetchGroups: () => void, refetchNodes: () => void, paused = false) {
+export function useGroupControl(id: string, refetchGroups: () => unknown, refetchNodes: () => unknown, paused = false) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
@@ -91,17 +91,14 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
   const action = useAction<'selection' | 'probe' | 'config'>({shared: `group-action:${id}`});
   const {run: act} = action;
   // Every control changes what the lists show, so all three refetch once it has gone through.
+  const refetchShown = useCallback(() => Promise.all([refetch(), refetchGroups(), refetchNodes()]), [refetch, refetchGroups, refetchNodes]);
   const run = useCallback(
     async <T>(kind: 'selection' | 'probe' | 'config', action: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> => {
       const result = await act(kind, action);
-      if (result !== undefined) {
-        refetch();
-        refetchGroups();
-        refetchNodes();
-      }
+      if (result !== undefined) void refetchShown();
       return result;
     },
-    [act, refetch, refetchGroups, refetchNodes]
+    [act, refetchShown]
   );
   // A TCP probe needs the backend to offer it and the group to accept it.
   const request = latencyProbe(capabilities, {type: 'group', group_id: id});
@@ -138,8 +135,14 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
     setNetwork,
     busy: action.busy,
     canProbe,
-    select: useCallback((member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal)), [api, id, network, run]),
-    clearOverride: useCallback((scope = network) => run('selection', signal => api.clearGroupOverride(id, scope, signal)), [api, id, network, run]),
+    select: useCallback(
+      (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal).catch(readBackUnconfirmed(refetchShown, signal))),
+      [api, id, network, run, refetchShown]
+    ),
+    clearOverride: useCallback(
+      (scope = network) => run('selection', signal => api.clearGroupOverride(id, scope, signal).catch(readBackUnconfirmed(refetchShown, signal))),
+      [api, id, network, run, refetchShown]
+    ),
     probe: useCallback(
       () =>
         run('probe', async signal => {
@@ -147,15 +150,11 @@ export function useGroupControl(id: string, refetchGroups: () => void, refetchNo
           try {
             return await probeGroup(api, capabilities, resource.data, signal);
           } catch (error) {
-            if (!signal.aborted) {
-              refetch();
-              refetchGroups();
-              refetchNodes();
-            }
+            if (!signal.aborted) void refetchShown();
             throw error;
           }
         }),
-      [api, capabilities, resource.data, canProbe, run, refetch, refetchGroups, refetchNodes]
+      [api, capabilities, resource.data, canProbe, run, refetchShown]
     ),
     patchConfig: patch,
     // Turning off a value the group never set clears it again rather than writing false.

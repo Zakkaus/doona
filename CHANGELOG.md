@@ -13,6 +13,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Pressing Enter twice quickly on a drag handle no longer starts a second drag and raises an error; the second press is ignored until the first drag is ready for its keys. (#300)
 - On the Config page, every module card shows one summary line under its header instead of status dots, a per-node edit link list, and the group policies. The Nodes page no longer accepts the `editNodeSource` link parameter that only those links used. (#298)
+- An operation the backend accepted whose progress can no longer be read is reported as having an unknown result, and the page is read again, for every operation rather than only configuration writes. A group selection or runtime setting refused as temporarily unavailable reads the group or the settings back, since the change may have been stored, and the control stays busy until that read lands and the backend's Retry-After has passed.
+- Applying held rules keeps going when the page that started it closes: rules whose file the backend accepted leave the held list, so the next apply does not write them a second time.
 - On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
 
 ## [0.1.0-beta.12] - 2026-09-30

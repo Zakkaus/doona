@@ -4,7 +4,7 @@ import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
-import {activationError, finished, settle, useAction} from './action';
+import {activationError, finished, readBackUnconfirmed, settle, useAction} from './action';
 export function useVersion(enabled = true) {
   const api = getApi();
   return useResource({key: ['version'], every: 0, fetch: signal => api.version(signal)}, {enabled});
@@ -74,7 +74,7 @@ export function useRuntimeSettings(enabled = true) {
   const save = useCallback(
     (patch: RuntimeSettingsPatch) =>
       run('save', async signal => {
-        const next = await api.patchRuntimeSettings(patch, signal);
+        const next = await api.patchRuntimeSettings(patch, signal).catch(readBackUnconfirmed(refetch, signal));
         setSaved({api, value: next});
         refetch();
         return next;

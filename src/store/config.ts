@@ -1,13 +1,12 @@
 import {ApiError, clientError} from '../api/error';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getApi} from '../api/index';
-import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult, OperationAccepted} from '../api/model';
+import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
 import {LocalError} from '../api/error';
 import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {activationError, etag, finished, settle, useAction} from './action';
-import {refetchAll} from './resourceCore';
 import type {Api} from '../api/api';
 import {sourceAt} from '../dae/newSource';
 
@@ -100,16 +99,6 @@ export async function withinLimits<T>(limits: WriteLimits, content: string, body
   });
 }
 
-// The backend accepted the write, so the file holds it: a poll that fails from here on leaves the outcome unknown, as a
-// forgotten operation does, rather than the write failed.
-function settleWrite(api: Api, accepted: OperationAccepted, signal: AbortSignal) {
-  return settle(api, accepted, signal).catch(error => {
-    if (signal.aborted || error instanceof LocalError) throw error;
-    void refetchAll();
-    throw new LocalError('ui.operationUnknown');
-  });
-}
-
 // Creates an empty source at `path` and returns the id the reloaded configuration lists it under, or null when it
 // lists none there. A failed reload removes the new file, which the operation reports as not written. Once the reload
 // succeeded the file exists, so a failed read-back only leaves the id unknown: the create still succeeded.
@@ -117,7 +106,7 @@ export async function createSource(api: Api, path: string, signal: AbortSignal):
   const accepted = await api.createConfigSource(path, '', signal).catch(error => {
     throw activationError(error) ?? error;
   });
-  const operation = await settleWrite(api, accepted, signal);
+  const operation = await settle(api, accepted, signal);
   finished(operation, 'reload');
   signal.throwIfAborted();
   const config = await readConfigFresh(api, signal).catch(() => {
@@ -207,7 +196,7 @@ export function useConfigEditor(refetch: () => void, {rethrow = false, shared}: 
           });
           lastRefused.current = null;
           signal.throwIfAborted();
-          const operation = await settleWrite(api, accepted, signal);
+          const operation = await settle(api, accepted, signal);
           signal.throwIfAborted();
           refetch();
           return {result: finished(operation, 'reload', {written: true})};

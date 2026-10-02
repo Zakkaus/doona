@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react';
+import {useRef} from 'react';
 import {getApi} from '../../api/index';
 import {LocalError} from '../../api/error';
 import type {ConfigSource} from '../../api/model';
@@ -15,13 +15,14 @@ type FileOutcome = {written: boolean; failure: PendingFailure | null};
 const reread = () => void refetchAll();
 // Writes held rules one file at a time, each with its own validation, If-Match and reload, and stops at the first
 // file that fails. Resolves to the outcome, or to undefined when cancelled or while another apply runs. Rules in a
-// written file leave the held list, even when its reload failed; the rest stay for the next attempt.
+// written file leave the held list, even when its reload failed; the rest stay for the next attempt. The apply belongs
+// to the held list rather than the page that started it: closing that page leaves it running, so a write the backend
+// accepted is still settled and its rules leave the list instead of being inserted again by the next apply.
 export function usePendingApply() {
   const t = useT();
-  const editor = useConfigEditor(reread, {rethrow: true});
+  const editor = useConfigEditor(reread, {rethrow: true, shared: 'pending-apply'});
   const busy = usePendingRules().applying;
   const active = useRef<AbortController | null>(null);
-  useEffect(() => () => active.current?.abort(), []);
   const writeFile = async (group: PendingRule[], signal: AbortSignal): Promise<FileOutcome | undefined> => {
     let sources: ConfigSource[] = [];
     let text: string | null | undefined;
@@ -75,9 +76,10 @@ export function usePendingApply() {
       pendingRules.end();
     }
   };
-  // Stops this hook's apply wherever it is, before the write or during it.
+  // Stops this hook's apply wherever it is, before the write or during it; an apply another control started goes on.
   const cancel = () => {
-    active.current?.abort();
+    if (!active.current) return;
+    active.current.abort();
     editor.cancel();
   };
   return {apply, busy, cancel};
