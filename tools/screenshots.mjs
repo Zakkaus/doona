@@ -9,6 +9,13 @@ import {dirname, join} from 'node:path';
 import {signInDemo} from './demo-session.mjs';
 import {langs} from './languages.mjs';
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(
+    'Usage: node tools/screenshots.mjs [URL] [DIR]\nDefaults: URL=http://127.0.0.1:4177 DIR=docs/screenshots\nRequires a running mock-backed preview, Playwright Chromium, cwebp and img2webp.'
+  );
+  process.exit(0);
+}
+
 const require = createRequire(import.meta.url);
 let browserModule;
 try {
@@ -20,10 +27,12 @@ try {
 const {chromium} = require(browserModule);
 const [baseURL = 'http://127.0.0.1:4177', dir = 'docs/screenshots'] = process.argv.slice(2);
 const shots = [
-  ['activity', 'light', '#/activity'],
-  ['activity', 'dark', '#/activity'],
-  ['policies', 'light', '#/policies'],
-  ['rules', 'light', '#/rules']
+  ['activity', 'light', '#/activity', '.rp-donut path'],
+  ['activity', 'dark', '#/activity', '.rp-donut path'],
+  ['policies', 'light', '#/policies', '.rp-node'],
+  ['rules', 'light', '#/rules', '.rp-radios'],
+  ['config-source', 'light', '#/config?tab=source', '.cm-content[contenteditable=true]'],
+  ['config-global', 'light', '#/config?tab=global', '#config-global-form input']
 ];
 // The palettes with the looks that differ: a family's light side is one look however many dark flavours it has.
 const looks = [
@@ -103,6 +112,7 @@ async function openPage(browser, lang, route, ready, options = {}) {
     localStorage.setItem('doona-lang', lang);
     localStorage.setItem('doona-scheme', 'light');
     localStorage.setItem('doona-palette', 'rose-pine/moon');
+    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
   }, lang);
   const page = await context.newPage();
   await page.goto(`${baseURL}/${route}`);
@@ -257,6 +267,7 @@ try {
         localStorage.setItem('doona-lang', 'en');
         localStorage.setItem('doona-scheme', scheme);
         localStorage.setItem('doona-palette', palette);
+        localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
       },
       [palette, scheme]
     );
@@ -283,7 +294,7 @@ try {
   await sheet.close();
   for (const lang of langs) {
     mkdirSync(join(dir, lang), {recursive: true});
-    for (const [name, scheme, route] of shots) {
+    for (const [name, scheme, route, ready] of shots) {
       const context = await browser.newContext({viewport: {width: 1440, height: 920}, colorScheme: scheme, reducedMotion: 'reduce', serviceWorkers: 'block'});
       await context.addInitScript(signInDemo);
       await context.addInitScript(
@@ -291,15 +302,13 @@ try {
           localStorage.setItem('doona-lang', lang);
           localStorage.setItem('doona-scheme', scheme);
           localStorage.setItem('doona-palette', 'rose-pine/moon');
+          localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
         },
         [lang, scheme]
       );
       const page = await context.newPage();
       await page.goto(`${baseURL}/${route}`);
-      await page
-        .locator(name === 'policies' ? '.rp-node' : name === 'rules' ? '.rp-radios' : '.rp-donut path')
-        .first()
-        .waitFor();
+      await page.locator(ready).first().waitFor();
       await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
       await page.evaluate(() => document.fonts.ready);
       await screenshot(page, join(dir, lang, `${name}-${scheme}`));

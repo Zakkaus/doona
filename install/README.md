@@ -16,24 +16,28 @@ The OpenWrt, Alpine, Gentoo and Nix recipes are unpublished templates, not ready
 All four consume the prebuilt program archive, with the font archive where enabled.
 Before submission, replace the marked OpenWrt and Nix hashes using `SHA256SUMS`, generate Alpine checksums with
 `abuild checksum`, and generate the Gentoo `Manifest` with `ebuild … manifest`.
+The release workflow generates and attaches `SHA256SUMS`; it does not replace recipe placeholders.
+After publishing the assets, fill both OpenWrt hashes, run `abuild checksum`, generate the Gentoo `Manifest`
+with `ebuild doona-0.1.0_beta13.ebuild manifest`, and replace both Nix `lib.fakeHash` values.
+The Gentoo template keeps the existing `metadata.xml`; no version-specific metadata change is needed.
 
 ## Version spellings
 
-The recipes use tag `v0.1.0-beta.12`. Release assets keep the upstream version without the tag's `v`;
+The recipes use tag `v0.1.0-beta.13`. Release assets keep the upstream version without the tag's `v`;
 package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts`, which the deb names `doona-web-fonts`.
 
 | Format           | `doona` asset                                 | Version in package or recipe                        |
 | ---------------- | --------------------------------------------- | --------------------------------------------------- |
-| Program archive  | `doona-0.1.0-beta.12.tar.gz`                  | n/a                                                 |
-| Fonts archive    | `doona-fonts-0.1.0-beta.12.tar.gz`            | n/a                                                 |
-| Debian           | `doona-web_0.1.0-beta.12-1_all.deb`           | `0.1.0~beta.12-1`                                   |
-| RPM              | `doona-0.1.0-beta.12-1.noarch.rpm`            | Version `0.1.0~beta.12`, Release `1`                |
-| OpenWrt ipk      | `doona_0.1.0-beta.12-1_all.ipk`               | `0.1.0~beta.12-1`                                   |
-| Arch             | `doona-0.1.0beta12-1-any.pkg.tar.zst`         | pkgver `0.1.0beta12`, pkgrel `1`, default epoch `0` |
-| Alpine APKBUILD  | Download the program and fonts archives above | pkgver `0.1.0_beta12`, pkgrel `0`                   |
-| Gentoo ebuild    | Download the program and fonts archives above | PV `0.1.0_beta12`                                   |
-| OpenWrt Makefile | Download the program and fonts archives above | PKG_VERSION `0.1.0_beta12`, PKG_RELEASE `1`         |
-| Nix recipe       | Download the program and fonts archives above | `0.1.0-beta.12`                                     |
+| Program archive  | `doona-0.1.0-beta.13.tar.gz`                  | n/a                                                 |
+| Fonts archive    | `doona-fonts-0.1.0-beta.13.tar.gz`            | n/a                                                 |
+| Debian           | `doona-web_0.1.0-beta.13-1_all.deb`           | `0.1.0~beta.13-1`                                   |
+| RPM              | `doona-0.1.0-beta.13-1.noarch.rpm`            | Version `0.1.0~beta.13`, Release `1`                |
+| OpenWrt ipk      | `doona_0.1.0-beta.13-1_all.ipk`               | `0.1.0~beta.13-1`                                   |
+| Arch             | `doona-0.1.0beta13-1-any.pkg.tar.zst`         | pkgver `0.1.0beta13`, pkgrel `1`, default epoch `0` |
+| Alpine APKBUILD  | Download the program and fonts archives above | pkgver `0.1.0_beta13`, pkgrel `0`                   |
+| Gentoo ebuild    | Download the program and fonts archives above | PV `0.1.0_beta13`                                   |
+| OpenWrt Makefile | Download the program and fonts archives above | PKG_VERSION `0.1.0_beta13`, PKG_RELEASE `1`         |
+| Nix recipe       | Download the program and fonts archives above | `0.1.0-beta.13`                                     |
 
 The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
@@ -43,7 +47,7 @@ The ebuild keywords the architectures listed in `KEYWORDS`; only amd64 was exerc
 Replace placeholder hashes and generate the required checksums or manifests before submission.
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
-under the subject `net-proxy/doona: new package, add 0.1.0_beta12`, keep the `Manifest` in the same commit, and add
+under the subject `net-proxy/doona: new package, add 0.1.0_beta13`, keep the `Manifest` in the same commit, and add
 a `.github/workflows/overlay.toml` entry in `category/package` order. The semver beta tag maps onto the
 ebuild's pre-release version with this overlay rule:
 
