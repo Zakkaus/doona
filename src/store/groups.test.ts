@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {optionsProbe, probeDefaults} from './probeOptions';
-import {groupActions, groupConflict, groupProbeProtocols, patchConfig, probeGroup} from './groups';
+import {groupActions, groupConflict, groupProbeMembers, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
 
@@ -148,7 +148,8 @@ it('inspects nested group leaves before choosing a common probe kind', async () 
   const nodes = (await api.nodes({limit: 1000})).nodes;
   const group = await api.group('backup');
   const parent = {...group, id: 'parent', members: [{id: group.id, name: group.name, kind: 'group' as const}]};
-  const protocols = await groupProbeProtocols(api, parent, nodes);
+  const members = await groupProbeMembers(api, parent);
+  const protocols = members.map(id => nodes.find(node => node.id === id)?.protocol ?? null);
   expect(protocols).toHaveLength(group.members.length);
   expect(protocols).toContain('hysteria2');
   const request = optionsProbe(await api.capabilities(), {type: 'group', group_id: parent.id}, {...probeDefaults, choice: 'tcp_connect'}, parent, protocols);
