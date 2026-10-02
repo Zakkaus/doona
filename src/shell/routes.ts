@@ -39,3 +39,18 @@ export function isRoutePath(path: string): path is RoutePath {
 // `replace` rewrites the current history entry, for changes such as a row selection that should not pile up under Back.
 export type Go = (page: RoutePath, query?: string, options?: {replace?: boolean}) => void;
 export type PageProps = {go: Go; query: string};
+
+// A feature search offers beyond pages and tabs, kept beside the registry it belongs to. `params` open its page, tab or
+// dialog; `open` opens a shell editor instead of a page. Search never runs the action itself. `aliases` are other
+// words people use for it: every language's label matches already. `aliasKeys` are labels of related terms, matched in
+// every language.
+export type SearchTarget = {
+  id: string;
+  titleKey: Key;
+  parentKey?: Key;
+  route: RoutePath | null;
+  params?: Record<string, string>;
+  open?: () => void;
+  aliases?: readonly string[];
+  aliasKeys?: readonly Key[];
+};

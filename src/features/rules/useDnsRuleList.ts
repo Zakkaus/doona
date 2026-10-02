@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useMemo, useState} from 'react';
 import {pendingRules, useCapabilities, useConfig, useDnsRules, usePendingRules} from '../../store';
 import {pendingView} from '../shared/pending';
 import {useApplyHeld} from '../shared/usePendingApply';
@@ -39,6 +39,9 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
   const params = new URLSearchParams(query);
   const seed = list === 'request' ? params.get('add') : null;
   const edit = params.get('list') === list ? params.get('edit') : null;
+  // A link names a rule by its list and id, as search does.
+  const landed = params.get('list') === list ? params.get('rule') : null;
+  const [picked, setPicked] = useState<{landed: string | null; row: string | null}>({landed, row: landed});
   const edited = edit ? listed?.find(rule => rule.rule_id === edit) : undefined;
   const preset = useMemo(() => parseRuleSeed(seed, dnsConditionKinds.request), [seed]);
   const editor = useRuleEditor<DnsRoutingRule>({
@@ -66,6 +69,9 @@ export function useDnsRuleList({go, query}: PageProps, list: DnsRuleListId): Dic
   return {
     ...editor.model,
     table,
+    selected: picked.landed === landed ? picked.row : landed,
+    select: (row: string | null) => setPicked({landed, row}),
+    landed,
     copy: {
       label: t(list === 'request' ? 'rule.dns.request' : 'rule.dns.response'),
       empty: t('rule.dns.empty'),

@@ -27,7 +27,7 @@ test('search opens a node in its source, a group on its card, a subscription and
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   let dialog = await open(page, 'jp-01');
   await dialog.getByRole('option', {name: /^jp-01/}).click();
-  await expect(page).toHaveURL(/#\/nodes\?provider=inline&q=jp-01$/);
+  await expect(page).toHaveURL(/#\/nodes\?provider=inline&q=jp-01&node=[^&]+$/);
   await expect(page.getByLabel('Search nodes')).toHaveValue('jp-01');
   await expect(page.locator('.rp-table').nth(1).locator('[role=row][data-key]')).toHaveCount(1);
   dialog = await open(page, 'gaming');
@@ -56,7 +56,7 @@ test('search finds a routing rule by its condition and lands on its row', async 
   await expect(row).toBeInViewport();
 });
 
-test('search opens a connections tab and the DNS rules tab from a DNS rule condition', async ({page}) => {
+test('search opens a connections tab, and a DNS rule condition on its marked row', async ({page}) => {
   await page.goto('/#/activity');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   let dialog = await open(page, 'traffic');
@@ -67,9 +67,26 @@ test('search opens a connections tab and the DNS rules tab from a DNS rule condi
   const hit = dialog.getByRole('option', {name: /qname\(suffix: lan, home\.arpa\)/}).filter({hasText: /Request rules #2 → asis/});
   await expect(hit).toHaveCount(1);
   await hit.click();
-  await expect(page).toHaveURL(/#\/rules\?tab=dns$/);
+  await expect(page).toHaveURL(/#\/rules\?tab=dns&list=request&rule=/);
   await expect(page.getByRole('tab', {name: 'DNS rules', exact: true})).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('qname(suffix: lan, home.arpa)').first()).toBeVisible();
+  const row = page.locator('[role="row"][aria-selected="true"]');
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText('qname(suffix: lan, home.arpa)');
+  await expect(row).toBeInViewport();
+  await expect(row).toHaveAttribute('data-highlighted', 'true');
+  // The mark is brief; the selection stays.
+  await expect(row).not.toHaveAttribute('data-highlighted', 'true', {timeout: 5000});
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+});
+
+test("search finds a Settings field by another language's label and focuses it", async ({page}) => {
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  const dialog = await open(page, '配色');
+  await dialog.getByRole('option', {name: /^Palette/}).click();
+  await expect(page).toHaveURL(/#\/settings\?card=appearance&field=palette$/);
+  await expect(page.locator('[data-setting="palette"] button').first()).toBeFocused();
+  await expect(page.locator('[data-setting="palette"] button').first()).toBeInViewport();
 });
 
 test('search respects destination capabilities, preserves loose-node ownership and qualifies partial results', async ({page}) => {
@@ -111,7 +128,7 @@ test('search respects destination capabilities, preserves loose-node ownership a
   await expect(dialog.getByRole('option', {name: /Trace simulation/})).toHaveCount(0);
   await dialog.locator('input').fill('orphan');
   await dialog.getByRole('option', {name: /^orphan/}).click();
-  await expect(page).toHaveURL(/provider=unattributed-&q=orphan$/);
+  await expect(page).toHaveURL(/provider=unattributed-&q=orphan&node=orphan-id$/);
   await expect(page.getByRole('rowheader', {name: 'orphan', exact: true})).toBeVisible();
   dialog = await open(page, 'nothing-matches-this');
   await expect(dialog.getByRole('option')).toHaveCount(0);
@@ -175,7 +192,7 @@ test('search reads live connection addresses, node and group names, and availabl
   await expect(page).not.toHaveURL(/id=/);
   await expect(detail(page)).toHaveCount(0);
   const targets: Array<[string, RegExp]> = [
-    ['Live node', /#\/nodes\?provider=inline&q=Live\+node$/],
+    ['Live node', /#\/nodes\?provider=inline&q=Live\+node&node=[^&]+$/],
     ['Live group', /#\/policies\?group=proxy$/],
     ['Settings', /#\/settings$/]
   ];
@@ -193,7 +210,7 @@ test('an empty search says what it looked through, so a domain with no live conn
   const dialog = await open(page, 'pixiv.net');
   await expect(dialog.getByRole('option')).toHaveCount(0);
   await expect(dialog.locator('.rp-empty')).toHaveText(
-    'No matches. Search covers the names of pages, tabs, nodes, groups and node sources, live connections, config file paths, and routing and DNS rule expressions.'
+    'No matches. Search covers the names of pages, tabs, settings, features, nodes, groups and node sources, live connections, config file paths and sections, and routing and DNS rule expressions.'
   );
 });
 

@@ -85,25 +85,35 @@ export function Settings({query}: PageProps) {
         )}
         <ActionHelp reason={profileReason}>
           <div className="rp-toolbar">
-            <LabeledSelect
-              label={t('settings.profile')}
-              side
-              value={activeId}
-              isDisabled={!hasActive || saving}
-              items={profile.choices}
-              onChange={switchProfile}
-            />
-            <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
-            <Button isDisabled={!hasActive} onPress={renameProfile}>
-              {t('settings.renameProfile')}
-            </Button>
-            <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
-              {t('settings.deleteProfile')}
-            </Button>
-            {session && (
-              <Button isPending={session.busy} onPress={() => void session.signOut()}>
-                {t('settings.signOut')}
+            <div className="rp-contents" data-setting="profile">
+              <LabeledSelect
+                label={t('settings.profile')}
+                side
+                value={activeId}
+                isDisabled={!hasActive || saving}
+                items={profile.choices}
+                onChange={switchProfile}
+              />
+            </div>
+            <div className="rp-contents" data-setting="addProfile">
+              <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
+            </div>
+            <div className="rp-contents" data-setting="renameProfile">
+              <Button isDisabled={!hasActive} onPress={renameProfile}>
+                {t('settings.renameProfile')}
               </Button>
+            </div>
+            <div className="rp-contents" data-setting="deleteProfile">
+              <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
+                {t('settings.deleteProfile')}
+              </Button>
+            </div>
+            {session && (
+              <div className="rp-contents" data-setting="signOut">
+                <Button isPending={session.busy} onPress={() => void session.signOut()}>
+                  {t('settings.signOut')}
+                </Button>
+              </div>
             )}
           </div>
         </ActionHelp>
@@ -116,34 +126,40 @@ export function Settings({query}: PageProps) {
             save();
           }}
         >
-          <TextField
-            label={t('ui.backendUrl')}
-            autoComplete="url"
-            spellCheck={false}
-            description={t('settings.apiHelp')}
-            error={invalidText}
-            name="api"
-            value={api}
-            onChange={changeApi}
-          />
+          <div className="rp-contents" data-setting="api">
+            <TextField
+              label={t('ui.backendUrl')}
+              autoComplete="url"
+              spellCheck={false}
+              description={t('settings.apiHelp')}
+              error={invalidText}
+              name="api"
+              value={api}
+              onChange={changeApi}
+            />
+          </div>
           {demo ? null : passwordMode ? (
             <p className="rp-label">{t('settings.passwordMode')}</p>
           ) : (
-            <TextField
-              label={t('settings.token')}
-              autoComplete="off"
-              spellCheck={false}
-              reveal={{shown: tokenType === 'text', label: tokenToggleText, onToggle: toggleToken}}
-              name="token"
-              type={tokenType}
-              value={token}
-              onChange={changeToken}
-            />
+            <div className="rp-contents" data-setting="token">
+              <TextField
+                label={t('settings.token')}
+                autoComplete="off"
+                spellCheck={false}
+                reveal={{shown: tokenType === 'text', label: tokenToggleText, onToggle: toggleToken}}
+                name="token"
+                type={tokenType}
+                value={token}
+                onChange={changeToken}
+              />
+            </div>
           )}
           <div className="rp-toolbar">
-            <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
-              {t('settings.test')}
-            </Button>
+            <div className="rp-contents" data-setting="test">
+              <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
+                {t('settings.test')}
+              </Button>
+            </div>
             <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
               {t('settings.save')}
             </Button>
@@ -164,47 +180,64 @@ export function Settings({query}: PageProps) {
     appearance: (
       <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
         <div className="rp-toolbar">
-          <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
-          <SearchSelect
-            label={t('ui.palette')}
-            searchLabel={t('shell.shortcutSearch')}
-            sections={paletteSections.map(section => ({...section, id: section.title}))}
-            value={ap.palette}
-            onChange={value => ap.pickPalette(value as PaletteId)}
-          />
-          <LabeledSelect
-            label={t('settings.scheme')}
-            value={ap.scheme}
-            onChange={value => ap.pickScheme(value as Scheme)}
-            items={[
-              {id: 'system', label: t('theme.system')},
-              {id: 'light', label: t('theme.light')},
-              {id: 'dark', label: t('theme.dark')}
-            ]}
-          />
-          <LabeledSelect
-            label={t('ui.wordmark')}
-            value={ap.wordmark}
-            onChange={value => ap.pickWordmark(value as Wordmark)}
-            items={[
-              {id: 'gradient', label: t('wordmark.gradient')},
-              {id: 'plain', label: t('wordmark.plain')}
-            ]}
-          />
-          <LabeledSelect
-            label={t('settings.toastPlacement')}
-            value={ap.toastPlacement}
-            onChange={value => ap.pickToastPlacement(value as ToastPlacement)}
-            items={[
-              {id: 'top', label: t('settings.toastTop')},
-              {id: 'top end', label: t('settings.toastTopEnd')},
-              {id: 'bottom', label: t('settings.toastBottom')},
-              {id: 'bottom end', label: t('settings.toastBottomEnd')}
-            ]}
-          />
-          <LabeledSelect label={t('settings.startPage')} value={ap.startPage} onChange={value => ap.pickStartPage(value as RoutePath)} items={startPageItems} />
+          <div className="rp-contents" data-setting="lang">
+            <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
+          </div>
+          <div className="rp-contents" data-setting="palette">
+            <SearchSelect
+              label={t('ui.palette')}
+              searchLabel={t('shell.shortcutSearch')}
+              sections={paletteSections.map(section => ({...section, id: section.title}))}
+              value={ap.palette}
+              onChange={value => ap.pickPalette(value as PaletteId)}
+            />
+          </div>
+          <div className="rp-contents" data-setting="scheme">
+            <LabeledSelect
+              label={t('settings.scheme')}
+              value={ap.scheme}
+              onChange={value => ap.pickScheme(value as Scheme)}
+              items={[
+                {id: 'system', label: t('theme.system')},
+                {id: 'light', label: t('theme.light')},
+                {id: 'dark', label: t('theme.dark')}
+              ]}
+            />
+          </div>
+          <div className="rp-contents" data-setting="wordmark">
+            <LabeledSelect
+              label={t('ui.wordmark')}
+              value={ap.wordmark}
+              onChange={value => ap.pickWordmark(value as Wordmark)}
+              items={[
+                {id: 'gradient', label: t('wordmark.gradient')},
+                {id: 'plain', label: t('wordmark.plain')}
+              ]}
+            />
+          </div>
+          <div className="rp-contents" data-setting="toastPlacement">
+            <LabeledSelect
+              label={t('settings.toastPlacement')}
+              value={ap.toastPlacement}
+              onChange={value => ap.pickToastPlacement(value as ToastPlacement)}
+              items={[
+                {id: 'top', label: t('settings.toastTop')},
+                {id: 'top end', label: t('settings.toastTopEnd')},
+                {id: 'bottom', label: t('settings.toastBottom')},
+                {id: 'bottom end', label: t('settings.toastBottomEnd')}
+              ]}
+            />
+          </div>
+          <div className="rp-contents" data-setting="startPage">
+            <LabeledSelect
+              label={t('settings.startPage')}
+              value={ap.startPage}
+              onChange={value => ap.pickStartPage(value as RoutePath)}
+              items={startPageItems}
+            />
+          </div>
         </div>
-        <div className="rp-field">
+        <div className="rp-field" data-setting="countryFlags">
           <Switch isSelected={ap.countryFlags} onChange={ap.pickCountryFlags} aria-describedby={countryFlagsHelpId}>
             {t('settings.countryFlags')}
           </Switch>
@@ -212,7 +245,7 @@ export function Settings({query}: PageProps) {
             {t('settings.countryFlagsHelp')}
           </span>
         </div>
-        <div className="rp-field">
+        <div className="rp-field" data-setting="sparklines">
           <Switch isSelected={ap.sparklines} onChange={ap.pickSparklines} aria-describedby={sparklinesHelpId}>
             {t('settings.sparklines')}
           </Switch>
@@ -220,7 +253,7 @@ export function Settings({query}: PageProps) {
             {t('settings.sparklinesHelp')}
           </span>
         </div>
-        <div className="rp-field">
+        <div className="rp-field" data-setting="mirrored">
           <Switch isSelected={ap.mirrored} onChange={ap.pickMirrored} aria-describedby={mirrorHelpId}>
             {t('settings.mirror')}
           </Switch>

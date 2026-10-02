@@ -4,17 +4,17 @@ import {engineOf} from '../../api/engines';
 import {formatList, formatNumber, type Lang, type Params, type Translator} from '../../i18n';
 import {href} from '../../shell/route';
 import {docsHref} from '../shared/docs';
-import {geodataConfigurable} from './nav';
+import {geodataConfigurable, runtimeFieldLabels} from './nav';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
 
 export type Recorder = Extract<RuntimeSettingField, 'record_flows' | 'record_logs' | 'record_dns_log'>;
 export type Numeric = Exclude<RuntimeSettingField, 'log.level' | Recorder | 'geodata'>;
 export type RecorderChoice = 'auto' | 'on' | 'off';
-export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'; label: Key}> = {
-  record_flows: {state: 'flows', label: 'settings.recordFlows'},
-  record_logs: {state: 'logs', label: 'settings.recordLogs'},
-  record_dns_log: {state: 'dns_log', label: 'settings.recordDnsLog'}
+export const recorderAccess: Record<Recorder, {state: 'flows' | 'logs' | 'dns_log'}> = {
+  record_flows: {state: 'flows'},
+  record_logs: {state: 'logs'},
+  record_dns_log: {state: 'dns_log'}
 };
 export const recorderFields = Object.keys(recorderAccess) as Recorder[];
 const recorderAutoLabel: Record<Recorder, Key> = {
@@ -27,7 +27,7 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
   const forbidden = state ? !state.allowed : false;
   return {
     id,
-    label: t(recorderAccess[id].label),
+    label: t(runtimeFieldLabels[id]),
     value: choice,
     items: (['auto', 'on', 'off'] as const).map(mode => ({
       id: mode,
@@ -50,44 +50,39 @@ export const flowRecordingNote = (choice: RecorderChoice, grace: number | null, 
 export const numericAccess: Record<
   Numeric,
   // read is undefined when the engine omits the section or member.
-  {read: (value: RuntimeSettings) => number | undefined; write: (patch: RuntimeSettingsPatch, value: number) => void; label: Key}
+  {read: (value: RuntimeSettings) => number | undefined; write: (patch: RuntimeSettingsPatch, value: number) => void}
 > = {
   'log.buffered_records': {
     read: s => s.log?.buffered_records,
     write: (p, v) => {
       (p.log ??= {}).buffered_records = v;
-    },
-    label: 'settings.logBuffer'
+    }
   },
   'dns_log.max_records': {
     read: s => s.dns_log?.max_records,
     write: (p, v) => {
       (p.dns_log ??= {}).max_records = v;
-    },
-    label: 'settings.dnsLogSize'
+    }
   },
   'flows.max_flows': {
     read: s => s.flows?.max_flows,
     write: (p, v) => {
       (p.flows ??= {}).max_flows = v;
-    },
-    label: 'settings.flowsMax'
+    }
   },
   'flows.retention_seconds': {
     read: s => s.flows?.retention_seconds,
     write: (p, v) => {
       (p.flows ??= {}).retention_seconds = v;
-    },
-    label: 'settings.flowsRetention'
+    }
   }
 };
 export const numericFields = Object.keys(numericAccess) as Numeric[];
 export function numericFieldView(id: Numeric, value: string, floor: number, ceiling: number | undefined, locale: string, t: Translator) {
-  const access = numericAccess[id];
   return {
     id,
     value,
-    label: t(access.label),
+    label: t(runtimeFieldLabels[id]),
     invalid: !/^\d+$/.test(value) || Number(value) < floor || (ceiling !== undefined && Number(value) > ceiling),
     description:
       ceiling === undefined

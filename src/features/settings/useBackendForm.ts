@@ -58,16 +58,37 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     }
   }, [query]);
   const card = new URLSearchParams(query).get('card');
+  const field = new URLSearchParams(query).get('field');
+  // `field` focuses the control inside the card's `data-setting="{field}"` (settingsFields in nav.ts). A control that
+  // renders once its data arrives is waited for a while with the card focused; a hidden or disabled one leaves it there.
   useEffect(() => {
-    if (card) {
-      const target = document.getElementById(cardHeadingId(card))?.closest('section');
-      if (target) {
-        target.tabIndex = -1;
-        target.focus();
-        target.scrollIntoView({block: 'start'});
-      }
-    }
-  }, [card]);
+    const section = card ? document.getElementById(cardHeadingId(card))?.closest('section') : null;
+    if (!section) return;
+    const land = () => {
+      const control = field
+        ? Array.from(section.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea)`)).find(
+            element => element.tabIndex >= 0 && !element.matches(':disabled') && !element.closest('[aria-hidden="true"]')
+          )
+        : undefined;
+      control?.focus({preventScroll: true});
+      control?.scrollIntoView({block: 'center'});
+      return !!control;
+    };
+    if (land()) return;
+    section.tabIndex = -1;
+    section.focus();
+    section.scrollIntoView({block: 'start'});
+    if (!field) return;
+    const observer = new MutationObserver(() => {
+      if (land()) observer.disconnect();
+    });
+    observer.observe(section, {childList: true, subtree: true});
+    const stop = setTimeout(() => observer.disconnect(), 5000);
+    return () => {
+      observer.disconnect();
+      clearTimeout(stop);
+    };
+  }, [card, field]);
   const params = new URLSearchParams(query);
   const loginProfile = params.get('profile');
   const [changedLogin, setChangedLogin] = useState(false);

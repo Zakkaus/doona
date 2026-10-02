@@ -38,9 +38,11 @@ export type DictionaryCopy = {
 export type DictionaryModel = RuleEditorModel & {
   table: DictionaryView;
   copy: DictionaryCopy;
-  // Only the routing list selects a row; a list without `select` has no selection.
+  // A list without `select` has no selection.
   selected?: string | null;
   select?: (row: string | null) => void;
+  // The rule a link names, selected and revealed when the list opens and marked for a moment.
+  landed?: string | null;
   held: ReturnType<typeof pendingView>;
   discard: (id: number) => void;
   // Writes every held rule, of every list, as the top bar's apply does.
@@ -144,6 +146,7 @@ export function useRuleList({go, query}: PageProps, simple: boolean): RuleListMo
     setSource,
     selected,
     select: (row: string | null) => setPicked({landed, row}),
+    landed,
     held: pendingView(held.rules, 'routing', held.failure, config.data?.sources ?? [], t),
     discard: (id: number) => {
       if (!held.applying) pendingRules.remove([id]);

@@ -120,6 +120,7 @@ export function DataTable<T extends {id: string}>({
   onSelect: onSelectProp,
   selectOnFocus,
   reveal,
+  highlighted,
   empty,
   loading,
   sort,
@@ -142,6 +143,8 @@ export function DataTable<T extends {id: string}>({
   selectOnFocus?: boolean;
   // Reveals the selected row, using the layout for virtual rows outside the DOM.
   reveal?: boolean;
+  // The row a link landed on, marked for a moment (see useLandingHighlight).
+  highlighted?: string | null;
   empty?: string;
   loading?: boolean;
   // Header clicks on sortable columns; the caller orders `rows`.
@@ -278,7 +281,7 @@ export function DataTable<T extends {id: string}>({
   const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
   const renderRow = (row: T) => {
     return (
-      <Row key={row.id} id={row.id} textValue={getTextValue?.(row)}>
+      <Row key={row.id} id={row.id} textValue={getTextValue?.(row)} data-highlighted={row.id === highlighted || undefined}>
         {shown.map(column => (
           <Cell key={column.id} className={cx(column.actions && 'rp-cell-actions', column.text === 'wrap' && 'rp-cell-wrap')}>
             {column.text === 'wrap' ? column.render(row) : content(column.render(row))}
@@ -344,7 +347,7 @@ export function DataTable<T extends {id: string}>({
       <TableColumns cols={shown} firstVisibleHeader={!!tree} resizable={rows.length > 0} />
       <TableBody<T | TableGroup<T>>
         items={rows}
-        dependencies={[shown, getTextValue]}
+        dependencies={[shown, getTextValue, highlighted]}
         renderEmptyState={() => (
           <div className="rp-table-empty" style={{width: width ?? '100%'}}>
             {loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>}

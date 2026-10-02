@@ -540,3 +540,8 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
+/* Inside the row, so the table's scroll box does not clip it. */
+.rp-table [role='row'][data-highlighted] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}

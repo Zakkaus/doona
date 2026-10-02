@@ -1,19 +1,23 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import type {Key} from 'react-aria-components';
-import {useLang, useT} from '../../i18n';
+import {languages, loadLanguage, useLang, useT} from '../../i18n';
 import {useCapabilities, useConfig, useConnections, useGroups, useNodes, useProviders, useRules, useDnsRules, useVersion} from '../../store';
 import {engineOf} from '../../api/engines';
 import type {PageProps} from '../routes';
 import {
   connectionEntries,
   dnsRuleEntries,
+  featureEntries,
+  globalSettingEntries,
   groupEntries,
+  moduleEntries,
   nodeEntries,
   pageEntries,
   providerEntries,
   ruleEntries,
   searchSections,
   searchView,
+  settingsEntries,
   sourceEntries
 } from './view';
 import {offered} from '../../api/capabilities';
@@ -33,8 +37,30 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const dnsRules = useDnsRules(offered(resources, 'dns_rules', {whileLoading: false}));
   const sources = [capabilities, connections, nodes, groups, providers, config, rules, dnsRules];
   // Each dataset is projected on its own data, so a keystroke only filters and a poll re-projects one dataset.
-  const hasGlobal = !!engineOf(useVersion().data).globalSettings;
-  const pages = useMemo(() => pageEntries(capabilities.data, t, hasGlobal), [capabilities.data, t, hasGlobal]);
+  const engine = engineOf(useVersion().data);
+  const hasGlobal = !!engine.globalSettings;
+  // Labels match in every interface language, so the other catalogues load with the dialog; the label entries are
+  // projected again once they arrive.
+  const [catalogues, setCatalogues] = useState(0);
+  useEffect(() => {
+    let live = true;
+    for (const language of languages) {
+      void loadLanguage(language.id).then(
+        () => live && setCatalogues(count => count + 1),
+        () => undefined
+      );
+    }
+    return () => {
+      live = false;
+    };
+  }, []);
+  /* eslint-disable react-hooks/exhaustive-deps -- `catalogues` re-projects the labels once another language loads */
+  const pages = useMemo(() => pageEntries(capabilities.data, t, hasGlobal), [capabilities.data, t, hasGlobal, catalogues]);
+  const settings = useMemo(() => settingsEntries(capabilities.data, t), [capabilities.data, t, catalogues]);
+  const globals = useMemo(() => globalSettingEntries(engine.globalSettings, capabilities.data, t), [engine.globalSettings, capabilities.data, t, catalogues]);
+  const featureHits = useMemo(() => featureEntries(capabilities.data, t), [capabilities.data, t, catalogues]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+  const modules = useMemo(() => moduleEntries(config.data, engine, t), [config.data, engine, t]);
   const conns = useMemo(() => connectionEntries(connections.data, t), [connections.data, t]);
   const nodeHits = useMemo(() => nodeEntries(nodes.data, providers.data, lang), [nodes.data, providers.data, lang]);
   const groupHits = useMemo(() => groupEntries(groups.data), [groups.data]);
@@ -45,7 +71,20 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
   const view = searchView(
     q,
     searchSections(
-      {pages, conns, nodes: nodeHits, groups: groupHits, providers: providerHits, sources: sourceHits, rules: ruleHits, dnsRules: dnsRuleHits},
+      {
+        pages,
+        settings,
+        globals,
+        features: featureHits,
+        conns,
+        nodes: nodeHits,
+        groups: groupHits,
+        providers: providerHits,
+        sources: sourceHits,
+        modules,
+        rules: ruleHits,
+        dnsRules: dnsRuleHits
+      },
       connections.data,
       t
     )
@@ -66,8 +105,9 @@ export function useSearch(go: PageProps['go'], onClose: () => void) {
     select: (id: Key) => {
       const item = view.byId.get(String(id));
       if (!item) return;
-      go(item.route, item.query);
+      if (item.route) go(item.route, item.query);
       onClose();
+      item.open?.();
     }
   };
 }

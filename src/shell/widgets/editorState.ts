@@ -1,3 +1,5 @@
+import type {SearchTarget} from '../routes';
+
 let open = false;
 const listeners = new Set<() => void>();
 export const editorState = {
@@ -13,3 +15,8 @@ export const editorState = {
     };
   }
 };
+// The widget editor opens over any page; the dashboard is edited on Activity.
+export const widgetTargets: SearchTarget[] = [
+  {id: 'widgets:edit', titleKey: 'widgets.edit', route: null, open: () => editorState.set(true), aliases: ['widget panel']},
+  {id: 'dashboard:edit', titleKey: 'dashboard.edit', parentKey: 'nav.activity', route: 'activity', aliases: ['dashboard']}
+];
