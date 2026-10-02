@@ -99,6 +99,8 @@ test('refresh remains pending until completion, refetches non-polling resources,
   await expect(page.locator('.rp-content').getByRole('alert')).toBeVisible();
   await expect(refresh).not.toHaveAttribute('data-pending');
   await expect(page.locator('.rp-toast.negative')).toContainText('Could not refresh data');
+  // It carries Copy error, so it stays until closed.
+  await page.locator('.rp-toast.negative .close').click();
   await page.goto('/#/dns?tab=query');
   await page.clock.fastForward(6000);
   await expect(page.locator('.rp-toast.positive')).toHaveCount(0);

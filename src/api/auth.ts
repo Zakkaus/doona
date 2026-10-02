@@ -53,7 +53,7 @@ export async function openSession(base: string, kind: 'setup' | 'login', credent
     },
     kind === 'setup'
   );
-  if (!response.ok) throw await responseError(response);
+  if (!response.ok) throw await responseError(response, 'POST');
   return response.json();
 }
 
@@ -67,5 +67,5 @@ export async function closeSession(base: string, token: string, signal?: AbortSi
     signal
   });
   // An already-ended session is the outcome logout asked for.
-  if (!response.ok && response.status !== 401) throw await responseError(response);
+  if (!response.ok && response.status !== 401) throw await responseError(response, 'POST');
 }

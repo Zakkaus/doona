@@ -80,7 +80,7 @@ export default [
             {
               target: './src/ui',
               from: './src/api',
-              except: ['./error.ts', './model.ts', './serverClock.ts', './types.ts'],
+              except: ['./diagnostics.ts', './error.ts', './model.ts', './serverClock.ts', './types.ts'],
               message: 'src/ui takes data as props; from src/api it may use only the error model, the types and the server clock.'
             },
             {target: './src/store', from: ['./src/features', './src/shell', './src/ui']},

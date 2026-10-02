@@ -41,11 +41,11 @@ export function useMode() {
       }
       // doona's own refusal is the whole story: its advice leads and the rule in the way is the second line.
       if (result.kind === 'failed' && result.error instanceof LocalError && result.error.key === 'act.modeInterleaved') {
-        toast('negative', t(result.error.key), {detail: result.error.detail ?? undefined});
+        toast('negative', t(result.error.key), {detail: result.error.detail ?? undefined, error: result.error});
         return;
       }
       const problem = editProblem(result, t);
-      if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
+      if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId, error: problem.error});
     });
   return {
     ...view,

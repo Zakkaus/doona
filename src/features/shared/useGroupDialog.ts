@@ -272,7 +272,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
           if (open) {
             refuse(noticeText(problem, t));
             setDraft(prev => (prev ? {...prev, refused: true} : prev));
-          } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId});
+          } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId, error: problem.error});
         }
       })
       .finally(() => {

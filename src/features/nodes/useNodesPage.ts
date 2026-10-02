@@ -220,11 +220,11 @@ export function useNodesPage({go, query}: PageProps) {
     const submitted = session.current;
     const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
-    const refuse = (text: string, toastText = text, requestId?: string) => {
+    const refuse = (text: string, toastText = text, error?: unknown) => {
       if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
-      else toast('negative', toastText, {requestId});
+      else toast('negative', toastText, {requestId: error === undefined ? undefined : requestIdOf(error), error});
     };
-    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.requestId);
+    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error);
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
@@ -322,7 +322,7 @@ export function useNodesPage({go, query}: PageProps) {
         close();
       }
     } catch (error) {
-      refuse(errorText(error, t), errorText(error, t, false), requestIdOf(error));
+      refuse(errorText(error, t), errorText(error, t, false), error);
     } finally {
       submitting.current = null;
       setPendingDialog(null);

@@ -91,6 +91,19 @@ test('a failed update keeps the old files and shows the reason in the status row
   // The toast names the failed stage, not only that the update failed.
   await expect(page.locator('.rp-toast.negative', {hasText: t('ui.backend.assetValidationFailed')})).toBeVisible();
   expect(sent).toEqual(['patch', 'update']);
+  // The failure toast copies its error for a bug report, and Settings copies the same entry later.
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
+  await page
+    .locator('.rp-toast.negative')
+    .getByRole('button', {name: t('toast.copyError')})
+    .click();
+  await expect(page.locator('.rp-toast.positive', {hasText: t('toast.copied')})).toBeVisible();
+  const [head, entry] = (await clipboard()).split('\n\n');
+  expect(head).toMatch(/^doona \S+\nengine .+\npage \/settings$/);
+  expect(entry).toMatch(/operation: \S+ geodata_update failed/);
+  await page.getByRole('button', {name: t('settings.copyErrors')}).click();
+  expect(await clipboard()).toContain(entry);
   const status = row(page, 'settings.geodataStatus').getByRole('status');
   await expect(status).toContainText(t('settings.geodataLastError'));
   await expect(status).toContainText(t('ui.backend.assetValidationFailed'));
@@ -120,6 +133,8 @@ test('an update the backend forgot while polling reports an unknown result, not 
     .click();
   await expect(page.locator('.rp-toast.neutral')).toHaveText(new RegExp('^' + t('ui.operationUnknown')));
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  // An unknown outcome is still an error to report, so its neutral toast offers the copy button too.
+  await expect(page.locator('.rp-toast.neutral').getByRole('button', {name: t('toast.copyError')})).toBeVisible();
 });
 
 test('custom URLs are edited in a dialog, saved once and then updated', async ({page}) => {

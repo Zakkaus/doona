@@ -103,7 +103,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
   const failures: Middleware = {
     onResponse: async ({request, response, schemaPath}) => {
       if (!response.ok) {
-        const error = await responseError(response);
+        const error = await responseError(response, request.method);
         error.configurationWrite = configurationWrites.has(`${request.method} ${schemaPath}`);
         throw error;
       }

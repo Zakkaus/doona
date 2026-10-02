@@ -47,7 +47,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const report = useEffectEvent((error: Error) => {
     const summary = t('policy.actionFailed', {name: control.data?.name ?? input.name, error: actionErrorText(error, t, false)});
     const notice = failureNotice(error, t, summary);
-    toast(notice.kind, notice.text, {detail: notice.text === summary ? undefined : notice.detail, requestId: requestIdOf(error)});
+    toast(notice.kind, notice.text, {detail: notice.text === summary ? undefined : notice.detail, requestId: requestIdOf(error), error});
   });
   useEffect(() => {
     if (control.actionError) report(control.actionError);

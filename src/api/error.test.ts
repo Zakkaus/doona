@@ -12,15 +12,15 @@ it('joins a local error and its detail with the colon of the active language', (
 it('reports a failure under the summary of its action, and an unknown operation outcome neutrally on its own', () => {
   const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
   const summary = t('ov.operationError');
-  expect(failureNotice(new LocalError('ui.operationUnknown'), t, summary)).toEqual({kind: 'neutral', text: t('ui.operationUnknown')});
-  expect(failureNotice(new LocalError('ui.operationFailed'), t, summary)).toEqual({kind: 'negative', text: summary, detail: t('ui.operationFailed')});
+  expect(failureNotice(new LocalError('ui.operationUnknown'), t, summary)).toMatchObject({kind: 'neutral', text: t('ui.operationUnknown')});
+  expect(failureNotice(new LocalError('ui.operationFailed'), t, summary)).toMatchObject({kind: 'negative', text: summary, detail: t('ui.operationFailed')});
   expect(noticeText(failureNotice(new Error('offline'), t, summary), t)).toBe('Could not run the operation: offline');
 });
 
 it('reports a file written but not applied without the failure wording that says it was not written', () => {
   const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
   const error = new LocalError('ui.writtenNotApplied', 'Reload rejected');
-  expect(failureNotice(error, t, t('ui.writeFailed'))).toEqual({kind: 'negative', text: t('ui.writtenNotApplied'), detail: 'Reload rejected'});
+  expect(failureNotice(error, t, t('ui.writeFailed'))).toMatchObject({kind: 'negative', text: t('ui.writtenNotApplied'), detail: 'Reload rejected'});
 });
 
 it('keeps the failed stage a backend operation names', () => {
@@ -45,7 +45,7 @@ it('gives a reused code the backend message as its detail, with the request note
   const error = new ApiError(422, 'unsupported_value', 'Group field is not mutable', 'abc');
   expect(errorLines(error, t)).toEqual({summary: t('ui.backend.unsupportedValue'), detail: 'Group field is not mutable（request_id：abc）'});
   const notice = failureNotice(error, t, t('ui.writeFailed'));
-  expect(notice).toEqual({
+  expect(notice).toMatchObject({
     kind: 'negative',
     text: t('ui.writeFailed'),
     detail: t('ui.valuePair', {label: t('ui.backend.unsupportedValue'), value: 'Group field is not mutable'}),

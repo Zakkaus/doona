@@ -10,6 +10,7 @@ import {searchDialog} from './search/load';
 import {CountryFlagsContext, FlagEditingContext} from '../ui/NodeName';
 import {flagKey} from '../dae/flags';
 import {resolvedFlag} from '../features/shared/countryFlags';
+import {useCopyDiagnostics} from '../features/shared/useCopyDiagnostics';
 import {readSettings, SettingsContext} from './preferences';
 import type {Settings, ToastPlacement} from './preferences';
 import {Shortcuts} from './Shortcuts';
@@ -104,7 +105,8 @@ function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () 
 
 function ToastHost({placement, route}: {placement: ToastPlacement; route: string}) {
   useStartupToasts();
-  return <Toasts placement={placement} page={route} />;
+  const copy = useCopyDiagnostics();
+  return <Toasts placement={placement} page={route} onCopyError={entry => void copy([entry])} />;
 }
 
 type FrameProps = {
