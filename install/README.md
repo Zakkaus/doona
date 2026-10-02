@@ -12,10 +12,10 @@ rather than with each other.
 | `nix/package.nix`                          | [nixpkgs](https://github.com/NixOS/nixpkgs) prebuilt web packages using `fetchurl` and `stdenvNoCC`                                                                                                                  |
 | the AUR `doona-bin` (separate repository)  | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                           |
 
-The OpenWrt, Alpine, Gentoo and Nix recipes are unpublished templates. Replace every marked hash before submission;
-none is ready for distribution. All four consume the prebuilt program archive, with the font archive where enabled.
-OpenWrt uses `SHA256SUMS`, Alpine uses `abuild checksum`, Gentoo uses `ebuild … manifest`, and Nix uses the
-archive hashes in `SHA256SUMS`.
+The OpenWrt, Alpine, Gentoo and Nix recipes are unpublished templates, not ready for distribution.
+All four consume the prebuilt program archive, with the font archive where enabled.
+Before submission, replace the marked OpenWrt and Nix hashes using `SHA256SUMS`, generate Alpine checksums with
+`abuild checksum`, and generate the Gentoo `Manifest` with `ebuild … manifest`.
 
 ## Version spellings
 
@@ -38,8 +38,9 @@ package metadata follows each package manager's ordering rules. The same names a
 The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
 installed and removed in its target root filesystem (Debian 13, Fedora 42, openSUSE Tumbleweed, Arch, OpenWrt 24.10
-and 25.12, Alpine 3.22), and the ebuild through `pkgcheck scan` and `emerge` in both USE states on an amd64 Gentoo host (`~arm64` is
-keyworded untested; the overlay's CI installs it). The recipes need new release hashes before submission.
+and 25.12, Alpine 3.22), and the ebuild through `pkgcheck scan` and `emerge` in both USE states on an amd64 Gentoo host.
+The ebuild keywords the architectures listed in `KEYWORDS`; only amd64 was exercised in that local check.
+Replace placeholder hashes and generate the required checksums or manifests before submission.
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
 under the subject `net-proxy/doona: new package, add 0.1.0_beta12`, keep the `Manifest` in the same commit, and add
@@ -71,3 +72,6 @@ The default local invocation uses the version in `package.json`.
 For local distribution, run `pnpm build && pnpm package` from the repository root and deploy the program archive
 from `release/`, plus the font archive if needed. Do not distribute raw `dist/`: it lacks the program's licence
 and notice files.
+
+For staged installs from a local build, `make install` installs the program and notices, and `make install-fonts`
+installs the optional Noto subsets and their licence. Both targets accept `DESTDIR` and `PREFIX`.

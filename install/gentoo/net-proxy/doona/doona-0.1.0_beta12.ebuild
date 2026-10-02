@@ -32,5 +32,5 @@ src_install() {
 }
 
 pkg_postinst() {
-	elog "Point the engine's ui setting at /usr/share/${PN}, or serve that directory with any web server."
+	elog "Point the engine's native API ui setting (honk: experimental.native_api.ui) at /usr/share/${PN}, or serve that directory with a web server."
 }

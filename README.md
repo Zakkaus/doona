@@ -4,7 +4,7 @@
 
 # doona
 
-**Web UI for the [daeuniverse](https://github.com/daeuniverse) engines: nodes, groups, rules and the configuration, from a browser.**
+**Web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
 
 **[Live demo](https://demo.daeuniverse.org/)** / **[Documentation](https://zakkaus.github.io/doona-docs/en/)**
 
@@ -14,7 +14,7 @@ English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
 
 </div>
 
-doona is a static web UI for the native API the daeuniverse engines share: honk today, dae once it implements the same contract. The engine serves it itself or any web server does; it shows what the engine is doing and manages nodes, groups, routing rules and configuration files.
+doona is a static web UI for the native API shared by daeuniverse engines. It supports honk; dae can use it once it implements the same contract. The engine or any web server can serve it. It displays engine state and manages nodes, groups, routing rules and configuration files.
 
 [Try the demo with sample data](https://demo.daeuniverse.org/). To see the error states, open it with [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
 
@@ -57,19 +57,19 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
 
-| Page          | Shows                                                                                                                                                                                                           |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Activity      | Outbound mode, traffic, memory and process CPU, active connections, node latency, outbound usage, top clients, notifications                                                                                    |
-| System status | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                                                         |
-| Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all                               |
-| Routing log   | The routing map and flow records                                                                                                                                                                                |
-| DNS           | Queries with their answers, cache, resolution log and statistics; create a DNS rule for a logged domain when writable; choose a query upstream; delete matching cache entries or flush the cache when supported |
-| Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                                                 |
-| Rules         | Routing and DNS request and response rules, editable in their source when writable; template settings in the simple view; rule hits and trace simulation                                                        |
-| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe, results by kind and join a group                                                                                                 |
-| Configuration | Create source files and edit them in place, diagnostics, validation, current config version and source export                                                                                                   |
-| Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                                                         |
-| Settings      | Backends, runtime settings, geodata sources, reset to defaults and SHA-256 verification when supported, language, appearance, palette and notification placement                                                |
+| Page          | Shows                                                                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Activity      | Outbound mode, traffic, memory and process CPU, active connections, node latency, outbound usage, top clients, notifications                                                             |
+| System status | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                                  |
+| Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all        |
+| Routing log   | The routing map and flow records                                                                                                                                                         |
+| DNS           | Queries with answers, cache, resolution log and statistics; per-row rule creation from cache and log entries; query upstream selection; cache entry deletion and flushing when supported |
+| Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                          |
+| Rules         | Routing and DNS request and response rules, editable in their source when writable; template settings in the simple view; rule hits and trace simulation                                 |
+| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe, results by kind and join a group                                                                          |
+| Configuration | Create source files and edit them in place, diagnostics, validation, current config version and source export                                                                            |
+| Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                                  |
+| Settings      | Backends, runtime settings, geodata sources and status, reset to defaults and SHA-256 verification when supported, language, appearance, palette and notification placement              |
 
 A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections, Routing log and Rules request flows while open, without setting Flow recording to Always.
 
@@ -95,7 +95,7 @@ The Traffic tab of Connections plots each connection's upload against its downlo
 
 ### DNS
 
-The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. When DNS rules and configuration writes are available, a resolution log entry can open a new DNS request rule for its domain. The default condition matches the exact domain; select a suffix condition to include subdomains.
+The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. Each cache and resolution log row has an add-rule icon for its domain. It opens a DNS request rule when DNS rules are available, or a routing rule otherwise; saving requires a writable configuration source. The default condition matches the exact domain; select a suffix condition to include subdomains.
 
 Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. When the backend supports deletion, Cache can remove entries by full name, suffix, keyword or regex, by record type, or both; it shows the matching count before confirmation.
 
@@ -123,7 +123,7 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 Configuration shows the version of the configuration in effect. Modules shows one summary per configuration section and links to the page that manages it. Global settings edits the engine's persistent settings when supported; Config files edits the selected writable source and exports its displayed content, which may contain credentials. A write that changes settings requiring a restart is refused without writing; the notice lists the settings and provides a restart command and an install-guide link.
 
-On Settings > Geodata, Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
+Settings > Geodata lists the geodata files and shows status and update controls when supported. Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Reload, DNS cache, subscription and connection actions remain on their respective pages, not in Settings. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
 
 ### Widgets
 
