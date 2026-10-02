@@ -104,7 +104,7 @@ export function PhoneWidgets({route, backend}: {route: string; backend: BackendV
         <WidgetsIcon />
       </Button>
       {!floating && opened && later(<PhoneDrawer open={open} onClose={() => setOpen(false)} backend={backend} />)}
-      {editing && later(<WidgetEditor onClose={() => editorState.set(false)} />)}
+      {editing && later(<WidgetEditor backend={backend} onClose={() => editorState.set(false)} />)}
     </>
   );
 }

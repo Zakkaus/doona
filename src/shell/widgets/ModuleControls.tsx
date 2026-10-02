@@ -101,9 +101,9 @@ export function ModuleInspector({
         </EditorOption>
       )}
       {formsFor(active.id, surface).length > 1 && !(active.size === 'small' && formsFor(active.id, surface).includes('sparkline')) && (
-        <EditorOption label={t('widgets.form', {name: t(registry[active.id].label)})}>
+        <EditorOption label={t('widgets.form')}>
           <Segmented
-            label={t('widgets.form', {name: t(registry[active.id].label)})}
+            label={t('widgets.form')}
             value={canonicalForm(active, surface)}
             onChange={form => update({...active, form: form as ModuleForm})}
             items={formsFor(active.id, surface).map(form => [form, t(formLabels[form])])}

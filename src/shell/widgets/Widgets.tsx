@@ -1,10 +1,11 @@
 import {useEffect, useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties} from 'react';
 import {createPortal} from 'react-dom';
 import {useT} from '../../i18n';
-import {Button, DetailPanel, Divider, Light, MoreMenu} from '../../ui/ui';
+import {Button, DetailPanel, Light, MoreMenu} from '../../ui/ui';
 import {FloatingPanel, ResizeHandle, useGesture} from '../../ui/FloatingPanel';
 import {WidgetHeader, WidgetPanel} from '../../ui/WidgetPanel';
 import {WidgetGrid, WidgetCell} from '../../ui/WidgetGrid';
+import {WidgetChartInset} from '../../ui/charts/compact';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import Pin from '../../ui/icons/Pin';
 import {BackendIndicator} from '../Backend';
@@ -47,7 +48,7 @@ export function PanelHost({
     if (page.current !== route && !layout.pinned && !docked) patchLayout({collapsed: true});
     page.current = route;
   }, [route, layout.pinned, docked]);
-  // Docked, the divider above the section is its height's handle: from a header and one widget row up to the height
+  // Docked, the gap above the section is its height's handle: from a header and one widget row up to the height
   // that still shows every link above it, or the section's default share when the links overflow anyway.
   const section = useRef<HTMLElement>(null);
   const dockResize = useGesture(
@@ -67,51 +68,7 @@ export function PanelHost({
     next => patchLayout({dockHeight: Math.round(next.height)})
   );
   const dockHeight = dockResize.live?.height ?? layout.dockHeight;
-  // Docked, the header keeps only the controls; the backend indicator with the engine and its version is the section's
-  // foot, where it sits on main.
-  const header = (
-    <WidgetHeader
-      backend={docked ? undefined : <BackendIndicator backend={backend} honk={honk} panel />}
-      summary={collapsed ? <SpeedSummary /> : undefined}
-      actions={
-        <>
-          <MoreMenu
-            quiet
-            label={t('widgets.panelOptions')}
-            actions={[
-              {id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)},
-              ...(dockable ? [{id: 'dock', label: t(docked ? 'widgets.undock' : 'widgets.dock'), onAction: () => dock(!docked)}] : []),
-              ...(docked
-                ? []
-                : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
-              {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
-            ]}
-          />
-          {!docked && (
-            <Button
-              quiet
-              icon
-              isSelected={layout.pinned}
-              label={t(layout.pinned ? 'widgets.unpin' : 'widgets.pin')}
-              onPress={() => patchLayout({pinned: !layout.pinned})}
-            >
-              <Pin />
-            </Button>
-          )}
-          <Button
-            quiet
-            icon
-            className="rp-widget-collapse"
-            expanded={!collapsed}
-            label={t(collapsed ? 'widgets.expand' : 'widgets.collapse')}
-            onPress={() => patchLayout({collapsed: !collapsed})}
-          >
-            <ChevronDown />
-          </Button>
-        </>
-      }
-    />
-  );
+  const header = <PanelHeader backend={backend} honk={honk} docked={docked} dockable={dockable} onDock={() => dock(!docked)} />;
   if (docked)
     return (
       <section
@@ -121,12 +78,13 @@ export function PanelHost({
         data-sized={dockHeight && !collapsed ? true : undefined}
         style={dockHeight ? ({'--rp-dock-height': `${dockHeight}px`} as CSSProperties) : undefined}
       >
-        <div className="rp-dock-edge">
-          <Divider orientation="horizontal" />
-          {!collapsed && <ResizeHandle edge={{block: 'start'}} label={t('widgets.resizePanel')} {...dockResize.props} />}
-        </div>
+        <div className="rp-dock-edge">{!collapsed && <ResizeHandle edge={{block: 'start'}} label={t('widgets.resizePanel')} {...dockResize.props} />}</div>
         {header}
-        {!collapsed && <SavedGrid />}
+        {!collapsed && (
+          <WidgetChartInset.Provider value={0}>
+            <SavedGrid docked />
+          </WidgetChartInset.Provider>
+        )}
         <BackendIndicator backend={backend} honk={honk} />
       </section>
     );
@@ -175,7 +133,7 @@ export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: (
     </DetailPanel>
   );
 }
-function SavedGrid() {
+function SavedGrid({docked = false}: {docked?: boolean}) {
   const layout = useWidgetLayout();
   const t = useT();
   return (
@@ -185,6 +143,7 @@ function SavedGrid() {
           <WidgetCell key={instanceId(item)} id={instanceId(item)} size={item.size === 'wide' ? 'large' : item.size}>
             <WidgetContent
               item={item}
+              docked={docked}
               onChange={next => saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(next) ? next : old))}))}
             />
           </WidgetCell>
@@ -192,5 +151,76 @@ function SavedGrid() {
       </WidgetGrid>
       {!layout.items.length && <span className="rp-label">{t('widgets.empty')}</span>}
     </WidgetPanel>
+  );
+}
+
+export function PanelHeader({
+  backend,
+  honk,
+  docked = false,
+  dockable = false,
+  onDock,
+  preview = false
+}: {
+  backend: BackendView;
+  honk?: () => void;
+  docked?: boolean;
+  dockable?: boolean;
+  onDock?: () => void;
+  preview?: boolean;
+}) {
+  const t = useT();
+  const layout = useWidgetLayout();
+  const collapsed = !preview && layout.collapsed;
+  return (
+    <WidgetHeader
+      backend={
+        docked ? undefined : honk ? (
+          <BackendIndicator backend={backend} honk={honk} panel />
+        ) : (
+          <Button quiet icon label={backend.label}>
+            <Light tone={backend.tone} small />
+          </Button>
+        )
+      }
+      summary={docked ? <h3 className="rp-dock-title">{t('widgets.title')}</h3> : collapsed ? <SpeedSummary /> : undefined}
+      actions={
+        <>
+          <MoreMenu
+            quiet
+            label={t('widgets.panelOptions')}
+            actions={[
+              {id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)},
+              ...(dockable && onDock ? [{id: 'dock', label: t(docked ? 'widgets.undock' : 'widgets.dock'), onAction: onDock}] : []),
+              ...(docked
+                ? []
+                : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
+              {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
+            ]}
+          />
+          {!docked && (
+            <Button
+              quiet
+              icon
+              isSelected={layout.pinned}
+              label={t(layout.pinned ? 'widgets.unpin' : 'widgets.pin')}
+              onPress={() => patchLayout({pinned: !layout.pinned})}
+            >
+              <Pin />
+            </Button>
+          )}
+          <Button
+            quiet
+            icon
+            className="rp-widget-collapse"
+            expanded={!collapsed}
+            label={t(collapsed ? 'widgets.expand' : 'widgets.collapse')}
+            onPress={() => patchLayout({collapsed: !collapsed})}
+          >
+            <ChevronDown />
+          </Button>
+        </>
+      }
+    />
   );
 }

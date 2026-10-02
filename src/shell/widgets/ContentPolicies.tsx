@@ -9,14 +9,13 @@ import {href} from '../route';
 import type {Widget} from './layout';
 import {Reading} from './Reading';
 
-export function ModeWidget({preview, targetOnly}: {preview: boolean; targetOnly: boolean}) {
+export function ModeWidget({targetOnly, docked = false}: {targetOnly: boolean; docked?: boolean}) {
   const t = useT();
   const m = useMode();
-  const model = {...m, writable: !preview && m.writable};
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
-      {!targetOnly && <ModeSwitch model={model} />}
+      {!targetOnly && <ModeSwitch model={m} fill={docked} />}
       {(targetOnly || m.mode === 'global') && (
         <WidgetRow label={t('act.global')}>
           <span className={targetOnly ? 'rp-cluster rp-global-controls' : 'rp-cluster'}>
@@ -25,13 +24,13 @@ export function ModeWidget({preview, targetOnly}: {preview: boolean; targetOnly:
               label={t('act.global')}
               value={m.target}
               onChange={m.pickTarget}
-              isDisabled={preview || m.busy || !m.writable}
+              isDisabled={m.busy || !m.writable}
               items={m.targets}
               searchLabel={t('ui.filterOutbounds')}
             >
               {m.targetText}
             </ChoiceMenu>
-            {targetOnly && <ModeApply model={model} />}
+            {targetOnly && <ModeApply model={m} />}
           </span>
         </WidgetRow>
       )}
@@ -42,7 +41,7 @@ export function ModeWidget({preview, targetOnly}: {preview: boolean; targetOnly:
 // Works without setup: the first manual group until the card picks another; with none, one jump to create a group.
 export const cardGroup = <G extends {id: string; policy: {kind: string}}>(groups: readonly G[] | undefined, chosen: string | undefined) =>
   groups?.find(group => group.id === chosen) ?? groups?.find(group => group.policy.kind === 'selector');
-export function GroupWidget({item, preview, onChange}: {item: Widget; preview: boolean; onChange?: (item: Widget) => void}) {
+export function GroupWidget({item, onChange}: {item: Widget; onChange?: (item: Widget) => void}) {
   const t = useT();
   const groups = useGroups();
   const selected = cardGroup(groups.data, item.group);
@@ -55,7 +54,6 @@ export function GroupWidget({item, preview, onChange}: {item: Widget; preview: b
               quiet
               label={t('ui.group')}
               value={selected.id}
-              isDisabled={preview || !onChange}
               items={(groups.data ?? []).map(group => ({id: group.id, label: group.name}))}
               onChange={group => onChange?.({...item, group})}
               searchLabel={t('ui.filterGroups')}
@@ -63,7 +61,7 @@ export function GroupWidget({item, preview, onChange}: {item: Widget; preview: b
               {selected.name}
             </ChoiceMenu>
           </WidgetRow>
-          <GroupControl id={selected.id} refresh={groups.refetch} preview={preview} />
+          <GroupControl id={selected.id} refresh={groups.refetch} />
         </>
       ) : (
         <Empty>
@@ -76,7 +74,7 @@ export function GroupWidget({item, preview, onChange}: {item: Widget; preview: b
     </Reading>
   );
 }
-function GroupControl({id, refresh, preview}: {id: string; refresh: () => unknown; preview: boolean}) {
+function GroupControl({id, refresh}: {id: string; refresh: () => unknown}) {
   const t = useT();
   const control = useGroupControl(id, refresh, () => {});
   const g = control.data;
@@ -94,7 +92,7 @@ function GroupControl({id, refresh, preview}: {id: string; refresh: () => unknow
         label={t('widgets.network')}
         value={network}
         onChange={value => control.setNetwork(value as typeof network)}
-        isDisabled={preview || !!control.busy}
+        isDisabled={!!control.busy}
         items={[
           ['both', t('policy.both')],
           ['tcp', 'TCP'],
@@ -118,7 +116,7 @@ function GroupControl({id, refresh, preview}: {id: string; refresh: () => unknow
           searchLabel={t('ui.filterMembers')}
           label={t('widgets.member')}
           value={selected ?? ''}
-          isDisabled={preview || !!control.busy || !canSelect}
+          isDisabled={!!control.busy || !canSelect}
           items={(g?.members ?? []).map(m => ({id: m.id, label: m.name}))}
           onChange={member => selectMember(control.select, member, selected, g?.name, name, t)}
         >
@@ -126,7 +124,7 @@ function GroupControl({id, refresh, preview}: {id: string; refresh: () => unknow
         </ChoiceMenu>
       </WidgetRow>
       {g?.capabilities.can_override && overridden && (
-        <Button small isDisabled={preview} isPending={control.busy === 'selection'} onPress={() => void control.clearOverride()}>
+        <Button small isPending={control.busy === 'selection'} onPress={() => void control.clearOverride()}>
           {t('policy.releaseOverride')}
         </Button>
       )}

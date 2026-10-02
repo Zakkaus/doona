@@ -2208,7 +2208,7 @@
   "widgets.edit": "Edit widgets",
   "widgets.empty": "No widgets. Edit to add one.",
   "widgets.expand": "Expand widgets",
-  "widgets.form": "{name} display",
+  "widgets.form": "Display",
   "widgets.gallery": "Widget gallery",
   "widgets.group": "Group quick switch",
   "widgets.hide": "Hide widgets",

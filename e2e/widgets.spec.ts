@@ -10,15 +10,60 @@ const save = (page: Page, layout: Layout) =>
   }, layout);
 // Wide enough for a segmented control's options to show in a row rather than in its overflow menu.
 const wide = {width: 480, height: 640};
-const floating = (page: Page) => page.locator('.rp-floating-panel');
+const floating = (page: Page) => page.locator('.rp-floating-frame .rp-floating-panel');
 const editor = (page: Page) => page.getByRole('dialog', {name: 'Edit widgets', exact: true});
 const openEditor = async (page: Page) => {
   await moreAction(page.locator('.rp-widget-header'), 'Edit widgets', 'Panel options');
   await expect(editor(page).locator('.rp-widget-inspector button').first()).toBeVisible();
 };
+const expectSelectionClearance = async (page: Page) => {
+  const selected = page.locator('.rp-widget-preview .rp-sortable-row[data-selected]');
+  await selected.scrollIntoViewIfNeeded();
+  const geometry = await selected.evaluate(el => {
+    const row = el.getBoundingClientRect();
+    const frame = getComputedStyle(el, '::before');
+    const scale = Number(getComputedStyle(el.closest('.rp-widget-preview')!).zoom);
+    const gap = (-Number.parseFloat(frame.top) - Number.parseFloat(frame.borderTopWidth)) * scale;
+    const content = el.querySelector('.rp-widget')!.getBoundingClientRect();
+    const edge = {left: row.left - gap, top: row.top - gap, right: row.right + gap, bottom: row.bottom + gap};
+    const tools = el.querySelector('.rp-dashboard-tools')!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(el.querySelector('.rp-widget-label')!);
+    const boxes = [...range.getClientRects(), ...[...el.querySelectorAll('figure, .rp-kv')].map(node => node.getBoundingClientRect())];
+    const overlap = boxes.some(box => tools.left < box.right && tools.right > box.left && tools.top < box.bottom && tools.bottom > box.top);
+    const clipped = [];
+    for (let ancestor = el.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (getComputedStyle(ancestor).overflow === 'visible') continue;
+      const box = ancestor.getBoundingClientRect();
+      if (edge.left < box.left || edge.right > box.right || edge.top < box.top || edge.bottom > box.bottom) clipped.push(ancestor.className);
+    }
+    return {gaps: [content.left - edge.left, content.top - edge.top, edge.right - content.right, edge.bottom - content.bottom], overlap, clipped};
+  });
+  for (const gap of geometry.gaps) expect(gap).toBeGreaterThanOrEqual(8);
+  expect(geometry.overlap).toBe(false);
+  expect(geometry.clipped).toEqual([]);
+};
+const expectPanelPreview = async (page: Page) => {
+  const preview = page.locator('.rp-widget-preview');
+  const live = await box(floating(page));
+  const scale = await preview.evaluate(el => Number(getComputedStyle(el).zoom));
+  const room = await page.locator('.rp-widget-preview-space').evaluate(el => {
+    const style = getComputedStyle(el);
+    return el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+  });
+  expect((await box(preview)).width).toBeCloseTo(Math.min(room, live.width), 0);
+  expect((await box(preview)).width / scale).toBeCloseTo(live.width, 0);
+  const sections = floating(page).locator('.rp-widget[aria-label]');
+  for (let i = 0; i < (await sections.count()); i++) {
+    const actual = await box(sections.nth(i));
+    const copy = await box(preview.locator('.rp-widget[aria-label]').nth(i));
+    expect(Math.abs(copy.height / scale - actual.height)).toBeLessThanOrEqual(2);
+  }
+};
 test('edits a draft, cancels changes, saves sizes and order, and restores defaults', async ({page}) => {
   await page.goto('/#/settings');
   await openEditor(page);
+  await expectPanelPreview(page);
   await editor(page).getByRole('radio', {name: 'Key-value list', exact: true}).click();
   await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
@@ -37,6 +82,85 @@ test('edits a draft, cancels changes, saves sizes and order, and restores defaul
   await editor(page).getByRole('button', {name: 'Restore defaults'}).click();
   await editor(page).getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('[data-widget-id="notices"]')).toHaveCount(0);
+});
+
+test.describe('medium-width widget editor', () => {
+  test.use({viewport: {width: 1150, height: 900}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': 'dark'}});
+  test('keeps the library, preview and inspector readable beside a resized panel', async ({page}) => {
+    await save(page, {
+      ...defaults(),
+      size: {width: 640, height: 640},
+      items: [
+        {id: 'speed', size: 'medium', form: 'sparkline'},
+        {id: 'memory', size: 'medium', form: 'kv'},
+        {id: 'divider', size: 'medium', form: 'kv'}
+      ]
+    });
+    await page.goto('/#/settings');
+    await moreAction(page.locator('.rp-widget-header'), '編輯小工具', '面板選項');
+    const dialog = page.getByRole('dialog', {name: '編輯小工具', exact: true});
+    const library = dialog.locator('.rp-widget-gallery-tile[data-module="speed"]');
+    await expect(library.locator('.rp-compact-chart')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expectPanelPreview(page);
+    const liveWidth = (await box(floating(page))).width;
+    const sectionHeight = (await box(floating(page).locator('.rp-widget').first())).height;
+    const labels = dialog.locator('.rp-widget-gallery-tile > h3, .rp-widget-inspector h3, .rp-widget-inspector .rp-module-option > .rp-label');
+    for (const label of await labels.all()) {
+      const geometry = await label.evaluate(el => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return {text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth, lines: new Set([...range.getClientRects()].map(rect => rect.top)).size};
+      });
+      expect(geometry.scroll, geometry.text!).toBeLessThanOrEqual(geometry.client);
+      expect(geometry.lines, geometry.text!).toBe(1);
+    }
+    expect((await box(library)).width).toBeGreaterThanOrEqual(300);
+    expect((await box(dialog.locator('.rp-widget-canvas'))).width).toBeGreaterThanOrEqual(280);
+    expect((await box(dialog.locator('.rp-widget-inspector'))).width).toBeGreaterThanOrEqual(240);
+    const body = dialog.locator('.rp-dialog-body');
+    expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const footer = await box(dialog.locator('.foot'));
+    expect((await box(body)).y + (await box(body)).height).toBeLessThanOrEqual(footer.y);
+    const frame = library.locator('.rp-widget-gallery-frame');
+    expect((await box(frame)).height).toBeCloseTo((await box(frame.locator(':scope > *'))).height, 0);
+    const canvas = dialog.locator('.rp-widget-canvas');
+    const tracks = await dialog.locator('.rp-widget-editor-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').map(Number.parseFloat));
+    expect((await box(canvas)).width).toBeCloseTo(tracks[1], 0);
+    const nestedScrollers = await body.evaluate(root =>
+      [...root.querySelectorAll<HTMLElement>('*')]
+        .filter(el => {
+          let count = 0;
+          for (let parent: HTMLElement | null = el; parent && root.contains(parent); parent = parent.parentElement) {
+            if (/auto|scroll/.test(getComputedStyle(parent).overflowY) && parent.scrollHeight > parent.clientHeight + 1) count++;
+          }
+          return count > 1;
+        })
+        .map(el => el.className)
+    );
+    expect(nestedScrollers, 'At most one vertical scroll container in each column').toEqual([]);
+    for (const control of await body.locator('button:not([inert] button), [role="radio"]:not([inert] *)').all()) {
+      await control.scrollIntoViewIfNeeded();
+      const bounds = await box(control);
+      expect(bounds.y + bounds.height, (await control.textContent()) ?? '').toBeLessThanOrEqual(footer.y);
+    }
+    await expectSelectionClearance(page);
+    await expect(dialog.locator('.rp-widget-canvas .rp-widget[aria-label="分隔線"] .rp-widget-label')).toHaveCount(0);
+    await page.setViewportSize({width: 390, height: 844});
+    const preview = dialog.locator('.rp-widget-preview');
+    const space = dialog.locator('.rp-widget-preview-space');
+    const room = await space.evaluate(el => {
+      const style = getComputedStyle(el);
+      return el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+    });
+    await expect.poll(async () => (await box(preview)).width).toBeCloseTo(room, 0);
+    const scale = await preview.evaluate(el => Number(getComputedStyle(el).zoom));
+    expect(scale).toBeLessThan(1);
+    expect(await preview.evaluate(el => (el as HTMLElement).offsetWidth)).toBeCloseTo(liveWidth, 0);
+    expect(Math.abs((await box(preview.locator('.rp-widget').first())).height / scale - sectionHeight)).toBeLessThanOrEqual(2);
+    expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await expectSelectionClearance(page);
+  });
 });
 test('group quick switch shares network scope, keeps release and enforces capabilities', async ({page}) => {
   await save(page, {...defaults(), items: [{id: 'group', form: 'text', size: 'medium', group: 'auto'}], size: wide});
@@ -131,6 +255,9 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await expect.poll(async () => (await box(floating(page))).width).toBe(before.width + 48);
   await page.reload();
   await expect.poll(async () => (await box(floating(page))).width).toBe(before.width + 48);
+  await openEditor(page);
+  await expectPanelPreview(page);
+  await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
   // The header moves the panel: dragged where its own controls are not, and by arrow keys on its move handle.
   const start = await box(floating(page));
   const name = await box(floating(page).locator('.rp-widget-backend'));
@@ -207,12 +334,36 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   const docked = await box(dock);
   expect(Math.abs(docked.y + docked.height - foot)).toBeLessThanOrEqual(1);
   expect(docked.height).toBeLessThanOrEqual(sideBox.height * 0.45);
-  // The divider above the docked section sets its height by arrow keys, kept after a reload.
-  await dock.getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
+  const dockHeader = dock.locator('.rp-widget-header');
+  const groupHeader = side.locator('.rp-disclosure-trigger').first();
+  const groupBox = await box(groupHeader);
+  expect(Math.abs((await box(dockHeader)).height - groupBox.height)).toBeLessThanOrEqual(1);
+  const groupStart = await groupHeader.evaluate(el => el.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(el).paddingInlineStart));
+  expect(Math.abs((await box(dock.getByRole('heading', {name: 'Activity widgets', exact: true}))).x - groupStart)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await box(dock.locator('.rp-widget-label').first())).x - groupStart)).toBeLessThanOrEqual(1);
+  await expect.poll(() => dock.locator('.rp-widget-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  const chevron = await box(groupHeader.locator('svg'));
+  for (const icon of await dockHeader.locator('svg').all()) {
+    const bounds = await box(icon);
+    expect(Math.abs(bounds.width - chevron.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.height - chevron.height)).toBeLessThanOrEqual(1);
+  }
+  // The group boundary resizes by keyboard and pointer, keeping the height after a reload.
+  const resize = dock.getByRole('button', {name: 'Resize widgets panel', exact: true});
+  await expect(resize).toHaveCSS('cursor', 'ns-resize');
+  await resize.focus();
   for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowDown');
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 32);
   await page.reload();
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 32);
+  const edge = await box(resize);
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2 + 24, {steps: 4});
+  await page.mouse.up();
+  await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
+  await page.reload();
+  await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
   await moreAction(dock, 'Undock', 'Panel options');
   await expect(floating(page).locator('.rp-widget-cell').first()).toBeVisible();
   await expect(dock).toHaveCount(0);
@@ -335,14 +486,13 @@ test.describe('header and edge at 1440', () => {
       expect(geometry.corners).toEqual(['0px', '0px']);
       expect(geometry.border).toBe('0px');
     });
-  test('the hidden summary is narrower than the unchanged docked collapsed row', async ({page}) => {
+  test('the hidden summary is narrower than the docked collapsed row', async ({page}) => {
     await save(page, {...defaults(), docked: true, collapsed: true, edge: true});
     await page.goto('/#/settings');
     const row = await box(page.locator('.rp-side-dock .rp-widget-header'));
     await moreAction(page.locator('.rp-side-dock'), 'Undock', 'Panel options');
     await expect(floating(page)).toBeHidden();
     const summary = await box(handle(page));
-    expect(row.width).toBe(208);
     expect(summary.width).toBeLessThan(row.width * 0.75);
     expect(Math.abs(summary.height - row.height)).toBeLessThanOrEqual(1);
   });
@@ -481,6 +631,118 @@ test('editor previews never rewrite a saved latency group, even without cached g
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-widgets') ?? '{}').items[0].group)).toBe('custom-only');
 });
 
+const darkTraditional = {
+  'doona-lang': 'zh-TW',
+  'doona-scheme': 'dark',
+  'doona-profiles': JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]),
+  'doona-profile': 'demo'
+};
+
+for (const width of [1280, 390]) {
+  test.describe(`sidebar widget content box at ${width}`, () => {
+    test.use({viewport: {width, height: 1100}, storage: darkTraditional});
+    test('aligns embedded content to section text and chevron edges without changing the phone host', async ({page}) => {
+      await save(page, {
+        ...defaults(),
+        docked: true,
+        items: [...defaults().items, {id: 'download', size: 'small', form: 'kv'}, {id: 'upload', size: 'small', form: 'kv'}]
+      });
+      await page.goto('/#/activity');
+      await page.getByRole('button', {name: '登入', exact: true}).click();
+      const side = page.locator('nav.rp-side');
+      const dock = side.locator('.rp-side-dock');
+      if (width === 390) {
+        await expect(side).toBeHidden();
+        await expect(dock).toHaveCount(0);
+        await page.getByRole('button', {name: '顯示小工具', exact: true}).click();
+        const sheet = page.locator('.rp-drawer');
+        await expect(sheet.locator('.rp-widget-label').first()).toBeVisible();
+        // The sheet is still entering: compare all edges in one frame, not across its moving transform.
+        const edges = await sheet
+          .locator('.rp-widget-label, .rp-compact-chart, .rp-compact-chart > div:not(.rp-legend), .rp-kv.row > div, .rp-hrule')
+          .evaluateAll(items => {
+            const content = items[0].getBoundingClientRect();
+            return items.map(item => {
+              const bounds = item.getBoundingClientRect();
+              return [Math.abs(bounds.left - content.left), Math.abs(bounds.right - content.right)];
+            });
+          });
+        for (const edge of edges) for (const gap of edge) expect(gap).toBeLessThanOrEqual(1);
+        return;
+      }
+      await expect(dock.locator('.rp-widget-label').first()).toBeVisible();
+      const group = side.getByRole('button', {name: '路由', exact: true});
+      const title = await box(group.locator('.rp-disclosure-title'));
+      const chevron = await box(group.locator('svg'));
+      const left = title.x;
+      const right = chevron.x + chevron.width;
+      expect(Math.abs((await box(dock.locator('.rp-dock-title'))).x - left)).toBeLessThanOrEqual(1);
+      await expect(dock.locator('.rp-compact-chart svg.rp-activity-surface')).toHaveCount(2);
+      for (const item of await dock
+        .locator(
+          '.rp-widget-header, .rp-widget-label, .rp-legend .it, .rp-compact-chart, .rp-compact-chart > div:not(.rp-legend), .rp-compact-chart svg.rp-activity-surface, .rp-kv > div, .rp-hrule, .rp-segfit, .rp-seg'
+        )
+        .all()) {
+        const bounds = await box(item);
+        const name = await item.evaluate(el => `${el.className}: ${el.textContent}`);
+        expect(Math.abs(bounds.x - left), name).toBeLessThanOrEqual(1);
+        expect(Math.abs(bounds.x + bounds.width - right), name).toBeLessThanOrEqual(1);
+      }
+      const apply = await box(dock.getByRole('button', {name: '套用', exact: true}));
+      const segmented = await box(dock.locator('.rp-segfit'));
+      expect(Math.abs(apply.x - left)).toBeLessThanOrEqual(1);
+      expect(Math.abs(apply.x + apply.width - right)).toBeLessThanOrEqual(1);
+      expect(Math.abs(apply.height - segmented.height)).toBeLessThanOrEqual(0.5);
+      for (const value of await dock.locator('.rp-kv .v, .rp-legend b').all()) {
+        const bounds = await box(value);
+        expect(Math.abs(bounds.x + bounds.width - right), (await value.textContent()) ?? undefined).toBeLessThanOrEqual(1);
+        const textRight = await value.evaluate(el => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return range.getBoundingClientRect().right;
+        });
+        expect(Math.abs(textRight - right), (await value.textContent()) ?? undefined).toBeLessThanOrEqual(1);
+      }
+      const collapse = await box(dock.locator('.rp-widget-collapse svg'));
+      expect(Math.abs(collapse.x + collapse.width - right)).toBeLessThanOrEqual(1);
+      const navIcon = await box(side.locator('.rp-nav > svg').first());
+      expect(Math.abs((await box(dock.locator('.rp-version .rp-light'))).x - navIcon.x)).toBeLessThanOrEqual(1);
+      for (const plot of await dock.locator('.rp-compact-chart svg.rp-activity-surface').all()) {
+        const ink = await plot.evaluate(el => {
+          const path = el.querySelector('path')!;
+          const bounds = path.getBBox();
+          return {left: bounds.x, right: bounds.x + bounds.width, width: el.getBoundingClientRect().width};
+        });
+        expect(Math.abs(ink.left)).toBeLessThanOrEqual(1);
+        expect(Math.abs(ink.right - ink.width)).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+}
+
+test.describe('sidebar read-only mode', () => {
+  test.use({viewport: {width: 1280, height: 1100}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': 'dark'}});
+  test('fills the content box with the mode explanation trigger at the segmented control height', async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    const config = await api.config();
+    for (const source of config.sources) source.writable = false;
+    handlers['GET config'] = async () => config;
+    await save(page, {...defaults(), docked: true});
+    await page.goto('/#/activity');
+    const dock = page.locator('.rp-side-dock');
+    const trigger = dock.getByRole('button', {name: '檢視唯讀原因', exact: true});
+    await expect(trigger).toBeVisible();
+    const content = await box(dock.locator('.rp-widget-label').first());
+    const segmented = await box(dock.locator('.rp-segfit'));
+    const action = await box(trigger);
+    expect(Math.abs(action.x - content.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(action.x + action.width - content.x - content.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(action.height - segmented.height)).toBeLessThanOrEqual(0.5);
+    await trigger.click();
+    await expect(page.getByRole('dialog', {name: '檢視唯讀原因', exact: true})).toBeVisible();
+  });
+});
+
 test.describe('phone sheet', () => {
   test.use({viewport: {width: 390, height: 844}, hasTouch: true});
   test('the sheet header carries the backend light and starts at the content inset', async ({page}) => {
@@ -524,3 +786,53 @@ for (const viewport of [
       await expect(page.getByRole('menuitem', {name: 'Dock in sidebar', exact: true})).toHaveCount(viewport.width >= 1024 ? 1 : 0);
     });
   });
+
+// A short window makes both the links and the docked panel scroll, so each has its scrollbar.
+test.describe('sidebar scrollbars at 1280x640', () => {
+  test.use({viewport: {width: 1280, height: 640}, storage: darkTraditional});
+  test("the scrollbars keep the top bar's inline gap from the links and the panel, and the mode control splits evenly", async ({page}) => {
+    await save(page, {...defaults(), docked: true});
+    await page.goto('/#/activity');
+    await page.getByRole('button', {name: '登入', exact: true}).click();
+    const side = page.locator('nav.rp-side');
+    const dock = side.locator('.rp-side-dock');
+    await expect(dock.locator('.rp-widget-label').first()).toBeVisible();
+    const segments = await dock.locator('.rp-seg .rp-btn').all();
+    expect(segments).toHaveLength(3);
+    const widths = [];
+    for (const segment of segments) {
+      const bounds = await box(segment);
+      const text = await segment.evaluate(el => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const rect = range.getBoundingClientRect();
+        return rect.left + rect.width / 2;
+      });
+      expect(Math.abs(text - (bounds.x + bounds.width / 2)), (await segment.textContent()) ?? undefined).toBeLessThanOrEqual(1);
+      widths.push(bounds.width);
+    }
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+    const gap = await page.evaluate(() => {
+      const bar = document.querySelector('.rp-top')!;
+      const inline = window.innerWidth - bar.lastElementChild!.getBoundingClientRect().right;
+      // The scrollbar's inner edge, and the right edge of what the scroller holds.
+      const clear = (scroller: HTMLElement, items: Element[]) => {
+        const bounds = scroller.getBoundingClientRect();
+        const scrolls = scroller.scrollHeight > scroller.clientHeight && scroller.offsetWidth - scroller.clientWidth > 0;
+        return {bar: scrolls, gap: bounds.left + scroller.clientWidth - Math.max(...items.map(item => item.getBoundingClientRect().right))};
+      };
+      const links = document.querySelector<HTMLElement>('.rp-side-links')!;
+      const body = document.querySelector<HTMLElement>('.rp-side-dock .rp-widget-body')!;
+      return {
+        inline,
+        links: clear(links, [...links.querySelectorAll('.rp-nav')]),
+        panel: clear(body, [...body.querySelectorAll('.rp-widget-body-content, .rp-seg, .rp-btn')])
+      };
+    });
+    expect(gap.inline).toBeGreaterThan(0);
+    expect(gap.links.bar).toBe(true);
+    expect(gap.panel.bar).toBe(true);
+    expect(gap.links.gap).toBeGreaterThanOrEqual(gap.inline);
+    expect(gap.panel.gap).toBeGreaterThanOrEqual(gap.inline);
+  });
+});

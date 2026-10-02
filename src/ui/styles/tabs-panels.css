@@ -198,7 +198,8 @@
   font: inherit;
 }
 /* S2 docs navigation: full-height section triggers and spaced links. */
-.rp-disclosure[data-variant='nav'] .rp-disclosure-trigger {
+.rp-disclosure[data-variant='nav'] .rp-disclosure-trigger,
+.rp-side-dock > .rp-widget-header {
   display: inline-flex;
   align-items: center;
   inline-size: 100%;

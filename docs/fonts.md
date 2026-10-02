@@ -17,3 +17,7 @@ including `OFL.txt` and this document as `README`. The application's font fallba
 
 When updating the packages, compare their `index.css` unicode ranges with the local declarations and retain the
 Latin faces at the end of `fonts-tc.css`: they take precedence over overlapping ideograph slices.
+
+Segmented-control labels use regular weight (400). At 14px and 1× device scale, Noto Sans TC's medium-weight strokes
+merge inside dense ideographs such as `直`; regular weight keeps the counters open without changing the font size
+or falling back to a different font.

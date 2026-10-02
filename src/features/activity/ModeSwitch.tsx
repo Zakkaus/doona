@@ -33,12 +33,12 @@ export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'writable' |
 }
 
 // The mode choice with its apply action, or why it cannot change: Activity's mode card and the widget panel share it.
-export function ModeSwitch({model: vm}: {model: ModeCardsModel}) {
+export function ModeSwitch({model: vm, fill}: {model: ModeCardsModel; fill?: boolean}) {
   const t = useT();
   const lang = useLang();
   return (
     <span className="rp-cluster">
-      <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
+      <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} fill={fill} />
       {vm.writable ? (
         <ModeApply model={vm} />
       ) : vm.readOnly ? (
