@@ -102,6 +102,10 @@
   min-width: 0;
   outline: none;
 }
+.rp-tabpanel:focus-visible {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: var(--rp-focus-offset);
+}
 
 /* ---- Detail panel: list on the left, a 360px panel on the right from 1200px; a drawer below that. ---- */
 .rp-with-panel {

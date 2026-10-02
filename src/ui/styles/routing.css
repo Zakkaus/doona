@@ -96,8 +96,9 @@
   background: var(--rp-selected);
 }
 .rp-tree-tile[data-focus-visible] {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
+  border-color: transparent;
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: calc(-1 * var(--rp-focus-width));
 }
 .rp-tree-tile .l {
   flex: 1;

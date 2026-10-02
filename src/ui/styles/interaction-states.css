@@ -50,6 +50,9 @@ h3.rp-label {
   overflow: clip;
   transition: height var(--rp-duration-panel) var(--rp-ease-out);
 }
+.rp-disclosure[data-expanded] > .rp-disclosure-panel {
+  overflow-clip-margin: var(--rp-space-1h);
+}
 .rp-disclosure-content {
   display: flex;
   flex-direction: column;
@@ -247,19 +250,25 @@ h3.rp-label {
   flex: 0 0 var(--rp-control);
 }
 
+:where(a, button, input, textarea, [tabindex]) {
+  scroll-margin: var(--rp-space-1h);
+}
+:focus-visible,
 [data-focus-visible],
 .rp-truncate:focus-visible,
 .rp-tipwrap:focus-visible {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: var(--rp-focus-offset);
 }
 .rp-tab[data-focus-visible],
 .rp-seg .rp-btn[data-focus-visible] {
-  outline: var(--rp-focus-width) solid var(--rp-accent);
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
   outline-offset: calc(-1 * var(--rp-focus-width));
 }
 /* These roots carry descendant focus state; only the focused control draws the ring. */
-:is(.rp-picker, .rp-tabs)[data-focus-visible] {
+:is(.rp-picker, .rp-tabs, .rp-field, .rp-search-field, .rp-radio, .rp-checkbox, .rp-switch)[data-focus-visible],
+.rp-input input,
+:is(.rp-radio, .rp-checkbox, .rp-switch, .rp-resizer) input:focus-visible {
   outline: none;
 }
 /* Disabled controls need a tooltip target; enabled wrappers stay boxless to preserve direct-child layout. The wrapper
@@ -276,21 +285,45 @@ h3.rp-label {
 .rp-tipwrap:not([data-passive]) > button {
   pointer-events: none;
 }
-/* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
-.rp-input:focus-within {
-  border-color: var(--rp-accent);
-  box-shadow: 0 0 0 1px var(--rp-accent);
+/* The field owns its input's ring, keyboard focus only as in S2 (a click darkens the border instead); clear/reveal
+   buttons own theirs, never both. */
+.rp-input:has(input[data-focus-visible]),
+.rp-editor[data-keyboard] .cm-editor.cm-focused,
+.rp-popover:has(:is([role='menu'], [role='listbox']):focus-visible):not(:has(.rp-item[data-focus-visible])) {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: var(--rp-focus-offset);
 }
 .rp-table [data-focus-visible],
-.rp-item[data-focus-visible] {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: -2px;
+.rp-table :is([role='row'], [role='rowheader'], [role='gridcell'], [role='columnheader']):focus-visible,
+.rp-item:is([data-focus-visible], :focus-visible),
+:is(.rp-nav, .rp-side .rp-disclosure-trigger)[data-focus-visible] {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: calc(-1 * var(--rp-focus-width));
+}
+.rp-popover :is([role='menu'], [role='listbox']):focus-visible {
+  outline: none;
+}
+/* Cell and menu padding is the gutter for nested text, whose own box clips its ellipsis. */
+:is(.rp-table [role='rowheader'], .rp-table [role='gridcell'], .rp-item):has(.rp-truncate:focus-visible) {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: calc(-1 * var(--rp-focus-width));
+}
+:is(.rp-table, .rp-item) .rp-truncate:focus-visible {
+  outline: none;
+}
+.rp-truncate:focus-visible {
+  outline-offset: var(--rp-space-1);
 }
 .rp-switch[data-hovered] .track {
   box-shadow: 0 0 0 2px var(--rp-hl-med);
 }
 .rp-switch[data-pressed] .track {
   box-shadow: 0 0 0 3px var(--rp-hl-high);
+}
+.rp-switch[data-focus-visible] .track {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: var(--rp-focus-offset);
+  box-shadow: none;
 }
 .rp-link {
   display: inline-flex;

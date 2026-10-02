@@ -153,6 +153,8 @@
   --rp-line-body: 20px;
   --rp-line-caption: 16px;
   --rp-focus-width: 2px;
+  --rp-focus-color: var(--rp-accent);
+  --rp-focus-offset: var(--rp-space-half);
   --rp-control-inset: var(--rp-space-half);
   --rp-control-block-inset: var(--rp-control-inset);
   /* Global stacking, low to high: the floating panel, then modals and tooltips (tooltips are portaled after the modal

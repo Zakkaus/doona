@@ -121,8 +121,7 @@
   }
 }
 .rp-resizer[data-hovered],
-.rp-resizer[data-resizing],
-.rp-resizer[data-focus-visible] {
+.rp-resizer[data-resizing] {
   border-inline-end-color: var(--rp-accent);
 }
 .rp-table [role='columnheader'][data-resizing] {
