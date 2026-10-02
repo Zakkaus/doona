@@ -18,7 +18,7 @@ const render = (lang: Lang, palette: PaletteId, key: Key) =>
 it('reads the China palette words for its statuses and the catalogue words under the default palette', () => {
   expect(render('en', 'qiangguo/qiangguo', 'lifecycle.running')).toBe('Improving');
   expect(render('en', 'qiangguo/qiangguo', 'act.unavailable')).toBe('Severe test');
-  expect(render('zh-TW', 'qiangguo/qiangguo', 'act.good')).toBe(translate('zh-TW', 'palette.qiangguoGood'));
+  expect(render('zh-TW', 'qiangguo/qiangguo', 'lifecycle.running')).toBe(translate('zh-TW', 'palette.qiangguoGood'));
   expect(render('zh-CN', 'qiangguo/qiangguo', 'lifecycle.degraded')).toBe(translate('zh-CN', 'palette.qiangguoBad'));
   expect(render('en', 'qiangguo/qiangguo', 'lifecycle.failed')).toBe('Failed');
   expect(render('en', 'qiangguo/qiangguo', 'theme.light')).toBe('Day shift');
@@ -27,6 +27,6 @@ it('reads the China palette words for its statuses and the catalogue words under
   expect(render('en', DEFAULT_PALETTE, 'theme.light')).toBe('Light');
   expect(render('en', DEFAULT_PALETTE, 'lifecycle.running')).toBe('Running');
   expect(render('en', DEFAULT_PALETTE, 'act.unavailable')).toBe('Unavailable');
-  expect(render('zh-TW', DEFAULT_PALETTE, 'act.good')).toBe(translate('zh-TW', 'act.good'));
+  expect(render('zh-TW', DEFAULT_PALETTE, 'lifecycle.running')).toBe(translate('zh-TW', 'lifecycle.running'));
   expect(render('zh-CN', DEFAULT_PALETTE, 'lifecycle.degraded')).toBe(translate('zh-CN', 'lifecycle.degraded'));
 });

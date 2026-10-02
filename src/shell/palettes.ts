@@ -24,7 +24,6 @@ export const palettes = [
     label: 'palette.qiangguo',
     desc: 'palette.qiangguoModes',
     words: {
-      'act.good': 'palette.qiangguoGood',
       'lifecycle.running': 'palette.qiangguoGood',
       'act.unavailable': 'palette.qiangguoBad',
       'lifecycle.degraded': 'palette.qiangguoBad',
