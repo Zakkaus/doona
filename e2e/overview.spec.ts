@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, mockBackend, setAppearance, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, mockBackend, setAppearance, settle, test} from './fixtures';
 
 test('overview exports runtime and reports a failed accepted reload without success', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
@@ -167,6 +167,7 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
       await setAppearance(page, lang, scheme);
       for (const width of [1024, 1280, 1440]) {
         await page.setViewportSize({width, height: 900});
+        await settle(page);
         await page.reload();
         await expect(page.locator('.rp-capability').first()).toBeVisible();
         const columns = await page.locator('.rp-capability').evaluateAll(rows => new Set(rows.map(row => Math.round(row.getBoundingClientRect().left))).size);

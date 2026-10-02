@@ -1,5 +1,5 @@
 import {translate, type Translator} from '../src/i18n';
-import {expect, loadCatalogues, mockBackend, setAppearance, test} from './fixtures';
+import {expect, loadCatalogues, mockBackend, test} from './fixtures';
 
 test.beforeAll(loadCatalogues);
 
@@ -22,9 +22,8 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
 
   test(`Expression editing describes the expression instead of condition rows in ${lang}`, async ({page}) => {
     await unsupportedRule(page);
+    await page.addInitScript(value => localStorage.setItem('doona-lang', value), lang);
     await page.goto('/#/rules?tab=list&view=advanced');
-    await setAppearance(page, lang, 'light');
-    await page.reload();
     await page
       .locator('[role=row][data-key]')
       .filter({hasText: 'mac(aa:bb:cc:dd:ee:ff)'})
@@ -37,9 +36,7 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
   });
 
   test(`routing and DNS add help follows the condition mode in ${lang}`, async ({page}) => {
-    await page.goto('/#/rules?tab=list&view=advanced');
-    await setAppearance(page, lang, 'light');
-    await page.reload();
+    await page.addInitScript(value => localStorage.setItem('doona-lang', value), lang);
     for (const [route, count] of [
       ['/#/rules?tab=list&view=advanced', 1],
       ['/#/rules?tab=dns', 2]
@@ -147,9 +144,7 @@ for (const [lang, edit, help] of [
   ['zh-CN', '编辑规则', '修改 fallback 目标；验证通过后保存并重新加载。']
 ]) {
   test(`fallback help describes only the target in ${lang}`, async ({page}) => {
-    await page.goto('/#/rules?tab=list&view=advanced');
-    await setAppearance(page, lang, 'light');
-    await page.reload();
+    await page.addInitScript(value => localStorage.setItem('doona-lang', value), lang);
     for (const route of ['/#/rules?tab=list&view=advanced', '/#/rules?tab=dns']) {
       await page.goto(route);
       const fallbacks = page.locator('[role=row][data-key]').filter({hasText: 'fallback:'});

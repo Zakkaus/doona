@@ -1,5 +1,5 @@
 import type {Request} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, settle, test} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 // What a password backend shows a caller without a credential: the sign-in links and mode, nothing else.
@@ -121,6 +121,7 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   // The backend ends the session (restart, logout elsewhere): the next load asks to sign in and says why.
   state.token = 'hnk1_other';
+  await settle(page);
   await page.reload();
   await expect(page.locator('.rp-login').getByRole('status')).toHaveText('The session has ended; sign in again.');
   expect(await page.evaluate(() => sessionStorage.getItem('doona-session'))).toBeNull();

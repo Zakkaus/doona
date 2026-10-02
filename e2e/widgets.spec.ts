@@ -1,4 +1,4 @@
-import {test, expect, mockBackend, moreAction, box} from './fixtures';
+import {test, expect, mockBackend, moreAction, settle, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import {defaults, type Layout} from '../src/shell/widgets/layout';
 import type {Page} from '@playwright/test';
@@ -242,6 +242,7 @@ test('an unpinned panel collapses on another page and a pinned one stays open', 
   await pin.click();
   await expect(floating(page).getByRole('button', {name: 'Unpin panel', exact: true})).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/#/settings');
+  await settle(page);
   await page.reload();
   await page.goto('/#/connections');
   await expect(floating(page).getByRole('button', {name: 'Collapse widgets', exact: true})).toBeVisible();

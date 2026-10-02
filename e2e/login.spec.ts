@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, mockBackend, test, box} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, settle, test, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 // The public demo saves a profile on the mock; a saved demo profile signs in with the account it publishes.
@@ -21,6 +21,7 @@ test.describe('the demo', () => {
     await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.rp-login-page')).toHaveCount(0);
     // The session belongs to the tab and survives a reload.
+    await settle(page);
     await page.reload();
     await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
   });
@@ -82,6 +83,7 @@ test.describe('the demo', () => {
     await page.getByRole('option', {name: /Nord/}).click();
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
     await page.goto('/#/activity');
+    await settle(page);
     await page.reload();
     await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('Sign in');
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');

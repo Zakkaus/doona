@@ -1,7 +1,7 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
 import {demoRouting, demoRoutingInclude} from '../src/dae/startingRouting';
-import {expect, isLive, mockBackend, routes, scrollTableToEnd, test, box} from './fixtures';
+import {expect, isLive, mockBackend, routes, scrollTableToEnd, settle, test, box} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
@@ -21,6 +21,7 @@ test('each hub opens its first page, then the page last seen in it', async ({pag
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/logs$/);
   // The memory lasts the session, through a reload.
+  await settle(page);
   await page.reload();
   await bar(page).getByRole('link', {name: 'Activity'}).click();
   await expect(page).toHaveURL(/#\/activity$/);
@@ -169,6 +170,7 @@ test.describe('with the scheme left to the system', () => {
   test('the overflow menu draws every row icon at the same size, whatever the scheme', async ({page}) => {
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({colorScheme: scheme});
+      await settle(page);
       await page.goto('/#/overview');
       await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
       await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();

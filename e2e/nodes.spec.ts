@@ -1,7 +1,7 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {editorText, box} from './fixtures';
-import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
+import {expect, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
@@ -540,6 +540,7 @@ test('the source kind badge shows its whole label in every language', async ({pa
   await page.goto('/#/nodes?tab=list');
   for (const lang of ['en', 'zh-TW', 'zh-CN']) {
     await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    await settle(page);
     await page.reload();
     const badges = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child .rp-badge');
     await expect(badges).toHaveCount(2);
