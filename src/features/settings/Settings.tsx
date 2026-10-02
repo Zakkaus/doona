@@ -73,6 +73,7 @@ export function Settings({query}: PageProps) {
   } = useSettingsPage(query);
   const mirrorHelpId = useId();
   const countryFlagsHelpId = useId();
+  const sparklinesHelpId = useId();
 
   const content: Record<SettingsCardId, ReactNode> = {
     backend: (
@@ -209,6 +210,14 @@ export function Settings({query}: PageProps) {
           </Switch>
           <span id={countryFlagsHelpId} className="rp-label">
             {t('settings.countryFlagsHelp')}
+          </span>
+        </div>
+        <div className="rp-field">
+          <Switch isSelected={ap.sparklines} onChange={ap.pickSparklines} aria-describedby={sparklinesHelpId}>
+            {t('settings.sparklines')}
+          </Switch>
+          <span id={sparklinesHelpId} className="rp-label">
+            {t('settings.sparklinesHelp')}
           </span>
         </div>
         <div className="rp-field">

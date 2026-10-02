@@ -88,7 +88,10 @@ export function createRuntime(capabilities: Capabilities, big: boolean, flowReco
       const snapshot = structuredClone(runtime);
       // Each poll is a fresh sample with a little swell, so the live curve keeps moving.
       const swell = 1 + 0.15 * Math.sin(now / 20000);
-      snapshot.traffic.sampled_at = new Date(now).toISOString();
+      snapshot.observed_at = new Date(now).toISOString();
+      snapshot.traffic.sampled_at = snapshot.observed_at;
+      if (snapshot.process.cpu_percent !== null)
+        snapshot.process.cpu_percent = Math.round(snapshot.process.cpu_percent * (1 + 0.6 * Math.sin(now / 15000)) * 10) / 10;
       if (snapshot.traffic.rates) {
         snapshot.traffic.rates.upload_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.upload_bytes_per_second) * swell));
         snapshot.traffic.rates.download_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.download_bytes_per_second) * swell));

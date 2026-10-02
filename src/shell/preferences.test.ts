@@ -186,13 +186,16 @@ it.each([null, '', 'last', 'login', 'unknown', 'rules?tab=dns'])('defaults an in
   expect(readSettings(storageFrom(value === null ? [] : [['doona-start-page', value]])).startPage).toBe('activity');
 });
 
-it('defaults country flags on and preserves an explicit off preference', () => {
-  expect(readSettings(storageFrom()).countryFlags).toBe(true);
-  expect(readSettings(storageFrom([['doona-country-flags', 'on']])).countryFlags).toBe(true);
-  expect(readSettings(storageFrom([['doona-country-flags', 'true']])).countryFlags).toBe(true);
+it.each([
+  ['countryFlags', 'doona-country-flags'],
+  ['sparklines', 'doona-sparklines']
+] as const)('defaults %s on and preserves an explicit off preference', (key, stored) => {
+  expect(readSettings(storageFrom())[key]).toBe(true);
+  expect(readSettings(storageFrom([[stored, 'on']]))[key]).toBe(true);
+  expect(readSettings(storageFrom([[stored, 'true']]))[key]).toBe(true);
   const storage = storageFrom();
-  writeSetting('countryFlags', 'off', storage);
-  expect(readSettings(storage).countryFlags).toBe(false);
+  writeSetting(key, 'off', storage);
+  expect(readSettings(storage)[key]).toBe(false);
 });
 
 it('validates and bounds flag overrides and removes automatic choices', () => {

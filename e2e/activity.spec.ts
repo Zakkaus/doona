@@ -341,6 +341,8 @@ test('the latency tile of a healthy node has no status light', async ({page}) =>
 });
 
 test('the latency tile names an active node that is unavailable and keeps its size', async ({page}) => {
+  // Narrow tiles stack the value over the line, so the light has to fill the line's place.
+  await page.setViewportSize({width: 390, height: 900});
   const backend = await mockBackend(page, {faults: true});
   const groups = await backend.api.groups();
   groups.find(group => group.name === 'gaming')!.selection.tcp_member_id = 'jp-01';
@@ -358,6 +360,18 @@ test('the latency tile names an active node that is unavailable and keeps its si
   await jp.click();
   await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
   expect((await box(tile)).height).toBe(height);
+  // The light takes the line's place: each row keeps one height, and the tiles keep their sizes without lines.
+  const sizes = () =>
+    page
+      .locator("[data-profile='metrics'] > *")
+      .evaluateAll(tiles => tiles.map(tile => [Math.round(tile.getBoundingClientRect().top), tile.getBoundingClientRect().height]));
+  const lit = await sizes();
+  for (const [top] of lit) expect(new Set(lit.filter(other => other[0] === top).map(other => other[1])).size, 'one height per row').toBe(1);
+  await page.evaluate(() => localStorage.setItem('doona-sparklines', 'off'));
+  await page.reload();
+  await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
+  await expect(page.locator("[data-profile='metrics'] .rp-spark")).toHaveCount(0);
+  expect(await sizes(), 'the same sizes without lines').toEqual(lit);
 });
 
 test('the latency card explains automatic selection from its info button', async ({page}) => {
@@ -461,9 +475,9 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
   await expect(ready).toHaveCount(1);
 });
 
-// The live window is two minutes of ten-second history, so a curve drawn from it has a dozen points across the plot.
+// The live window is two minutes of ten-second history, so a traffic curve drawn from it has a dozen points across the plot.
 async function expectLiveCurves(page: Page) {
-  const curves = page.locator('.rp-spark .rp-area-curve');
+  const curves = page.locator(':is([data-module=download], [data-module=upload], [data-module=connections]) .rp-spark .rp-area-curve');
   await expect(curves).toHaveCount(3);
   for (const curve of await curves.all()) await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(10);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
@@ -475,6 +489,11 @@ async function expectLiveCurves(page: Page) {
   expect(drawn!.width).toBeGreaterThan(plot!.width * 0.8);
 }
 const pointCount = (path: Element) => (path.getAttribute('d')?.match(/[MLC]/g) ?? []).length;
+// A sparkline waits for its second sample: whatever is drawn has at least two points, and a lone sample leaves no dot.
+async function expectNoLoneSample(page: Page) {
+  await expect(page.locator('.rp-spark circle')).toHaveCount(0);
+  for (const curve of await page.locator('.rp-spark .rp-area-curve').all()) expect(await curve.evaluate(pointCount)).toBeGreaterThanOrEqual(2);
+}
 
 test('the live curves keep their window after the page was hidden', async ({page}) => {
   await page.clock.install();
@@ -506,37 +525,80 @@ test('the live curves are drawn when the page opens after the session has run a 
 for (const width of [390, 1440]) {
   test.describe(`${width}px metric tiles`, () => {
     test.use({viewport: {width, height: 900}});
-    test('keep a readable sparkline and equal heights in each row', async ({page}) => {
+    test('keep a readable sparkline and equal heights in each row, and their heights without sparklines', async ({page}) => {
+      await page.clock.install();
       await page.goto('/#/activity');
-      await expect(page.locator("[data-profile='metrics'] .rp-spark")).toHaveCount(3);
-      const tiles = await page.locator("[data-profile='metrics'] > *").evaluateAll(elements =>
-        elements.map(tile => {
-          const box = tile.getBoundingClientRect();
-          const style = getComputedStyle(tile);
-          const inset = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
-          const value = tile.querySelector('.rp-big')!.getBoundingClientRect();
-          const spark = tile.querySelector('.rp-spark')?.getBoundingClientRect();
-          return {
-            label: tile.querySelector('.rp-tile-head')!.textContent,
-            top: Math.round(box.top),
-            height: box.height,
-            content: box.width - inset,
-            spark: spark && {width: spark.width, beside: spark.left >= value.right, below: spark.top >= value.bottom}
-          };
-        })
-      );
+      await expectNoLoneSample(page);
+      // CPU and latency draw the session's own polls; the node list comes every 30 seconds.
+      await page.clock.runFor(1000);
+      await expectNoLoneSample(page);
+      await page.clock.runFor(60000);
+      await expect(page.locator("[data-profile='metrics'] .rp-spark svg")).toHaveCount(5);
+      const measure = () =>
+        page.locator("[data-profile='metrics'] > *").evaluateAll(elements =>
+          elements.map(tile => {
+            const box = tile.getBoundingClientRect();
+            const style = getComputedStyle(tile);
+            const inset =
+              parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+            const value = tile.querySelector('.rp-big')!.getBoundingClientRect();
+            const spark = tile.querySelector('.rp-spark')?.getBoundingClientRect();
+            return {
+              label: tile.querySelector('.rp-tile-head')!.textContent,
+              head: tile.querySelector('.rp-tile-head')!.getBoundingClientRect().height,
+              line: tile.querySelector('.rp-tile-body')!.getBoundingClientRect().top - box.top,
+              top: Math.round(box.top),
+              height: box.height,
+              content: box.width - inset,
+              spark: spark && {width: spark.width, height: spark.height, beside: spark.left >= value.right, below: spark.top >= value.bottom}
+            };
+          })
+        );
+      const tiles = await measure();
+      // The latency tile keeps its picker on the caption's line, so its header and value line match the others'.
+      const [download, latency] = ['Download', 'Latency'].map(label => tiles.find(tile => tile.label!.startsWith(label))!);
+      expect([latency.head, latency.line], 'latency header and value line').toEqual([download.head, download.line]);
+      // One plot height; under the value every plot spans the tile, beside it each fills the room up to the same cap.
+      expect(new Set(tiles.map(tile => tile.spark!.height)).size, 'plot heights').toBe(1);
+      expect(new Set(tiles.filter(tile => tile.spark!.below).map(tile => Math.round(tile.spark!.width))).size, 'stacked plot widths').toBeLessThanOrEqual(1);
+      for (const tile of tiles.filter(tile => !tile.spark!.below)) expect(tile.spark!.width, `${tile.label}: plot width`).toBeLessThanOrEqual(120);
       for (const tile of tiles) {
         const row = tiles.filter(other => other.top === tile.top);
         for (const other of row) expect(other.height, `${tile.label} and ${other.label} share a row`).toBeCloseTo(tile.height, 0);
         if (!tile.spark) continue;
-        if (width === 390) {
+        // A tile narrower than the value and a 64px line stacks them (cards-dashboard.css).
+        if (tile.content < 174) {
           expect(tile.spark.below, `${tile.label}: sparkline under the value`).toBe(true);
           expect(tile.spark.width, `${tile.label}: sparkline width`).toBeGreaterThanOrEqual(tile.content * 0.6);
         } else expect(tile.spark.beside, `${tile.label}: sparkline beside the value`).toBe(true);
       }
+      await page.evaluate(() => localStorage.setItem('doona-sparklines', 'off'));
+      await page.reload();
+      await expect(page.locator("[data-profile='metrics'] .rp-big")).toHaveCount(5);
+      await expect(page.locator("[data-profile='metrics'] .rp-spark")).toHaveCount(0);
+      expect((await measure()).map(tile => [tile.top, tile.height])).toEqual(tiles.map(tile => [tile.top, tile.height]));
     });
   });
 }
+
+test('the latency sparkline restarts when the tile picks another group', async ({page}) => {
+  // Hold time between reads: a menu can pause and resume the tile, and events can bring a read forward.
+  await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-09-16T00:00:01Z'));
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-latency .rp-big')).toHaveText(/ms/);
+  const curve = page.locator('.rp-latency .rp-spark .rp-area-curve');
+  await page.clock.runFor(61000);
+  await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(3);
+  await page.locator('.rp-latency .rp-select').click();
+  await page.getByRole('menuitemradio', {checked: false}).last().click();
+  // One sample is no line; the box stays.
+  await expect(curve).toHaveCount(0);
+  await expectNoLoneSample(page);
+  await expect(page.locator('.rp-latency .rp-spark')).toBeVisible();
+  await page.clock.runFor(31000);
+  await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(2);
+});
 
 // The picker stays inside the tile; phones keep two tiles per row and truncate long node names.
 for (const [width, lang] of [
@@ -998,11 +1060,12 @@ test('the latency picker shows the resolved node on a phone', async ({page}) => 
   const picker = page.locator('.rp-latency .rp-select');
   await expect(picker).toContainText('hk-01');
   await expect(picker).toHaveAccessibleName('组：hk-01');
-  const cut = await picker.evaluate(button => [...button.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1));
-  expect(cut).toBe(false);
-  const caption = await page.locator('.rp-latency .rp-tile-caption').boundingBox();
+  // A phone tile hides the caption from view, so the picker on its line keeps room for the name; the caption still names the tile.
+  expect(await picker.locator('.rp-truncate').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(0);
+  expect(await page.locator('.rp-latency').ariaSnapshot()).toMatch(/text: 延迟$/m);
+  const icon = await page.locator('.rp-latency .rp-tile-head > svg').boundingBox();
   const controls = await page.locator('.rp-latency .rp-tile-controls').boundingBox();
-  expect(controls!.y).toBeGreaterThanOrEqual(caption!.y + caption!.height);
+  expect(controls!.y).toBeLessThan(icon!.y + icon!.height);
 });
 
 for (const [lang, scheme, width] of [
@@ -1017,21 +1080,20 @@ for (const [lang, scheme, width] of [
       const card = page.locator('.rp-latency');
       const picker = card.locator('.rp-select');
       const value = card.locator('.rp-big');
-      const title = card.locator('.rp-tile-caption');
+      // A phone tile shows the clock icon in the caption's place.
+      const title = card.locator(width < 600 ? '.rp-tile-head > svg' : '.rp-tile-caption');
       await expect(picker).toHaveText('hk-01');
       await expect(value).toHaveText('84 ms');
       await page.evaluate(() => document.fonts.ready);
       await settleFrames(page);
       const [titleBox, triggerBox, valueBox] = await Promise.all([box(title), box(picker), box(value)]);
-      // Wide controls share the header; phones put them below the title.
-      if (width < 600) expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(triggerBox.y);
-      else expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(triggerBox.x);
+      expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(triggerBox.x);
       expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(valueBox.y);
       expect(triggerBox.y + triggerBox.height).toBeLessThanOrEqual(valueBox.y);
       expect(await value.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(
         await picker.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
       );
-      for (const element of [title, picker, value]) {
+      for (const element of width < 600 ? [picker, value] : [title, picker, value]) {
         await expectTextInside(element);
         expect(
           await element.evaluate(el => {

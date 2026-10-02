@@ -36,8 +36,13 @@ export function useSelection(count: number, select: (index: number, y?: number) 
       if (!focused) hide();
     },
     onKeyDown: (event: KeyboardEvent<SVGSVGElement>) => {
-      if (!['ArrowRight', 'ArrowLeft', 'Enter'].includes(event.key)) return;
+      if (!['ArrowRight', 'ArrowLeft', 'Enter', 'Escape'].includes(event.key)) return;
       event.preventDefault();
+      if (event.key === 'Escape') {
+        setActive(false);
+        hide();
+        return;
+      }
       if (event.key === 'Enter') {
         if (current === null) return;
         if (active) hide();

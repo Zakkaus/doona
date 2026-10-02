@@ -6,6 +6,45 @@ import {sha256} from '../src/api/hash';
 test.beforeAll(loadCatalogues);
 const shots = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_ACTIVITY_SHOTS;
 
+function latencyGeometry(el: Element) {
+  const head = el.querySelector<HTMLElement>('.rp-tile-head')!;
+  const caption = head.querySelector<HTMLElement>('.rp-tile-caption')!;
+  const picker = head.querySelector<HTMLElement>('.rp-select')!;
+  const help = head.querySelector<HTMLElement>('.rp-help')!;
+  const value = el.querySelector<HTMLElement>('.rp-big')!;
+  const range = document.createRange();
+  range.selectNodeContents(caption);
+  const title = range.getBoundingClientRect();
+  const hiddenCaption = getComputedStyle(caption).clipPath === 'inset(50%)';
+  const header = head.getBoundingClientRect();
+  const p = picker.getBoundingClientRect();
+  const h = help.getBoundingClientRect();
+  const v = value.getBoundingClientRect();
+  return {
+    hiddenCaption,
+    titleFits:
+      hiddenCaption || (caption.scrollWidth <= caption.clientWidth + 1 && title.right <= p.left && title.top >= header.top && title.bottom <= header.bottom),
+    control: Number.parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')),
+    headerHeight: header.height,
+    picker: [p.y, p.height],
+    help: [h.y, h.width, h.height],
+    controlsFit: [p, h].every(box => box.left >= header.left && box.right <= header.right && box.top >= header.top && box.bottom <= header.bottom),
+    valueFits: v.top >= header.bottom && v.right <= el.getBoundingClientRect().right && value.scrollWidth <= value.clientWidth + 1,
+    clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(child => {
+      if (child.scrollWidth <= child.clientWidth + 1) return false;
+      const style = getComputedStyle(child);
+      return !(
+        child.matches('.rp-node-name') &&
+        child.clientWidth > 0 &&
+        style.overflow === 'hidden' &&
+        style.textOverflow === 'ellipsis' &&
+        style.whiteSpace === 'nowrap'
+      );
+    }),
+    padding: getComputedStyle(picker).paddingInlineStart
+  };
+}
+
 for (const width of [1440, 768, 390])
   for (const lang of ['en', 'zh-TW', 'zh-CN'] as const)
     test.describe(`${width} ${lang} Activity cards`, () => {
@@ -57,32 +96,17 @@ for (const width of [1440, 768, 390])
             await page.evaluate(() => document.fonts.ready);
           }
           if (shots) await page.screenshot({path: `${shots}/activity.${width}.${lang}.light.flags-${flags ? 'on' : 'off'}.png`});
-          const geometry = await latency.evaluate(el => {
-            const picker = el.querySelector<HTMLElement>('.rp-select')!;
-            const help = el.querySelector<HTMLElement>('.rp-help')!;
-            const caption = el.querySelector('.rp-tile-caption');
-            const range = document.createRange();
-            if (caption) range.selectNodeContents(caption);
-            else
-              range.selectNode([...el.querySelector('.rp-tile-head')!.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())!);
-            const title = range.getBoundingClientRect();
-            const p = picker.getBoundingClientRect();
-            const h = help.getBoundingClientRect();
-            return {
-              titleFits: !caption || (caption.scrollWidth <= caption.clientWidth + 1 && title.right <= el.getBoundingClientRect().right - 16),
-              control: Number.parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')),
-              picker: [p.y, p.height],
-              help: [h.y, h.width, h.height],
-              secondRow: p.y >= title.bottom,
-              clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(child => child.scrollWidth > child.clientWidth + 1),
-              padding: getComputedStyle(picker).paddingInlineStart
-            };
-          });
+          const geometry = await latency.evaluate(latencyGeometry);
+          await expect.soft(latency.locator('.rp-tile-caption')).toHaveText(translate(lang, 'act.latency'));
+          await expect.soft(picker).toHaveAccessibleName(translate(lang, 'ui.valuePair', {label: translate(lang, 'policy.pickGroups'), value: 'hk-01'}));
+          expect.soft(geometry.hiddenCaption).toBe(width === 390);
           expect.soft(geometry.titleFits).toBe(true);
           expect.soft(geometry.help.slice(1)).toEqual([geometry.control, geometry.control]);
           expect.soft(geometry.picker[1]).toBe(geometry.control);
           expect.soft(geometry.help[0]).toBe(geometry.picker[0]);
-          expect.soft(geometry.secondRow).toBe(width === 390 || (flags && width === 1440 && lang === 'en'));
+          expect.soft(geometry.headerHeight).toBe(geometry.control);
+          expect.soft(geometry.controlsFit).toBe(true);
+          expect.soft(geometry.valueFits).toBe(true);
           expect.soft(geometry.clipped).toBe(false);
           expect.soft(geometry.padding).toBe('8px');
           expect.soft(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
@@ -93,10 +117,15 @@ for (const width of [1440, 768, 390])
           await page.getByRole('searchbox', {name: translate(lang, 'policy.pickGroups'), exact: true}).fill('gaming');
           await menu.getByRole('menuitemradio', {name: 'gaming', exact: true}).click();
           await expect(picker).toHaveText('hk-02');
+          await expect.soft(picker).toHaveAccessibleName(translate(lang, 'ui.valuePair', {label: translate(lang, 'policy.pickGroups'), value: 'hk-02'}));
           await expect(picker).toBeFocused();
-          expect
-            .soft(await picker.evaluate(button => [...button.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1)))
-            .toBe(false);
+          expect.soft(await latency.evaluate(latencyGeometry)).toMatchObject({
+            titleFits: true,
+            headerHeight: geometry.control,
+            controlsFit: true,
+            valueFits: true,
+            clipped: false
+          });
           await page.keyboard.press('Tab');
           const help = latency.getByRole('button', {name: translate(lang, 'ui.helpFor', {name: translate(lang, 'act.latency')}), exact: true});
           await expect(help).toBeFocused();

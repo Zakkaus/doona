@@ -353,8 +353,10 @@
   color: var(--rp-subtle);
   white-space: nowrap;
 }
-/* Keep the caption and picker boxes when the help target grows into the card's end inset. */
+/* The picker and help share the caption's line at every width: the picker gives way first and ellipsises its name.
+   The help target grows into the card's end inset, so the caption and picker keep their boxes. */
 .rp-tile-head[data-layout='responsive'] {
+  flex-wrap: nowrap;
   margin-inline-end: -8px;
 }
 .rp-tile-controls {
@@ -467,14 +469,19 @@
    sparkline's 64px basis: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
    narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. */
 @container rp-tile (width < 174px) {
+  /* Too narrow for the caption and a node name: the caption leaves the view, the icon and the picker stay, close
+     enough that a short node name still fits, and the caption still names the tile, as the wordmark still names its
+     button. */
   .rp-tile-head[data-layout='responsive'] {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    height: auto;
-    margin-inline-end: 0;
+    gap: var(--rp-space-1);
   }
-  .rp-tile-head[data-layout='responsive'] > .rp-tile-controls {
-    grid-column: 1 / -1;
+  .rp-tile-head[data-layout='responsive'] > .rp-tile-caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .rp-tile-body {
     display: grid;

@@ -22,6 +22,7 @@ export type Settings = {
   wordmark: Wordmark;
   mirrored: boolean;
   countryFlags: boolean;
+  sparklines: boolean;
   flagOverrides: FlagOverrides;
   toastPlacement: ToastPlacement;
   startPage: RoutePath;
@@ -29,7 +30,7 @@ export type Settings = {
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
 export function writeSetting(
-  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'flagOverrides' | 'toastPlacement' | 'startPage',
+  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'sparklines' | 'flagOverrides' | 'toastPlacement' | 'startPage',
   value: string,
   storage?: StoragePort
 ) {
@@ -63,6 +64,7 @@ export function readSettings(storage?: StoragePort): Settings {
     mirrored: read(storageKeys.mirror) === 'on',
     startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
     countryFlags: read(storageKeys.countryFlags) !== 'off',
+    sparklines: read(storageKeys.sparklines) !== 'off',
     flagOverrides: readFlagOverrides(storage),
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
   };
@@ -86,6 +88,8 @@ type Appearance = {
   flagOverrides: FlagOverrides;
   pickMirrored: (value: boolean) => void;
   pickCountryFlags: (value: boolean) => void;
+  sparklines: boolean;
+  pickSparklines: (value: boolean) => void;
   pickFlag: (name: string, value: string) => void;
   toastPlacement: ToastPlacement;
   pickToastPlacement: (value: ToastPlacement) => void;

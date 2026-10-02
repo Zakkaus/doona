@@ -1636,6 +1636,8 @@
   "settings.signOutTokenHelp": "僅清除此瀏覽器儲存的 Token；該 Token 在後端仍然有效。",
   "settings.sourceConfig": "組態值",
   "settings.sourceRuntime": "執行期覆寫",
+  "settings.sparklines": "活動卡片顯示趨勢圖",
+  "settings.sparklinesHelp": "在活動頁的指標卡片上繪製近期數值。",
   "settings.startPage": "啟動時開啟",
   "settings.switchProfileHelp": "切換連線設定檔會放棄尚未儲存的後端網址與 Token 修改；已儲存的連線設定檔保持不變。",
   "settings.test": "測試連線",
