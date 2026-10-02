@@ -3,7 +3,7 @@ import type {Capabilities, Runtime, RuntimeMemory} from '../../api/model';
 import {ResourcePreview} from '../../store/preview';
 import {useMemoryHistory, useTrafficHistory} from '../../store';
 import {offered} from '../../api/capabilities';
-import {useRings} from '../../api/rings';
+import {useRings} from '../../store/rings';
 import {foldMemory, historySamples, memorySample, memoryWindow} from './memory';
 import {foldTraffic, historyTrafficSamples, trafficSample, trafficWindow} from './traffic';
 

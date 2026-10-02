@@ -19,7 +19,7 @@ export const storageKeys = {
   // The single-backend settings from before profiles, read once to migrate them.
   legacyApi: 'doona-api',
   legacyToken: 'doona-api-token',
-  // One key per backend and ring; see rings.ts.
+  // One key per backend and ring; see store/rings.ts.
   ringsPrefix: 'doona-rings-',
   connectionsView: 'doona-connections-view',
   activityGroup: 'doona-activity-group',

@@ -8,7 +8,7 @@ import {isTrafficRange, trafficRanges, trafficWindow, type TrafficRange} from '.
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
-import {useRings} from '../../api/rings';
+import {useRings} from '../../store/rings';
 import {ResourcePreview} from '../../store/preview';
 import {SettingsContext} from '../../shell/preferences';
 import {cpuSample, foldCpu, sparkPoints, sparkWindow} from '../shared/widgetSeries';
