@@ -164,8 +164,16 @@ export const connectionStates: Record<Connection['state'], Key> = {
   unknown: 'conn.state.unknown'
 };
 
+// A connection a poll re-reads unchanged keeps its identity, so its row with the network does too, and the tables'
+// caches keyed on the row survive the poll.
+const withNetwork = new WeakMap<Connection, Connection & {network: string}>();
+const tagged = (c: Connection, network: string) => {
+  let row = withNetwork.get(c);
+  if (row?.network !== network) withNetwork.set(c, (row = {...c, network}));
+  return row;
+};
 export function connectionRows(snapshot: ConnectionList | undefined) {
-  return snapshot ? [...snapshot.tcp.map(c => ({...c, network: 'tcp'})), ...snapshot.udp.map(c => ({...c, network: 'udp'}))] : [];
+  return snapshot ? [...snapshot.tcp.map(c => tagged(c, 'tcp')), ...snapshot.udp.map(c => tagged(c, 'udp'))] : [];
 }
 
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
