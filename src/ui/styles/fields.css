@@ -19,6 +19,12 @@
   color: var(--rp-muted);
 }
 
+/* Keyboard focus must scroll the control's hidden input and painted mark together. */
+.rp-radio,
+.rp-switch {
+  position: relative;
+}
+
 .rp-switch .track {
   width: 32px;
   height: 16px;
@@ -188,8 +194,9 @@
 :is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input {
   border-color: var(--rp-negative);
 }
-:is(.rp-field, .rp-cluster, .rp-search-field)[data-invalid] .rp-input:focus-within {
-  box-shadow: 0 0 0 1px var(--rp-negative);
+/* Any focus inside the field, mouse included, takes the strong border as in S2; an invalid field keeps its own. */
+.rp-input:focus-within {
+  border-color: var(--rp-text);
 }
 .rp-field > label:not(.rp-switch),
 .rp-field .lbl {

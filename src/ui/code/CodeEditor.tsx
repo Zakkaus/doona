@@ -1,4 +1,5 @@
 import {useEffect, useLayoutEffect, useRef, type ReactNode} from 'react';
+import {useFocusVisible} from 'react-aria';
 import {Menu, MenuItem} from 'react-aria-components';
 import {useT, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -67,7 +68,8 @@ const theme = EditorView.theme({
     borderRadius: 'var(--rp-r-md)',
     fontSize: 'var(--rp-text-sm)'
   },
-  '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-accent)', boxShadow: '0 0 0 1px var(--rp-accent)'},
+  // Any focus takes the strong border; the keyboard ring is drawn by interaction-states.css.
+  '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-text)'},
   '.cm-scroller': {
     fontFamily: 'var(--rp-font-mono)',
     lineHeight: 'var(--rp-line-body)',
@@ -258,6 +260,8 @@ export function CodeEditor({
     if (collapsed && toolbar.current?.contains(document.activeElement)) overflow.current?.querySelector('button')?.focus();
   }, [collapsed]);
   const host = useRef<HTMLDivElement>(null);
+  // CodeMirror has no React Aria state; the ring follows the same keyboard-only modality as the other fields.
+  const {isFocusVisible} = useFocusVisible({isTextInput: true});
   const head = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
@@ -443,7 +447,7 @@ export function CodeEditor({
           {banner}
         </div>
       )}
-      <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} />
+      <div className={compact ? 'rp-editor compact' : 'rp-editor'} ref={host} data-keyboard={isFocusVisible || undefined} />
     </>
   );
 }

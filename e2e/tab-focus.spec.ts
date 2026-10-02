@@ -99,3 +99,84 @@ for (const width of [390, 768, 1440]) {
     });
   }
 }
+
+test('focus rings clear field, picker, button, list, legend and table content without clipping', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  const samples = [
+    ['settings', '.rp-input input', '.rp-input'],
+    ['settings', '.rp-selectbtn:enabled', ''],
+    ['activity', '.rp-content .rp-btn', ''],
+    ['activity', '.rp-bar .top .l > .rp-link', ''],
+    ['activity', '.rp-donut .r .n > .rp-link', ''],
+    ['dns?tab=cache', '[role=rowheader]', '']
+  ];
+  for (const [route, selector, owner] of samples) {
+    await page.goto(`/#/${route}`);
+    const target = page.locator(`${selector}:visible`).first();
+    await expect(target).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await target.scrollIntoViewIfNeeded();
+    await page.keyboard.press('Tab');
+    await target.focus();
+    await expect(target).toBeFocused();
+    await expect
+      .poll(() =>
+        target.evaluate((element, owner) => {
+          const frame = owner ? element.closest(owner)! : element;
+          const style = getComputedStyle(frame);
+          const bounds = frame.getBoundingClientRect();
+          const offset = parseFloat(style.outlineOffset);
+          const width = parseFloat(style.outlineWidth);
+          const inner = {left: bounds.left - offset, right: bounds.right + offset, top: bounds.top - offset, bottom: bounds.bottom + offset};
+          const content: DOMRect[] = [];
+          if (element instanceof HTMLInputElement) content.push(element.getBoundingClientRect());
+          else {
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+              if (!walker.currentNode.textContent?.trim()) continue;
+              const range = document.createRange();
+              range.selectNodeContents(walker.currentNode);
+              content.push(...range.getClientRects());
+            }
+          }
+          const clear = content.every(
+            box => box.left - inner.left >= 2 && inner.right - box.right >= 2 && box.top - inner.top >= 2 && inner.bottom - box.bottom >= 2
+          );
+          let clipped = false;
+          for (let parent = frame.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+            const css = getComputedStyle(parent);
+            const box = parent.getBoundingClientRect();
+            if (/(hidden|clip|auto|scroll)/.test(css.overflowX)) clipped ||= inner.left - width < box.left - 1 || inner.right + width > box.right + 1;
+            if (/(hidden|clip|auto|scroll)/.test(css.overflowY)) clipped ||= inner.top - width < box.top - 1 || inner.bottom + width > box.bottom + 1;
+          }
+          return {clear, clipped, visible: style.outlineStyle === 'solid' && width === 2, shadow: style.boxShadow};
+        }, owner)
+      )
+      .toEqual({clear: true, clipped: false, visible: true, shadow: 'none'});
+  }
+});
+
+test('a text field darkens its border on any focus and shows the ring only for the keyboard', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  await page.goto('/#/settings');
+  const input = page.locator('.rp-input input:visible').first();
+  const field = input.locator('xpath=ancestor::*[contains(@class,"rp-input")][1]');
+  await expect(input).toBeVisible();
+  const look = () =>
+    field.evaluate(el => {
+      const style = getComputedStyle(el);
+      return {border: style.borderTopColor, outline: style.outlineStyle, width: style.outlineWidth, offset: style.outlineOffset, shadow: style.boxShadow};
+    });
+  const rest = await look();
+  await input.click();
+  await expect(input).toBeFocused();
+  await expect.poll(async () => (await look()).border).not.toBe(rest.border);
+  expect((await look()).outline).toBe('none');
+  expect((await look()).shadow).toBe('none');
+  await input.blur();
+  await page.keyboard.press('Tab');
+  await input.focus();
+  await expect(input).toHaveAttribute('data-focus-visible');
+  await expect.poll(look).toMatchObject({outline: 'solid', width: '2px', offset: '2px', shadow: 'none'});
+  expect((await look()).border).not.toBe(rest.border);
+});

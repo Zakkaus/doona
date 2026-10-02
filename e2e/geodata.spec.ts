@@ -102,6 +102,15 @@ test('a failed update keeps the old files and shows the reason in the status row
   const [head, entry] = (await clipboard()).split('\n\n');
   expect(head).toMatch(/^doona \S+\nengine .+\npage \/settings$/);
   expect(entry).toMatch(/operation: \S+ geodata_update failed/);
+  // Dismiss the notifications before reaching the Settings action underneath them.
+  await page
+    .locator('.rp-toast.positive', {hasText: t('toast.copied')})
+    .getByRole('button', {name: t('ui.close'), exact: true})
+    .click();
+  await page
+    .locator('.rp-toast.negative')
+    .getByRole('button', {name: t('ui.close'), exact: true})
+    .click();
   await page.getByRole('button', {name: t('settings.copyErrors')}).click();
   expect(await clipboard()).toContain(entry);
   const status = row(page, 'settings.geodataStatus').getByRole('status');

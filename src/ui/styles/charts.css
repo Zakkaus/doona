@@ -229,21 +229,21 @@
 }
 .rp-markerplot .row .name {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--rp-text-sm);
 }
-/* A name that opens its node is a link only as tall as the text, so the row keeps its height. */
+/* Compensate the ring gutter so the node name stays aligned with the plotted row. */
 .rp-markerplot .row .name > .rp-link {
   display: block;
+  width: max-content;
+  max-width: calc(100% + 2 * var(--rp-space-half));
   min-height: 0;
-  padding: 0;
+  padding: var(--rp-space-half);
+  margin: calc(-1 * var(--rp-space-half));
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.rp-markerplot .row .name > .rp-link[data-focus-visible] {
-  outline-offset: -2px;
 }
 .rp-markerplot .row .value {
   text-align: end;

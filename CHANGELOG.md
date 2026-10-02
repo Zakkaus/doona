@@ -44,6 +44,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Open action menus keep their items in place when late configuration reads make another action available, so a Remove click cannot open Edit instead. Reopening shows the newly available actions.
+- Keyboard focus rings clear chart legends and list labels and stay inside clipped navigation, menus and table boundaries. Backend feature labels retain wrapping inside the padded focus targets. Text fields and their reveal controls no longer draw doubled rings. Checkbox lists scroll focused controls into view. (#375)
 - Searchable pickers keep the search field fixed and scroll only the option list within the available popover height, without nested scrollbars or native scroll arrows.
 - Connections and Flows rows add routing rules for their own target, without requiring a selection; Flows removes the duplicate detail-panel entry. Disabled actions explain their reason in a tooltip instead of shifting the button row; configuration history uses contextual help for export and retention details. (#371)
 - Short status, event-kind, log-level, count and relative-time columns reserve enough width for their labels. Chinese action explanations use formal wording.

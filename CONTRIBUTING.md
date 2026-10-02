@@ -212,6 +212,8 @@ doona does not depend on `@react-spectrum/s2`. Version 1.7.1 unpacks to about 54
 
 Each role has one kit component in `src/ui`. Variants are typed props, never class strings, and styling uses tokens only. Features compose kit components and do not use React Aria components or kit class names directly; a composition with a single consumer may stay in its feature until a second one needs it.
 
+Keyboard focus uses one `--rp-focus-width` (2px) outline in `--rp-focus-color`, following the target's radius. Keep at least 2px between the ring and visible content: text-only targets use padding with compensating margins, and scroll-clipped controls use an inset ring. Text fields put the ring on the field box, not both the input and its wrapper; clear and reveal buttons own their rings. Preserve unfocused content positions, palette values and selection backgrounds when changing focus styles.
+
 | Role (S2 name)                    | Kit component                                     |
 | --------------------------------- | ------------------------------------------------- |
 | Button, LinkButton                | `Button` (secondary outline, accent fill), `Link` |

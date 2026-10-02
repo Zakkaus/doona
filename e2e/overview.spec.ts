@@ -174,7 +174,7 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
         expect(columns, `${lang} ${scheme} ${width}px capability columns`).toBeGreaterThanOrEqual(2);
         if (width !== 1024) continue;
         const memory = page.locator('.rp-g3 > .rp-card:nth-child(3)');
-        const memoryBar = memory.locator('.rp-bar .top .l');
+        const memoryBar = memory.locator('.rp-bar .top .l > :is(.rp-link, .rp-truncate)');
         expect(await memoryBar.evaluate(label => label.scrollWidth <= label.clientWidth), 'memory label is not clipped').toBe(true);
         const memoryWidth = await memory.evaluate(card => card.getBoundingClientRect().width);
         const gridWidth = await page.locator('.rp-g3').evaluate(grid => grid.getBoundingClientRect().width);

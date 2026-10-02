@@ -80,35 +80,27 @@
 }
 .rp-bar .top .l {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* A label that opens what it names is a link only as tall as the text, so the bar keeps its row height; the label cuts
-   overflow, so the focus ring is drawn inside the link. */
-.rp-bar .top .l > .rp-link {
-  display: flex;
-  max-width: 100%;
-  min-height: 0;
-  padding: 0;
-}
-.rp-bar .top .l > .rp-link[data-focus-visible] {
-  outline-offset: -2px;
-}
+/* Compensated padding gives text links a ring gutter without moving the label or its neighbours. */
+.rp-bar .top .l > :is(.rp-link, .rp-truncate),
 .rp-donut .r .n > .rp-link,
 .rp-capability .rp-light > span > .rp-link {
   display: block;
+  width: max-content;
+  max-width: calc(100% + 2 * var(--rp-space-half));
   min-height: 0;
-  padding: 0;
-}
-.rp-donut .r .n > .rp-link {
+  padding: var(--rp-space-half);
+  margin: calc(-1 * var(--rp-space-half));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rp-donut .r .n > .rp-link[data-focus-visible],
-.rp-capability .rp-light > span > .rp-link[data-focus-visible] {
-  outline-offset: -2px;
+/* Capability names keep their original wrapping; the shared legend rule must not ellipsize them. */
+.rp-capability .rp-light > span > .rp-link {
+  white-space: normal;
 }
 .rp-bar .top .v {
   color: var(--rp-subtle);
@@ -256,14 +248,16 @@
   z-index: 1;
 }
 .rp-donut .lst {
-  flex: 1 1 160px;
+  flex: 1 1 calc(160px + 2 * var(--rp-space-1h));
   min-width: 0;
-  max-width: 100%;
+  max-width: calc(100% + 2 * var(--rp-space-1h));
   display: flex;
   flex-direction: column;
   gap: 4px;
   /* Six rows; a longer legend scrolls rather than growing the card. */
-  max-height: 164px;
+  max-height: calc(164px + 2 * var(--rp-space-1h));
+  padding: var(--rp-space-1h);
+  margin: calc(-1 * var(--rp-space-1h));
   overflow-y: auto;
 }
 .rp-donut .r {
@@ -284,7 +278,7 @@
 .rp-donut .r .n {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--rp-text);

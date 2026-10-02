@@ -697,7 +697,13 @@ test.describe('many outbounds', () => {
     await page.goto('/#/activity');
     const legend = page.locator('[data-module=outbounds] .rp-donut .lst');
     await expect(legend.locator('.r')).toHaveCount(29);
-    expect(await legend.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight <= 170)).toBe(true);
+    expect(
+      await legend.evaluate(el => {
+        const style = getComputedStyle(el);
+        const height = el.getBoundingClientRect().height + parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+        return el.scrollHeight > el.clientHeight && height <= 170;
+      })
+    ).toBe(true);
   });
 
   test.describe('without the service worker', () => {
