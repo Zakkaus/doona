@@ -5,8 +5,7 @@ import {useRuntimeOperations} from '../../store';
 import {toast, toastFailure} from '../../ui/ui';
 import {lifecycleActions} from './lifecycle';
 
-// Runs lifecycle operations and reports each outcome in a toast. The overview, the settings page and the top bar's
-// reload button share it.
+// Runs lifecycle operations and reports each outcome in a toast. The overview and the top bar's reload button share it.
 export function useLifecycle(runtime: Runtime | undefined, capabilities: Capabilities | undefined, refetch: () => void) {
   const t = useT();
   const operations = useRuntimeOperations(runtime, capabilities, refetch);

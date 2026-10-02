@@ -11,7 +11,6 @@ export type CheckEditView = {
   available: boolean;
   busy: boolean;
   changed: boolean;
-  // Why Save is disabled, shown under it.
   fields: Array<{id: CheckField; label: string; value: string; description: string; error?: string; change: (value: string) => void}>;
   show: () => void;
   close: () => void;

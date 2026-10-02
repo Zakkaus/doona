@@ -107,8 +107,8 @@ export function deleteCacheName(api: Api, query: Parameters<Api['deleteDnsCacheB
   return api.deleteDnsCacheByName(query, signal).finally(() => changed(api));
 }
 const DELETE_CONCURRENCY = 4;
-// Deletes the entries a few at a time; the client itself waits out a 429 or 503 with Retry-After. A failed entry is
-// counted and the rest still go, so the result says how far it got. An entry that is already gone (404) is not a failure.
+// Deletes the entries a few at a time; a DELETE is sent once, so a refusal counts as failed. A failed entry is counted
+// and the rest still go, so the result says how far it got. An entry that is already gone (404) is not a failure.
 export async function deleteCacheEntries(api: Api, ids: string[], signal: AbortSignal) {
   let next = 0;
   let deleted = 0;
