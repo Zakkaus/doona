@@ -21,7 +21,6 @@
   "act.emptyHistory": "尚無歷史樣本",
   "act.global": "全域模式出站",
   "act.globalMissing": "全域模式須指定出站",
-  "act.good": "良好",
   "act.groupFollow": "自動",
   "act.groupPickHelp": "預設跟隨連線最多的策略群組，選擇群組只會變更此卡片。",
   "act.h1": "1 小時",

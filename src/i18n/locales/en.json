@@ -21,7 +21,6 @@
   "act.emptyHistory": "No history samples yet",
   "act.global": "Global mode outbound",
   "act.globalMissing": "Global mode needs an outbound",
-  "act.good": "Good",
   "act.groupFollow": "Automatic",
   "act.groupPickHelp": "By default, this card follows the group with the most connections; choosing a group changes only this card.",
   "act.h1": "1 h",
