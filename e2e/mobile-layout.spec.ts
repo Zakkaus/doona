@@ -1,4 +1,4 @@
-import {expect, routes, test} from './fixtures';
+import {expect, routes, settleFrames, test} from './fixtures';
 
 for (const width of [1280, 1024, 390, 320]) {
   test.describe(`${width}px layout`, () => {
@@ -104,4 +104,67 @@ test.describe('390x844 portrait', () => {
     await expect(page.locator('.rp-content > *').first()).toBeVisible();
     await expect(page.locator('.rp-top')).toHaveCSS('position', 'sticky');
   });
+});
+
+test('group forms and searchable menus avoid nested scrolling', async ({page}) => {
+  const findings: Array<{state: string; axis: string; inner: string; outer: string}> = [];
+  const inspect = async (state: string) => {
+    await settleFrames(page);
+    const pairs = await page.locator('.rp-modal, .rp-popover').evaluateAll(roots => {
+      const pairs: Array<{axis: string; inner: string; outer: string}> = [];
+      for (const root of roots) {
+        for (const inner of root.querySelectorAll('*')) {
+          if (!inner.getClientRects().length) continue;
+          for (const axis of ['x', 'y']) {
+            const scrolls = (el: Element) => {
+              const style = getComputedStyle(el);
+              return (
+                /^(auto|scroll)$/.test(axis === 'y' ? style.overflowY : style.overflowX) &&
+                (axis === 'y' ? el.scrollHeight > el.clientHeight + 1 : el.scrollWidth > el.clientWidth + 1)
+              );
+            };
+            if (!scrolls(inner)) continue;
+            const page = document.scrollingElement!;
+            if (
+              axis === 'y' &&
+              root.matches('.rp-modal') &&
+              page.scrollHeight > page.clientHeight + 1 &&
+              !/^(hidden|clip)$/.test(getComputedStyle(page).overflowY)
+            )
+              pairs.push({axis, inner: inner.className, outer: 'page'});
+            for (let outer = inner.parentElement; outer; outer = outer.parentElement) {
+              if (scrolls(outer)) pairs.push({axis, inner: inner.className, outer: outer.className});
+              if (outer === root) break;
+            }
+          }
+        }
+      }
+      return pairs;
+    });
+    findings.push(...pairs.map(pair => ({state, ...pair})));
+  };
+  await page.setViewportSize({width: 1024, height: 700});
+  await page.goto('/#/policies');
+  await page.getByRole('button', {name: 'New group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
+  await inspect('group regions');
+  await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
+  for (const name of ['Groups', 'Nodes']) {
+    await dialog.getByRole('button', {name, exact: true}).click();
+    await expect(page.getByRole('listbox', {name, exact: true})).toBeVisible();
+    await inspect(name);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.rp-popover')).toHaveCount(0);
+  }
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('button', {name: 'Edit group', exact: true}).first().click();
+  await inspect('edit group regions');
+  await page.getByRole('dialog').getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.goto('/#/connections?tab=list');
+  await page.getByRole('button', {name: 'Select', exact: true}).click();
+  await expect(page.getByRole('menu', {name: 'Select', exact: true})).toBeVisible();
+  await inspect('connection filters');
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({width: 390, height: 844});
+  expect(findings).toEqual([]);
 });

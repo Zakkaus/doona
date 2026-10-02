@@ -103,7 +103,7 @@ export function MenuButton({
           <Tip triggerRef={triggerRef}>{label}</Tip>
         </TooltipTrigger>
       )}
-      <Popover className="rp-popover" placement={placement}>
+      <Popover className="rp-popover rp-list-popover" placement={placement}>
         {content}
       </Popover>
     </MenuTrigger>
@@ -255,7 +255,7 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
           'sections' in submenu ? (
             <SubmenuTrigger key={submenu.label}>
               <SubmenuItem {...submenu} />
-              <Popover className="rp-popover" offset={-4} crossOffset={-9}>
+              <Popover className="rp-popover rp-list-popover" offset={-4} crossOffset={-9}>
                 <SectionMenu {...submenu} headers={submenu.sections.length > 1} />
               </Popover>
             </SubmenuTrigger>

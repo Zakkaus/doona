@@ -166,6 +166,20 @@ section:not(:first-child) > .rp-sec-h {
   width: max-content;
   max-width: calc(100vw - 24px);
 }
+/* Search stays above a long list; only the list consumes the available popover height. */
+.rp-list-popover:has(.rp-menu-scroll),
+.rp-list-popover:has(.rp-menu-scroll) :is(.rp-drill, section[role='dialog']) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.rp-list-popover .rp-menu-scroll {
+  min-height: 0;
+}
+.rp-list-popover :is(.rp-menu-search, .rp-drill-back) {
+  flex: none;
+}
 /* A dialog in a popover, after S2's: a title over its content, with a dialog's inset rather than a menu's. */
 .rp-popover-dialog {
   inline-size: min(300px, calc(100vw - 24px));
