@@ -1,4 +1,5 @@
-import {blockFields, isBareName, isFragment, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextField} from './text';
+import {blockFields, isBareName, isFragment, isQuotable, quote, scanConfig, unquote, type TextBlock, type TextField, type TextToken} from './text';
+import {rustRegexToJs} from './rustRegex';
 import {isBuiltinOutbound} from './vocab';
 
 export type GroupEntry = {
@@ -197,11 +198,11 @@ export function nestedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
 // lines combine with OR, so adding a value to `name(a, b)` admits one more node and nothing else, while a line
 // with `&&`, `!`, `keyword:` or `regex:` would change meaning.
 export type ExactCall = 'name' | 'subtag';
-export function exactTokens(filter: string, call: ExactCall | 'group'): string[] | null {
+function exactSpans(filter: string, call: ExactCall | 'group'): TextToken[] | null {
   const tokens = scanConfig(filter).tokens;
   const raw = tokens.map(token => filter.slice(token.from, token.to));
   if (tokens[0]?.kind !== 'text' || raw[0] !== call || raw[1] !== '(' || raw.at(-1) !== ')' || tokens.at(-1)?.parens !== 1) return null;
-  const values: string[] = [];
+  const values: TextToken[] = [];
   let value = true;
   for (let i = 2; i < tokens.length - 1; i++) {
     const token = tokens[i];
@@ -210,11 +211,24 @@ export function exactTokens(filter: string, call: ExactCall | 'group'): string[]
       if (token.kind !== 'text' && token.kind !== 'quoted') return null;
       // honk reads any bare value as an exact name (`name(香港01)`); `keyword:` and `regex:` split off at the colon.
       if (token.kind === 'text' && /[\s:]/.test(raw[i])) return null;
-      values.push(raw[i]);
+      values.push(token);
     } else if (raw[i] !== ',') return null;
     value = !value;
   }
   return value && values.length ? null : values;
+}
+export const exactTokens = (filter: string, call: ExactCall | 'group') => exactSpans(filter, call)?.map(token => filter.slice(token.from, token.to)) ?? null;
+// Drops and appends values inside a call while keeping the spacing and quoting of every other value.
+function spliceExact(filter: string, spans: TextToken[], drop: Set<number>, append: string[]): string | null {
+  const kept = spans.flatMap((_, i) => (drop.has(i) ? [] : [i]));
+  if (!kept.length && !append.length) return null;
+  let body = '';
+  kept.forEach((index, n) => {
+    body += filter.slice(spans[index].from, spans[index].to);
+    if (n < kept.length - 1) body += filter.slice(spans[index].to, spans[index + 1].from);
+  });
+  if (append.length) body += `${body ? ', ' : ''}${append.join(', ')}`;
+  return filter.slice(0, spans[0].from) + body + filter.slice(spans.at(-1)!.to);
 }
 const exactIn = (filters: string[], call: ExactCall) => filters.flatMap(filter => (exactTokens(filter, call) ?? []).map(unquote));
 export function namedIn(entry: Pick<GroupEntry, 'filters'>): string[] {
@@ -281,15 +295,18 @@ function editExact(text: string, group: string, call: ExactCall, add: string[], 
   let placed = !added.length;
   const filters: string[] = [];
   for (const filter of entry?.filters ?? []) {
-    const raw = exactTokens(filter, call);
-    if (raw === null) {
+    const spans = exactSpans(filter, call);
+    // An empty list (`subtag()`) holds nothing to drop or extend, so it stays as written.
+    if (!spans?.length) {
       filters.push(filter);
       continue;
     }
-    const kept = raw.filter(value => !gone.has(unquote(value)));
-    const values = placed ? kept : [...kept, ...written(kept)];
+    const raw = spans.map(span => filter.slice(span.from, span.to));
+    const drop = new Set(raw.flatMap((value, i) => (gone.has(unquote(value)) ? [i] : [])));
+    const kept = raw.filter((_, i) => !drop.has(i));
+    const spliced = spliceExact(filter, spans, drop, placed ? [] : written(kept));
     placed = true;
-    if (values.length) filters.push(`${call}(${values.join(', ')})`);
+    if (spliced !== null) filters.push(spliced);
   }
   if (!placed) filters.push(`${call}(${written([]).join(', ')})`);
   if (entry && filters.length === entry.filters.length && filters.every((filter, i) => filter === entry.filters[i])) return text;
@@ -340,13 +357,8 @@ function parseTerm(raw: string): Term | null {
     if (!value) continue;
     if (keyword) tests.push(candidate => candidate.includes(value));
     else if (regex) {
-      let pattern: RegExp;
-      try {
-        const flags = /^\(\?([ims]+)\)/.exec(value);
-        pattern = new RegExp(flags ? value.slice(flags[0].length) : value, flags?.[1]);
-      } catch {
-        return null;
-      }
+      const pattern = rustRegexToJs(value);
+      if (!pattern) return null;
       tests.push(candidate => pattern.test(candidate));
     } else {
       exact.push(value);
