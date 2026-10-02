@@ -36,6 +36,7 @@ const share = (label: Key, resource: Definition['resource']): Definition => ({
   forms: ['donut', 'waffle', 'ranked', 'kv'],
   compact: ['donut', 'ranked', 'kv']
 });
+export const maxInstances = 3;
 export const registry = {
   speed: metric('widgets.speed', 'runtime'),
   traffic: {...list('widgets.traffic', 'runtime'), sizes: ['medium']},
@@ -111,7 +112,7 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
     if (surface === 'dashboard' && onlyPanel(id)) continue;
     if (value.instance !== undefined && (typeof value.instance !== 'string' || !value.instance.length || value.instance.length > 128)) continue;
     const key = value.instance ?? id;
-    if (seen.has(key) || (counts.get(id) ?? 0) >= 3) continue;
+    if (seen.has(key) || (counts.get(id) ?? 0) >= maxInstances) continue;
     if (value.form !== undefined && value.form !== 'chart' && value.form !== 'text' && !formsFor(id, surface).includes(value.form as ModuleForm)) continue;
     if (value.group !== undefined && typeof value.group !== 'string') continue;
     if (value.by !== undefined && value.by !== 'dev' && value.by !== 'domain') continue;

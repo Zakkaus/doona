@@ -8,12 +8,12 @@ import {SamplePreview} from './SamplePreview';
 import {dashboardDefaults, dashboardItems} from './dashboardLayout';
 import {WidgetCard} from './Dashboard';
 import {WidgetContent} from './WidgetContent';
-import {maxInstances} from './instances';
 import {
   canonicalForm,
   defaultWidget,
   formsFor,
   instanceId,
+  maxInstances,
   onlyPanel,
   registry,
   type ModuleForm,

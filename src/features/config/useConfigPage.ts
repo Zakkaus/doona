@@ -5,7 +5,7 @@ import {useCapabilities, useConfig, useConfigEditor, useVersion, useRules, useDn
 import {readGroupEntries} from '../../dae/groups';
 import {groupQuery} from '../shared/link';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../../api/model';
-import {ApiError} from '../../api/error';
+import {refusalDetails} from '../shared/pending';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
 import {allGroupNames, fileName, restartRequired, restartSettings} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
@@ -44,13 +44,10 @@ export type ConfigEditor = {
 function useConfigEditorController(refetch: () => void) {
   const t = useT();
   const editor = useConfigEditor(refetch);
-  const diagnostics = useMemo(
-    () =>
-      editor.error instanceof ApiError && editor.error.status === 422
-        ? ((editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? [])
-        : null,
-    [editor.error]
-  );
+  const diagnostics = useMemo(() => {
+    const refused = refusalDetails(editor.error);
+    return refused ? (refused.diagnostics ?? []) : null;
+  }, [editor.error]);
   useEffect(() => {
     if (!editor.error) return;
     if (diagnostics) {

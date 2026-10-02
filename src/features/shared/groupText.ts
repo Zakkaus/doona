@@ -1,4 +1,4 @@
-import type {ConfigSource, Group, Node} from '../../api/model';
+import type {ConfigSource, Group, HealthObservation, Node} from '../../api/model';
 import {compileFilters, isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames} from '../../dae/vocab';
@@ -120,22 +120,18 @@ export function memberSections(
   return [noneFirst(items, held, t), {id: 'members', title: t('policy.pickMembers'), items}].filter(section => section.items.length);
 }
 
+export function healthStatus(health: Pick<HealthObservation, 'state' | 'latency_ms'> | undefined, t: Translator): NodeStatus {
+  const ms = healthMillis(health);
+  if (ms !== undefined) return {text: formatLatency(ms, t), tone: latencyTone(ms)};
+  return health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err'} : {text: '—'};
+}
+
 // Member choices follow the draft filters, including before a new group exists on the backend.
 export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
   const admits = compileFilters(filters);
   return [
     ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: t('ui.group'), badge: true}})),
-    ...nodes.filter(admits).map(node => {
-      const health = preferredHealth(node);
-      const tcp = healthMillis(health);
-      const status: NodeStatus =
-        tcp !== undefined
-          ? {text: formatLatency(tcp, t), tone: latencyTone(tcp)}
-          : health?.state === 'unavailable'
-            ? {text: t('ui.unavailable'), tone: 'err'}
-            : {text: '—'};
-      return {name: node.name, nodeName: true, status};
-    })
+    ...nodes.filter(admits).map(node => ({name: node.name, nodeName: true, status: healthStatus(preferredHealth(node), t)}))
   ];
 }
 

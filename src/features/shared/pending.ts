@@ -54,11 +54,12 @@ export function byFile(rules: PendingRule[]): PendingRule[][] {
   return [...files.values()];
 }
 
+export const refusalDetails = (error: unknown): {diagnostics?: ConfigDiagnostic[]} | null =>
+  error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null) ?? {}) : null;
+
 // A refused write: the validation errors with their lines when the backend sent them, else what went wrong.
 export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | null, sources: ConfigSource[], t: Translator): PendingFailure {
-  const found =
-    diagnostics ??
-    (error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics ?? null) : null);
+  const found = diagnostics ?? refusalDetails(error)?.diagnostics ?? null;
   if (!found) {
     const notice = failureNotice(error, t, t('ui.writeFailed'));
     return {
