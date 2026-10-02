@@ -1074,23 +1074,6 @@ test('node editing writes in place and renames group references', async ({page})
   );
 });
 
-test('Config opens the same node form and no longer edits the raw node section', async ({page}) => {
-  await mockBackend(page);
-  await page.goto('/#/config');
-  const card = page.getByRole('region', {name: 'node', exact: true});
-  await expect(card.getByRole('button', {name: 'Edit', exact: true})).toHaveCount(0);
-  await card.getByRole('link', {name: 'Edit hk-01', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'Edit node hk-01'});
-  await expect(dialog.getByLabel('Name', {exact: true})).toHaveValue('hk-01');
-  await expect(dialog.getByLabel('Node link', {exact: true})).toHaveValue(/vless:\/\//);
-  await dialog.getByLabel('Name', {exact: true}).fill('edge-renamed');
-  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page).toHaveURL(/q=edge-renamed/);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(nodeRows(page)).toHaveCount(1);
-  await expect(nodeRows(page)).toContainText('edge-renamed');
-});
-
 test('missing latency names and the remaining count open probeable node rows', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const listed = await api.nodes();

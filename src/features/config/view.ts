@@ -2,14 +2,12 @@ import type {Engine} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
-import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
+import {formatNumber, type Translator} from '../../i18n';
 import {diagnosticMessage, refusalMessage, type BackendMessage} from '../../i18n/backend';
 import type {Key} from '../../i18n';
 import {fileName, redacted} from '../../dae/sources';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
 import {href as routeHref} from '../../shell/route';
-import {groupPolicyText} from '../shared/policyText';
-import {policyKind} from '../../dae/vocab';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 import type {Help, KvItem} from '../../ui/ui';
 import {sourceKinds} from './nav';
@@ -69,7 +67,7 @@ function entryCount(block: TextBlock, tokens: TextToken[], fields: ReturnType<ty
   return fields.length + untagged.length;
 }
 
-function sectionSummary(kind: SectionKind, text: string, block: TextBlock, tokens: TextToken[], lang: Lang, t: Translator): string {
+function sectionSummary(kind: SectionKind, text: string, block: TextBlock, tokens: TextToken[], t: Translator): string {
   const fields = blockFields(text, block, tokens);
   switch (kind) {
     case 'global':
@@ -79,18 +77,7 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
     case 'node':
       return t('config.moduleNodes', {n: entryCount(block, tokens, fields)});
     case 'group':
-      return t('config.moduleGroups', {
-        n: block.children.length,
-        policies: formatList(
-          lang,
-          block.children.map(child => {
-            const policy = blockFields(text, child, tokens).find(field => field.name === 'policy')?.value;
-            if (!policy) return child.name;
-            const kind = policyKind(policy);
-            return t('ui.valuePair', {label: child.name, value: kind ? groupPolicyText({kind, native: policy}, t).label : policy});
-          })
-        )
-      });
+      return t('config.moduleGroups', {n: block.children.length});
     case 'dns': {
       const upstreams = block.children.filter(child => child.name === 'upstream');
       const routing = block.children.filter(child => child.name === 'routing').flatMap(child => child.children);
@@ -121,7 +108,7 @@ export const sectionPages: Record<string, string | null> = {
 
 // Card ids count occurrences rather than offsets, so an edit elsewhere in the file keeps an open editor on its card.
 // A section counts wherever the main file or an include defines it; a read-only file still shows its sections.
-export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: Lang, t: Translator): ModuleSection[] {
+export function sectionSummaries(sources: ConfigSource[], engine: Engine, t: Translator): ModuleSection[] {
   const eligible = sources.filter(source => source.kind === 'main' || source.kind === 'include');
   const parsed = eligible.map(source => ({source, ...scanConfig(source.content)}));
   const main = sources.find(source => source.kind === 'main') ?? null;
@@ -137,7 +124,7 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, lang: 
           block,
           href: kind === 'global' ? routeHref('config', {tab: 'global', source: source.id, section: String(index)}) : href,
           range: sectionRange(source, block),
-          summary: sectionSummary(kind, source.content, block, tokens, lang, t),
+          summary: sectionSummary(kind, source.content, block, tokens, t),
           note: null
         }))
     );

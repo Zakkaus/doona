@@ -182,7 +182,7 @@ routing {
   fallback: proxy
 }`);
   const include = source('routing { fallback: direct }', 'include');
-  const cards = sectionSummaries([main, include], honk, 'en', t);
+  const cards = sectionSummaries([main, include], honk, t);
   expect(cards.map(card => card.kind)).toEqual(['global', 'subscription', 'node', 'group', 'dns', 'routing', 'routing']);
   expect(cards.find(card => card.kind === 'dns')?.summary).toBe('1 upstream, 1 request rule, 1 response rule');
   expect(cards.filter(card => card.kind === 'routing').map(card => [card.range, card.summary])).toEqual([
@@ -255,7 +255,7 @@ it('does not merge diagnostics with different parameters', () => {
 });
 
 it('withholds editing for native_api sections', () => {
-  const cards = sectionSummaries([source(''), source('experimental { native_api { token: redacted } }', 'include')], honk, 'en', t);
+  const cards = sectionSummaries([source(''), source('experimental { native_api { token: redacted } }', 'include')], honk, t);
   expect(cards.filter(card => card.kind === 'experimental.native_api')).toMatchObject([{block: null, note: t('config.incomplete')}]);
 });
 
@@ -272,14 +272,14 @@ routing {
   domain(example.org) -> proxy
   fallback: proxy
 }`);
-  const cards = sectionSummaries([main], honk, 'en', t);
+  const cards = sectionSummaries([main], honk, t);
   expect(cards.find(card => card.kind === 'subscription')?.summary).toBe('2 subscriptions');
   expect(cards.find(card => card.kind === 'node')?.summary).toBe('1 node');
   expect(cards.find(card => card.kind === 'routing')?.summary).toBe('2 rules, fallback: proxy');
 });
 
 it('keeps a card id when text before the section changes', () => {
-  const id = (text: string) => sectionSummaries([source(text)], honk, 'en', t).find(card => card.kind === 'routing')!.id;
+  const id = (text: string) => sectionSummaries([source(text)], honk, t).find(card => card.kind === 'routing')!.id;
   expect(id('# a\nrouting { fallback: direct }')).toBe(id('# a longer comment\n\nrouting { fallback: direct }'));
 });
 
@@ -310,12 +310,9 @@ it('does not submit pathless includes or validate an omitted replacement source'
   expect(validationSources([main, include], {id: include.id, content: 'routing { fallback: direct }'})).toBeNull();
 });
 
-it('names group policies in words, keeping one honk does not recognise as written', () => {
-  const text =
-    'group {\n  fast { policy: min_avg10 }\n  pinned { policy: fixed(0) }\n  picked { policy: select }\n  odd { policy: custom }\n  dae { policy: random }\n}';
-  expect(sectionSummaries([source(text)], honk, 'en', t).find(card => card.kind === 'group')?.summary).toBe(
-    '5 groups: fast: Fastest on average, pinned: Manual, picked: Manual, odd: custom, dae: random'
-  );
+it('counts groups without listing their policies', () => {
+  const text = 'group {\n  fast { policy: min_avg10 }\n  pinned { policy: fixed(0) }\n}';
+  expect(sectionSummaries([source(text)], honk, t).find(card => card.kind === 'group')?.summary).toBe('2 groups');
 });
 
 it('says why Save is disabled, and names the shortcut otherwise', () => {
@@ -375,5 +372,5 @@ it('prefers reported source reasons over inferred credentials and falls back for
 });
 
 it('does not invent a source filename when no main file exists', () => {
-  expect(sectionSummaries([], honk, 'en', t).every(card => card.range === '')).toBe(true);
+  expect(sectionSummaries([], honk, t).every(card => card.range === '')).toBe(true);
 });

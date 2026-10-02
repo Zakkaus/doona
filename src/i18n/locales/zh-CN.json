@@ -205,7 +205,7 @@
   "config.moduleDnsRequests": "{n} 条 request 规则",
   "config.moduleDnsResponses": "{n} 条 response 规则",
   "config.moduleDnsUpstreams": "{n} 个上游",
-  "config.moduleGroups": "{n} 个组：{policies}",
+  "config.moduleGroups": "{n} 个组",
   "config.moduleNodes": "{n} 个节点",
   "config.moduleOpen": "打开页面",
   "config.moduleRules": "{n} 条规则",
