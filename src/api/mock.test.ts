@@ -586,6 +586,7 @@ it('serves the base profile from storage and refuses its unavailable resources',
     expect(base.profiles).toEqual(['base']);
     expect(base.resources.runtime_outbounds.available).toBe(false);
     expect(base.resources.traffic_history.available).toBe(false);
+    expect(base.resources.groups.config_patch).toBe(false);
     await expect(createMockApi().runtimeOutbounds()).rejects.toMatchObject({status: 404});
     await expect(createMockApi().trafficHistory()).rejects.toMatchObject({status: 404});
   } finally {

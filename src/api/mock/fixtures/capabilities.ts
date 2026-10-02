@@ -139,6 +139,7 @@ export const capabilitiesBase: Capabilities = {
   profiles: ['base'],
   resources: {
     ...capabilities.resources,
+    groups: {...capabilities.resources.groups, config_patch: false},
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
     memory_history: {available: false},

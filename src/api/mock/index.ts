@@ -59,7 +59,10 @@ export function createMockApi(options: MockOptions = {}): MockApi {
       log: (level, target, message, fields) => lifecycle.log(level, target, message, fields),
       publish: event => lifecycle.publish(event),
       eventData: () => lifecycle.eventData(),
-      trimLogs: () => lifecycle.trimLogs()
+      trimRecords: () => {
+        lifecycle.trimLogs();
+        network.trimRecords();
+      }
     },
     () => inventory.groupNames(),
     (text, revision) => inventory.activate(text, revision),
@@ -69,6 +72,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
   const lifecycle = createLifecycle(
     capabilities.resources.logs,
     capabilities.resources.events,
+    capabilities.resources.operations,
     runtime.runtime,
     configuration.logSettings,
     configuration.revision,
@@ -84,6 +88,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     configuration.revision,
     configuration.ruleSnapshot,
     configuration.recording,
+    configuration.networkSettings,
     busy,
     faults
   );

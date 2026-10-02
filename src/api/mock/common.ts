@@ -14,7 +14,7 @@ export function pageLimit(limit = 100): number {
 // page size it was issued with; either changed, it is refused.
 export function createPager(resource: ResourceName, budget = Infinity) {
   const snapshots = new Map<string, {items: unknown[]; key: string; expires: number}>();
-  return <T>(items: T[], query: {cursor?: string; limit?: number} = {}) => {
+  const page = <T>(items: T[], query: {cursor?: string; limit?: number} = {}) => {
     const {cursor, limit: asked, ...filters} = query;
     const limit = pageLimit(asked);
     const key = normalizeResourceKey([resource, {...filters, limit}]);
@@ -23,7 +23,11 @@ export function createPager(resource: ResourceName, budget = Infinity) {
     const start = Number(offset);
     const snapshot = cursor ? snapshots.get(id) : {items: items as unknown[], key, expires: Date.now() + 30000};
     if (!snapshot || extra !== undefined || snapshot.key !== key || !Number.isSafeInteger(start) || (cursor && (start < 1 || start >= snapshot.items.length)))
-      throw new ApiError(resource === 'flows' ? 410 : 400, resource === 'flows' ? 'snapshot_expired' : 'invalid_request', 'Unknown or expired cursor');
+      throw new ApiError(
+        resource === 'flows' || (resource === 'dnsLog' && !snapshot) ? 410 : 400,
+        resource === 'flows' || (resource === 'dnsLog' && !snapshot) ? 'snapshot_expired' : 'invalid_request',
+        'Unknown or expired cursor'
+      );
     const page = snapshot.items.slice(start, start + limit);
     let size = 0;
     const over = page.findIndex(item => (size += JSON.stringify(item).length) > budget);
@@ -39,6 +43,11 @@ export function createPager(resource: ResourceName, budget = Infinity) {
       next_cursor: end < snapshot.items.length ? `${id}:${end}` : null
     };
   };
+  return Object.assign(page, {
+    invalidate: (evicted: ReadonlySet<string>) => {
+      for (const [id, snapshot] of snapshots) if (snapshot.items.some(item => evicted.has((item as {id: string}).id))) snapshots.delete(id);
+    }
+  });
 }
 export function found<T>(value: T | undefined, kind: string): T {
   if (value === undefined) throw new ApiError(404, 'resource_not_found', `${kind} not found`);

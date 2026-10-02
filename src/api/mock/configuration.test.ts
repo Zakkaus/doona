@@ -435,3 +435,38 @@ it('checks global write admission before headers, but source permissions after h
     capabilities.resources.config.writable = writable;
   }
 });
+
+it.each(['dns', 'flows'] as const)('applies %s capacity immediately and invalidates evicted pages', async resource => {
+  const api = createMockApi();
+  const read = (cursor?: string) => (resource === 'dns' ? api.dnsLog({limit: 1, cursor}) : api.flows({limit: 1, cursor}));
+  const first = await read();
+  await api.patchRuntimeSettings(resource === 'dns' ? {dns_log: {max_records: 64}} : {flows: {max_flows: 64}});
+  await expect(read(first.next_cursor!)).rejects.toMatchObject({status: 410, code: 'snapshot_expired'});
+  const all = resource === 'dns' ? (await api.dnsLog({limit: 500})).records : (await api.flows({limit: 1000})).flows;
+  expect(all).toHaveLength(64);
+  if (resource === 'dns') expect(all.map(row => row.id)).toEqual(Array.from({length: 64}, (_, i) => 'dl-' + String(i + 1).padStart(6, '0')));
+});
+
+it('expires only terminal flows, drops their detail and cursor, and keeps live flows', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const before = (await api.flows({limit: 1000})).flows;
+  const first = await api.flows({limit: 1});
+  await api.patchRuntimeSettings({flows: {retention_seconds: 1}});
+  await vi.advanceTimersByTimeAsync(2000);
+  const after = (await api.flows({limit: 1000})).flows;
+  expect(after).toEqual(before.filter(flow => flow.ended_at === null));
+  await expect(api.flows({cursor: first.next_cursor!, limit: 1})).rejects.toMatchObject({status: 410, code: 'snapshot_expired'});
+  const terminal = before.find(flow => flow.ended_at !== null)!;
+  await expect(api.flow(terminal.id)).rejects.toMatchObject({status: 404});
+  await expect(api.flow(after[0].id)).resolves.toMatchObject({id: after[0].id});
+});
+
+it('keeps a live-flow cursor when a smaller capacity only evicts terminal flows', async () => {
+  const api = createMockApi();
+  const first = await api.flows({state: 'active', limit: 1});
+  await api.patchRuntimeSettings({flows: {max_flows: 64}});
+  const next = await api.flows({state: 'active', limit: 1, cursor: first.next_cursor!});
+  expect(next.flows[0].id).not.toBe(first.flows[0].id);
+  expect(next.flows.every(flow => flow.ended_at === null)).toBe(true);
+});

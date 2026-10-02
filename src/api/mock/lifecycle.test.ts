@@ -72,3 +72,43 @@ it('binds log cursors to filters and the retained buffer', async () => {
   for (let i = 0; i < 65; i++) await api.patchRuntimeSettings({log: {level: 'info'}});
   await expect(api.subscribeLogs({level: 'info', lastEventId: cursor, onRecord: vi.fn()})).rejects.toMatchObject({code: 'event_cursor_expired'});
 });
+
+it.each(['succeeded', 'failed'] as const)('bounds finished %s operations without reusing IDs or evicting running jobs', async status => {
+  vi.useFakeTimers();
+  const {createLifecycle} = await import('./lifecycle');
+  const {capabilities} = await import('./fixtures/capabilities');
+  const api = createMockApi();
+  const {createRecording} = await import('./recording');
+  const settings = await api.runtimeSettings();
+  const lifecycle = createLifecycle(
+    capabilities.resources.logs,
+    capabilities.resources.events,
+    capabilities.resources.operations,
+    await api.runtime(),
+    () => settings.log,
+    () => '40',
+    createRecording(settings)
+  );
+  const enqueue = () =>
+    lifecycle.enqueue('reload', () => {
+      if (status === 'failed') throw new Error('reload failed');
+      return {active_generation_id: '41', datapath_generation_id: '41'};
+    });
+  const completed = Array.from({length: 129}, enqueue);
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(lifecycle.api.operation(completed[0].operation_id)).rejects.toMatchObject({status: 404});
+  await expect(lifecycle.api.operation(completed.at(-1)!.operation_id)).resolves.toMatchObject({status});
+  const pending = Array.from({length: 129}, enqueue);
+  expect(new Set([...completed, ...pending].map(op => op.operation_id)).size).toBe(258);
+  await expect(lifecycle.api.operation(pending[0].operation_id)).resolves.toMatchObject({status: 'running'});
+});
+
+it('expires completed operations after their advertised retention', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const accepted = await api.startSuspend();
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(api.operation(accepted.operation_id)).resolves.toMatchObject({status: 'succeeded'});
+  await vi.advanceTimersByTimeAsync(300000);
+  await expect(api.operation(accepted.operation_id)).rejects.toMatchObject({status: 404});
+});
