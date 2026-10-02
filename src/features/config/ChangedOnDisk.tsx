@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, InlineAlert} from '../../ui/ui';
+import {Button, InlineAlert, Toolbar} from '../../ui/ui';
 
 // A draft whose file changed on disk while it was being edited. Saving waits until the person keeps the draft over
 // the new text or discards it: here, or with the editor's own Cancel when it has one. `keep` is null when there is
@@ -10,7 +10,7 @@ export function ChangedOnDisk({message, busy, keep, discard}: {message: string; 
     <InlineAlert
       action={
         (keep || discard) && (
-          <span className="rp-toolbar">
+          <Toolbar>
             {keep && (
               <Button isDisabled={busy} onPress={keep}>
                 {t('config.keepChanges')}
@@ -21,7 +21,7 @@ export function ChangedOnDisk({message, busy, keep, discard}: {message: string; 
                 {t('config.discard')}
               </Button>
             )}
-          </span>
+          </Toolbar>
         )
       }
     >

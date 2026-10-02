@@ -1,7 +1,7 @@
 import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
 import {createContext, useContext, useMemo, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
-import {Button, ChoiceMenu, DataTable, FitTags, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
+import {Button, ChoiceMenu, DataTable, FitTags, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn, Toolbar} from '../../ui/ui';
 import {NodeName, FlagEditingContext} from '../../ui/NodeName';
 import {flagKey} from '../../dae/flags';
 import {SettingsContext} from '../../shell/preferences';
@@ -150,7 +150,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
       {m.scope && <p className="rp-label">{m.scope}</p>}
-      <div className="rp-toolbar">
+      <Toolbar page>
         <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
         {m.groupSections ? (
           <SearchSelect side label={t('nodes.group')} searchLabel={t('ui.filterGroups')} value={m.group} onChange={m.setGroup} sections={m.groupSections} />
@@ -162,7 +162,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         {m.clearNodes && <Button onPress={m.clearNodes}>{t('ui.clearFilters')}</Button>}
         <span className="rp-grow" />
         {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
-      </div>
+      </Toolbar>
       <ProbeBusy.Provider value={m.probeBusy}>
         <DataTable
           label={m.label}

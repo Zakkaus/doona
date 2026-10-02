@@ -34,7 +34,6 @@ export function ConfigHistory() {
         {(h.management.export || h.list.data) && (
           <ContextualHelp
             title={t('config.tabHistory')}
-            size="control"
             text={[
               ...(h.management.export ? [t('config.backup.exportHelp')] : []),
               ...(h.list.data ? [t('config.revisions.retention', {n: h.list.data.max_revisions})] : [])

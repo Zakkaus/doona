@@ -5,6 +5,7 @@ import {Check} from './Check';
 import {cx} from './cx';
 import {ItemLabel, ItemText, type Item} from './Select';
 import {SearchList} from './SearchList';
+import {useControlSize, type ControlSize} from './controlSize';
 
 // A choice whose description is a latency or a state, coloured by its tone as the node menus colour theirs.
 // `keywords`: more text the filter matches besides the label, such as the rule a position is placed before.
@@ -34,7 +35,8 @@ export function SearchSelect({
   onChange,
   isDisabled,
   description,
-  side
+  side,
+  size
 }: {
   label: string;
   // Names the filter field in the popover.
@@ -46,9 +48,11 @@ export function SearchSelect({
   description?: string;
   // The label beside the trigger, as LabeledSelect's `side`, for a toolbar.
   side?: boolean;
+  size?: ControlSize;
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const controlSize = useControlSize(size);
   const shown = sections.flatMap(section => section.items).find(item => item.id === value);
   return (
     <Select
@@ -61,7 +65,7 @@ export function SearchSelect({
     >
       <div ref={fieldRef} className={side ? 'rp-cluster' : 'rp-field'}>
         <Label className={side ? 'rp-label' : 'lbl'}>{label}</Label>
-        <RButton ref={buttonRef} className="rp-selectbtn">
+        <RButton ref={buttonRef} className="rp-selectbtn" data-size={controlSize}>
           {/* The list is built only while the popover is open, so the trigger finds the chosen item itself. */}
           <SelectValue>{() => (shown ? <ItemLabel i={shown} /> : value)}</SelectValue>
           <ChevronDown />

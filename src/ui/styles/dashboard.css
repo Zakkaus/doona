@@ -5,6 +5,7 @@
   justify-content: space-between;
   gap: var(--rp-space-3);
   min-inline-size: 0;
+  min-block-size: var(--rp-control-lg);
 }
 .rp-page-actions {
   margin-inline-start: auto;
@@ -132,9 +133,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--rp-space-4);
-}
-:is(.rp-widget-inspector, .rp-module-inspector) .rp-seg {
-  min-block-size: var(--rp-control);
 }
 /* A section's profile is its whole layout: tracks per width, and spans from each card's own size and footprint. The
    four main profiles reproduce origin/main's Activity grids; a card's footprint replaces main's position rules. */
@@ -316,13 +314,6 @@
 .rp-dashboard-tools [slot='drag'] {
   touch-action: none;
   cursor: grab;
-}
-@media (pointer: coarse) {
-  .rp-dashboard-tools > .rp-btn,
-  .rp-dashboard-tools > * > .rp-btn {
-    min-inline-size: 44px;
-    min-block-size: 44px;
-  }
 }
 .rp-dashboard[data-editing] .rp-dashboard-cell {
   outline: none;

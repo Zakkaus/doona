@@ -14,9 +14,8 @@ export function ContextualHelp({
   text,
   icon = <InfoCircle />,
   label,
-  size = 'label',
   boundaryElement
-}: Help & {icon?: ReactNode; label?: string; size?: 'label' | 'control'; boundaryElement?: Element}) {
+}: Help & {icon?: ReactNode; label?: string; boundaryElement?: Element}) {
   const t = useT();
   return (
     <PopoverDialog
@@ -24,7 +23,7 @@ export function ContextualHelp({
       placement="bottom start"
       boundaryElement={boundaryElement}
       trigger={
-        <Button quiet icon className={size === 'control' ? 'rp-help rp-help-control' : 'rp-help'} label={label ?? t('ui.helpFor', {name: title})}>
+        <Button quiet icon className="rp-help" label={label ?? t('ui.helpFor', {name: title})}>
           {icon}
         </Button>
       }
@@ -50,11 +49,11 @@ export function IconTip({label, text, children}: {label: string; text: string; c
 // A label, a heading or a status with its help button after it, on one row. The row stays when there is no help, so the
 // label sits the same either way. A clipped cell passes fill: the text then gives way with an ellipsis and the help
 // button stays in view.
-export function HelpRow({help, fill, size, children}: {help?: Help | null; fill?: boolean; size?: 'label' | 'control'; children: ReactNode}) {
+export function HelpRow({help, fill, children}: {help?: Help | null; fill?: boolean; children: ReactNode}) {
   return (
     <span className={fill ? 'rp-help-row rp-help-row-fill' : 'rp-help-row'}>
       {fill ? <span className="rp-help-text">{children}</span> : children}
-      {help && <ContextualHelp {...help} size={size} />}
+      {help && <ContextualHelp {...help} />}
     </span>
   );
 }

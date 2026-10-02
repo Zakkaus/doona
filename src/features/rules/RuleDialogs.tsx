@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import {ConditionRow} from '../../ui/ConditionRow';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
-import {Button, ConfirmDialog, DialogForm, LabeledSelect, Segmented, StaticField, Switch, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, DialogForm, LabeledSelect, Segmented, StaticField, Switch, TextField, Toolbar} from '../../ui/ui';
 import type {RuleConditionKind} from '../../dae/groups';
 import type {DictionaryModel} from './useRuleList';
 
@@ -16,7 +16,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
   // What the rule routes to, which both adding and editing a rule set.
   const targetFields = (
     <>
-      <div className="rp-toolbar end">
+      <Toolbar className="end">
         {view.table.outboundSections ? (
           <SearchSelect
             isDisabled={view.busy}
@@ -40,7 +40,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
             {t('rule.must')} <code>must</code>
           </Switch>
         )}
-      </div>
+      </Toolbar>
       {view.copy.must && (
         <span id={mustHelpId} className="rp-label">
           {t('rule.mustHelp')}
@@ -80,11 +80,11 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
           />
         </ConditionRow>
       ))}
-      <div className="rp-toolbar">
+      <Toolbar>
         <Button small isDisabled={view.busy} onPress={view.addCondition}>
           {t('rule.addCondition')}
         </Button>
-      </div>
+      </Toolbar>
     </DialogForm>
   );
   return (

@@ -26,7 +26,8 @@ import {
   cardClass,
   HelpRow,
   type Action,
-  type TableColumn
+  type TableColumn,
+  Toolbar
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
@@ -51,7 +52,7 @@ export function Dns(props: PageProps) {
         }}
       >
         <ActionHelp reason={vm.reason}>
-          <div className="rp-toolbar">
+          <Toolbar>
             <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
             <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
             {vm.upstreams.length > 0 && <LabeledSelect label={t('ui.upstream')} side value={vm.upstream} onChange={vm.setUpstream} items={vm.upstreams} />}
@@ -61,7 +62,7 @@ export function Dns(props: PageProps) {
             <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
               {t('dns.query')}
             </Button>
-          </div>
+          </Toolbar>
         </ActionHelp>
       </form>
       {vm.cards.length > 0 && (
@@ -120,7 +121,7 @@ export function Dns(props: PageProps) {
   };
   return (
     <div className="rp-page">
-      <Tabs keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
+      <Tabs page keepMounted label={t('nav.dns')} items={vm.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={vm.tab} onChange={vm.setTab} />
       <RuleDialog dialog={vm.rule.dialog} />
     </div>
   );
@@ -170,18 +171,14 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <div className="rp-toolbar top">
+      <Toolbar page className="top">
         <Kv row items={vm.fields} />
         {vm.coverage.map(badge => (
           <Badge key={badge.id} tone="warn">
             {badge.text}
           </Badge>
         ))}
-        {vm.filterText && (
-          <Button small onPress={clearFilter}>
-            {vm.filterText}
-          </Button>
-        )}
+        {vm.filterText && <Button onPress={clearFilter}>{vm.filterText}</Button>}
         <span className="rp-grow" />
         <div className="rp-col">
           <ActionHelp reason={vm.flushReason}>
@@ -195,10 +192,10 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
             />
           </ActionHelp>
         </div>
-      </div>
+      </Toolbar>
       {(vm.deleteBy.name || vm.deleteBy.entry) && (
         <ActionHelp reason={vm.matchReason}>
-          <div className="rp-toolbar">
+          <Toolbar page>
             <LabeledSelect side label={t('rule.kind')} value={vm.matchKind} onChange={k => vm.setMatchKind(k as MatchKind)} items={vm.matchKinds} />
             <TextField
               side
@@ -232,7 +229,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
               onConfirm={vm.removeMatching}
               onAbort={vm.abortFlush}
             />
-          </div>
+          </Toolbar>
         </ActionHelp>
       )}
       <ActionHelp reason={vm.deleteReason}>
@@ -313,7 +310,7 @@ function DnsLog({
   );
   return (
     <>
-      <div className="rp-toolbar">
+      <Toolbar page>
         <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
         <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
@@ -333,7 +330,7 @@ function DnsLog({
             ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
           ]}
         />
-      </div>
+      </Toolbar>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>

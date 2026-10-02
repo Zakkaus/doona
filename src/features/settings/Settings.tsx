@@ -1,6 +1,6 @@
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField, Toolbar} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
@@ -84,7 +84,7 @@ export function Settings({query}: PageProps) {
           <InlineAlert tone="informative">{t(loginReason === 'rejected' ? 'login.rejected' : 'login.tokenRequired')}</InlineAlert>
         )}
         <ActionHelp reason={profileReason}>
-          <div className="rp-toolbar">
+          <Toolbar>
             <div className="rp-contents" data-setting="profile">
               <LabeledSelect
                 label={t('settings.profile')}
@@ -115,7 +115,7 @@ export function Settings({query}: PageProps) {
                 </Button>
               </div>
             )}
-          </div>
+          </Toolbar>
         </ActionHelp>
         {session?.tokenOnly && <span className="rp-label">{t('settings.signOutTokenHelp')}</span>}
         <form
@@ -154,7 +154,7 @@ export function Settings({query}: PageProps) {
               />
             </div>
           )}
-          <div className="rp-toolbar">
+          <Toolbar>
             <div className="rp-contents" data-setting="test">
               <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
                 {t('settings.test')}
@@ -163,7 +163,7 @@ export function Settings({query}: PageProps) {
             <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
               {t('settings.save')}
             </Button>
-          </div>
+          </Toolbar>
           <div className="rp-label">{t('settings.saveHelp')}</div>
           {pending && <div role="status">{t('settings.testing')}</div>}
           {profile.result && (
@@ -179,7 +179,7 @@ export function Settings({query}: PageProps) {
     geodata: <GeodataSettingsCard />,
     appearance: (
       <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
-        <div className="rp-toolbar">
+        <Toolbar>
           <div className="rp-contents" data-setting="lang">
             <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
           </div>
@@ -236,7 +236,7 @@ export function Settings({query}: PageProps) {
               items={startPageItems}
             />
           </div>
-        </div>
+        </Toolbar>
         <div className="rp-field" data-setting="countryFlags">
           <Switch isSelected={ap.countryFlags} onChange={ap.pickCountryFlags} aria-describedby={countryFlagsHelpId}>
             {t('settings.countryFlags')}

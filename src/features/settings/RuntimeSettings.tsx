@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField, Toolbar} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {recordingLimitsHref} from '../shared/link';
 import {runtimeFieldLabels, settingsCard} from './nav';
@@ -46,7 +46,7 @@ export function RuntimeSettingsCard() {
           )}
           {m.hasBaseline && (
             <>
-              <div className="rp-toolbar top rp-fieldgrid">
+              <Toolbar className="top rp-fieldgrid">
                 {m.hasLevel && (
                   <div className="rp-contents" data-setting="log.level">
                     <LabeledSelect label={t(runtimeFieldLabels['log.level'])} value={m.level} onChange={m.setLevel} items={m.levels} isDisabled={m.busy} />
@@ -66,9 +66,9 @@ export function RuntimeSettingsCard() {
                     />
                   </div>
                 ))}
-              </div>
+              </Toolbar>
               {m.recorders.length > 0 && (
-                <div className="rp-toolbar top rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
+                <Toolbar className="top rp-fieldgrid" role="group" aria-label={t('settings.recording')}>
                   {m.recorders.map(recorder => (
                     <div key={recorder.id} className="rp-field" data-setting={recorder.id}>
                       <LabeledSelect
@@ -90,10 +90,10 @@ export function RuntimeSettingsCard() {
                   ))}
                   {m.recordingNote && <span className="rp-label">{m.recordingNote}</span>}
                   {m.flowNote && <span className="rp-label">{m.flowNote}</span>}
-                </div>
+                </Toolbar>
               )}
               <ActionHelp reason={m.reason}>
-                <div className="rp-toolbar">
+                <Toolbar>
                   <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
                     {t('settings.apply')}
                   </Button>
@@ -102,7 +102,7 @@ export function RuntimeSettingsCard() {
                       {t('config.discard')}
                     </Button>
                   )}
-                </div>
+                </Toolbar>
               </ActionHelp>
             </>
           )}

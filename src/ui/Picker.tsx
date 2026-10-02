@@ -3,6 +3,7 @@ import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
 import {ItemLabel, ItemText, type Item} from './Select';
 import {cx} from './cx';
+import {useControlSize, type ControlSize} from './controlSize';
 
 export function LabeledSelect({
   label,
@@ -14,6 +15,7 @@ export function LabeledSelect({
   bare,
   cut,
   takeFocus,
+  size,
   description
 }: {
   label: string;
@@ -27,8 +29,10 @@ export function LabeledSelect({
   cut?: 'start' | 'path';
   takeFocus?: boolean;
   description?: string;
+  size?: ControlSize;
 }) {
   const layout = bare ? undefined : side ? 'side' : 'field';
+  const controlSize = useControlSize(size);
   // With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
   return (
     <Select
@@ -42,7 +46,7 @@ export function LabeledSelect({
     >
       {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- An explicit jump focuses the requested field. */}
-      <RButton className="rp-selectbtn" autoFocus={takeFocus}>
+      <RButton className="rp-selectbtn" data-size={controlSize} autoFocus={takeFocus}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} cut={cut} /> : value)}</SelectValue>
         <ChevronDown />
       </RButton>

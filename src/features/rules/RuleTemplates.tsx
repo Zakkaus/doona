@@ -1,6 +1,6 @@
 import {useId} from 'react';
 import {useT, type Key} from '../../i18n';
-import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, HelpRow, Radio, RadioGroup, Switch} from '../../ui/ui';
+import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, HelpRow, Radio, RadioGroup, Switch, Toolbar} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -54,11 +54,11 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             </Switch>
           ))}
         </div>
-        <div className="rp-toolbar">
+        <Toolbar>
           <Button accent isDisabled={!model.canApply} onPress={model.open}>
             {t('rule.template.apply')}
           </Button>
-        </div>
+        </Toolbar>
       </Card>
       <ConfirmDialog
         title={dialog ? t('rule.template.confirmTitle', {name: dialog.choice.name}) : ''}

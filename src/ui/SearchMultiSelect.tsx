@@ -5,6 +5,7 @@ import {Check} from './Check';
 import {ItemText} from './Select';
 import ChevronDown from './icons/ChevronDown';
 import type {CheckboxChoice} from './CheckboxSet';
+import {useControlSize, type ControlSize} from './controlSize';
 
 export function SearchMultiSelect({
   label,
@@ -15,7 +16,8 @@ export function SearchMultiSelect({
   onChange,
   isDisabled,
   description,
-  action
+  action,
+  size
 }: {
   label: string;
   searchLabel: string;
@@ -26,11 +28,13 @@ export function SearchMultiSelect({
   isDisabled?: boolean;
   description?: string;
   action?: ReactNode;
+  size?: ControlSize;
 }) {
   const [open, setOpen] = useState(false);
   const heading = useId();
   const summaryId = useId();
   const helpId = useId();
+  const controlSize = useControlSize(size);
   return (
     <div className="rp-field">
       <span id={heading} className="lbl">
@@ -39,6 +43,7 @@ export function SearchMultiSelect({
       <DialogTrigger isOpen={open} onOpenChange={setOpen}>
         <Button
           className="rp-selectbtn"
+          data-size={controlSize}
           aria-labelledby={heading}
           aria-describedby={[summaryId, description && helpId].filter(Boolean).join(' ')}
           isDisabled={isDisabled}

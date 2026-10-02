@@ -85,7 +85,7 @@ export function Nodes(props: PageProps) {
   return (
     <div className="rp-page">
       {tabs.length > 0 ? (
-        <Tabs keepMounted label={t('nav.nodes')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />
+        <Tabs page keepMounted label={t('nav.nodes')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />
       ) : (
         list
       )}

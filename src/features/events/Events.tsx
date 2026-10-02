@@ -1,6 +1,6 @@
 import {useCallback, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, DataTable, HelpRow, LabeledSelect, Light, Link, ErrorMessage, TextTooltip, type TableColumn, Kv} from '../../ui/ui';
+import {Button, DataTable, HelpRow, LabeledSelect, Light, Link, ErrorMessage, TextTooltip, type TableColumn, Kv, Toolbar} from '../../ui/ui';
 import {useEventsPage} from './useEventsPage';
 import Download from '../../ui/icons/Download';
 
@@ -66,7 +66,7 @@ export function Events() {
   );
   return (
     <div className="rp-page">
-      <div className="rp-toolbar">
+      <Toolbar page>
         <LabeledSelect label={t('event.kind')} side value={vm.kind} onChange={vm.setKind} items={vm.kinds} />
         <Light small tone={vm.status.tone}>
           {vm.status.text}
@@ -82,7 +82,7 @@ export function Events() {
           <Download />
           {t('event.export')}
         </Button>
-      </div>
+      </Toolbar>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <DataTable label={t('nav.events')} stream flow loading={vm.loading} rows={vm.rows} empty={t('event.empty')} cols={columns} detail={detail} />
     </div>

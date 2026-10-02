@@ -4,7 +4,7 @@ import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import {href} from '../../shell/route';
 import {latencyProbeChoice, probeChoices, saveProbeOptions, useProbeOptions, type ProbeFamily} from '../../store/probeOptions';
-import {Card, ErrorMessage, LabeledSelect, Link, Loading} from '../../ui/ui';
+import {Card, ErrorMessage, LabeledSelect, Link, Loading, Toolbar} from '../../ui/ui';
 import {settingsCard} from './nav';
 
 const card = settingsCard('probes');
@@ -35,7 +35,7 @@ export function ProbeSettingsCard() {
       ) : (
         <>
           <span className="rp-label">{t('settings.probesNote')}</span>
-          <div className="rp-toolbar top rp-fieldgrid">
+          <Toolbar className="top rp-fieldgrid">
             <div className="rp-contents" data-setting="probeMethod">
               <LabeledSelect
                 label={t('settings.probeMethod')}
@@ -78,7 +78,7 @@ export function ProbeSettingsCard() {
                 ]}
               />
             </div>
-          </div>
+          </Toolbar>
         </>
       )}
       {resources && <span className="rp-label">{t('settings.probesChecks')}</span>}

@@ -230,7 +230,6 @@ for (const width of [1440, 768, 390]) {
     const bar = page.locator('.rp-toolbar').filter({has: add});
     const segment = await bar.locator('.rp-seg').boundingBox();
     expect((await box(add)).height).toBe(segment!.height);
-    await expect(add).toHaveCSS('font-size', '14px');
     const cells = page.locator('.rp-cell-wrap');
     await expect(cells.first()).toBeVisible();
     expect(

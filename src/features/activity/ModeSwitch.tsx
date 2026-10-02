@@ -23,10 +23,10 @@ type ModeCardsModel = {
   apply: () => void;
 };
 
-export function ModeApply({model: vm, small = true}: {model: Pick<ModeCardsModel, 'writable' | 'dirty' | 'incomplete' | 'busy' | 'apply'>; small?: boolean}) {
+export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'writable' | 'dirty' | 'incomplete' | 'busy' | 'apply'>}) {
   const t = useT();
   return vm.writable ? (
-    <Button small={small} accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
+    <Button accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
       {t('config.save')}
     </Button>
   ) : null;
@@ -46,7 +46,7 @@ export function ModeSwitch({model: vm}: {model: ModeCardsModel}) {
           label={t('act.modeWhyReadOnly')}
           placement="bottom end"
           trigger={
-            <Button small quiet label={t('act.modeWhyReadOnly')}>
+            <Button quiet label={t('act.modeWhyReadOnly')}>
               {vm.status}
             </Button>
           }
@@ -102,7 +102,7 @@ export function ModeCards({model: vm, part}: {model: ModeCardsModel; part?: 'mod
               >
                 {vm.targetText}
               </ChoiceMenu>
-              <ModeApply model={vm} small={false} />
+              <ModeApply model={vm} />
             </span>
           }
         />

@@ -27,6 +27,7 @@ export {MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, typ
 export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';
 export {Disclosure} from './Disclosure';
 export {Tabs} from './Tabs';
+export {Toolbar} from './Toolbar';
 export {useTabShown} from './useTabShown';
 export {DataTable, type TableSort, type TableColumn} from './Table';
 export {cachedRows, fitColumns} from './tableHooks';

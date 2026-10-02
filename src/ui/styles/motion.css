@@ -11,19 +11,82 @@
 .rp-version,
 .rp-brand,
 .rp-input .clear,
+.rp-input .reveal,
+.rp-link,
+.rp-tag-link,
+.rp-tag-more,
+.rp-disclosure-trigger,
 .rp-table [role='row'],
 .rp-switch,
 .rp-badge {
-  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color, scale, translate;
+  transition-property: color, background-color, border-color, opacity, box-shadow, outline-color, scale, translate, transform;
   transition-duration: var(--rp-duration);
   transition-timing-function: var(--rp-ease);
 }
-/* Press feedback after S2 `pressScale`: a text button sinks to about 0.95 of its size; icon buttons, tabs, rows
-   and navigation take the colour step only. */
-.rp-btn:not(.icon)[data-pressed],
-.rp-select[data-pressed]:not([aria-expanded='true']),
-.rp-selectbtn[data-pressed]:not([aria-expanded='true']) {
-  scale: 0.95;
+/* Press feedback after S2 `pressScale`: the pressed control sinks 2px away under a perspective of
+   max(height, width / 3, 24px). S2 measures the box on each press; here --rp-press-perspective stands in: the control's
+   height, or twice it for the row-shaped controls, about S2's value at their usual width. The pressed fill sits on the
+   control's own box (interaction-states.css), so it keeps the control's radius. Table rows take the fill only, as in
+   S2; with reduced motion every control does. A control whose menu is open stays put, and a tile's stretched link sinks
+   the whole tile, since its cover must keep the tile's box. */
+:is(
+  .rp-btn,
+  .rp-tab,
+  .rp-tag-link,
+  .rp-tag-more,
+  .rp-input .clear,
+  .rp-input .reveal,
+  .rp-toast :is(.more, .close, .action),
+  .rp-hubbar-pill,
+  .rp-checkbox-mark,
+  .rp-radio-mark
+) {
+  --rp-press-perspective: var(--rp-control);
+}
+:is(.rp-btn, .rp-tab)[data-size='L'] {
+  --rp-press-perspective: var(--rp-control-lg);
+}
+:is(.rp-select, .rp-selectbtn, .rp-search, .rp-nav, .rp-item, .rp-version, .rp-brand, .rp-link, .rp-node, .rp-tree-tile, .rp-disclosure-trigger.rp-group) {
+  --rp-press-perspective: calc(2 * var(--rp-control));
+}
+.rp-select[data-size='L'] {
+  --rp-press-perspective: calc(2 * var(--rp-control-lg));
+}
+.rp-card-link,
+.rp-card:has(.rp-tile-val > .rp-link) {
+  --rp-press-perspective: calc(4 * var(--rp-control));
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(
+      .rp-btn,
+      .rp-select,
+      .rp-selectbtn,
+      .rp-search,
+      .rp-version,
+      .rp-brand,
+      .rp-link,
+      .rp-nav,
+      .rp-item,
+      .rp-tab,
+      .rp-tag-link,
+      .rp-tag-more,
+      .rp-card-link,
+      .rp-node,
+      .rp-tree-tile,
+      .rp-disclosure-trigger.rp-group,
+      .rp-input .clear,
+      .rp-input .reveal,
+      .rp-toast :is(.more, .close, .action)
+    )[data-pressed]:not([aria-expanded='true'], .rp-tile-val > .rp-link),
+  .rp-card:has(.rp-tile-val > .rp-link[data-pressed]),
+  .rp-hubbar > [data-pressed] .rp-hubbar-pill,
+  .rp-checkbox[data-pressed] .rp-checkbox-mark,
+  .rp-radio[data-pressed] .rp-radio-mark {
+    transform: perspective(var(--rp-press-perspective)) translate3d(0, 0, -2px);
+  }
+  .rp-switch[data-pressed] .track::after {
+    scale: 0.9;
+  }
 }
 /* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
 .rp-btn[aria-expanded='true'][aria-haspopup] {
@@ -42,19 +105,18 @@
   opacity: 1;
 }
 /* A radio's ring thickens and recolours as it is selected. */
-.rp-radio-mark {
+.rp-radio-mark,
+.rp-checkbox-mark {
   transition:
     border-color var(--rp-duration) var(--rp-ease),
-    border-width var(--rp-duration) var(--rp-ease);
+    border-width var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 /* The switch handle takes the press with the control. */
 .rp-switch .track::after {
   transition:
     transform var(--rp-duration) var(--rp-ease-out),
     scale var(--rp-duration) var(--rp-ease-out);
-}
-.rp-switch[data-pressed] .track::after {
-  scale: 0.9;
 }
 /* Tiles and tree tiles change colour under the pointer, as S2 cards do; nothing lifts. Status text recolours
    instead of flipping. Later sheets must not set `transition` on these, or the colour fades are lost. */
@@ -68,9 +130,12 @@
     background-color var(--rp-duration) var(--rp-ease),
     border-color var(--rp-duration) var(--rp-ease),
     color var(--rp-duration) var(--rp-ease),
-    opacity var(--rp-duration) var(--rp-ease);
+    opacity var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 :root {
+  /* Touch browsers draw a square tap box over the pressed element; every control has its own rounded pressed state. */
+  -webkit-tap-highlight-color: transparent;
   color-scheme: light;
   --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --rp-underlay: rgba(0, 0, 0, 0.32);
@@ -166,6 +231,14 @@
   --rp-sidebar-width: 240px;
   --rp-sidebar-padding: 16px;
   --rp-control: 32px;
+  --rp-control-lg: 40px;
+  /* L's inline padding and text size. Phones take M's (below), so a row of L controls fits as a row of M controls does. */
+  --rp-lg-inset-btn: calc(var(--rp-control-lg) / 2);
+  --rp-lg-inset-field: calc(var(--rp-control-lg) * 3 / 8);
+  --rp-lg-inset-compact: calc(var(--rp-control-lg) * 3 / 8);
+  --rp-lg-text: var(--rp-text-lg);
+  --rp-lg-text-compact: var(--rp-text-lg);
+  --rp-control-xs: 24px;
   --rp-duration: 150ms;
   --rp-duration-panel: 200ms;
   --rp-duration-modal-in: 250ms;
@@ -205,6 +278,11 @@
   :root {
     --rp-control: 36px;
     --rp-control-block-inset: 0px;
+    --rp-lg-inset-btn: var(--rp-space-3);
+    --rp-lg-inset-field: var(--rp-space-3);
+    --rp-lg-inset-compact: var(--rp-space-2);
+    --rp-lg-text: var(--rp-text-md);
+    --rp-lg-text-compact: var(--rp-text-xs);
   }
 }
 :root[data-scheme='dark'] {
@@ -231,6 +309,21 @@
   border-radius: var(--rp-r-lg);
   padding: var(--rp-control-block-inset) var(--rp-control-inset);
   position: relative;
+  min-block-size: var(--rp-control);
+}
+.rp-seg[data-size='L'] {
+  --rp-control-block-inset: 0px;
+  min-block-size: var(--rp-control-lg);
+}
+/* Flush with the track at L, so the items and the slider take the track's radius, as a tab does. */
+.rp-seg[data-size='L'] > .rp-slider,
+.rp-seg[data-size='L'] .rp-btn {
+  border-radius: var(--rp-r-lg);
+}
+.rp-seg[data-size='L'] .rp-btn {
+  height: var(--rp-control-lg);
+  padding-inline: var(--rp-lg-inset-compact);
+  font-size: var(--rp-lg-text);
 }
 /* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. The
    track hugs its items in a column or a grid too, where a flex or grid item would otherwise stretch. */
@@ -294,7 +387,10 @@
   position: relative;
   z-index: 1;
   /* Like a tab: the label recolours as the slider arrives. */
-  transition: color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab);
+  transition:
+    color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab),
+    background-color var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 /* Popovers, menus, tooltips: fade and drift 4px from the trigger side. */
 .rp-popover,

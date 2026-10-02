@@ -25,6 +25,13 @@
   position: relative;
 }
 
+.rp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-height: var(--rp-control);
+}
 .rp-switch .track {
   width: 32px;
   height: 16px;
@@ -218,6 +225,15 @@
   color: var(--rp-text);
   cursor: pointer;
   min-width: 120px;
+}
+.rp-selectbtn[data-size='L'] {
+  height: var(--rp-control-lg);
+  padding-inline: var(--rp-lg-inset-field);
+  font-size: var(--rp-lg-text);
+}
+.rp-switch[data-size='L'] {
+  min-height: var(--rp-control-lg);
+  font-size: var(--rp-lg-text);
 }
 .rp-selectbtn[data-hovered] {
   background: var(--rp-hl-med);

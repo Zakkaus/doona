@@ -15,7 +15,8 @@ import {
   ErrorMessage,
   Tabs,
   TextTooltip,
-  MoreMenu
+  MoreMenu,
+  Toolbar
 } from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import {SearchSelect} from '../../ui/SearchSelect';
@@ -34,7 +35,7 @@ export function Connections(props: PageProps) {
   const cur = vm.detail;
   const list = (
     <>
-      <div className="rp-toolbar">
+      <Toolbar page>
         {vm.compact ? (
           <span className="rp-filter-row">
             <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
@@ -58,7 +59,7 @@ export function Connections(props: PageProps) {
               onChange={vm.setOut}
               sections={vm.outboundSections}
             />
-            <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick} searchLabel={t('conn.filterPick')}>
+            <ChoiceMenu label={t('conn.pick')} sections={vm.picks} onAction={vm.pick} searchLabel={t('conn.filterPick')}>
               {t('conn.pick')}
             </ChoiceMenu>
           </>
@@ -95,7 +96,7 @@ export function Connections(props: PageProps) {
           <Download />
           {t('conn.export')}
         </Button>
-      </div>
+      </Toolbar>
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
           collection={vm.collection}
@@ -180,6 +181,7 @@ export function Connections(props: PageProps) {
     <div className="rp-page">
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <Tabs
+        page
         keepMounted
         label={t('nav.connections')}
         value={vm.tab}

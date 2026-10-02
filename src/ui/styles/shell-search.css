@@ -494,10 +494,16 @@
   width: 56px;
   height: 32px;
   border-radius: var(--rp-r-pill);
-  transition: background-color var(--rp-duration) var(--rp-ease);
+  transition:
+    background-color var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 .rp-hubbar > [data-hovered] .rp-hubbar-pill {
   background: var(--rp-fill);
+}
+/* The press shows on the pill, in the selected pill's shape; the selected one keeps its fill (motion.css sinks both). */
+.rp-hubbar > [data-pressed] .rp-hubbar-pill {
+  background: var(--rp-hl-med);
 }
 .rp-hubbar > [aria-current='page'] {
   color: var(--rp-text);

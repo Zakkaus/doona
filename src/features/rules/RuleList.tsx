@@ -16,7 +16,8 @@ import {
   ErrorMessage,
   InlineAlert,
   TextTooltip,
-  type TableColumn
+  type TableColumn,
+  Toolbar
 } from '../../ui/ui';
 import Close from '../../ui/icons/Close';
 import Edit from '../../ui/icons/Edit';
@@ -50,11 +51,11 @@ export function RuleList(props: PageProps) {
     return dictionary ? <RuleDictionary view={view} viewSwitch={viewSwitch} /> : <Distribution view={view} viewSwitch={viewSwitch} />;
   return (
     <div className="rp-col">
-      <div className="rp-toolbar">
+      <Toolbar page>
         {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
         <span className="rp-grow" />
         {viewSwitch}
-      </div>
+      </Toolbar>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <RuleTemplates model={templates} />
     </div>
@@ -174,7 +175,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
   return (
     <div className="rp-col">
       <ActionHelp reason={view.canWrite ? view.addReason : null}>
-        <div className="rp-toolbar">
+        <Toolbar page>
           {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
           <span className="rp-grow" />
           {view.canWrite && (
@@ -183,7 +184,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
             </Button>
           )}
           {viewSwitch}
-        </div>
+        </Toolbar>
       </ActionHelp>
       {view.held && (
         <Card className="rp-list" aria-label={view.held.title} ref={heldRef} tabIndex={-1}>
@@ -261,7 +262,7 @@ function Distribution({view, viewSwitch}: {view: Model; viewSwitch?: ReactNode})
   );
   return (
     <div className="rp-col">
-      <div className="rp-toolbar">
+      <Toolbar page>
         <HelpRow help={table.sourceHelp}>
           <Segmented label={t('rule.distributionSource')} value={view.source} onChange={view.setSource} items={table.choices} />
         </HelpRow>
@@ -278,7 +279,7 @@ function Distribution({view, viewSwitch}: {view: Model; viewSwitch?: ReactNode})
         )}
         <span className="rp-grow" />
         {viewSwitch}
-      </div>
+      </Toolbar>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <DataTable label={t('rule.listTitle')} loading={view.loading} rows={table.rows} fit empty={table.empty} cols={columns} />
     </div>

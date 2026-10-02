@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, Disclosure, Light, Link, VisuallyHidden, type Action} from '../../ui/ui';
+import {Badge, Button, Card, Disclosure, Light, Link, Toolbar, VisuallyHidden, type Action} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {RestartNotice} from './RestartNotice';
@@ -46,13 +46,13 @@ export function SourceCard(props: SourceCardProps) {
   const located = locatedForms(links, focus, text);
   const jumps = located.length ? located : links;
   const formLinks = (
-    <div className="rp-toolbar" aria-label={t('config.forms')}>
+    <Toolbar aria-label={t('config.forms')}>
       {jumps.map(link => (
         <Link key={link.from} appearance="button" href={link.href}>
           {link.label}
         </Link>
       ))}
-    </div>
+    </Toolbar>
   );
   // Pinned under the editor's toolbar: one bar as wide as the editor, its counts opening into the list on errors.
   const banner = (
