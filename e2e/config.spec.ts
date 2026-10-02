@@ -1,7 +1,7 @@
 import {test as httpTest, type Page, type Route} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend} from './fixtures';
+import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend, box} from './fixtures';
 import {sha256} from '../src/api/hash';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';
 import {readGroupEntries} from '../src/dae/groups';
@@ -509,8 +509,8 @@ test('code scrolled sideways passes under the line numbers', async ({page}) => {
   // Clear of the phone's bottom bar, whose translucent surface shows the scrolled code behind it. The comparison leaves
   // out the editor's rounded border, whose anti-aliasing can differ by a shade between two captures.
   await gutter.evaluate(element => element.scrollIntoView({block: 'center'}));
-  const box = (await gutter.boundingBox())!;
-  const clip = {x: box.x + 3, y: box.y + 3, width: box.width - 6, height: box.height - 6};
+  const rect = await box(gutter);
+  const clip = {x: rect.x + 3, y: rect.y + 3, width: rect.width - 6, height: rect.height - 6};
   const before = await page.screenshot({clip});
   await routing.locator('.cm-scroller').evaluate(scroller => (scroller.scrollLeft = 120));
   expect(await page.screenshot({clip})).toEqual(before);

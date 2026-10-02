@@ -1,4 +1,4 @@
-import {downloadText, expect, expectTextInside, mockBackend, test} from './fixtures';
+import {downloadText, expect, expectTextInside, mockBackend, test, box} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {test as browserTest} from '@playwright/test';
@@ -446,7 +446,7 @@ test('on a phone, Load older records stays in view at the end of the log', async
   await page.goto('/#/dns?tab=log');
   const older = page.getByRole('button', {name: 'Load older records', exact: true});
   await expect(older).toBeVisible();
-  const [table, button] = [(await page.getByRole('grid', {name: 'Resolution log'}).boundingBox())!, (await older.boundingBox())!];
+  const [table, button] = [await box(page.getByRole('grid', {name: 'Resolution log'})), await box(older)];
   expect(button.y).toBeGreaterThanOrEqual(table.y + table.height);
   await older.click();
   await expect(older).toHaveCount(0);

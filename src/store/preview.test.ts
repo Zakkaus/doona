@@ -1,3 +1,4 @@
+import {stubVisibleDocument} from './testHelpers';
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {normalizeResourceKey} from '../api/inflight';
@@ -46,7 +47,7 @@ it('reads cached preview data without starting a resource watcher', () => {
   expect(watchResource).not.toHaveBeenCalled();
 });
 it('does not subscribe or replay the event stream for an inert preview', async () => {
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
   const api = createMockApi();
   api.capabilities = vi.fn(api.capabilities);
   api.subscribeEvents = vi.fn(api.subscribeEvents);

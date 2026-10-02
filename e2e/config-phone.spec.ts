@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {expect, mockBackend, moreAction, test} from './fixtures';
+import {expect, mockBackend, moreAction, test, box} from './fixtures';
 
 for (const scheme of ['light', 'dark'])
   test.describe(`390px ${scheme} config status`, () => {
@@ -150,9 +150,9 @@ for (const width of [320, 360, 390])
         expect(geometry.left).toBeGreaterThanOrEqual(0);
         expect(geometry.right).toBeLessThanOrEqual(0);
         expect(geometry.textWidth).toBeLessThanOrEqual(geometry.fileWidth);
-        const box = (await picker.boundingBox())!;
-        expect(box.x).toBeGreaterThanOrEqual(16);
-        expect(box.x + box.width).toBeLessThanOrEqual(width - 16);
+        const rect = await box(picker);
+        expect(rect.x).toBeGreaterThanOrEqual(16);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(width - 16);
         await picker.focus();
         await expect(page.getByRole('tooltip')).toHaveText(path);
         await picker.click();

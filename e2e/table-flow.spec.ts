@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, box} from './fixtures';
 import type {Page} from '@playwright/test';
 
 async function feed(page: Page, kind: 'events' | 'logs', count: number) {
@@ -56,7 +56,7 @@ for (const viewport of [
         await page.evaluate(() => window.scrollTo(0, 2400));
         await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(2000);
         const heading = grid.getByRole('columnheader').first();
-        await expect.poll(async () => Math.round((await heading.boundingBox())!.y)).toBe(64);
+        await expect.poll(async () => Math.round((await box(heading)).y)).toBe(64);
         expect((await geometry()).top).toBe(0);
         expect(await mounted.count()).toBeLessThan(150);
         const visible = await mounted.evaluateAll(rows =>
@@ -88,7 +88,7 @@ for (const viewport of [
         await page.keyboard.press('Home');
         const first = grid.locator(`[data-key="${kind === 'logs' ? 'log:2001' : 'event:2001'}"]`);
         await expect(first).toBeInViewport();
-        await expect.poll(async () => (await first.boundingBox())!.y).toBeGreaterThanOrEqual(101);
+        await expect.poll(async () => (await box(first)).y).toBeGreaterThanOrEqual(101);
         await page.keyboard.press('End');
         await page.keyboard.press('Enter');
         await expect(page.locator('.rp-table-detail')).toContainText(kind === 'logs' ? 'Record 1002' : 'Record 2');
@@ -119,8 +119,8 @@ for (const viewport of [
         const detail = page.locator('.rp-table-detail');
         await expect
           .poll(async () => {
-            const row = (await last.boundingBox())!;
-            const panel = (await detail.boundingBox())!;
+            const row = await box(last);
+            const panel = await box(detail);
             return panel.y - row.y - row.height;
           })
           .toBeGreaterThanOrEqual(0);
@@ -140,7 +140,7 @@ for (const viewport of [
         await expect(detail).toBeEmpty();
         await expect(selected).toBeFocused();
         await expect(selected).toHaveAttribute('data-focus-visible');
-        await expect.poll(async () => (await selected.boundingBox())!.y).toBeGreaterThanOrEqual(101);
+        await expect.poll(async () => (await box(selected)).y).toBeGreaterThanOrEqual(101);
         await page.keyboard.press('ArrowDown');
         await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:199' : 'event:199'}"]`)).toBeFocused();
       });
@@ -177,7 +177,7 @@ for (const kind of ['events', 'logs'] as const) {
   test(`${kind} fit a single row without an empty band`, async ({page}) => {
     const {grid, frame} = await feed(page, kind, 1);
     await expect(grid.getByRole('rowheader')).toHaveCount(1);
-    expect((await grid.boundingBox())!.height).toBe(77);
+    expect((await box(grid)).height).toBe(77);
     expect(await grid.evaluate(el => el.scrollHeight - el.clientHeight)).toBe(0);
     await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(2));
     await expect(grid.getByRole('rowheader').first()).toHaveText('Record 2');

@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, box} from './fixtures';
 import {nestedIn, compileFilters, readGroupEntries, writeGroupEntry} from '../src/dae/groups';
 import {regionFilters} from '../src/features/shared/groupIncludes';
 
@@ -294,14 +294,14 @@ for (const width of [1440, 390]) {
     const option = page.getByRole('option', {name, exact: true});
     await expect(option).toBeVisible();
     const controlSize = await option.evaluate(el => Number.parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')));
-    expect((await option.boundingBox())!.height).toBeLessThanOrEqual(controlSize);
+    expect((await box(option)).height).toBeLessThanOrEqual(controlSize);
     await expect(option.locator('.rp-truncate')).toHaveCSS('white-space', 'nowrap');
     await option.click();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeVisible();
     await expect(page.getByRole('dialog', {name: 'Nodes', exact: true})).toHaveCount(0);
     const action = dialog.getByRole('button', {name: `Remove ${name}`, exact: true});
-    const bounds = (await action.boundingBox())!;
+    const bounds = await box(action);
     expect(bounds.width).toBe(bounds.height);
     expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   });

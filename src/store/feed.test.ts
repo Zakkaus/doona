@@ -1,3 +1,4 @@
+import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createFeed} from './feed';
 import {eventFeed, noticeFeed} from './logs';
@@ -7,7 +8,7 @@ import type {ApiEvent} from '../api/model';
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('window', globalThis);
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
 });
 afterEach(() => {
   vi.unstubAllGlobals();

@@ -1,26 +1,8 @@
-import {detail, expect, expectLoadFailures, mockBackend, test, moreAction} from './fixtures';
+import {detail, expect, expectLoadFailures, mockBackend, test, moreAction, pickOutbound, rejectedReload, setupIncludedRouting, box} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {sha256} from '../src/api/hash';
-
-// The dialog starts with no outbound, so a rule is written only after one is chosen.
-async function pick(dialog: import('@playwright/test').Locator, name: string) {
-  await dialog.getByRole('button', {name: /Outbound$/}).click();
-  await dialog.page().getByRole('option', {name, exact: true}).click();
-}
 
 test.use({viewport: {width: 1440, height: 900}});
-// A reload the engine refused after the files were written.
-const rejectedReload = () => ({
-  operation_id: 'op-rejected',
-  kind: 'reload',
-  status: 'failed',
-  created_at: new Date().toISOString(),
-  started_at: new Date().toISOString(),
-  finished_at: new Date().toISOString(),
-  result: null,
-  error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
-});
 
 test('a rule added from a connection is written before the rule it matched, in one request', async ({page}) => {
   const {api, requests} = await mockBackend(page);
@@ -29,7 +11,7 @@ test('a rule added from a connection is written before the rule it matched, in o
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await dialog.getByRole('button', {name: /Match by$/}).click();
@@ -68,7 +50,7 @@ test('a refused write shows its diagnostics in the dialog and writes nothing', a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toContainText('Validation found 1 error; nothing written');
   await expect(dialog).toContainText('config.dae line 44: Backend message: no group gaming');
@@ -130,7 +112,7 @@ for (const width of [360, 768, 1440])
     await expect(
       detail(page).getByRole('button', {name: /^(Show matched rule|View flow|Trace this connection|Only this device|Close connection)$/})
     ).toHaveCount(0);
-    const [primary, trigger] = [(await add.boundingBox())!, (await more.boundingBox())!];
+    const [primary, trigger] = [await box(add), await box(more)];
     expect(trigger.height).toBe(primary.height);
     expect(Math.abs(trigger.y - primary.y)).toBeLessThanOrEqual(1);
     await more.click();
@@ -152,7 +134,7 @@ async function hold(page: import('@playwright/test').Page, id: string) {
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   // The outbound each connection takes now: proxy for connection 1, direct for connection 2.
-  await pick(dialog, id === '2' ? 'direct' : 'proxy');
+  await pickOutbound(dialog, id === '2' ? 'direct' : 'proxy');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toHaveCount(0);
 }
@@ -253,7 +235,8 @@ test('cancelling the reload confirmation reloads nothing', async ({page}) => {
   const dialog = page.getByRole('dialog', {name: 'Reload honk?'});
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await page.waitForTimeout(300);
+  await page.goto('/#/rules?tab=list&view=advanced');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite:telegram)');
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
 });
 
@@ -302,11 +285,11 @@ test('the dialog shows the outbound the connection uses without choosing it', as
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   // A rule to the outbound the traffic already takes is allowed, and the dialog says it changes nothing.
   const unchanged = dialog.getByText('This rule does not change where this traffic goes now.');
-  await pick(dialog, 'direct');
+  await pickOutbound(dialog, 'direct');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
   await expect(unchanged).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(unchanged).toHaveCount(0);
 });
 
@@ -346,7 +329,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await expect(dialog).toContainText('The matched rule changed; the rule will be inserted at the position shown below.');
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Last, before the fallback');
@@ -359,27 +342,7 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
 
 test('an apply that fails in a later file keeps what it could not write and says what it wrote', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page, {includedRule: true});
-  // The mock's include holds bare rules, which doona cannot place; give it a routing section so both files take rules.
-  const wrap = (text: string) => 'routing {\n' + text + '}\n';
-  handlers['GET config'] = async () => {
-    const config = await api.config();
-    const sources = config.sources.map(async source =>
-      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
-    );
-    return {...config, sources: await Promise.all(sources)};
-  };
-  handlers['GET rules'] = async () => {
-    const list = await api.rules();
-    return {
-      ...list,
-      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
-    };
-  };
-  handlers['PUT config/sources/src-rules'] = async () => {
-    throw new ApiError(422, 'validation_failed', 'invalid', null, {
-      diagnostics: [{level: 'error', source_id: 'src-rules', line: 7, column: 1, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
-    });
-  };
+  setupIncludedRouting({api, handlers}, {refuseWrite: true});
   const connections = await createMockApi().connections();
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await hold(page, '1');
@@ -414,7 +377,7 @@ test('rules the backend displays with their outbound are still placed', async ({
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
 
@@ -435,7 +398,7 @@ test('closing the dialog while it reads the configuration writes nothing', async
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   slow = true;
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect.poll(() => reading).toBe(true);
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
@@ -445,7 +408,6 @@ test('closing the dialog while it reads the configuration writes nothing', async
   // The rule list is read again after the close; a write would come before that settles.
   await page.goto('/#/rules?tab=list&view=advanced');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('domain(geosite:telegram)');
-  await page.waitForTimeout(500);
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
 });
 
@@ -463,7 +425,7 @@ test('a rule written whose reload failed is not held again and not offered for a
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Add rule'});
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   const notice = page.locator('.rp-toast.negative', {hasText: 'Written to the config file but not applied'});
   await expect(notice).toBeVisible();
@@ -496,7 +458,7 @@ test('the dialog does not write while the top bar applies held rules', async ({p
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   write.open();
   await expect(page.locator('.rp-toast.positive', {hasText: '1 rule is in effect'})).toBeVisible();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
 });
@@ -572,22 +534,7 @@ test('a rule written whose operation poll kept failing is not held again', async
 
 test('an apply whose later file is written but not reloaded counts every rule written', async ({page}) => {
   const {api, handlers} = await mockBackend(page, {includedRule: true});
-  // As in the later-file test above: the include takes rules once it has a routing section.
-  const wrap = (text: string) => 'routing {\n' + text + '}\n';
-  handlers['GET config'] = async () => {
-    const config = await api.config();
-    const sources = config.sources.map(async source =>
-      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
-    );
-    return {...config, sources: await Promise.all(sources)};
-  };
-  handlers['GET rules'] = async () => {
-    const list = await api.rules();
-    return {
-      ...list,
-      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
-    };
-  };
+  setupIncludedRouting({api, handlers});
   handlers['PUT config/sources/src-rules'] = async () => ({
     operation_id: 'op-rejected',
     kind: 'reload',
@@ -618,7 +565,7 @@ test('the dialog waits for the groups before it writes', async ({page}) => {
   await expect(dialog.getByRole('button', {name: /Insert$/})).toContainText('Before the matched rule');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   groups.open();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
@@ -639,7 +586,7 @@ test('the dialog preselects no outbound the groups may contradict before they ar
   await expect(dialog.getByRole('button', {name: /Outbound$/})).not.toContainText('direct');
   groups.open();
   await expect(dialog).toContainText('Current: proxy');
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: /Outbound$/})).toContainText('proxy');
 });
@@ -658,7 +605,7 @@ test('a failed groups read shows in the dialog and is retried there', async ({pa
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();
   fail = false;
   await dialog.getByRole('button', {name: 'Retry', exact: true}).click();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
 });
@@ -672,7 +619,7 @@ test.describe('phone', () => {
     await expect(apply).toBeVisible();
     const count = apply.locator('.rp-held-count');
     await expect(count).toHaveText('1');
-    const [badge, bar] = [(await count.boundingBox())!, (await top(page).boundingBox())!];
+    const [badge, bar] = [await box(count), await box(top(page))];
     expect(badge.x).toBeGreaterThanOrEqual(0);
     expect(badge.x + badge.width).toBeLessThanOrEqual(bar.width);
     expect(badge.y).toBeGreaterThanOrEqual(bar.y);

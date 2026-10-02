@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, mockBackend, test, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 // The public demo saves a profile on the mock; a saved demo profile signs in with the account it publishes.
@@ -98,13 +98,13 @@ test.describe('the demo', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     await expect(page.locator('.rp-login-showcase')).toHaveCount(0);
     // The column is centred on a phone.
-    const column = (await login.locator('.rp-login-column').boundingBox())!;
+    const column = await box(login.locator('.rp-login-column'));
     expect(Math.abs(column.x + column.width / 2 - 180)).toBeLessThanOrEqual(1);
     await page.setViewportSize({width: 1280, height: 800});
     const showcase = page.locator('.rp-login-showcase');
     await expect(showcase.locator('canvas')).toBeVisible();
-    const pane = (await page.locator('.rp-login-pane').boundingBox())!;
-    expect((await showcase.boundingBox())!.x).toBeGreaterThanOrEqual(pane.x + pane.width);
+    const pane = await box(page.locator('.rp-login-pane'));
+    expect((await box(showcase)).x).toBeGreaterThanOrEqual(pane.x + pane.width);
   });
 
   test('shows a still scene that takes no presses under reduced motion, and plays once motion is allowed', async ({page}) => {

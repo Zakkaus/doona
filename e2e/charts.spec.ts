@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, setAppearance, test} from './fixtures';
+import {expect, faults, mockBackend, setAppearance, test, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
@@ -456,18 +456,18 @@ for (const [name, storage] of [
       await tile.scrollIntoViewIfNeeded();
       await expect(spark).toBeVisible();
       await spark.scrollIntoViewIfNeeded();
-      const card = (await tile.boundingBox())!;
-      const line = (await spark.boundingBox())!;
+      const card = await box(tile);
+      const line = await box(spark);
       for (const x of [1, line.width - 1]) {
         await page.mouse.move(line.x + x, line.y + line.height / 2);
         const tip = tile.locator('.rp-charttip-bounded');
         await expect(tip).toBeVisible();
         await expect(async () => {
-          const box = (await tip.locator('[role=status]').boundingBox())!;
-          expect(box.x).toBeGreaterThanOrEqual(card.x);
-          expect(box.y).toBeGreaterThanOrEqual(card.y);
-          expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width);
-          expect(box.y + box.height).toBeLessThanOrEqual(card.y + card.height);
+          const rect = await box(tip.locator('[role=status]'));
+          expect(rect.x).toBeGreaterThanOrEqual(card.x);
+          expect(rect.y).toBeGreaterThanOrEqual(card.y);
+          expect(rect.x + rect.width).toBeLessThanOrEqual(card.x + card.width);
+          expect(rect.y + rect.height).toBeLessThanOrEqual(card.y + card.height);
         }).toPass();
       }
     });
@@ -481,15 +481,15 @@ for (const [name, storage] of [
       await tile.scrollIntoViewIfNeeded();
       await expect(spark).toBeVisible();
       await spark.scrollIntoViewIfNeeded();
-      const card = (await tile.boundingBox())!;
-      const line = (await spark.boundingBox())!;
+      const card = await box(tile);
+      const line = await box(spark);
       await page.mouse.move(line.x + line.width - 1, line.y + line.height / 2);
       const tip = tile.locator('.rp-charttip-bounded [role=status]');
       await expect(tip).toBeVisible();
       await expect(async () => {
-        const box = (await tip.boundingBox())!;
-        expect(box.x).toBeGreaterThanOrEqual(card.x);
-        expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width);
+        const rect = await box(tip);
+        expect(rect.x).toBeGreaterThanOrEqual(card.x);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(card.x + card.width);
       }).toPass();
     });
   });

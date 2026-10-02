@@ -1,4 +1,4 @@
-import {expect, fulfillStream, mockBackend, test} from './fixtures';
+import {expect, fulfillStream, mockBackend, test, box} from './fixtures';
 
 // On a phone a table keeps its columns' minimum widths and scrolls sideways (src/ui/Table.tsx); wider screens fit the
 // columns to the table as before.
@@ -33,18 +33,14 @@ test.describe('390px', () => {
     expect((await scroll()).left).toBe(0);
     // A one-row flow table can sit behind the phone dock; centre it before sending a wheel gesture.
     await grid.evaluate(el => el.scrollIntoView({block: 'center'}));
-    const box = (await grid.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const rect = await box(grid);
+    await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);
     await page.mouse.wheel(2000, 0);
     await expect.poll(async () => (await scroll()).left).toBeGreaterThan(0);
     const cell = grid.getByRole('rowheader');
     await expect(cell).toContainText(message.slice(0, 20));
     // The message cell and its header sit wholly inside the scrolled grid, the header over its column.
-    const [cellBox, gridBox, headerBox] = [
-      (await cell.boundingBox())!,
-      (await grid.boundingBox())!,
-      (await grid.getByRole('columnheader', {name: /^Message /}).boundingBox())!
-    ];
+    const [cellBox, gridBox, headerBox] = [await box(cell), await box(grid), await box(grid.getByRole('columnheader', {name: /^Message /}))];
     expect(cellBox.x).toBeGreaterThanOrEqual(gridBox.x);
     expect(cellBox.x + cellBox.width).toBeLessThanOrEqual(gridBox.x + gridBox.width + 1);
     expect(Math.round(headerBox.x)).toBe(Math.round(cellBox.x));

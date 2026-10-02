@@ -1,6 +1,6 @@
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
-import {expect, expectTextInside, mockBackend, test} from './fixtures';
+import {expect, expectTextInside, mockBackend, test, box} from './fixtures';
 
 // Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
@@ -227,7 +227,7 @@ for (const width of [1440, 768, 390]) {
     await expect(add).toBeVisible();
     const bar = page.locator('.rp-toolbar').filter({has: add});
     const segment = await bar.locator('.rp-seg').boundingBox();
-    expect((await add.boundingBox())!.height).toBe(segment!.height);
+    expect((await box(add)).height).toBe(segment!.height);
     await expect(add).toHaveCSS('font-size', '14px');
     const cells = page.locator('.rp-cell-wrap');
     await expect(cells.first()).toBeVisible();

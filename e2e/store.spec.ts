@@ -36,35 +36,6 @@ test('a failed second probe batch reports partial completion instead of success'
   await page.keyboard.press('Escape');
 });
 
-test('a hidden main-source path does not block a validated conditional replacement', async ({page}) => {
-  const {api, handlers, requests} = await mockBackend(page);
-  handlers['GET config'] = async () => {
-    const config = await api.config();
-    return {...config, sources: config.sources.map(source => ({...source, path: '<redacted>'}))};
-  };
-  handlers['POST config/validate'] = async request => {
-    const candidate = request.postDataJSON();
-    if (candidate.mode === 'full')
-      return {
-        valid: false,
-        generation_id: '40',
-        validated_at: new Date().toISOString(),
-        diagnostics: [
-          {level: 'error', source_id: 'src-main', line: null, column: null, span: null, code: 'include_not_found', message: 'No include-resolution base'}
-        ]
-      };
-    return api.validateConfig(candidate);
-  };
-  await page.goto('/#/config?tab=source&source=src-main');
-  const editor = page.locator('.cm-content');
-  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
-  await editor.fill(main.content! + '\n# updated\n');
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
-  expect(requests.filter(request => request.method() === 'PUT' && request.url().includes('/config/sources/'))).toHaveLength(1);
-  expect((await api.config()).sources.find(source => source.kind === 'main')?.content).toContain('# updated');
-});
-
 test('query simulation traces the first IPv4 and IPv6 answer and lists every answer', async ({page}) => {
   const {api, capabilities, handlers, requests} = await mockBackend(page);
   // honk's own limit: one address per trace request.

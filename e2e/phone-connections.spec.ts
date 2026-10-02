@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, test, mockBackend, detail} from './fixtures';
 
 // The filter field: a fixed 240px box on desktop, the toolbar row beside the filters menu on phones, and an ellipsis
 // rather than an abrupt cut mid-word when its placeholder or value still does not fit
@@ -38,4 +38,23 @@ test.describe('1280px', () => {
     const width = await field.evaluate(el => Math.round(el.closest('.rp-input')!.getBoundingClientRect().width));
     expect(width).toBe(240);
   });
+});
+
+// TextTooltip only reveals on an ancestor's :focus-visible, which a tap never produces (src/ui/Button.tsx). On a
+// phone the detail drawer has vertical room to spare, so a value that would otherwise truncate wraps instead, and the
+// full text is on screen without needing the tooltip at all.
+test('the detail rule wraps on phones and truncates on desktop', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const connections = await api.connections({detail: 'full', limit: 1000});
+  const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
+  await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);
+  const rule = detail(page).locator('.rp-list .rp-truncate').first();
+  for (const {width, whiteSpace} of [
+    {width: 390, whiteSpace: 'normal'},
+    {width: 1280, whiteSpace: 'nowrap'}
+  ]) {
+    await page.setViewportSize({width, height: 900});
+    await expect(rule).toHaveText(row.rule_expression!);
+    await expect.poll(() => rule.evaluate(el => getComputedStyle(el).whiteSpace)).toBe(whiteSpace);
+  }
 });

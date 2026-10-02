@@ -1,4 +1,4 @@
-import {test, expect, mockBackend, moreAction} from './fixtures';
+import {test, expect, mockBackend, moreAction, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 import type {Provider} from '../src/api/model';
@@ -173,9 +173,9 @@ test('the notification position setting moves the toasts and survives a reload',
   await expect(region).toHaveAttribute('data-placement', 'bottom');
   await expect(region).toHaveAttribute('data-align', 'end');
   const viewport = page.viewportSize()!;
-  const box = (await region.boundingBox())!;
-  expect(Math.round(viewport.width - (box.x + box.width))).toBe(16);
-  expect(box.y + box.height).toBeGreaterThan(viewport.height - 80);
+  const rect = await box(region);
+  expect(Math.round(viewport.width - (rect.x + rect.width))).toBe(16);
+  expect(rect.y + rect.height).toBeGreaterThan(viewport.height - 80);
 });
 
 test('toasts default to the bottom centre', async ({page}) => {
@@ -185,8 +185,8 @@ test('toasts default to the bottom centre', async ({page}) => {
   const region = page.locator('.rp-toasts');
   await expect(region).toHaveAttribute('data-placement', 'bottom');
   await expect(region).toHaveAttribute('data-align', 'center');
-  const box = (await region.boundingBox())!;
-  expect(Math.abs(box.x + box.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
+  const rect = await box(region);
+  expect(Math.abs(rect.x + rect.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
 });
 
 test('a failure toast leaves the request id out of its text and logs it', async ({page}) => {

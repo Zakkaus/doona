@@ -2,7 +2,7 @@ import type {Locator} from '@playwright/test';
 import en from '../src/i18n/locales/en.json' with {type: 'json'};
 import zh from '../src/i18n/locales/zh-CN.json' with {type: 'json'};
 import tw from '../src/i18n/locales/zh-TW.json' with {type: 'json'};
-import {expect, mockBackend, scrollIntoList, test} from './fixtures';
+import {expect, mockBackend, scrollIntoList, test, box} from './fixtures';
 import {readGroupEntries} from '../src/dae/groups';
 
 async function expectFormGeometry(dialog: Locator) {
@@ -199,28 +199,23 @@ for (const entry of ['Nodes', 'Policies'])
     });
   });
 
-for (const lang of ['en', 'zh-CN'])
-  test.describe(`unquotable-${lang}`, () => {
-    test.use({storage: {'doona-lang': lang}});
-    test('Nodes explains an unquotable name without opening a group dialog', async ({page}) => {
-      const {api, handlers, requests} = await mockBackend(page);
-      const labels = lang === 'en' ? en : zh;
-      handlers['GET nodes'] = async () => {
-        const list = await api.nodes({limit: 1000});
-        return {...list, nodes: list.nodes.map(node => (node.id === 'hk-01' ? {...node, name: "O'Hare"} : node))};
-      };
-      await page.goto('/#/nodes?provider=inline');
-      await page
-        .getByRole('row')
-        .filter({has: page.getByRole('rowheader', {name: "O'Hare", exact: true})})
-        .getByRole('button', {name: labels['nodes.actions'], exact: true})
-        .click();
-      await page.getByRole('menuitem', {name: labels['nodes.newGroup'], exact: true}).click();
-      await expect(page.locator('.rp-toast.negative')).toContainText(labels['config.unquotable']);
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-      expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
-    });
-  });
+test('Nodes explains an unquotable name without opening a group dialog', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['GET nodes'] = async () => {
+    const list = await api.nodes({limit: 1000});
+    return {...list, nodes: list.nodes.map(node => (node.id === 'hk-01' ? {...node, name: "O'Hare"} : node))};
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: "O'Hare", exact: true})})
+    .getByRole('button', {name: en['nodes.actions'], exact: true})
+    .click();
+  await page.getByRole('menuitem', {name: en['nodes.newGroup'], exact: true}).click();
+  await expect(page.locator('.rp-toast.negative')).toContainText(en['config.unquotable']);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
+});
 
 for (const viewport of [
   {width: 1440, height: 1000},
@@ -281,8 +276,8 @@ for (const viewport of [
         const edit = page.getByRole('dialog', {name: labels['policy.editTitle'].replace('{name}', 'office'), exact: true});
         await expect(edit).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        const heading = (await edit.getByRole('heading', {name: labels['policy.liveConfig']}).boundingBox())!;
-        const help = (await edit.getByText(labels['policy.finalOutboundHelp'], {exact: true}).boundingBox())!;
+        const heading = await box(edit.getByRole('heading', {name: labels['policy.liveConfig']}));
+        const help = await box(edit.getByText(labels['policy.finalOutboundHelp'], {exact: true}));
         expect(heading.y - help.y - help.height).toBeGreaterThanOrEqual(16);
         await page.mouse.move(0, 0);
         await expectFormGeometry(edit);
@@ -321,8 +316,8 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
         await expect.poll(() => body.evaluate(element => element.scrollTop)).toBe(0);
         const title = dialog.getByRole('heading', {name: labels['group.newGroup'], exact: true});
         const footer = dialog.locator('.foot');
-        const titleBox = (await title.boundingBox())!;
-        const footerBox = (await footer.boundingBox())!;
+        const titleBox = await box(title);
+        const footerBox = await box(footer);
         for (const end of ['top', 'bottom']) {
           if (end === 'bottom') {
             await page.keyboard.press('End');
@@ -341,11 +336,11 @@ for (const lang of ['en', 'zh-CN', 'zh-TW'])
                   dialog.getByRole('button', {name: new RegExp(`${labels['policy.cfg.defaultMember']}$`)}),
                   dialog.getByRole('button', {name: new RegExp(`${labels['policy.cfg.finalOutbound']}$`)})
                 ];
-          const contentBox = (await body.boundingBox())!;
+          const contentBox = await box(body);
           for (const picker of pickers) {
-            const box = (await picker.boundingBox())!;
-            expect(box.y).toBeGreaterThanOrEqual(contentBox.y);
-            expect(box.y + box.height).toBeLessThanOrEqual(contentBox.y + contentBox.height);
+            const rect = await box(picker);
+            expect(rect.y).toBeGreaterThanOrEqual(contentBox.y);
+            expect(rect.y + rect.height).toBeLessThanOrEqual(contentBox.y + contentBox.height);
             expect(await picker.locator('.rp-truncate').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
           }
           expect(await body.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);

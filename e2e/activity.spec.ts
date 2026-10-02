@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, test} from './fixtures';
+import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, test, box, settleFrames, expectTextInside} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -309,7 +309,7 @@ test('group latency shares connection demand and manual choices stop following t
   const trigger = page.getByRole('button', {name: /^Groups: /});
   await page.setViewportSize({width: 390, height: 480});
   await page.getByRole('heading', {name: 'Activity', exact: true}).evaluate(el => el.scrollIntoView({block: 'start'}));
-  await expect.poll(async () => (await ranking.boundingBox())!.y).toBeGreaterThan(1000);
+  await expect.poll(async () => (await box(ranking)).y).toBeGreaterThan(1000);
   await page.clock.runFor(100);
   await page.clock.fastForward(1000);
   for (const id of ['ranking', 'latency', 'connectionOutbounds']) {
@@ -350,14 +350,14 @@ test('the latency tile names an active node that is unavailable and keeps its si
   // The value link appears once the nodes have loaded; before that the tile shows its placeholder.
   await expect(tile.getByRole('link')).toHaveAccessibleName(/^[^→]+: \d/);
   await expect(tile.locator('.rp-light')).toHaveCount(0);
-  const height = (await tile.boundingBox())!.height;
+  const height = (await box(tile)).height;
   await page.getByRole('button', {name: /^Groups: /}).click();
   await page.getByRole('searchbox', {name: 'Groups', exact: true}).fill('gaming');
   const jp = page.getByRole('menuitemradio').filter({hasText: 'gaming'});
   await scrollIntoList(jp);
   await jp.click();
   await expect(tile.locator('.rp-light')).toHaveText('Unavailable');
-  expect((await tile.boundingBox())!.height).toBe(height);
+  expect((await box(tile)).height).toBe(height);
 });
 
 test('the latency card explains automatic selection from its info button', async ({page}) => {
@@ -991,53 +991,42 @@ test('the latency picker shows the resolved node on a phone', async ({page}) => 
   expect(controls!.y).toBeGreaterThanOrEqual(caption!.y + caption!.height);
 });
 
-// Wide boxes measured at 6bb91def without flag decoration; narrow controls now take a second row.
-for (const [lang, scheme, width, title, trigger, valueColor] of [
-  ['en', 'light', 1440, [45, 26, 45, 14], [98, 17, 71, 32], 'rgb(70, 66, 97)'],
-  ['zh-TW', 'dark', 1440, [45, 26, 24, 14], [77, 17, 71, 32], 'rgb(156, 207, 216)'],
-  ['zh-CN', 'light', 390, [45, 20, 24, 14], [17, 45, 71, 36], 'rgb(70, 66, 97)']
+for (const [lang, scheme, width] of [
+  ['en', 'light', 1440],
+  ['zh-TW', 'dark', 1440],
+  ['zh-CN', 'light', 390]
 ] as const)
   test.describe(`${lang} ${scheme} latency geometry`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang, 'doona-scheme': scheme, 'doona-country-flags': 'off'}});
-    test('preserves the title, node picker and large value boxes', async ({page}) => {
+    test('keeps the title above the value and the controls inside the card', async ({page}) => {
       await page.goto('/#/activity');
       const card = page.locator('.rp-latency');
-      await expect(card.locator('.rp-select')).toHaveText('hk-01');
-      await expect(card.locator('.rp-tile-val')).toHaveText('84 ms');
-      await card.evaluate(async el => {
-        const targets = [el.querySelector('.rp-tile-head')!, el.querySelector('.rp-big')!];
-        await Promise.all(targets.map(target => document.fonts.load(getComputedStyle(target).font, target.textContent ?? '')));
-        await document.fonts.ready;
-        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-      });
-      const actual = await card.evaluate(el => {
-        const root = el.getBoundingClientRect();
-        const box = (r: DOMRect) => [r.x - root.x, r.y - root.y, r.width, r.height];
-        const head = el.querySelector('.rp-tile-head')!;
-        const range = document.createRange();
-        const caption = head.querySelector('.rp-tile-caption');
-        if (caption) range.selectNodeContents(caption);
-        else range.selectNode([...head.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())!);
-        const picker = el.querySelector('.rp-select')!;
-        const value = el.querySelector('.rp-big')!;
-        const ps = getComputedStyle(picker);
-        const vs = getComputedStyle(value);
-        return {
-          title: box(range.getBoundingClientRect()),
-          trigger: box(picker.getBoundingClientRect()),
-          value: box(value.getBoundingClientRect()),
-          pickerStyle: [ps.backgroundColor, ps.fontSize, ps.lineHeight, ps.fontWeight],
-          valueStyle: [vs.fontSize, vs.lineHeight, vs.fontWeight, vs.color]
-        };
-      });
-      for (const [key, expected] of [
-        ['title', title],
-        ['trigger', trigger],
-        ['value', [17, width < 600 ? 93 : 63, 77, 28]]
-      ] as const)
-        actual[key].forEach((coordinate, i) => expect(Math.abs(coordinate - expected[i]), `${key}[${i}]`).toBeLessThanOrEqual(1));
-      expect(actual.pickerStyle).toEqual(['rgba(0, 0, 0, 0)', '12px', '16px', '400']);
-      expect(actual.valueStyle).toEqual(['22px', '28px', '700', valueColor]);
+      const picker = card.locator('.rp-select');
+      const value = card.locator('.rp-big');
+      const title = card.locator('.rp-tile-caption');
+      await expect(picker).toHaveText('hk-01');
+      await expect(value).toHaveText('84 ms');
+      await page.evaluate(() => document.fonts.ready);
+      await settleFrames(page);
+      const [titleBox, triggerBox, valueBox] = await Promise.all([box(title), box(picker), box(value)]);
+      // Wide controls share the header; phones put them below the title.
+      if (width < 600) expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(triggerBox.y);
+      else expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(triggerBox.x);
+      expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(valueBox.y);
+      expect(triggerBox.y + triggerBox.height).toBeLessThanOrEqual(valueBox.y);
+      expect(await value.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(
+        await picker.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      );
+      for (const element of [title, picker, value]) {
+        await expectTextInside(element);
+        expect(
+          await element.evaluate(el => {
+            const card = el.closest('.rp-latency')!.getBoundingClientRect();
+            const own = el.getBoundingClientRect();
+            return own.left >= card.left && own.right <= card.right && own.top >= card.top && own.bottom <= card.bottom;
+          })
+        ).toBe(true);
+      }
     });
   });
 

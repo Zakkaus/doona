@@ -1,4 +1,4 @@
-import {expect, routes, test} from './fixtures';
+import {expect, routes, test, box} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 
 const ranges = ['实时', '10 分钟', '1 小时', '6 小时', '24 小时', '7 天'];
@@ -108,7 +108,7 @@ test.describe('1440px', () => {
     await expect(group.getByRole('radio')).toHaveText(ranges);
     await expect(picker).toHaveCount(0);
     const control = card.locator('.rp-segfit');
-    const height = (await control.boundingBox())!.height;
+    const height = (await box(control)).height;
     // An observer created after the control's own runs after it in the same pass, before the browser paints: at that
     // point the mode must already match the fit, so no frame shows the track spilling out or both modes at once.
     await card.evaluate(el => {
@@ -125,7 +125,7 @@ test.describe('1440px', () => {
     await card.evaluate(el => (el.style.width = '300px'));
     await expect(picker).toBeVisible();
     await expect(group).toHaveCount(0);
-    expect((await control.boundingBox())!.height).toBe(height);
+    expect((await box(control)).height).toBe(height);
     await expect.poll(() => spill(card.locator('.rp-row').first())).toEqual([]);
 
     await card.evaluate(el => (el.style.width = ''));
@@ -181,6 +181,6 @@ for (const width of [1440, 768, 390]) {
     await page.goto('/#/policies');
     const segments = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
     await expect(segments).toBeVisible();
-    expect((await segments.boundingBox())!.height).toBe(geometry.control);
+    expect((await box(segments)).height).toBe(geometry.control);
   });
 }

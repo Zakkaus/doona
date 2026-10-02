@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, scrollTableToEnd, test} from './fixtures';
+import {expect, scrollTableToEnd, test, settleFrames} from './fixtures';
 
 // A virtualised grid draws only the columns in view, so the headers are gathered while scrolling across it.
 const columnNames = (grid: Locator) =>
@@ -97,7 +97,7 @@ for (const width of [320, 360, 390]) {
           const fits = async (label: Locator) => {
             await expect(label).toBeVisible();
             await page.evaluate(() => document.fonts.ready);
-            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+            await settleFrames(page);
             const geometry = await label.evaluate(el => {
               const text = document.createRange();
               text.selectNodeContents(el);

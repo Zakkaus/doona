@@ -1,5 +1,5 @@
 import {ApiError} from '../src/api/error';
-import {expect, mockBackend, query, test} from './fixtures';
+import {expect, mockBackend, query, test, settleFrames, box} from './fixtures';
 
 test('cache deletion removes one entry and flushing requires confirmation', async ({page}) => {
   const {api, requests} = await mockBackend(page);
@@ -113,7 +113,7 @@ for (const way of ['Cancel', 'Escape'] as const) {
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeEnabled();
     release();
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await settleFrames(page);
     await expect(page.locator('.rp-toast')).toHaveCount(0);
   });
 }
@@ -151,7 +151,7 @@ test('the cache table fits its entries instead of holding a page of empty space'
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Cache', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(entries.length);
   // Border, header and one row per entry; a fill-height table would stay at 442.
-  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + entries.length * 40 + 1);
+  await expect.poll(async () => (await box(table)).height).toBeLessThanOrEqual(2 + 37 + entries.length * 40 + 1);
 });
 
 test('a hidden cache tab stops walking the cache until it is shown again', async ({page}) => {
@@ -179,7 +179,7 @@ test('a hidden cache tab stops walking the cache until it is shown again', async
   await expect(grid).toBeHidden();
   const hidden = walks();
   await page.clock.fastForward(46000);
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await settleFrames(page);
   expect(walks()).toBe(hidden);
   await page.getByRole('tab', {name: 'Cache', exact: true}).click();
   await expect(grid.getByRole('rowheader', {name: `walk-${hidden + 1}.example`, exact: true})).toBeVisible();

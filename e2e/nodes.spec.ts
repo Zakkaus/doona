@@ -1,6 +1,6 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
-import {editorText} from './fixtures';
+import {editorText, box} from './fixtures';
 import {expect, mockBackend, query, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
@@ -507,16 +507,16 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
   const sources = page.getByRole('grid', {name: 'Node sources', exact: true});
   await expect(sources.getByRole('row')).toHaveCount(3);
   // A heading, two rows and the frame: no placeholder height left over from loading.
-  await expect.poll(async () => (await page.locator('.rp-table', {has: sources}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  await expect.poll(async () => (await box(page.locator('.rp-table', {has: sources}))).height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
   const protocol = page.locator('.rp-table .rp-truncate', {hasText: /^shadowsocks$/}).first();
   expect(await whole(protocol)).toBe(true);
   await page.goto('/#/settings');
   const geodata = page.getByRole('grid', {name: 'Geodata', exact: true});
   await expect(geodata.getByRole('row')).toHaveCount(3);
-  await expect.poll(async () => (await page.locator('.rp-table', {has: geodata}).boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  await expect.poll(async () => (await box(page.locator('.rp-table', {has: geodata}))).height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
   // The release address is cut inside its column, not past the table's edge.
-  const table = (await page.locator('.rp-table', {has: geodata}).boundingBox())!;
-  const source = (await geodata.getByRole('row').nth(1).getByRole('gridcell').last().boundingBox())!;
+  const table = await box(page.locator('.rp-table', {has: geodata}));
+  const source = await box(geodata.getByRole('row').nth(1).getByRole('gridcell').last());
   expect(source.x + source.width).toBeLessThanOrEqual(table.x + table.width + 1);
 });
 

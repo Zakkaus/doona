@@ -2,7 +2,7 @@ import {test as httpTest, type Locator, type Page} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
-import {expect, test, moreAction} from './fixtures';
+import {expect, test, moreAction, settleFrames} from './fixtures';
 
 async function backend(page: Page) {
   const api = createMockApi();
@@ -151,7 +151,7 @@ for (const all of [false, true]) {
     await page.locator('.rp-nav[href="#/settings"]').click();
     await expect(page.locator('[name=api]')).toBeVisible();
     release();
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await settleFrames(page);
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.locator('.rp-toast')).toHaveCount(0);
   });
@@ -280,7 +280,7 @@ test('discarding source inside Config cancels its transaction and releases the n
     release();
   }
   await handled;
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await settleFrames(page);
   expect(writes).toBe(0);
   await expect(page.locator('.rp-toast')).toHaveCount(0);
   await expect(page).toHaveURL(/source=src-rules/);
@@ -471,7 +471,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
   await discard.getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections$/);
   release();
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await settleFrames(page);
   await expect(page.locator('.rp-toast.positive', {hasText: 'Backend options applied'})).toHaveCount(0);
 });
 

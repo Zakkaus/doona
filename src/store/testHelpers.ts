@@ -1,3 +1,11 @@
+import {vi} from 'vitest';
+
+export function stubVisibleDocument() {
+  const document = Object.assign(new EventTarget(), {hidden: false});
+  vi.stubGlobal('document', document);
+  return document;
+}
+
 // A promise a test settles by hand.
 export function deferred<T>() {
   let resolve!: (value: T) => void;

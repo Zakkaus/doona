@@ -1,3 +1,4 @@
+import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
@@ -21,7 +22,7 @@ function watchConfig(api: ReturnType<typeof createMockApi>, fetch: () => Promise
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
 });
 afterEach(() => {
   disposers.splice(0).forEach(dispose => dispose());

@@ -1,4 +1,4 @@
-import {test, expect, mockBackend, moreAction} from './fixtures';
+import {test, expect, mockBackend, moreAction, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import {defaults, type Layout} from '../src/shell/widgets/layout';
 import type {Page} from '@playwright/test';
@@ -125,33 +125,33 @@ test('hidden widgets leave their editor unloaded', async ({page}) => {
 
 test('the anchored panel resizes by keyboard within its limits and keeps the size after a reload', async ({page}) => {
   await page.goto('/#/settings');
-  const before = (await floating(page).boundingBox())!;
+  const before = await box(floating(page));
   await floating(page).getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft');
-  await expect.poll(async () => (await floating(page).boundingBox())!.width).toBe(before.width + 48);
+  await expect.poll(async () => (await box(floating(page))).width).toBe(before.width + 48);
   await page.reload();
-  await expect.poll(async () => (await floating(page).boundingBox())!.width).toBe(before.width + 48);
+  await expect.poll(async () => (await box(floating(page))).width).toBe(before.width + 48);
   // The header moves the panel: dragged where its own controls are not, and by arrow keys on its move handle.
-  const start = (await floating(page).boundingBox())!;
-  const name = (await floating(page).locator('.rp-widget-backend').boundingBox())!;
-  const actions = (await floating(page).locator('.rp-widget-actions').boundingBox())!;
+  const start = await box(floating(page));
+  const name = await box(floating(page).locator('.rp-widget-backend'));
+  const actions = await box(floating(page).locator('.rp-widget-actions'));
   const grip = {x: (name.x + name.width + actions.x) / 2, y: actions.y + actions.height / 2};
   await page.mouse.move(grip.x, grip.y);
   await page.mouse.down();
   await page.mouse.move(grip.x - 60, grip.y - 40, {steps: 4});
   await page.mouse.up();
-  await expect.poll(async () => (await floating(page).boundingBox())!.x).toBe(start.x - 60);
-  expect((await floating(page).boundingBox())!.y).toBe(start.y - 40);
+  await expect.poll(async () => (await box(floating(page))).x).toBe(start.x - 60);
+  expect((await box(floating(page))).y).toBe(start.y - 40);
   await floating(page).getByRole('button', {name: 'Move panel', exact: true}).focus();
   await page.keyboard.press('ArrowRight');
   await expect(floating(page).getByRole('status')).toHaveText('Panel moved');
   await page.reload();
-  await expect.poll(async () => (await floating(page).boundingBox())!.x).toBe(start.x - 44);
+  await expect.poll(async () => (await box(floating(page))).x).toBe(start.x - 44);
   // Collapsing leaves the header alone, one control high on one row, without the resized body; expanding restores
   // the stored size.
   await floating(page).getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp');
-  const sized = (await floating(page).boundingBox())!;
+  const sized = await box(floating(page));
   // Every header item keeps its place in the panel, and the collapsed panel is the header with one inset all round.
   const items = () =>
     floating(page).evaluate(panel => {
@@ -165,25 +165,25 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await floating(page).getByRole('button', {name: 'Collapse widgets', exact: true}).click();
   await expect(floating(page).locator('.rp-widget-speed')).toBeVisible();
   expect(await items()).toEqual(expanded);
-  const header = (await floating(page).locator('.rp-widget-header').boundingBox())!;
-  const panel = (await floating(page).boundingBox())!;
+  const header = await box(floating(page).locator('.rp-widget-header'));
+  const panel = await box(floating(page));
   expect(header.height).toBe(32);
   const insets = [header.x - panel.x, header.y - panel.y, panel.x + panel.width - header.x - header.width, panel.y + panel.height - header.y - header.height];
   for (const inset of insets) expect(Math.abs(inset - insets[0]), `${insets}`).toBeLessThanOrEqual(0.5);
   for (const part of ['.rp-widget-backend', '.rp-widget-speed', '.rp-widget-actions']) {
-    const box = (await floating(page).locator(part).boundingBox())!;
-    expect(Math.abs(box.y + box.height / 2 - (header.y + header.height / 2))).toBeLessThanOrEqual(1);
-    expect(box.x + box.width, part).toBeLessThanOrEqual(header.x + header.width + 0.5);
+    const rect = await box(floating(page).locator(part));
+    expect(Math.abs(rect.y + rect.height / 2 - (header.y + header.height / 2))).toBeLessThanOrEqual(1);
+    expect(rect.x + rect.width, part).toBeLessThanOrEqual(header.x + header.width + 0.5);
   }
   await expect(floating(page).getByRole('button', {name: 'Resize widgets panel', exact: true})).toHaveCount(0);
   await floating(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
-  await expect.poll(async () => (await floating(page).boundingBox())!.height).toBe(sized.height);
+  await expect.poll(async () => (await box(floating(page))).height).toBe(sized.height);
   // Dragging the header opens a dock slot in the sidebar's lower half; only the slot is a drop target. Dropped there,
   // the panel docks as the sidebar's last section, at its foot with the engine and its version as its foot; it stays
   // docked after a reload and floats again from its menu.
-  const head = (await floating(page).locator('.rp-widget-header').boundingBox())!;
+  const head = await box(floating(page).locator('.rp-widget-header'));
   const side = page.locator('nav.rp-side');
-  const sideBox = (await side.boundingBox())!;
+  const sideBox = await box(side);
   const slot = side.locator('.rp-dock-slot');
   await expect(slot).toBeHidden();
   await page.mouse.move(head.x + head.width / 2, head.y + head.height / 2);
@@ -191,7 +191,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await page.mouse.move(head.x - 40, head.y, {steps: 2});
   await expect(slot).toHaveText('Drop here to dock');
   await expect.poll(async () => (await slot.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(sideBox.y + sideBox.height * 0.45);
-  const target = (await slot.boundingBox())!;
+  const target = await box(slot);
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, {steps: 6});
   await expect(slot).toHaveAttribute('data-dock-target', '');
   expect(await side.evaluate(nav => getComputedStyle(nav).outlineStyle)).toBe('none');
@@ -203,30 +203,30 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await expect(floating(page)).toHaveCount(0);
   await expect(dock.locator('.rp-version-text')).not.toBeEmpty();
   const foot = await side.evaluate(nav => nav.getBoundingClientRect().bottom - Number.parseFloat(getComputedStyle(nav).paddingBottom));
-  const docked = (await dock.boundingBox())!;
+  const docked = await box(dock);
   expect(Math.abs(docked.y + docked.height - foot)).toBeLessThanOrEqual(1);
   expect(docked.height).toBeLessThanOrEqual(sideBox.height * 0.45);
   // The divider above the docked section sets its height by arrow keys, kept after a reload.
   await dock.getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
   for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowDown');
-  await expect.poll(async () => Math.round((await dock.boundingBox())!.height)).toBe(Math.round(docked.height) - 32);
+  await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 32);
   await page.reload();
-  await expect.poll(async () => Math.round((await dock.boundingBox())!.height)).toBe(Math.round(docked.height) - 32);
+  await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 32);
   await moreAction(dock, 'Undock', 'Panel options');
   await expect(floating(page).locator('.rp-widget-cell').first()).toBeVisible();
   await expect(dock).toHaveCount(0);
   // A collapsed panel moved to the top edge expands downwards, whole inside the viewport, its chevron pointing down.
   await floating(page).getByRole('button', {name: 'Collapse widgets', exact: true}).click();
-  const bar = (await floating(page).locator('.rp-widget-header').boundingBox())!;
+  const bar = await box(floating(page).locator('.rp-widget-header'));
   const barGrip = {x: bar.x + bar.width / 2 - 40, y: bar.y + bar.height / 2};
   await page.mouse.move(barGrip.x, barGrip.y);
   await page.mouse.down();
   await page.mouse.move(barGrip.x, 0, {steps: 6});
   await page.mouse.up();
-  const top = (await floating(page).boundingBox())!;
+  const top = await box(floating(page));
   await floating(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
-  await expect.poll(async () => (await floating(page).boundingBox())!.height).toBeGreaterThan(top.height + 100);
-  const grown = (await floating(page).boundingBox())!;
+  await expect.poll(async () => (await box(floating(page))).height).toBeGreaterThan(top.height + 100);
+  const grown = await box(floating(page));
   expect(grown.y).toBe(top.y);
   expect(grown.y + grown.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   expect(await page.evaluate(() => String(getSelection()))).toBe('');
@@ -267,10 +267,10 @@ test.describe('phone sheet', () => {
     await expect(floating(page)).toHaveCount(0);
     const title = sheet.getByRole('heading', {level: 2});
     await expect(title.locator('.rp-light.ok')).toBeVisible();
-    const head = (await title.boundingBox())!;
-    const first = (await sheet.locator('.rp-widget-cell').first().boundingBox())!;
+    const head = await box(title);
+    const first = await box(sheet.locator('.rp-widget-cell').first());
     expect(Math.abs(head.x - first.x)).toBeLessThanOrEqual(1);
-    const close = (await sheet.getByRole('button', {name: 'Close', exact: true}).boundingBox())!;
+    const close = await box(sheet.getByRole('button', {name: 'Close', exact: true}));
     expect(Math.abs(head.y + head.height / 2 - (close.y + close.height / 2))).toBeLessThanOrEqual(1);
   });
 });
@@ -285,8 +285,8 @@ for (const viewport of [
       await page.goto('/#/overview');
       await expect(floating(page).locator('.rp-widget-cell').first()).toBeVisible();
       await expect(page.locator('.rp-drawer')).toHaveCount(0);
-      const start = (await floating(page).boundingBox())!;
-      const head = (await floating(page).locator('.rp-widget-header').boundingBox())!;
+      const start = await box(floating(page));
+      const head = await box(floating(page).locator('.rp-widget-header'));
       const x = head.x + head.width / 2 - 40;
       const y = head.y + head.height / 2;
       const cdp = await page.context().newCDPSession(page);
@@ -294,8 +294,8 @@ for (const viewport of [
       for (let step = 1; step <= 4; step++)
         await cdp.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: x - 15 * step, y: y - 10 * step}]});
       await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
-      await expect.poll(async () => (await floating(page).boundingBox())!.x).toBeCloseTo(start.x - 60, 0);
-      expect((await floating(page).boundingBox())!.y).toBeCloseTo(start.y - 40, 0);
+      await expect.poll(async () => (await box(floating(page))).x).toBeCloseTo(start.x - 60, 0);
+      expect((await box(floating(page))).y).toBeCloseTo(start.y - 40, 0);
       await floating(page).getByRole('button', {name: 'Panel options', exact: true}).click();
       await expect(page.getByRole('menuitem', {name: 'Dock in sidebar', exact: true})).toHaveCount(viewport.width >= 1024 ? 1 : 0);
     });

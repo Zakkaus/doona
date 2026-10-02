@@ -1,4 +1,4 @@
-import {expect, scrollTableToEnd, test} from './fixtures';
+import {expect, scrollTableToEnd, test, box} from './fixtures';
 
 for (const width of [320, 360, 390])
   for (const lang of ['en', 'zh-CN', 'zh-TW'])
@@ -52,9 +52,9 @@ for (const width of [320, 360, 390])
           // Optional text starts beyond the scrollport, rather than showing part of a word at its edge.
           const optional = grid.locator('[role=columnheader][data-key="kind"], [role=columnheader][data-key="protocol"]');
           for (const header of await optional.all()) {
-            const box = (await header.boundingBox())!;
-            const card = (await table.boundingBox())!;
-            expect(box.x).toBeGreaterThanOrEqual(card.x + card.width - 1);
+            const rect = await box(header);
+            const card = await box(table);
+            expect(rect.x).toBeGreaterThanOrEqual(card.x + card.width - 1);
           }
           for (const heading of await grid.locator('.rp-th').all()) {
             const geometry = await heading.evaluate(el => {

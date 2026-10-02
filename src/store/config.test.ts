@@ -1,8 +1,20 @@
 import {expect, it, onTestFinished, vi} from 'vitest';
+import * as apiSelection from '../api/index';
 import {ApiError, LocalError} from '../api/error';
-import {closestLimit, createSource, readConfigFresh, refusalOutcome, withinLimits} from './config';
-import {watchResource} from './resourceCore';
 import {createMockApi} from '../api/mock';
+import {capabilities} from '../api/mock/fixtures';
+// The mocked react reads hookHarness, so testHelpers loads before the modules that import react.
+import {hookHarness, stubVisibleDocument} from './testHelpers';
+import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, withinLimits} from './config';
+import {watchResource} from './resourceCore';
+
+vi.mock('react', async original => ({
+  ...(await original<typeof import('react')>()),
+  ...hookHarness.hooks,
+  useCallback: (callback: unknown) => callback,
+  useSyncExternalStore: (_subscribe: unknown, read: () => unknown) => read()
+}));
+vi.mock('./runtime', () => ({useCapabilities: () => ({data: capabilities})}));
 
 const source = {id: 'main', content_sha256: 'aaa'};
 const refused = new ApiError(412, 'precondition_failed', 'Precondition failed');
@@ -82,7 +94,7 @@ it('finds a created source again whose name holds a space, CJK or a question mar
 });
 
 it('reads the configuration past the watched copy, one request a call, and leaves that copy as fetched', async () => {
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
   onTestFinished(() => void vi.unstubAllGlobals());
   const api = createMockApi();
   const watched = watchResource(api, {key: ['config'], every: 0, fetch: signal => api.config(signal)}, () => {});
@@ -98,4 +110,53 @@ it('reads the configuration past the watched copy, one request a call, and leave
   expect(read.mock.calls).toEqual([[signal], [signal]]);
   expect(created(fresh)).toBe(true);
   expect(watched.getSnapshot().data).toBe(before);
+});
+
+it.each([
+  {path: '<redacted>', writes: 1, validations: 0},
+  {path: '/etc/honk/config.dae', writes: 0, validations: 1}
+])('conditionally replaces a main source at $path when full validation has no include base', async ({path, writes, validations}) => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+  });
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const source = {...main, path};
+  const content = main.content! + '\n# updated\n';
+  const diagnostic = {
+    level: 'error' as const,
+    source_id: source.id,
+    line: null,
+    column: null,
+    span: null,
+    code: 'include_not_found',
+    message: 'No include-resolution base'
+  };
+  const validate = vi.spyOn(api, 'validateConfig').mockResolvedValue({
+    valid: false,
+    generation_id: '40',
+    validated_at: new Date().toISOString(),
+    diagnostics: [diagnostic]
+  });
+  const replace = vi.spyOn(api, 'replaceConfigSource');
+  const refetch = vi.fn();
+  const editor = hookHarness.render(() => useConfigEditor(refetch, {rethrow: true}));
+  hookHarness.runEffects();
+  const result = await editor.apply(source, content);
+  expect(validate).toHaveBeenCalledTimes(validations);
+  expect(replace).toHaveBeenCalledTimes(writes);
+  if (validations) expect(validate).toHaveBeenCalledWith({sources: [{id: source.id, path, content}], mode: 'full'}, expect.any(AbortSignal));
+  if (writes) {
+    expect(replace).toHaveBeenCalledWith(source.id, content, `"${source.content_sha256}"`, expect.any(AbortSignal));
+    expect(result).toHaveProperty('result');
+    expect(refetch).toHaveBeenCalledOnce();
+    expect((await api.config()).sources.find(item => item.id === source.id)?.content).toBe(content);
+  } else {
+    expect(result).toEqual({diagnostics: [diagnostic]});
+    expect(refetch).not.toHaveBeenCalled();
+    expect((await api.config()).sources.find(item => item.id === source.id)?.content).toBe(main.content);
+  }
 });
