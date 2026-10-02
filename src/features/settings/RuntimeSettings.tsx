@@ -24,9 +24,11 @@ export function RuntimeSettingsCard() {
         <span className="rp-label">{m.waiting ? '\u00a0' : m.note}</span>
       )}
       {!m.waiting && m.persistent && (
-        <Link appearance="link" href={m.persistent}>
-          {t('settings.runtimePersistent')}
-        </Link>
+        <div className="rp-cluster">
+          <Link appearance="button" href={m.persistent}>
+            {t('settings.runtimePersistent')}
+          </Link>
+        </div>
       )}
       {m.waiting && !m.capsError && (
         <div className="rp-chart-wait form">

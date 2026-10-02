@@ -2,6 +2,12 @@
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The runtime overrides card on Settings links to the persistent settings in Config with a button instead of a plain text link. (#294)
+
 ## [0.1.0-beta.12] - 2026-09-30
 
 ### Changed
