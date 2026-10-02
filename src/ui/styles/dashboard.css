@@ -137,12 +137,14 @@
 /* A section's profile is its whole layout: tracks per width, and spans from each card's own size and footprint. The
    four main profiles reproduce origin/main's Activity grids; a card's footprint replaces main's position rules. */
 .rp-dash-section {
+  --rp-dash-gap: var(--rp-space-3);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--rp-space-3);
+  gap: var(--rp-dash-gap);
   align-items: stretch;
 }
-/* Each cell is a tile container, as main's strip children are, so a narrow card stacks its value and sparkline. */
+/* Each cell is a tile container, as main's strip children are, so a narrow tile stacks its value and sparkline; its
+   row then stacks every tile in it (see packSection). */
 .rp-dash-section > * {
   container: rp-tile / inline-size;
 }
@@ -237,16 +239,146 @@
   grid-column: 1 / -1;
 }
 
+/* A section holding a card with a chosen width uses the fraction grid from tablet width up; phones keep the profile's
+   columns. 420 tracks hold fifths, quarters, thirds, halves, sixths and sevenths exactly. The column gap is each cell's
+   inline-start margin, and the section reaches one gap before its start, so a card's width depends on its fraction
+   alone: the same fraction is the same width in every section, and a profile's equal tracks give the same widths. A
+   chosen width (--rp-chosen) snaps to sixths below 1280px. An Auto card (--rp-span) keeps the box its profile gives it
+   at every width, so choosing one card's width never moves or resizes another. A profile of unequal tracks (quick's
+   3:2:2, traffic's 2:1) shares its gaps among its tracks in proportion, so there an Auto card gives back a share of its
+   start gap (--rp-shift) and leaves a share of its end (--rp-trim), each a ratio of the gap. The resize handles read
+   --rp-span, --rp-shift and --rp-trim as Auto's width. */
+.rp-dash-section {
+  --rp-dash-snap: none;
+}
+@media (min-width: 768px) {
+  .rp-dash-section {
+    --rp-dash-snap: 6;
+  }
+  .rp-dash-section[data-grid] {
+    grid-template-columns: repeat(420, minmax(0, 1fr));
+    column-gap: 0;
+    margin-inline-start: calc(0px - var(--rp-dash-gap));
+  }
+  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell {
+    grid-column: span var(--rp-chosen, var(--rp-span));
+    margin-inline-start: var(--rp-dash-gap);
+  }
+  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell:not([data-width], [data-size='wide']) {
+    margin-inline-start: calc(var(--rp-dash-gap) * (1 - var(--rp-shift, 0)));
+    margin-inline-end: calc(var(--rp-dash-gap) * var(--rp-trim, 0));
+  }
+  .rp-dash-section > * {
+    --rp-span: 210;
+  }
+  .rp-dash-section:is([data-profile='traffic'], [data-profile='details']) > *,
+  .rp-dash-section[data-profile='quick'] > [data-foot='lead'],
+  .rp-dash-section[data-profile='metrics'] > :is([data-foot='end'], [data-size='large']),
+  .rp-dash-section[data-profile='extensions'] > [data-size='large'] {
+    --rp-span: 420;
+  }
+  .rp-dash-section > :is([data-width='1/5'], [data-width='1/4'], [data-width='1/3']) {
+    --rp-chosen: 140;
+  }
+  .rp-dash-section > [data-width='1/2'] {
+    --rp-chosen: 210;
+  }
+  .rp-dash-section > [data-width='2/3'] {
+    --rp-chosen: 280;
+  }
+  .rp-dash-section > [data-width='full'] {
+    --rp-chosen: 420;
+  }
+}
+@media (min-width: 1024px) {
+  .rp-dash-section[data-profile='traffic'] > * {
+    --rp-span: 140;
+  }
+  .rp-dash-section[data-profile='traffic'] > :nth-child(odd of .rp-dashboard-cell) {
+    --rp-span: 280;
+  }
+  .rp-dash-section[data-profile='details'] > * {
+    --rp-span: 210;
+  }
+  .rp-dash-section[data-profile='details'] > :is([data-foot='end'], [data-size='large']) {
+    --rp-span: 420;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .rp-dash-section[data-profile='traffic'] > :nth-child(odd of .rp-dashboard-cell) {
+    --rp-trim: 1 / 3;
+  }
+  .rp-dash-section[data-profile='traffic'] > :nth-child(even of .rp-dashboard-cell) {
+    --rp-shift: 1 / 3;
+  }
+}
+@media (min-width: 1100px) {
+  .rp-dash-section[data-profile='quick'] > * {
+    --rp-span: 120;
+  }
+  .rp-dash-section[data-profile='quick'] > :nth-child(3n + 1 of .rp-dashboard-cell) {
+    --rp-span: 180;
+    --rp-trim: 2 / 7;
+  }
+  .rp-dash-section[data-profile='quick'] > :nth-child(3n + 2 of .rp-dashboard-cell) {
+    --rp-shift: 2 / 7;
+    --rp-trim: 1 / 7;
+  }
+  .rp-dash-section[data-profile='quick'] > :nth-child(3n of .rp-dashboard-cell) {
+    --rp-shift: 1 / 7;
+  }
+  .rp-dash-section[data-profile='metrics'] > * {
+    --rp-span: 140;
+  }
+  .rp-dash-section[data-profile='metrics'] > :is([data-foot='tail'], [data-foot='end']) {
+    --rp-span: 210;
+  }
+  .rp-dash-section[data-profile='metrics'] > [data-size='large'] {
+    --rp-span: 280;
+  }
+}
+@media (min-width: 1280px) {
+  .rp-dash-section {
+    --rp-dash-snap: 12;
+  }
+  .rp-dash-section[data-profile='metrics'] > :is(*, [data-foot]) {
+    --rp-span: 84;
+  }
+  .rp-dash-section[data-profile='metrics'] > [data-size='large'] {
+    --rp-span: 168;
+  }
+  .rp-dash-section:is([data-profile='traffic'], [data-profile='details'], [data-profile='extensions']) > :is(*, [data-foot]) {
+    --rp-span: 140;
+  }
+  .rp-dash-section[data-profile='traffic'] > :nth-child(odd of .rp-dashboard-cell),
+  .rp-dash-section:is([data-profile='details'], [data-profile='extensions']) > [data-size='large'] {
+    --rp-span: 280;
+  }
+  .rp-dash-section[data-profile='extensions'] > [data-size='small'] {
+    --rp-span: 70;
+  }
+  .rp-dash-section > [data-width='1/5'] {
+    --rp-chosen: 84;
+  }
+  .rp-dash-section > [data-width='1/4'] {
+    --rp-chosen: 105;
+  }
+}
+/* A full row wins over every profile's footprint, as it does on the profile grids. */
+.rp-dash-section[data-profile] > .rp-dashboard-cell[data-size='wide'] {
+  --rp-span: 420;
+}
+
 /* Packed sections (see usePacking) run on 1px rows: a cell spans its content and the gap below it, so the vertical gap
    is the cell's margin, and the section gives the last gap back. */
 .rp-dash-section[data-packed] {
   grid-auto-rows: 1px;
   row-gap: 0;
-  margin-block-end: calc(0px - var(--rp-space-3));
+  margin-block-end: calc(0px - var(--rp-dash-gap));
 }
 .rp-dash-section[data-packed] > .rp-dashboard-cell {
   grid-row-end: span var(--rp-rows, 1);
-  margin-block-end: var(--rp-space-3);
+  margin-block-end: var(--rp-dash-gap);
 }
 .rp-dash-section[data-measure] > .rp-dashboard-cell {
   align-self: start;
@@ -256,6 +388,57 @@
 .rp-dash-section[data-measure] > .rp-dashboard-cell > .rp-card,
 .rp-dash-section[data-measure] .rp-dashboard-body > .rp-card {
   flex: none;
+}
+
+/* A value tile's sparkline is as tall as its height step and grows with the card when a taller card in its row
+   stretches it; the value keeps its type. A chosen width gives the sparkline the rest of the line. Stacked (see
+   packSection: a narrow tile or a tall one stacks its whole row), the value sits on top and the sparkline takes the
+   full width under it and the rest of the card's height. */
+.rp-dashboard-cell {
+  --rp-tile-chart: var(--rp-space-8);
+}
+.rp-dashboard-cell[data-height='short'] {
+  --rp-tile-chart: var(--rp-space-6);
+}
+.rp-dashboard-cell[data-height='tall'] {
+  --rp-tile-chart: var(--rp-space-16);
+}
+.rp-dashboard-cell .rp-tile-body {
+  flex: 1 0 auto;
+  height: auto;
+  min-block-size: var(--rp-tile-chart);
+}
+.rp-dashboard-cell .rp-tile-body > .rp-spark {
+  --rp-spark-fill: 100%;
+  align-self: stretch;
+}
+.rp-dashboard-cell[data-width] .rp-tile-body > .rp-spark {
+  max-width: none;
+}
+.rp-dashboard-cell[data-tile='stacked'] .rp-tile-body {
+  display: grid;
+  grid-template-rows: var(--rp-value-line) minmax(var(--rp-tile-chart), 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: var(--rp-space-2);
+}
+.rp-dashboard-cell[data-tile='stacked'] .rp-tile-body > .rp-spark {
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+}
+/* A short tile is one cell: its value and sparkline stay on one line at every width, the sparkline narrowing to the
+   value type's line where the tile is narrow (the widest value, 98px, a small gap and 32px fit a fifth at 1280px). */
+.rp-dashboard-cell[data-height='short'] .rp-tile-body {
+  display: flex;
+  gap: var(--rp-space-2);
+}
+.rp-dashboard-cell[data-height='short'] .rp-tile-body > .rp-spark {
+  flex: 1 1 var(--rp-space-8);
+  min-width: var(--rp-space-8);
+  width: auto;
 }
 
 /* A section's control cards share one of two layouts (see packSection): inline, the label and its control on one line,
@@ -292,7 +475,9 @@
 }
 
 /* Edit mode keeps every box: the tools sit in the card's header row at its inline end, over the header's own actions,
-   the indicator is a line in the gap, and the drop indicator element itself takes no grid cell. */
+   the indicator is a line in the gap, and the drop indicator element itself takes no grid cell. The tools show over
+   the card a pointer is on, the card focus is in (a tap focuses it) and the card whose popover is open, so at rest
+   every title reads in full. */
 .rp-dashboard-cell {
   position: relative;
 }
@@ -301,15 +486,43 @@
 .rp-dashboard-body {
   display: contents;
 }
+/* The tools are a chip on the card's top edge at its inline end, as a phone's widget edit badge is: it ends at the
+   card's padding and stands out over the border into the gap, so it never covers the card's own header, caption or
+   value at any width. */
 .rp-dashboard-tools {
   position: absolute;
-  z-index: 1;
-  inset-block-start: var(--rp-space-3);
+  z-index: 2;
+  inset-block-end: calc(100% - var(--rp-space-4));
   inset-inline-end: var(--rp-space-3);
   display: flex;
-  gap: var(--rp-space-2);
-  border-radius: var(--rp-r-md);
-  background: var(--rp-base);
+  padding: var(--rp-space-half);
+  border: 1px solid var(--rp-popover-border);
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-surface);
+  box-shadow: var(--rp-elevated);
+}
+/* Each card is a layer and the card in use stands above the others, so its tools and edge handles, which stand out
+   into the gaps, are never under a neighbour's hidden chip. */
+.rp-dash-section > .rp-dashboard-cell .rp-dashboard-tools {
+  opacity: 0;
+}
+.rp-dashboard[data-editing] .rp-dash-section > .rp-dashboard-cell {
+  z-index: 0;
+}
+.rp-dashboard[data-editing]
+  .rp-dash-section
+  > .rp-dashboard-cell:is([data-hovered], :focus-within, [data-dragging], [data-resizing], :has(.rp-dashboard-tools [aria-expanded='true'])) {
+  z-index: 1;
+}
+.rp-dash-section > .rp-dashboard-cell:is([data-hovered], :focus-within, [data-dragging], :has(.rp-dashboard-tools [aria-expanded='true'])) .rp-dashboard-tools {
+  opacity: 1;
+}
+/* Right after a removal the card now under a mouse shows no tools or edge handles until the pointer moves. */
+@media (hover: hover) and (pointer: fine) {
+  .rp-dashboard-canvas[data-rearm] .rp-dash-section > .rp-dashboard-cell :is(.rp-dashboard-tools, .rp-dashboard-resize) {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 .rp-dashboard-tools [slot='drag'] {
   touch-action: none;
@@ -317,13 +530,6 @@
 }
 .rp-dashboard[data-editing] .rp-dashboard-cell {
   outline: none;
-}
-/* The tools take the header's inline end, so the card's own header controls, beside the title or after it, keep their
-   place but are not drawn. */
-.rp-dashboard[data-editing] .rp-dashboard-cell .rp-card > .rp-row:first-child > :not(:first-child),
-.rp-dashboard[data-editing] .rp-dashboard-cell .rp-card > .rp-row:first-child > :first-child :is(button, a, [role='button']),
-.rp-dashboard[data-editing] .rp-dashboard-cell .rp-tile-controls {
-  visibility: hidden;
 }
 .rp-dashboard[data-editing] .rp-dashboard-cell[data-focus-visible] > .rp-dashboard-body > .rp-card {
   outline: 2px solid var(--rp-accent);
@@ -358,4 +564,93 @@
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
   border-radius: var(--rp-r-lg);
+}
+
+/* A card's edge handles (see DashboardResize): a short pill centred on the inline-end edge for the width and one on the
+   bottom edge for the height, the resize grip phones and S2 draw, unlike the move handle's dots. Each sits in a hit area
+   of one control across the edge. A pointer sees them over the card it is on; touch always sees them. */
+.rp-dashboard-cell .rp-dashboard-resize {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  margin: auto;
+  border-radius: var(--rp-r-pill);
+  touch-action: none;
+  opacity: 0;
+}
+.rp-dashboard-resize::before {
+  content: '';
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-subtle);
+  box-shadow: 0 0 0 var(--rp-space-half) var(--rp-base);
+}
+.rp-dashboard-cell .rp-dashboard-resize[data-edge='width'] {
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--rp-control);
+  block-size: var(--rp-space-12);
+  margin-inline-end: calc(var(--rp-control) / -2);
+  cursor: ew-resize;
+}
+.rp-dashboard-resize[data-edge='width']::before {
+  inline-size: var(--rp-space-1);
+  block-size: var(--rp-space-6);
+}
+.rp-dashboard-cell .rp-dashboard-resize[data-edge='height'] {
+  inset-inline: 0;
+  inset-block-end: 0;
+  inline-size: var(--rp-space-12);
+  block-size: var(--rp-control);
+  margin-block-end: calc(var(--rp-control) / -2);
+  cursor: ns-resize;
+}
+.rp-dashboard-resize[data-edge='height']::before {
+  inline-size: var(--rp-space-6);
+  block-size: var(--rp-space-1);
+}
+.rp-dashboard-resize[data-focus-visible]::before,
+.rp-dashboard-cell[data-resizing] .rp-dashboard-resize::before {
+  background: var(--rp-accent);
+}
+.rp-dashboard-resize[data-focus-visible] {
+  outline: var(--rp-focus-width) solid var(--rp-accent);
+}
+.rp-dashboard-cell:is([data-hovered], :focus-within, [data-resizing]) .rp-dashboard-resize {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .rp-dashboard-cell .rp-dashboard-resize {
+    opacity: 1;
+  }
+}
+.rp-dashboard-cell[data-resizing] .rp-dashboard-body > .rp-card {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 767.98px) {
+  .rp-dashboard-cell .rp-dashboard-resize[data-edge='width'] {
+    display: none;
+  }
+}
+/* Row hints (see DashboardGaps) are drawn over the section, outside its grid. */
+.rp-dashboard-canvas {
+  position: relative;
+  min-inline-size: 0;
+}
+.rp-dashboard-gap {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--rp-line);
+  border-radius: var(--rp-r-lg);
+}
+.rp-dashboard-gap[data-drop-target] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+.rp-dashboard-gap[data-refused] {
+  outline: 2px solid var(--rp-negative);
+  outline-offset: 2px;
+  cursor: not-allowed;
 }

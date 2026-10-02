@@ -1,13 +1,16 @@
+import {useState} from 'react';
 import {useT} from '../../i18n';
 import {useCapabilities, useGroups} from '../../store';
 import {Button, ChoiceMenu, Segmented} from '../../ui/ui';
-import {WidgetGalleryTile} from '../../ui/WidgetGalleryTile';
+import {WidgetGalleryTile, type GalleryRow} from '../../ui/WidgetGalleryTile';
+import {tileAttributes} from '../../ui/DashboardTile';
 import {EditorOption} from '../../ui/EditorOption';
 import {ResourcePreview} from '../../store/preview';
 import {SamplePreview} from './SamplePreview';
-import {dashboardDefaults, dashboardItems} from './dashboardLayout';
+import {dashboardDefaults, dashboardItems, mainCard, tileOf} from './dashboardLayout';
 import {WidgetCard} from './Dashboard';
 import {WidgetContent} from './WidgetContent';
+import {fraction, presetLabel, presetsFor, sizeAxes, withPreset, type Preset, type SizeAxis} from './dashboardSizing';
 import {
   canonicalForm,
   defaultWidget,
@@ -23,12 +26,30 @@ import {
   type WidgetId
 } from './layout';
 
-export function ModuleGallery({items, add, surface = 'panel'}: {items: Widget[]; add: (id: WidgetId) => void; surface?: Surface}) {
+// The dashboard's row a gallery thumbnail stands for: the editor's widest section, with its gap and the snap of
+// chosen widths at this viewport (see dashboard.css).
+function pageRow(): GalleryRow & {snap: number} {
+  const canvas = document.querySelector<HTMLElement>('.rp-dashboard-canvas');
+  const style = canvas && getComputedStyle(canvas.querySelector('.rp-dash-section') ?? canvas);
+  return {
+    width: canvas?.getBoundingClientRect().width || 1152,
+    gap: Number.parseFloat(style?.getPropertyValue('--rp-dash-gap') ?? '') || 12,
+    snap: Number.parseFloat(style?.getPropertyValue('--rp-dash-snap') ?? '') || 12
+  };
+}
+export function ModuleGallery({items, add, surface = 'panel'}: {items: Widget[]; add: (id: WidgetId, preset?: Preset) => void; surface?: Surface}) {
   const t = useT();
+  const [row] = useState(pageRow);
   return (Object.keys(registry) as WidgetId[])
     .filter(id => surface === 'panel' || !onlyPanel(id))
     .map(id => {
       const n = items.filter(item => item.id === id).length;
+      const card = dashboardItems(dashboardDefaults()).find(item => item.id === id) ?? defaultWidget(id);
+      // A preset's share snaps as a chosen width does on the page.
+      const share = (preset: Preset) => {
+        const f = fraction(preset.width);
+        return row.snap >= 12 ? f : Math.ceil(f * row.snap - 1e-6) / row.snap;
+      };
       return (
         <WidgetGalleryTile
           key={id}
@@ -38,16 +59,37 @@ export function ModuleGallery({items, add, surface = 'panel'}: {items: Widget[];
           addLabel={t('widgets.add')}
           count={t('widgets.placedCount', {n, max: maxInstances})}
           onAdd={() => add(id)}
+          row={row}
+          presets={
+            surface === 'dashboard'
+              ? presetsFor(card, mainCard(card)).map(preset => {
+                  const item = withPreset(card, preset);
+                  const size = presetLabel(preset, t);
+                  return {
+                    key: size,
+                    label: size,
+                    addLabel: t('widgets.addPreset', {name: t(registry[id].label), size}),
+                    share: share(preset),
+                    onAdd: () => add(id, preset),
+                    preview: (
+                      <SamplePreview id={id}>
+                        <ResourcePreview value>
+                          <div className="rp-dashboard-cell" {...tileAttributes(tileOf(item))} data-tile={item.height === 'tall' ? 'stacked' : undefined}>
+                            <WidgetCard item={item} preview />
+                          </div>
+                        </ResourcePreview>
+                      </SamplePreview>
+                    )
+                  };
+                })
+              : undefined
+          }
         >
-          <SamplePreview id={id}>
-            {surface === 'dashboard' ? (
-              <ResourcePreview value>
-                <WidgetCard item={dashboardItems(dashboardDefaults()).find(item => item.id === id) ?? defaultWidget(id)} preview />
-              </ResourcePreview>
-            ) : (
+          {surface === 'panel' && (
+            <SamplePreview id={id}>
               <WidgetContent item={defaultWidget(id)} preview sample />
-            )}
-          </SamplePreview>
+            </SamplePreview>
+          )}
         </WidgetGalleryTile>
       );
     });
@@ -66,7 +108,7 @@ const sizeLabels = {small: 'widgets.small', medium: 'widgets.medium', large: 'wi
 export function ModuleInspector({
   active,
   items,
-  sizes,
+  sizes = [],
   surface,
   update,
   move,
@@ -74,7 +116,7 @@ export function ModuleInspector({
 }: {
   active?: Widget;
   items: Widget[];
-  sizes: readonly ModuleSize[];
+  sizes?: readonly ModuleSize[];
   surface: Surface;
   update: (item: Widget) => void;
   move: (delta: -1 | 1) => void;
@@ -84,6 +126,20 @@ export function ModuleInspector({
   if (!active) return <p className="rp-label">{t('widgets.select')}</p>;
   return (
     <>
+      {surface === 'dashboard' &&
+        Object.values(sizeAxes(active, mainCard(active), t)).map(
+          (axis: SizeAxis | undefined) =>
+            axis && (
+              <EditorOption key={axis.label} label={axis.label}>
+                <Segmented
+                  label={axis.label}
+                  value={axis.value}
+                  onChange={value => update(axis.set(value))}
+                  items={axis.options.map(option => [option.value, option.label])}
+                />
+              </EditorOption>
+            )
+        )}
       {sizes.length > 1 && (
         <EditorOption label={t('widgets.size')}>
           <Segmented
@@ -100,7 +156,7 @@ export function ModuleInspector({
           />
         </EditorOption>
       )}
-      {formsFor(active.id, surface).length > 1 && !(active.size === 'small' && formsFor(active.id, surface).includes('sparkline')) && (
+      {formsFor(active.id, surface).length > 1 && !(active.size === 'small' && !active.width && formsFor(active.id, surface).includes('sparkline')) && (
         <EditorOption label={t('widgets.form')}>
           <Segmented
             label={t('widgets.form')}

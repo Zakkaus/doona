@@ -70,7 +70,7 @@ export function Contents({
     case 'latency':
       return <CurrentLatency item={item} dashboard={dashboard} onChange={onChange} />;
     case 'nodeLatency':
-      return <Latency item={item} />;
+      return <Latency item={item} dashboard={dashboard} />;
     case 'sourceHealth':
       return <Sources item={item} />;
     case 'policyGroups':
@@ -111,7 +111,7 @@ function NoticesWidget({item}: {item: Widget}) {
   const t = useT();
   const feed = useNoticeFeed(interestingNotice);
   const records = feed.records;
-  const rows = noticeRows(records, t).slice(0, contentLimit(item.size));
+  const rows = noticeRows(records, t).slice(0, item.rows ?? contentLimit(item.size));
   return (
     <>
       <ErrorMessage error={feed.error} onRetry={() => reopenEvents(api)} />

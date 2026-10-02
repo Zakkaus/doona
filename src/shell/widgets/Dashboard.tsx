@@ -3,12 +3,13 @@ import type {PageProps} from '../routes';
 import {useT} from '../../i18n';
 import {Button, Card, Loading, useNearViewport} from '../../ui/ui';
 import {PageActions} from '../../ui/PageActions';
-import {DashboardSection, DashboardTile} from '../../ui/DashboardTile';
+import {DashboardSection, DashboardTile, sectionGrid} from '../../ui/DashboardTile';
 import {useCapabilities} from '../../store';
 import {ResourcePreview} from '../../store/preview';
 import {useDashboardLayout, saveDashboard} from './dashboardSettings';
-import {dashboardItems, footprint, mainCard, type DashboardLayout} from './dashboardLayout';
+import {dashboardItems, mainCard, tileOf, type DashboardLayout} from './dashboardLayout';
 import {instanceId, registry, type Widget} from './layout';
+import {scaleOf} from './dashboardSizing';
 import {ActivityCard, GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/activity/widgets';
 import {ModeJump} from './ModeJump';
 import '../../ui/styles/dashboard.css';
@@ -58,7 +59,7 @@ export function Activity({query}: PageProps) {
           layout.sections
             .filter(section => section.items.length)
             .map(section => (
-              <DashboardSection key={section.id} profile={section.id}>
+              <DashboardSection key={section.id} profile={section.id} grid={sectionGrid(section.items.map(tileOf))}>
                 {section.items.map(item => (
                   <DashboardModule key={instanceId(item)} item={item} onChange={update} />
                 ))}
@@ -77,7 +78,7 @@ export function Activity({query}: PageProps) {
 function DashboardModule({item, onChange}: {item: Widget; onChange: (item: Widget) => void}) {
   const [ref, visible] = useNearViewport(undefined, 0);
   return (
-    <DashboardTile tile={{id: instanceId(item), module: item.id, size: item.size, foot: footprint(item)}} visible={visible} targetRef={ref}>
+    <DashboardTile tile={tileOf(item)} visible={visible} targetRef={ref}>
       <ResourcePreview value={!visible}>
         <WidgetCard item={item} onChange={onChange} />
       </ResourcePreview>
@@ -91,6 +92,7 @@ export function WidgetCard({item, preview = false, onChange = () => {}}: {item: 
     return (
       <ActivityCard
         item={item}
+        scale={scaleOf(item)}
         ranking={{by: item.by === 'domain' ? 'host' : 'dev', setBy: by => onChange({...item, by: by === 'host' ? 'domain' : 'dev'})}}
         selection={{chosen: item.group ?? '', setChosen: group => onChange({...item, group})}}
       />

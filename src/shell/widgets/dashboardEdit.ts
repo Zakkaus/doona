@@ -1,12 +1,6 @@
-import {instanceId, type ModuleSize} from './layout';
+import {instanceId, maxInstances} from './layout';
 import {dashboardItems, type DashboardLayout, type Profile} from './dashboardLayout';
 // The editor's operations, loaded with the editor.
-// The sizes a card offers in a section: main's sections size by their tracks, so they have no smaller step.
-export function sizesFor(profile: Profile, sizes: readonly string[]): ModuleSize[] {
-  if (sizes.length < 2) return ['medium'];
-  if (profile === 'extensions') return [...(sizes.includes('small') ? (['small'] as const) : []), 'medium', 'large', 'wide'];
-  return profile === 'metrics' || profile === 'details' ? ['medium', 'large', 'wide'] : ['medium', 'wide'];
-}
 export type Placement = {section: Profile; target?: string; after?: boolean};
 // One transaction for every move: the card leaves its section and lands before or after the target, or at the end.
 export function placeWidget(layout: DashboardLayout, id: string, place: Placement): DashboardLayout {
@@ -31,4 +25,36 @@ export function stepWidget(layout: DashboardLayout, id: string, delta: -1 | 1): 
   if (!next) return layout;
   const edge = delta > 0 ? next.items[0] : next.items.at(-1);
   return placeWidget(layout, id, {section: next.id, ...(edge ? {target: instanceId(edge), after: delta < 0} : {})});
+}
+// Removes a card, and returns the function that puts it back where it was in the layout as it is by then: at its
+// place in its section, while `restorable` holds, that is unless the card is on the page again or its module has
+// reached its instance limit since.
+export function removeWidget(
+  layout: DashboardLayout,
+  id: string
+): {layout: DashboardLayout; restore: (current: DashboardLayout) => DashboardLayout; restorable: (current: DashboardLayout) => boolean} {
+  const home = layout.sections.find(section => section.items.some(item => instanceId(item) === id));
+  if (!home) return {layout, restore: current => current, restorable: () => false};
+  const at = home.items.findIndex(item => instanceId(item) === id);
+  const item = home.items[at];
+  const restorable = (current: DashboardLayout) => {
+    const items = dashboardItems(current);
+    return !items.some(old => instanceId(old) === id) && items.filter(old => old.id === item.id).length < maxInstances;
+  };
+  return {
+    layout: {
+      ...layout,
+      sections: layout.sections.map(section => (section === home ? {...section, items: section.items.filter(old => old !== item)} : section))
+    },
+    restore: current =>
+      restorable(current)
+        ? {
+            ...current,
+            sections: current.sections.map(section =>
+              section.id === home.id ? {...section, items: [...section.items.slice(0, at), item, ...section.items.slice(at)]} : section
+            )
+          }
+        : current,
+    restorable
+  };
 }

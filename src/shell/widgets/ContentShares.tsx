@@ -27,14 +27,14 @@ function Shares({item, rows, bytes = false, empty}: {item: Widget; rows: Share[]
   const format = (value: number) => (bytes ? formatBytes(value, locale) : formatNumber(value, locale));
   const {total, rows: shown} = shareRows(rows, p.cat);
   const shares = shown.map(row => ({...row, text: format(row.count)}));
-  const chart = {legendLimit: contentLimit(item.size), label: t(registry[item.id].label)};
+  const chart = {legendLimit: item.rows ?? contentLimit(item.size), label: t(registry[item.id].label)};
   if (!total) return <Empty>{empty}</Empty>;
   if (item.form === 'donut') return <Donut {...chart} total={format(total)} rows={shares.map(row => ({...row, value: Math.round(row.pct)}))} />;
   if (item.form === 'waffle') return <Waffle {...chart} shares={shares.map(row => ({...row, id: row.name, label: row.name}))} />;
   return (
     <div className="rp-list">
       {shares
-        .slice(0, contentLimit(item.size))
+        .slice(0, item.rows ?? contentLimit(item.size))
         .map(row =>
           item.form === 'ranked' ? (
             <Bar key={row.name} label={row.name} value={row.text} pct={row.pct} color={row.color} />
@@ -49,8 +49,13 @@ export function RankingWidget({item}: {item: Widget}) {
   const t = useT();
   const list = useConnections(undefined, true, false, poll.summary);
   const rows = useMemo(
-    () => connectionRanking(list.data, item.by ?? 'dev').map(row => ({name: row.name, count: Number(row.download ?? 0n), percent: row.percent ?? undefined})),
-    [list.data, item.by]
+    () =>
+      connectionRanking(list.data, item.by ?? 'dev', item.rows ?? 5).map(row => ({
+        name: row.name,
+        count: Number(row.download ?? 0n),
+        percent: row.percent ?? undefined
+      })),
+    [list.data, item.by, item.rows]
   );
   return (
     <Reading state={list}>

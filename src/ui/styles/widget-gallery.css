@@ -23,3 +23,49 @@
   pointer-events: none;
   mask-image: linear-gradient(to bottom, #000 80%, transparent);
 }
+/* A dashboard item's sizes: thumbnails laid out as the page's row would be, at the scale of the row to the frame, so
+   a quarter is a quarter of the frame's width and two halves share a line. */
+.rp-widget-gallery-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--rp-space-3) var(--rp-preset-gap);
+}
+.rp-widget-gallery-preset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-1);
+  min-inline-size: 0;
+}
+.rp-widget-gallery-thumb {
+  position: relative;
+  overflow: hidden;
+}
+.rp-widget-gallery-thumb-card {
+  container: rp-tile / inline-size;
+  transform-origin: top left;
+  pointer-events: none;
+}
+.rp-widget-gallery-thumb-card:dir(rtl) {
+  transform-origin: top right;
+}
+.rp-widget-gallery-thumb-add {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: var(--rp-r-lg);
+  background: none;
+  cursor: pointer;
+}
+.rp-widget-gallery-thumb-add[data-hovered] {
+  outline: 2px solid var(--rp-line);
+  outline-offset: 2px;
+}
+.rp-widget-gallery-thumb-add[data-focus-visible] {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
+}
+.rp-widget-gallery-thumb-add[data-disabled] {
+  cursor: default;
+  outline: none;
+}

@@ -74,7 +74,14 @@ export function SparkPlot({
     });
   });
   return (
-    <div ref={ref} style={{height, width: '100%', position: 'relative'}} aria-hidden={drawn ? true : undefined} onPointerLeave={() => setSelected(null)}>
+    // A dashboard tile sizes its sparkline through --rp-spark-fill (see dashboard.css); the drawing is out of flow, so
+    // it follows its box both ways and never holds it at an earlier size.
+    <div
+      ref={ref}
+      style={{height: `var(--rp-spark-fill, ${height}px)`, width: '100%', position: 'relative'}}
+      aria-hidden={drawn ? true : undefined}
+      onPointerLeave={() => setSelected(null)}
+    >
       {drawn && size && (
         <>
           <ChartTip tip={tip} />
@@ -83,7 +90,7 @@ export function SparkPlot({
             width={size.width}
             height={size.height}
             viewBox={`0 0 ${size.width} ${size.height}`}
-            style={{display: 'block'}}
+            style={{display: 'block', position: 'absolute', inset: 0}}
             onPointerMove={event => {
               const point = pointerPosition(event, event.currentTarget, size);
               setSelected(point.x < 0 || point.x > size.width || point.y < 2 || point.y > size.height - 2 ? null : nearestIndex(xs, point.x));

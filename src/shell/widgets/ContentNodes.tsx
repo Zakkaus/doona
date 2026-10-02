@@ -35,7 +35,7 @@ export function CurrentLatency({item, dashboard, onChange}: {item: Widget; dashb
   );
 }
 
-export function Latency({item}: {item: Widget}) {
+export function Latency({item, dashboard = false}: {item: Widget; dashboard?: boolean}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
@@ -47,8 +47,9 @@ export function Latency({item}: {item: Widget}) {
   );
   const {measured, missing} = latencySummary(view);
   const averages = latencyAverages(view);
-  // A gallery preview shows the summary and the first rows whole inside its frame.
-  const limit = useContext(ResourceSamples) ? 3 : contentLimit(item.size, [3, 6, 12]);
+  // The panel gallery's preview shows the summary and the first rows whole inside its frame; a dashboard thumbnail
+  // shows the rows the card will.
+  const limit = useContext(ResourceSamples) && !dashboard ? 3 : (item.rows ?? contentLimit(item.size, [3, 6, 12]));
   return (
     <Reading state={{...nodes, error: nodes.error ?? groups.error, refetch: () => (nodes.refetch(), groups.refetch())}}>
       {!view.length ? (
@@ -118,7 +119,7 @@ export function Sources({item}: {item: Widget}) {
       {!resource.data?.providers.length ? (
         <Empty>{t('dashboard.noSources')}</Empty>
       ) : (
-        resource.data.providers.map(provider => {
+        (item.rows === undefined ? resource.data.providers : resource.data.providers.slice(0, item.rows)).map(provider => {
           const row = providerRowView(provider, undefined, locale, t);
           return <Kv truncate key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
         })
@@ -137,7 +138,7 @@ export function Groups({item}: {item: Widget}) {
       {!rows.length ? (
         <Empty>{t('dashboard.noGroups')}</Empty>
       ) : (
-        rows.slice(0, contentLimit(item.size)).map(group => {
+        rows.slice(0, item.rows ?? contentLimit(item.size)).map(group => {
           const health = nodeView(group.node ? [group.node] : [], '', t);
           return (
             <Kv

@@ -11,9 +11,10 @@ type NoticesModel = {
   retry: () => void;
   loading: boolean;
   empty: string;
+  limit?: number;
 };
 
-export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
+export function Notices({rows, total, error, retry, loading, empty, limit}: NoticesModel) {
   const t = useT();
   return (
     <Card aria-label={t('act.issues')}>
@@ -39,7 +40,7 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
           <Empty>{empty}</Empty>
         </div>
       ) : (
-        <NoticeList rows={rows} label={t('act.issues')} bounded />
+        <NoticeList rows={limit === undefined ? rows : rows.slice(0, limit)} label={t('act.issues')} bounded={limit === undefined} />
       )}
     </Card>
   );
