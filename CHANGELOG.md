@@ -12,6 +12,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - A failure toast, and the notice for an operation with an unknown result, has a Copy error action on its button row, after the toast's own button if it has one. It copies the request, status, error code, backend message, request ID and operation for a bug report, so the browser console is no longer needed. Settings > About has a Copy recent errors button for the last 20, kept in memory only, with secrets and request bodies left out. (#304)
 - The DNS query tab can send a query to one of the upstreams the configuration's `dns.upstream` defines instead of the one `dns.routing` picks. The picker appears when the configuration is readable and names at least one upstream. (#330)
 - The floating widget panel's menu adds Hide at edge: an unpinned, undocked panel hides at its nearest screen edge behind a summary sized to its backend light and speed text, with square corners and no border against that edge. Hovering, focusing or tapping the summary reveals the panel. Edit widgets stays in the menu so the collapsed header has room for both speeds. (#322)
+- The Geodata card on Settings has a Reset to defaults button beside Update now that, after a confirmation, removes every geodata override and every value taken from the configuration file, so the built-in sources and defaults apply again. (#331)
 
 ### Changed
 
@@ -46,6 +47,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Adding a rule from a flow record or a trace offers "Before the matched rule" only when the match comes from the rule list's current generation. (#315)
 - Saving a subscription writes only the fields changed in the dialog, so a link or name updated in the source meanwhile is no longer overwritten. (#315)
 - On the Nodes page, Add to group lists the groups of every writable include as well as the main source, and stays available when only an include can be written; groups are not offered while a write is in progress. (#315)
+- A failed operation shows as an error in the Activity notices instead of a plain notice. A failed refresh of the Activity ranking, outbound usage and status cards, the DNS statistics and the simple rules view keeps the data it has and shows the error with Retry above it. (#331)
+- Switching profile or signing out while another form has unsaved changes asks first and changes nothing if declined; before, the saved profile or token changed first and the page stayed busy after the prompt was declined. (#331)
+- A write that was accepted but whose result is not confirmed shows as a notice instead of a failure in the group and node dialogs. (#331)
+- The connection outbounds widget no longer asks a backend without outbound traffic for it. The Geodata card shows when the groups for the download route cannot be read and offers Retry. The routing tree no longer draws a node left over from a group hidden inside another group. Cancelling the widget editor after Restore defaults moved the panel asks to discard the change. Saving a source or the global settings keeps the draft until the new configuration is read back; when the read fails after the write landed, the draft stays and Retry is offered. (#331)
 
 ## [0.1.0-beta.12] - 2026-09-30
 

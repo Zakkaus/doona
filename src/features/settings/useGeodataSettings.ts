@@ -25,7 +25,6 @@ import {
   type GeodataUrls
 } from './geodata';
 
-type Patch = Exclude<GeoDataSettingsPatch, null>;
 type Route = 'routing' | 'direct' | 'group';
 
 // Every control saves as it changes. Where the backend updates on request, a source change then downloads at once, so
@@ -43,10 +42,12 @@ export function useGeodataSettings() {
   const groups = useGroups(available && groupsOffered);
   const stored = settings.data?.geodata;
   // The patch being saved shows in the controls until the settings come back, and is dropped on failure.
-  const [pending, setPending] = useState<Patch | null>(null);
+  const [pending, setPending] = useState<GeoDataSettingsPatch>(null);
   const [custom, setCustom] = useState<GeodataUrls | null>(null);
   const [routeChoice, setRouteChoice] = useState<Route | null>(null);
   // A preset lacking categories the rules use, waiting for confirmation; the shown source stays as it was.
+  // Removing every override waits for confirmation, since it also drops the values the configuration file named.
+  const [resetting, setResetting] = useState(false);
   const [lacking, setLacking] = useState<{preset: GeodataPreset; codes: string} | null>(null);
   const busy = settings.busy || geodata.busy;
   const canUpdate = !!caps.data?.resources.geodata.can_update;
@@ -65,7 +66,8 @@ export function useGeodataSettings() {
   // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
   // One save at a time: a second press while one is in flight, or while an update runs, does nothing.
   const inflight = useRef(false);
-  const save = (patch: Patch) => {
+  // A null patch removes every override.
+  const save = (patch: GeoDataSettingsPatch) => {
     if (inflight.current || busy) return Promise.resolve(false);
     inflight.current = true;
     setPending(patch);
@@ -75,18 +77,20 @@ export function useGeodataSettings() {
         setPending(null);
         if (result === undefined) return false;
         geodata.refetch();
-        if (patch.geosite && canUpdate) void update();
+        if (patch?.geosite && canUpdate) void update();
         else
           toast(
             'positive',
             t(
-              patch.geosite
-                ? 'settings.geodataSaved'
-                : patch.download
-                  ? 'settings.geodataRouteSaved'
-                  : patch.verify_checksum !== undefined
-                    ? 'settings.geodataVerifyChecksumSaved'
-                    : 'settings.geodataAutoSaved'
+              !patch
+                ? 'settings.geodataResetDone'
+                : patch.geosite
+                  ? 'settings.geodataSaved'
+                  : patch.download
+                    ? 'settings.geodataRouteSaved'
+                    : patch.verify_checksum !== undefined
+                      ? 'settings.geodataVerifyChecksumSaved'
+                      : 'settings.geodataAutoSaved'
             )
           );
         return true;
@@ -153,6 +157,20 @@ export function useGeodataSettings() {
           const codes = lackingCodes(chosen, geodata.data?.required_codes, t);
           if (codes) setLacking({preset: chosen, codes});
           else savePreset(chosen);
+        }
+      }
+    },
+    reset: {
+      ask: () => setResetting(true),
+      dialog: resetting && {
+        title: t('settings.geodataResetTitle'),
+        help: t('settings.geodataResetHelp'),
+        confirm: t('settings.geodataReset'),
+        cancel: () => setResetting(false),
+        save: () => {
+          setResetting(false);
+          setRouteChoice(null);
+          void save(null);
         }
       }
     },
@@ -235,6 +253,8 @@ export function useGeodataSettings() {
       },
       group: route === 'group' ? (download?.route === 'group' ? (download.group_id ?? '') : '') : null,
       groups: (groups.data ?? []).map(group => ({id: group.id, label: group.name})),
+      groupsError: groups.error,
+      retryGroups: groups.refetch,
       pickGroup: (id: string) => {
         if (id === (download?.route === 'group' ? download.group_id : null)) return;
         void save({download: {route: 'group', group_id: id}}).then(saved => saved && setRouteChoice(null));

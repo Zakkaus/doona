@@ -1717,6 +1717,10 @@
   "settings.geodataPreset.metacubex": "MetaCubeX full",
   "settings.geodataPreset.metacubexLite": "MetaCubeX lite",
   "settings.geodataPresetSize": "geosite about {geosite}, geoip about {geoip}",
+  "settings.geodataReset": "Reset to defaults",
+  "settings.geodataResetDone": "Geodata settings reset to defaults",
+  "settings.geodataResetHelp": "Removes every geodata override and every value taken from the configuration file. The built-in sources and defaults apply again.",
+  "settings.geodataResetTitle": "Reset geodata settings?",
   "settings.geodataRoute": "Download route",
   "settings.geodataRouteDirect": "Direct",
   "settings.geodataRouteGroup": "Specific group",
@@ -2089,6 +2093,7 @@
     "other": "Validation found {n} errors; nothing written"
   },
   "ui.writtenNotApplied": "Written to the config file but not applied; the running configuration is unchanged. Fix the file, then reload or restart honk",
+  "ui.writtenNotRead": "The change was saved, but the configuration could not be read back. Retry to show it",
   "ui.yes": "Yes",
   "unit.byte": "{n} B",
   "unit.bytePerSecond": "{n} B/s",

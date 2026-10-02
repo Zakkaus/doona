@@ -1,4 +1,4 @@
-import {expect, loadCatalogues, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, loadCatalogues, mockBackend, test} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 import {geodataPreset} from '../src/dae/geodata';
@@ -219,6 +219,27 @@ test('the download route follows the routing rules by default, and a group route
   expect(bodies[1]).toEqual({geodata: {download: {route: 'direct'}}});
   await expect(route.getByRole('button', {name: t('settings.geodataRouteGroup')})).toHaveCount(0);
   expect(sent).toEqual(['patch', 'patch']);
+  // Reset removes every override after a confirmation.
+  await row(page, 'settings.geodataStatus')
+    .getByRole('button', {name: t('settings.geodataReset'), exact: true})
+    .click();
+  await page
+    .getByRole('dialog', {name: t('settings.geodataResetTitle')})
+    .getByRole('button', {name: t('settings.geodataReset'), exact: true})
+    .click();
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataResetDone')})).toBeVisible();
+  expect(bodies[2]).toEqual({geodata: null});
+});
+
+test('a group list that cannot be read says so beside the route group select', async ({page}) => {
+  await traffic(page);
+  expectLoadFailures(page, /\/api\/v1\/groups$/);
+  await page.route('**/api/v1/groups', route =>
+    route.fulfill({status: 500, json: {error: {code: 'internal', message: 'boom', details: null}, request_id: 'r1'}})
+  );
+  await page.goto('/#/settings');
+  await pick(page, 'settings.geodataRoute', t('settings.geodataRouteGroup'));
+  await expect(section(page).getByRole('button', {name: t('ui.retry'), exact: true})).toBeVisible();
 });
 
 test('a backend without groups neither asks for them nor offers a group route', async ({page}) => {
