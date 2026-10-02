@@ -167,33 +167,39 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
   return (
     <>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <ActionHelp reason={vm.flushReason}>
-        <div className="rp-toolbar">
-          <Kv row items={vm.fields} />
-          {vm.coverage.map(badge => (
-            <Badge key={badge.id} tone="warn">
-              {badge.text}
-            </Badge>
-          ))}
-          {vm.filterText && (
-            <Button small onPress={clearFilter}>
-              {vm.filterText}
-            </Button>
-          )}
-          <span className="rp-grow" />
-          <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} tip={vm.seed ? undefined : t('ui.selectRow')} onPress={() => vm.seed && rule.open(vm.seed)}>
-            {t('rule.add')}
+      <div className="rp-toolbar top">
+        <Kv row items={vm.fields} />
+        {vm.coverage.map(badge => (
+          <Badge key={badge.id} tone="warn">
+            {badge.text}
+          </Badge>
+        ))}
+        {vm.filterText && (
+          <Button small onPress={clearFilter}>
+            {vm.filterText}
           </Button>
-          <ConfirmButton
-            label={t('dns.flushAll')}
-            confirmationText={vm.confirmationText}
-            isPending={vm.flushPending}
-            isDisabled={vm.flushPending || vm.flushDisabled}
-            onConfirm={vm.flush}
-            onAbort={vm.abortFlush}
-          />
+        )}
+        <span className="rp-grow" />
+        <div className="rp-col">
+          <ActionHelp reason={vm.seed ? null : t('ui.selectRow')}>
+            <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} onPress={() => vm.seed && rule.open(vm.seed)}>
+              {t('rule.add')}
+            </Button>
+          </ActionHelp>
         </div>
-      </ActionHelp>
+        <div className="rp-col">
+          <ActionHelp reason={vm.flushReason}>
+            <ConfirmButton
+              label={t('dns.flushAll')}
+              confirmationText={vm.confirmationText}
+              isPending={vm.flushPending}
+              isDisabled={vm.flushPending || vm.flushDisabled}
+              onConfirm={vm.flush}
+              onAbort={vm.abortFlush}
+            />
+          </ActionHelp>
+        </div>
+      </div>
       {(vm.deleteBy.name || vm.deleteBy.entry) && (
         <ActionHelp reason={vm.matchReason}>
           <div className="rp-toolbar">
@@ -310,34 +316,36 @@ function DnsLog({
   );
   return (
     <>
-      <div className="rp-toolbar">
-        <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
-        <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
-        {vm.total && (
-          <HelpRow help={vm.totalHelp}>
-            <span className="rp-label">{vm.total}</span>
-          </HelpRow>
-        )}
-        {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
-        <span className="rp-grow" />
-        <ActionGroup
-          actions={[
-            // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
-            {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
-            {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
-            {
-              id: 'rule',
-              label: t('rule.add'),
-              isDisabled: !seed || !rule.canAdd(seed),
-              reason: seed ? undefined : t('ui.selectRow'),
-              onAction: () => seed && rule.open(seed)
-            },
-            ...links,
-            ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
-          ]}
-        />
-      </div>
+      <ActionHelp reason={seed ? null : t('ui.selectRow')}>
+        <div className="rp-toolbar">
+          <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
+          <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
+          <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
+          {vm.total && (
+            <HelpRow help={vm.totalHelp}>
+              <span className="rp-label">{vm.total}</span>
+            </HelpRow>
+          )}
+          {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
+          <span className="rp-grow" />
+          <ActionGroup
+            actions={[
+              // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
+              {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+              {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+              {
+                id: 'rule',
+                label: t('rule.add'),
+                isDisabled: !seed || !rule.canAdd(seed),
+                reason: seed ? undefined : t('ui.selectRow'),
+                onAction: () => seed && rule.open(seed)
+              },
+              ...links,
+              ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
+            ]}
+          />
+        </div>
+      </ActionHelp>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>

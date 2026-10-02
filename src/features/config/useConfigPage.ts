@@ -359,7 +359,9 @@ export function useSourceCard({
     reason: dirty
       ? !writable && readOnly
         ? readOnly.note
-        : saveReason({busy: !!editor.busy, conflict: !!conflict}, t)
+        : editor.busy === 'validate'
+          ? t('config.saveValidating')
+          : saveReason({busy: !!editor.busy, conflict: !!conflict}, t)
       : canValidate && !editor.busy
         ? validateReason(candidates, sources, isComplete, t)
         : null

@@ -238,18 +238,20 @@ export function Settings({query}: PageProps) {
             {versionWarning}
           </Light>
         )}
-        <div className="rp-cluster">
-          <About trigger={<Button>{t('about.title')}</Button>} />
-          <Button onPress={openShortcuts}>{t('shell.shortcuts')}</Button>
-          <Link appearance="button" href={guide} external>
-            {t('shell.guide')}
-          </Link>
-          <Button isDisabled={!recorded.length} tip={t('settings.copyErrorsNone')} onPress={() => void copyDiagnostics()}>
-            {t('settings.copyErrors')}
-          </Button>
-          {install && <Button onPress={install}>{t('settings.install')}</Button>}
-          {installHint && <p className="rp-note">{installHint}</p>}
-        </div>
+        <ActionHelp reason={!recorded.length ? t('settings.copyErrorsNone') : null}>
+          <div className="rp-cluster">
+            <About trigger={<Button>{t('about.title')}</Button>} />
+            <Button onPress={openShortcuts}>{t('shell.shortcuts')}</Button>
+            <Link appearance="button" href={guide} external>
+              {t('shell.guide')}
+            </Link>
+            <Button isDisabled={!recorded.length} onPress={() => void copyDiagnostics()}>
+              {t('settings.copyErrors')}
+            </Button>
+            {install && <Button onPress={install}>{t('settings.install')}</Button>}
+            {installHint && <p className="rp-note">{installHint}</p>}
+          </div>
+        </ActionHelp>
       </Card>
     )
   };

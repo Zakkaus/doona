@@ -48,14 +48,9 @@ test('the DNS log adds a rule for the selected record from its toolbar and its d
   const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
   const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
-  // Once the records are listed, the disabled button gives its reason in a tooltip on the wrapper that stays hoverable.
   await expect(first).toBeVisible();
-  // The toolbar may lay its actions out again as later records arrive, so the hover is retried until the tip shows.
-  await expect(async () => {
-    await page.mouse.move(0, 0);
-    await add.locator('..').hover();
-    await expect(page.getByRole('tooltip')).toHaveText('Select a row first', {timeout: 1500});
-  }).toPass();
+  await expect(page.getByText('Select a row first', {exact: true})).toBeVisible();
+  await expect(add).toHaveAccessibleDescription('Select a row first');
   const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
   await first.click();
   await add.click();

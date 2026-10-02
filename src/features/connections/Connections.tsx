@@ -1,5 +1,6 @@
 import {OutboundTag} from '../shared/OutboundTag';
 import {
+  ActionHelp,
   Badge,
   Button,
   ConfirmButton,
@@ -34,71 +35,73 @@ export function Connections(props: PageProps) {
   const cur = vm.detail;
   const list = (
     <>
-      <div className="rp-toolbar">
-        {vm.compact ? (
-          <span className="rp-filter-row">
-            <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
-            <ChoiceMenu
-              label={vm.filterMenu.active ? t('conn.filtersActive', {n: vm.filterMenu.active}) : t('conn.filters')}
-              count={vm.filterMenu.active}
-              submenus={vm.filterMenu.submenus}
-            >
-              {t('conn.filters')}
-            </ChoiceMenu>
-          </span>
-        ) : (
-          <>
-            <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
-            <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
-            <SearchSelect
-              side
-              label={t('ui.outbound')}
-              searchLabel={t('ui.filterOutbounds')}
-              value={vm.out}
-              onChange={vm.setOut}
-              sections={vm.outboundSections}
-            />
-            <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick} searchLabel={t('conn.filterPick')}>
-              {t('conn.pick')}
-            </ChoiceMenu>
-          </>
-        )}
-        <LabeledSelect
-          label={t('conn.group')}
-          side
-          value={vm.view.group}
-          onChange={group => vm.updateView({group: group as ConnectionView['group']})}
-          items={[
-            {id: 'source', label: t('conn.byClient')},
-            {id: 'outbound', label: t('ui.outbound')},
-            {id: 'none', label: t('conn.ungrouped')}
-          ]}
-        />
-        {vm.view.group !== 'none' && <Button onPress={vm.toggleCollapseAll}>{t(vm.collapse.allCollapsed ? 'conn.expandAll' : 'conn.collapseAll')}</Button>}
-        <ChoiceMenu label={t('conn.columns')} selectionMode="multiple" items={vm.columns} value={vm.visibleColumns} onAction={vm.toggleColumn}>
-          {t('conn.columns')}
-        </ChoiceMenu>
-        {vm.filtered && (
-          <Button quiet onPress={vm.clear}>
-            {t('ui.clearFilters')}
+      <ActionHelp reason={!vm.ruleAction.canAdd ? vm.ruleAction.addTip : null}>
+        <div className="rp-toolbar">
+          {vm.compact ? (
+            <span className="rp-filter-row">
+              <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
+              <ChoiceMenu
+                label={vm.filterMenu.active ? t('conn.filtersActive', {n: vm.filterMenu.active}) : t('conn.filters')}
+                count={vm.filterMenu.active}
+                submenus={vm.filterMenu.submenus}
+              >
+                {t('conn.filters')}
+              </ChoiceMenu>
+            </span>
+          ) : (
+            <>
+              <TextField search label={t('ui.filter')} value={vm.text} onChange={vm.setText} placeholder={t('conn.filterHint')} className="rp-filter" />
+              <Segmented label={t('ui.network')} value={vm.network} onChange={vm.setNetwork} items={vm.networks} />
+              <SearchSelect
+                side
+                label={t('ui.outbound')}
+                searchLabel={t('ui.filterOutbounds')}
+                value={vm.out}
+                onChange={vm.setOut}
+                sections={vm.outboundSections}
+              />
+              <ChoiceMenu quiet label={t('conn.pick')} sections={vm.picks} onAction={vm.pick} searchLabel={t('conn.filterPick')}>
+                {t('conn.pick')}
+              </ChoiceMenu>
+            </>
+          )}
+          <LabeledSelect
+            label={t('conn.group')}
+            side
+            value={vm.view.group}
+            onChange={group => vm.updateView({group: group as ConnectionView['group']})}
+            items={[
+              {id: 'source', label: t('conn.byClient')},
+              {id: 'outbound', label: t('ui.outbound')},
+              {id: 'none', label: t('conn.ungrouped')}
+            ]}
+          />
+          {vm.view.group !== 'none' && <Button onPress={vm.toggleCollapseAll}>{t(vm.collapse.allCollapsed ? 'conn.expandAll' : 'conn.collapseAll')}</Button>}
+          <ChoiceMenu label={t('conn.columns')} selectionMode="multiple" items={vm.columns} value={vm.visibleColumns} onAction={vm.toggleColumn}>
+            {t('conn.columns')}
+          </ChoiceMenu>
+          {vm.filtered && (
+            <Button quiet onPress={vm.clear}>
+              {t('ui.clearFilters')}
+            </Button>
+          )}
+          {vm.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
+          {vm.visibility && (
+            <TextTooltip text={t('conn.visibilityNote')}>
+              <Badge>{vm.visibility}</Badge>
+            </TextTooltip>
+          )}
+          <span className="rp-grow" />
+          <Button isDisabled={!vm.ruleAction.canAdd} onPress={vm.ruleAction.openAdd}>
+            {t('rule.add')}
           </Button>
-        )}
-        {vm.truncated && <Badge tone="warn">{t('conn.truncated')}</Badge>}
-        {vm.visibility && (
-          <TextTooltip text={t('conn.visibilityNote')}>
-            <Badge>{vm.visibility}</Badge>
-          </TextTooltip>
-        )}
-        <span className="rp-grow" />
-        <Button isDisabled={!vm.ruleAction.canAdd} tip={vm.ruleAction.addTip} onPress={vm.ruleAction.openAdd}>
-          {t('rule.add')}
-        </Button>
-        {vm.canClose && <ConfirmButton label={t('conn.closeAll')} {...vm.closeAll} />}
-        <Button isDisabled={!vm.canExport} onPress={vm.export}>
-          <Download />
-          {t('conn.export')}
-        </Button>
-      </div>
+          {vm.canClose && <ConfirmButton label={t('conn.closeAll')} {...vm.closeAll} />}
+          <Button isDisabled={!vm.canExport} onPress={vm.export}>
+            <Download />
+            {t('conn.export')}
+          </Button>
+        </div>
+      </ActionHelp>
       <div className="rp-with-panel" data-open={cur ? '' : undefined}>
         <ConnectionTable
           collection={vm.collection}
