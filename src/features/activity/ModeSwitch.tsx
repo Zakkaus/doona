@@ -23,6 +23,15 @@ type ModeCardsModel = {
   apply: () => void;
 };
 
+export function ModeApply({model: vm, small = true}: {model: Pick<ModeCardsModel, 'writable' | 'dirty' | 'incomplete' | 'busy' | 'apply'>; small?: boolean}) {
+  const t = useT();
+  return vm.writable ? (
+    <Button small={small} accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
+      {t('config.save')}
+    </Button>
+  ) : null;
+}
+
 // The mode choice with its apply action, or why it cannot change: Activity's mode card and the widget panel share it.
 export function ModeSwitch({model: vm}: {model: ModeCardsModel}) {
   const t = useT();
@@ -31,9 +40,7 @@ export function ModeSwitch({model: vm}: {model: ModeCardsModel}) {
     <span className="rp-cluster">
       <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} />
       {vm.writable ? (
-        <Button small accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
-          {t('config.save')}
-        </Button>
+        <ModeApply model={vm} />
       ) : vm.readOnly ? (
         <PopoverDialog
           label={t('act.modeWhyReadOnly')}
@@ -83,17 +90,20 @@ export function ModeCards({model: vm, part}: {model: ModeCardsModel; part?: 'mod
           tile={{icon: <Filter />, tint: 2, kind: 'control'}}
           reason={vm.reasons.global}
           aside={
-            <ChoiceMenu
-              quiet
-              isDisabled={vm.busy || !vm.writable}
-              label={t('act.global')}
-              value={vm.target}
-              onChange={vm.pickTarget}
-              items={vm.targets}
-              searchLabel={t('ui.filterOutbounds')}
-            >
-              {vm.targetText}
-            </ChoiceMenu>
+            <span className="rp-cluster rp-global-controls">
+              <ChoiceMenu
+                quiet
+                isDisabled={vm.busy || !vm.writable}
+                label={t('act.global')}
+                value={vm.target}
+                onChange={vm.pickTarget}
+                items={vm.targets}
+                searchLabel={t('ui.filterOutbounds')}
+              >
+                {vm.targetText}
+              </ChoiceMenu>
+              <ModeApply model={vm} small={false} />
+            </span>
           }
         />
       )}

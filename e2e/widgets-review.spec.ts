@@ -52,6 +52,71 @@ test('panel mode stages a draft until Apply and writes the chosen mode', async (
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
 });
 
+for (const host of ['panel', 'dashboard'] as const) {
+  for (const width of [1280, 390]) {
+    test(`standalone Global outbound in the ${host} at ${width}px applies without reflow and clears its draft`, async ({page}) => {
+      await page.setViewportSize({width, height: 844});
+      const backend = await mockBackend(page);
+      await page.addInitScript(
+        ({host, layout, item}) => {
+          localStorage.setItem('doona-widgets', JSON.stringify({...layout, visible: host === 'panel', items: [item]}));
+          localStorage.setItem('doona-dashboard', JSON.stringify({version: 2, sections: [{id: 'quick', items: [item]}]}));
+        },
+        {host, layout: defaults(), item: defaultWidget('global')}
+      );
+      await page.goto(host === 'panel' ? '/#/settings' : '/#/activity');
+      if (host === 'panel' && width === 390) await page.getByRole('button', {name: 'Show widgets', exact: true}).click();
+      const widget = host === 'panel' ? page.locator('.rp-widget[aria-label="Global outbound"]') : page.locator('[data-instance="global"] .rp-card');
+      const label = widget.getByText('Global outbound', {exact: true});
+      const target = widget.getByRole('button', {name: 'Global outbound', exact: true});
+      const apply = widget.getByRole('button', {name: 'Apply', exact: true});
+      await expect(target).toBeEnabled();
+      await expect(apply).toBeVisible();
+      await expect(apply).toBeDisabled();
+      await page.evaluate(() => document.fonts.ready);
+      const before = (await widget.boundingBox())!;
+      const idleBoxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
+      const idleCenters = idleBoxes.map(box => box!.y + box!.height / 2);
+      expect(Math.max(...idleCenters) - Math.min(...idleCenters)).toBeLessThanOrEqual(2);
+      expect(idleBoxes[2]!.height).toBe(idleBoxes[1]!.height);
+      await target.click();
+      await page.getByRole('searchbox', {name: 'Filter outbounds', exact: true}).fill('gaming');
+      await page.getByRole('menuitemradio', {name: 'gaming', exact: true}).click();
+      await expect(target).toContainText('gaming');
+      expect(backend.requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
+      await expect(apply).toBeEnabled();
+      const boxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
+      const centers = boxes.map(box => box!.y + box!.height / 2);
+      expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
+      expect(boxes[2]!.height).toBe(boxes[1]!.height);
+      expect(boxes[2]!.x).toBeGreaterThanOrEqual(boxes[1]!.x + boxes[1]!.width);
+      expect((await widget.boundingBox())!.height).toBe(before.height);
+      await apply.click();
+      await expect
+        .poll(async () => readMode((await backend.api.config()).sources.find(source => source.kind === 'main')!.content!))
+        .toEqual({
+          mode: 'global',
+          target: 'gaming'
+        });
+      await expect(apply).toBeVisible();
+      await expect(apply).toBeDisabled();
+      expect((await widget.boundingBox())!.height).toBe(before.height);
+      expect(backend.requests.filter(request => request.method() === 'PUT' && request.url().includes('/config/sources/'))).toHaveLength(1);
+      if (host === 'panel' && width === 390) {
+        await page.getByRole('dialog').getByRole('button', {name: 'Close', exact: true}).click();
+      }
+      const destination = host === 'panel' ? 'Activity' : 'Settings';
+      const navigation = width === 390 ? page.getByRole('navigation', {name: 'Sections'}) : page.locator('.rp-side');
+      await navigation.getByRole('link', {name: destination, exact: true}).click();
+      if (host === 'dashboard' && width === 390) {
+        await page.getByRole('navigation', {name: 'Settings', exact: true}).getByRole('link', {name: 'Settings', exact: true}).click();
+      }
+      await expect(page.locator('main h1')).toHaveText(destination);
+      await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    });
+  }
+}
+
 test('visible panels keep the gallery code unloaded until editing', async ({page}) => {
   const loaded: string[] = [];
   page.on('request', request => loaded.push(request.url()));

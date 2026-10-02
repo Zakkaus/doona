@@ -93,7 +93,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await page.goto('/#/activity');
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  const apply = page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
   await expect(apply).toBeEnabled();
@@ -118,7 +118,7 @@ test('the outbound mode is staged and applied as a configuration write with a re
 
 test('applying a mode keeps the Apply button that the pending announcement names', async ({page}) => {
   await page.goto('/#/activity');
-  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  const apply = page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true});
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
   const id = await apply.getAttribute('id');
   await apply.click();
@@ -165,9 +165,9 @@ test('read-only main configuration keeps the current mode and explains the write
   const mode = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await expect(mode.getByRole('radio', {name: 'Global', exact: true})).toHaveAttribute('aria-checked', 'true');
   await expect(mode.getByRole('radio', {name: 'Global', exact: true})).toBeDisabled();
-  await expect(page.getByRole('button', {name: 'Global mode outbound', exact: true})).toBeDisabled();
-  await expect(page.getByRole('button', {name: 'Global mode outbound', exact: true})).toContainText('proxy');
-  await expect(page.getByRole('button', {name: 'Global mode outbound', exact: true})).toHaveAccessibleDescription('Read-only');
+  await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toContainText('proxy');
+  await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toHaveAccessibleDescription('Read-only');
   await page.getByRole('button', {name: 'Why is the mode read-only?'}).click();
   await expect(page.getByRole('dialog', {name: 'Why is the mode read-only?'})).toContainText('honk requires configuration writes');
   await expect(page.getByRole('link', {name: 'Read-only config files'})).toHaveAttribute(
@@ -827,7 +827,7 @@ test('staged mode changes require discard before navigation', async ({page}) => 
   await expect(page).toHaveURL(/#\/overview$/);
   await page.locator('.rp-nav[href="#/activity"]').click();
   await expect(mode.getByRole('radio', {name: 'Rule', exact: true})).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+  await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
 });
 
 test('local traffic renders without history and latency falls back to a node without groups', async ({page}) => {
@@ -912,7 +912,7 @@ test('interleaved mandatory rules reject mode changes without writing configurat
   handlers['GET config'] = async () => config;
   await page.goto('/#/activity');
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.negative');
   await expect(toast).toContainText('Move the must rules to the top of the routing block');
   // The rule in the way is named on its own line.
@@ -929,7 +929,7 @@ test('the demo switches the outbound mode and back while preserving mandatory ru
   await page.goto('/#/activity');
   const modes = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await modes.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Direct');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   // The catch-all is a real rule of the new generation, right after the must rules.
@@ -946,7 +946,7 @@ test('the demo switches the outbound mode and back while preserving mandatory ru
   await page.goto('/#/activity');
   await expect(modes.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   await modes.getByRole('radio', {name: 'Rule', exact: true}).click();
-  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive').filter({hasText: 'reloaded: Rule'})).toBeVisible();
   await expect(modes.getByRole('radio', {name: 'Rule', exact: true})).toBeChecked();
 });

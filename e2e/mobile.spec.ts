@@ -595,7 +595,7 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
 
 test('the outbound mode keeps Apply disabled without a line until a mode is picked', async ({page}) => {
   await page.goto('/#/activity');
-  const apply = page.getByRole('button', {name: 'Apply', exact: true});
+  const apply = page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true});
   await expect(apply).toBeDisabled();
   await expect(page.getByText('No changes to apply', {exact: true})).toHaveCount(0);
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();

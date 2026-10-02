@@ -19,7 +19,7 @@
   "act.domains": "域名",
   "act.download": "下载",
   "act.emptyHistory": "暂无历史样本",
-  "act.global": "全局模式出站",
+  "act.global": "全局出站",
   "act.globalMissing": "全局模式须指定出站",
   "act.groupFollow": "自动",
   "act.groupPickHelp": "默认跟随连接最多的策略组，选择组只会更改此卡片。",
