@@ -45,7 +45,6 @@ export function useGlobalSettings({query, go}: PageProps) {
   const source = chosen?.source;
   const editor = useConfigEditor(config.refetch);
   const [draft, setDraft] = useState<{source: ConfigSource; id: string; patch: Record<string, string>} | null>(null);
-  // A message, or the diagnostics that refused the write.
   const [failure, setFailure] = useState<string | ConfigDiagnostic[] | null>(null);
   const guard = useDraftGuard(!!draft, () => {
     setDraft(null);

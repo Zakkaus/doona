@@ -1,5 +1,3 @@
-// Shared chart layout and axis helpers.
-
 // Nearest-rank percentile of values already sorted ascending; null for no values.
 export function percentile(sorted: number[], p: number): number | null {
   if (!sorted.length) return null;

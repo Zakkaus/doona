@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {currentTemplate, refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
+import {refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -56,9 +56,9 @@ it('says which groups each template creates', () => {
 
 it('reads routing split over files, or held by a generated file, as custom', () => {
   const bypass = writeTemplate('group { proxy {} }\n', 'bypass', [], {t});
-  expect(currentTemplate([source('main', bypass, 'main'), source('more', 'routing { fallback: proxy }\n')])).toBeNull();
+  expect(templatesView([source('main', bypass, 'main'), source('more', 'routing { fallback: proxy }\n')], t).current).toBeNull();
   expect(routingSources([source('gen', bypass, 'generated')])).toEqual([]);
-  expect(currentTemplate([source('main', bypass.replace('fallback: proxy', 'fallback: direct'), 'main')])).toBeNull();
+  expect(templatesView([source('main', bypass.replace('fallback: proxy', 'fallback: direct'), 'main')], t).current).toBeNull();
 });
 
 const input = (sources: ConfigSource[], patch: Partial<Parameters<typeof templateTarget>[0]> = {}) =>
