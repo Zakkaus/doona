@@ -206,6 +206,14 @@ export function useDebounced<T>(value: T, ms = 300): T {
   return settled;
 }
 
+// The value while `shown`, and the last one it had then while hidden, so what is derived from it does not recompute
+// for a kept tab that is out of sight. Undefined until first shown.
+export function useWhileShown<T>(value: T | undefined, shown: boolean): T | undefined {
+  const [kept, setKept] = useState(shown ? value : undefined);
+  if (shown && kept !== value) setKept(value);
+  return shown ? value : kept;
+}
+
 // How far outside the viewport a lazy card counts as near, so it loads before it scrolls in.
 const nearMargin = 400;
 

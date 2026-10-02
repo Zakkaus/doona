@@ -3,7 +3,7 @@ import {readTag} from '../shared/taggedId';
 import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useNodes, useOutboundNames} from '../../store';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
-import {downloadFile, exportName, panelQuery, phoneQuery, toast, toastErrorDetail, useLinked, useMediaQuery} from '../../ui/ui';
+import {downloadFile, exportName, panelQuery, phoneQuery, toast, toastErrorDetail, useLinked, useMediaQuery, useWhileShown} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {compareNames} from '../../i18n/format';
@@ -94,14 +94,28 @@ export function useConnectionsPage({go, query}: PageProps) {
   useFlowDemand(capabilities.data?.resources);
   const names = useOutboundNames();
   const closing = useConnectionClose(resource.refetch);
-  const rows = useMemo(() => connectionRows(resource.data), [resource.data]);
+  // Both tabs stay mounted, so each tab's projections follow the snapshot only while its tab is open; the other
+  // holds the snapshot it last showed and is recomputed when it comes back.
+  const fallback = connectionsFallback(query);
+  const tab = pickTab(query, connectionTabs, fallback);
+  const listData = useWhileShown(resource.data, tab === 'list');
+  const trafficData = useWhileShown(resource.data, tab === 'traffic');
+  const rows = useMemo(() => connectionRows(listData), [listData]);
+  const trafficRows = useMemo(() => connectionRows(trafficData), [trafficData]);
   // The node list the names above already read; a backend without it gets no latency card.
   const nodesListed = offered(capabilities.data?.resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesListed);
-  const latency = useMemo(() => (nodesListed && nodes.data ? pathLatency(rows, nodes.data, locale) : null), [nodesListed, nodes.data, rows, locale]);
+  const trafficNodes = useWhileShown(nodes.data, tab === 'traffic');
+  const latency = useMemo(
+    () => (nodesListed && trafficNodes ? pathLatency(trafficRows, trafficNodes, locale) : null),
+    [nodesListed, trafficNodes, trafficRows, locale]
+  );
   // A failed read keeps the card, with the reason, so it does not pass for a backend without health samples.
   const latencyError = nodesListed && !nodes.data ? nodes.error : null;
-  const outboundKeys = useMemo(() => [...new Set(rows.map(row => row.outbound))].sort((a, b) => compareNames(locale)(a ?? '', b ?? '')), [rows, locale]);
+  const outboundKeys = useMemo(
+    () => [...new Set(trafficRows.map(row => row.outbound))].sort((a, b) => compareNames(locale)(a ?? '', b ?? '')),
+    [trafficRows, locale]
+  );
   const needle = settledText.trim().toLowerCase();
   const shown = useMemo(
     () =>
@@ -129,7 +143,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     setCollapse(expandGroup(collapse, target.group));
   }
   const ruleAction = useConnectionRule(cur, go);
-  const lists = useMemo(() => connectionsView(rows, resource.data, src, rule, out, locale, t), [rows, resource.data, src, rule, out, locale, t]);
+  const lists = useMemo(() => connectionsView(rows, listData, src, rule, out, locale, t), [rows, listData, src, rule, out, locale, t]);
   const detail = useMemo(() => connectionDetail(cur, locale, t, names, rulesListed), [cur, locale, t, names, rulesListed]);
   const model = {...lists, detail};
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
@@ -174,11 +188,10 @@ export function useConnectionsPage({go, query}: PageProps) {
       sections: submenu.sections.map(section => ({...section, onChange: pickFor[filter]}))
     }))
   };
-  const fallback = connectionsFallback(query);
   const openInList = useCallback((id: string) => go('connections', within(query, {tab: 'list', id})), [go, query]);
   return {
     ...model,
-    tab: pickTab(query, connectionTabs, fallback),
+    tab,
     setTab: (next: string) => go('connections', tabQuery(query, next, fallback === 'traffic' ? fallback : null)),
     openInList,
     view,
@@ -196,7 +209,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     collection,
     // Every connection in the snapshot for the traffic chart, which has no filters of its own, and every outbound for
     // its colours.
-    rows,
+    rows: trafficRows,
     outboundKeys,
     latency,
     latencyError,

@@ -1,7 +1,8 @@
 import {expect, it} from 'vitest';
-import type {ApiEvent, GroupSummary} from './model';
+import type {ApiEvent, Connection, ConnectionList, GroupSummary} from './model';
 import {
   addressPort,
+  connectionRows,
   eventKindLabels,
   eventKinds,
   eventSummary,
@@ -130,4 +131,15 @@ it('counts a backend as without node sources only once both lists load empty of 
   expect(noNodeSources([{kind: 'inline'}], [builtin])).toBe(true);
   expect(noNodeSources([{kind: 'subscription'}], [])).toBe(false);
   expect(noNodeSources([], [builtin, {protocol: 'vless'}])).toBe(false);
+});
+
+it("keeps a connection row's identity across snapshots that re-read it unchanged", () => {
+  const tcp = {id: 'a'} as Connection;
+  const udp = {id: 'b'} as Connection;
+  const first = connectionRows({tcp: [tcp], udp: [udp]} as ConnectionList);
+  const next = connectionRows({tcp: [tcp, {id: 'c'} as Connection], udp: [udp]} as ConnectionList);
+  expect(first.map(row => row.network)).toEqual(['tcp', 'udp']);
+  expect(next[0]).toBe(first[0]);
+  expect(next[2]).toBe(first[1]);
+  expect(next[1]).not.toBe(first[1]);
 });

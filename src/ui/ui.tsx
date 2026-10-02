@@ -5,6 +5,7 @@ export {
   useContentWidth,
   useFillHeight,
   useDebounced,
+  useWhileShown,
   useMediaQuery,
   useNearViewport,
   useLinked,
