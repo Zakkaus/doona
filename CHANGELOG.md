@@ -39,6 +39,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Import and restore retain an accepted operation whose outcome is unknown after closing the dialog or leaving Configuration. Reopening offers recovery without sending another write; failures retain their backend details in Copy error and Settings' recent errors. (#337)
+- Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0.
 - Renaming a node updates DNS upstream detours in its declaring source and is blocked while another source refers to it. (#353)
 - Add to group on Nodes keeps the shared Policies editor available for new and existing groups when the runtime groups API is unavailable. (#353)
 - Empty file providers remain visible on Nodes, including their status and removal action. (#353)
