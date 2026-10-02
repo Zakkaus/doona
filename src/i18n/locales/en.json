@@ -510,6 +510,7 @@
     "other": "Delete {n} cache entries? This cannot be undone."
   },
   "dns.deleteMatchingFailed": "Could not delete the cache entries: {error}",
+  "dns.deleteNameConfirm": "Delete cached records for {name} ({type})? This cannot be undone.",
   "dns.deletePartial": {
     "one": "{deleted} deleted; {n} entry could not be deleted",
     "other": "{deleted} deleted; {n} entries could not be deleted"
@@ -546,6 +547,7 @@
   },
   "dns.logTotalHelp": "When a new record brings the kept count or memory use to its limit, the oldest records are removed.",
   "dns.logUnavailable": "This backend does not provide a resolution log",
+  "dns.matchFailed": "Could not match cache entries",
   "dns.matchMore": "and {n} more",
   "dns.matchNameOnly": "This backend deletes cache entries by full domain only",
   "dns.matchRegex": "Domain regex",
@@ -568,6 +570,7 @@
   "dns.queryFailed": "Could not run the query: {error}",
   "dns.queryUnavailable": "This backend cannot run DNS queries right now",
   "dns.regexHelp": "JavaScript regex syntax, ignoring case, matched without the trailing dot",
+  "dns.regexTimeout": "Regex matching timed out. Use a simpler pattern.",
   "dns.result": "Result",
   "dns.route.default": "Default",
   "dns.route.forced": "Forced",
