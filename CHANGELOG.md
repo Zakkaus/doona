@@ -22,6 +22,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - Internal: 39 icons share one SVG shell; no visible change. (#357)
+- Internal: update fast-uri and brace-expansion to address development-tool security advisories.
 - Internal: the Noto fonts come from Fontsource packages instead of 208 committed files; the built fonts are unchanged. (#351)
 - Internal: ring history state, its persistence and hook live in the store instead of the API layer; no visible change. (#341)
 - Internal: production builds minify with Terser, cutting total JavaScript by about 16 KB gzip; no visible change. (#352)
