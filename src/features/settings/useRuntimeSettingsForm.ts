@@ -44,8 +44,6 @@ export function useRuntimeSettingsForm() {
   } | null>(null);
   const edits = draft ?? {at: stamp, values: {}, modes: {}};
   const level = edits.level ?? baseline?.log?.level ?? '';
-  const dirty = !!draft && (draft.level !== undefined || Object.keys(draft.values).length > 0 || Object.keys(draft.modes).length > 0);
-  const guard = useDraftGuard(dirty, () => setDraft(null));
   const ceilings: Record<Numeric, number | undefined> = {
     'log.buffered_records': capabilities?.logs.max_buffered_records,
     'dns_log.max_records': capabilities?.dns_log.max_records,
@@ -84,6 +82,20 @@ export function useRuntimeSettingsForm() {
     for (const field of numeric)
       if (!field.invalid && Number(field.value) !== numericAccess[field.id].read(baseline)) numericAccess[field.id].write(patch, Number(field.value));
   }
+  // An edit put back to the stored value leaves nothing to save, so only a value that differs, or one not yet valid,
+  // counts as unsaved.
+  const invalid = numeric.find(field => field.invalid)?.label ?? null;
+  // A draft value whose field the engine no longer offers cannot be saved, but it is still an unsaved edit.
+  const hiddenEdit =
+    !!draft &&
+    (numericFields.some(
+      id =>
+        !numeric.some(field => field.id === id) && draft.values[id] !== undefined && Number(draft.values[id]) !== (baseline && numericAccess[id].read(baseline))
+    ) ||
+      recorderFields.some(id => !recorders.some(recorder => recorder.id === id) && draft.modes[id] !== undefined && draft.modes[id] !== modeOf(id)) ||
+      (!hasLevel && draft.level !== undefined && draft.level !== baseline?.log?.level));
+  const dirty = !!draft && (Object.keys(patch).length > 0 || invalid !== null || hiddenEdit);
+  const guard = useDraftGuard(dirty, () => setDraft(null));
   const apply = () => {
     if (settings.busy) return;
     const submitted = draft;
@@ -127,8 +139,8 @@ export function useRuntimeSettingsForm() {
       setDraft(null);
     },
     dirty,
-    blocked: !Object.keys(patch).length || numeric.some(field => field.invalid),
-    reason: runtimeApplyReason({busy: settings.busy, invalid: numeric.find(field => field.invalid)?.label ?? null}, t),
+    blocked: !Object.keys(patch).length || invalid !== null,
+    reason: runtimeApplyReason({busy: settings.busy, invalid}, t),
     apply
   };
 }
