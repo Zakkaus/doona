@@ -197,19 +197,21 @@ const emptyRings: Rings<never> = {fine: [], coarse: []};
 const unobserved = () => () => {};
 
 // The store is the external system: a fresh poll (the source compared by identity) is recorded after render,
-// and the component reads the ring the store holds.
+// and the component reads the ring the store holds. A `paused` reader (a preview) takes no part in recording and is
+// not woken by other charts' samples; it reads the ring a render finds.
 export function useRings<S, T extends Timed>(
   name: string,
   source: S | undefined,
   sample: (source: S) => T | undefined,
   fold: Fold<T>,
-  enabled = true
+  enabled = true,
+  paused = false
 ): Rings<T> {
   useEffect(() => {
     if (enabled) record(name, source && sample(source), fold);
   }, [name, source, sample, fold, enabled]);
   // A render reads the ring already loaded; the next record re-checks the profile, so storage is not read per render.
-  return useSyncExternalStore(enabled ? subscribe : unobserved, () =>
+  return useSyncExternalStore(enabled && !paused ? subscribe : unobserved, () =>
     enabled ? ((stores.get(name) as {rings: Rings<T>} | undefined) ?? load<T>(name)).rings : emptyRings
   );
 }

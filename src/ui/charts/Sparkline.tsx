@@ -1,4 +1,4 @@
-import {useId, useLayoutEffect, useState} from 'react';
+import {useCallback, useId, useLayoutEffect, useMemo, useState} from 'react';
 import {localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
 import {usePalette} from './palette';
@@ -47,17 +47,23 @@ export function SparkPlot({
   const [selected, setSelected] = useState<number | null>(null);
   const [ref, size] = useContentSize<HTMLDivElement>(Math.round, 120);
   const {tip, showAt, hide} = useChartTip();
-  const known = values.filter((value): value is number => value !== null);
-  const domain: [number, number] = [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)];
-  const x = (value: number) => linearPosition(value, [Math.min(...timestamps), Math.max(...timestamps)], [inset, Math.max(inset, (size?.width ?? 0) - inset)]);
-  const y = (value: number) => linearPosition(value, domain, [(size?.height ?? height) - 2, 2]);
+  const known = useMemo(() => values.filter((value): value is number => value !== null), [values]);
+  const domain = useMemo<[number, number]>(() => [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)], [known, floor]);
+  const width = size?.width ?? 0;
+  const bottom = (size?.height ?? height) - 2;
+  const xs = useMemo(() => {
+    const span: [number, number] = [Math.min(...timestamps), Math.max(...timestamps)];
+    return timestamps.map(value => linearPosition(value, span, [inset, Math.max(inset, width - inset)]));
+  }, [timestamps, width, inset]);
+  const y = useCallback((value: number) => linearPosition(value, domain, [bottom, 2]), [domain, bottom]);
+  const points = useMemo(() => values.map((value, i) => (value === null ? null : {x: xs[i], y: y(value)})), [values, xs, y]);
   useLayoutEffect(() => {
     if (selected === null || values[selected] == null || !fmt || !locale || !ref.current || !size) {
       hide();
       return;
     }
     showAt({
-      x: x(timestamps[selected]),
+      x: xs[selected],
       y: y(values[selected]!),
       width: size.width,
       bounds: tipBounds(ref.current),
@@ -78,21 +84,15 @@ export function SparkPlot({
             style={{display: 'block'}}
             onPointerMove={event => {
               const point = pointerPosition(event, event.currentTarget, size);
-              setSelected(point.x < 0 || point.x > size.width || point.y < 2 || point.y > size.height - 2 ? null : nearestIndex(timestamps.map(x), point.x));
+              setSelected(point.x < 0 || point.x > size.width || point.y < 2 || point.y > size.height - 2 ? null : nearestIndex(xs, point.x));
             }}
           >
             <defs>
               <Gradient id={uid} color={color} />
             </defs>
-            <Curve
-              points={values.map((value, i) => (value === null ? null : {x: x(timestamps[i]), y: y(value)}))}
-              baseline={y(Math.max(0, domain[0]))}
-              color={color}
-              id={uid}
-              strokeWidth={1.5}
-            />
+            <Curve points={points} baseline={y(Math.max(0, domain[0]))} color={color} id={uid} strokeWidth={1.5} />
             {selected !== null && values[selected] != null && (
-              <circle cx={x(timestamps[selected])} cy={y(values[selected]!)} r={4} fill={color} stroke={p.base} strokeWidth={2} />
+              <circle cx={xs[selected]} cy={y(values[selected]!)} r={4} fill={color} stroke={p.base} strokeWidth={2} />
             )}
           </svg>
         </>

@@ -1,3 +1,4 @@
+import {memo} from 'react';
 import {area, line, curveMonotoneX} from 'd3-shape';
 
 export function Gradient({id, color}: {id: string; color: string}) {
@@ -8,7 +9,8 @@ export function Gradient({id, color}: {id: string; color: string}) {
     </linearGradient>
   );
 }
-export function Curve({
+// Memoised: a cursor move re-renders the chart with the same points, and the paths are not rebuilt for it.
+export const Curve = memo(function Curve({
   points,
   baseline,
   color,
@@ -45,4 +47,4 @@ export function Curve({
       <path className="rp-area-curve" d={stroke(points) ?? undefined} stroke={color} strokeWidth={strokeWidth} fill="none" />
     </g>
   );
-}
+});

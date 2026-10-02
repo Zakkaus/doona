@@ -33,6 +33,8 @@ it('passive previews read existing rings without recording their cached resource
   const sample = {time: Date.now(), value: 12};
   record('preview', sample, fold);
   const convert = vi.fn((value: Sample) => value);
-  expect(useRings('preview', undefined, convert, fold).fine).toEqual([sample]);
+  expect(useRings('preview', undefined, convert, fold, true, true).fine).toEqual([sample]);
   expect(convert).not.toHaveBeenCalled();
+  record('preview', {...sample, time: sample.time + 5000}, fold);
+  expect(state.notify).not.toHaveBeenCalled();
 });

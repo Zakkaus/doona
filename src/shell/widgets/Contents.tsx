@@ -236,7 +236,8 @@ function CpuChart({runtime, ...props}: ChartProps & {runtime: Runtime | undefine
   const t = useT();
   const p = usePalette();
   const preview = useContext(ResourceSamples);
-  const ring = useRings('cpu', useContext(ResourcePreview) ? undefined : runtime, cpuSample, foldCpu);
+  const passive = useContext(ResourcePreview);
+  const ring = useRings('cpu', passive ? undefined : runtime, cpuSample, foldCpu, true, passive);
   const fallback = !!preview && !ring.fine.length && !ring.coarse.length;
   const series = useMemo(
     () => ringWindow(ring, fallback ? sampleCpu : [], 60, foldCpu, preview ? (fallback ? sampleCpu.at(-1)?.time : ring.fine.at(-1)?.time) : undefined),
