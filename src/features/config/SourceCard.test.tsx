@@ -5,10 +5,19 @@ import {SourceCard} from './SourceCard';
 import type {SourceCardProps} from './useConfigPage';
 import type {DiagnosticRow} from './view';
 
-const state = vi.hoisted(() => ({diagnostics: {} as Record<string, unknown>}));
+const state = vi.hoisted(() => ({diagnostics: {} as Record<string, unknown>, restart: [] as unknown[]}));
 vi.mock('../../ui/code/CodeEditor', () => ({CodeEditor: ({banner}: {banner: ReactNode}) => banner}));
 vi.mock('./useConfigPage', () => ({
-  useSourceCard: () => ({links: [], diagnostics: state.diagnostics, marks: [], text: '', view: {label: 'main'}, saveButton: {}, note: ''})
+  useSourceCard: () => ({
+    links: [],
+    restart: state.restart,
+    diagnostics: state.diagnostics,
+    marks: [],
+    text: '',
+    view: {label: 'main'},
+    saveButton: {},
+    note: ''
+  })
 }));
 
 const row = (id: string, backend: string | null): Partial<DiagnosticRow> => ({
@@ -20,6 +29,7 @@ const row = (id: string, backend: string | null): Partial<DiagnosticRow> => ({
   action: null
 });
 const render = (diagnostics: Record<string, unknown>) => {
+  state.restart = [];
   state.diagnostics = {errors: 0, warnings: 0, scope: 'Draft diagnostics', quiet: null, open: true, rows: [], ...diagnostics};
   return renderToStaticMarkup(<SourceCard {...({canValidate: false, source: {id: 'main'}} as SourceCardProps)} />);
 };
@@ -48,4 +58,19 @@ it('keeps a quiet line in the bar when there is nothing to list', () => {
   expect(markup).toContain('class="rp-config-diagnostics"');
   expect(markup).toContain('rp-config-diagnostics-quiet rp-label">No diagnostics<');
   expect(markup).not.toContain('rp-disclosure-trigger');
+});
+
+it('tells a write refused for a restart: the settings, that nothing was written and the command to run', () => {
+  state.restart = [
+    {key: 'global.log_level', sourceId: 'main', line: null},
+    {key: 'dns.bind', sourceId: 'rules', line: 3}
+  ];
+  const sources = [{id: 'main'}, {id: 'rules', path: '/etc/honk/rules.dae'}];
+  const markup = renderToStaticMarkup(<SourceCard {...({canValidate: false, source: {id: 'main'}, sources} as unknown as SourceCardProps)} />);
+  expect(markup).toContain('2 項設定需重新啟動');
+  expect(markup).toContain('未寫入');
+  for (const key of ['global.log_level', 'dns.bind']) expect(markup).toContain(`<code class="rp-code">${key}</code>`);
+  expect(markup).toContain('rules.dae:3');
+  expect(markup).toContain('systemctl restart honk-core');
+  expect(markup).toContain('install.html#reload-and-restart');
 });

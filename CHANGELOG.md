@@ -7,6 +7,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - The runtime overrides card on Settings links to the persistent settings in Config with a button instead of a plain text link. (#294)
+- A write that changes a setting only a restart applies is refused with a notice that stays on the global settings form and the source editor. It lists the settings, says nothing was written, and gives the restart command with a link to the install guide's Reload and restart section. The demo refuses a changed `data_dir` the same way. (#295)
 
 ### Fixed
 

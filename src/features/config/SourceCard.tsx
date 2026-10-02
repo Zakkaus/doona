@@ -3,6 +3,7 @@ import {useT} from '../../i18n';
 import {Badge, Button, Card, Disclosure, Light, Link, VisuallyHidden, type Action} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
+import {RestartNotice} from './RestartNotice';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
 import {locatedForms} from './sourceForms';
 export function SourceCard(props: SourceCardProps) {
@@ -14,6 +15,7 @@ export function SourceCard(props: SourceCardProps) {
     diagnostics: d,
     note,
     refused,
+    restart,
     marks,
     text,
     outbounds,
@@ -147,6 +149,7 @@ export function SourceCard(props: SourceCardProps) {
         </span>
       </div>
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
+      {restart.length > 0 && <RestartNotice settings={restart} sources={props.sources} />}
       {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
       <CodeEditor
         actions={actions}

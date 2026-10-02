@@ -7,7 +7,7 @@ import {groupQuery} from '../shared/link';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../../api/model';
 import {ApiError} from '../../api/error';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
-import {allGroupNames, fileName, restartRequired} from '../../dae/sources';
+import {allGroupNames, fileName, restartRequired, restartSettings} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {buildHash, href, pickTab, tabQuery, within} from '../../shell/route';
 import {
@@ -207,6 +207,8 @@ export function useSourceCard({
   // reject changes made on disk while editing.
   const [draft, setDraft] = useState<{text: string; origin: ConfigSource} | null>(null);
   const [found, setFound] = useState<ConfigDiagnostic[] | null>(null);
+  // The diagnostics of the last write the backend refused after its own check; a refusal at the HTTP level is the editor's.
+  const [refusal, setRefusal] = useState<ConfigDiagnostic[] | null>(null);
   // Editable until busy; while the digest check is pending the text is not known to be whole yet.
   const writable = canWrite && isComplete(source) === true;
   // The read-only notice shows once for this source; the card remounts when another source is chosen.
@@ -241,7 +243,12 @@ export function useSourceCard({
     // Put the cursor on the first error so the problem is on screen, not below a long file.
     const first = result.diagnostics.find(d => d.source_id === source.id && d.level === 'error' && d.line !== null);
     jumpTo(first ? first.line : null);
-    if (!result.valid) toast('negative', t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length}));
+    const restart = restartRequired(result.diagnostics);
+    if (!result.valid)
+      toast(
+        'negative',
+        restart ? t('config.writeRestart', {n: restart}) : t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length})
+      );
     else if (announce) toast('positive', t('config.valid'));
     return result.valid;
   };
@@ -252,10 +259,12 @@ export function useSourceCard({
   };
   const save = async () => {
     if (draft === null || editor.busy || !writable || conflict) return;
+    setRefusal(null);
     const result = await editor.apply(draft.origin, draft.text);
     setFound(null);
     if (!result) return;
     if (result.diagnostics) {
+      setRefusal(result.diagnostics);
       presentValidation({valid: false, diagnostics: result.diagnostics}, false);
       return;
     }
@@ -267,6 +276,7 @@ export function useSourceCard({
     editor.cancel();
     setDraft(null);
     setFound(null);
+    setRefusal(null);
   };
   // Typing back to the loaded text leaves nothing to save, so it ends the draft as a cancel does.
   const change = (value: string) => {
@@ -274,6 +284,7 @@ export function useSourceCard({
     if (value === source.content) cancel();
     else {
       setFound(null);
+      setRefusal(null);
       setDraft(prev => ({text: value, origin: prev?.origin ?? source}));
     }
   };
@@ -327,6 +338,7 @@ export function useSourceCard({
         else if (row.action === 'open') open(row.sourceId, row.line);
       }
     },
+    restart: dirty ? restartSettings(saveErrors ?? refusal ?? []) : [],
     marks,
     text,
     outbounds,

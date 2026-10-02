@@ -99,6 +99,29 @@ it('keeps cross-source rejection rows without marking or jumping the edited file
   expect(read().focus).toBeNull();
 });
 
+it.each(['http', 'checked'])('lists the settings of a write refused for needing a restart (%s), and clears them with the draft', async path => {
+  const restart = {
+    ...config.diagnostics[0],
+    level: 'error' as const,
+    code: 'restart-required',
+    line: null,
+    message: 'Changing global.log_level requires restarting honk'
+  };
+  const diagnostics = [restart, {...restart, message: 'Changing dns.bind requires restarting honk'}, {...restart, code: 'unknown_key'}];
+  read().change(props.source.content + '\n# draft');
+  expect(read().restart).toEqual([]);
+  if (path === 'http') {
+    editor.errorSource = props.source.id;
+    editor.diagnostics = diagnostics;
+  } else {
+    vi.mocked(editor.apply).mockResolvedValue({diagnostics});
+    await read().save();
+  }
+  expect(read().restart.map(item => item.key)).toEqual(['global.log_level', 'dns.bind']);
+  read().cancel();
+  expect(read().restart).toEqual([]);
+});
+
 it('retains accepted diagnostics and a legacy focus request before redacted text is checked', () => {
   config.sources[0].content = '<redacted>';
   complete = undefined;

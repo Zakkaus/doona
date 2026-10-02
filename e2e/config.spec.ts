@@ -693,8 +693,16 @@ httpTest('a restart-only change is refused with the setting named, and the next 
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('1 setting takes effect only after a restart; nothing written');
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toContainText('global.log_level');
+  const notice = page.getByRole('alert').filter({hasText: '1 setting needs a restart'});
+  await expect(notice).toContainText('global.log_level');
+  await expect(notice).toContainText('Nothing was written');
+  await expect(notice).toBeFocused();
+  await expect(notice).toContainText('other init systems');
+  await expect(notice).toContainText('systemctl restart honk-core');
+  await expect(notice.getByRole('link', {name: /Reload and restart/})).toHaveAttribute('href', /install\.html#reload-and-restart$/);
   await expect(editor).toContainText('# restart draft');
   await editor.fill((await editor.innerText()) + '\n# revised draft\n');
+  await expect(notice).toHaveCount(0);
   await expect(page.getByRole('list', {name: 'Diagnostics'})).toHaveCount(0);
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
@@ -930,19 +938,23 @@ test('modules are summaries with one link to each editor', async ({page}) => {
 
 test('a located global jumps to its field, writes only the value, and survives navigation', async ({page}) => {
   const {api} = await mockBackend(page);
+  const main = (await api.config()).sources[0];
+  // tproxy_port and its neighbours are restart-only in honk, so the demo refuses to write them; sniffing_timeout reloads.
+  const seeded = main.content.replace('tproxy_port: 12345', 'tproxy_port: 12345\n  sniffing_timeout: 100ms');
+  await api.pollOperation(await api.replaceConfigSource(main.id, seeded, `"${main.content_sha256}"`));
   const original = (await api.config()).sources[0];
-  const line = original.content.slice(0, original.content.indexOf('tproxy_port:')).split('\n').length;
+  const line = original.content.slice(0, original.content.indexOf('sniffing_timeout:')).split('\n').length;
   await page.goto(`/#/config?tab=source&source=${original.id}&line=${line}`);
-  await page.getByRole('link', {name: 'tproxy_port', exact: true}).click();
-  const field = page.getByRole('textbox', {name: 'Transparent proxy port', exact: true});
+  await page.getByRole('link', {name: 'sniffing_timeout', exact: true}).click();
+  const field = page.getByRole('textbox', {name: 'Sniffing timeout', exact: true});
   await expect(field).toBeFocused();
-  await field.fill('23456');
+  await field.fill('200ms');
   await page.getByRole('tabpanel', {name: 'Global settings'}).getByRole('button', {name: 'Write and reload'}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Global settings written');
-  expect((await api.config()).sources[0].content).toBe(original.content.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
+  expect((await api.config()).sources[0].content).toBe(original.content.replace('sniffing_timeout: 100ms', 'sniffing_timeout: 200ms'));
   await page.reload();
-  await expect(field).toHaveValue('23456');
-  await field.fill('23457');
+  await expect(field).toHaveValue('200ms');
+  await field.fill('300ms');
   await page.getByRole('link', {name: 'Configuration', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await expect(dialog).toBeVisible();
@@ -967,11 +979,11 @@ test('source editing writes form-owned values in full', async ({page}) => {
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content');
   await expect(editor).toBeVisible();
-  await editor.fill(original.replace('tproxy_port: 12345', 'tproxy_port: 23456'));
+  await editor.fill(original.replace('allow_insecure: false', 'allow_insecure: true'));
   await expect(page.getByRole('region', {name: 'Diagnostics', exact: true})).toContainText('Current draft');
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
-  expect((await api.config()).sources[0].content).toContain('tproxy_port: 23456');
+  expect((await api.config()).sources[0].content).toContain('allow_insecure: true');
 });
 
 test('legacy validation links focus diagnostics above the source at its line', async ({page}) => {

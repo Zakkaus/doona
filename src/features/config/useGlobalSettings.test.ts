@@ -136,7 +136,7 @@ it.each(['validation', 'apply', '422', 'restart'])('explains %s refusals and cou
     column: null,
     span: null,
     code: mode === 'restart' ? 'restart-required' : 'invalid',
-    message: 'Change refused'
+    message: mode === 'restart' ? 'Changing global.tproxy_port requires restarting honk' : 'Change refused'
   };
   const diagnostics = [diagnostic, {...diagnostic, level: 'warning' as const}, {...diagnostic, level: 'info' as const}];
   if (mode === 'validation') editor.validate.mockResolvedValue({valid: false, diagnostics});
@@ -149,7 +149,9 @@ it.each(['validation', 'apply', '422', 'restart'])('explains %s refusals and cou
   }
   field('tproxy_port').change('23456');
   await read().save();
-  expect(read().failure).toContain(mode === 'restart' ? '1 setting takes effect only after a restart; nothing written' : 'Validation found 1 error');
+  // A restart refusal is told by the restart notice, which lists the setting, not by the failure line.
+  expect(read().failure).toBe(mode === 'restart' ? null : 'Validation found 1 error');
+  expect(read().restart.map(item => item.key)).toEqual(mode === 'restart' ? ['global.tproxy_port'] : []);
   expect(read().dirty).toBe(true);
   if (mode === 'validation') expect(editor.apply).not.toHaveBeenCalled();
   if (mode === '422' || mode === 'restart') expect(read().error).toBeNull();

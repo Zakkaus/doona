@@ -119,7 +119,9 @@ function groupsIn(text: string): Set<string> {
 export function validate(
   request: ConfigValidationRequest,
   generationId: string,
-  localSources: ConfigValidationRequest['sources'] = []
+  // `local` holds files a plain include may name beyond the request; `active` is the accepted source set a full validation
+  // compares restart-only settings against.
+  {local = [], active}: {local?: ConfigValidationRequest['sources']; active?: {id: string; content: string}[]} = {}
 ): ConfigValidationResult {
   const sources = request.sources.map((source, index) => ({...source, id: source.id ?? `source-${index + 1}`}));
   if (new Set(sources.map(source => source.id)).size !== sources.length) throw new ApiError(400, 'invalid_request', 'Source IDs must be unique');
@@ -127,7 +129,7 @@ export function validate(
   if (request.mode === 'full') {
     // The first source is the main one; every include resolves from its directory.
     const base = sources[0]?.path;
-    const byPath = new Map([...localSources, ...sources].filter(source => source.path).map(source => [resolveIncludePath(undefined, source.path!), source]));
+    const byPath = new Map([...local, ...sources].filter(source => source.path).map(source => [resolveIncludePath(undefined, source.path!), source]));
     const visited = new Set(sources.map(source => source.path && resolveIncludePath(undefined, source.path)));
     for (let index = 0; index < sources.length; index++) {
       const source = sources[index];
@@ -163,5 +165,61 @@ export function validate(
   }
   const groups = request.mode === 'full' ? new Set(sources.flatMap(source => [...groupsIn(source.content)])) : new Set<string>();
   diagnostics.push(...sources.flatMap(source => diagnose(source.id, source.content, groups, request.mode)));
+  if (request.mode === 'full' && active) diagnostics.push(...restartDiagnostics(active, sources));
   return {valid: !diagnostics.some(item => item.level === 'error'), diagnostics, generation_id: generationId, validated_at: new Date().toISOString()};
+}
+
+// The demo mirrors honk's global restart-only settings, so a candidate set that changes one of them from the accepted
+// files is refused as honk's reload check refuses it. Each setting is read from the first statement in the global
+// sections, so neither source IDs nor the layout of the block matter.
+const restartOnlyKeys = [
+  'check_interval',
+  'tcp_check_url',
+  'tcp_check_http_method',
+  'udp_check_dns',
+  'tls_implementation',
+  'tproxy_port',
+  'tproxy_mark',
+  'tproxy_port_protect',
+  'pprof_port',
+  'so_mark_from_dae',
+  'log_level',
+  'log_file',
+  'lan_interface',
+  'wan_interface',
+  'auto_config_kernel_parameter',
+  'data_dir',
+  'store_subscribe',
+  'nfqueue_enable'
+];
+const globalSettings = (sources: {id: string; content: string}[]) => {
+  const first = new Map<string, {id: string; line: number; value: string}>();
+  for (const {id, content} of sources)
+    for (const {code, line} of sectionLines(content, 'global')) {
+      const match = /^(\w+)\s*:\s*(.*)$/.exec(code);
+      if (match && !first.has(match[1])) first.set(match[1], {id, line, value: unquote(match[2])});
+    }
+  return first;
+};
+function restartDiagnostics(active: {id: string; content: string}[], candidate: {id: string; content: string}[]): ConfigDiagnostic[] {
+  const before = globalSettings(active);
+  const after = globalSettings(candidate);
+  // honk compares tls_implementation only as "is utls". Removing a setting is not flagged: only a new value is a change the demo can name.
+  const isUtls = (value?: string) => value?.toLowerCase() === 'utls';
+  return restartOnlyKeys.flatMap(key => {
+    const next = after.get(key);
+    const prev = before.get(key);
+    if (!next || (key === 'tls_implementation' ? isUtls(next.value) === isUtls(prev?.value) : next.value === prev?.value)) return [];
+    return [
+      {
+        level: 'error' as const,
+        source_id: next.id,
+        line: next.line,
+        column: null,
+        span: null,
+        code: 'restart-required',
+        message: `Changing global.${key} requires restarting honk`
+      }
+    ];
+  });
 }
