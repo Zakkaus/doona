@@ -23,6 +23,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- Table headers and cells use start alignment, including numeric columns with tabular digits. Action headers align with the first action slot's icon inset. Rule actions keep their source, edit and remove slots when a button is absent. (#320)
+
 - Pressing Enter twice quickly on a drag handle no longer starts a second drag and raises an error; the second press is ignored until the first drag is ready for its keys. (#300)
 - On the Config page, every module card shows one summary line under its header instead of status dots, a per-node edit link list, and the group policies. The Nodes page no longer accepts the `editNodeSource` link parameter that only those links used. (#298)
 - An operation the backend accepted whose progress can no longer be read is reported as having an unknown result, and the page is read again, for every operation rather than only configuration writes. A group selection or runtime setting refused as temporarily unavailable reads the group or the settings back, since the change may have been stored, and the control stays busy until that read lands and the backend's Retry-After has passed. (#303)

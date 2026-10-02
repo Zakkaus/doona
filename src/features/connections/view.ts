@@ -57,15 +57,15 @@ export function connectionDetails(c: Connection, locale: string): Array<[Key, st
 
 // `drop` orders which columns give way first when a table wider than a phone is narrower than the minima (see fitColumns);
 // the target column always stays.
-export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; align?: 'end'; drop?: number}> = [
+export const columns: Array<{id: string; label: Key; minWidth: number; sortable?: boolean; drop?: number}> = [
   {id: 'dst', label: 'ui.target', minWidth: 200, sortable: true},
   {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 5},
   {id: 'node', label: 'conn.node', minWidth: 120, drop: 3},
   {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 2},
   {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 7},
-  {id: 'down', label: 'ui.download', minWidth: 96, align: 'end', sortable: true, drop: 4},
-  {id: 'downRate', label: 'conn.f.downloadRate', minWidth: 128, align: 'end', sortable: true, drop: 1},
-  {id: 'age', label: 'ui.started', minWidth: 132, align: 'end', sortable: true, drop: 6}
+  {id: 'down', label: 'ui.download', minWidth: 96, sortable: true, drop: 4},
+  {id: 'downRate', label: 'conn.f.downloadRate', minWidth: 128, sortable: true, drop: 1},
+  {id: 'age', label: 'ui.started', minWidth: 132, sortable: true, drop: 6}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
 type GroupRow = {id: string; group: string; children: Connection[]; active: number; download: bigint | null};

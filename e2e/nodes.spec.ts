@@ -34,6 +34,34 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await expect(list).toHaveCount(1);
 });
 
+test('node cell content starts at its header text, including latency and action icons', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes?provider=inline');
+  const table = page.locator('.rp-table').nth(1);
+  await expect(rows(table)).toHaveCount(5);
+  await page.evaluate(() => document.fonts.ready);
+  for (const label of ['Protocol', 'Latency', 'Groups', 'Actions']) {
+    const header = table.getByRole('columnheader', {name: new RegExp(`^${label}`)});
+    const index = await header.evaluate(el => [...el.parentElement!.children].indexOf(el));
+    const cell = rows(table).first().locator('[role=rowheader], [role=gridcell]').nth(index);
+    const headerLeft = await header.locator('.rp-th').evaluate(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el.firstChild!);
+      return range.getBoundingClientRect().left;
+    });
+    const contentLeft = await cell.evaluate((el, label) => {
+      if (label === 'Actions') return el.querySelector('svg')!.getBoundingClientRect().left;
+      if (label === 'Latency' || label === 'Groups') return el.firstElementChild!.getBoundingClientRect().left;
+      const text = document.createTreeWalker(el, NodeFilter.SHOW_TEXT).nextNode()!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return range.getBoundingClientRect().left;
+    }, label);
+    expect(Math.abs(contentLeft - headerLeft), label).toBeLessThanOrEqual(2);
+    if (label === 'Latency') expect(await cell.evaluate(el => getComputedStyle(el).fontVariantNumeric)).toBe('tabular-nums');
+  }
+});
+
 test('a share link becomes an inline node and can be removed again', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
   const table = page.locator('.rp-table').nth(1);

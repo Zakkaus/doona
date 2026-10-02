@@ -126,10 +126,22 @@
 :where(:root[data-mirror] *) {
   unicode-bidi: plaintext;
 }
-:root[data-mirror] :is(input, textarea, .rp-tree-tile, .rp-table [role='columnheader'], .rp-node, .rp-search, .rp-disclosure-trigger, .rp-drill-back) {
+:root[data-mirror]
+  :is(
+    input,
+    textarea,
+    .rp-tree-tile,
+    .rp-table [role='columnheader'],
+    .rp-table [role='rowheader'],
+    .rp-table [role='gridcell'],
+    .rp-node,
+    .rp-search,
+    .rp-disclosure-trigger,
+    .rp-drill-back
+  ) {
   text-align: right;
 }
-:root[data-mirror] :is(.rp-table .end, .rp-markerplot .row .value, .rp-donut .r .p, .cm-editor) {
+:root[data-mirror] :is(.rp-markerplot .row .value, .rp-donut .r .p, .cm-editor) {
   text-align: left;
 }
 .rp-dae-comment {
