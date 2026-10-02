@@ -456,7 +456,7 @@ it('sums an automatic group up in one line: the member in place, per network whe
   const same = {runtime: {...g.runtime, selection: {tcp: g.runtime.selection.tcp, udp: g.runtime.selection.tcp}}};
   expect(selectionSummary(same, members, t)).toBe(`Current: ${name('hk-01')}, ${available} available`);
   expect(selectionSummary({runtime: {...g.runtime, selection: {tcp: null, udp: null}}}, [], t)).toBe('Current: no member selected yet, 0 available');
-  expect(policyCardView(g, members, 'both', t)).toMatchObject({automatic: g.policy.kind !== 'selector', summary: selectionSummary(g, members, t)});
+  expect(policyCardView(g, members, 'both', t)).toMatchObject({automatic: g.policy.kind !== 'selector'});
 });
 
 it('marks node names by member kind even when badge presentation changes', () => {

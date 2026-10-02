@@ -15,7 +15,8 @@ it('lays the config out as a tree and weights it with retained flows', async () 
     expect(entry.must).toBe(rule.must);
     expect(tree.links.some(link => link.source === entry.id && link.target === 'outbound:' + rule.outbound)).toBe(true);
   }
-  expect(tree.leaves.find(rule => rule.fallback)?.outbound).toBe('outbound:' + rules.fallback.outbound);
+  const fallback = rules.rules.find(rule => rule.kind === 'fallback')!;
+  expect(tree.leaves.find(leaf => leaf.id === 'rule:' + fallback.rule_id)?.outbound).toBe('outbound:' + rules.fallback.outbound);
   // A group appears as an outbound or inside a nested selection.
   for (const group of groups) {
     expect(tree.outbounds.some(outbound => outbound.groups.some(nested => nested.name === group.name))).toBe(true);

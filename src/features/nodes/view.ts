@@ -62,9 +62,6 @@ export function providerChanges(form: ProviderForm, entry: SubscriptionText, def
   };
 }
 
-export const providerEdited = (form: ProviderForm, entry: SubscriptionText, defaultCache: boolean | undefined) =>
-  Object.values(providerChanges(form, entry, defaultCache)).some(Boolean);
-
 export function subscriptionActionKind(unique: boolean, daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | undefined) {
   if (unique && daeText && canWrite && source.writable && complete === undefined) return null;
   return unique && editableSource(daeText, canWrite, source, complete) ? 'edit' : 'open';

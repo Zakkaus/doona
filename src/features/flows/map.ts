@@ -5,7 +5,7 @@ import {healthMillis, preferredHealth, resolveSelectedLeaf, sourceIp} from '../.
 
 export type TreeBy = 'rule' | 'client';
 export type TreeItem = {id: string; label: string; count: number; unknown?: boolean};
-type TreeLeaf = TreeItem & {outbound: string | null; must: boolean; fallback: boolean};
+type TreeLeaf = TreeItem & {outbound: string | null; must: boolean};
 type TreeGroup = {name: string; kind: GroupSummary['policy']['kind']; policy: string};
 // A group's selection may be another group; `groups` is the whole chain, the first entry being the outbound itself.
 type TreeOutbound = TreeItem & {kind: 'direct' | 'block' | 'group' | 'unknown'; groups: TreeGroup[]; node: string | null};
@@ -118,7 +118,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   };
   const leafItem = (id: string, label: string, unknown = false) => {
     let entry = leafItems.get(id);
-    if (!entry) leafItems.set(id, (entry = {id, label, count: 0, unknown: unknown || undefined, outbound: null, must: false, fallback: false}));
+    if (!entry) leafItems.set(id, (entry = {id, label, count: 0, unknown: unknown || undefined, outbound: null, must: false}));
     return entry;
   };
   // Config first, in evaluation order: every rule, its outbound and the selected node exist before a flow used them.
@@ -126,7 +126,6 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
     for (const rule of rules?.rules ?? []) {
       const entry = leafItem(stageId('rule', {key: rule.rule_id, label: rule.expression}), rule.expression);
       entry.must = rule.must;
-      entry.fallback = rule.kind === 'fallback';
       if (rule.outbound) {
         entry.outbound = outboundItem(rule.outbound).id;
         link(entry.id, entry.outbound);
