@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {TextTooltip, Card, Light, Link} from '../../ui/ui';
+import {Card, Link} from '../../ui/ui';
 import {useModules, type ModulesProps} from './useModules';
 export function Modules(props: ModulesProps) {
   const t = useT();
@@ -19,25 +19,7 @@ export function Modules(props: ModulesProps) {
               </Link>
             )}
           </div>
-          {card.nodeLinks.length > 0 && (
-            <div className="rp-cluster">
-              {card.nodeLinks.map(node => (
-                <Link key={node.name} appearance="link" layout="constrained" href={node.href}>
-                  <TextTooltip>{t('nodes.edit', {name: node.name})}</TextTooltip>
-                </Link>
-              ))}
-            </div>
-          )}
-          {card.summary && (
-            <Light small tone="muted">
-              {card.summary}
-            </Light>
-          )}
-          {card.note && (
-            <Light small tone="muted">
-              {card.note}
-            </Light>
-          )}
+          <span className="rp-label">{card.note ?? card.summary}</span>
         </Card>
       ))}
     </div>

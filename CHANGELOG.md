@@ -12,6 +12,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Pressing Enter twice quickly on a drag handle no longer starts a second drag and raises an error; the second press is ignored until the first drag is ready for its keys. (#300)
+- On the Config page, every module card shows one summary line under its header instead of status dots, a per-node edit link list, and the group policies. The Nodes page no longer accepts the `editNodeSource` link parameter that only those links used. (#298)
 - On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
 
 ## [0.1.0-beta.12] - 2026-09-30

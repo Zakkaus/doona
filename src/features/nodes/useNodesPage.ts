@@ -10,7 +10,6 @@ import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
-import {nodeOwner} from '../../api/selectors';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -176,30 +175,6 @@ export function useNodesPage({go, query}: PageProps) {
     });
     return () => cancelAnimationFrame(frame);
   }, [params, providers.data, config.data, list, editAction, query]);
-  useLayoutEffect(() => {
-    const sourceId = params.get('editNodeSource');
-    const line = params.get('line');
-    if (!sourceId || !config.data || !nodes.data) return;
-    const own = authored.find(item => item.source.id === sourceId && String(item.entry.line) === line);
-    if (!own || isComplete(own.source) !== true || !own.source.writable || !daeText || !source.writable) return;
-    if (authored.filter(item => item.entry.name === own.entry.name).length !== 1) return;
-    const frame = requestAnimationFrame(() => {
-      const node = nodes.data!.find(
-        node => node.name === own.entry.name && providers.data?.providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline')
-      );
-      replaceRoute(
-        'nodes',
-        within(query, {
-          editNodeSource: null,
-          line: null,
-          provider: node ? nodeOwner(node, providers.data?.providers ?? []) : params.get('provider'),
-          node: node?.id ?? null
-        })
-      );
-      open({kind: 'editNode', ...own});
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [params, config.data, nodes.data, providers.data, authored, isComplete, daeText, source.writable, query, open]);
   const selectedId = selectedProvider(list, params.get('provider'));
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
