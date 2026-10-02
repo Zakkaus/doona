@@ -123,7 +123,7 @@ it('groups, sorts and describes by the displayed labels', () => {
     ['unknown', 2]
   ]);
   const described = connectionTableView(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', new Map(), false, t);
-  expect(described.map(row => ('label' in row ? row.label : row.id))).toEqual([`${t('ui.direct')} (1)`, `${t('ui.unknown')} (2)`]);
+  expect(described.map(row => ('label' in row ? row.label : row.id))).toEqual([`${t('ui.direct')}, 1 connection`, `${t('ui.unknown')}, 2 connections`]);
   const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, 'en-US', t);
   expect(sorted.map(row => row.id)).toEqual(
     [...list].sort((x, y) => compareNames('en-US')(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id)

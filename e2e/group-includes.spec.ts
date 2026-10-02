@@ -349,11 +349,11 @@ test('legacy region counts agree on the card, checkbox, tag and summary before a
   const {api} = await mockBackend(page);
   await page.goto('/#/policies?group=hk');
   const card = cardFor(page, 'hk');
-  await expect(card.getByRole('group', {name: 'Includes', exact: true})).toHaveText('Hong Kong (12 nodes)');
+  await expect(card.getByRole('group', {name: 'Includes', exact: true})).toHaveText('Hong Kong, 12 nodes');
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group hk', exact: true});
-  await expect(dialog.getByRole('checkbox', {name: 'Hong Kong (12 nodes)', exact: true})).toBeChecked();
-  await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('Hong Kong (12 nodes)');
+  await expect(dialog.getByRole('checkbox', {name: 'Hong Kong, 12 nodes', exact: true})).toBeChecked();
+  await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('Hong Kong, 12 nodes');
   await expect(dialog.getByRole('status')).toHaveText('12 nodes');
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
   await expect(dialog.getByRole('textbox')).toHaveCount(0);
@@ -369,10 +369,10 @@ test('legacy region counts agree on the card, checkbox, tag and summary before a
     .locator('label')
     .filter({has: page.getByRole('checkbox', {name: /^Hong Kong/})})
     .click();
-  await expect(dialog.getByRole('checkbox', {name: 'Hong Kong (14 nodes)', exact: true})).toBeChecked();
+  await expect(dialog.getByRole('checkbox', {name: 'Hong Kong, 14 nodes', exact: true})).toBeChecked();
   await expect(dialog.getByRole('status')).toHaveText('14 nodes');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(card.getByRole('group', {name: 'Includes', exact: true})).toHaveText('Hong Kong (14 nodes)');
+  await expect(card.getByRole('group', {name: 'Includes', exact: true})).toHaveText('Hong Kong, 14 nodes');
 });
 
 test('the membership summary is a short count with names in a collapsed tag list', async ({page}) => {

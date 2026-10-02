@@ -696,7 +696,7 @@ test('the node list names its source, groups a node by a labelled menu, and refr
     .getByRole('button', {name: 'Node actions', exact: true});
   await expect(join).toHaveAccessibleName('Node actions');
   await expect(join).toHaveText('');
-  await page.getByRole('button', {name: 'Update subscription (1)', exact: true}).click();
+  await page.getByRole('button', {name: 'Update 1 subscription', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Subscriptions updated: 1 of 1'})).toBeVisible();
 });
 

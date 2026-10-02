@@ -375,7 +375,10 @@
   "conn.filters": "Filters",
   "conn.filtersActive": "Filters, {n} applied",
   "conn.group": "Group by",
-  "conn.groupCount": "{name} ({n})",
+  "conn.groupCount": {
+    "one": "{name}, {n} connection",
+    "other": "{name}, {n} connections"
+  },
   "conn.latency.hint": "Each dot is one node, at the TCP latency the Nodes page shows.",
   "conn.latency.inUse": "In use",
   "conn.latency.others": "Not in use",
@@ -484,8 +487,8 @@
   "dns.chart.shortPage": "The backend ended this page early: {n} of {limit} records",
   "dns.chart.slowest": "P95: {value}",
   "dns.chart.speed": {
-    "one": "Upstream latency ({n} lookup)",
-    "other": "Upstream latency ({n} lookups)"
+    "one": "Upstream latency for {n} lookup",
+    "other": "Upstream latency for {n} lookups"
   },
   "dns.chart.tooFew": "Too few records to chart yet",
   "dns.chart.typical": "Median: {value}",
@@ -805,8 +808,8 @@
     "other": "{n} nodes still match another filter and remain included."
   },
   "group.subscriptionCount": {
-    "one": "{name} ({n} node)",
-    "other": "{name} ({n} nodes)"
+    "one": "{name}, {n} node",
+    "other": "{name}, {n} nodes"
   },
   "group.subscriptions": "Subscriptions",
   "group.takenName": "A group with this name already exists.",
@@ -1399,11 +1402,14 @@
     "other": "{n} rules are in effect"
   },
   "rule.applyFiles": {
-    "one": "Apply ({n}); writes {files} file",
-    "other": "Apply ({n}); writes {files} files"
+    "one": "{rules}; writes {files} file",
+    "other": "{rules}; writes {files} files"
   },
   "rule.applyHeld": "Apply held rules",
-  "rule.applyPending": "Apply ({n})",
+  "rule.applyPending": {
+    "one": "Apply {n} rule",
+    "other": "Apply {n} rules"
+  },
   "rule.beforeMatchedNote": "Placed before the rule that matches now.",
   "rule.condition": "Condition",
   "rule.conditionInvalid": "The condition must be a single line containing a call such as domain(…), with balanced parentheses and no ->, # comment or braces",
@@ -1811,8 +1817,8 @@
   "settings.recordingIdle": "Idle",
   "settings.recordingRequirements": "View enabling requirements",
   "settings.refreshAll": {
-    "one": "Update subscription ({n})",
-    "other": "Update all subscriptions ({n})"
+    "one": "Update {n} subscription",
+    "other": "Update {n} subscriptions"
   },
   "settings.refreshAllFailed": "Could not update subscriptions",
   "settings.refreshedAll": "Subscriptions updated: {n} of {total}",
@@ -1903,7 +1909,10 @@
   "toast.copied": "Error details copied",
   "toast.copyError": "Copy error",
   "toast.copyFailed": "Could not copy the error details",
-  "toast.showAllCount": "Show all ({n})",
+  "toast.showAllCount": {
+    "one": "Show all {n} notification",
+    "other": "Show all {n} notifications"
+  },
   "ui.actions": "Actions",
   "ui.activationDegraded": "The change is active, but part of the datapath did not load",
   "ui.activationDegradedSaved": "The change is active, but part of the datapath did not load. It was saved",
