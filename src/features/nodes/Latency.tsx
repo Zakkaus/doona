@@ -7,7 +7,7 @@ import {FactStrip, MarkerPlot, type ChartFact} from '../../ui/charts';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import Clock from '../../ui/icons/Clock';
 import SpeedFast from '../../ui/icons/SpeedFast';
-import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyMax, latencyRange, type LatencyBy, type LatencyMissing} from './latencyGroups';
+import {latencyAverages, latencyMax, latencyPlotRow, latencySummary, type LatencyBy, type LatencyMissing} from './latencyGroups';
 import {nodeSetHref} from '../shared/link';
 import {useLatencyTab} from './useLatencyTab';
 
@@ -53,9 +53,7 @@ export function NodeLatency() {
   if (!nodes.data) return <Loading />;
   if (!nodes.data.length) return <Empty>{t('ui.empty')}</Empty>;
   const averages = latencyAverages(view);
-  // One entry per node for the summary, whichever groups it sits in.
-  const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
-  const down = new Set(view.flatMap(group => group.missing.filter(row => row.state === 'unavailable').map(row => row.id))).size;
+  const {measured, down} = latencySummary(view);
   const facts: ChartFact[] = measured.length
     ? [
         {
@@ -134,26 +132,7 @@ export function NodeLatency() {
           groups={view.map(group => ({
             id: group.id,
             label: group.label ?? t(by === 'group' ? 'nodes.latency.noGroup' : 'nodes.latency.noProtocol'),
-            rows: group.rows.map(row => {
-              const slower = isSlowerThanUsual(row);
-              return {
-                id: row.id,
-                label: row.name,
-                nodeName: true,
-                href: hrefs.get(row.id),
-                value: row.latest,
-                average: latencyAverage(row),
-                range: latencyRange(row),
-                text: formatLatency(row.latest, t),
-                tone: slower ? ('notice' as const) : undefined,
-                details: () => [
-                  t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
-                  ...(averages.moving ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
-                  ...(averages.avg10 ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
-                  ...(slower ? [t('nodes.latency.slower')] : [])
-                ]
-              };
-            }),
+            rows: group.rows.map(row => latencyPlotRow(row, t, hrefs.get(row.id))),
             notes: notes(group.missing)
           }))}
         />

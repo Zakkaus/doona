@@ -1,12 +1,41 @@
 import type {GroupSummary, Node} from '../../api/model';
 import {preferredHealth} from '../../api/selectors';
 import {percentile} from '../../ui/charts/layout';
-import {compareNames} from '../../i18n/format';
+import type {Translator} from '../../i18n';
+import {compareNames, formatLatency} from '../../i18n/format';
 
 export type LatencyBy = 'group' | 'protocol';
 export type LatencyRow = {id: string; name: string; latest: number; moving: number | null; avg10: number | null};
 export type LatencyMissing = {id: string; name: string; state: 'unavailable' | 'unmeasured'};
 export type LatencyGroup = {id: string; label: string | null; rows: LatencyRow[]; missing: LatencyMissing[]};
+
+export function latencySummary(view: LatencyGroup[]): {measured: LatencyRow[]; missing: LatencyMissing[]; down: number} {
+  const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);
+  const missing = [...new Map(view.flatMap(group => group.missing).map(row => [row.id, row])).values()];
+  const down = new Set(view.flatMap(group => group.missing.filter(row => row.state === 'unavailable').map(row => row.id))).size;
+  return {measured, missing, down};
+}
+
+export function latencyPlotRow(row: LatencyRow, t: Translator, href?: string) {
+  const slower = isSlowerThanUsual(row);
+  return {
+    id: row.id,
+    label: row.name,
+    nodeName: true as const,
+    href,
+    value: row.latest,
+    average: latencyAverage(row),
+    range: latencyRange(row),
+    text: formatLatency(row.latest, t),
+    tone: slower ? ('notice' as const) : undefined,
+    details: () => [
+      t('ui.valuePair', {label: t('nodes.latency.latest'), value: formatLatency(row.latest, t)}),
+      ...(row.moving !== null ? [t('ui.valuePair', {label: t('nodes.latency.moving'), value: formatLatency(row.moving, t)})] : []),
+      ...(row.avg10 !== null ? [t('ui.valuePair', {label: t('nodes.latency.avg10'), value: formatLatency(row.avg10, t)})] : []),
+      ...(slower ? [t('nodes.latency.slower')] : [])
+    ]
+  };
+}
 
 // Each node's latest latency and its two averages, from the same preferred observation the node table shows,
 // grouped by policy group (a node in several groups appears in each) or by protocol; fastest first.
