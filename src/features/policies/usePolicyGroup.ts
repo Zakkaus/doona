@@ -1,5 +1,5 @@
 import {href} from '../../shell/route';
-import {includeChoices, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
+import {selectedIncludeLabels, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
 import {quoteName, isWritableName} from '../../dae/groups';
 import {useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {useT, useLang} from '../../i18n';
@@ -95,7 +95,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (input.editRequested && declared.editable && !declared.open) openRequested();
   }, [input.editRequested, declared.editable, declared.open]);
   const filters = useMemo(() => (declaration.owner && declaration.owner !== 'ambiguous' ? declaration.owner.entry.filters : []), [declaration.owner]);
-  const choices = useMemo(() => includeChoices(filters, input.nodes ?? [], input.providers ?? [], lang), [filters, input.nodes, input.providers, lang]);
+  const named = useMemo(() => selectedIncludeLabels(filters, input.nodes ?? [], input.providers ?? [], lang), [filters, input.nodes, input.providers, lang]);
   const includes = {
     filters:
       declaration.owner && declaration.owner !== 'ambiguous'
@@ -105,12 +105,16 @@ export function usePolicyGroup(input: PolicyGroupInput) {
         : null,
     tags: (['region', 'subscription', 'node', 'group'] as const).flatMap(kind =>
       selectedIncludes(filters, kind).map(value => {
-        const choice = kind === 'group' ? undefined : choices[kind].find(item => item.id === value);
+        const region = kind === 'region' ? named.regions.get(value) : undefined;
         return {
           id: `${kind}:${value}`,
           nodeName: kind === 'node',
           href: kind === 'group' ? href('policies', {group: value}) : undefined,
-          label: kind === 'region' && choice ? t('group.subscriptionCount', {name: choice.label, n: choice.count}) : (choice?.label ?? value)
+          label: region
+            ? t('group.subscriptionCount', {name: region.label, n: region.count})
+            : kind === 'subscription'
+              ? (named.subscriptions.get(value) ?? value)
+              : value
         };
       })
     )

@@ -96,11 +96,10 @@ export function setIncludes(filters: string[], kind: IncludeKind, selected: stri
   if (active.length) return active;
   return filters.some(filter => filter.trim()) ? [noNodes] : next;
 }
-// Counts and previews share the matches of the exact filter strings kept in the draft.
-export function includeMatches(filters: string[], nodes: Node[]) {
-  const lines = filters.map(filter => filter.trim()).filter(Boolean);
+// Nodes matching a set of filter lines, each distinct line compiled once.
+function matcher(nodes: Node[]) {
   const cache = new Map<string, Node[]>();
-  const matching = (filters: string[]) => {
+  return (filters: string[]) => {
     if (!filters.length) return nodes.filter(compileFilters([]));
     const matched = new Set(
       filters.flatMap(filter => {
@@ -110,17 +109,41 @@ export function includeMatches(filters: string[], nodes: Node[]) {
     );
     return nodes.filter(node => matched.has(node));
   };
-  const selected = matching(lines);
-  const regions = new Map(
-    regionFilters.map(region => {
-      const kept = lines.filter(filter => {
-        const include = recogniseInclude(filter);
-        return include?.kind === 'region' && include.values.includes(region.id);
-      });
-      return [region.id, matching(kept.length ? kept : [region.filter])];
-    })
-  );
-  return {selected, regions};
+}
+const includeLines = (filters: string[]) => filters.map(filter => filter.trim()).filter(Boolean);
+// A region counts the lines that select it, or its own filter when none does.
+function regionLines(lines: string[], region: (typeof regionFilters)[number]) {
+  const kept = lines.filter(filter => {
+    const include = recogniseInclude(filter);
+    return include?.kind === 'region' && include.values.includes(region.id);
+  });
+  return kept.length ? kept : [region.filter];
+}
+// Counts and previews share the matches of the exact filter strings kept in the draft.
+export function includeMatches(filters: string[], nodes: Node[]) {
+  const lines = includeLines(filters);
+  const matching = matcher(nodes);
+  return {selected: matching(lines), regions: new Map(regionFilters.map(region => [region.id, matching(regionLines(lines, region))]))};
+}
+const subscriptionLabel = (tag: string, nodes: Node[], providers: Provider[]) => {
+  const owned = nodes.filter(node => node.subscription_tag === tag);
+  return providers.find(provider => provider.kind === 'subscription' && owned.some(node => node.provider_id === provider.id))?.name ?? tag;
+};
+// What a card names for the regions and subscriptions a group selects. Unlike includeChoices, it matches only the
+// selected regions, since a card never lists the others.
+export function selectedIncludeLabels(filters: string[], nodes: Node[], providers: Provider[], locale: string) {
+  const lines = includeLines(filters);
+  const matching = matcher(nodes);
+  const names = new Map(flagChoices(locale).map(region => [region.id, region.label]));
+  return {
+    regions: new Map(
+      selectedIncludes(filters, 'region').flatMap(id => {
+        const region = regionFilters.find(region => region.id === id);
+        return region ? [[id, {label: names.get(id) ?? id, count: matching(regionLines(lines, region)).length}] as const] : [];
+      })
+    ),
+    subscriptions: new Map(selectedIncludes(filters, 'subscription').map(tag => [tag, subscriptionLabel(tag, nodes, providers)]))
+  };
 }
 export function includeChoices(filters: string[], nodes: Node[], providers: Provider[], locale: string, declaredTags: string[] = []) {
   const matches = includeMatches(filters, nodes);
@@ -136,11 +159,12 @@ export function includeChoices(filters: string[], nodes: Node[], providers: Prov
     ...nodes.flatMap(node => (node.subscription_tag && subscriptionIds.has(node.provider_id ?? '') ? [node.subscription_tag] : [])),
     ...selectedIncludes(filters, 'subscription')
   ]);
-  const subscriptions = [...tags].map(tag => {
-    const owned = nodes.filter(node => node.subscription_tag === tag);
-    const provider = providers.find(provider => provider.kind === 'subscription' && owned.some(node => node.provider_id === provider.id));
-    return {id: tag, label: provider?.name ?? tag, count: owned.length, disabled: !isWritableName(tag)};
-  });
+  const subscriptions = [...tags].map(tag => ({
+    id: tag,
+    label: subscriptionLabel(tag, nodes, providers),
+    count: nodes.filter(node => node.subscription_tag === tag).length,
+    disabled: !isWritableName(tag)
+  }));
   const nodeCounts = new Map<string, number>();
   for (const node of nodes) nodeCounts.set(node.name, (nodeCounts.get(node.name) ?? 0) + 1);
   const nodeNames = new Set([...nodeCounts.keys(), ...selectedIncludes(filters, 'node')]);
