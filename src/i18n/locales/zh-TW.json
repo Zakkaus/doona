@@ -882,6 +882,7 @@
   "nodes.linkInvalid": "節點連結須為 vless://… 這類格式",
   "nodes.manualOnly": "僅手動",
   "nodes.minutes": "分鐘",
+  "nodes.moreGroups": "另有 {n} 個群組",
   "nodes.name": "名稱",
   "nodes.nameInvalid": "名稱只能使用英文字母、數字、_、. 與 -",
   "nodes.nameMissing": "須填寫名稱",

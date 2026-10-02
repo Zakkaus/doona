@@ -1029,6 +1029,10 @@
   "nodes.linkInvalid": "The node link must look like vless://…",
   "nodes.manualOnly": "Manual only",
   "nodes.minutes": "Minutes",
+  "nodes.moreGroups": {
+    "one": "{n} more group",
+    "other": "{n} more groups"
+  },
   "nodes.name": "Name",
   "nodes.nameInvalid": "The name may use only letters, digits, _, . and -",
   "nodes.nameMissing": "Enter a name",

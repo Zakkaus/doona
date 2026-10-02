@@ -366,6 +366,59 @@ export async function expectTextInside(cell: Locator) {
   ).toBe(true);
 }
 
+// The Nodes table's group tags: whole tags on one line inside each cell, nothing that scrolls, every row's line one
+// height, and a "+N" tag whose tip names all of a node's groups without pressing the row.
+export async function expectFittedGroupTags(page: Page) {
+  const table = page.locator('.rp-table').nth(1);
+  const lines = table.locator('.rp-tags[data-fit]');
+  await expect(lines.first()).toBeVisible();
+  const cells = await lines.evaluateAll(els =>
+    els.map(el => {
+      const cell = el.closest('[role="gridcell"]')!;
+      const style = getComputedStyle(cell);
+      const end = cell.getBoundingClientRect().right - parseFloat(style.paddingRight);
+      return {
+        scrolls: [cell, ...cell.querySelectorAll('*')].filter(node => node.scrollWidth > node.clientWidth).length,
+        beyond: [...el.children].filter(tag => tag.getBoundingClientRect().right > end + 0.01).length,
+        height: el.getBoundingClientRect().height
+      };
+    })
+  );
+  expect(cells.filter(cell => cell.scrolls || cell.beyond)).toEqual([]);
+  expect(new Set(cells.map(cell => cell.height)).size).toBe(1);
+  const line = lines.filter({has: page.locator('.rp-tag-more')}).first();
+  const more = line.locator('.rp-tag-more');
+  const shown = await line.locator('.rp-tag-link').allTextContents();
+  const hidden = Number((await more.textContent())!.slice(1));
+  expect(hidden).toBeGreaterThan(0);
+  await expect(more).toHaveAccessibleName(`${hidden} more group${hidden === 1 ? '' : 's'}`);
+  const tip = page.getByRole('tooltip');
+  const names = async () => (await tip.textContent())!.trim().split(', ');
+  // A pointer move first puts react-aria in pointer modality, where hovering opens a tip.
+  await page.mouse.move(0, 0);
+  await more.hover();
+  await expect(tip).toBeVisible();
+  const all = await names();
+  expect(all).toHaveLength(shown.length + hidden);
+  expect(all.slice(0, shown.length)).toEqual(shown);
+  expect(all.slice(shown.length).filter(name => shown.includes(name))).toEqual([]);
+  // Pressing it neither follows a link nor opens the row's detail.
+  const url = page.url();
+  await more.click();
+  await expect(tip).toBeVisible();
+  expect(page.url()).toBe(url);
+  await expect(table.locator('[role=row][data-selected]')).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await more.blur();
+  await expect(tip).toBeHidden();
+  // Focus lands on the row; the arrow keys walk its cells and their tags up to the overflow tag.
+  await more.focus();
+  for (let step = 0; step < 12 && !(await more.evaluate(el => el === document.activeElement)); step++) await page.keyboard.press('ArrowRight');
+  await expect(more).toBeFocused();
+  await expect(tip).toBeVisible();
+  expect(await names()).toEqual(all);
+}
+
 // The dialog starts with no outbound, so a rule is written only after one is chosen.
 export async function pickOutbound(dialog: Locator, name: string) {
   await dialog.getByRole('button', {name: /Outbound$/}).click();

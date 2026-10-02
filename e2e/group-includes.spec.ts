@@ -111,7 +111,9 @@ test('membership jumps stage the node without writing and node links focus their
   await expect(page).toHaveURL(/#\/nodes\?group=hk/);
   await expect(page.getByRole('button', {name: /Group$/})).toContainText('hk');
   const row = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'jp-01', exact: true})});
-  await row.getByRole('link', {name: 'hk', exact: true}).click();
+  // The group joined last can sit behind the row's "+N" tag; the row's detail links every group.
+  await row.getByRole('rowheader').click();
+  await page.locator('.rp-table-detail').getByRole('link', {name: 'hk', exact: true}).click();
   await expect(card.getByRole('heading', {name: 'hk', exact: true})).toBeFocused();
   await expect(card).toHaveAttribute('data-highlighted', 'true');
   await expect(page.getByRole('dialog')).toHaveCount(0);

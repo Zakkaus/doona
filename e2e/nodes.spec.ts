@@ -1,7 +1,7 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {editorText, box} from './fixtures';
-import {expect, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
+import {expect, expectFittedGroupTags, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
@@ -331,6 +331,13 @@ test('an unavailable latency fits its column in English at 1440 px', async ({pag
     return {text: el.getBoundingClientRect().width, room: cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)};
   });
   expect(text).toBeLessThanOrEqual(room);
+});
+
+test('group tags fit their column at 1440 px, the rest behind a +N tag', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes');
+  await page.evaluate(() => document.fonts.ready);
+  await expectFittedGroupTags(page);
 });
 
 test('a long unavailable node name wraps inside the latency card', async ({page}) => {
