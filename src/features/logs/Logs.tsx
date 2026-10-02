@@ -30,7 +30,7 @@ export function Logs({go}: PageProps) {
       {
         id: 'level',
         label: t('log.level'),
-        minWidth: 90,
+        minWidth: 104,
         grow: 0,
         drop: 3,
         render: record =>

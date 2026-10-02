@@ -32,6 +32,31 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   ]);
 });
 
+test('a missing cache capability keeps the toolbar fixed and explains the disabled action', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  const {capabilities} = await mockBackend(page);
+  await page.goto('/#/dns?tab=cache');
+  const flush = page.getByRole('button', {name: 'Clear all cache', exact: true});
+  const grid = page.getByRole('grid', {name: 'Cache', exact: true});
+  await expect(flush).toBeEnabled();
+  await expect(grid.getByRole('rowheader').first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const before = {button: await box(flush), table: await box(grid)};
+  capabilities.resources.dns_cache.flush = false;
+  await page.reload();
+  const reason = 'This backend does not support clearing the cache';
+  await expect(flush).toHaveAccessibleDescription(reason);
+  await expect(flush).toBeDisabled();
+  await expect(grid.getByRole('rowheader').first()).toBeVisible();
+  expect((await box(flush)).y).toBe(before.button.y);
+  expect((await box(grid)).y).toBe(before.table.y);
+  await page.mouse.move(0, 0);
+  await flush.locator('..').hover();
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toHaveText(reason);
+  expect(await tip.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(13);
+});
+
 test.describe('Traditional Chinese cache labels', () => {
   test.use({viewport: {width: 1280, height: 900}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': 'dark'}});
 

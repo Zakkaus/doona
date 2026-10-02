@@ -24,7 +24,7 @@ export function Events() {
           </TextTooltip>
         )
       },
-      {id: 'k', label: t('event.kind'), minWidth: 168, drop: 2, render: event => <TextTooltip text={event.kind}>{event.kindText}</TextTooltip>},
+      {id: 'k', label: t('event.kind'), minWidth: 224, drop: 2, render: event => <TextTooltip text={event.kind}>{event.kindText}</TextTooltip>},
       {
         id: 'm',
         label: t('event.summary'),

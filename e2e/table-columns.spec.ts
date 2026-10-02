@@ -1,4 +1,5 @@
-import {expect, settleFrames, test} from './fixtures';
+import {expect, settleFrames, test, mockBackend, fulfillStream} from './fixtures';
+import type {Locator} from '@playwright/test';
 
 // Headless Chromium hides scrollbars by default; with classic scrollbars shown, as in Chromium on Linux and Windows,
 // a table whose scroller gains a scrollbar after load, or switches from a native to a virtualised grid, used to slide
@@ -82,3 +83,82 @@ test('the page keeps its width while a short page gives way to a long one', asyn
   expect(seen.heights, 'the route change goes from a short page to a long one').toEqual([false, true]);
   expect(seen.widths).toHaveLength(1);
 });
+
+async function expectWholeToken(cell: Locator) {
+  await expect(cell).toBeVisible();
+  await cell.page().evaluate(() => document.fonts.ready.then(() => undefined));
+  expect(await cell.evaluate(element => [element, ...element.querySelectorAll('*')].every(node => node.scrollWidth <= node.clientWidth))).toBe(true);
+}
+
+for (const lang of ['en', 'zh-TW'] as const) {
+  for (const width of [1280, 1024]) {
+    test.describe(`short tokens ${lang} ${width}px`, () => {
+      test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang}});
+
+      test('Connections and Flows retain the longest state label', async ({page}) => {
+        const {api, handlers} = await mockBackend(page);
+        handlers['GET connections'] = async () => {
+          const list = await api.connections();
+          return {...list, tcp: [{...list.tcp[0], state: 'observed'}], udp: []};
+        };
+        handlers['GET flows'] = async () => {
+          const list = await api.flows();
+          return {...list, flows: [{...list.flows[0], state: 'observed', started_at: new Date(Date.now() - 59000).toISOString()}], next_cursor: null};
+        };
+        for (const path of ['connections?tab=list', 'flows?tab=records']) {
+          await page.goto('/#/' + path);
+          await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? 'Observed' : '觀測中', exact: true}).first());
+          if (path.startsWith('flows')) {
+            await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? /seconds ago|minute ago/ : /秒前|分鐘前/}).first());
+            await expectWholeToken(page.getByRole('gridcell', {name: 'TCP', exact: true}).first());
+          }
+        }
+      });
+
+      test('Providers retain the longest fetch status', async ({page}) => {
+        const {api, handlers} = await mockBackend(page);
+        handlers['GET providers'] = async () => {
+          const list = await api.providers();
+          return {...list, providers: list.providers.map(provider => ({...provider, status: 'stale', updated_at: null, last_error: null}))};
+        };
+        await page.goto('/#/nodes');
+        await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? 'Not fetched' : '尚未擷取', exact: true}).first());
+      });
+
+      test('Rules retain four-digit snapshot hit counts in both views', async ({page}) => {
+        const {api, handlers, capabilities} = await mockBackend(page);
+        handlers['GET flows'] = async () => {
+          const list = await api.flows();
+          return {...list, flows: Array.from({length: 4096}, (_, i) => ({...list.flows[0], id: `token-${i}`})), next_cursor: null};
+        };
+        // The fitted dictionary intentionally drops Hits at 1024px; distribution retains it.
+        for (const dictionary of width === 1024 ? [false] : [true, false]) {
+          capabilities.resources.rules.available = dictionary;
+          await page.goto('/#/rules?tab=list&view=advanced');
+          await page.reload();
+          await expectWholeToken(page.getByRole('gridcell', {name: '4,096', exact: true}).first());
+        }
+      });
+
+      test('Events and Logs retain the longest kind and level labels', async ({page}) => {
+        const {api, capabilities} = await mockBackend(page);
+        capabilities.resources.events.available = true;
+        const runtime = await api.runtime();
+        const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+        await page.route(/\/api\/v1\/events(\?.*)?$/, route =>
+          fulfillStream(route, [{id: 'event:1', event: 'generation.changed', data: {...data, previous_generation_id: '39', generation_id: '40'}}])
+        );
+        await page.route(/\/api\/v1\/logs(\?.*)?$/, route =>
+          fulfillStream(route, [
+            {id: 'ready:0', event: 'stream.ready', data},
+            {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'warn', target: 'dns', message: 'Slow query', fields: null}}
+          ])
+        );
+        await page.goto('/#/events');
+        await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? 'Configuration activated' : '組態生效', exact: true}));
+        await page.goto('/#/logs');
+        await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? 'Warning' : '警告', exact: true}));
+      });
+    });
+  }
+}

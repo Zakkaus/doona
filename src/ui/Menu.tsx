@@ -16,7 +16,7 @@ import {
   type Key
 } from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
-import {Tip, buttonClass, TextTooltip, useReasonId} from './Button';
+import {Tip, buttonClass, TextTooltip, useActionReason} from './Button';
 import {Check} from './Check';
 import {useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
@@ -72,14 +72,15 @@ export function MenuButton({
       {count}
     </span>
   ) : null;
-  const reasonId = useReasonId(isDisabled);
+  const reason = useActionReason(isDisabled);
+  const [tipOpen, setTipOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const trigger = (
     <RButton
       ref={triggerRef}
       className={appearance ? 'rp-select' : buttonClass({quiet, small, icon: !chevron})}
       aria-label={label}
-      aria-describedby={reasonId}
+      aria-describedby={reason?.id}
       isDisabled={isDisabled}
       onHoverStart={onIntent}
       onFocus={onIntent}
@@ -91,16 +92,24 @@ export function MenuButton({
   );
   return (
     <MenuTrigger>
-      {chevron ? (
+      {chevron && !reason ? (
         trigger
       ) : (
-        <TooltipTrigger delay={400}>
+        <TooltipTrigger delay={400} isOpen={tipOpen} onOpenChange={setTipOpen}>
           <Focusable>
-            <span className="rp-tipwrap" tabIndex={-1} data-passive="">
+            <span
+              className="rp-tipwrap"
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a disabled menu's reason remains keyboard accessible
+              tabIndex={isDisabled ? 0 : -1}
+              data-passive={isDisabled ? undefined : ''}
+              onPointerDown={event => {
+                if (isDisabled && event.pointerType === 'touch') setTipOpen(open => !open);
+              }}
+            >
               {trigger}
             </span>
           </Focusable>
-          <Tip triggerRef={triggerRef}>{label}</Tip>
+          <Tip triggerRef={triggerRef}>{reason?.text ?? label}</Tip>
         </TooltipTrigger>
       )}
       <Popover className="rp-popover rp-list-popover" placement={placement}>

@@ -9,6 +9,8 @@ import {compareNames, formatBytes, formatRate} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {ruleHref} from '../shared/link';
 import {connectionKey, groupKey, groupName, groupRowId, type ConnectionView, type TableRow} from './viewState';
+import {connectionSeed} from './useConnectionRule';
+import type {QuickRuleSeed} from '../shared/rule';
 
 // Decorate, sort, undecorate: each item's key is computed once rather than on every comparison.
 export function sortByKey<T, K>(items: T[], key: (item: T) => K, compare: (a: K, b: K) => number): T[] {
@@ -70,6 +72,7 @@ export function tableRows(rows: Connection[], view: ConnectionView, locale: stri
 export type ConnectionRowView = {
   id: string;
   target: string;
+  seed: QuickRuleSeed;
   source: string;
   node: string;
   nodeName: boolean;
@@ -100,6 +103,7 @@ export function connectionTableView(
     const row: ConnectionRowView = {
       id: connectionKey(c.id),
       target: c.domain || c.dst || '—',
+      seed: connectionSeed(c),
       source: c.src ?? '—',
       node: nodeLabel(c, t, names),
       nodeName: !isBuiltinOutbound(c.outbound) && c.chain.length > 0,

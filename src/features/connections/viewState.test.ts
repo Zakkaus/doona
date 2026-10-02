@@ -1,7 +1,6 @@
 import {expect, it} from 'vitest';
 import {connections} from '../../../mock/fixtures';
 import {collapseAll, columns, isCollapsed, revealTarget, readView, toggleGroup} from './viewState';
-import {fitColumns} from '../../ui/ui';
 
 it('unfolds a selected connection again when it moves to another group, and only then', () => {
   const c = {...connections.tcp[0], id: 'moving', outbound: null};
@@ -27,22 +26,6 @@ it('folds groups by a default and its exceptions, so later groups take the defau
   expect(isCollapsed(state, 'a')).toBe(true);
   expect(toggleGroup(opened, 'a').exceptions.size).toBe(0);
   expect(isCollapsed(collapseAll(false), 'a')).toBe(false);
-});
-
-it('drops columns by priority until the minimum widths fit, keeping the target', () => {
-  const ids = (width: number | null, hidden: string[] = []) =>
-    fitColumns(
-      columns.filter(column => !hidden.includes(column.id)),
-      width
-    ).map(column => column.id);
-  expect(ids(null)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'downRate', 'age']);
-  expect(ids(1112)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'downRate', 'age']);
-  // The rate goes first, before any column the table had without it.
-  expect(ids(1032)).toEqual(['dst', 'src', 'node', 'rule', 'state', 'down', 'age']);
-  expect(ids(942)).toEqual(['dst', 'src', 'node', 'state', 'down', 'age']);
-  expect(ids(726)).toEqual(['dst', 'src', 'state', 'down', 'age']);
-  expect(ids(726, ['down'])).toEqual(['dst', 'src', 'node', 'state', 'age']);
-  expect(ids(100)).toEqual(['dst']);
 });
 
 it('rejects corrupt saved preferences and prevents hiding every column', () => {

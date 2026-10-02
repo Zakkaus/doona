@@ -1,34 +1,28 @@
-import {detail, expect, mockBackend, test, pickOutbound} from './fixtures';
+import {detail, expect, mockBackend, test, pickOutbound, scrollTableToEnd} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 const dialogOf = (page: import('@playwright/test').Page) => page.getByRole('dialog', {name: 'Add rule', exact: true});
 
-test('the connection list toolbar adds a rule for the selected row', async ({page}) => {
-  await page.goto('/#/connections?tab=list');
-  const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
-  await expect(add).toBeDisabled();
-  await expect(page.getByText('Select a row first', {exact: true})).toBeVisible();
-  await expect(add).toHaveAccessibleDescription('Select a row first');
-  // Clicking a row selects the connection the toolbar acts on.
-  await page.getByRole('rowheader', {name: 'cdn.bilibili.com', exact: true}).click();
-  await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
-  await add.click();
-  await expect(dialogOf(page).locator('.rp-code')).toHaveText(/^domain\(full: cdn\.bilibili\.com\)/);
-  await dialogOf(page).getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(dialogOf(page)).toHaveCount(0);
+test('a connection row writes its own rule independently of the selected connection', async ({page}) => {
+  const {requests} = await mockBackend(page);
   await page.goto('/#/connections?tab=list&id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+  await expect(page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
+  await expect(page.getByText(/Select a row first|請先選取一列/)).toHaveCount(0);
+  const add = page.getByRole('button', {name: 'Add routing rule for cdn.bilibili.com', exact: true});
+  await page.mouse.move(0, 0);
+  await add.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Add routing rule for cdn.bilibili.com');
   await add.click();
-  await pickOutbound(dialogOf(page), 'proxy');
-  await expect(dialogOf(page).locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
-  // The destination address is offered beside the domain, as one host.
-  await dialogOf(page)
-    .getByRole('button', {name: /Match by$/})
-    .click();
-  await page.getByRole('option', {name: 'Destination IP', exact: true}).click();
-  await expect(dialogOf(page).locator('.rp-code')).toHaveText(/^dip\([\d.]+\/32\) -> proxy$/);
-  await dialogOf(page).getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(dialogOf(page)).toHaveCount(0);
+  const dialog = dialogOf(page);
+  await pickOutbound(dialog, 'proxy');
+  await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> proxy');
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  const writes = requests.filter(request => request.method() === 'PUT');
+  expect(writes).toHaveLength(1);
+  expect(writes[0].postDataJSON().content).toContain('domain(full: cdn.bilibili.com) -> proxy');
+  expect(writes[0].postDataJSON().content).not.toContain('domain(full: api.telegram.org) -> proxy');
 });
 
 test('an outbound the configuration does not name is not replaced by the first choice', async ({page}) => {
@@ -131,18 +125,20 @@ test('without a writable configuration the dialog still opens and copies the rul
 test.describe('disabled actions on touch', () => {
   test.use({viewport: {width: 390, height: 844}, hasTouch: true});
 
-  test('Add rule shows its reason without hover until a connection is selected', async ({page}) => {
-    await mockBackend(page);
+  test('a row without a rule target explains its disabled action on tap', async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    handlers['GET connections'] = async () => {
+      const list = await api.connections({detail: 'full', limit: 1000});
+      return {...list, tcp: list.tcp.map(row => (row.id === '1' ? {...row, domain: null, dst: null, src: null} : row))};
+    };
     await page.goto('/#/connections?tab=list');
-    const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true, includeHidden: true});
-    const reason = page.locator('.rp-label').filter({hasText: /^Select a row first$/});
+    const table = page.getByRole('treegrid', {name: 'Connections'});
+    await scrollTableToEnd(table);
+    const add = table.getByRole('button', {name: 'Add routing rule for —', exact: true});
     await expect(add).toBeDisabled();
-    await expect(reason).toBeVisible();
-    await expect(add).toHaveAccessibleDescription('Select a row first');
-    await expect(page.getByRole('tooltip')).toHaveCount(0);
-    await page.getByRole('rowheader', {name: 'cdn.bilibili.com', exact: true}).tap();
-    await expect(add).toBeEnabled();
-    await expect(reason).toHaveCount(0);
-    await expect(add).not.toHaveAttribute('aria-describedby');
+    await expect(add).toHaveAccessibleDescription('This connection has no domain or IP address to match');
+    await add.locator('..').tap();
+    await expect(page.getByRole('tooltip')).toHaveText('This connection has no domain or IP address to match');
+    await expect(page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
   });
 });

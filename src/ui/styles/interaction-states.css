@@ -110,7 +110,7 @@ h3.rp-label {
 .rp-tip {
   background: var(--rp-text);
   color: var(--rp-on-text);
-  font-size: var(--rp-text-xs);
+  font-size: var(--rp-text-sm);
   padding: 4px 8px;
   border-radius: var(--rp-r-sm);
   /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
@@ -272,6 +272,9 @@ h3.rp-label {
 }
 .rp-tipwrap[data-passive] {
   display: contents;
+}
+.rp-tipwrap:not([data-passive]) > button {
+  pointer-events: none;
 }
 /* A field in use shows one ring hugging its own edge, the S2 way; no second ring floating outside it. */
 .rp-input:focus-within {

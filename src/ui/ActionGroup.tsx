@@ -64,8 +64,7 @@ export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Acti
   );
 }
 
-// The menu a MoreMenu opens. A disabled item keeps its reason as its description, the way a disabled button names its
-// ActionHelp line. A menu with a setting in it keeps the checkmark column on every item, so the labels line up.
+// Disabled items keep their reasons as descriptions. A menu with a setting keeps the checkmark column on every item.
 export function MoreActionsList({actions, label}: {actions: Action[]; label: string}) {
   // The settings among the actions share one section, where the first of them stands.
   const checks = actions.filter(action => action.checked !== undefined);

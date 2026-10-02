@@ -40,7 +40,7 @@ export function ModalDialog({
   hideTitle?: boolean;
   // Neither the underlay nor Escape closes it: the app behind cannot be used until the dialog is done.
   locked?: boolean;
-  // Why the footer's actions cannot run, as an ActionHelp line under them.
+  // Why the footer's disabled actions cannot run.
   reason?: string | null;
   // S2's dialog anatomy for long content: only the content scrolls, between a title and a footer that stay in view.
   scrollBody?: boolean;
@@ -249,7 +249,7 @@ export function ConfirmDialog({
   isDisabled?: boolean;
   // The action is not offered: the footer holds one Close button instead of Cancel and Confirm.
   dismissOnly?: boolean;
-  // Why Confirm is disabled, under the footer.
+  // Why Confirm is disabled, shown in its tooltip.
   reason?: string | null;
   error?: Problem | null;
   scrollBody?: boolean;

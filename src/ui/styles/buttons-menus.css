@@ -314,6 +314,9 @@ section:not(:first-child) > .rp-sec-h {
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
+.rp-item .desc.reason {
+  font-size: var(--rp-text-sm);
+}
 .rp-subitem > .ic {
   display: flex;
   color: var(--rp-subtle);

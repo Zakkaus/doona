@@ -3,9 +3,16 @@ import type {Connection} from '../../api/model';
 import {offered} from '../../api/capabilities';
 import {sourceIp} from '../../api/selectors';
 import {useT} from '../../i18n';
-import {ruleTargets, ruleWritable} from '../shared/rule';
+import {ruleWritable} from '../shared/rule';
 import {useQuickRule, type QuickRuleSeed} from '../shared/useQuickRule';
 import type {PageProps} from '../../shell/routes';
+
+export type ConnectionRowRule = {
+  canAdd: (seed: QuickRuleSeed) => boolean;
+  open: (seed: QuickRuleSeed) => void;
+  label: (target: string) => string;
+  noTarget: string;
+};
 
 // What a connection tells the add-rule dialog. The rule it matched counts only when the backend recorded the match.
 export const connectionSeed = (c: Connection): QuickRuleSeed => ({
@@ -31,8 +38,12 @@ export function useConnectionRule(connection: Connection | undefined, go: PagePr
   const seed = connection && connectionSeed(connection);
   return {
     canAdd: !!seed && quick.canAdd(seed),
-    // Why the list toolbar's Add rule, which acts on the selected connection, cannot open.
-    addTip: !seed ? t('ui.selectRow') : !ruleTargets(seed).length ? t('conn.ruleNoTarget') : undefined,
+    row: {
+      canAdd: quick.canAdd,
+      open: quick.open,
+      label: (target: string) => t('conn.addRuleFor', {target}),
+      noTarget: t('conn.ruleNoTarget')
+    },
     // Showing the matched rule only reads the rule list.
     canShow: offered(resources, 'rules', {whileLoading: false}) && !!connection?.rule_id,
     canEdit:

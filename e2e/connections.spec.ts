@@ -27,7 +27,7 @@ async function expectRowInView(row: Locator) {
 test('English Started values fit without truncation', async ({page}) => {
   await page.goto('/#/connections?id=c-0241');
   const row = page.locator('.rp-table [data-key="c-0241"]');
-  const started = row.getByRole('gridcell').last().locator('.cell');
+  const started = row.getByRole('gridcell', {name: /minutes ago/}).locator('.cell');
   await expect(started).toContainText('minutes ago');
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const widths = await started.evaluate(element => ({available: element.clientWidth, text: element.scrollWidth}));
@@ -181,10 +181,11 @@ test('connection selection survives a runtime poll', async ({page}) => {
   await page.goto('/#/connections?tab=list');
   const selected = page.locator('.rp-table [aria-selected="true"]');
   await page.locator('.rp-table [data-key="c-0002"]').click();
-  const age = await selected.getByRole('gridcell').last().textContent();
+  const ageCell = selected.getByRole('gridcell', {name: /ago/});
+  const age = await ageCell.textContent();
   await page.clock.fastForward(6000);
   await expect(selected).toHaveAttribute('data-key', 'c-0002');
-  await expect(selected.getByRole('gridcell').last()).not.toHaveText(age!);
+  await expect(ageCell).not.toHaveText(age!);
   await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
 });
 

@@ -199,6 +199,7 @@ type FlowRow = {
   network: string;
   state: string;
   startedAt: string | null;
+  seed: QuickRuleSeed;
 };
 type FlowDetailView = {
   title: string;
@@ -207,7 +208,6 @@ type FlowDetailView = {
   revision: string;
   fields: [string, string][];
   connectionHref: string | null;
-  seed: QuickRuleSeed;
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };
 type FlowRecordsView = {rows: FlowRow[]; coverage: CoverageView | null; stateOptions: {id: string; label: string}[]};
@@ -232,7 +232,15 @@ export function flowRecordsView(
       recomputed: flow.rule_source === 'recomputed',
       network: flow.network.toUpperCase(),
       state: enumLabel(connectionStates, flow.state, t),
-      startedAt: flow.started_at
+      startedAt: flow.started_at,
+      seed: {
+        domain: flow.input?.domain ?? null,
+        dip: sourceIp(flow.input?.dst ?? undefined) ?? null,
+        sip: sourceIp(flow.input?.src ?? undefined) ?? null,
+        outbound: flow.outbound,
+        matched:
+          flow.rule_id && flow.rule_source !== 'unknown' ? {id: flow.rule_id, expression: flow.rule_expression, generation: flow.rule_generation_id} : null
+      }
     })),
     coverage: list ? coverageView(list, t, lang) : null,
     stateOptions: [{id: 'all', label: t('flow.allStates')}, ...Object.entries(connectionStates).map(([id, key]) => ({id, label: t(key)}))]
@@ -270,16 +278,6 @@ export function flowDetailView(
         : [])
     ],
     connectionHref: detail.connection_id ? href('connections', {id: detail.connection_id}) : null,
-    seed: {
-      domain: detail.input.domain,
-      dip: sourceIp(detail.input.dst ?? undefined) ?? null,
-      sip: sourceIp(detail.input.src ?? undefined) ?? null,
-      outbound: detail.outbound,
-      matched:
-        detail.rule_id && detail.rule_source !== 'unknown'
-          ? {id: detail.rule_id, expression: detail.rule_expression, generation: detail.rule_generation_id}
-          : null
-    },
     steps: [...detail.trace.steps]
       .sort((a, b) => a.seq - b.seq)
       .map(step => {

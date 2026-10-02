@@ -43,6 +43,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Searchable pickers keep the search field fixed and scroll only the option list within the available popover height, without nested scrollbars or native scroll arrows.
+- Connections and Flows rows add routing rules for their own target, without requiring a selection; Flows removes the duplicate detail-panel entry. Disabled actions explain their reason in a tooltip instead of shifting the button row; configuration history uses contextual help for export and retention details. (#371)
+- Short status, event-kind, log-level, count and relative-time columns reserve enough width for their labels. Chinese action explanations use formal wording.
 - DNS cache and resolution-log rows open the rule dialog for their own domain, with labelled icon actions instead of selection-dependent toolbar buttons. Cache labels use concise stale deadlines and an unambiguous memory-only notice; Chinese selection prompts use formal wording.
 - Group editor region checkboxes scroll with the dialog body instead of adding nested scrollbars.
 - Searchable menus and the group editor's Groups and Nodes pickers keep their search field fixed and scroll only the option list when space is limited.

@@ -1,6 +1,6 @@
 import {useT} from '../../i18n';
 import {
-  ActionHelp,
+  ContextualHelp,
   Badge,
   Button,
   ConfirmDialog,
@@ -31,8 +31,17 @@ export function ConfigHistory() {
           </Button>
         )}
         {h.management.import && <Button onPress={() => h.show(null)}>{t('config.backup.import')}</Button>}
+        {(h.management.export || h.list.data) && (
+          <ContextualHelp
+            title={t('config.tabHistory')}
+            size="control"
+            text={[
+              ...(h.management.export ? [t('config.backup.exportHelp')] : []),
+              ...(h.list.data ? [t('config.revisions.retention', {n: h.list.data.max_revisions})] : [])
+            ]}
+          />
+        )}
       </div>
-      {h.management.export && <ActionHelp reason={t('config.backup.exportHelp')}>{null}</ActionHelp>}
       <ErrorMessage error={h.exportError} message={error => t('config.backup.exportFailed', {error})} />
       {h.view.unrecorded && <InlineAlert tone="informative">{t('config.revisions.unrecorded')}</InlineAlert>}
       {h.management.revisions && (
@@ -43,7 +52,6 @@ export function ConfigHistory() {
           ) : (
             h.list.data && (
               <>
-                <ActionHelp reason={t('config.revisions.retention', {n: h.list.data.max_revisions})}>{null}</ActionHelp>
                 {h.view.rows.length ? (
                   <DataTable
                     label={t('config.tabHistory')}

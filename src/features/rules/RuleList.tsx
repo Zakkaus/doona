@@ -64,7 +64,7 @@ type Row = DictionaryModel['table']['rows'][number];
 const hitsColumn = (t: Translator): TableColumn<Row> => ({
   id: 'hits',
   label: t('rule.hits'),
-  minWidth: 60,
+  minWidth: 96,
   grow: 0,
   drop: 1,
   render: row => row.hits
@@ -88,7 +88,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
   }, [reviewing]);
   const columns = useMemo(
     (): TableColumn<Row>[] => [
-      {id: 'n', label: t('rule.id'), minWidth: 44, grow: 0, drop: 3, render: row => row.number},
+      {id: 'n', label: t('rule.id'), minWidth: 72, grow: 0, drop: 3, render: row => row.number},
       {
         id: 'expression',
         text: 'wrap',
@@ -251,7 +251,7 @@ function Distribution({view, viewSwitch}: {view: Model; viewSwitch?: ReactNode})
         render: row => (row.expressionClass ? <DaeCode text={row.expression} /> : row.expression)
       },
       {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
-      {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, render: row => row.hits},
+      {id: 'hits', label: t('rule.hits'), minWidth: 96, grow: 0, render: row => row.hits},
       {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, drop: 3, render: row => row.share}
     ],
     [t]
