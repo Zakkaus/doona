@@ -426,7 +426,7 @@ test('a probe toast names its reason in words, never as a backend code', async (
 });
 
 test('an unknown probe result gives its reason in words', async ({page}) => {
-  await udpOnlyNode(page, row => ({...row, state: 'unknown', latency_ms: null, error: 'probe_deadline'}));
+  await udpOnlyNode(page, row => ({...row, state: 'unknown', latency_ms: null, error: 'deadline'}));
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
   await expect(page.locator('.rp-toast.neutral')).toContainText('hk-01: result unknown (The probe timed out before measuring)');

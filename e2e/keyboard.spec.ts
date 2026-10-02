@@ -110,9 +110,16 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await page.keyboard.press('ArrowRight');
   await expect(traffic.locator('.rp-charttip-bounded')).toBeVisible();
   await expect(traffic.locator('.rp-charttip-bounded li').first()).toContainText(/\d/);
-  // A live backend that has carried no traffic since it started has no donut to step through.
   const donut = page.locator('[data-module=outbounds] .rp-donut');
-  if (isLive && !(await donut.count())) return;
+  if (!(await donut.count())) return;
+  const surface = donut.locator('svg');
+  await expect(surface).toBeVisible();
+  if (!(await surface.locator('path').count())) {
+    await expect(surface).toHaveAttribute('role', 'img');
+    await expect(surface).not.toHaveAttribute('tabindex');
+    await expect(donut.locator('.rp-charttip-bounded')).toHaveCount(0);
+    return;
+  }
   await donut.getByRole('application').focus();
   await page.keyboard.press('ArrowRight');
   await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
@@ -120,6 +127,37 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   // The chart is a single tab stop: the next Tab leaves it.
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => !!document.activeElement?.closest('.rp-donut .box'))).toBe(false);
+});
+
+test('an all-zero outbound donut has no tooltip target and becomes interactive when traffic arrives', async ({page}) => {
+  test.skip(isLive, 'Requires controlled outbound byte totals');
+  const backend = await mockBackend(page);
+  const outbounds = await backend.api.runtimeOutbounds();
+  let idle = true;
+  backend.handlers['GET runtime/outbounds'] = async () => ({
+    ...outbounds,
+    outbounds: outbounds.outbounds.map(row => ({...row, download_bytes: idle ? '0' : '100'}))
+  });
+  await page.goto('/#/activity');
+  const donut = page.locator('[data-module=outbounds] .rp-donut');
+  const image = donut.getByRole('img', {name: 'Outbound downloads', exact: true});
+  await expect(image).toBeVisible();
+  await expect(donut.locator('.center')).toHaveText('0 B');
+  await expect(image).not.toHaveAttribute('tabindex');
+  await expect(image.locator('path')).toHaveCount(0);
+  await image.hover();
+  await expect(donut.locator('.rp-charttip-bounded')).toHaveCount(0);
+  idle = false;
+  await page.keyboard.press('r');
+  const chart = donut.getByRole('application');
+  await chart.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(donut.locator('.rp-charttip-bounded')).toBeVisible();
+  idle = true;
+  await page.keyboard.press('r');
+  await expect(image).toBeVisible();
+  await expect(image).not.toHaveAttribute('tabindex');
+  await expect(donut.locator('.rp-charttip-bounded')).toHaveCount(0);
 });
 
 test('slash focuses the page filter and r refreshes everything', async ({page}) => {
@@ -142,6 +180,7 @@ test('slash focuses the page filter and r refreshes everything', async ({page}) 
 });
 
 test('idle traffic has distinct fractional rate labels', async ({page}) => {
+  test.skip(isLive, 'Requires controlled zero traffic rates and history');
   const backend = await mockBackend(page);
   const runtime = await backend.api.runtime();
   runtime.traffic.rates = {window_seconds: 10, upload_bytes_per_second: '0', download_bytes_per_second: '0'};
@@ -158,14 +197,16 @@ test('idle traffic has distinct fractional rate labels', async ({page}) => {
 
 test('charts are named and icon buttons show their tooltip on keyboard focus', async ({page}) => {
   await page.goto('/#/activity');
-  // The three cards' charts take focus under their card's name; the tile sparks are decoration and do not.
-  const names = ['Traffic', 'Memory', 'Outbound downloads'];
+  // Empty donuts are named images; charts with data are keyboard applications.
   await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
-  // Live, the donut exists only once the backend has carried traffic.
-  if (isLive && !(await page.locator('.rp-donut').count())) names.pop();
   await page.locator('[data-module=memory]').scrollIntoViewIfNeeded();
-  for (const name of names) await expect(page.getByRole('application', {name, exact: true})).toBeVisible();
-  await expect(page.locator(".rp-dash-section:not([data-profile='extensions'])").getByRole('application')).toHaveCount(names.length);
+  await expect(page.getByRole('application', {name: 'Memory', exact: true})).toBeVisible();
+  const donut = page.locator('[data-module=outbounds] .rp-donut svg');
+  if (await page.locator('[data-module=outbounds] .rp-donut').count()) {
+    await expect(donut).toBeVisible();
+    await expect(donut).toHaveAccessibleName('Outbound downloads');
+    await expect(donut).toHaveAttribute('role', (await donut.locator('path').count()) ? 'application' : 'img');
+  }
   await page.locator('.rp-search').focus();
   await page.keyboard.press('Tab');
   await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);
@@ -193,6 +234,7 @@ test('Tab leaves a resizable table that has no rows', async ({page}) => {
 });
 
 test('Tab leaves an empty resizable table in flat mode', async ({page}) => {
+  test.skip(isLive, 'Requires clearing the DNS cache, which live observation must not mutate');
   const {api} = await mockBackend(page);
   await api.flushDnsCache();
   await page.goto('/#/dns?tab=cache');

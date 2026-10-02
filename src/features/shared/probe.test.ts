@@ -10,7 +10,7 @@ it('tells a failed probe from one whose result is unknown', () => {
   const result = (...results: ProbeResult['results']) => ({results}) as ProbeResult;
   expect(probeToast(result(item('healthy', 5.4)), 'hk', 'HK', t)).toEqual({kind: 'positive', text: t('nodes.probed', {name: 'HK', n: 5.4})});
   expect(probeToast(result(item('unavailable', null, 'refused')), 'hk', 'HK', t)).toEqual({kind: 'negative', text: t('nodes.probeFailed', {name: 'HK'})});
-  expect(probeToast(result(item('unknown', null, 'probe_deadline')), 'hk', 'HK', t)).toEqual({
+  expect(probeToast(result(item('unknown', null, 'deadline')), 'hk', 'HK', t)).toEqual({
     kind: 'neutral',
     text: t('nodes.probeUnknownWhy', {name: 'HK', error: t('ui.backend.probeDeadline')})
   });

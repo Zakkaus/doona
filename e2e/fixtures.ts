@@ -230,6 +230,7 @@ export const query = (request: Request) => {
 };
 
 export async function mockBackend(page: Page, options: {faults?: boolean; includedRule?: boolean} = {}) {
+  if (isLive) throw new Error('mockBackend is forbidden in live mode; use the live backend or skip with a reason');
   const api = createMockApi(options);
   if (options.includedRule) {
     const sources = (await api.config()).sources;

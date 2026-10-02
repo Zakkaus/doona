@@ -34,6 +34,24 @@ it.each(LANGS.map(([lang]) => lang))('translates every operation error code in %
   }
 });
 
+// Every per-result error emitted by honk's native_api/probes/wire.rs.
+const probeResultCodes = [
+  ['address_unavailable', 'ui.backend.probeAddressUnavailable'],
+  ['cancelled', 'ui.backend.probeCancelled'],
+  ['deadline', 'ui.backend.probeDeadline'],
+  ['local_refusal', 'ui.backend.probeLocalRefusal'],
+  ['probe_failed', 'ui.backend.probeFailed']
+] as const;
+
+it.each(LANGS.map(([lang]) => lang))('explains every per-result probe error in %s', (lang: Lang) => {
+  const t: Translator = (key, params) => translate(lang, key, params);
+  for (const [code, key] of probeResultCodes) {
+    expect(backendCode(code, t), code).toBe(t(key));
+    expect(backendCode(code, t), code).not.toMatch(/ui\.backend\.|_/);
+  }
+  expect(new Set(probeResultCodes.map(([code]) => backendCode(code, t))).size).toBe(probeResultCodes.length);
+});
+
 it('reads an inherited property name as an unknown code', () => {
   const t: Translator = (key, params) => translate('en', key, params);
   expect(backendMessage('constructor', 'From the backend', t, {stage: 'toString'}).summary).toContain('From the backend');

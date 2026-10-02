@@ -363,6 +363,7 @@ for (const [scheme, palette] of [
     });
 
     test('diagnostic prose wraps and empty tables stay centered while scrolled', async ({page}) => {
+      test.skip(isLive, 'Requires injected diagnostic prose and an empty DNS cache');
       const backend = await mockBackend(page);
       const config = await backend.api.config();
       const message = 'duplicate endpoint identity; retaining the first usable entry ' + 'identifier'.repeat(12);
@@ -578,6 +579,7 @@ async function expectReason(page: Page, button: ReturnType<Page['getByRole']>, r
 }
 
 test('the DNS cache says in view that the backend cannot clear or delete entries', async ({page}) => {
+  test.skip(isLive, 'Requires DNS cache entries with flush and deletion capabilities disabled');
   const backend = await mockBackend(page);
   backend.capabilities.resources.dns_cache.flush = false;
   backend.capabilities.resources.dns_cache.delete_entry = false;
