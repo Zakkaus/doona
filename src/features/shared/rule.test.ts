@@ -59,13 +59,13 @@ it('inserts before a vouched-for matched rule, else before the fallback, and onl
   const r5 = rules.find(rule => rule.rule_id === 'r5')!;
   const hit = (id: string, expression: string | null = null) => ({id, expression});
   const ids = (matched: {id: string; expression: string | null} | null, list = sources) =>
-    rulePositions(rules, list, matched, t).map(position => [position.id, position.label]);
+    rulePositions(rules, undefined, list, matched, t).map(position => [position.id, position.label]);
   expect(ids(hit('r5', r5.expression))).toEqual([
     ['r5', 'Before the matched rule'],
     ['fallback', 'Last, before the fallback'],
     ['r1', 'First']
   ]);
-  expect(rulePositions(rules, sources, hit('r5'), t)[0]).toMatchObject({desc: 'domain(geosite:telegram)', matched: true, first: false});
+  expect(rulePositions(rules, undefined, sources, hit('r5'), t)[0]).toMatchObject({desc: 'domain(geosite:telegram)', matched: true, first: false});
   expect(ids(hit('r1'))).toEqual([
     ['r1', 'Before the matched rule'],
     ['fallback', 'Last, before the fallback']
@@ -97,13 +97,13 @@ it('places rules the contract displays with their outbound, and falls back to th
   const api = createMockApi();
   const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
   const ids = (list: typeof rules, matched: string | null, from = sources) =>
-    rulePositions(list, from, matched === null ? null : {id: matched, expression: null}, t).map(position => [position.id, position.label]);
+    rulePositions(list, undefined, from, matched === null ? null : {id: matched, expression: null}, t).map(position => [position.id, position.label]);
   // The contract shows `pname(curl) -> direct`; honk sends the condition alone. Both name the same line.
   const shown = rules.map(rule => (rule.kind === 'rule' ? {...rule, expression: ruleLine(rule.expression, rule.outbound, rule.must)} : rule));
   expect(ids(shown, 'r5')).toEqual(ids(rules, 'r5'));
   expect(ids(shown, 'r5')).toHaveLength(3);
   const r5 = rules.find(rule => rule.rule_id === 'r5')!;
-  expect(rulePositions(shown, sources, {id: 'r5', expression: r5.expression}, t)[0].matched).toBe(true);
+  expect(rulePositions(shown, undefined, sources, {id: 'r5', expression: r5.expression}, t)[0].matched).toBe(true);
   // With the first rule in a file doona cannot write, the earliest rule it can write before is offered instead.
   const main = sources.find(source => source.id === 'src-main')!;
   const locked = [...sources, {...main, id: 'src-locked', writable: false}];
@@ -118,7 +118,7 @@ it('places rules the contract displays with their outbound, and falls back to th
 it('keeps the pinned position while its rule exists and reports it moved after a reload removed it', async () => {
   const api = createMockApi();
   const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
-  const positions = rulePositions(rules, sources, {id: 'r5', expression: null}, t);
+  const positions = rulePositions(rules, undefined, sources, {id: 'r5', expression: null}, t);
   const r5 = rules.find(rule => rule.rule_id === 'r5')!;
   const pin = {generation: '40', id: r5.rule_id, desc: r5.expression};
   expect(pinnedPosition(positions, null, '40')).toEqual({before: 'r5', moved: false});
@@ -126,6 +126,7 @@ it('keeps the pinned position while its rule exists and reports it moved after a
   expect(pinnedPosition(positions, {...pin, id: 'r1'}, '40')).toEqual({before: 'r1', moved: false});
   const reloaded = rulePositions(
     rules.filter(rule => rule.rule_id !== 'r5'),
+    undefined,
     sources,
     {id: 'r5', expression: null},
     t
@@ -134,6 +135,7 @@ it('keeps the pinned position while its rule exists and reports it moved after a
   // The same id in a new generation is the same rule only if it still reads the same.
   const renumbered = rulePositions(
     rules.map(rule => (rule.rule_id === 'r5' ? {...rule, expression: 'dip(9.9.9.9)'} : rule)),
+    undefined,
     sources,
     null,
     t
@@ -348,13 +350,24 @@ it('notes the matched position only when the default is the verified writable ma
   const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
   const hit = rules.find(rule => rule.kind === 'rule' && ruleWritable(rule, sources))!;
   const seed: QuickRuleSeed = {domain: 'example.com', dip: null, sip: null, outbound: 'proxy', matched: {id: hit.rule_id, expression: hit.expression}};
-  const matched = rulePositions(rules, sources, seed.matched, t);
+  const matched = rulePositions(rules, undefined, sources, seed.matched, t);
   expect(matched[0].matched).toBe(true);
   expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: '', position: matched[0]}).beforeMatched).toBe(true);
   // A match whose rule no longer reads the same is not vouched for, so the default is the fallback and nothing is said.
-  const stale = rulePositions(rules, sources, {id: hit.rule_id, expression: 'domain(elsewhere.test)'}, t);
+  const stale = rulePositions(rules, undefined, sources, {id: hit.rule_id, expression: 'domain(elsewhere.test)'}, t);
   expect(stale[0].matched).toBe(false);
   expect(quickRuleContext({list: 'routing', seed, upstreams: [], outbound: '', position: stale[0]}).beforeMatched).toBe(false);
+});
+
+it.each([
+  ['the listed generation', '40', true],
+  ['another generation', '39', false],
+  ['an unknown generation', null, false]
+])('vouches for a recorded match only from %s', async (_, generation, vouched) => {
+  const api = createMockApi();
+  const [{rules}, {sources}] = await Promise.all([api.rules(), api.config()]);
+  const hit = rules.find(rule => rule.kind === 'rule' && ruleWritable(rule, sources))!;
+  expect(rulePositions(rules, '40', sources, {id: hit.rule_id, expression: null, generation}, t)[0].matched).toBe(vouched);
 });
 
 it('shows the answering upstream of a DNS request as context only', () => {

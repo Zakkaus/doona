@@ -15,7 +15,9 @@ export type QuickRuleSeed = {
   dip: string | null;
   sip: string | null;
   outbound: string | null;
-  matched: {id: string; expression: string | null} | null;
+  // Rule ids are scoped to a generation: a recorded origin names its generation (null when unknown), while a live
+  // connection carries none and is checked by its expression instead.
+  matched: {id: string; expression: string | null; generation?: string | null} | null;
   // What a DNS origin adds, which offers the DNS lists too: the record type asked for, the A and AAAA addresses
   // answered, the upstream that answered, and the query to repeat once a DNS rule is written.
   dns?: {type: string | null; answers: string[]; upstream: string | null; query: {name: string; type: string} | null};
@@ -112,10 +114,11 @@ export function conditionKey(expression: string): string {
 // and the rule still reads as it did, so the new rule takes over that traffic; otherwise before the fallback, where
 // earlier rules may still match first. The earliest place doona can write is offered too. Only a rule doona can locate
 // in a writable source is offered.
-export function rulePositions(rules: RoutingRule[], sources: ConfigSource[], matched: QuickRuleSeed['matched'], t: Translator) {
+export function rulePositions(rules: RoutingRule[], generation: string | undefined, sources: ConfigSource[], matched: QuickRuleSeed['matched'], t: Translator) {
   const anchored = (rule: RoutingRule) => ruleWritable(rule, sources);
+  const current = matched && (matched.generation === undefined || (matched.generation !== null && matched.generation === generation));
   const hit =
-    matched &&
+    current &&
     rules.find(
       rule =>
         rule.rule_id === matched.id && anchored(rule) && (matched.expression === null || conditionKey(matched.expression) === conditionKey(rule.expression))

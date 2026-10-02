@@ -7,7 +7,7 @@ import type {Node, Provider} from '../../api/model';
 import {useNodeProbe} from '../../store';
 import type {OutboundNames} from '../../api/selectors';
 import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
-import {namedIn, readGroupEntries} from '../../dae/groups';
+import {namedIn, type GroupEntry} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
 import {nodeRows, nodeRowView} from './view';
 import {compareNames} from '../../i18n/format';
@@ -34,6 +34,8 @@ type NodeTableInput = {
   nodeIds: string[];
   clearNodes: () => void;
   source: MainSourceEdit;
+  // The groups a node can join: each declared once in a writable, complete source, where the group editor writes.
+  joinable: GroupEntry[];
   canManage: boolean;
   busy: boolean;
   reload: () => void;
@@ -90,10 +92,9 @@ export function useNodeTable(input: NodeTableInput) {
     () => nodeRows(nodes, search, activeGroup, activeProtocol, sort, contains, locale),
     [nodes, search, activeGroup, activeProtocol, sort, contains, locale]
   );
-  const entries = useMemo(
-    () => readGroupEntries(source.main?.content ?? '').map(entry => ({...entry, names: new Set(namedIn(entry))})),
-    [source.main?.content]
-  );
+  const entries = useMemo(() => input.joinable.map(entry => ({...entry, names: new Set(namedIn(entry))})), [input.joinable]);
+  // A new group is written to the main source.
+  const canCreate = source.writable && !source.busy && !!source.main;
   const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
   const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
   const {probe: runProbe, canProbe, busy: probeBusy} = probe;
@@ -118,14 +119,14 @@ export function useNodeTable(input: NodeTableInput) {
         ...entries
           .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
           .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
-        {id: '/new', label: t('nodes.newGroup')}
+        ...(canCreate ? [{id: '/new', label: t('nodes.newGroup')}] : [])
       ],
       join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
+    [names, lang, sourceOf, canProbe, runProbe, t, entries, canCreate, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -152,7 +153,7 @@ export function useNodeTable(input: NodeTableInput) {
     canManage,
     busy: input.busy,
     writable: source.writable,
-    sourceBusy: source.busy || !source.main,
+    canJoin: canCreate || entries.length > 0,
     sourceTip: source.error ? errorText(source.error, t) : undefined,
     clearNodes: selectedNodes
       ? () => {
@@ -209,7 +210,7 @@ export type NodeTableView = {
   canManage: boolean;
   busy: boolean;
   writable: boolean;
-  sourceBusy: boolean;
+  canJoin: boolean;
   sourceTip?: string;
   onAdd: () => void;
   clearNodes: (() => void) | null;

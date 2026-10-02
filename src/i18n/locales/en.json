@@ -1465,6 +1465,7 @@
   "rule.edited": "Rule change is in effect",
   "rule.evaluation": "Rule evaluation {n}",
   "rule.expression": "Expression",
+  "rule.expressionNoRows": "Condition rows cannot represent this expression.",
   "rule.held": "Rule held; not written yet",
   "rule.hits": "Hits",
   "rule.hold": "Hold",

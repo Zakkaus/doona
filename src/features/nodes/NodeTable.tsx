@@ -30,7 +30,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
   const phone = useMediaQuery(phoneQuery);
   const settings = useContext(SettingsContext);
   const editFlag = useContext(FlagEditingContext);
-  const {canManage, writable, sourceBusy, busy, across} = m;
+  const {canManage, canJoin, busy, across} = m;
   const columns = useMemo<TableColumn<NodeTableView['rows'][number]>[]>(
     () => [
       {
@@ -95,7 +95,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         render: row => (
           <span className="rp-chain">
             {row.canProbe && <ProbeButton row={row} />}
-            {(writable || editFlag || row.edit) && (
+            {(canJoin || editFlag || row.edit) && (
               <ChoiceMenu
                 quiet
                 small
@@ -113,7 +113,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                         }
                       ]
                     : []),
-                  ...(writable && !sourceBusy ? [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}] : []),
+                  ...(canJoin && row.menu().length ? [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}] : []),
                   ...(editFlag
                     ? [{title: t('flags.region'), hideHeader: true, selectionMode: 'none' as const, value: '', items: [{id: '/flag', label: t('flags.edit')}]}]
                     : [])
@@ -133,7 +133,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       }
     ],
-    [t, editFlag, across, canManage, writable, sourceBusy, busy, phone]
+    [t, editFlag, across, canManage, canJoin, busy, phone]
   );
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
   return (

@@ -17,7 +17,8 @@ import {
   providerCreate,
   providerChanges,
   renameReferences,
-  selectedProvider
+  selectedProvider,
+  joinableGroups
 } from './view';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
@@ -369,6 +370,35 @@ it.each([
   [true, true, true, undefined, false]
 ] as const)('permits editing only complete writable authored text (%s, %s, %s, %s)', (daeText, canWrite, writable, complete, expected) => {
   expect(editableSource(daeText, canWrite, {...main, writable}, complete)).toBe(expected);
+});
+
+it.each([
+  ['main and a writable include', true, true, true, false, ['hk', 'jp']],
+  ['a read-only include', true, false, true, false, ['hk']],
+  ['an incomplete include', true, true, false, false, ['hk']],
+  ['an include being written', true, true, true, true, ['hk']],
+  ['a read-only main', false, true, true, false, ['jp']]
+])('offers the groups of every writable, complete, idle source to join: %s', (_, mainWritable, includeWritable, complete, busy, expected) => {
+  const at = (id: string, kind: 'main' | 'include', writable: boolean, group: string) => ({
+    ...main,
+    id,
+    kind,
+    writable,
+    content: `group {\n    ${group} {\n        policy: min\n    }\n}\n`
+  });
+  // A group declared twice is ambiguous and never offered.
+  const sources = [
+    at('main', 'main', mainWritable, 'hk'),
+    at('inc', 'include', includeWritable, 'jp'),
+    at('a', 'include', true, 'tw'),
+    at('b', 'include', true, 'tw')
+  ];
+  const joinable = joinableGroups(
+    sources,
+    source => source.id !== 'inc' || complete,
+    source => source.id === 'inc' && busy
+  );
+  expect(joinable.map(entry => entry.name)).toEqual(expected);
 });
 
 it('locates the declaring subscription and opens ambiguous names without editing', () => {

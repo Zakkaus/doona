@@ -14,7 +14,8 @@ import {backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
 import {groupsNamingNode, readNodeEntries, type NodeEntry} from '../../dae/nodes';
-import {citingGroups, groupsNamingTag, namedInExpression} from '../../dae/groups';
+import {citingGroups, groupsNamingTag, namedInExpression, type GroupEntry} from '../../dae/groups';
+import {groupOwners} from '../shared/groupText';
 import {draftInterval, intervalText} from '../shared/subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
@@ -292,4 +293,16 @@ export function nodeFormReason(kind: string | undefined, name: string, value: st
   if (kind === 'node') return isNodeLink(value) ? null : t('nodes.linkInvalid');
   if (!isBareName(bare)) return t('nodes.nameInvalid');
   return isSubscriptionUrl(value) ? null : t('nodes.urlInvalid');
+}
+
+// Joining opens the group's editor in the source that declares it, so only a group that editor can write is offered:
+// declared once, in a writable source whose content is known complete and that no write is changing.
+export function joinableGroups(
+  sources: ConfigSource[],
+  isComplete: (source: ConfigSource) => boolean | undefined,
+  isBusy: (source: ConfigSource) => boolean
+): GroupEntry[] {
+  return [...groupOwners(sources).values()].flatMap(owner =>
+    owner !== 'ambiguous' && owner.origin.writable && isComplete(owner.origin) === true && !isBusy(owner.origin) ? [owner.entry] : []
+  );
 }

@@ -375,6 +375,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
                 label={t('rule.condition')}
                 value={form.condition}
                 placeholder={view.copy.placeholder}
+                description={view.expressionHint ?? undefined}
                 isInvalid={draft.rawInvalid}
                 spellCheck={false}
                 onChange={condition => setForm({...form, condition})}

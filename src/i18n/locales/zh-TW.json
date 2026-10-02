@@ -1285,6 +1285,7 @@
   "rule.edited": "規則變更已生效",
   "rule.evaluation": "規則評估 {n}",
   "rule.expression": "運算式",
+  "rule.expressionNoRows": "此運算式無法以條件列表示。",
   "rule.held": "規則已暫存，尚未寫入",
   "rule.hits": "命中",
   "rule.hold": "暫存",
