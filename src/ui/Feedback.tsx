@@ -134,7 +134,7 @@ export function Badge({children, tone, className, tip}: {children: ReactNode; to
 }
 
 // Toasts: react-aria's queue rendered like S2's ToastContainer; timers pause while hovered, focused or listed.
-type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
+type ToastKind = 'positive' | 'negative' | 'neutral' | 'info' | 'warning';
 // A button in the toast, as S2's actionLabel / onAction / shouldCloseOnAction. A toast with one, or with an error to copy,
 // stays until closed: the person needs time to reach the button (WCAG 2.2.1).
 type ToastAction = {label: string; onAction: () => void; closeOnAction?: boolean};
@@ -176,7 +176,7 @@ export const toastErrorDetail = (error: unknown, t: Translator) => ({
   requestId: requestIdOf(error),
   error
 });
-const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
+const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, warning: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
 export type ToastPlacement = 'top' | 'top end' | 'bottom' | 'bottom end';
 // `page` names the current page: the expanded list and its underlay belong to the page they were opened on, so moving

@@ -683,7 +683,7 @@ test('a refresh whose nodes were applied to a degraded runtime reads as applied 
   });
   await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
-  await expect(page.locator('.rp-toast.info')).toContainText('harbor: nodes applied, but the datapath did not recover');
+  await expect(page.locator('.rp-toast.warning')).toContainText('harbor: nodes applied, but the datapath did not recover');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
 });
 

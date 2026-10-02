@@ -26,10 +26,10 @@ export function useRefreshAll(providers: Pick<ReturnType<typeof useProviders>, '
           const counts = {n: done, total: subscriptions.length};
           // Nothing refreshed is a failure, unless every refresh only left its outcome unknown.
           const unknown = failures.length > 0 && failures.every(error => failureNotice(error, t, '').kind === 'neutral');
-          const kind = done === subscriptions.length ? 'positive' : done ? 'info' : unknown ? 'neutral' : 'negative';
+          const kind = done === subscriptions.length ? 'positive' : done ? 'warning' : unknown ? 'neutral' : 'negative';
           if (failures.length) toast(kind, t('settings.refreshedAllFailed', {...counts, failed: failures.length}), toastErrorDetail(failures[0], t));
           else toast(kind, t('settings.refreshedAll', counts));
-          if (degraded) toast('info', t('settings.refreshedDegraded'));
+          if (degraded) toast('warning', t('settings.refreshedDegraded'));
         },
         error => toastFailure(error, t, t('settings.refreshAllFailed'))
       );
