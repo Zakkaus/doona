@@ -53,8 +53,8 @@ h3.rp-label {
 .rp-disclosure-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px 0;
+  gap: var(--rp-space-4);
+  padding: var(--rp-space-3) 0;
 }
 .rp-truncate {
   display: inline-block;
@@ -114,7 +114,7 @@ h3.rp-label {
   padding: 4px 8px;
   border-radius: var(--rp-r-sm);
   /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
-  z-index: 10;
+  z-index: var(--rp-z-tooltip);
   max-width: min(480px, calc(100vw - 24px));
   white-space: normal;
   overflow-wrap: anywhere;

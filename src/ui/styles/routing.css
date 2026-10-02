@@ -107,9 +107,7 @@
   white-space: nowrap;
 }
 .rp-tree-tile[data-stage='rule'] .l {
-  font-family:
-    'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono',
-    monospace;
+  font-family: var(--rp-font-mono);
   font-size: var(--rp-text-xs);
   font-variant-ligatures: none;
 }

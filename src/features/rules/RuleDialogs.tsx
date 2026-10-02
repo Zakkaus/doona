@@ -1,8 +1,9 @@
 import {useId} from 'react';
 import {useT} from '../../i18n';
+import {ConditionRow} from '../../ui/ConditionRow';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
-import {Button, ConfirmDialog, DialogForm, DialogSection, LabeledSelect, Segmented, StaticField, Switch, TextField} from '../../ui/ui';
+import {Button, ConfirmDialog, DialogForm, LabeledSelect, Segmented, StaticField, Switch, TextField} from '../../ui/ui';
 import type {RuleConditionKind} from '../../dae/groups';
 import type {DictionaryModel} from './useRuleList';
 
@@ -50,7 +51,16 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
   const conditionFields = (
     <DialogForm onSubmit={event => event.preventDefault()}>
       {view.conditions?.map(row => (
-        <DialogSection key={row.id}>
+        <ConditionRow
+          key={row.id}
+          negate={row.negate}
+          onNegate={negate => view.setCondition(row.id, {...row, negate})}
+          negateLabel={t('rule.negate')}
+          removeLabel={t('rule.removeCondition')}
+          onRemove={() => view.removeCondition(row.id)}
+          isDisabled={view.busy}
+          removeDisabled={view.conditions!.length === 1}
+        >
           <LabeledSelect
             isDisabled={view.busy}
             label={t('rule.kind')}
@@ -68,16 +78,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
             spellCheck={false}
             onChange={value => view.setCondition(row.id, {...row, value})}
           />
-          <div className="rp-toolbar">
-            <Switch isDisabled={view.busy} isSelected={row.negate} onChange={negate => view.setCondition(row.id, {...row, negate})}>
-              {t('rule.negate')}
-            </Switch>
-            <span className="rp-grow" />
-            <Button small isDisabled={view.busy || view.conditions!.length === 1} onPress={() => view.removeCondition(row.id)}>
-              {t('rule.removeCondition')}
-            </Button>
-          </div>
-        </DialogSection>
+        </ConditionRow>
       ))}
       <div className="rp-toolbar">
         <Button small isDisabled={view.busy} onPress={view.addCondition}>

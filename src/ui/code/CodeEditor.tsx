@@ -69,9 +69,8 @@ const theme = EditorView.theme({
   },
   '&.cm-focused': {outline: 'none', borderColor: 'var(--rp-accent)', boxShadow: '0 0 0 1px var(--rp-accent)'},
   '.cm-scroller': {
-    fontFamily:
-      "'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
-    lineHeight: '20px',
+    fontFamily: 'var(--rp-font-mono)',
+    lineHeight: 'var(--rp-line-body)',
     fontVariantLigatures: 'none',
     // Clip the opaque gutter to the frame's corners; tooltips live outside the scroller and are not clipped.
     borderRadius: 'calc(var(--rp-r-md) - 1px)'
@@ -118,8 +117,7 @@ const theme = EditorView.theme({
   '.cm-tooltip': {backgroundColor: 'var(--rp-surface)', border: '1px solid var(--rp-hl-high)', borderRadius: 'var(--rp-r-md)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {backgroundColor: 'var(--rp-selected)', color: 'var(--rp-text)'},
   '.cm-tooltip.cm-tooltip-autocomplete > ul': {
-    fontFamily:
-      "'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono', monospace",
+    fontFamily: 'var(--rp-font-mono)',
     fontVariantLigatures: 'none'
   },
   '.cm-panels': {backgroundColor: 'var(--rp-surface)', color: 'var(--rp-text)'},

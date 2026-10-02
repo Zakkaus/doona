@@ -95,7 +95,7 @@ section:not(:first-child) > .rp-sec-h {
   width: 6px;
 }
 .rp-popover::-webkit-scrollbar-thumb {
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
   background: var(--rp-hl-high);
 }
 .rp-popover::-webkit-scrollbar-track {
@@ -138,7 +138,7 @@ section:not(:first-child) > .rp-sec-h {
   background: transparent;
 }
 .rp-overlay-scroll::-webkit-scrollbar-thumb {
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
   background: transparent;
 }
 .rp-overlay-scroll:focus-within::-webkit-scrollbar-thumb {

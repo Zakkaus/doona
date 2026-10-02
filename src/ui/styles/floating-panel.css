@@ -3,7 +3,7 @@
    the panel keeps its top edge. The gap gives way first, so a panel that grows never leaves the frame. */
 .rp-floating-frame {
   position: fixed;
-  z-index: 9;
+  z-index: var(--rp-z-panel);
   inset-block: calc(var(--rp-topbar) + var(--rp-space-4) + env(safe-area-inset-top)) calc(var(--rp-dock) + var(--rp-space-4) + env(safe-area-inset-bottom));
   inset-inline: max(var(--rp-space-4), env(safe-area-inset-left)) max(var(--rp-space-4), env(safe-area-inset-right));
   display: flex;

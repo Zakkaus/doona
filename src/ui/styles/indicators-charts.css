@@ -221,7 +221,7 @@
 .rp-legend .sw {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
   background: var(--rp-c1);
 }
 .rp-legend b {

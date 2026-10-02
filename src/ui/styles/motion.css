@@ -114,6 +114,7 @@
   --rp-space-1: 4px;
   --rp-space-2: calc(var(--rp-space-1) * 2);
   --rp-space-6: calc(var(--rp-space-1) * 6);
+  --rp-r-xs: 3px;
   --rp-r-sm: 6px;
   --rp-r-md: 8px;
   --rp-r-lg: 10px;
@@ -145,11 +146,20 @@
   --rp-space-10: 40px;
   --rp-space-12: 48px;
   --rp-space-16: 64px;
+  --rp-font-mono:
+    'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono',
+    monospace;
   --rp-line-body: 20px;
   --rp-line-caption: 16px;
   --rp-focus-width: 2px;
   --rp-control-inset: var(--rp-space-half);
   --rp-control-block-inset: var(--rp-control-inset);
+  /* Global stacking, low to high: the floating panel, then modals and tooltips (tooltips are portaled after the modal
+     they sit on), then toasts. */
+  --rp-z-panel: 9;
+  --rp-z-modal: 10;
+  --rp-z-tooltip: 10;
+  --rp-z-toast: 20;
   --rp-sidebar-width: 240px;
   --rp-sidebar-padding: 16px;
   --rp-control: 32px;

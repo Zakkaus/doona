@@ -62,8 +62,8 @@
       calc(var(--rp-shell-inset) + 249.88px) 65.22px,
       calc(var(--rp-shell-inset) + 244.69px) 68.69px,
       calc(var(--rp-shell-inset) + 241.22px) 73.88px,
-      calc(var(--rp-shell-inset) + 240px) 80px,
-      calc(var(--rp-shell-inset) + 240px) 100%,
+      calc(var(--rp-shell-inset) + var(--rp-sidebar-width)) 80px,
+      calc(var(--rp-shell-inset) + var(--rp-sidebar-width)) 100%,
       0 100%
     );
   }
@@ -85,8 +85,8 @@
       calc(100% - var(--rp-shell-inset) - 249.88px) 65.22px,
       calc(100% - var(--rp-shell-inset) - 244.69px) 68.69px,
       calc(100% - var(--rp-shell-inset) - 241.22px) 73.88px,
-      calc(100% - var(--rp-shell-inset) - 240px) 80px,
-      calc(100% - var(--rp-shell-inset) - 240px) 100%,
+      calc(100% - var(--rp-shell-inset) - var(--rp-sidebar-width)) 80px,
+      calc(100% - var(--rp-shell-inset) - var(--rp-sidebar-width)) 100%,
       100% 100%
     );
   }
