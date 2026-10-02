@@ -17,6 +17,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Applying held rules keeps going when the page that started it closes: rules whose file the backend accepted leave the held list, so the next apply does not write them a second time. (#303)
 - An operation whose result is unknown is reported with a neutral notice instead of an error when it comes from applying rules, a group action, a geodata update, refreshing every subscription or saving runtime settings. A rule apply that fails after its dialog or page closed reports the failure as a notice. (#303)
 - A runtime setting or a subscription edit put back to its stored value no longer counts as unsaved, so leaving the form does not ask to discard it. (#303)
+- Chinese translations distinguish backend profiles from configuration files, use subscription update labels that fit any count, and clarify that saving backend settings creates a profile. The sign-in game's accessible name uses a neutral term for the duck. (#302)
 - On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
 
 ## [0.1.0-beta.12] - 2026-09-30
