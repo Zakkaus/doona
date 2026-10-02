@@ -64,20 +64,31 @@ test('a failed first fetch of a new subscription offers Retry, which stays until
 // The boxes of a toast's parts, for the layout checks below.
 async function parts(toast: ReturnType<Page['locator']>) {
   return toast.evaluate(toast => {
-    const box = (selector: string) => {
-      const rect = toast.querySelector(selector)?.getBoundingClientRect();
+    const box = (selector: string | null) => {
+      const rect = (selector ? toast.querySelector(selector) : toast)?.getBoundingClientRect();
       return rect ? {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, middle: rect.top + rect.height / 2} : null;
     };
     return {
+      toast: box(null)!,
+      msg: box('.msg')!,
       summary: box('[slot="title"]')!,
       detail: box('[slot="description"]'),
       icon: box('.icon svg'),
       close: box('.close')!,
       foot: box('.foot'),
-      action: box('.action'),
+      action: box('.foot .action:last-child'),
+      actions: [...toast.querySelectorAll('.foot .action')].map(el => el.getBoundingClientRect()),
       more: box('.more')
     };
   });
+}
+
+// The message column runs from the icon to the close button, 8px short of it, and the footer row sits 4px under the first
+// row with the toast's 12px padding below it.
+function expectMessageBesideClose(boxes: Awaited<ReturnType<typeof parts>>) {
+  expect(Math.abs(boxes.close.left - boxes.msg.right - 8)).toBeLessThanOrEqual(1);
+  expect(Math.abs(boxes.foot!.top - Math.max(boxes.msg.bottom, boxes.close.bottom) - 4)).toBeLessThanOrEqual(1);
+  expect(Math.abs(boxes.toast.bottom - boxes.foot!.bottom - 12)).toBeLessThanOrEqual(1);
 }
 
 for (const width of [1280, 390])
@@ -95,6 +106,10 @@ for (const width of [1280, 390])
     for (const middle of [boxes.icon!.middle, boxes.close.middle]) expect(Math.abs(middle - (boxes.summary.top + 10))).toBeLessThanOrEqual(1);
     expect(boxes.action!.top).toBeGreaterThanOrEqual(boxes.detail!.bottom);
     expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
+    // The error is copied from an action after Retry on that row, so the message keeps the width it has without it.
+    await expect(failure.locator('.foot .action')).toHaveText(['Retry', 'Copy error']);
+    expect(boxes.actions[0].right).toBeLessThan(boxes.actions[1].left);
+    expectMessageBesideClose(boxes);
     // A toast without a detail shows only its summary, and one with neither an action nor a stack behind it has no
     // footer row.
     await failure.getByRole('button', {name: 'Retry', exact: true}).click();
@@ -205,3 +220,35 @@ test('a failure toast leaves the request id out of its text and logs it', async 
   await expect(failure).not.toContainText('request_id');
   expect(warnings.filter(text => text.includes('request_id: 0f8c2a4e-5b1d-4c3e-9a7f-2d6b8e1c4f90'))).toHaveLength(1);
 });
+
+for (const width of [1280, 390])
+  test(`an error toast without an action at ${width}px copies its error from a footer row and, on a phone, stays clear of a dialog's button`, async ({
+    page
+  }) => {
+    await page.setViewportSize({width, height: 844});
+    await page.clock.install();
+    const backend = await mockBackend(page);
+    backend.handlers['POST providers/harbor/refresh'] = async () => {
+      throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
+    };
+    await page.goto('/#/nodes?tab=list');
+    await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
+    const failure = page.locator('.rp-toast.negative');
+    await expect(failure.locator('.foot .action')).toHaveText('Copy error');
+    const boxes = await parts(failure);
+    expectMessageBesideClose(boxes);
+    expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
+    if (width > 400) return;
+    // On a phone the toast sits over the page's lower part, but not over the centre of a dialog's Save button.
+    await page.goto('/#/settings');
+    await page.getByRole('button', {name: 'Add profile', exact: true}).click();
+    const dialog = page.getByRole('dialog', {name: 'Add profile'});
+    await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
+    const save = dialog.getByRole('button', {name: 'Save', exact: true});
+    await expect(save).toBeVisible();
+    const centre = await save.evaluate(button => {
+      const rect = button.getBoundingClientRect();
+      return button.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
+    });
+    expect(centre).toBe(true);
+  });

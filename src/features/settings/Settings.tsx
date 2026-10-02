@@ -8,6 +8,7 @@ import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
+import {useCopyDiagnostics, useDiagnostics} from '../shared/useCopyDiagnostics';
 import {About} from '../../shell/About';
 import {openShortcuts} from '../../shell/shortcuts';
 import type {PageProps, RoutePath} from '../../shell/routes';
@@ -18,6 +19,8 @@ const cards = {backend: settingsCard('backend'), appearance: settingsCard('appea
 export function Settings({query}: PageProps) {
   const t = useT();
   const session = useSignOut();
+  const copyDiagnostics = useCopyDiagnostics();
+  const recorded = useDiagnostics();
   const {
     activeId,
     staleLogin,
@@ -232,6 +235,9 @@ export function Settings({query}: PageProps) {
           <Link appearance="button" href={guide} external>
             {t('shell.guide')}
           </Link>
+          <Button isDisabled={!recorded.length} tip={t('settings.copyErrorsNone')} onPress={() => void copyDiagnostics()}>
+            {t('settings.copyErrors')}
+          </Button>
           {install && <Button onPress={install}>{t('settings.install')}</Button>}
           {installHint && <p className="rp-note">{installHint}</p>}
         </div>

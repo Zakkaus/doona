@@ -6,6 +6,8 @@ import {backendMessage, oneLine, refusalMessage, type BackendMessage} from '../i
 
 export class ApiError extends Error {
   configurationWrite = false;
+  // The request that failed, for a bug report: the path only, never the query.
+  request: {method: string; path: string} | null = null;
   constructor(
     public status: number,
     public code: string,
@@ -27,10 +29,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function responseError(response: Response): Promise<ApiError> {
+export async function responseError(response: Response, method = 'GET'): Promise<ApiError> {
   const body: Partial<ErrorResponse> | null = await response.json().catch(() => null);
   const retryAfter = Number(response.headers.get('Retry-After'));
-  return new ApiError(
+  const error = new ApiError(
     response.status,
     body?.error?.code ?? '',
     body?.error?.message ?? (response.statusText || `HTTP ${response.status}`),
@@ -38,6 +40,8 @@ export async function responseError(response: Response): Promise<ApiError> {
     body?.error?.details ?? null,
     retryAfter > 0 ? retryAfter : null
   );
+  if (response.url) error.request = {method: method.toUpperCase(), path: new URL(response.url).pathname};
+  return error;
 }
 
 // A contract failure detected by doona: it keeps the status and code callers branch on, and a translated text.
@@ -159,8 +163,12 @@ export async function send(input: RequestInfo | URL, init?: RequestInit, write?:
   }
 }
 
+// The operation a failure belongs to, with the last status doona saw.
+export type OperationRef = {id: string; kind: string; status: string};
+
 // Local failures carry a message key; detail, code and details preserve the backend's error.
 export class LocalError extends Error {
+  operation: OperationRef | null = null;
   constructor(
     public key: Key,
     public detail: string | null = null,
@@ -202,7 +210,8 @@ export const requestIdOf = (error: unknown): string | undefined =>
 // whose outcome is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is
 // reported under its own summary too, since the action's would say the write failed, and so is an activation that
 // left the change active or its outcome unknown.
-export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; requestId?: string};
+// `error` is the failure it reports, for a toast to record and offer to copy; an invalid edit has none.
+export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; requestId?: string; error?: unknown};
 const ownSummary = new Set<Key>([
   'ui.writtenNotApplied',
   'ui.activationDegraded',
@@ -212,9 +221,9 @@ const ownSummary = new Set<Key>([
   'ui.activationUnknown'
 ]);
 export function failureNotice(error: unknown, t: Translator, summary: string): Notice {
-  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key)};
-  if (error instanceof LocalError && ownSummary.has(error.key)) return {kind: 'negative', text: t(error.key), detail: localDetail(error, t)};
-  return {kind: 'negative', text: summary, detail: errorText(error, t, false), requestId: requestIdOf(error)};
+  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key), error};
+  if (error instanceof LocalError && ownSummary.has(error.key)) return {kind: 'negative', text: t(error.key), detail: localDetail(error, t), error};
+  return {kind: 'negative', text: summary, detail: errorText(error, t, false), requestId: requestIdOf(error), error};
 }
 
 // A notice as one line, for a place that shows it inline rather than as a toast.

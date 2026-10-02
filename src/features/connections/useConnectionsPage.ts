@@ -156,7 +156,7 @@ export function useConnectionsPage({go, query}: PageProps) {
       if (new URLSearchParams(latest.current).get('id') === id) select(null);
       toast('positive', t('conn.closed', {name: model.detail.title}));
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'state_conflict') toast('negative', t('conn.notClosable'));
+      if (error instanceof ApiError && error.code === 'state_conflict') toast('negative', t('conn.notClosable'), {error});
       else toast('negative', t('conn.closeFailed'), toastErrorDetail(error, t));
     }
   };

@@ -18,6 +18,7 @@ import InfoCircle from './icons/InfoCircle';
 import ChevronDown from './icons/ChevronDown';
 import {useT, type Translator} from '../i18n';
 import {errorLines, errorText, failureNotice, requestIdOf} from '../api/error';
+import {recordDiagnostic, type Diagnostic} from '../api/diagnostics';
 import {cx} from './cx';
 import {Button, TextTooltip} from './Button';
 import {escapeLayers} from './hooks';
@@ -123,25 +124,28 @@ export function Badge({children, tone, className, tip}: {children: ReactNode; to
 
 // Toasts: react-aria's queue rendered like S2's ToastContainer; timers pause while hovered, focused or listed.
 type ToastKind = 'positive' | 'negative' | 'neutral' | 'info';
-// A button in the toast, as S2's actionLabel / onAction / shouldCloseOnAction. A toast with one stays until closed:
-// the person needs time to reach the button (WCAG 2.2.1).
+// A button in the toast, as S2's actionLabel / onAction / shouldCloseOnAction. A toast with one, or with an error to copy,
+// stays until closed: the person needs time to reach the button (WCAG 2.2.1).
 type ToastAction = {label: string; onAction: () => void; closeOnAction?: boolean};
 // The detail is a second, smaller line under the message: what went wrong, in the backend's words.
-type ToastOptions = {detail?: string; action?: ToastAction; requestId?: string};
-type ToastMessage = {kind: ToastKind; text: string; detail?: string; action?: ToastAction};
+// A toast about an error object, of any kind, records it and offers to copy it as an action; one that is not
+// about an error has nothing to copy.
+type ToastOptions = {detail?: string; action?: ToastAction; requestId?: string; error?: unknown};
+type ToastMessage = {kind: ToastKind; text: string; detail?: string; action?: ToastAction; diagnostic?: Diagnostic};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
 // A repeated message replaces its earlier copy at the front instead of stacking behind it.
 const queued = new Map<string, string>();
 // A toast leaves the request id out of its words and logs the failure with it instead, where a bug report can find it.
-export const toast = (kind: ToastKind, text: string, {detail, action, requestId}: ToastOptions = {}) => {
+export const toast = (kind: ToastKind, text: string, {detail, action, requestId, error}: ToastOptions = {}) => {
+  const diagnostic = error === undefined ? undefined : recordDiagnostic(error);
   if (requestId) console.warn(`${text}${detail ? `\n${detail}` : ''} (request_id: ${requestId})`);
   const id = [kind, text, detail ?? ''].join('\n');
   const earlier = queued.get(id);
   if (earlier) toasts.close(earlier);
   const key = toasts.add(
-    {kind, text, detail, action},
+    {kind, text, detail, action, diagnostic},
     {
-      timeout: action ? undefined : 5000,
+      timeout: action || diagnostic ? undefined : 5000,
       onClose: () => {
         if (queued.get(id) === key) queued.delete(id);
       }
@@ -153,19 +157,28 @@ export const toast = (kind: ToastKind, text: string, {detail, action, requestId}
 // neutrally.
 export const toastFailure = (error: unknown, t: Translator, summary: string, action?: ToastAction) => {
   const notice = failureNotice(error, t, summary);
-  toast(notice.kind, notice.text, {detail: notice.detail, requestId: notice.requestId, action});
+  toast(notice.kind, notice.text, {detail: notice.detail, requestId: notice.requestId, action, error});
 };
-// An error as a toast's detail, with its request id passed on for the log.
+// An error as a toast's detail, with its request id passed on for the log and the error itself for the toast to record.
 export const toastErrorDetail = (error: unknown, t: Translator) => ({
   detail: errorText(error, t, false),
-  requestId: requestIdOf(error)
+  requestId: requestIdOf(error),
+  error
 });
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
 export type ToastPlacement = 'top' | 'top end' | 'bottom' | 'bottom end';
 // `page` names the current page: the expanded list and its underlay belong to the page they were opened on, so moving
 // to another page collapses them.
-export function Toasts({placement = 'bottom', page = ''}: {placement?: ToastPlacement; page?: string}) {
+export function Toasts({
+  placement = 'bottom',
+  page = '',
+  onCopyError
+}: {
+  placement?: ToastPlacement;
+  page?: string;
+  onCopyError: (diagnostic: Diagnostic) => void;
+}) {
   const [edge, align = 'center'] = placement.split(' ') as ['top' | 'bottom', 'end' | undefined];
   const t = useT();
   const [expandedOn, setExpandedOn] = useState<string | null>(null);
@@ -209,11 +222,21 @@ export function Toasts({placement = 'bottom', page = ''}: {placement?: ToastPlac
           </RButton>
         </div>
       )}
-      <ToastStack expanded={expanded} edge={edge} onExpand={() => setExpanded(true)} />
+      <ToastStack expanded={expanded} edge={edge} onExpand={() => setExpanded(true)} onCopyError={onCopyError} />
     </ToastRegion>
   );
 }
-function ToastStack({expanded, edge, onExpand}: {expanded: boolean; edge: 'top' | 'bottom'; onExpand: () => void}) {
+function ToastStack({
+  expanded,
+  edge,
+  onExpand,
+  onCopyError
+}: {
+  expanded: boolean;
+  edge: 'top' | 'bottom';
+  onExpand: () => void;
+  onCopyError: (diagnostic: Diagnostic) => void;
+}) {
   const state = useContext(ToastStateContext) as ToastState<ToastMessage>;
   const visible = state.visibleToasts;
   return (
@@ -229,6 +252,7 @@ function ToastStack({expanded, edge, onExpand}: {expanded: boolean; edge: 'top' 
             count={visible.length}
             background={!expanded && depth > 0}
             more={!expanded && depth === 0 && visible.length > 1 ? {edge, onExpand} : null}
+            onCopyError={onCopyError}
           />
         );
       }}
@@ -236,15 +260,16 @@ function ToastStack({expanded, edge, onExpand}: {expanded: boolean; edge: 'top' 
   );
 }
 // One toast, after S2's with the message in two levels: the icon, the summary with its detail below, and close on the
-// first line; under them, only when there is one, a row with "show all" at the start and the action at the end, which
-// ends where close ends. The same on a phone.
+// first line; under them, only when there is one, a row with "show all" at the start and the actions at the end (its
+// own, then "copy error"), which ends where close ends. The same on a phone.
 function ToastItem({
   item,
   state,
   depth,
   count,
   background,
-  more
+  more,
+  onCopyError
 }: {
   item: QueuedToast<ToastMessage>;
   state: ToastState<ToastMessage>;
@@ -252,10 +277,11 @@ function ToastItem({
   count: number;
   background: boolean;
   more: {edge: 'top' | 'bottom'; onExpand: () => void} | null;
+  onCopyError: (diagnostic: Diagnostic) => void;
 }) {
   const t = useT();
   const Icon = TOAST_ICON[item.content.kind];
-  const {text, detail, action} = item.content;
+  const {text, detail, action, diagnostic} = item.content;
   return (
     <RToast
       toast={item}
@@ -283,7 +309,7 @@ function ToastItem({
       <RButton slot="close" className="rp-btn quiet icon close" aria-label={t('ui.close')}>
         <Close />
       </RButton>
-      {(more || action) && (
+      {(more || action || diagnostic) && (
         <div className="foot">
           {more && (
             <RButton className="rp-btn sm quiet more" onPress={more.onExpand}>
@@ -300,6 +326,11 @@ function ToastItem({
               }}
             >
               {action.label}
+            </RButton>
+          )}
+          {diagnostic && (
+            <RButton className="rp-btn action" onPress={() => onCopyError(diagnostic)}>
+              {t('toast.copyError')}
             </RButton>
           )}
         </div>

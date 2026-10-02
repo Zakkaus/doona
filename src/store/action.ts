@@ -82,9 +82,14 @@ export async function settle(api: Api, accepted: OperationAccepted, signal?: Abo
   } catch (error) {
     if (signal?.aborted) throw error;
     void refetchAll();
-    throw new LocalError('ui.operationUnknown');
+    throw during(new LocalError('ui.operationUnknown'), accepted.operation_id, accepted.kind, accepted.status);
   }
 }
+// Names the operation a failure belongs to, for the diagnostics a person can copy.
+const during = (error: LocalError, id: string, kind: string, status: string) => {
+  error.operation = {id, kind, status};
+  return error;
+};
 // A direct write refused with 503 temporarily_unavailable may still have changed what it wrote, so the resource is
 // read back. The action stays busy until that read lands and the Retry-After the backend asked for has passed, so the
 // control cannot send again sooner.
@@ -110,10 +115,16 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
     return {degraded: true} as Finished<K>;
   if (operation.status === 'failed') {
     const outcome = activationError(operation.error, {written});
-    if (outcome) throw outcome;
+    if (outcome) throw during(outcome, operation.operation_id, operation.kind, operation.status);
   }
   const onDisk = operation.status === 'failed' && (typeof details?.written === 'boolean' ? details.written : written);
-  throw new LocalError(onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed', operation.error?.message ?? null, operation.error?.code ?? null, details);
+  const failure = new LocalError(
+    onDisk ? 'ui.writtenNotApplied' : 'ui.operationFailed',
+    operation.error?.message ?? null,
+    operation.error?.code ?? null,
+    details
+  );
+  throw during(failure, operation.operation_id, operation.kind, operation.status);
 }
 // An activation that failed after the new generation became active (`committed: true`) or without knowing whether it
 // did (`committed: null`). The outcome code is a failed operation's `error.code` or a synchronous error's

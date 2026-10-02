@@ -70,7 +70,7 @@
   justify-content: flex-end;
   gap: 8px;
 }
-/* S2's toast. The footer row takes "show all" at the start and the action at the end, which ends where close ends; the
+/* S2's toast. The footer row takes "show all" at the start and the actions at the end, which ends where close ends; the
    widest toast sets the width of the stack. Margins rather than column gaps space the columns, so a toast without an
    icon starts its message at the padding. */
 .rp-toast {
@@ -151,6 +151,9 @@
   border-radius: var(--rp-r-pill);
   background: transparent;
   color: inherit;
+}
+.rp-toast .action + .action {
+  margin-inline-start: 0;
 }
 .rp-toast .action[data-focus-visible] {
   outline-color: currentColor;
