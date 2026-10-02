@@ -23,6 +23,7 @@ const allowed = new Map(
   [
     ['src/main.tsx', 'text', 'doona', 'product name'],
     ['src/features/rules/RuleList.tsx', 'text', 'must', 'dae keyword'],
+    ['src/features/rules/RuleDialogs.tsx', 'text', 'must', 'dae keyword'],
     ['src/features/config/NewSource.tsx', 'placeholder', 'extra', 'sample source name'],
     ['src/features/config/NewSource.tsx', 'placeholder', 'config.d/extra.dae', 'sample source path'],
     ['src/features/shared/IncludesEditor.tsx', 'placeholder', "name(keyword: 'HK')", 'sample dae condition'],

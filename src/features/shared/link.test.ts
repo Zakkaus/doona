@@ -1,6 +1,9 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource} from '../../api/model';
-import {groupQuery, nodeHref, parseRuleSeed, parseTraceLink, sectionSourceHref, traceQuery} from './link';
+import {groupQuery, nodeHref, outboundTag, parseRuleSeed, parseTraceLink, sectionSourceHref, traceQuery} from './link';
+import {translate, type Translator} from '../../i18n';
+
+const t: Translator = (key, params) => translate('en', key, params);
 import {tagId} from './taggedId';
 
 it('round trips IPv6 and reserved URL characters without reinterpreting the condition kind', () => {
@@ -75,4 +78,13 @@ it('carries a trace target, source and process through the address and back', ()
   });
   expect(parseTraceLink('tab=trace&src_ip=10.0.0.2')).toBeNull();
   expect(parseTraceLink('tab=trace')).toBeNull();
+});
+
+it.each([
+  ['a listed group', 'proxy', {label: 'proxy', href: '#/policies?group=g1'}],
+  ['a node', 'hk-01', {label: 'hk-01', href: null}],
+  ['a built-in', 'direct', {label: 'direct', href: null}],
+  ['nothing recorded', null, {label: 'Unknown', href: null}]
+])('shows the outbound of %s as a tag', (_, name, view) => {
+  expect(outboundTag(name, [{id: 'g1', name: 'proxy'}], t)).toEqual(view);
 });

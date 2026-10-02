@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useCapabilities, useFlow, useFlows, useOutboundNames, useRules, type FlowFilter} from '../../store';
+import {useCapabilities, useFlow, useFlows, useGroups, useOutboundNames, useRules, type FlowFilter} from '../../store';
 import {connectionStates, outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';
@@ -8,7 +8,7 @@ import type {PageProps} from '../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
 import {offered} from '../../api/capabilities';
-import {recordingSettingsHref} from '../shared/link';
+import {outboundTag, recordingSettingsHref} from '../shared/link';
 import {useQuickRule} from '../shared/useQuickRule';
 
 export function useFlowRecords({go, query}: PageProps) {
@@ -37,7 +37,11 @@ export function useFlowRecords({go, query}: PageProps) {
   const generation = rules.data?.generation_id;
   const view = useMemo(() => flowRecordsView(shown, resource.data, generation, names, t, lang), [shown, resource.data, generation, names, t, lang]);
   const row = view.rows.find(flow => flow.id === id);
-  const detailView = useMemo(() => flowDetailView(detail.data ?? undefined, t, lang, row), [detail.data, t, lang, row]);
+  const groups = useGroups(offered(resources, 'groups', {whileLoading: false})).data;
+  const detailView = useMemo(() => {
+    const shown = flowDetailView(detail.data ?? undefined, t, lang, row);
+    return shown && {...shown, outboundTag: outboundTag(shown.seed.outbound, groups, t)};
+  }, [detail.data, t, lang, row, groups]);
   const quick = useQuickRule(go);
   return {
     ...view,

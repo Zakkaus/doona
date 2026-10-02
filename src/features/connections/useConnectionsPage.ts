@@ -1,6 +1,7 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {readTag} from '../shared/taggedId';
-import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useNodes, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useGroups, useNodes, useOutboundNames} from '../../store';
+import {outboundTag} from '../shared/link';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, phoneQuery, toast, toastErrorDetail, useLinked, useMediaQuery, useWhileShown} from '../../ui/ui';
@@ -144,7 +145,11 @@ export function useConnectionsPage({go, query}: PageProps) {
   }
   const ruleAction = useConnectionRule(cur, go);
   const lists = useMemo(() => connectionsView(rows, listData, src, rule, out, locale, t), [rows, listData, src, rule, out, locale, t]);
-  const detail = useMemo(() => connectionDetail(cur, locale, t, names, rulesListed), [cur, locale, t, names, rulesListed]);
+  const groups = useGroups(offered(capabilities.data?.resources, 'groups', {whileLoading: false})).data;
+  const detail = useMemo(() => {
+    const base = connectionDetail(cur, locale, t, names, rulesListed);
+    return base && {...base, outboundTag: outboundTag(base.outbound, groups, t)};
+  }, [cur, locale, t, names, rulesListed, groups]);
   const model = {...lists, detail};
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {

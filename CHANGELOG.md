@@ -35,6 +35,14 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Adding a rule from a flow record or a trace offers "Before the matched rule" only when the match comes from the rule list's current generation.
 - Saving a subscription writes only the fields changed in the dialog, so a link or name updated in the source meanwhile is no longer overwritten.
 - On the Nodes page, Add to group lists the groups of every writable include as well as the main source, and stays available when only an include can be written; groups are not offered while a write is in progress.
+- A group whose filter names a value with an apostrophe, such as `name("O'Reilly")`, opens in the group dialog with its filter as text instead of failing to open. (#315)
+- Group member previews and counts read `regex:` filters in honk's Rust syntax, such as `\p{Han}`, `\-` and `[[:alpha:]]`; a pattern doona cannot translate leaves the filter as text. (#315)
+- Renaming a subscription rewrites only the changed values inside its group filters; other values and other filter lines keep their spacing and quotes. (#315)
+- In the add-rule dialog, switching from Expression back to Select turns the edited expression into condition rows; an expression the rows cannot hold stays in Expression with a hint, and an emptied expression starts again from one empty row. (#315)
+- The Select and Expression switch in the add-rule dialog is as wide as its two segments instead of the whole dialog; every segmented control keeps its own width in a column or a grid. (#315)
+- Adding a rule from a flow record or a trace offers "Before the matched rule" only when the match comes from the rule list's current generation. (#315)
+- Saving a subscription writes only the fields changed in the dialog, so a link or name updated in the source meanwhile is no longer overwritten. (#315)
+- On the Nodes page, Add to group lists the groups of every writable include as well as the main source, and stays available when only an include can be written; groups are not offered while a write is in progress. (#315)
 
 ## [0.1.0-beta.12] - 2026-09-30
 

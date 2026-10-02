@@ -1,5 +1,6 @@
 import type {ConfigSource, Node} from '../../api/model';
-import {nodeOwner} from '../../api/selectors';
+import {nodeOwner, outboundLabel} from '../../api/selectors';
+import type {Translator} from '../../i18n';
 import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {scanConfig} from '../../dae/text';
 import {readTag} from './taggedId';
@@ -21,6 +22,13 @@ export function groupQuery(groups: ReadonlyArray<{id: string; name: string}> | u
 
 // The routing trace with its form filled in from a link: the target, and the source and process when the link knows
 // them. The person runs the trace.
+// An outbound as a detail panel shows it: a listed group links to it on the Policies page, anything else is its label.
+export type OutboundTagView = {label: string; href: string | null};
+export function outboundTag(name: string | null, groups: ReadonlyArray<{id: string; name: string}> | undefined, t: Translator): OutboundTagView {
+  const group = groups?.find(group => group.name === name);
+  return group ? {label: group.name, href: href('policies', {group: group.id})} : {label: outboundLabel(name, t), href: null};
+}
+
 export type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string; src_port: string; pname: string};
 const traceKeys = ['network', 'domain', 'dst_ip', 'dst_port', 'src_ip', 'src_port', 'pname'] as const;
 export const traceQuery = (link: Partial<TraceLink>) => within('', {tab: 'trace', ...Object.fromEntries(traceKeys.map(key => [key, link[key] || null]))});

@@ -306,3 +306,16 @@ test('kit pickers keep symmetric insets', async ({page}) => {
     )
   ).toBe(true);
 });
+
+test('the add-rule mode switch hugs its segments instead of the dialog width', async ({page}) => {
+  await page.goto('/#/rules?view=advanced');
+  await page.getByRole('button', {name: 'Add rule', exact: true}).click();
+  const track = page.getByRole('dialog').getByRole('radiogroup', {name: 'Condition form'});
+  await expect(track).toBeVisible();
+  const trackBox = await track.boundingBox();
+  const segments = await track.getByRole('radio').evaluateAll(els => els.map(el => el.getBoundingClientRect().width));
+  const dialog = await page.getByRole('dialog').boundingBox();
+  // Track = segments + gaps + padding + border, a few pixels over their sum, and well under the dialog.
+  expect(trackBox!.width - segments.reduce((a, b) => a + b, 0)).toBeLessThan(24);
+  expect(trackBox!.width).toBeLessThan(dialog!.width / 2);
+});
