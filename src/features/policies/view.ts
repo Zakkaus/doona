@@ -209,7 +209,6 @@ export function policyCardView(g: Group, members: MemberView[], network: 'both' 
     overridable,
     pinned,
     automatic: groupKind(g.policy) === 'auto',
-    summary: selectionSummary(g, members, t),
     interruptable,
     interrupt: g.config.interrupt_connections === true,
     // null: the group sets no value and the engine's default applies.

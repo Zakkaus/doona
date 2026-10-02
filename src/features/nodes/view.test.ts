@@ -15,7 +15,7 @@ import {
   providerRowView,
   keptOptions,
   providerCreate,
-  providerEdited,
+  providerChanges,
   renameReferences,
   selectedProvider
 } from './view';
@@ -404,19 +404,19 @@ it.each([
   ['-1h', true]
 ] as const)('guards only changed subscription intervals (%s)', (interval, edited) => {
   const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub' {\n    interval: 1h\n  }\n}")[0];
-  expect(providerEdited({name: entry.tag, value: entry.url, interval, agent: '', cache: null, route: ''}, entry, undefined)).toBe(edited);
+  expect(providerChanges({name: entry.tag, value: entry.url, interval, agent: '', cache: null, route: ''}, entry, undefined).interval).toBe(edited);
 });
 
 it.each([
-  ['the cache switched back to the default', {cache: true}, true, false],
-  ['the cache switched off the default', {cache: false}, true, true],
-  ['the cache switched with no default', {cache: true}, undefined, true],
-  ['the route put back to routing', {route: 'routing'}, undefined, false],
-  ['another route', {route: 'direct'}, undefined, true],
-  ['the name with spaces around it', {name: ' harbor '}, undefined, false],
-  ['a blank User-Agent', {agent: '  '}, undefined, false]
-] as const)('counts only a real change as unsaved: %s', (_, change, defaultCache, edited) => {
+  ['the cache switched back to the default', 'cache', {cache: true}, true, false],
+  ['the cache switched off the default', 'cache', {cache: false}, true, true],
+  ['the cache switched with no default', 'cache', {cache: true}, undefined, true],
+  ['the route put back to routing', 'route', {route: 'routing'}, undefined, false],
+  ['another route', 'route', {route: 'direct'}, undefined, true],
+  ['the name with spaces around it', 'name', {name: ' harbor '}, undefined, false],
+  ['a blank User-Agent', 'agent', {agent: '  '}, undefined, false]
+] as const)('counts only a real change as unsaved: %s', (_, field, change, defaultCache, edited) => {
   const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub'\n}")[0];
   const form = {name: entry.tag, value: entry.url, interval: '', agent: '', cache: null, route: '', ...change};
-  expect(providerEdited(form, entry, defaultCache)).toBe(edited);
+  expect(providerChanges(form, entry, defaultCache)[field]).toBe(edited);
 });
