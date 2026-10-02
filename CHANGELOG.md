@@ -44,6 +44,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0.
 - Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0. (#359)
 - Nested policy groups recover their probe options when refreshed node IDs arrive after the descendant group reads, without reopening Policies. (#334)
+- Nested policy groups recover their probe options when refreshed node IDs arrive after the descendant group reads, without reopening Policies. (#334) (#358)
+- Trojan, AnyTLS and VLESS retain DNS UDP probe choices when support depends on node configuration; backend admission failures remain visible instead of silently switching to HTTP. (#334) (#358)
 - Renaming a node updates DNS upstream detours in its declaring source and is blocked while another source refers to it. (#353)
 - Add to group on Nodes keeps the shared Policies editor available for new and existing groups when the runtime groups API is unavailable. (#353)
 - Empty file providers remain visible on Nodes, including their status and removal action. (#353)

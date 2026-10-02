@@ -25,5 +25,5 @@ export function supportsNodeProbe(protocol: string | null, kind: ProbeRequest['k
   const support = nodeProbeSupport(protocol);
   return kind === 'tcp_connect'
     ? support.connect && transports.every(transport => transport === 'tcp')
-    : support.stream && transports.every(transport => transport === 'tcp' || (kind === 'dns' && support.udp === true));
+    : support.stream && transports.every(transport => transport === 'tcp' || (kind === 'dns' && support.udp !== false));
 }
