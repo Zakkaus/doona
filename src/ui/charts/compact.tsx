@@ -14,7 +14,14 @@ export function compactSamples(timestamps: number[], minimumInterval = 1000): nu
 // Each sparkline's tip lists every series at the hovered time, as the full chart's does.
 export function WidgetAreaChart({size, ...props}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'}) {
   const t = useT();
-  if (size === 'normal') return <AreaChart {...props} />;
+  const legend = <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} />;
+  if (size === 'normal')
+    return (
+      <>
+        {legend}
+        <AreaChart {...props} />
+      </>
+    );
   const indices = compactSamples(props.timestamps);
   const lines = (at: number) =>
     props.series
@@ -23,7 +30,7 @@ export function WidgetAreaChart({size, ...props}: ComponentProps<typeof AreaChar
       .map(s => t('ui.valuePair', {label: s.label, value: props.fmt(s.values[indices[at]]!)}));
   return (
     <figure className="rp-compact-chart" aria-label={props.label}>
-      <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} />
+      {legend}
       {props.series.map(series => (
         <Spark
           key={series.label}

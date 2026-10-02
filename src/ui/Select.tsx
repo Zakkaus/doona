@@ -55,10 +55,13 @@ export const ItemLabel = ({i, cut, reserveFlag = false}: {i: Item; reserveFlag?:
     </span>
   );
 };
-// S2 descriptions sit below the label and grow with their content.
+// S2 descriptions sit below the label and grow with their content. The label slot names the item apart from its
+// description, which is announced as the description.
 export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
-    <ItemLabel i={i} reserveFlag />
+    <Text slot="label" elementType="span">
+      <ItemLabel i={i} reserveFlag />
+    </Text>
     {children ??
       (i.desc && (
         <Text slot="description" className="desc">

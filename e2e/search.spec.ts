@@ -48,8 +48,8 @@ test('search finds a routing rule by its condition and lands on its row', async 
   await page.goto('/#/activity');
   await expect(page.locator('.rp-nav').first()).toBeVisible();
   const dialog = await open(page, 'telegram');
-  // The connection to api.telegram.org is a hit too; the rule is the one that names its outbound.
-  const hit = dialog.getByRole('option', {name: /domain\(geosite:telegram\).*→ telegram/});
+  // The connection to api.telegram.org is a hit too; the rule is the one that names its outbound in its description.
+  const hit = dialog.getByRole('option', {name: /domain\(geosite:telegram\)/}).filter({hasText: /→ telegram/});
   await expect(hit).toHaveCount(1);
   await hit.click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&rule=/);
@@ -66,7 +66,7 @@ test('search opens a connections tab and the DNS rules tab from a DNS rule condi
   await expect(page).toHaveURL(/#\/connections\?tab=traffic$/);
   await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
   dialog = await open(page, 'home.arpa');
-  const hit = dialog.getByRole('option', {name: /qname\(suffix: lan, home\.arpa\).*Request rules #2 → asis/});
+  const hit = dialog.getByRole('option', {name: /qname\(suffix: lan, home\.arpa\)/}).filter({hasText: /Request rules #2 → asis/});
   await expect(hit).toHaveCount(1);
   await hit.click();
   await expect(page).toHaveURL(/#\/rules\?tab=dns$/);

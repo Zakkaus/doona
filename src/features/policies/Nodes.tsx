@@ -8,7 +8,7 @@ export function NodeGrid({
   nodes,
   selected,
   cur,
-  marks = {},
+  marks,
   onSelect,
   isDisabled
 }: {
