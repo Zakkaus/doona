@@ -586,9 +586,11 @@ for (const available of [false, true]) {
     capabilities.resources.probes.kinds = ['dns'];
     await page.goto('/#/policies');
     const group = page.getByRole('region', {name: 'gaming', exact: true});
-    await expect(await moreItem(group, 'Test all')).toBeDisabled();
+    const probe = await moreItem(group, 'Test all');
+    if (available) await expect(probe).toBeEnabled();
+    else await expect(probe).toBeDisabled();
     const options = page.getByRole('menuitem', {name: 'Probe with options…', exact: true});
-    if (available) await expect(options).toBeDisabled();
+    if (available) await expect(options).toBeEnabled();
     else await expect(options).toHaveCount(0);
   });
 }

@@ -1,3 +1,4 @@
+import {probeFallbackNotice} from '../shared/probe';
 import type {ProbeOptions} from '../../store/probeOptions';
 import {href} from '../../shell/route';
 import {selectedIncludeLabels, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
@@ -130,7 +131,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     void control.probe(options).then(result => {
       if (result && g) {
         const summary = probeSummary(result);
-        toast('positive', t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}));
+        toast('positive', t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}) + probeFallbackNotice(result.fallback, g.name, t));
       }
     });
   const release = () =>

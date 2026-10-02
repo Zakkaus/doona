@@ -393,8 +393,11 @@ test('policy details load near the viewport and a deep link explicitly mounts a 
   await page.route('**/api/v1/groups', route => route.fulfill({json: groups}));
   await page.route('**/api/v1/groups/*', route => {
     const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    const name = groups.find(group => group.id === id)?.name;
+    // The nested groups a card reads for its probe kinds come from the mock.
+    if (!name) return route.fallback();
     loaded.add(id);
-    return route.fulfill({json: {...base, id, name: groups.find(group => group.id === id)!.name}});
+    return route.fulfill({json: {...base, id, name}});
   });
   await page.goto('/#/policies');
   await expect(page.getByRole('region', {name: 'Group 0', exact: true}).getByRole('heading', {name: 'Group 0', exact: true})).toBeVisible();

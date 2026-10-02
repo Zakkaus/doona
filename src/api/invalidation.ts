@@ -11,6 +11,8 @@ export type ResourceName =
   | 'nodes'
   | 'groups'
   | 'group'
+  // The leaf protocols under a group's nested groups, read from the group resources and refreshed with them.
+  | 'groupProbeProtocols'
   | 'flows'
   | 'flow'
   | 'datapath'
@@ -39,6 +41,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
       'capabilities',
       'groups',
       'group',
+      'groupProbeProtocols',
       'nodes',
       'connections'
     ]
@@ -54,6 +57,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
       'config',
       'groups',
       'group',
+      'groupProbeProtocols',
       'nodes',
       'providers',
       'geodata',

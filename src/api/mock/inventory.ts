@@ -1,3 +1,4 @@
+import {nodeProbeSupport} from '../../dae/probes';
 import type {Api} from '../api';
 import type {Capabilities, GroupSelectionResult} from '../model';
 import {ApiError} from '../error';
@@ -218,7 +219,18 @@ export function createInventory(
         throw new ApiError(422, 'unsupported_value', 'Unsupported probe dimensions');
       if (group && Array.isArray(request.members) && request.members.some(id => !group.members.some(m => m.id === id)))
         throw new ApiError(422, 'unsupported_value', 'Probe member is not in this group');
-      const members = probeMembers(request, nodes, groups).length;
+      const ids = probeMembers(request, nodes, groups);
+      for (const id of ids) {
+        for (const transport of request.transport) {
+          const node = resolveLeaf(id, transport, nodes, groups);
+          if (!node) continue;
+          if (request.kind === 'tcp_connect' && (node.protocol === 'direct' || node.protocol === 'block'))
+            throw new ApiError(422, 'unsupported_value', 'TCP connect probes do not apply to direct or block nodes');
+          if (transport === 'udp' && nodeProbeSupport(node.protocol).udp === false)
+            throw new ApiError(422, 'unsupported_value', 'The probed node does not carry UDP');
+        }
+      }
+      const members = ids.length;
       const limits = probes.limits!;
       if (members > limits.max_members_per_job || members * request.transport.length * versions.length > limits.max_results_per_job)
         throw new ApiError(413, 'request_too_large', 'Probe exceeds the advertised member or result limit');

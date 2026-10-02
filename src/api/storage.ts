@@ -14,6 +14,7 @@ export const storageKeys = {
   flagOverrides: 'doona-flag-overrides',
   toastPlacement: 'doona-toast-placement',
   startPage: 'doona-start-page',
+  latencyProbe: 'doona-latency-probe',
   profiles: 'doona-profiles',
   profile: 'doona-profile',
   // The single-backend settings from before profiles, read once to migrate them.
