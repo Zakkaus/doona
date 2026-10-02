@@ -636,12 +636,71 @@ test('adding a node to a group opens its staged editor on the policies page', as
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
-  await page.getByRole('menuitem', {name: /^gaming/}).click();
+  const menu = page.getByRole('menu', {name: 'Node actions', exact: true});
+  await expect(menu.getByRole('menuitem')).toHaveText(['Edit…', 'Add to group', 'Change flag…']);
+  await menu.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+  const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+  await expect(submenu.locator('[slot=description]')).toHaveCount(0);
+  await expect(submenu.getByRole('separator')).toBeVisible();
+  await submenu.getByRole('menuitem', {name: 'gaming', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming', exact: true});
   await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-01');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies\?group=gaming$/);
   await expect(page.locator('#group-gaming')).toBeInViewport();
+});
+
+for (const width of [1440, 390])
+  test(`node group submenu supports keyboard entry, return and creation at ${width}px`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/nodes?provider=inline');
+    const trigger = page
+      .getByRole('row')
+      .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+      .getByRole('button', {name: 'Node actions', exact: true});
+    await trigger.click();
+    const join = page.getByRole('menuitem', {name: 'Add to group', exact: true});
+    await join.focus();
+    await page.keyboard.press('ArrowRight');
+    const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+    await expect(submenu.getByRole('menuitem').first()).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(submenu).toHaveCount(0);
+    await expect(join).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(submenu.getByRole('menuitem').first()).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(submenu.getByRole('menuitem', {name: 'New group…', exact: true})).toBeFocused();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
+    await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toBeVisible();
+  });
+
+test('long group lists scroll inside the submenu and omit existing memberships', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  const groups = Array.from({length: 40}, (_, i) => `choice-${i} { filter: name(jp-01) policy: min_last_delay }`).join('\n');
+  main.content = main.content.replace('group {', `group {\nalready { filter: name(hk-01) }\n${groups}\n`);
+  main.content_sha256 = await sha256(main.content);
+  handlers['GET config'] = async () => config;
+  await page.goto('/#/nodes?provider=inline');
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+  const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+  await expect(submenu.getByRole('menuitem', {name: 'already', exact: true})).toHaveCount(0);
+  expect(await submenu.evaluate(el => el.scrollHeight > el.clientHeight && getComputedStyle(el).overflowY === 'auto')).toBe(true);
+  await submenu.evaluate(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect(submenu.getByRole('menuitem', {name: 'choice-39', exact: true})).toHaveText('choice-39');
+  await expect(submenu.getByRole('menuitem', {name: 'choice-39', exact: true})).toBeInViewport();
+  await submenu.getByRole('menuitem', {name: 'New group…', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'New group', exact: true})).toBeVisible();
 });
 
 test('a node search looks through every source and names the source of each result', async ({page}) => {
@@ -1059,7 +1118,7 @@ test('node editing writes in place and renames group references', async ({page})
   await page.goto('/#/nodes?provider=inline');
   const row = nodeRows(page).filter({hasText: 'hk-01'});
   await row.getByRole('button', {name: 'Node actions', exact: true}).click();
-  await page.getByRole('menuitem', {name: 'Edit hk-01', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit node hk-01'});
   await dialog.getByLabel('Name', {exact: true}).fill('edge one');
   await dialog.getByLabel('Node link', {exact: true}).fill('socks5://127.0.0.1:1080');

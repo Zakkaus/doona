@@ -41,12 +41,14 @@ export const globalKeys = [
 ];
 // Group policies: the canonical names first, then the dae spellings the engine maps onto them.
 // Which contract kind a native policy expression behaves as, read as honk reads it: the name before `(`, trimmed, in
-// ASCII lower case. Undefined for a policy honk does not recognise; honk runs that as a selector and warns, except for
-// `honk`, which it rejects as the old name of `score`.
+// ASCII lower case. Legacy min/random use its selector fallback; other unknown names stay undefined.
+// honk rejects `honk` as the old name of `score`.
 const policyKinds: Record<string, Group['policy']['kind']> = {
   select: 'selector',
   selector: 'selector',
   fixed: 'selector',
+  min: 'selector',
+  random: 'selector',
   urltest: 'urltest',
   min_moving_avg: 'urltest',
   min_avg10: 'urltest',
@@ -60,8 +62,7 @@ const policyKinds: Record<string, Group['policy']['kind']> = {
 };
 export function policyKind(native: string): Group['policy']['kind'] | undefined {
   const base = native
-    .trim()
-    .replace(/\(.*$/, '')
+    .split('(', 1)[0]
     .trim()
     .replace(/[A-Z]/g, letter => letter.toLowerCase());
   return Object.hasOwn(policyKinds, base) ? policyKinds[base] : undefined;
@@ -74,7 +75,7 @@ export const newGroupPolicies: Array<{id: string; label: Key; description: Key}>
   {id: 'min_moving_avg', label: 'policy.kind.urltest', description: 'group.policy.fastestHint'},
   {id: 'score', label: 'policy.kind.score', description: 'group.policy.scoreHint'},
   {id: 'fallback', label: 'policy.kind.fallback', description: 'group.policy.fallbackHint'},
-  {id: 'roundrobin', label: 'group.policy.spread', description: 'group.policy.spreadHint'},
+  {id: 'roundrobin', label: 'policy.kind.loadbalance', description: 'group.policy.spreadHint'},
   {id: 'select', label: 'policy.kind.selector', description: 'group.policy.manualHint'}
 ];
 // Built-in outbounds, as nodes, groups and rules name them; a rule may add `(must)`, which keeps DNS traffic from

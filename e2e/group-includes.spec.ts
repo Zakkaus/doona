@@ -62,6 +62,7 @@ test('Nodes creates through the shared editor with region and subscription selec
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   await expect(page).toHaveURL(/#\/policies/);
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
@@ -96,7 +97,8 @@ test('membership jumps stage the node without writing and node links focus their
     .filter({has: page.getByRole('rowheader', {name: 'jp-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
-  await page.getByRole('menuitem', {name: /^hk/}).click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'hk', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group hk', exact: true});
   await expect(dialog.getByRole('group', {name: 'Includes'})).toContainText('jp-01');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
@@ -379,6 +381,7 @@ test('the membership summary is a short count with names in a collapsed tag list
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await expect(dialog.getByRole('status')).toHaveText('1 node');

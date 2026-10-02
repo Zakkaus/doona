@@ -21,11 +21,13 @@ it('offers score, which the engine knows as its own kind', () => {
   expect(policyKind('score')).toBe('score');
 });
 
-it('reads policies as honk does: its aliases, any case, arguments ignored', () => {
+it('reads policies as honk does: its aliases and legacy selector fallbacks, any case, arguments ignored', () => {
   const kinds = {
     select: 'selector',
     selector: 'selector',
     fixed: 'selector',
+    min: 'selector',
+    random: 'selector',
     urltest: 'urltest',
     min_moving_avg: 'urltest',
     min_avg10: 'urltest',
@@ -40,10 +42,11 @@ it('reads policies as honk does: its aliases, any case, arguments ignored', () =
   for (const [name, kind] of Object.entries(kinds)) {
     expect(policyKind(name)).toBe(kind);
     expect(policyKind(` ${name.toUpperCase()} (0) `)).toBe(kind);
+    expect(policyKind(`${name}(\n0)`)).toBe(kind);
   }
 });
 
-it("leaves a policy honk does not recognise unclassified, dae's random included", () => {
+it('leaves other unknown policies unclassified', () => {
   // honk runs these as a selector with a warning, and rejects `honk`, the old name of `score`.
-  for (const name of ['random', 'random(1)', 'honk', 'custom', 'constructor', 'toString', '']) expect(policyKind(name)).toBeUndefined();
+  for (const name of ['honk', 'custom', 'constructor', 'toString', '']) expect(policyKind(name)).toBeUndefined();
 });

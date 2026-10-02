@@ -9,6 +9,7 @@ import {
   MenuTrigger,
   Popover,
   Select,
+  Separator,
   SubmenuTrigger,
   SelectValue,
   ListBox,
@@ -118,9 +119,9 @@ export const pickMenuKey = (on: (k: string) => void) => (k: 'all' | Set<Key>) =>
   const v = [...k][0];
   if (v != null) on(String(v));
 };
-export function MenuChoice({item, children}: {item: Item; children?: ReactNode}) {
+export function MenuChoice({item, children, onAction}: {item: Item; children?: ReactNode; onAction?: () => void}) {
   return (
-    <MenuItem id={item.id} className="rp-item" textValue={item.label}>
+    <MenuItem id={item.id} className="rp-item" textValue={item.label} onAction={onAction}>
       <Check />
       <ItemText i={item}>{children}</ItemText>
     </MenuItem>
@@ -209,9 +210,17 @@ export type ChoiceSection = {
 };
 // A row that opens its own menu of choices, showing the current one, after S2's ActionMenu with submenus.
 // `searchLabel` names the filter field of a list long enough to get one, by what the submenu lists.
-export type ChoiceSubmenu = {label: string; icon?: ReactNode; sections: ChoiceSection[]; searchLabel?: string};
-// A row after the submenus that runs a command and closes the menu, such as opening a dialog.
+export type ChoiceSubmenu = {
+  label: string;
+  icon?: ReactNode;
+  sections: ChoiceSection[];
+  searchLabel?: string;
+  onAction?: (key: string) => void;
+  actions?: ChoiceAction[];
+};
+// A command row closes the menu, including when interleaved with submenus.
 export type ChoiceAction = {label: string; icon?: ReactNode; onAction: () => void};
+type SubmenuEntries = Array<ChoiceSubmenu | ChoiceAction>;
 
 function SectionMenu({
   label,
@@ -220,10 +229,12 @@ function SectionMenu({
   headers = true,
   focusedByCaller,
   onAction,
-  searchLabel
+  searchLabel,
+  actions = []
 }: {
   label: string;
   labelledBy?: string;
+  actions?: ChoiceAction[];
   sections: ChoiceSection[] | (() => ChoiceSection[]);
   headers?: boolean;
   // The caller moves focus itself, so the menu does not take it to its first item as a trigger's menu does.
@@ -240,22 +251,25 @@ function SectionMenu({
       className={long ? 'rp-menu-scroll' : undefined}
       // eslint-disable-next-line jsx-a11y/no-autofocus -- false only: the caller places focus instead of the trigger
       autoFocus={focusedByCaller ? false : undefined}
-      onAction={onAction && (key => onAction(String(key)))}
     >
       {sections.map(section => (
         <MenuSection
           key={section.title}
           id={section.title}
-          aria-label={headers ? undefined : section.title}
+          aria-label={headers && !section.hideHeader ? undefined : section.title}
           selectionMode={section.selectionMode ?? 'single'}
           selectedKeys={[section.value]}
           onSelectionChange={section.onChange && pickMenuKey(section.onChange)}
         >
           {headers && !section.hideHeader && <Header className="rp-sec-h">{section.title}</Header>}
           {section.items.map(item => (
-            <MenuChoice key={item.id} item={item} />
+            <MenuChoice key={item.id} item={item} onAction={onAction && (() => onAction(item.id))} />
           ))}
         </MenuSection>
+      ))}
+      {actions.length > 0 && <Separator className="rp-hrule" />}
+      {actions.map((action, index) => (
+        <ActionItem key={action.label} id={actionKey(index)} {...action} />
       ))}
     </Menu>
   );
@@ -278,7 +292,7 @@ const ActionItem = ({id, label, icon, onAction}: ChoiceAction & {id: string}) =>
     <TextTooltip>{label}</TextTooltip>
   </MenuItem>
 );
-const actionKey = (index: number) => `action-${index}`;
+const actionKey = (index: number) => `/action-${index}`;
 
 const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string}) => {
   const t = useT();
@@ -298,7 +312,8 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
 // text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
 const phone = '(max-width: 639px)';
-function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]}) {
+function SubmenuMenu({label, submenus: source, actions = []}: {label: string; submenus: SubmenuEntries | (() => SubmenuEntries); actions?: ChoiceAction[]}) {
+  const submenus = typeof source === 'function' ? source() : source;
   const t = useT();
   const inline = useMediaQuery(phone);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
@@ -317,7 +332,7 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
   useEffect(() => {
     const el = root.current;
     if (!el || (open == null && left == null)) return;
-    const target = open == null ? `[data-key="${left}"]` : '[aria-checked="true"]';
+    const target = open == null ? `[data-key="${left}"]` : '[aria-checked="true"], [role="menuitem"]';
     const frame = requestAnimationFrame(() => {
       if (document.activeElement === el) el.querySelector<HTMLElement>(target)?.focus();
     });
@@ -326,21 +341,25 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
   if (!inline)
     return (
       <Menu aria-label={label} aria-labelledby="">
-        {submenus.map(submenu => (
-          <SubmenuTrigger key={submenu.label}>
-            <SubmenuItem {...submenu} />
-            <Popover className="rp-popover" offset={-4} crossOffset={-9}>
-              <SectionMenu label={submenu.label} sections={submenu.sections} headers={submenu.sections.length > 1} searchLabel={submenu.searchLabel} />
-            </Popover>
-          </SubmenuTrigger>
-        ))}
+        {submenus.map((submenu, index) =>
+          'sections' in submenu ? (
+            <SubmenuTrigger key={submenu.label}>
+              <SubmenuItem {...submenu} />
+              <Popover className="rp-popover" offset={-4} crossOffset={-9}>
+                <SectionMenu {...submenu} headers={submenu.sections.length > 1} />
+              </Popover>
+            </SubmenuTrigger>
+          ) : (
+            <ActionItem key={submenu.label} id={String(index)} {...submenu} />
+          )
+        )}
         {actions.map((action, index) => (
           <ActionItem key={action.label} id={actionKey(index)} {...action} />
         ))}
       </Menu>
     );
   const submenu = open == null ? null : submenus[open];
-  if (submenu) {
+  if (submenu && 'sections' in submenu) {
     const leave = () => go(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== back && e.key !== 'Escape') return;
@@ -355,19 +374,12 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
           <span id={title}>{submenu.label}</span>
         </RButton>
         {/* Named by its title, not by the menu button the trigger would name it after. */}
-        <SectionMenu
-          label={submenu.label}
-          labelledBy={title}
-          sections={submenu.sections}
-          headers={submenu.sections.length > 1}
-          focusedByCaller
-          searchLabel={submenu.searchLabel}
-        />
+        <SectionMenu {...submenu} labelledBy={title} headers={submenu.sections.length > 1} focusedByCaller />
       </div>
     );
   }
   // An action row's key is not a submenu index; the row runs its own command.
-  const index = (key: string | undefined) => (key != null && submenus[Number(key)] ? Number(key) : null);
+  const index = (key: string | undefined) => (key != null && submenus[Number(key)] && 'sections' in submenus[Number(key)] ? Number(key) : null);
   const onKey = (e: KeyboardEvent) => {
     const key = index((e.target as HTMLElement).dataset.key);
     if (e.key !== into || key == null) return;
@@ -387,9 +399,13 @@ function SubmenuMenu({label, submenus, actions = []}: {label: string; submenus: 
           if (open != null) go(open);
         }}
       >
-        {submenus.map((submenu, index) => (
-          <SubmenuItem key={submenu.label} id={String(index)} {...submenu} />
-        ))}
+        {submenus.map((submenu, index) =>
+          'sections' in submenu ? (
+            <SubmenuItem key={submenu.label} id={String(index)} {...submenu} />
+          ) : (
+            <ActionItem key={submenu.label} id={String(index)} {...submenu} />
+          )
+        )}
         {actions.map((action, index) => (
           <ActionItem key={action.label} id={actionKey(index)} {...action} />
         ))}
@@ -483,13 +499,13 @@ export function ChoiceMenu({
       })
     | (NoActions & {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never})
     | (NotFlat & NoActions & {sections: ChoiceSection[] | (() => ChoiceSection[]); onAction?: (key: string) => void; submenus?: never})
-    | (NotFlat & {submenus: ChoiceSubmenu[]; actions?: ChoiceAction[]; onAction?: never; sections?: never})
+    | (NotFlat & {submenus: SubmenuEntries | (() => SubmenuEntries); actions?: ChoiceAction[]; onAction?: never; sections?: never})
   )) {
   // A list read only once the menu opens is not counted ahead; its search loads when it first opens long.
   const long = sections
     ? Array.isArray(sections) && longList(itemCount(sections))
     : submenus
-      ? submenus.some(submenu => !!submenu.searchLabel && longList(itemCount(submenu.sections)))
+      ? Array.isArray(submenus) && submenus.some(submenu => 'sections' in submenu && !!submenu.searchLabel && longList(itemCount(submenu.sections)))
       : Array.isArray(items) && longList(items.length);
   return (
     <MenuButton

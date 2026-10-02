@@ -9,17 +9,15 @@ import type {Group} from '../../api/model';
 // A group without a policy line is a selector in honk, which is what `select` writes.
 const IMPLIED = 'select';
 
-// A policy as written in the file, in words when the picker offers it and as written otherwise.
+// Translate native names without changing expressions saved by the editor.
 export function policyLabel(value: string | null, t: Translator): string {
-  const known = newGroupPolicies.find(item => item.id === (value ?? IMPLIED));
-  return known ? t(known.label) : value!;
+  const native = value ?? IMPLIED;
+  const kind = policyKind(native);
+  return kind ? enumLabel(policyKindLabels, kind, t) : native;
 }
 
-// A live group's policy in words: the picker's when it offers the policy, otherwise its kind's. `id` is the engine's
-// spelling, set only when the label differs from it.
 export function groupPolicyText(policy: Pick<Group['policy'], 'kind' | 'native'>, t: Translator): {label: string; id?: string} {
-  const offered = newGroupPolicies.some(item => item.id === (policy.native ?? IMPLIED));
-  const label = policy.native && offered ? policyLabel(policy.native, t) : enumLabel(policyKindLabels, policy.kind, t);
+  const label = policy.native ? policyLabel(policy.native, t) : enumLabel(policyKindLabels, policy.kind, t);
   const id = policy.native || policy.kind;
   return label === id ? {label} : {label, id};
 }
@@ -34,7 +32,7 @@ export function policyChoices(value: string | null, t: Translator) {
     label: t(item.label),
     desc: t(item.description)
   }));
-  return {selected: value ?? IMPLIED, items: value && !items.some(item => item.id === value) ? [{id: value, label: value}, ...items] : items};
+  return {selected: value ?? IMPLIED, items: value && !items.some(item => item.id === value) ? [{id: value, label: policyLabel(value, t)}, ...items] : items};
 }
 
 const nameProblems = {invalid: 'group.badName', taken: 'group.takenName'} as const;

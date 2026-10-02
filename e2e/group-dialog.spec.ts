@@ -130,6 +130,7 @@ test('Nodes creates a filtered group with a final and keeps the draft after vali
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group'});
   await dialog.getByRole('textbox', {name: 'Group name'}).fill('nodegroup');
@@ -163,6 +164,7 @@ for (const entry of ['Nodes', 'Policies'])
         .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
         .getByRole('button', {name: 'Node actions', exact: true})
         .click();
+      await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
       await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
     } else await page.getByRole('button', {name: 'New group', exact: true}).click();
     const dialog = page.getByRole('dialog', {name: 'New group'});
@@ -211,6 +213,7 @@ test('Nodes explains an unquotable name without opening a group dialog', async (
     .filter({has: page.getByRole('rowheader', {name: "O'Hare", exact: true})})
     .getByRole('button', {name: en['nodes.actions'], exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: en['nodes.newGroup'], exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText(en['config.unquotable']);
   await expect(page.getByRole('dialog')).toHaveCount(0);

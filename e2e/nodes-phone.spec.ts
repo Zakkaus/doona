@@ -146,3 +146,24 @@ test('desktop subscription and node actions use the kit control text role', asyn
     expect(type.weight).toBe('500');
   }
 });
+
+test.describe('node group submenu on touch', () => {
+  test.use({viewport: {width: 390, height: 844}, hasTouch: true});
+
+  test('opens, returns and joins through the shared menu', async ({page}) => {
+    await page.goto('/#/nodes?provider=inline');
+    await page
+      .getByRole('row')
+      .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+      .getByRole('button', {name: 'Node actions', exact: true})
+      .tap();
+    await page.getByRole('menuitem', {name: 'Add to group', exact: true}).tap();
+    await page.getByRole('button', {name: 'Back', exact: true}).tap();
+    await page.getByRole('menuitem', {name: 'Add to group', exact: true}).tap();
+    const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+    await expect(submenu.locator('[slot=description]')).toHaveCount(0);
+    await submenu.getByRole('menuitem', {name: 'gaming', exact: true}).tap();
+    const dialog = page.getByRole('dialog', {name: 'Edit group gaming', exact: true});
+    await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-01');
+  });
+});

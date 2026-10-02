@@ -30,7 +30,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
   const phone = useMediaQuery(phoneQuery);
   const settings = useContext(SettingsContext);
   const editFlag = useContext(FlagEditingContext);
-  const {canManage, canJoin, busy, across} = m;
+  const {canManage, canJoin, canCreate, busy, across} = m;
   const columns = useMemo<TableColumn<NodeTableView['rows'][number]>[]>(
     () => [
       {
@@ -101,25 +101,21 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                 small
                 chevron={false}
                 label={t('nodes.actions')}
-                sections={() => [
-                  ...(row.edit
+                submenus={() => [
+                  ...(row.edit ? [{label: t('nodes.editAction'), onAction: row.edit}] : []),
+                  ...(canJoin
                     ? [
                         {
-                          title: t('ui.actions'),
-                          hideHeader: true,
-                          selectionMode: 'none' as const,
-                          value: '',
-                          items: [{id: '/edit', label: t('nodes.edit', {name: row.name})}]
+                          label: t('nodes.addToGroup'),
+                          sections: [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}],
+                          onAction: row.join,
+                          actions: canCreate ? [{label: t('nodes.newGroup'), onAction: () => row.join('/new')}] : [],
+                          searchLabel: t('ui.filterGroups')
                         }
                       ]
                     : []),
-                  ...(canJoin && row.menu().length ? [{title: t('nodes.addToGroup'), selectionMode: 'none' as const, value: '', items: row.menu()}] : []),
-                  ...(editFlag
-                    ? [{title: t('flags.region'), hideHeader: true, selectionMode: 'none' as const, value: '', items: [{id: '/flag', label: t('flags.edit')}]}]
-                    : [])
+                  ...(editFlag ? [{label: t('flags.edit'), onAction: () => editFlag(row.name)}] : [])
                 ]}
-                onAction={key => (key === '/edit' ? row.edit?.() : key === '/flag' ? editFlag?.(row.name) : row.join(key))}
-                searchLabel={t('ui.filterGroups')}
               >
                 <MoreHorizontal />
               </ChoiceMenu>
@@ -133,7 +129,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         )
       }
     ],
-    [t, editFlag, across, canManage, canJoin, busy, phone]
+    [t, editFlag, across, canManage, canJoin, canCreate, busy, phone]
   );
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
   return (
