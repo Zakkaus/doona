@@ -124,6 +124,26 @@ export async function scrollIntoList(item: Locator) {
   await expect.poll(() => item.evaluate(el => getComputedStyle(el).pointerEvents)).not.toBe('none');
 }
 
+// Read the complete section in list order, not just the virtual rows mounted in one viewport.
+export async function expectVirtualOptions(list: Locator, options: Locator, expected: string[]) {
+  const seen = new Map<string, string>();
+  await list.evaluate(el => {
+    el.scrollTop = 0;
+  });
+  while (true) {
+    await settleFrames(list.page());
+    for (const [key, text] of await options.evaluateAll(elements => elements.map(el => [el.getAttribute('data-key')!, el.textContent!] as const)))
+      if (!seen.has(key)) seen.set(key, text);
+    const end = await list.evaluate(el => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) return true;
+      el.scrollTop += el.clientHeight / 2;
+      return false;
+    });
+    if (end) break;
+  }
+  expect([...seen.values()]).toEqual(expected);
+}
+
 // The selected item's detail: an aside beside the list on wide screens, a drawer below 1200px.
 // A phone keeps every column and scrolls the table sideways, the container around a native table and the grid itself
 // once virtualised; this brings the trailing columns into view. A virtualised grid turns pointer events off on its

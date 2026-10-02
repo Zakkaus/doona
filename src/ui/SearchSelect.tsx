@@ -75,7 +75,7 @@ export function SearchSelect({
       {/* Include the label in the anchor so a flipped list clears both label and trigger. */}
       <Popover className="rp-popover rp-search-popover" placement="bottom start" triggerRef={side ? buttonRef : fieldRef}>
         <SearchList label={searchLabel}>
-          <ListBox className="rp-menu-scroll">
+          <ListBox className="rp-menu-scroll rp-overlay-scroll">
             {sections.map(section =>
               section.title ? (
                 <ListBoxSection key={section.id} id={section.id}>

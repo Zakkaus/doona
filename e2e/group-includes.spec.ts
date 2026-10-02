@@ -308,6 +308,38 @@ test('a stalled first group read does not hide the other policy cards', async ({
   await expect(cardFor(page, 'auto')).toBeVisible({timeout: 7000});
 });
 
+test('the group picker scrolls only its list and can select its last option', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 600});
+  await mockBackend(page);
+  await page.goto('/#/policies');
+  await page.getByRole('button', {name: 'New group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
+  await dialog.getByRole('button', {name: 'Groups', exact: true}).click();
+  const popover = page.locator('.rp-search-popover');
+  const search = popover.getByRole('searchbox', {name: 'Search groups', exact: true});
+  await expect(search).toBeFocused();
+  await expect
+    .poll(() =>
+      popover.evaluate(
+        root =>
+          [root, ...root.querySelectorAll('*')].filter(el => el.scrollHeight > el.clientHeight && /^(auto|scroll)$/.test(getComputedStyle(el).overflowY)).length
+      )
+    )
+    .toBe(1);
+  const searchBefore = await box(search);
+  const list = popover.getByRole('listbox');
+  await list.evaluate(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+  const last = list.getByRole('option', {name: 'backup', exact: true});
+  await expect(last).toBeInViewport();
+  expect((await box(search)).y).toBe(searchBefore.y);
+  await last.click();
+  await expect(last).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(dialog.getByRole('button', {name: 'Remove backup', exact: true})).toBeVisible();
+});
+
 for (const width of [1440, 390]) {
   test(`long member names preserve picker rows, labels and tag action sizes at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
