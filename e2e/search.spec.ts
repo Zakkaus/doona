@@ -19,9 +19,7 @@ test('search reaches tabs and cards, not only pages', async ({page}) => {
   await expect(page).toHaveURL(/#\/settings\?card=geodata$/);
   await expect(page.getByRole('region', {name: 'Geodata', exact: true})).toBeInViewport();
   dialog = await open(page, 'actions');
-  await dialog.getByRole('option', {name: /Backend actions/}).click();
-  await expect(page).toHaveURL(/#\/settings\?card=actions$/);
-  await expect(page.getByRole('region', {name: 'Backend actions'})).toBeInViewport();
+  await expect(dialog.getByRole('option', {name: /Backend actions/})).toHaveCount(0);
 });
 
 test('search opens a node in its source, a group on its card, a subscription and a config source', async ({page}) => {

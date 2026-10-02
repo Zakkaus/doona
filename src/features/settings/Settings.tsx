@@ -6,7 +6,6 @@ import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/pref
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
-import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
 import {ProbeSettingsCard} from './ProbeSettings';
 import {useCopyDiagnostics, useDiagnostics} from '../shared/useCopyDiagnostics';
@@ -232,7 +231,6 @@ export function Settings({query}: PageProps) {
       </Card>
     ),
     probes: <ProbeSettingsCard />,
-    actions: <BackendActionsCard />,
     about: (
       <Card level={2} title={t(cards.about.titleKey)} titleId={cards.about.headingId}>
         {versionWarning && (

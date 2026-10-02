@@ -15,7 +15,7 @@
 .rp-chart-wait.form {
   min-height: 204px;
 }
-/* The four backend action groups. */
+/* Geodata controls while their source settings load. */
 .rp-chart-wait.ops {
   min-height: 164px;
 }

@@ -1,20 +1,36 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Button, Card, ConfirmDialog, ContextualHelp, Disclosure, ErrorMessage, Kv, LabeledSelect, Loading, Switch, TextField} from '../../ui/ui';
+import {
+  ActionHelp,
+  Button,
+  Card,
+  ConfirmDialog,
+  ContextualHelp,
+  DataTable,
+  Disclosure,
+  ErrorMessage,
+  Kv,
+  LabeledSelect,
+  Link,
+  Loading,
+  Switch,
+  TextField,
+  TextTooltip,
+  TimeCell
+} from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './nav';
 
 const card = settingsCard('geodata');
 
-// Source, download route, checksum verification, automatic updates and status as labelled rows; each control saves as it changes. Only
-// mounted where the backend lets the sources be configured.
+// Files are always shown; source controls mount only where the backend lets them be configured.
 export function GeodataSettingsCard() {
   const t = useT();
   const m = useGeodataSettings();
   if (!m.available) return null;
   return (
     <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
-      <span className="rp-label">{m.note}</span>
+      {m.note && <span className="rp-label">{m.note}</span>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
         <div className="rp-chart-wait ops">
@@ -99,36 +115,94 @@ export function GeodataSettingsCard() {
               )}
             </div>
           </div>
-          <div className="rp-ops-group">
-            <span className="rp-label">{t('settings.geodataStatus')}</span>
-            <ActionHelp reason={m.canUpdate ? m.updateReason : null}>
-              <div className="rp-cluster">
-                <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
-                  {m.status.text}
-                </span>
-                {m.status.help && <ContextualHelp {...m.status.help} />}
-                {m.canUpdate && (
-                  <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
-                    {t('settings.geodataUpdateNow')}
-                  </Button>
-                )}
+        </div>
+      )}
+      <div className="rp-geodata">
+        <div className="rp-ops-group">
+          <span className="rp-label">{t('settings.geodataStatus')}</span>
+          <ActionHelp reason={m.canUpdate ? m.updateReason : null}>
+            <div className="rp-cluster">
+              <span role="status" className={m.status.error ? 'rp-geodata-note negative' : undefined}>
+                {m.status.text}
+              </span>
+              {m.status.help && <ContextualHelp {...m.status.help} />}
+              {m.canUpdate && (
+                <Button isPending={m.updating} isDisabled={m.updateBlocked} onPress={m.update}>
+                  {t('settings.geodataUpdateNow')}
+                </Button>
+              )}
+              {m.ready && (
                 <Button isDisabled={m.busy} onPress={m.reset.ask}>
                   {t('settings.geodataReset')}
                 </Button>
-              </div>
-            </ActionHelp>
-          </div>
-          <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
-          {m.status.details.length > 0 && (
-            <Disclosure title={t('settings.geodataDetails')}>
-              <div className="rp-geodata-details">
-                <Kv items={m.status.details} />
-              </div>
-            </Disclosure>
-          )}
-          {m.lifecycleNote && <span className="rp-label">{m.lifecycleNote}</span>}
+              )}
+            </div>
+          </ActionHelp>
         </div>
-      )}
+        <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
+        {m.ready && m.status.details.length > 0 && (
+          <Disclosure title={t('settings.geodataDetails')}>
+            <div className="rp-geodata-details">
+              <Kv items={m.status.details} />
+            </div>
+          </Disclosure>
+        )}
+        {m.ready && m.lifecycleNote && <span className="rp-label">{m.lifecycleNote}</span>}
+        <span className="rp-label">{t('settings.geodataNote')}</span>
+        {m.fromConfig && (
+          <span className="rp-label rp-geodata-from-config">
+            {m.fromConfig.text}{' '}
+            <Link appearance="link" external href={m.fromConfig.docs.href}>
+              {m.fromConfig.docs.text}
+              <span aria-hidden="true">↗</span>
+            </Link>
+            {m.fromConfig.config && (
+              <>
+                {' '}
+                <Link appearance="link" href={m.fromConfig.config.href}>
+                  {m.fromConfig.config.text}
+                </Link>
+              </>
+            )}
+          </span>
+        )}
+        <DataTable
+          label={t('settings.geodata')}
+          loading={m.geodataLoading}
+          rows={m.rows}
+          height={160}
+          fit
+          cols={[
+            {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
+            {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, render: asset => asset.size},
+            {
+              id: 'modified',
+              label: t('nodes.updated'),
+              minWidth: 140,
+              grow: 0,
+              render: asset => <TimeCell at={asset.modifiedAt} />
+            },
+            {
+              id: 'sha',
+              label: 'SHA-256',
+              minWidth: 160,
+              drop: 2,
+              render: asset => (
+                <TextTooltip text={asset.shaTitle}>
+                  <span className="rp-code">{asset.sha}</span>
+                </TextTooltip>
+              )
+            },
+            {
+              id: 'source',
+              label: t('settings.geodataSource'),
+              minWidth: 240,
+              grow: 2,
+              render: asset => <TextTooltip className="rp-code">{asset.source}</TextTooltip>
+            }
+          ]}
+        />
+      </div>
       {m.reset.dialog && (
         <ConfirmDialog
           title={m.reset.dialog.title}

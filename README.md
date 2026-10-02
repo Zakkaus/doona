@@ -69,7 +69,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 | Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe, results by kind and join a group                                                                                                 |
 | Configuration | Create source files and edit them in place, diagnostics, validation, current config version and source export                                                                                                   |
 | Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                                                         |
-| Settings      | Backends, runtime settings and actions, geodata sources, reset to defaults and SHA-256 verification when supported, language, appearance, palette and notification placement                                    |
+| Settings      | Backends, runtime settings, geodata sources, reset to defaults and SHA-256 verification when supported, language, appearance, palette and notification placement                                                |
 
 A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections, Routing log and Rules request flows while open, without setting Flow recording to Always.
 

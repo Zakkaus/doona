@@ -1,13 +1,13 @@
 import {useRef, useState} from 'react';
 import type {GeoDataSettingsPatch} from '../../api/model';
-import {useCapabilities, useGeodata, useGroups, useRuntimeSettings} from '../../store';
+import {useCapabilities, useGeodata, useGroups, useRuntimeSettings, useVersion} from '../../store';
 import {offered} from '../../api/capabilities';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
 import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
-import {geodataUpdateReason} from './view';
+import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {
   assetDetails,
   cleanUrls,
@@ -35,11 +35,13 @@ export function useGeodataSettings() {
   const locale = LOCALE[lang];
   const now = useNow();
   const caps = useCapabilities();
-  const available = geodataConfigurable(caps.data?.resources);
-  const settings = useRuntimeSettings(available);
+  const version = useVersion();
+  const available = !!caps.data?.resources.geodata.available;
+  const configurable = geodataConfigurable(caps.data?.resources);
+  const settings = useRuntimeSettings(configurable);
   const geodata = useGeodata(available);
   const groupsOffered = offered(caps.data?.resources, 'groups', {whileLoading: false});
-  const groups = useGroups(available && groupsOffered);
+  const groups = useGroups(configurable && groupsOffered);
   const stored = settings.data?.geodata;
   // The patch being saved shows in the controls until the settings come back, and is dropped on failure.
   const [pending, setPending] = useState<GeoDataSettingsPatch>(null);
@@ -129,10 +131,13 @@ export function useGeodataSettings() {
 
   return {
     available,
-    loading: settings.loading && !stored,
-    error: settings.error,
+    loading: configurable && settings.loading && !stored,
+    error: configurable ? settings.error : null,
     retry: settings.refetch,
-    ready: !!stored,
+    ready: configurable && !!stored,
+    geodataLoading: geodata.loading && !geodata.data,
+    fromConfig: geodataFromConfig(caps.data, version.data, t, lang),
+    rows: geodataRows(geodata.data?.assets ?? [], locale),
     busy,
     // URLs the configuration file names return with its values; overrides that do not persist end at a restart.
     lifecycleNote:
@@ -141,7 +146,7 @@ export function useGeodataSettings() {
         : lifecycle?.overrides_persist === false
           ? t('settings.geodataOverridesUntilRestart')
           : null,
-    note: t(canUpdate ? 'settings.geodataSourcesNote' : 'settings.geodataSourcesNoteStored'),
+    note: configurable ? t(canUpdate ? 'settings.geodataSourcesNote' : 'settings.geodataSourcesNoteStored') : null,
     source: {
       value: urls ? (preset?.id ?? 'custom') : '',
       items: [
