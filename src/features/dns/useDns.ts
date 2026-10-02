@@ -9,7 +9,7 @@ import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, toastErrorDetail, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
-import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';
 import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
 import {wait} from '../../api/wait';
@@ -37,6 +37,15 @@ export function useDns({go, query}: PageProps) {
   const ids = view.tabs.map(item => item.id);
   const linked = params.has('domain') || params.has('device');
   const fallback = ids.includes('log') ? (linked ? 'log' : 'stats') : ids.includes('query') ? 'query' : (ids[0] ?? 'query');
+  const tab = pickTab(query, ids, fallback);
+  // The upstreams a query can be sent to are the ones the configuration defines, read once the query tab opens.
+  const configReadable = offered(resources, 'config', {whileLoading: false});
+  const config = useConfig(tab === 'query' && configReadable && offered(resources, 'dns_query', {whileLoading: false}));
+  const upstreams = useMemo(() => (configReadable ? dnsQueryUpstreams(config.data?.sources, t) : []), [configReadable, config.data, t]);
+  const [picked, setUpstream] = useState('');
+  // Automatic when the picked name is no longer defined.
+  const upstream = upstreams.some(item => item.id === picked) ? picked : '';
+  if (config.data && picked && !upstream) setUpstream('');
   const submit = async (asked = {domain, type}) => {
     try {
       await run('query', async signal => {
@@ -46,7 +55,8 @@ export function useDns({go, query}: PageProps) {
           asked.type === 'all' ? view.types : [asked.type],
           resources?.dns_query.limits?.max_types_per_request ?? 1,
           signal,
-          bypassCache ? 'bypass' : 'normal'
+          bypassCache ? 'bypass' : 'normal',
+          upstream || undefined
         );
         if (!signal.aborted) setResult(value);
         return value;
@@ -86,15 +96,14 @@ export function useDns({go, query}: PageProps) {
     setType,
     bypassCache,
     setBypassCache,
+    upstreams,
+    upstream,
+    setUpstream,
     pending: busy === 'query',
     queryError: error,
     submit: () => void submit(),
     setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !linked ? fallback : null)),
-    tab: pickTab(
-      query,
-      view.tabs.map(item => item.id),
-      fallback
-    ),
+    tab,
     filterDomain: params.get('domain') ?? '',
     filterDevice: params.get('device') ?? '',
     cacheHref: ids.includes('cache') ? href('dns', {tab: 'cache'}) : null,

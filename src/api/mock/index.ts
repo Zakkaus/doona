@@ -87,6 +87,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     runtime.outbounds,
     configuration.revision,
     configuration.ruleSnapshot,
+    configuration.dnsUpstreams,
     configuration.recording,
     configuration.networkSettings,
     busy,

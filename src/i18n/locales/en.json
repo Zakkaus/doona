@@ -574,6 +574,7 @@
   "dns.staleUntil": "Stale until",
   "dns.tab.stats": "Statistics",
   "dns.typeUnsupported": "This backend cannot query this record type",
+  "dns.upstreamAuto": "Automatic",
   "dns.viewCache": "View cache",
   "event.allKinds": "All kinds",
   "event.connected": "Connected",

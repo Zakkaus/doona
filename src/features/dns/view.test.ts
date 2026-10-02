@@ -1,8 +1,8 @@
 import {expect, it} from 'vitest';
 import {capabilities, dnsCache} from '../../api/mock/fixtures';
-import type {DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import type {ConfigSource, DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
-import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryView} from './view';
+import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
 const record: DnsLogRecord = {
@@ -38,6 +38,28 @@ it('uses the same nullable field and answer projection for queries and log detai
 
 it('lists the statistics and the two listings before the query', () => {
   expect(dnsQueryView(null, capabilities.resources, 'A', '', false, t).tabs.map(tab => tab.id)).toEqual(['stats', 'log', 'cache', 'query']);
+});
+
+const source = (content: string | undefined) => ({id: 'main', content}) as ConfigSource;
+it.each([
+  ['no sources', undefined, []],
+  ['no dns section', [source('routing {\n  fallback: direct\n}\n')], []],
+  ['unread text', [source(undefined)], []],
+  [
+    'quoted keys across files, each once',
+    [
+      source("dns {\n  upstream {\n    cloudflare: 'tls://1.1.1.1:853'\n    'ali dns': 'udp://223.5.5.5:53'\n  }\n}\n"),
+      source("dns {\n  upstream {\n    'cloudflare': 'tls://1.1.1.1:853'\n    \"ali dns\": 'udp://223.5.5.5:53'\n    Cloudflare: 'tls://1.0.0.1:853'\n  }\n}\n")
+    ],
+    [
+      {id: '', label: 'Automatic'},
+      {id: 'cloudflare', label: 'cloudflare'},
+      {id: 'ali dns', label: 'ali dns'},
+      {id: 'Cloudflare', label: 'Cloudflare'}
+    ]
+  ]
+] as const)('offers the configured DNS upstreams for a query: %s', (_, sources, expected) => {
+  expect(dnsQueryUpstreams(sources as ConfigSource[] | undefined, t)).toEqual(expected);
 });
 
 it('disables unsupported query types and omits explicitly unavailable tabs', () => {

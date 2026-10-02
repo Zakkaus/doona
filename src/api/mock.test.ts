@@ -594,6 +594,27 @@ it('serves the base profile from storage and refuses its unavailable resources',
   }
 });
 
+it('sends a DNS query to a configured upstream by name and refuses an unknown one', async () => {
+  const api = createMockApi();
+  const answer = await api.dnsQuery('forced.example', ['A'], undefined, 'normal', 'alidns');
+  expect(answer.results[0]).toMatchObject({upstream: 'alidns', route: {source: 'forced', rule: null}});
+  await expect(api.dnsQuery('forced.example', ['A'], undefined, 'normal', 'ALIDNS')).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
+  await expect(api.dnsQuery('forced.example', ['A'], undefined, 'normal', 'nowhere')).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
+});
+
+it('keeps forced queries to two upstreams out of the unscoped DNS cache', async () => {
+  const api = createMockApi();
+  const before = await api.dnsCache({detail: 'full'});
+  const entry = before.entries[0];
+  expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: true, cache_entry_id: entry.entry_id});
+  for (const upstream of ['cloudflare', 'alidns']) {
+    const answer = (await api.dnsQuery(entry.domain, [entry.type], undefined, 'normal', upstream)).results[0];
+    expect(answer).toMatchObject({cached: false, cache_entry_id: null, upstream, route: {source: 'forced', rule: null}});
+    expect(answer.answers).not.toEqual(entry.answers);
+  }
+  expect(await api.dnsCache({detail: 'full'})).toEqual(before);
+});
+
 it('bypasses a cached DNS answer without removing or changing the entry', async () => {
   const api = createMockApi();
   const before = await api.dnsCache();

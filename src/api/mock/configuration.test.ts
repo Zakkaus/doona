@@ -24,6 +24,24 @@ it('returns a translated refusal and structured path for an unmatched new source
 
 afterEach(() => vi.useRealTimers());
 
+it.each(['renamed', "'ali dns'"])('uses current unquoted DNS upstream names after renaming alidns to %s', async key => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  await api.dnsQuery('forced.example', ['A'], undefined, 'normal', 'alidns');
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const accepted = await api.replaceConfigSource(main.id, main.content!.replaceAll('alidns', key), `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  const name = key === 'renamed' ? key : 'ali dns';
+  expect((await api.dnsQuery('forced.example', ['A'], undefined, 'normal', name)).results[0]).toMatchObject({
+    upstream: name,
+    route: {source: 'forced', rule: null}
+  });
+  await expect(api.dnsQuery('forced.example', ['A'], undefined, 'normal', 'alidns')).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
+  if (key !== name)
+    await expect(api.dnsQuery('forced.example', ['A'], undefined, 'normal', key)).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
+});
+
 it('shares accepted routing rules and the mutable DNS cache with tracing', async () => {
   vi.useFakeTimers();
   const api = createMockApi();

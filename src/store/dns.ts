@@ -213,7 +213,8 @@ export async function queryTypes(
   types: string[],
   limit: number,
   signal: AbortSignal,
-  cacheMode: DnsQueryResponse['cache_mode'] = 'normal'
+  cacheMode: DnsQueryResponse['cache_mode'] = 'normal',
+  upstream?: string
 ): Promise<DnsQueryResponse> {
   const size = Math.max(1, Math.floor(limit));
   let response: DnsQueryResponse | undefined;
@@ -221,7 +222,7 @@ export async function queryTypes(
     signal.throwIfAborted();
     const batch = types.slice(start, start + size);
     // Transient refusals are waited out by the client itself; this only batches record types.
-    const part = await query(domain, batch, signal, cacheMode);
+    const part = await query(domain, batch, signal, cacheMode, upstream);
     signal.throwIfAborted();
     if (response) response.results.push(...part.results);
     else response = {...part, results: [...part.results]};

@@ -56,6 +56,7 @@ export function Dns(props: PageProps) {
           <div className="rp-toolbar">
             <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
             <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
+            {vm.upstreams.length > 0 && <LabeledSelect label={t('ui.upstream')} side value={vm.upstream} onChange={vm.setUpstream} items={vm.upstreams} />}
             <Switch isSelected={vm.bypassCache} onChange={vm.setBypassCache}>
               {t('dns.bypassCache')}
             </Switch>

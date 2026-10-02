@@ -233,15 +233,15 @@ it('fails permanent refusals immediately', async () => {
   expect(permanent).toHaveBeenCalledTimes(1);
 });
 
-it('preserves bypass cache mode and cancellation signal across every record type batch', async () => {
+it('preserves bypass cache mode, the upstream and cancellation signal across every record type batch', async () => {
   const api = createMockApi();
   const query = vi.fn(api.dnsQuery);
   const signal = new AbortController().signal;
-  const result = await queryTypes(query, 'example.com', ['A', 'AAAA', 'TXT'], 1, signal, 'bypass');
+  const result = await queryTypes(query, 'example.com', ['A', 'AAAA', 'TXT'], 1, signal, 'bypass', 'alidns');
   expect(query.mock.calls).toEqual([
-    ['example.com', ['A'], signal, 'bypass'],
-    ['example.com', ['AAAA'], signal, 'bypass'],
-    ['example.com', ['TXT'], signal, 'bypass']
+    ['example.com', ['A'], signal, 'bypass', 'alidns'],
+    ['example.com', ['AAAA'], signal, 'bypass', 'alidns'],
+    ['example.com', ['TXT'], signal, 'bypass', 'alidns']
   ]);
   expect(result.cache_mode).toBe('bypass');
 });
