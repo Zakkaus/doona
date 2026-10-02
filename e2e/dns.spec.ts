@@ -388,6 +388,64 @@ test('an older page the backend cannot hold a snapshot for starts the log again 
   expect(heads).toBe(2);
 });
 
+test('a query goes to the upstream picked from the configured ones, or to the routed one on Automatic', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const sent: Array<Record<string, unknown>> = [];
+  handlers['POST dns/query'] = async request => {
+    const body = request.postDataJSON();
+    sent.push(body);
+    return api.dnsQuery(body.domain, body.type, undefined, body.cache_mode, body.upstream);
+  };
+  await page.goto('/#/dns?tab=query&domain=example.com&type=A');
+  const panel = page.getByRole('tabpanel', {name: 'Query'});
+  const picker = page.getByRole('button', {name: /Upstream$/});
+  await expect(picker).toBeVisible();
+  await expect(picker).toContainText('Automatic');
+  await picker.click();
+  await expect(page.getByRole('option')).toHaveText(['Automatic', 'cloudflare', 'alidns']);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).not.toHaveProperty('upstream');
+  await picker.click();
+  await page.getByRole('option', {name: 'alidns', exact: true}).click();
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]).toMatchObject({upstream: 'alidns'});
+  await expect(panel).toContainText('Forced');
+  const config = await api.config();
+  const refreshConfig = async () => {
+    const read = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/config');
+    const refresh = page.getByRole('button', {name: 'Refresh', exact: true});
+    await refresh.click();
+    await read;
+    await expect(refresh).not.toHaveAttribute('data-pending');
+  };
+  handlers['GET config'] = async () => ({
+    ...config,
+    sources: config.sources.map(source => ({...source, content: source.content?.replace(/^    alidns:.*\n/m, '')}))
+  });
+  await refreshConfig();
+  await expect(picker).toContainText('Automatic');
+  delete handlers['GET config'];
+  await refreshConfig();
+  await picker.click();
+  await expect(page.getByRole('option', {name: 'alidns', exact: true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(picker).toContainText('Automatic');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[2]).not.toHaveProperty('upstream');
+  // Without upstreams in the configuration there is nothing to pick.
+  await expect(picker).toBeVisible();
+  handlers['GET config'] = async () => {
+    return {...config, sources: config.sources.map(source => ({...source, content: source.content?.replace(/ {2}upstream \{[^}]*\}\n/, '')}))};
+  };
+  await refreshConfig();
+  await expect(page.getByRole('button', {name: /Type$/})).toBeVisible();
+  await expect(picker).toHaveCount(0);
+});
+
 test('a failed query stays on the query tab', async ({page}) => {
   const {handlers} = await mockBackend(page);
   handlers['POST dns/query'] = async () => {

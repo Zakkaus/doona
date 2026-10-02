@@ -79,7 +79,14 @@ export interface Api {
   flow(id: string, signal?: AbortSignal): Promise<FlowDetail>;
   dnsCache(query?: DnsCacheQuery, signal?: AbortSignal): Promise<DnsCacheList>;
   dnsLog(query?: DnsLogQuery, signal?: AbortSignal): Promise<DnsLogList>;
-  dnsQuery(domain: string, types: DnsRecordType[], signal?: AbortSignal, cacheMode?: DnsQueryResponse['cache_mode']): Promise<DnsQueryResponse>;
+  dnsQuery(
+    domain: string,
+    types: DnsRecordType[],
+    signal?: AbortSignal,
+    cacheMode?: DnsQueryResponse['cache_mode'],
+    // A name from the configuration's dns.upstream; without one dns.routing picks the upstream.
+    upstream?: string
+  ): Promise<DnsQueryResponse>;
   closeConnection(connectionId: string, signal?: AbortSignal): Promise<void>;
   /** Closes every closable connection the filters select; unfiltered needs all=true. */
   closeConnections(query: BulkCloseQuery, signal?: AbortSignal): Promise<BulkCloseResult>;

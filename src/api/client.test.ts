@@ -118,6 +118,14 @@ describe('native transport', () => {
     await createApi('https://honk.test').dnsQuery('example.org', ['A', 'AAAA'], undefined, cacheMode);
     expect(await (request.mock.calls[0][0] as Request).json()).toEqual({domain: 'example.org', type: ['A', 'AAAA'], cache_mode: cacheMode});
   });
+  it('names the upstream in the request body only when one is chosen', async () => {
+    const request = vi.fn().mockImplementation(() => Promise.resolve(json({domain: 'example.org', cache_mode: 'normal', results: []})));
+    vi.stubGlobal('fetch', request);
+    await createApi('https://honk.test').dnsQuery('example.org', ['A'], undefined, 'normal', 'alidns');
+    await createApi('https://honk.test').dnsQuery('example.org', ['A']);
+    expect(await (request.mock.calls[0][0] as Request).json()).toEqual({domain: 'example.org', type: ['A'], cache_mode: 'normal', upstream: 'alidns'});
+    expect(await (request.mock.calls[1][0] as Request).json()).not.toHaveProperty('upstream');
+  });
   it('shows a long rate-limit wait while it lasts', async () => {
     vi.useFakeTimers();
     const request = vi

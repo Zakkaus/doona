@@ -1,4 +1,4 @@
-import type {Capabilities, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import type {Capabilities, ConfigSource, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
@@ -7,6 +7,8 @@ import type {Key} from '../../i18n';
 import {dnsTabs} from './nav';
 import {sourceIp} from '../../api/selectors';
 import {answerAddresses, type QuickRuleSeed} from '../shared/rule';
+import {dnsUpstreamNames} from '../../dae/ruleText';
+import {unquote} from '../../dae/text';
 
 type Answer = NonNullable<DnsQueryResponse['results'][number]['answers']>[number];
 // The add-rule seed for a queried name: the name for a routing or request rule, the answered A and AAAA addresses for
@@ -46,6 +48,11 @@ export function dnsAnswerView(result: Result, t: LabelFn) {
     cacheText: t(result.cached ? 'dns.hit' : 'dns.miss'),
     cacheTone: result.cached ? undefined : ('warn' as const)
   };
+}
+// Automatic leaves the pick to dns.routing; forced queries name an upstream without its configuration quotes.
+export function dnsQueryUpstreams(sources: ConfigSource[] | undefined, t: LabelFn) {
+  const names = [...new Set((sources ?? []).flatMap(source => (source.content ? dnsUpstreamNames(source.content).map(unquote) : [])))];
+  return names.length ? [{id: '', label: t('dns.upstreamAuto')}, ...names.map(id => ({id, label: id}))] : [];
 }
 export function dnsQueryView(
   result: DnsQueryResponse | null,

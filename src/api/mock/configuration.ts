@@ -10,6 +10,8 @@ import type {MockLifecycle} from './lifecycle';
 import type {MockGeodataState} from './geodata';
 import {faultRules} from './rules';
 import {dnsRulesOf} from './dnsRules';
+import {dnsUpstreamNames} from '../../dae/ruleText';
+import {unquote} from '../../dae/text';
 import {createRecording} from './recording';
 import {readGroupEntries} from '../../dae/groups';
 
@@ -402,6 +404,11 @@ export function createConfiguration(
     recording,
     flowRecorder: () => settings.recording?.flows,
     ruleSnapshot,
+    // The upstreams the rule files define, as the query's upstream names them.
+    dnsUpstreams: async () => {
+      await loadSources();
+      return sources!.filter(ruleFile).flatMap(source => dnsUpstreamNames(source.content).map(unquote));
+    },
     advance,
     editSource,
     revision: () => String(configRevision),

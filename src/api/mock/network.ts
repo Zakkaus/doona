@@ -79,6 +79,7 @@ export function createNetwork(
   outbounds: RuntimeOutbounds,
   revision: () => string,
   ruleSnapshot: () => Promise<RuleList>,
+  dnsUpstreams: () => Promise<string[]>,
   recording: MockRecording,
   settings: () => Pick<RuntimeSettings, 'dns_log' | 'flows'>,
   busy = false,
@@ -250,9 +251,11 @@ export function createNetwork(
       // total counts the ring before filters, as the contract defines it.
       return {observed_at: new Date().toISOString(), total: ring.length, next_cursor: result.next_cursor, records: result.items};
     },
-    dnsQuery: async (domain, types, signal, cacheMode = 'normal') => {
+    dnsQuery: async (domain, types, signal, cacheMode = 'normal', upstream) => {
       signal?.throwIfAborted();
       if (!capabilities.resources.dns_query.available) throw new ApiError(404, 'capability_not_supported', 'DNS query unavailable');
+      const forced = upstream === undefined ? null : (await dnsUpstreams()).find(name => name === upstream);
+      if (forced === undefined) throw new ApiError(422, 'unsupported_value', 'Unknown configured DNS upstream');
       const name = domain.trim().toLowerCase().replace(/\.$/, '') + '.';
       return {
         domain: name,
@@ -260,14 +263,16 @@ export function createNetwork(
         query_time: new Date().toISOString(),
         results: types.map(type => {
           const entry =
-            cacheMode === 'normal' ? dnsCache.entries.find(e => e.domain === name && e.type === type && Date.parse(e.expires_at) > Date.now()) : undefined;
+            cacheMode === 'normal' && forced === null
+              ? dnsCache.entries.find(e => e.domain === name && e.type === type && Date.parse(e.expires_at) > Date.now())
+              : undefined;
           const data = type === 'AAAA' ? '2001:db8::14' : type === 'HTTPS' ? '1 . alpn="h2"' : '192.0.2.14';
           return {
             type,
             cached: !!entry,
             cache_entry_id: entry?.entry_id ?? null,
-            upstream: entry ? null : 'udp://192.0.2.53',
-            route: {source: 'default' as const, rule: null},
+            upstream: entry ? null : (forced ?? 'udp://192.0.2.53'),
+            route: {source: forced ? ('forced' as const) : ('default' as const), rule: null},
             status: entry?.status ?? 'NOERROR',
             elapsed_ms: entry ? 0 : 8,
             question: {name, type},

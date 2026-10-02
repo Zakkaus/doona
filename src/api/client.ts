@@ -296,8 +296,14 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     flow: async (id, signal) => read(await client.GET('/api/v1/flows/{flow_id}', {params: {path: {flow_id: id}}, signal})) as FlowDetail,
     dnsCache: async (query, signal) => read(await client.GET('/api/v1/dns/cache', {params: {query}, signal})),
     dnsLog: async (query, signal) => read(await client.GET('/api/v1/dns/log', {params: {query}, signal})),
-    dnsQuery: async (domain, types, signal, cacheMode = 'normal') =>
-      read(await client.POST('/api/v1/dns/query', {params: {query: {detail: 'full'}}, body: {domain, type: types, cache_mode: cacheMode}, signal})),
+    dnsQuery: async (domain, types, signal, cacheMode = 'normal', upstream) =>
+      read(
+        await client.POST('/api/v1/dns/query', {
+          params: {query: {detail: 'full'}},
+          body: {domain, type: types, cache_mode: cacheMode, ...(upstream ? {upstream} : {})},
+          signal
+        })
+      ),
     // 204 carries no body; the response middleware has already turned any error status into an ApiError.
     closeConnection: async (connection_id, signal) => {
       await client.DELETE('/api/v1/connections/{connection_id}', {params: {path: {connection_id}}, signal});

@@ -490,6 +490,7 @@
   "dns.staleUntil": "過期後仍可用至",
   "dns.tab.stats": "統計",
   "dns.typeUnsupported": "此後端不支援查詢此記錄類型",
+  "dns.upstreamAuto": "自動",
   "dns.viewCache": "檢視快取",
   "event.allKinds": "所有種類",
   "event.connected": "已連線",
