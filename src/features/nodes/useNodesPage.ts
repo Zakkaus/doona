@@ -24,7 +24,7 @@ import {
   nodeSource,
   ownedNodes,
   providerCreate,
-  providerEdited,
+  providerChanges,
   providerRows,
   renameReferences,
   selectedProvider,
@@ -70,12 +70,14 @@ export function useNodesPage({go, query}: PageProps) {
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
   const intervalSeconds = draftInterval(form.interval);
-  const edited =
-    dialog?.kind === 'editProvider'
-      ? providerEdited(form, dialog.entry)
-      : dialog?.kind === 'editNode'
-        ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
-        : !!(form.name || form.value);
+  const resources = useCapabilities().data?.resources;
+  const createOptions = resources?.providers.create_options;
+  const changes = dialog?.kind === 'editProvider' ? providerChanges(form, dialog.entry, createOptions?.cache) : null;
+  const edited = changes
+    ? Object.values(changes).some(Boolean)
+    : dialog?.kind === 'editNode'
+      ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
+      : !!(form.name || form.value);
   const guard = useDraftGuard(!!dialog && edited, () => {
     session.current++;
     setDialog(null);
@@ -91,7 +93,6 @@ export function useNodesPage({go, query}: PageProps) {
     setDialog(next);
   }, []);
   const lang = useLang();
-  const resources = useCapabilities().data?.resources;
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const names = useOutboundNames();
@@ -294,11 +295,11 @@ export function useNodesPage({go, query}: PageProps) {
           const written = writeSubscriptionEntry(text, from, {
             tag,
             url,
-            ...(intervalChanged ? {interval: draftInterval(form.interval)!} : {}),
-            ...(form.agent !== (dialog.entry.ua ?? '') ? {ua: form.agent.trim() || null} : {}),
-            ...(editCache.changed ? {cache: editCache.value} : {}),
+            ...(changes?.interval ? {interval: draftInterval(form.interval)!} : {}),
+            ...(changes?.agent ? {ua: form.agent.trim() || null} : {}),
+            ...(changes?.cache ? {cache: form.cache} : {}),
             // Following the routing rules is honk's default, so choosing it removes the route.
-            ...(routeChanged ? {route: editRoute === 'routing' ? null : editRoute} : {})
+            ...(changes?.route ? {route: (form.route || 'routing') === 'routing' ? null : form.route} : {})
           });
           if (!follow) return written;
           return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
@@ -340,7 +341,6 @@ export function useNodesPage({go, query}: PageProps) {
             : dialog.kind === 'editProvider'
               ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
               : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
-  const createOptions = resources?.providers.create_options;
   const agentKey = agentProblem(form.agent, false);
   const agentError = agentKey && t(agentKey);
   // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
@@ -348,7 +348,6 @@ export function useNodesPage({go, query}: PageProps) {
   const editAgentError = editAgentKey && t(editAgentKey);
   // The switch shows the entry's cache, or the default a new subscription gets when the entry sets none.
   const writtenCache = dialog?.kind === 'editProvider' ? (dialog.entry.cache ?? createOptions?.cache) : undefined;
-  const editCache = {value: form.cache ?? writtenCache ?? null, changed: form.cache !== null && form.cache !== writtenCache};
   // A kept name is valid as written; a new one is bare, as doona writes names, and free among the subscriptions.
   const editName = form.name.trim();
   const editNameError =
@@ -359,11 +358,8 @@ export function useNodesPage({go, query}: PageProps) {
         : declared.has(editName)
           ? t('nodes.tagTaken')
           : null;
-  const editRoute = form.route || 'routing';
-  const routeChanged = dialog?.kind === 'editProvider' && editRoute !== (dialog.entry.route || 'routing');
   const intervalKey = intervalProblem(form.interval);
   const intervalError = intervalKey && t(intervalKey);
-  const intervalChanged = dialog?.kind === 'editProvider' && intervalSeconds != null && intervalSeconds !== dialog.entry.interval;
   const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
   const references =
     dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
@@ -391,18 +387,7 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'editNode'
       ? nodeState!.valid
       : dialog?.kind === 'editProvider'
-        ? !!editName &&
-          editNameError === null &&
-          intervalSeconds !== null &&
-          editUrlValid &&
-          editAgentError === null &&
-          !references.elsewhere.length &&
-          (editName !== dialog.entry.tag ||
-            form.value.trim() !== dialog.entry.url ||
-            (form.agent !== (dialog.entry.ua ?? '') && (form.agent.trim() || null) !== dialog.entry.ua) ||
-            editCache.changed ||
-            intervalChanged ||
-            routeChanged)
+        ? !!editName && editNameError === null && intervalSeconds !== null && editUrlValid && editAgentError === null && !references.elsewhere.length && edited
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'

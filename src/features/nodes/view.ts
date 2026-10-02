@@ -47,17 +47,23 @@ const latencyOf = (node: Node) => healthMillis(preferredHealth(node));
 export const editableSource = (daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | null | undefined) =>
   daeText && canWrite && source.writable && complete === true;
 
-export function providerEdited(form: ProviderForm, entry: SubscriptionText) {
+// What the edit dialog changes in the entry, as the write reads it: names and URLs trimmed, a blank User-Agent as none,
+// an empty route as `routing`, and the cache switch against the entry's value or the default it falls back to. An
+// interval not yet valid counts as changed, so the draft is kept; the dialog refuses to save it.
+export function providerChanges(form: ProviderForm, entry: SubscriptionText, defaultCache: boolean | undefined) {
   const interval = draftInterval(form.interval);
-  return (
-    form.name !== entry.tag ||
-    form.value !== entry.url ||
-    (form.interval !== '' && (interval === null || interval !== entry.interval)) ||
-    form.agent !== (entry.ua ?? '') ||
-    form.cache !== null ||
-    form.route !== (entry.route ?? '')
-  );
+  return {
+    name: form.name.trim() !== entry.tag,
+    url: form.value.trim() !== entry.url,
+    interval: form.interval !== '' && (interval === null || interval !== entry.interval),
+    agent: form.agent !== (entry.ua ?? '') && (form.agent.trim() || null) !== (entry.ua ?? null),
+    cache: form.cache !== null && form.cache !== (entry.cache ?? defaultCache),
+    route: (form.route || 'routing') !== (entry.route || 'routing')
+  };
 }
+
+export const providerEdited = (form: ProviderForm, entry: SubscriptionText, defaultCache: boolean | undefined) =>
+  Object.values(providerChanges(form, entry, defaultCache)).some(Boolean);
 
 export function subscriptionActionKind(unique: boolean, daeText: boolean, canWrite: boolean, source: ConfigSource, complete: boolean | undefined) {
   if (unique && daeText && canWrite && source.writable && complete === undefined) return null;
