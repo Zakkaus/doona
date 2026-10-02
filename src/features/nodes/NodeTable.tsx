@@ -1,6 +1,6 @@
 import {createContext, useContext, useMemo} from 'react';
 import {useT} from '../../i18n';
-import {Button, ChoiceMenu, DataTable, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
+import {Button, ChoiceMenu, DataTable, FitTags, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn} from '../../ui/ui';
 import {NodeName, FlagEditingContext} from '../../ui/NodeName';
 import {flagKey} from '../../dae/flags';
 import {SettingsContext} from '../../shell/preferences';
@@ -74,17 +74,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         label: t('nodes.groups'),
         minWidth: 200,
         render: row =>
-          row.groupLinks.length ? (
-            <Tags label={t('nodes.groups')} singleLine>
-              {row.groupLinks.map(group => (
-                <LinkTag key={group.id} href={group.href}>
-                  {group.label}
-                </LinkTag>
-              ))}
-            </Tags>
-          ) : (
-            row.groups
-          )
+          row.groupLinks.length ? <FitTags label={t('nodes.groups')} items={row.groupLinks} more={n => t('nodes.moreGroups', {n})} /> : row.groups
       },
       {
         id: 'actions',

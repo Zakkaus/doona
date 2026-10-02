@@ -1,4 +1,4 @@
-import {expect, scrollTableToEnd, test, box} from './fixtures';
+import {expect, expectFittedGroupTags, scrollTableToEnd, test, box} from './fixtures';
 
 for (const width of [320, 360, 390])
   for (const lang of ['en', 'zh-CN', 'zh-TW'])
@@ -165,5 +165,24 @@ test.describe('node group submenu on touch', () => {
     await submenu.getByRole('menuitem', {name: 'gaming', exact: true}).tap();
     const dialog = page.getByRole('dialog', {name: 'Edit group gaming', exact: true});
     await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-01');
+  });
+});
+
+test.describe('390px touch nodes', () => {
+  test.use({hasTouch: true});
+  test('group tags fit their column at 390 px, the rest behind a +N tag that a tap opens and closes', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 900});
+    await page.goto('/#/nodes');
+    await page.evaluate(() => document.fonts.ready);
+    await scrollTableToEnd(page.locator('.rp-table').nth(1).locator('[role=grid]'));
+    await expectFittedGroupTags(page);
+    const more = page.locator('.rp-table').nth(1).locator('.rp-tag-more').first();
+    const tip = page.getByRole('tooltip');
+    await page.keyboard.press('Escape');
+    await expect(tip).toBeHidden();
+    await more.tap();
+    await expect(tip).toBeVisible();
+    await more.tap();
+    await expect(tip).toBeHidden();
   });
 });

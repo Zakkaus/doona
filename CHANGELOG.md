@@ -54,6 +54,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - A write that was accepted but whose result is not confirmed shows as a notice instead of a failure in the group and node dialogs. (#331)
 - The connection outbounds widget no longer asks a backend without outbound traffic for it. The Geodata card shows when the groups for the download route cannot be read and offers Retry. The routing tree no longer draws a node left over from a group hidden inside another group. Cancelling the widget editor after Restore defaults moved the panel asks to discard the change. Saving a source or the global settings keeps the draft until the new configuration is read back; when the read fails after the write landed, the draft stays and Retry is offered. (#331)
 - Remove is disabled, with the reason shown, for a node or subscription declared in an include file, which the backend only removes from the main source. (#333)
+- The groups column of the Nodes table no longer scrolls inside each row or cuts a tag mid-word. It shows as many whole group tags as fit the column and a "+N" tag for the rest, which names all of the node's groups on hover or keyboard focus. The tags refit when the column or the window resizes. (#320)
 
 ## [0.1.0-beta.12] - 2026-09-30
 

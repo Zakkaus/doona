@@ -882,6 +882,7 @@
   "nodes.linkInvalid": "节点链接须为 vless://… 这类格式",
   "nodes.manualOnly": "仅手动",
   "nodes.minutes": "分钟",
+  "nodes.moreGroups": "另有 {n} 个组",
   "nodes.name": "名称",
   "nodes.nameInvalid": "名称只能使用英文字母、数字、_、. 和 -",
   "nodes.nameMissing": "须填写名称",

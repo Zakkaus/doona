@@ -10,14 +10,16 @@
 .rp-tags-title {
   flex-basis: 100%;
 }
-.rp-tags[data-single-line] {
+/* FitTags: one line as wide as its cell, so the width read is the room the tags have. */
+.rp-tags[data-fit] {
+  width: 100%;
   flex-wrap: nowrap;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  white-space: nowrap;
 }
-.rp-tags[data-single-line] > .rp-tag {
+/* Each tag keeps its full width, so a tag wider than the cell goes behind "+N" instead of showing cut. */
+.rp-tags[data-fit] > .rp-tag {
   flex-shrink: 0;
+  max-width: none;
 }
 .rp-tag {
   min-width: 0;
@@ -42,16 +44,23 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.rp-tag-link {
+.rp-tag-link,
+.rp-tag-more {
+  padding-block: 0;
   color: var(--rp-text);
   text-decoration: none;
-  cursor: pointer;
   user-select: none;
 }
-.rp-tag-link[data-hovered] {
+.rp-tag-link {
+  cursor: pointer;
+}
+.rp-tag-more {
+  font-variant-numeric: tabular-nums;
+}
+:is(.rp-tag-link, .rp-tag-more)[data-hovered] {
   background: var(--rp-hl-med);
 }
-.rp-tag-link[data-pressed] {
+:is(.rp-tag-link, .rp-tag-more)[data-pressed] {
   background: var(--rp-hl-high);
 }
 .rp-tag.new {
