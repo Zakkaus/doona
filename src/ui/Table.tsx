@@ -38,7 +38,7 @@ type Col = {
 };
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
-// A group row in tree mode: its label under the first column, its totals under the others, then its children.
+// A group row in tree mode: its label spans columns before the totals, then its children.
 export type TableGroup<T> = {id: string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
 
 // `resizable`: false leaves the resizers out. In a grid with no rows React Aria (1.21) keeps Tab on the first column's
@@ -387,21 +387,27 @@ export function DataTable<T extends {id: string}>({
       </Row>
     );
   };
-  const renderGroup = (row: TableGroup<T>) => (
-    <Row key={row.id} id={row.id} textValue={row.label}>
-      {shown.map((column, index) => (
-        <Cell key={column.id}>
-          {index === 0 && (
-            <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
-              <ChevronDown />
-            </RButton>
-          )}
-          <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
-        </Cell>
-      ))}
-      {row.children.map(renderRow)}
-    </Row>
-  );
+  const renderGroup = (row: TableGroup<T>) => {
+    const firstTotal = shown.findIndex((column, index) => index > 0 && row.totals[column.id] != null);
+    const labelSpan = firstTotal < 0 ? shown.length : firstTotal;
+    return (
+      <Row key={row.id} id={row.id} textValue={row.label}>
+        {shown
+          .filter((_, index) => index === 0 || index >= labelSpan)
+          .map((column, index) => (
+            <Cell key={column.id} colSpan={index === 0 ? labelSpan : undefined}>
+              {index === 0 && (
+                <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
+                  <ChevronDown />
+                </RButton>
+              )}
+              <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
+            </Cell>
+          ))}
+        {row.children.map(renderRow)}
+      </Row>
+    );
+  };
   const table = (
     <Table
       // A native table overflows its container, which scrolls it. A virtualised grid scrolls itself and lays its columns

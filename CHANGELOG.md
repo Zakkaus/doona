@@ -29,6 +29,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Disabled page and card actions show their reasons without hovering, including on touch devices. (#340)
 
+- Connection group headings span the empty columns before their totals, keeping the connection count readable on phones. (#339)
 - Table headers and cells use start alignment, including numeric columns with tabular digits. Action headers align with the first action slot's icon inset. Rule actions keep their source, edit and remove slots when a button is absent. (#320)
 
 - The floating widget panel collapses again when you leave a page through the sidebar or a link; rate charts in widgets list their series with the latest values at full size; the connections chart in widgets uses the same colour as on Activity; the recomputed mark on Flows is the badge Connections uses; and pickers announce an option's name apart from its description.

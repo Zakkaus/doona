@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem, box} from './fixtures';
+import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem, box, settleFrames} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 
@@ -33,6 +33,27 @@ test('English Started values fit without truncation', async ({page}) => {
   const widths = await started.evaluate(element => ({available: element.clientWidth, text: element.scrollWidth}));
   expect(widths.text).toBeLessThanOrEqual(widths.available);
 });
+
+for (const lang of ['en', 'zh-TW']) {
+  test.describe(`group headings in ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang, 'doona-connections-view': JSON.stringify({hidden: [], sort: null, group: 'source'})}});
+
+    test('connection counts fit at phone, tablet and desktop widths', async ({page}) => {
+      await page.goto('/#/connections?tab=list');
+      const heading = page.locator('.rp-table [role=row][aria-level="1"]').first().getByRole('rowheader').locator('.cell');
+      await expect(heading).toHaveText(lang === 'en' ? '10.0.0.12, 2 connections' : '10.0.0.12，2 條連線');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      for (const width of [390, 768, 1440]) {
+        await page.setViewportSize({width, height: 900});
+        await settleFrames(page);
+        await expect(heading).toBeVisible();
+        await expect
+          .poll(() => heading.evaluate(element => element.scrollWidth <= element.clientWidth), {message: `${lang} group heading at ${width}px`})
+          .toBe(true);
+      }
+    });
+  });
+}
 
 test('a column can be resized with the keyboard', async ({page}) => {
   await page.goto('/#/connections?tab=list');
