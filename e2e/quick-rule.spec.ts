@@ -7,13 +7,8 @@ test('the connection list toolbar adds a rule for the selected row', async ({pag
   await page.goto('/#/connections?tab=list');
   const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
-  // The disabled button gives its reason in a tooltip on the wrapper that stays hoverable. The toolbar may lay its
-  // actions out again as the list arrives, so the hover is retried until the tip shows.
-  await expect(async () => {
-    await page.mouse.move(0, 0);
-    await add.locator('..').hover();
-    await expect(page.getByRole('tooltip')).toHaveText('Select a row first', {timeout: 1500});
-  }).toPass();
+  await expect(page.getByText('Select a row first', {exact: true})).toBeVisible();
+  await expect(add).toHaveAccessibleDescription('Select a row first');
   // Clicking a row selects the connection the toolbar acts on.
   await page.getByRole('rowheader', {name: 'cdn.bilibili.com', exact: true}).click();
   await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
@@ -131,4 +126,23 @@ test('without a writable configuration the dialog still opens and copies the rul
   await dialog.getByRole('button', {name: 'Copy rule', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule copied'})).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('domain(full: api.telegram.org) -> proxy');
+});
+
+test.describe('disabled actions on touch', () => {
+  test.use({viewport: {width: 390, height: 844}, hasTouch: true});
+
+  test('Add rule shows its reason without hover until a connection is selected', async ({page}) => {
+    await mockBackend(page);
+    await page.goto('/#/connections?tab=list');
+    const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true, includeHidden: true});
+    const reason = page.locator('.rp-label').filter({hasText: /^Select a row first$/});
+    await expect(add).toBeDisabled();
+    await expect(reason).toBeVisible();
+    await expect(add).toHaveAccessibleDescription('Select a row first');
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    await page.getByRole('rowheader', {name: 'cdn.bilibili.com', exact: true}).tap();
+    await expect(add).toBeEnabled();
+    await expect(reason).toHaveCount(0);
+    await expect(add).not.toHaveAttribute('aria-describedby');
+  });
 });

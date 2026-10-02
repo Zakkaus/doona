@@ -4,6 +4,7 @@ import {FilterSummary} from '../shared/FilterSummary';
 import {createContext, Fragment, memo, useCallback, use, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {
+  ActionHelp,
   Badge,
   Button,
   Card,
@@ -151,47 +152,49 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
       {g && (
         <>
           {/* A long name gives way, truncating, so the More menu keeps its place on the title row. */}
-          <div className="rp-row nowrap">
-            <span className="rp-cluster rp-grow">
-              <h2 className="rp-h3" tabIndex={-1}>
-                <TextTooltip>{g.name}</TextTooltip>
-              </h2>
-              {m.actionsReason && (
-                <IconTip label={t('policy.lockHelp', {name: g.name})} text={m.actionsReason}>
-                  <Lock />
-                </IconTip>
-              )}
-              <Badge tip={g.policy.id}>{g.policy.label}</Badge>
-              <Light small tone="ok">
-                {g.healthy}
-              </Light>
-              {g.down && (
-                <Light small tone="err">
-                  {g.down}
+          <ActionHelp reason={!m.edit.editable || m.edit.disabled ? m.edit.tip : null}>
+            <div className="rp-row nowrap">
+              <span className="rp-cluster rp-grow">
+                <h2 className="rp-h3" tabIndex={-1}>
+                  <TextTooltip>{g.name}</TextTooltip>
+                </h2>
+                {m.actionsReason && (
+                  <IconTip label={t('policy.lockHelp', {name: g.name})} text={m.actionsReason}>
+                    <Lock />
+                  </IconTip>
+                )}
+                <Badge tip={g.policy.id}>{g.policy.label}</Badge>
+                <Light small tone="ok">
+                  {g.healthy}
                 </Light>
-              )}
-              {g.untested && (
-                <HelpRow help={m.untestedHelp}>
-                  <Light small tone="neutral">
-                    {g.untested}
+                {g.down && (
+                  <Light small tone="err">
+                    {g.down}
                   </Light>
-                </HelpRow>
-              )}
-            </span>
-            <Button quiet icon small label={t('policy.edit')} tip={m.edit.tip} isDisabled={!m.edit.editable || m.edit.disabled} onPress={() => m.edit.show()}>
-              <Edit />
-            </Button>
-            <GroupDialog id={g.id} model={m.edit} details={m.details} />
-            <CheckEdit model={m.check} />
-            <MoreMenu
-              actions={[
-                ...(!m.edit.editable ? [{id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view}] : []),
-                ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
-                {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
-                ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
-              ]}
-            />
-          </div>
+                )}
+                {g.untested && (
+                  <HelpRow help={m.untestedHelp}>
+                    <Light small tone="neutral">
+                      {g.untested}
+                    </Light>
+                  </HelpRow>
+                )}
+              </span>
+              <Button quiet icon small label={t('policy.edit')} isDisabled={!m.edit.editable || m.edit.disabled} onPress={() => m.edit.show()}>
+                <Edit />
+              </Button>
+              <GroupDialog id={g.id} model={m.edit} details={m.details} />
+              <CheckEdit model={m.check} />
+              <MoreMenu
+                actions={[
+                  ...(!m.edit.editable ? [{id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view}] : []),
+                  ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
+                  {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
+                  ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
+                ]}
+              />
+            </div>
+          </ActionHelp>
           {m.includes.tags.length > 0 && (
             <Tags label={t('policy.includes')}>
               {m.includes.tags.map(tag => (
@@ -293,14 +296,16 @@ export function Policies(props: PageProps) {
   );
   return (
     <div className="rp-page">
-      <div className="rp-toolbar">
-        {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
-        <span className="rp-grow" />
-        <Button secondary isDisabled={m.createDisabled} tip={m.create.tip} onPress={() => m.create.show()}>
-          <AddCircle />
-          {t('group.newGroup')}
-        </Button>
-      </div>
+      <ActionHelp reason={m.createDisabled ? m.create.tip : null}>
+        <div className="rp-toolbar">
+          {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
+          <span className="rp-grow" />
+          <Button secondary isDisabled={m.createDisabled} onPress={() => m.create.show()}>
+            <AddCircle />
+            {t('group.newGroup')}
+          </Button>
+        </div>
+      </ActionHelp>
       <GroupDialog id="policies-create" model={m.create} details={null} />
       {groups}
     </div>
