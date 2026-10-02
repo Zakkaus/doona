@@ -30,10 +30,10 @@ type Col = {
   minWidth: number;
   grow?: number;
   isRowHeader?: boolean;
-  align?: 'end';
   drop?: number;
   sortable?: boolean;
   hideLabel?: boolean;
+  actions?: boolean;
   text?: 'wrap';
 };
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
@@ -53,7 +53,6 @@ export function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols
           id={c.id}
           isRowHeader={firstVisibleHeader ? index === 0 : c.isRowHeader}
           allowsSorting={c.sortable}
-          className={c.align}
           defaultWidth={`${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr`}
           minWidth={c.minWidth}
         >
@@ -381,7 +380,7 @@ export function DataTable<T extends {id: string}>({
     return (
       <Row key={row.id} id={row.id} textValue={getTextValue?.(row)}>
         {shown.map(column => (
-          <Cell key={column.id} className={cx(column.align, column.text === 'wrap' && 'rp-cell-wrap')}>
+          <Cell key={column.id} className={cx(column.actions && 'rp-cell-actions', column.text === 'wrap' && 'rp-cell-wrap')}>
             {column.text === 'wrap' ? column.render(row) : content(column.render(row))}
           </Cell>
         ))}
@@ -391,7 +390,7 @@ export function DataTable<T extends {id: string}>({
   const renderGroup = (row: TableGroup<T>) => (
     <Row key={row.id} id={row.id} textValue={row.label}>
       {shown.map((column, index) => (
-        <Cell key={column.id} className={column.align}>
+        <Cell key={column.id}>
           {index === 0 && (
             <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
               <ChevronDown />

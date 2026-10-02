@@ -64,7 +64,6 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         // Fits the longest value, English "Unavailable" after its dot, with the cell's padding.
         minWidth: 128,
         grow: 0,
-        align: 'end',
         sortable: true,
         render: row => <span className={row.latencyClass}>{row.latency}</span>
       },
@@ -78,6 +77,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       },
       {
         id: 'actions',
+        actions: true,
         label: t('ui.actions'),
         hideLabel: phone,
         minWidth: canManage ? 148 : 104,

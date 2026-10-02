@@ -1,13 +1,15 @@
 /* Pixel-sized icons stay aligned with the fixed 14px type regardless of the browser's default font size. */
+:root {
+  --rp-icon-size: 20px;
+}
 .rp-icon {
-  width: 20px;
-  height: 20px;
+  width: var(--rp-icon-size);
+  height: var(--rp-icon-size);
   flex-shrink: 0;
 }
 @media not ((hover: hover) and (pointer: fine)) {
-  .rp-icon {
-    width: 25px;
-    height: 25px;
+  :root {
+    --rp-icon-size: 25px;
   }
 }
 .rp-icon-stack {

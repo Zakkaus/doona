@@ -25,7 +25,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
         )
       },
       {id: 'kind', label: t('nodes.kindLabel'), minWidth: 150, grow: 0, drop: 5, render: row => <Badge>{row.kind}</Badge>},
-      {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, align: 'end', drop: 6, render: row => row.count},
+      {id: 'count', label: t('nodes.count'), minWidth: 80, grow: 0, drop: 6, render: row => row.count},
       {id: 'usage', label: t('nodes.usage'), minWidth: 200, drop: 2, render: row => row.usage},
       {id: 'updated', label: t('nodes.updated'), minWidth: 140, drop: 3, render: row => <TimeCell at={row.updatedAt} />},
       {id: 'interval', label: t('nodes.interval'), minWidth: 130, grow: 0, drop: 4, render: row => row.interval},
@@ -47,6 +47,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
       },
       {
         id: 'actions',
+        actions: true,
         label: t('ui.actions'),
         hideLabel: phone,
         minWidth: (canManage ? 112 : 88) + (editing ? 40 : 0),

@@ -119,7 +119,7 @@ export function BackendActionsCard() {
             fit
             cols={[
               {id: 'kind', label: t('settings.geodataAsset'), minWidth: 100, grow: 0, isRowHeader: true, render: asset => asset.kind},
-              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, align: 'end', render: asset => asset.size},
+              {id: 'size', label: t('settings.geodataSize'), minWidth: 100, grow: 0, render: asset => asset.size},
               {
                 id: 'modified',
                 label: t('nodes.updated'),

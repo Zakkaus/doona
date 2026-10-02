@@ -65,7 +65,6 @@ const hitsColumn = (t: Translator): TableColumn<Row> => ({
   label: t('rule.hits'),
   minWidth: 60,
   grow: 0,
-  align: 'end',
   drop: 1,
   render: row => row.hits
 });
@@ -115,6 +114,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
       ...(hits ? [hitsColumn(t)] : []),
       {
         id: 'actions',
+        actions: true,
         label: t('ui.actions'),
         minWidth: 136,
         grow: 0,
@@ -250,8 +250,8 @@ function Distribution({view}: {view: Model}) {
         render: row => (row.expressionClass ? <DaeCode text={row.expression} /> : row.expression)
       },
       {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
-      {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, align: 'end', render: row => row.hits},
-      {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, align: 'end', drop: 3, render: row => row.share}
+      {id: 'hits', label: t('rule.hits'), minWidth: 72, grow: 0, render: row => row.hits},
+      {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, drop: 3, render: row => row.share}
     ],
     [t]
   );

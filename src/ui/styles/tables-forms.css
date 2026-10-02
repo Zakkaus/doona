@@ -133,6 +133,8 @@
 }
 .rp-table [role='rowheader'],
 .rp-table [role='gridcell'] {
+  text-align: start;
+  font-variant-numeric: tabular-nums;
   padding: 0 var(--rp-cell-padding, var(--rp-space-4));
   height: 40px;
   border-bottom: 1px solid var(--rp-line);
@@ -158,8 +160,9 @@
 .rp-table [role='row'][data-selection-mode='single'] {
   cursor: default;
 }
-.rp-table .end {
-  text-align: end;
+/* The icon, rather than its hit area, starts at the header's text inset. */
+.rp-table .rp-cell-actions {
+  padding-inline-start: calc(var(--rp-cell-padding, var(--rp-space-4)) - (var(--rp-control) - var(--rp-icon-size)) / 2);
 }
 /* Virtualised tables use divs; only their layout differs from native cells. */
 .rp-table > div[role='grid'],

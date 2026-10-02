@@ -151,6 +151,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
       {id: 'st', label: t('dns.staleUntil'), minWidth: 128, drop: 1, render: entry => <TimeCell at={entry.staleUntil} />},
       {
         id: 'a',
+        actions: true,
         label: t('ui.delete'),
         minWidth: 80,
         grow: 0,
@@ -303,7 +304,7 @@ function DnsLog({
           )
       },
       // Wide enough for four digits and the unit, "9999 ms" (about 55px), with the cell's padding.
-      {id: 'e', label: t('ui.elapsed'), minWidth: 88, grow: 0, align: 'end', drop: 4, render: record => record.elapsed}
+      {id: 'e', label: t('ui.elapsed'), minWidth: 88, grow: 0, drop: 4, render: record => record.elapsed}
     ],
     [t]
   );
