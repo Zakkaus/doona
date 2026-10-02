@@ -8,6 +8,38 @@ import {readGroupEntries} from '../src/dae/groups';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
+for (const scenario of ['unique', 'duplicate', 'node-tag'] as const)
+  test(`located subscription links resolve opaque provider IDs only for a unique tag (${scenario})`, async ({page}) => {
+    const {api, handlers} = await mockBackend(page);
+    const ambiguous = scenario === 'duplicate';
+    handlers['GET providers'] = async () => {
+      const list = await api.providers();
+      const providers = list.providers.map(provider =>
+        provider.name === 'harbor' ? {...provider, id: 'provider-a', name: scenario === 'node-tag' ? 'opaque-name' : provider.name} : provider
+      );
+      if (ambiguous) providers.push({...providers.find(provider => provider.name === 'harbor')!, id: 'provider-b'});
+      return {...list, providers};
+    };
+    if (scenario === 'node-tag')
+      handlers['GET nodes'] = async () => {
+        const list = await api.nodes({limit: 1000});
+        return {...list, nodes: list.nodes.map(node => (node.subscription_tag === 'harbor' ? {...node, provider_id: 'provider-a'} : node))};
+      };
+    const file = (await api.config()).sources.find(source => source.kind === 'main')!;
+    const entry = readSubscriptionEntries(file.content).find(entry => entry.tag === 'harbor')!;
+    await page.goto(`/#/config?tab=source&source=${file.id}&line=${entry.line}`);
+    await page.getByRole('link', {name: entry.tag, exact: true}).click();
+    if (ambiguous) {
+      await expect(page.getByRole('button', {name: 'Add subscription', exact: true})).toBeVisible();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page).toHaveURL(/editSubscriptionTag=harbor/);
+    } else {
+      const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor', exact: true});
+      await expect(dialog.getByRole('textbox', {name: 'Subscription URL', exact: true})).toHaveValue(entry.url);
+      await expect(page).not.toHaveURL(/editSubscription/);
+    }
+  });
+
 test('the removed quick setup address opens the default tab', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const tabs = page.getByRole('tablist', {name: 'Configuration'});

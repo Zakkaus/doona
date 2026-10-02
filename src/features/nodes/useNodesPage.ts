@@ -56,7 +56,7 @@ type NodeDialog =
 
 export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
   if (!action) return;
-  replaceRoute('nodes', within(query, {editSubscription: null, focus: null}));
+  replaceRoute('nodes', within(query, {editSubscription: null, editSubscriptionTag: null, focus: null}));
   action.run();
 }
 
@@ -131,7 +131,8 @@ export function useNodesPage({go, query}: PageProps) {
   const editAction = useCallback(
     (item: ProviderRow, focus?: 'interval') => {
       if (!version || !resources) return null;
-      const place = subscriptionPlace(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : [], item, providers.data?.providers ?? []);
+      const tag = item.configTag ?? item.sourceTag;
+      const place = subscriptionPlace(tag ? (declared.get(tag) ?? []) : [], item, providers.data?.providers ?? []);
       if (!place) return null;
       const {source: origin, entry, unique} = place;
       const kind = subscriptionActionKind(unique, daeText, source.writable, origin, isComplete(origin));
@@ -177,8 +178,10 @@ export function useNodesPage({go, query}: PageProps) {
   }, [params, resources, canAddProvider, open]);
   useLayoutEffect(() => {
     const id = params.get('editSubscription');
-    if (!id || !providers.data || !config.data) return;
-    const item = list.find(item => item.id === id);
+    const tag = params.get('editSubscriptionTag');
+    if ((!id && !tag) || !providers.data || !config.data) return;
+    const matches = tag ? list.filter(item => (item.configTag ?? item.sourceTag) === tag) : list.filter(item => item.id === id);
+    const item = matches.length === 1 ? matches[0] : null;
     const action = item ? editAction(item, params.get('focus') === 'interval' ? 'interval' : undefined) : null;
     if (!action) return;
     const frame = requestAnimationFrame(() => {
