@@ -1,0 +1,240 @@
+import {expect, it} from 'vitest';
+import {connections} from '../../api/mock/fixtures';
+import {connectionsView, connectionTableView, sortByKey, tableRows} from './tableRows';
+import {columns, connectionId, connectionKey, type ConnectionView} from './viewState';
+import {connectionDetails} from './view';
+import {parseU64} from '../../api/u64';
+import {compareNames, formatRate} from '../../i18n/format';
+import {translate, type Translator} from '../../i18n';
+const t: Translator = (key, params) => translate('en', key, params);
+
+it('groups by client address without losing IPv6 hosts or UInt64 precision', () => {
+  const c = connections.tcp[0];
+  const rows = tableRows(
+    [
+      {...c, id: 'a', src: '[2001:db8::1]:123', download_bytes: '9007199254740993'},
+      {...c, id: 'b', src: '[2001:db8::1]:456', download_bytes: '7', outbound: 'direct'},
+      {...c, id: 'c', src: '10.0.0.7:123', download_bytes: null},
+      {...c, id: 'd', src: '10.0.0.7:456', state: 'closed', download_bytes: '2'}
+    ],
+    {hidden: [], sort: null, group: 'source'},
+    'en-US',
+    t
+  );
+  expect(rows.map(row => ('group' in row ? [row.group, row.children.length, row.active, row.download] : row.id))).toEqual([
+    ['2001:db8::1', 2, 2, 9007199254741000n],
+    ['10.0.0.7', 2, 1, null]
+  ]);
+});
+
+it('keys groups by their name so a reorder keeps each id', () => {
+  const c = connections.tcp[0];
+  const view: ConnectionView = {hidden: [], sort: {column: 'src', direction: 'ascending'}, group: 'source'};
+  const a = {...c, id: 'a', src: '10.0.0.1:1'};
+  const b = {...c, id: 'b', src: '10.0.0.2:1'};
+  const ids = (list: (typeof c)[]) => tableRows(list, view, 'en-US', t).map(row => row.id);
+  expect(ids([a, b])).toEqual(['g:10.0.0.1', 'g:10.0.0.2']);
+  expect(ids([b])).toEqual(['g:10.0.0.2']);
+  expect(tableRows([a, b], {...view, sort: {column: 'src', direction: 'descending'}}, 'en-US', t).map(row => row.id)).toEqual(['g:10.0.0.2', 'g:10.0.0.1']);
+});
+
+it('keys outbound groups on the outbound, whatever the language or a label it shares', () => {
+  const c = connections.tcp[0];
+  const list = [
+    {...c, id: 'a', outbound: 'direct'},
+    {...c, id: 'b', outbound: 'Direct'}
+  ];
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  const keys = (translator: Translator) => tableRows(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', translator).map(row => row.id);
+  expect(keys(t)).toEqual(['g:direct', 'g:Direct']);
+  expect(keys(zh)).toEqual(keys(t));
+});
+
+it('keeps group and connection keys apart, and every connection id recoverable from its key', () => {
+  const c = connections.tcp[0];
+  const view: ConnectionView = {hidden: [], sort: null, group: 'source'};
+  const list = [
+    {...c, id: 'g:10.0.0.1', src: '10.0.0.1:1'},
+    {...c, id: '\\g:10.0.0.1', src: '10.0.0.1:2'},
+    {...c, id: 'plain', src: '10.0.0.1:3'}
+  ];
+  const [group] = connectionTableView(list, view, 'en-US', new Map(), false, t);
+  const keys = 'children' in group ? [group.id, ...group.children.map(row => row.id)] : [];
+  expect(new Set(keys).size).toBe(4);
+  expect(keys.slice(1).map(connectionId)).toEqual(list.map(row => row.id));
+  expect(connectionKey('plain')).toBe('plain');
+});
+
+it('groups, sorts and describes by the displayed labels', () => {
+  const c = connections.tcp[0];
+  const list = [
+    {...c, id: 'a', outbound: 'direct', state: 'dialing' as const},
+    {...c, id: 'b', outbound: null, state: 'active' as const},
+    {...c, id: 'c', outbound: 'unknown', state: 'blocked' as const}
+  ];
+  const groups = tableRows(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', t);
+  expect(groups.map(row => ('group' in row ? [row.group, row.children.length] : row.id))).toEqual([
+    ['direct', 1],
+    ['unknown', 2]
+  ]);
+  const described = connectionTableView(list, {hidden: [], sort: null, group: 'outbound'}, 'en-US', new Map(), false, t);
+  expect(described.map(row => ('label' in row ? row.label : row.id))).toEqual([`${t('ui.direct')}, 1 connection`, `${t('ui.unknown')}, 2 connections`]);
+  const sorted = tableRows(list, {hidden: [], sort: {column: 'state', direction: 'ascending'}, group: 'none'}, 'en-US', t);
+  expect(sorted.map(row => row.id)).toEqual(
+    [...list].sort((x, y) => compareNames('en-US')(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id)
+  );
+  const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
+  expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
+  expect(connectionDetails(c, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
+  expect(connectionDetails({...c, chain_source: 'reconstructed'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.reconstructed'}]);
+  expect(connectionDetails({...c, chain_source: 'unknown'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'ui.unknown'}]);
+  // A backend that predates the field leaves it out, and the detail shows no row for it.
+  const {chain_source: _omitted, ...older} = c;
+  expect(connectionDetails(older as typeof c, 'en-US').some(([key]) => key === 'conn.f.chainSource')).toBe(false);
+});
+
+it('computes each sort key once and keeps equal keys in their order', () => {
+  const seen: string[] = [];
+  const items = ['b2', 'a1', 'b1', 'a2', 'c1'];
+  const sorted = sortByKey(
+    items,
+    item => {
+      seen.push(item);
+      return item[0];
+    },
+    (a, b) => a.localeCompare(b)
+  );
+  expect(sorted).toEqual(['a1', 'a2', 'b2', 'b1', 'c1']);
+  expect(seen).toEqual(items);
+  expect(items).toEqual(['b2', 'a1', 'b1', 'a2', 'c1']);
+});
+
+it('sorts every column as comparing the displayed values pairwise would', () => {
+  const c = connections.tcp[0];
+  const states = ['active', 'closed', 'blocked', 'dialing'] as const;
+  const list = Array.from({length: 40}, (_, i) => ({
+    ...c,
+    id: 'r' + i,
+    domain: i % 5 === 0 ? null : `host${(i * 7) % 13}.example`,
+    dst: i % 9 === 0 ? undefined : `10.0.0.${i % 6}:443`,
+    src: i % 11 === 0 ? undefined : `192.168.1.${(i * 3) % 8}:${1000 + i}`,
+    state: states[i % states.length],
+    download_bytes: i % 7 === 0 ? null : String((i * 7919) % 23),
+    download_bytes_per_second: i % 6 === 0 ? null : String((i * 104729) % 100003),
+    started_at: i % 8 === 0 ? null : i % 13 === 0 ? 'not a time' : new Date(Date.UTC(2026, 0, 1, 0, (i * 17) % 29)).toISOString()
+  }));
+  const shown = (row: (typeof list)[number], column: string) =>
+    column === 'dst'
+      ? row.domain || row.dst
+      : column === 'src'
+        ? row.src
+        : column === 'state'
+          ? t(`conn.state.${row.state}`)
+          : column === 'down'
+            ? parseU64(row.download_bytes)
+            : column === 'downRate'
+              ? parseU64(row.download_bytes_per_second)
+              : row.started_at
+                ? Date.parse(row.started_at)
+                : null;
+  for (const column of columns.filter(column => column.sortable).map(column => column.id))
+    for (const direction of ['ascending', 'descending'] as const) {
+      const expected = [...list].sort((a, b) => {
+        const left = shown(a, column),
+          right = shown(b, column);
+        if (left == null) return right == null ? 0 : 1;
+        if (right == null) return -1;
+        const order = typeof left === 'string' && typeof right === 'string' ? compareNames('en-US')(left, right) : left < right ? -1 : left > right ? 1 : 0;
+        return direction === 'descending' ? -order : order;
+      });
+      const sorted = tableRows(list, {hidden: [], sort: {column, direction}, group: 'none'}, 'en-US', t);
+      expect(sorted.map(row => row.id)).toEqual(expected.map(row => row.id));
+    }
+});
+
+it('sorts the download rate by value, with unknown rates last', () => {
+  const c = connections.tcp[0];
+  const list = ['900', null, '10000', '0'].map((rate, i) => ({...c, id: 'r' + i, download_bytes_per_second: rate}));
+  const order = (direction: 'ascending' | 'descending') =>
+    tableRows(list, {hidden: [], sort: {column: 'downRate', direction}, group: 'none'}, 'en-US', t).map(row => row.id);
+  expect(order('descending')).toEqual(['r2', 'r0', 'r3', 'r1']);
+  expect(order('ascending')).toEqual(['r3', 'r0', 'r2', 'r1']);
+  const [row] = connectionTableView(list.slice(2, 3), {hidden: [], sort: null, group: 'none'}, 'en-US', new Map(), false, t);
+  expect('connection' in row && row.connection.downloadRate).toBe(formatRate('10000', 'en-US'));
+});
+
+it('prepares grouped cells and rule-link availability without losing unknown counters', () => {
+  const row = {...connections.tcp[0], src: undefined, domain: undefined, dst: undefined, download_bytes: null, rule_source: 'recomputed' as const};
+  const collection = connectionTableView([row], {hidden: [], sort: null, group: 'source'}, 'en-US', new Map(), false, t);
+  const group = collection[0];
+  expect('children' in group).toBe(true);
+  if (!('children' in group)) throw new Error('Expected client group');
+  expect(group.children[0]).toMatchObject({target: '—', source: '—', download: '—', rule: {href: undefined}});
+  expect(group.totals.down).toBe('—');
+  expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.device', '—']);
+});
+
+it('shows only the leaf node in the table and keeps the full path for the tooltip', () => {
+  const names = new Map([
+    ['group-id', 'proxy'],
+    ['node-id', 'HK']
+  ]);
+  const base = {...connections.tcp[0], network: 'tcp'};
+  const rows = [
+    {...base, id: 'a', outbound: 'proxy', chain: ['group-id', 'node-id']},
+    {...base, id: 'b', outbound: 'proxy', chain: []},
+    {...base, id: 'c', outbound: 'direct', chain: []},
+    {...base, id: 'd', outbound: null, chain: []}
+  ];
+  const view = connectionTableView(rows, {hidden: [], sort: null, group: 'none'}, 'en-US', names, true, t);
+  const cells = view.flatMap(row => ('connection' in row ? [row.connection] : row.children)).map(c => [c.node, c.path]);
+  expect(cells).toEqual([
+    ['HK', 'proxy → HK'],
+    ['proxy', null],
+    [t('ui.direct'), null],
+    ['—', null]
+  ]);
+});
+
+it('reuses a projected row until the connection or a label input changes', () => {
+  const row = {...connections.tcp[0], id: 'kept'};
+  const view: ConnectionView = {hidden: [], sort: null, group: 'none'};
+  const names = new Map();
+  const project = (list: (typeof row)[], locale = 'en-US', listed = true, translate = t) =>
+    connectionTableView(list, view, locale, names, listed, translate).map(item => ('connection' in item ? item.connection : null));
+  const [first] = project([row]);
+  expect(project([row])[0]).toBe(first);
+  expect(project([{...row}])[0]).not.toBe(first);
+  expect(project([{...row}])[0]).toEqual(first);
+  expect(project([row], 'zh-CN')[0]).not.toBe(first);
+  expect(project([row], 'en-US', false)[0]).not.toBe(first);
+  const other: Translator = (key, params) => translate('zh-CN', key, params);
+  expect(project([row], 'en-US', true, other)[0]?.state).toBe(other(`conn.state.${row.state}`));
+});
+
+it('lists devices and rules with equal counts in the same order whatever order the rows arrive in', () => {
+  const c = {...connections.tcp[0], network: 'tcp'};
+  const rows = [
+    {...c, id: 'a', src: '10.0.0.9:1', rule_expression: 'domain(b)'},
+    {...c, id: 'b', src: '10.0.0.1:1', rule_expression: 'domain(a)'}
+  ];
+  const menus = (list: typeof rows) =>
+    connectionsView(list, connections, undefined, 'all', 'all', 'en-US', t).picks.map(pick => pick.items.map(item => item.label));
+  expect(menus(rows)).toEqual([
+    ['10.0.0.1', '10.0.0.9'],
+    ['domain(a)', 'domain(b)']
+  ]);
+  expect(menus([...rows].reverse())).toEqual(menus(rows));
+});
+
+it('lists every device and rule for the searchable menu, and the outbounds in one section for the picker', () => {
+  const c = {...connections.tcp[0], network: 'tcp'};
+  const rows = Array.from({length: 30}, (_, i) => ({...c, id: `c${i}`, src: `10.0.0.${i}:1`, rule_expression: `domain(r${i})`, outbound: `node-${i % 20}`}));
+  const lists = connectionsView(rows, connections, undefined, 'all', 'all', 'en-US', t);
+  expect(lists.picks.map(pick => pick.items.length)).toEqual([30, 30]);
+  const [section] = lists.outboundSections;
+  expect(lists.outboundSections).toHaveLength(1);
+  expect(section).not.toHaveProperty('title');
+  expect(section.items).toEqual(lists.outbounds);
+  expect(section.items).toHaveLength(21);
+});

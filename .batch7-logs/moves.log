@@ -1,0 +1,4 @@
+35 connections declarations preserved (exports/imports excluded).
+All 23 existing connections test bodies preserved verbatim.
+Membership functions preserved (local noNodes alias resolved).
+Group editor JSX elements and non-action props preserved; callback/choice bindings reviewed separately.

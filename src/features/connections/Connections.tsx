@@ -27,7 +27,7 @@ import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
 import {connectionsTabs} from './nav';
-import type {ConnectionView} from './view';
+import type {ConnectionView} from './viewState';
 
 export function Connections(props: PageProps) {
   const t = useT();

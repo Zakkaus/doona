@@ -9,24 +9,9 @@ import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {compareNames} from '../../i18n/format';
 import type {PageProps} from '../../shell/routes';
-import {
-  columns,
-  readView,
-  viewKey,
-  closeSelection,
-  collapseAll,
-  expandGroup,
-  revealTarget,
-  toggleGroup,
-  connectionsExport,
-  connectionsView,
-  connectionDetail,
-  connectionTableView,
-  filterMenu,
-  type CloseSelection,
-  type ConnectionView,
-  type GroupCollapse
-} from './view';
+import {columns, readView, viewKey, collapseAll, expandGroup, revealTarget, toggleGroup, type ConnectionView, type GroupCollapse} from './viewState';
+import {closeSelection, connectionsExport, connectionDetail, filterMenu, type CloseSelection} from './view';
+import {connectionsView, connectionTableView} from './tableRows';
 import {offered} from '../../api/capabilities';
 import {pathLatency} from './latency';
 import {useConnectionRule} from './useConnectionRule';
