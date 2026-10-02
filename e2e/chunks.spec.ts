@@ -79,6 +79,9 @@ test('slow page chunks delay the loading treatment without hiding the frame', as
   expect(await bounds()).toEqual(before);
 });
 
+// The CPU and latency lines wait for their second sample, so only these draw as the charts arrive.
+const drawnAtLoad = ['download', 'upload', 'connections', 'history', 'outbounds', 'memory'];
+
 test('activity keeps card geometry while its charts load', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 1100});
   let release!: () => void;
@@ -95,7 +98,7 @@ test('activity keeps card geometry while its charts load', async ({page}) => {
     const before = await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()));
     await expect(page.locator('main .rp-activity-surface')).toHaveCount(0);
     release();
-    await expect(page.locator(".rp-dash-section:not([data-profile='extensions']) .rp-activity-surface")).toHaveCount(6);
+    for (const module of drawnAtLoad) await expect(page.locator(`[data-module=${module}] .rp-activity-surface`)).toHaveCount(1);
     expect(await cards.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().toJSON()))).toEqual(before);
   } finally {
     release();
@@ -130,7 +133,7 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
       await alert.getByRole('button', {name: 'Reload'}).click();
       await expect(page.locator(chunk === 'Policies' ? '.rp-content > .rp-page' : "[data-profile='metrics']")).toBeVisible();
       await expect(page.locator('.rp-content .rp-alert')).toHaveCount(0);
-      if (chunk !== 'Policies') await expect(page.locator(".rp-dash-section:not([data-profile='extensions']) .rp-activity-surface")).toHaveCount(6);
+      if (chunk !== 'Policies') for (const module of drawnAtLoad) await expect(page.locator(`[data-module=${module}] .rp-activity-surface`)).toHaveCount(1);
       expect(uncaught).toEqual([]);
     } finally {
       await context.close();

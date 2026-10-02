@@ -1,13 +1,17 @@
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useContext, useMemo, useState} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useVersion} from '../../store';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {formatBytes, formatRate} from '../../i18n/format';
+import {formatBytes, formatCpu, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
 import {useMemorySeries, useTrafficSeries} from '../shared/useSeries';
 import {isTrafficRange, trafficRanges, trafficWindow, type TrafficRange} from '../shared/traffic';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
+import {useRings} from '../../api/rings';
+import {ResourcePreview} from '../../store/preview';
+import {SettingsContext} from '../../shell/preferences';
+import {cpuSample, foldCpu, sparkPoints, sparkWindow} from '../shared/widgetSeries';
 
 export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' | 'history' | 'memory' | 'status' = 'history') {
   const t = useT();
@@ -28,7 +32,16 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     samples: historySamples,
     series
   } = useTrafficSeries(capabilities.data, runtime.data, windowSeconds, {enabled: ['download', 'upload', 'connections', 'history'].includes(kind)});
-  const spark = useMemo(() => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, 24), [polledTraffic, historySamples]);
+  const spark = useMemo(
+    () => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, sparkPoints),
+    [polledTraffic, historySamples]
+  );
+  // The backend keeps no CPU history, so the tile draws the session's own polls, the ring the CPU widget also reads;
+  // with the lines switched off the tile stops recording.
+  const preview = useContext(ResourcePreview);
+  const sparklines = useContext(SettingsContext)?.ap.sparklines ?? true;
+  const cpuRing = useRings('cpu', preview ? undefined : runtime.data, cpuSample, foldCpu, kind === 'cpu' && sparklines, preview);
+  const cpuSpark = useMemo(() => sparkWindow(cpuRing, trafficRanges.live.seconds, foldCpu), [cpuRing]);
   const traffic = useMemo(
     () => [
       {label: t('act.download'), color: p.cat[0], values: series.down},
@@ -52,6 +65,7 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
   // Traffic series are in KB/s.
   const chartRate = useCallback((value: number | null | undefined) => formatRate(value == null ? null : value * 1000, locale), [locale]);
   const count = useCallback((value: number) => formatNumber(value, locale), [locale]);
+  const cpuText = useCallback((value: number) => formatCpu(value, t), [t]);
   const memoryBytes = useCallback((value: number | null | undefined) => formatBytes(value ?? null, locale), [locale]);
   const view = useMemo(
     () => activityView(runtime.data, t, resources?.runtime.available, locale, datapath.data?.state),
@@ -79,10 +93,13 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     locale,
     p,
     spark,
+    sparklines,
+    cpuSpark,
     traffic,
     memorySeries,
     chartRate,
     count,
+    cpuText,
     memoryBytes,
     trafficBounds,
     memoryBounds,

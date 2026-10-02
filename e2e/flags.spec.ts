@@ -410,16 +410,16 @@ for (const lang of ['en', 'zh-TW'] as const)
       await expect(picker).toContainText('hk-01');
       await expect(picker.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
       const geometry = await card.evaluate(card => {
-        const caption = card.querySelector('.rp-tile-caption')!.getBoundingClientRect();
+        const caption = getComputedStyle(card.querySelector('.rp-tile-caption')!);
         const controls = card.querySelector('.rp-tile-controls')!.getBoundingClientRect();
         const picker = card.querySelector('.rp-select')!;
         const box = card.getBoundingClientRect();
         return {
-          nextLine: controls.top >= caption.bottom,
+          captionHidden: caption.clipPath === 'inset(50%)',
           inside: controls.left >= box.left && controls.right <= box.right,
           clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1)
         };
       });
-      expect(geometry).toEqual({nextLine: true, inside: true, clipped: false});
+      expect(geometry).toEqual({captionHidden: true, inside: true, clipped: false});
     });
   });

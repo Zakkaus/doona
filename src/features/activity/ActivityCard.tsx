@@ -73,7 +73,7 @@ export function RuntimeAlert() {
 function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
   const t = useT();
   const vm = useActivity(kind);
-  const {p, locale, range, ranges, setRange, traffic, spark, chartRate, count, memorySeries, memoryBytes} = vm;
+  const {p, locale, range, ranges, setRange, traffic, spark, sparklines, cpuSpark, chartRate, count, cpuText, memorySeries, memoryBytes} = vm;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   const alert = kind === 'status' && vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   if (!vm.ready) return alert || (vm.discoveryFailed ? null : <DeferredLoading>{t('ui.loading')}</DeferredLoading>);
@@ -105,9 +105,11 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
             <span className="rp-tile-val">
               <span className={big}>{vm.download}</span>
             </span>
-            <span className="rp-spark">
-              <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
-            </span>
+            {sparklines && (
+              <span className="rp-spark">
+                <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
+              </span>
+            )}
           </div>
         </CardLink>
       );
@@ -119,9 +121,11 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
             <span className="rp-tile-val">
               <span className={big}>{vm.upload}</span>
             </span>
-            <span className="rp-spark">
-              <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
-            </span>
+            {sparklines && (
+              <span className="rp-spark">
+                <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
+              </span>
+            )}
           </div>
         </CardLink>
       );
@@ -133,9 +137,11 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
             <span className="rp-tile-val">
               <span className={big}>{vm.connections}</span>
             </span>
-            <span className="rp-spark">
-              <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />
-            </span>
+            {sparklines && (
+              <span className="rp-spark">
+                <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />
+              </span>
+            )}
           </div>
         </CardLink>
       );
@@ -150,6 +156,12 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
                 <span className={big}>{vm.cpu}</span>
               </Link>
             </span>
+            {sparklines && (
+              <span className="rp-spark">
+                {/* Percent of one core: the line keeps a 0 to 100 scale and grows only past one busy core. */}
+                <Spark values={cpuSpark.values} timestamps={cpuSpark.timestamps} color={p.cat[1]} floor={100} fmt={cpuText} locale={locale} />
+              </span>
+            )}
           </div>
         </Card>
       );

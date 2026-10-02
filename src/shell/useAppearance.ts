@@ -18,6 +18,7 @@ export function useAppearance(stored: Settings) {
   const [mirrored, setMirrored] = useState(stored.mirrored);
   const [flagOverrides, setFlagOverrides] = useState(stored.flagOverrides);
   const [countryFlags, setCountryFlags] = useState(stored.countryFlags);
+  const [sparklines, setSparklines] = useState(stored.sparklines);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
@@ -44,6 +45,10 @@ export function useAppearance(stored: Settings) {
   const pickCountryFlags = useCallback((next: boolean) => {
     setCountryFlags(next);
     writeSetting('countryFlags', next ? 'on' : 'off');
+  }, []);
+  const pickSparklines = useCallback((next: boolean) => {
+    setSparklines(next);
+    writeSetting('sparklines', next ? 'on' : 'off');
   }, []);
   const pickFlag = useCallback(
     (name: string, value: string) => {
@@ -77,6 +82,8 @@ export function useAppearance(stored: Settings) {
       pickFlag,
       countryFlags,
       pickCountryFlags,
+      sparklines,
+      pickSparklines,
       toastPlacement,
       pickToastPlacement,
       startPage,
@@ -97,6 +104,8 @@ export function useAppearance(stored: Settings) {
       pickFlag,
       countryFlags,
       pickCountryFlags,
+      sparklines,
+      pickSparklines,
       toastPlacement,
       pickToastPlacement,
       startPage,

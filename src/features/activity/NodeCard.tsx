@@ -1,14 +1,23 @@
 import {DeferredLoading} from './DeferredLoading';
-import {useT} from '../../i18n';
+import {useCallback, useContext} from 'react';
+import {useT, useLang, LOCALE} from '../../i18n';
+import {formatLatency} from '../../i18n/format';
+import {Spark, usePalette} from '../../ui/charts';
+import {SettingsContext} from '../../shell/preferences';
 import {Card, HelpRow, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
-import {useActivityNode} from './useActivityNode';
+import {useActivityNode, useLatencySpark} from './useActivityNode';
 import {GroupMenu} from './GroupMenu';
 import type {ConnectionList} from '../../api/model';
 
 export function NodeCard({connections, selection}: {connections: ConnectionList | undefined; selection?: {chosen: string; setChosen: (id: string) => void}}) {
   const t = useT();
   const vm = useActivityNode(connections, selection);
+  const p = usePalette();
+  const locale = LOCALE[useLang()];
+  const sparklines = useContext(SettingsContext)?.ap.sparklines ?? true;
+  const latencyText = useCallback((value: number) => formatLatency(value, t), [t]);
+  const spark = useLatencySpark(vm.nodes, vm.id, `${vm.chosen}/${vm.id}`, sparklines);
   return (
     <Card
       className="rp-latency"
@@ -36,12 +45,19 @@ export function NodeCard({connections, selection}: {connections: ConnectionList 
                 <span className={vm.latencyClass}>{vm.latency}</span>
               )}
             </span>
-            {vm.status && (
+            {/* An unavailable or unknown node's light takes the sparkline's place. */}
+            {vm.status ? (
               <TextTooltip text={vm.healthError}>
                 <Light small tone={vm.tone}>
                   {vm.status}
                 </Light>
               </TextTooltip>
+            ) : (
+              sparklines && (
+                <span className="rp-spark">
+                  <Spark values={spark.values} timestamps={spark.timestamps} color={p.cat[4]} fmt={latencyText} locale={locale} />
+                </span>
+              )
             )}
           </>
         )}

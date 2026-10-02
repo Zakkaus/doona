@@ -48,6 +48,8 @@ export function SparkPlot({
   const [ref, size] = useContentSize<HTMLDivElement>(Math.round, 120);
   const {tip, showAt, hide} = useChartTip();
   const known = useMemo(() => values.filter((value): value is number => value !== null), [values]);
+  // A single sample is no trend: the box keeps its height and the line waits for a second one.
+  const drawn = known.length > 1;
   const domain = useMemo<[number, number]>(() => [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)], [known, floor]);
   const width = size?.width ?? 0;
   const bottom = (size?.height ?? height) - 2;
@@ -72,8 +74,8 @@ export function SparkPlot({
     });
   });
   return (
-    <div ref={ref} style={{height, width: '100%', position: 'relative'}} aria-hidden={known.length ? true : undefined} onPointerLeave={() => setSelected(null)}>
-      {known.length > 0 && size && (
+    <div ref={ref} style={{height, width: '100%', position: 'relative'}} aria-hidden={drawn ? true : undefined} onPointerLeave={() => setSelected(null)}>
+      {drawn && size && (
         <>
           <ChartTip tip={tip} />
           <svg

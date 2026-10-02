@@ -78,7 +78,10 @@ export function createInventory(
       signal?.throwIfAborted();
       if (!capabilities.resources.nodes.available) throw new ApiError(404, 'capability_not_supported', 'Nodes are unavailable');
       const result = nodePage(query?.group_id ? nodes.filter(n => n.group_ids.includes(query.group_id!)) : nodes, query);
-      return {observed_at: observedAt, nodes: result.items, next_cursor: result.next_cursor};
+      // Each read is a fresh probe round, as each runtime read is a fresh sample, so a latency line keeps moving.
+      const probed = new Date().toISOString();
+      const items = result.items.map(item => ({...item, health: item.health.map(row => ({...row, observed_at: probed}))}));
+      return {observed_at: observedAt, nodes: items, next_cursor: result.next_cursor};
     },
     groups: async signal => {
       signal?.throwIfAborted();

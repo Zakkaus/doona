@@ -389,18 +389,23 @@ for (const width of [1440, 390]) {
   });
 }
 
-test('activity draws all six charts without loading a chart vendor', async ({page}) => {
+test('activity draws all eight charts without loading a chart vendor', async ({page}) => {
   const requests: string[] = [];
   page.on('request', request => requests.push(request.url()));
+  await page.clock.install();
   await page.goto('/#/activity');
   await expect(page.getByRole('application', {name: 'Traffic', exact: true})).toBeVisible();
   expect(requests.filter(url => /vendor-charts/.test(url))).toEqual([]);
-  await expect(page.locator('main .rp-activity-surface')).toHaveCount(6);
+  // The CPU and latency lines draw from their second sample, the latency one after the next node list read.
+  await page.clock.runFor(61000);
+  await expect(page.locator('main .rp-activity-surface')).toHaveCount(8);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   const chart = traffic.getByRole('application');
   await chart.focus();
   await expect(traffic.getByRole('status')).toBeVisible();
   await page.keyboard.press('Escape');
+  // A live update must not reopen a tip dismissed from the keyboard.
+  await page.clock.runFor(5100);
   await expect(traffic.getByRole('status')).toBeHidden();
   await page.keyboard.press('ArrowRight');
   await expect(traffic.getByRole('status')).toBeVisible();
