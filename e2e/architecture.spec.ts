@@ -449,10 +449,15 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
   const gate = new Promise<void>(resolve => {
     release = resolve;
   });
+  let settled!: () => void;
+  const handled = new Promise<void>(resolve => {
+    settled = resolve;
+  });
   await page.route('**/api/v1/runtime/settings', async route => {
     if (route.request().method() !== 'PATCH') return route.fallback();
     await gate;
     await route.fulfill({json: await api.patchRuntimeSettings(route.request().postDataJSON())});
+    settled();
   });
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Temporary runtime overrides'});
@@ -471,6 +476,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
   await discard.getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections$/);
   release();
+  await handled;
   await settleFrames(page);
   await expect(page.locator('.rp-toast.positive', {hasText: 'Backend options applied'})).toHaveCount(0);
 });
