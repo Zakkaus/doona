@@ -446,6 +446,15 @@ it.each(['filter: name(hk-01)', 'default: hk-01', 'final: hk-01'])('blocks a cro
   expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, error: null});
 });
 
+it.each(['hk-01', "'hk-01'"])('blocks a cross-source DNS detour rename through %s but allows a link edit', target => {
+  const other = {...main, id: 'dns', kind: 'include' as const, content: `dns {\n upstream {\n remote: 'tcp://1.1.1.1:53' -> ${target}\n }\n}\n`};
+  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, error: t('nodes.renameElsewhere')});
+  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, error: null});
+  expect(
+    nodeEditState([main, {...other, content: other.content.replace(`-> ${target}`, '-> hk-010')}], main, entry, [], {...form, name: 'changed'}, t).valid
+  ).toBe(true);
+});
+
 it('assigns duplicate names to the name field and validates links and unchanged drafts', () => {
   for (const nodes of [[], [node('hk-02')]]) {
     expect(nodeEditState([main], main, entry, nodes, {...form, name: 'hk-02'}, t)).toMatchObject({valid: false, nameError: t('nodes.nameTaken')});

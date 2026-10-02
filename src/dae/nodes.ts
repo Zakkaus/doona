@@ -25,30 +25,44 @@ export function readNodeEntries(text: string): NodeEntry[] {
 
 function nameReferences(text: string, name: string) {
   const {blocks, tokens} = scanConfig(text);
-  return blocks
+  const groups = blocks
     .filter(block => block.name === 'group')
     .flatMap(block =>
       block.children.flatMap(group =>
         blockFields(text, group, tokens).flatMap(field => {
           if (field.name === 'default' || field.name === 'final')
-            return unquote(field.value) === name ? [{from: field.valueTo - field.value.length, to: field.valueTo, group: group.name}] : [];
+            return unquote(field.value) === name ? [{from: field.valueTo - field.value.length, to: field.valueTo}] : [];
           if (field.name !== 'filter') return [];
           const parts = tokens.filter(token => token.from >= field.valueFrom && token.to <= field.valueTo);
-          const refs: Array<{from: number; to: number; group: string}> = [];
+          const refs: Array<{from: number; to: number}> = [];
           const raw = (index: number) => (parts[index] ? text.slice(parts[index].from, parts[index].to) : '');
           for (let i = 0; i < parts.length - 2; i++) {
             if (!/^(?:&&)?!?name$/.test(raw(i)) || raw(i + 1) !== '(') continue;
             for (let j = i + 2; j < parts.length && raw(j) !== ')'; j++) {
               if ((raw(j - 1) === '(' || raw(j - 1) === ',') && (raw(j + 1) === ',' || raw(j + 1) === ')') && unquote(raw(j)) === name)
-                refs.push({from: parts[j].from, to: parts[j].to, group: group.name});
+                refs.push({from: parts[j].from, to: parts[j].to});
             }
           }
           return refs;
         })
       )
     );
+  const dns = blocks
+    .filter(block => block.name === 'dns')
+    .flatMap(block => block.children.filter(child => child.name === 'upstream'))
+    .flatMap(block =>
+      blockFields(text, block, tokens).flatMap(field => {
+        const parts = tokens.filter(token => token.from >= field.valueFrom && token.to <= field.valueTo && token.kind !== 'comment');
+        const target = parts.at(-1);
+        const arrow = parts.at(-2);
+        return target && arrow && text.slice(arrow.from, arrow.to) === '->' && unquote(text.slice(target.from, target.to)) === name
+          ? [{from: target.from, to: target.to}]
+          : [];
+      })
+    );
+  return [...groups, ...dns];
 }
-export const groupsNamingNode = (text: string, name: string) => [...new Set(nameReferences(text, name).map(ref => ref.group))];
+export const nodeReferenced = (text: string, name: string) => nameReferences(text, name).length > 0;
 
 export function writeNodeEntry(text: string, original: NodeEntry, next: {name: string; link: string}): string {
   const entries = readNodeEntries(text).filter(entry => entry.name === original.name);

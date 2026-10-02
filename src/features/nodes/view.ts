@@ -13,7 +13,7 @@ import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/fo
 import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
-import {groupsNamingNode, readNodeEntries, type NodeEntry} from '../../dae/nodes';
+import {nodeReferenced, readNodeEntries, type NodeEntry} from '../../dae/nodes';
 import {citingGroups, groupsNamingTag, namedInExpression, type GroupEntry} from '../../dae/groups';
 import {groupOwners} from '../shared/groupText';
 import {draftInterval, intervalText} from '../shared/subscription';
@@ -103,7 +103,7 @@ export function subscriptionPlace(places: Array<{source: ConfigSource; entry: Su
 export function nodeEditState(sources: ConfigSource[], source: ConfigSource, entry: NodeEntry, nodes: Node[], form: ProviderForm, t: Translator) {
   const name = form.name.trim();
   const renamed = name !== entry.name;
-  const blocked = renamed && sources.some(item => item.id !== source.id && groupsNamingNode(item.content, entry.name).length > 0);
+  const blocked = renamed && sources.some(item => item.id !== source.id && nodeReferenced(item.content, entry.name));
   const taken =
     renamed &&
     (nodes.some(node => node.name === name) ||

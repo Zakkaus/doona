@@ -2,7 +2,21 @@ import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
 import Edit from '../../ui/icons/Edit';
 import AddCircle from '../../ui/icons/AddCircle';
 import {FilterSummary} from '../shared/FilterSummary';
-import {createContext, Fragment, memo, useCallback, use, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode} from 'react';
+import {
+  createContext,
+  Fragment,
+  memo,
+  useCallback,
+  use,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ReactNode
+} from 'react';
 import {useT} from '../../i18n';
 import {
   ActionHelp,
@@ -32,6 +46,10 @@ import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
+import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
+import type {MainSourceEdit} from '../../store/mainSource';
+import type {OutboundCatalogue} from '../shared/groupText';
+import {isWritableName, quoteName} from '../../dae/groups';
 
 // Holds roughly the loaded card's height, so cards below do not move when the details arrive. A collapsed automatic
 // group holds its summary line alone.
@@ -265,6 +283,47 @@ const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) 
     </Card>
   );
 });
+
+function DeclaredPolicy({
+  name,
+  declaration,
+  source,
+  outbounds,
+  editRequested,
+  seedNode,
+  editorOpened
+}: {
+  name: string;
+  declaration: PolicyDeclaration;
+  source: MainSourceEdit;
+  outbounds: OutboundCatalogue;
+  editRequested: boolean;
+  seedNode?: string;
+  editorOpened: () => void;
+}) {
+  const t = useT();
+  const edit = useGroupDialog({mode: 'edit', name, source, declaration, context: {g: undefined, members: [], outbounds}});
+  const openRequested = useEffectEvent(() => {
+    edit.show(seedNode && isWritableName(seedNode) ? [`name(${quoteName(seedNode)})`] : []);
+    editorOpened();
+  });
+  useEffect(() => {
+    if (editRequested && edit.editable && !edit.open) openRequested();
+  }, [editRequested, edit.editable, edit.open]);
+  return (
+    <Card aria-label={name}>
+      <ActionHelp reason={!edit.editable || edit.disabled ? edit.tip : null}>
+        <div className="rp-row nowrap">
+          <h2 className="rp-h3 rp-grow">{name}</h2>
+          <Button quiet icon small label={t('policy.edit')} isDisabled={!edit.editable || edit.disabled} onPress={() => edit.show()}>
+            <Edit />
+          </Button>
+        </div>
+      </ActionHelp>
+      <GroupDialog id={'declared-' + name} model={edit} details={null} />
+    </Card>
+  );
+}
 export function Policies(props: PageProps) {
   const t = useT();
   const m = usePolicies(props);
@@ -291,6 +350,17 @@ export function Policies(props: PageProps) {
               source={m.source}
               refreshGroups={m.refreshGroups}
               refreshNodes={m.refreshNodes}
+            />
+          ))}
+          {m.declarations.map(group => (
+            <DeclaredPolicy
+              key={group.name}
+              {...group}
+              source={m.source}
+              outbounds={m.outbounds}
+              editRequested={m.focus === group.name && m.editRequested}
+              seedNode={m.seedNode}
+              editorOpened={m.editorOpened}
             />
           ))}
         </div>

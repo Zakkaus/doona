@@ -1073,7 +1073,7 @@
   "nodes.removeProviderHelp": "Deletes this node source and its nodes from the main configuration and reloads.",
   "nodes.removeProviderTitle": "Remove node source {name}",
   "nodes.removed": "{name} removed",
-  "nodes.renameElsewhere": "Groups in another source refer to this node. Change those references before renaming.",
+  "nodes.renameElsewhere": "Another source refers to this node. Change those references before renaming.",
   "nodes.renameGroups": "Also update the subscription filter in {groups}",
   "nodes.renameGroupsHelp": "Otherwise these groups lose the nodes of {name}.",
   "nodes.routeHelp": "Applies to fetching the subscription itself, not to the traffic of its nodes.",
