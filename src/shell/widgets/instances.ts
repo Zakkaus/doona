@@ -1,7 +1,6 @@
 import {uuid} from '../../api/hash';
-import {defaultWidget, instanceId, type Widget, type WidgetId} from './layout';
+import {defaultWidget, instanceId, maxInstances, type Widget, type WidgetId} from './layout';
 // The editors' list operations, loaded with the editors.
-export const maxInstances = 3;
 export const addInstance = (items: Widget[], id: WidgetId) =>
   items.filter(item => item.id === id).length < maxInstances
     ? {...defaultWidget(id), ...(items.some(item => instanceId(item) === id) ? {instance: uuid()} : {})}

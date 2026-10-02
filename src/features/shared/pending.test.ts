@@ -4,7 +4,7 @@ import {ApiError, LocalError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {PendingRule} from '../../store';
-import {byFile, failureToast, insertRules, partialFailure, pendingView, ruleFailure} from './pending';
+import {byFile, failureToast, insertRules, partialFailure, pendingView, refusalDetails, ruleFailure} from './pending';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 async function held() {
@@ -134,6 +134,17 @@ it('explains a refused write with its diagnostics, restart-only settings or the 
   expect(refused.toastText).not.toContain('request_id');
   expect(refused.requestId).toBe('rule-17');
   expect(partialFailure(refused, 1, 2, t).requestId).toBe('rule-17');
+});
+
+const diagnostics = [{level: 'error' as const, source_id: 'src-main', line: 44, column: 3, span: null, code: 'unknown-outbound', message: 'no group nope'}];
+it.each([
+  ['422 with diagnostics', new ApiError(422, 'validation_failed', 'invalid', null, {diagnostics}), {diagnostics}],
+  ['422 with null details', new ApiError(422, 'validation_failed', 'invalid', null, null), {}],
+  ['422 with empty details', new ApiError(422, 'validation_failed', 'invalid', null, {}), {}],
+  ['500', new ApiError(500, 'internal', 'failed', null, {diagnostics: []}), null],
+  ['plain Error', new Error('offline'), null]
+])('reads refusal details for %s', (_, error, expected) => {
+  expect(refusalDetails(error)).toEqual(expected);
 });
 
 it('does not count errors a refusal did not report', async () => {

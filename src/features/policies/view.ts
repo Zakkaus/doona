@@ -1,12 +1,12 @@
-import {groupConfigLabels, type OutboundCatalogue} from '../shared/groupText';
-import {compareNames, formatLatency} from '../../i18n/format';
+import {groupConfigLabels, healthStatus, type OutboundCatalogue} from '../shared/groupText';
+import {compareNames} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
 import type {Key} from '../../i18n';
 import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
 import {formatNumber, type Translator} from '../../i18n';
-import {latencyTone, type Help, type NodeStatus, type KvItem} from '../../ui/ui';
+import type {Help, NodeStatus, KvItem} from '../../ui/ui';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
@@ -127,9 +127,7 @@ const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpo
 // The tile's status slot: a group badge, a latency with its tone, or the state when there is no latency.
 function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
   if (member.kind === 'group') return {text: t('ui.group'), badge: true};
-  const tcp = healthMillis(member.health);
-  if (tcp != null) return {text: formatLatency(tcp, t), tone: latencyTone(tcp)};
-  return member.health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err'} : {text: '—'};
+  return healthStatus(member.health, t);
 }
 export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>, t: Translator): MemberView[] {
   return members.map(member => ({

@@ -60,6 +60,11 @@ it('moves only within bounds and preserves widget settings', () => {
   expect(moveWidget(items, 'speed', 1)[1]).toBe(items[0]);
 });
 
+it.each(['panel', 'dashboard'] as const)('keeps only three stored instances of one widget on the %s', surface => {
+  const items = [1, 2, 3, 4].map(n => ({id: 'speed', instance: `speed-${n}`, form: 'sparkline', size: 'medium'}));
+  expect(parseItems(items, surface)).toEqual(items.slice(0, 3));
+});
+
 it.each([
   ['keeps a size within the limits', {width: 400, height: 500}, {width: 400, height: 500}],
   ['clamps a size to the limits', {width: 9999, height: 10}, {width: 640, height: 200}],

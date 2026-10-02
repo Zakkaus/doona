@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useCapabilities, useConfig, useConfigEditor, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
-import {ApiError} from '../../api/error';
+import {refusalDetails} from '../shared/pending';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
@@ -108,8 +108,7 @@ export function useGlobalSettings({query, go}: PageProps) {
     !engine.holdsCredentials(source);
   const busy = !!editor.busy;
   const blocked = !draft || !writable || conflict || fields.some(field => field.key in patch && field.invalid);
-  const rejected =
-    editor.error instanceof ApiError && editor.error.status === 422 ? (editor.error.details as {diagnostics?: ConfigDiagnostic[]} | null)?.diagnostics : null;
+  const rejected = refusalDetails(editor.error)?.diagnostics ?? null;
   const refusal = failure ?? rejected ?? null;
   // Shown while the draft that was refused is still open, as the source editor shows it.
   const restart = draft && Array.isArray(refusal) ? restartSettings(refusal) : [];
