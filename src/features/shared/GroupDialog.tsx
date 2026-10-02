@@ -1,7 +1,7 @@
 import {IncludesEditor} from './IncludesEditor';
 import {useId} from 'react';
 import {useT} from '../../i18n';
-import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
+import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ProblemAlert, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {PolicyPicker} from './PolicyPicker';
@@ -88,11 +88,7 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
                 isDisabled={m.busy}
               />
             )}
-            {m.problem && (
-              <InlineAlert key={m.problem.id} takeFocus>
-                {m.problem.text}
-              </InlineAlert>
-            )}
+            {m.problem && <ProblemAlert key={m.problem.id} problem={m.problem} />}
             <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
             <IncludesEditor model={m} />
             {m.routes.map(field => (

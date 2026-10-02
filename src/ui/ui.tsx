@@ -25,7 +25,22 @@ export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, ItemLab
 export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, Tabs, useTabShown} from './Dialog';
 export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
-export {Empty, Loading, ErrorMessage, InlineAlert, toast, toastFailure, toastErrorDetail, Toasts, type ToastPlacement, Light, Badge, Bar} from './Feedback';
+export {
+  Empty,
+  Loading,
+  ErrorMessage,
+  InlineAlert,
+  ProblemAlert,
+  type Problem,
+  toast,
+  toastFailure,
+  toastErrorDetail,
+  Toasts,
+  type ToastPlacement,
+  Light,
+  Badge,
+  Bar
+} from './Feedback';
 export {Kv, type KvItem} from './Kv';
 export {ContextualHelp, IconTip, HelpRow, type Help} from './ContextualHelp';
 export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';

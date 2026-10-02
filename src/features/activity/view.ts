@@ -21,7 +21,7 @@ import {engineStatus} from '../shared/engineStatus';
 import {href} from '../../shell/route';
 
 export {modeView, modeReasons} from '../shared/modeView';
-export type NoticeRow = {id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; action?: {label: string; href: string}};
+export type NoticeRow = {id: string; tone: 'err' | 'warn' | 'info'; kindText: string; summaryText: string; action?: {label: string; href: string}};
 // What the backend still lacks before it routes through a proxy, listed ahead of the event notices until it is added.
 export function setupNotices({noNodeSources, noRouting}: {noNodeSources: boolean; noRouting: boolean}, t: LabelFn): NoticeRow[] {
   const notice = (id: string, summary: Key, action: NoticeRow['action']): NoticeRow => ({
@@ -43,11 +43,14 @@ export {interestingNotice} from '../../api/selectors';
 
 // The home card holds this many rows; the rest is one click away on the events page.
 const NOTICE_ROWS = 8;
+// A failed operation is an error and a recorder gap a warning; every other event is a notice.
+const noticeTone = (event: ApiEvent): NoticeRow['tone'] =>
+  event.event === 'operation.updated' && event.data.status === 'failed' ? 'err' : event.event === 'flow.gap' ? 'warn' : 'info';
 // A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
 // backend dropping records at pace does not push everything else off the card. Two notices that differ in
 // any of those never fold: a failure must not disappear behind a neighbouring success.
 export function noticeRows(events: ApiEvent[], t: LabelFn) {
-  const rows: Array<{id: string; tone: 'warn' | 'info'; kindText: string; summaryText: string; key: string; count: number}> = [];
+  const rows: Array<{id: string; tone: NoticeRow['tone']; kindText: string; summaryText: string; key: string; count: number}> = [];
   for (const event of events) {
     const summary = eventSummary(event, t);
     const key = [event.event, summary.key, ...Object.entries(summary.params ?? {}).map(([name, value]) => `${name}=${String(value)}`)].join('|');
@@ -58,10 +61,11 @@ export function noticeRows(events: ApiEvent[], t: LabelFn) {
     }
     if (rows.length === NOTICE_ROWS) break;
     const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
+    const tone = noticeTone(event);
     rows.push({
       id: event.id,
-      tone: event.event === 'flow.gap' ? ('warn' as const) : ('info' as const),
-      kindText: t(event.event === 'flow.gap' ? 'ui.warning' : 'ui.notice'),
+      tone,
+      kindText: t(tone === 'err' ? 'ui.error' : tone === 'warn' ? 'ui.warning' : 'ui.notice'),
       summaryText: t('ui.valuePair', {label: enumLabel(eventKindLabels, event.event, t), value: t(summary.key, params)}),
       key,
       count: 1

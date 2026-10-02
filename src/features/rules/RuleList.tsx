@@ -53,6 +53,7 @@ export function RuleList(props: PageProps) {
         <span className="rp-grow" />
         {viewSwitch}
       </div>
+      <ErrorMessage error={view.error} onRetry={view.retry} />
       <RuleTemplates model={templates} />
     </div>
   );

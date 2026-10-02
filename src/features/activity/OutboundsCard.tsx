@@ -16,9 +16,8 @@ export function OutboundsCard() {
           {view.since && <span className="rp-label rp-counter-since">{view.since}</span>}
         </div>
       </div>
-      {error && state !== 'ready' ? (
-        <ErrorMessage error={error} onRetry={retry} />
-      ) : state === 'unavailable' ? (
+      {error && <ErrorMessage error={error} onRetry={retry} />}
+      {error && state !== 'ready' ? null : state === 'unavailable' ? (
         <div className="rp-chart-wait tall">
           <Empty>{t('act.noOutbounds')}</Empty>
         </div>
