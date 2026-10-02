@@ -46,7 +46,7 @@ export function SearchMultiSelect({
           <span id={summaryId}>{summary}</span>
           <ChevronDown />
         </Button>
-        <Popover className="rp-popover rp-search-popover" placement="bottom start">
+        <Popover className="rp-popover rp-search-popover rp-list-popover" placement="bottom start">
           <Dialog
             aria-label={label}
             render={props => (
