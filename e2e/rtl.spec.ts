@@ -189,3 +189,29 @@ test.describe('right to left at 390px', () => {
     await expect(page.getByRole('menuitem', {name: 'Theme'})).toBeFocused();
   });
 });
+
+test('dashboard edge handles sit on the inline end and mirror their arrow keys', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  await page.goto('/#/activity');
+  const cpu = page.locator('.rp-dashboard-cell[data-instance="cpu"]');
+  await expect(cpu.locator('.rp-tile-body')).toBeVisible();
+  await page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
+  const handle = cpu.getByRole('slider', {name: 'Resize width', exact: true});
+  await cpu.focus();
+  for (let i = 0; i < 5 && !(await handle.evaluate(node => node === document.activeElement)); i++) await page.keyboard.press('Tab');
+  await expect(handle).toBeFocused();
+  const cell = await box(cpu);
+  const grip = await box(handle);
+  expect(Math.abs(grip.x + grip.width / 2 - cell.x)).toBeLessThanOrEqual(1);
+  const before = cell.width;
+  await page.keyboard.press('ArrowLeft');
+  await expect(cpu).toHaveAttribute('data-width', '1/4');
+  expect((await box(cpu)).width).toBeGreaterThan(before);
+  await expect(handle).toHaveAttribute('aria-valuetext', '1/4');
+  // Back steps through a fifth to Auto, the first step.
+  await page.keyboard.press('ArrowRight');
+  await expect(cpu).toHaveAttribute('data-width', '1/5');
+  await page.keyboard.press('ArrowRight');
+  await expect(cpu).not.toHaveAttribute('data-width');
+  await expect(handle).toHaveAttribute('aria-valuetext', 'Auto');
+});

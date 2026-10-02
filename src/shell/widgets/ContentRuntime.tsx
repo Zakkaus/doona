@@ -14,6 +14,7 @@ import {ErrorMessage, Kv} from '../../ui/ui';
 import {sampleCpu} from './samples';
 import type {ModuleForm, Widget} from './layout';
 import {Reading} from './Reading';
+import {scaleOf} from './dashboardSizing';
 
 const rateIds = ['speed', 'history', 'download', 'upload'];
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
@@ -66,9 +67,10 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
         form !== 'kv' &&
         item.size !== 'small' &&
         (item.id === 'cpu' ? (
-          <CpuChart large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} />
+          <CpuChart scale={scaleOf(item)} large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} />
         ) : (
           <TrafficChart
+            scale={scaleOf(item)}
             large={item.size === 'large' || item.size === 'wide'}
             form={form}
             runtime={r}
@@ -83,11 +85,13 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
 function HistoryChart({
   form,
   large,
+  scale,
   history,
   ...chart
 }: {
   form: ModuleForm;
   large: boolean;
+  scale?: number;
   history?: {error?: Error | null; refetch: () => unknown};
   timestamps: number[];
   fmt: (n: number | null) => string;
@@ -98,11 +102,17 @@ function HistoryChart({
   return (
     <>
       {history && <ErrorMessage error={history.error} onRetry={history.refetch} />}
-      <WidgetAreaChart size={form === 'sparkline' ? (large ? 'widget' : 'compact') : 'normal'} label={t('widgets.lastMinute')} locale={locale} {...chart} />
+      <WidgetAreaChart
+        size={form === 'sparkline' ? (large ? 'widget' : 'compact') : 'normal'}
+        scale={scale}
+        label={t('widgets.lastMinute')}
+        locale={locale}
+        {...chart}
+      />
     </>
   );
 }
-type ChartProps = {large: boolean; form: ModuleForm};
+type ChartProps = {large: boolean; form: ModuleForm; scale?: number};
 function TrafficChart({runtime, connections, direction, ...props}: ChartProps & {runtime: Runtime | undefined; connections: boolean; direction: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -166,7 +176,7 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
       />
       {!rss && !cgroup && <span className="rp-label">{t('widgets.unavailable')}</span>}
       {form !== 'kv' && item.size !== 'small' && (
-        <MemoryChart large={item.size === 'large' || item.size === 'wide'} form={form} memory={memory.data} rss={rss} cgroup={cgroup} />
+        <MemoryChart scale={scaleOf(item)} large={item.size === 'large' || item.size === 'wide'} form={form} memory={memory.data} rss={rss} cgroup={cgroup} />
       )}
     </Reading>
   );

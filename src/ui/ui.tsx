@@ -40,6 +40,7 @@ export {
   ProblemAlert,
   type Problem,
   toast,
+  closeToast,
   toastFailure,
   toastErrorDetail,
   Toasts,

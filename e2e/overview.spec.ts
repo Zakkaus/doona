@@ -189,7 +189,8 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
   }
 });
 
-// Activity's dashboard sections pack like masonry, so there the rule is that every column ends level.
+// Activity's dashboard sections pack like masonry, so there the rule is that the cards starting a row together end
+// level, except one with a card under it in its columns.
 test('Activity and Overview keep cards in each grid row equal height', async ({page}) => {
   for (const scheme of ['light', 'dark']) {
     await page.addInitScript(value => localStorage.setItem('doona-scheme', value), scheme);
@@ -204,8 +205,10 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
             const cards = [...grid.children].filter(child => child.classList.contains('rp-card') || child.classList.contains('rp-dashboard-cell'));
             if (grid.classList.contains('rp-dash-section')) {
               const boxes = cards.map(card => card.getBoundingClientRect());
-              const last = boxes.filter(box => !boxes.some(other => other.top >= box.bottom && other.left < box.right - 1 && other.right > box.left + 1));
-              return [last.map(box => box.bottom)];
+              const open = boxes.filter(box => !boxes.some(other => other.top >= box.bottom && other.left < box.right - 1 && other.right > box.left + 1));
+              const rows = new Map<number, number[]>();
+              for (const box of open) rows.set(Math.round(box.top), [...(rows.get(Math.round(box.top)) ?? []), box.bottom]);
+              return [...rows.values()];
             }
             const byTop = new Map<number, number[]>();
             for (const card of cards) {

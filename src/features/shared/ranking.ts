@@ -2,7 +2,7 @@ import type {ConnectionList} from '../../api/model';
 import {connectionRows, sourceIp} from '../../api/selectors';
 import {addU64, pctU64} from '../../api/u64';
 
-export function connectionRanking(snapshot: ConnectionList | undefined, by: string) {
+export function connectionRanking(snapshot: ConnectionList | undefined, by: string, limit = 5) {
   const totals = new Map<string, bigint | null>();
   for (const row of connectionRows(snapshot)) {
     const name = by === 'dev' ? sourceIp(row.src) : row.domain || row.dst;
@@ -12,5 +12,5 @@ export function connectionRanking(snapshot: ConnectionList | undefined, by: stri
   const rows = [...totals].map(([name, download]) => ({name, download}));
   const total = addU64(...rows.map(row => row.download));
   rows.sort((a, b) => (a.download === b.download ? 0 : a.download === null ? 1 : b.download === null ? -1 : a.download > b.download ? -1 : 1));
-  return rows.slice(0, 5).map(row => ({...row, percent: pctU64(row.download, total)}));
+  return rows.slice(0, limit).map(row => ({...row, percent: pctU64(row.download, total)}));
 }

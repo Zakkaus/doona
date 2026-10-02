@@ -8,7 +8,9 @@ for (const lang of ['en', 'zh-TW'])
     test.use({storage: {'doona-lang': lang}});
     for (const [width, height] of [
       [1440, 900],
+      [1280, 900],
       [1024, 768],
+      [768, 1024],
       [390, 844]
     ]) {
       test(`matches main ${width}`, async ({page}, info) => {

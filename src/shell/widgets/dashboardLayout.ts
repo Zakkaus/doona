@@ -1,9 +1,10 @@
+import type {TileProps} from '../../ui/DashboardTile';
 import {defaultWidget, instanceId, object, parseItems, type Widget, type WidgetId} from './layout';
 // Each section keeps one layout profile for good: adding, moving or resizing a card never switches another card's rules.
 export const profiles = ['quick', 'metrics', 'traffic', 'details', 'extensions'] as const;
 export type Profile = (typeof profiles)[number];
 export type Section = {id: Profile; items: Widget[]};
-export type DashboardLayout = {version: 2; sections: Section[]};
+export type DashboardLayout = {version: 3; sections: Section[]};
 // origin/main's Activity page, card for card; the extensions section only adds cards after it.
 const mainSections: Record<Exclude<Profile, 'extensions'>, WidgetId[]> = {
   quick: ['mode', 'global', 'status'],
@@ -17,6 +18,15 @@ const mainForms: Partial<Record<WidgetId, Widget['form']>> = {history: 'area', m
 // row at 1024-1279px. A footprint belongs to the card's first instance, not to whichever card sits in that position.
 const footprints: Partial<Record<WidgetId, string>> = {mode: 'lead', latency: 'tail', cpu: 'end', notices: 'end'};
 export const footprint = (item: Widget) => (item.instance ? undefined : footprints[item.id]);
+// A card's cell attributes, the same on the page and in the editor.
+export const tileOf = (item: Widget): TileProps => ({
+  id: instanceId(item),
+  module: item.id,
+  size: item.size,
+  foot: footprint(item),
+  width: item.width,
+  height: item.height
+});
 const mainWidget = (id: WidgetId): Widget => ({...defaultWidget(id), ...(mainForms[id] ? {form: mainForms[id]} : {})});
 // Main's own content renders a card while it keeps main's display; another display needs the general renderer.
 export const mainCard = (item: Widget) => Object.values(mainSections).some(ids => ids.includes(item.id)) && item.form === mainWidget(item.id).form;
@@ -39,7 +49,7 @@ function sectioned(groups: Array<[Profile, unknown[]]>): DashboardLayout {
     groups.flatMap(([, values]) => values),
     'dashboard'
   );
-  return {version: 2, sections: profiles.map(id => ({id, items: items.filter(item => owner.get(instanceId(item)) === id)}))};
+  return {version: 3, sections: profiles.map(id => ({id, items: items.filter(item => owner.get(instanceId(item)) === id)}))};
 }
 // Version 1 kept one list. Main's untouched layout maps card for card into main's sections; a list the reader had
 // rearranged keeps its order in the extensions section, whose grid is the one that list used.
@@ -54,7 +64,8 @@ function migrate(values: unknown[], original: boolean): DashboardLayout {
 export function parseDashboard(value: unknown): DashboardLayout {
   if (!object(value)) return dashboardDefaults();
   if (value.version === 1 && Array.isArray(value.items)) return migrate(value.items, value.original === true);
-  if (value.version !== 2 || !Array.isArray(value.sections)) return dashboardDefaults();
+  // Version 3 added width, height and rows to cards; a version 2 card has none of them, so it reads unchanged.
+  if ((value.version !== 2 && value.version !== 3) || !Array.isArray(value.sections)) return dashboardDefaults();
   const sections = value.sections.filter(object);
   return sectioned(profiles.map(id => [id, (sections.find(section => section.id === id && Array.isArray(section.items))?.items as unknown[]) ?? []]));
 }

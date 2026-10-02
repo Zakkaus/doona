@@ -141,16 +141,18 @@ type ToastAction = {label: string; onAction: () => void; closeOnAction?: boolean
 // The detail is a second, smaller line under the message: what went wrong, in the backend's words.
 // A toast about an error object, of any kind, records it and offers to copy it as an action; one that is not
 // about an error has nothing to copy.
-type ToastOptions = {detail?: string; action?: ToastAction; requestId?: string; error?: unknown};
+// `id` names what the toast is about: a toast replaces the earlier one with its id, which by default is its words.
+type ToastOptions = {detail?: string; action?: ToastAction; requestId?: string; error?: unknown; id?: string};
 type ToastMessage = {kind: ToastKind; text: string; detail?: string; action?: ToastAction; diagnostic?: Diagnostic};
 const toasts = new ToastQueue<ToastMessage>({maxVisibleToasts: 5});
 // A repeated message replaces its earlier copy at the front instead of stacking behind it.
 const queued = new Map<string, string>();
 // A toast leaves the request id out of its words and logs the failure with it instead, where a bug report can find it.
-export const toast = (kind: ToastKind, text: string, {detail, action, requestId, error}: ToastOptions = {}) => {
+// Returns the toast's key, which closes it.
+export const toast = (kind: ToastKind, text: string, {detail, action, requestId, error, id: about}: ToastOptions = {}) => {
   const diagnostic = error === undefined ? undefined : recordDiagnostic(error);
   if (requestId) console.warn(`${text}${detail ? `\n${detail}` : ''} (request_id: ${requestId})`);
-  const id = [kind, text, detail ?? ''].join('\n');
+  const id = about ?? [kind, text, detail ?? ''].join('\n');
   const earlier = queued.get(id);
   if (earlier) toasts.close(earlier);
   const key = toasts.add(
@@ -163,7 +165,9 @@ export const toast = (kind: ToastKind, text: string, {detail, action, requestId,
     }
   );
   queued.set(id, key);
+  return key;
 };
+export const closeToast = (key: string) => toasts.close(key);
 // A failed action's toast: its summary, with the error as the detail. An unknown operation outcome is shown on its own,
 // neutrally.
 export const toastFailure = (error: unknown, t: Translator, summary: string, action?: ToastAction) => {

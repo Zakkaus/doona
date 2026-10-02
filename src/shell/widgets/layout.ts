@@ -63,7 +63,30 @@ export const registry = {
   divider: {...list('widgets.divider', null), sizes: ['medium'], panelOnly: true}
 } satisfies Record<string, Definition>;
 export type WidgetId = keyof typeof registry;
-export type Widget = {id: WidgetId; instance?: string; form: ModuleForm | 'chart' | 'text'; size: ModuleSize; group?: string; by?: 'dev' | 'domain'};
+export type Widget = {
+  id: WidgetId;
+  instance?: string;
+  form: ModuleForm | 'chart' | 'text';
+  size: ModuleSize;
+  group?: string;
+  by?: 'dev' | 'domain';
+  // Dashboard only, see dashboardSizing.ts; absent means Auto width, standard height and the list's own row count.
+  width?: DashboardWidth;
+  height?: DashboardHeight;
+  rows?: number;
+};
+// A dashboard card's size apart from its section's footprint (see dashboardSizing.ts): a width is a fraction of the
+// section, the same in every section, and a height a chart's step or a list's row count.
+export const widths = ['1/5', '1/4', '1/3', '1/2', '2/3', 'full'] as const;
+export type DashboardWidth = (typeof widths)[number];
+export const heights = ['short', 'standard', 'tall'] as const;
+export type DashboardHeight = (typeof heights)[number];
+export const rowChoices = [3, 5, 8] as const;
+export const tiles: WidgetId[] = ['download', 'upload', 'connections', 'cpu', 'latency'];
+// The narrowest width a card's content still reads at: a value tile a fifth, as five share a metrics row, a table of
+// nodes half, any other a third.
+export const widthsFor = (id: WidgetId): readonly DashboardWidth[] => widths.slice(tiles.includes(id) ? 0 : id === 'nodeLatency' ? 3 : 2);
+
 export const instanceId = (item: Widget) => item.instance ?? item.id;
 export const formsFor = (id: WidgetId, surface: Surface): ModuleForm[] => registry[id][surface === 'panel' ? 'compact' : 'forms'] as ModuleForm[];
 export const onlyPanel = (id: WidgetId) => 'panelOnly' in registry[id];
@@ -136,6 +159,13 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
     item.form = canonicalForm(item, surface);
     if (value.group !== undefined) item.group = value.group as string;
     if (id === 'ranking') item.by = value.by === 'domain' ? 'domain' : 'dev';
+    if (surface === 'dashboard') {
+      // A width under the card's narrowest one, as from a newer or edited layout, reads as the narrowest.
+      if (widths.includes(value.width as DashboardWidth))
+        item.width = widthsFor(id).includes(value.width as DashboardWidth) ? (value.width as DashboardWidth) : widthsFor(id)[0];
+      if (heights.includes(value.height as DashboardHeight)) item.height = value.height as DashboardHeight;
+      if ((rowChoices as readonly unknown[]).includes(value.rows)) item.rows = value.rows as number;
+    }
     seen.add(key);
     counts.set(id, (counts.get(id) ?? 0) + 1);
     items.push(item);

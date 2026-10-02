@@ -1,8 +1,9 @@
 import {expect, it} from 'vitest';
 import {dashboardDefaults, dashboardItems, footprint, mainCard, parseDashboard} from './dashboardLayout';
-import {placeWidget, sizesFor, stepWidget} from './dashboardEdit';
-import {defaultWidget, instanceId, parseItems, registry, formsFor} from './layout';
+import {placeWidget, removeWidget, stepWidget} from './dashboardEdit';
+import {defaultWidget, instanceId, parseItems, registry, formsFor, widthsFor} from './layout';
 import {addInstance, moveWidget} from './instances';
+import {heightKind, legacyRows, presetsFor, sizeAxes, withPreset, withWidth} from './dashboardSizing';
 const ids = (layout: ReturnType<typeof dashboardDefaults>) => layout.sections.map(section => section.items.map(instanceId));
 const main = [
   ['mode', 'global', 'status'],
@@ -27,12 +28,9 @@ it.each([
   const parsed = parseDashboard({version: 1, original, items: original ? items : [...items].reverse()});
   expect(ids(parsed).slice(0, expected.length)).toEqual(expected);
 });
-it('keeps footprints on the first instance and sizes per section', () => {
+it('keeps footprints on the first instance', () => {
   expect(footprint(defaultWidget('cpu'))).toBe('end');
   expect(footprint({...defaultWidget('cpu'), instance: 'b'})).toBeUndefined();
-  expect(sizesFor('metrics', registry.cpu.sizes)).toEqual(['medium', 'large', 'wide']);
-  expect(sizesFor('extensions', registry.cpu.sizes)).toEqual(['small', 'medium', 'large', 'wide']);
-  expect(sizesFor('quick', registry.mode.sizes)).toEqual(['medium']);
 });
 it.each([
   [
@@ -100,4 +98,134 @@ it('declares compatible compact forms and sources for every module', () => {
   for (const id of Object.keys(registry) as Array<keyof typeof registry>)
     for (const form of formsFor(id, 'panel')) expect(formsFor(id, 'dashboard')).toContain(form);
   expect(formsFor('nodeLatency', 'dashboard')).toEqual(['dots', 'ranked']);
+});
+
+it('reads a version 2 layout unchanged, so every card stays Auto with its own rows', () => {
+  const v2 = {...dashboardDefaults(), version: 2};
+  const read = parseDashboard(JSON.parse(JSON.stringify(v2)));
+  expect(read).toEqual(dashboardDefaults());
+  expect(read.version).toBe(3);
+  expect(dashboardItems(read).some(item => item.width || item.height || item.rows)).toBe(false);
+});
+it('keeps chosen widths, heights and rows when moved and read back', () => {
+  const layout = parseDashboard({
+    version: 3,
+    sections: [
+      {
+        id: 'details',
+        items: [
+          {...defaultWidget('memory'), width: '1/2', height: 'tall'},
+          {...defaultWidget('nodeLatency'), width: 'full', rows: 8}
+        ]
+      }
+    ]
+  });
+  const moved = parseDashboard(JSON.parse(JSON.stringify(placeWidget(layout, 'memory', {section: 'metrics'}))));
+  expect(dashboardItems(moved).find(item => item.id === 'memory')).toMatchObject({width: '1/2', height: 'tall'});
+  expect(dashboardItems(moved).find(item => item.id === 'nodeLatency')).toMatchObject({width: 'full', rows: 8});
+});
+it.each([
+  [{width: '1/4'}, 'memory', {width: '1/3'}],
+  [{width: '1/3'}, 'nodeLatency', {width: '1/2'}],
+  [{width: '1/4'}, 'cpu', {width: '1/4'}],
+  [{width: '3/5'}, 'cpu', {width: undefined}],
+  [{height: 'huge'}, 'memory', {height: undefined}],
+  [{rows: 12}, 'nodeLatency', {rows: undefined}],
+  [{rows: 5}, 'nodeLatency', {rows: 5}]
+] as const)('reads %o on %s as %o', (fields, id, expected) => {
+  const [item] = dashboardItems(parseDashboard({version: 3, sections: [{id: 'extensions', items: [{...defaultWidget(id), ...fields}]}]}));
+  for (const [key, value] of Object.entries(expected)) expect(item[key as keyof typeof item]).toBe(value);
+});
+it.each([
+  ['cpu', 'sparkline', true, 'chart'],
+  ['latency', 'kv', true, 'chart'],
+  ['memory', 'area', true, 'chart'],
+  ['ranking', 'ranked', true, 'rows'],
+  ['notices', 'kv', true, 'rows'],
+  ['mode', 'kv', true, undefined],
+  ['cpu', 'kv', false, undefined],
+  ['speed', 'sparkline', false, 'chart'],
+  ['dnsAnswers', 'donut', false, undefined],
+  ['dnsAnswers', 'ranked', false, 'rows'],
+  ['nodeLatency', 'dots', false, 'rows']
+] as const)('%s as %s (main %s) adjusts its %s', (id, form, main, kind) => {
+  expect(heightKind({...defaultWidget(id), form}, main)).toBe(kind);
+});
+it.each([
+  ['nodeLatency', 'small', false, 3],
+  ['nodeLatency', 'medium', false, 6],
+  ['nodeLatency', 'wide', false, 12],
+  ['policyGroups', 'small', false, 1],
+  ['ranking', 'large', false, 5],
+  ['ranking', 'medium', true, 5],
+  ['notices', 'medium', true, undefined],
+  ['sourceHealth', 'medium', false, undefined]
+] as const)('%s at %s (main %s) keeps its earlier %s rows', (id, size, main, rows) => {
+  expect(legacyRows({...defaultWidget(id), size}, main)).toBe(rows);
+});
+it("offers widths from the card's narrowest, Auto first, and its earlier row count beside the three steps", () => {
+  const t = (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key);
+  expect(widthsFor('nodeLatency')).toEqual(['1/2', '2/3', 'full']);
+  expect(widthsFor('cpu')).toEqual(['1/5', '1/4', '1/3', '1/2', '2/3', 'full']);
+  expect(widthsFor('history')).toEqual(['1/3', '1/2', '2/3', 'full']);
+  const axes = sizeAxes({...defaultWidget('nodeLatency'), size: 'wide'}, false, t as never);
+  expect(axes.width.options.map(option => option.value)).toEqual(['auto', '1/2', '2/3', 'full']);
+  expect(axes.height?.options.map(option => [option.value, option.label])).toEqual([
+    ['3', 'dashboard.rows:{"n":3}'],
+    ['5', 'dashboard.rows:{"n":5}'],
+    ['8', 'dashboard.rows:{"n":8}'],
+    ['auto', 'dashboard.rows:{"n":12}']
+  ]);
+  expect(axes.height?.value).toBe('auto');
+  // The earlier count stays on offer after another is chosen, and choosing it clears the choice.
+  const eight = axes.height!.set('8');
+  expect(eight.rows).toBe(8);
+  const again = sizeAxes(eight, false, t as never).height!;
+  expect([again.value, again.options.map(option => option.value)]).toEqual(['8', ['3', '5', '8', 'auto']]);
+  expect(again.set('auto').rows).toBeUndefined();
+  // A list that had no limit offers every row as Auto, and reports it.
+  const notices = sizeAxes(defaultWidget('notices'), true, t as never).height!;
+  expect([notices.value, notices.options.at(-1)]).toEqual(['auto', {value: 'auto', label: 'dashboard.allRows'}]);
+  // A list whose earlier count is a step has no separate Auto.
+  expect(sizeAxes({...defaultWidget('ranking'), size: 'medium'}, true, t as never).height).toMatchObject({
+    value: '5',
+    options: [{value: '3'}, {value: '5'}, {value: '8'}]
+  });
+  expect(withWidth({...defaultWidget('cpu'), size: 'small'}, '1/2')).toMatchObject({width: '1/2', size: 'medium'});
+  expect(withWidth({...defaultWidget('cpu'), size: 'large', width: '1/2'}, undefined)).toMatchObject({width: undefined, size: 'large'});
+});
+
+it('offers gallery presets from the narrowest width of a quarter or more, with a tall half where a card has a height', () => {
+  const t = defaultWidget;
+  expect(presetsFor(t('cpu'), true)).toEqual([{width: '1/4'}, {width: '1/2'}, {width: 'full'}, {width: '1/2', height: 'tall'}]);
+  expect(presetsFor({...t('history'), form: 'area'}, true)).toEqual([{width: '1/3'}, {width: '1/2'}, {width: 'full'}, {width: '1/2', height: 'tall'}]);
+  expect(presetsFor({...t('nodeLatency'), form: 'ranked'}, false)).toEqual([{width: '1/2'}, {width: 'full'}, {width: '1/2', rows: 8}]);
+  expect(withPreset({...t('cpu'), size: 'small'}, {width: '1/2', height: 'tall'})).toMatchObject({width: '1/2', height: 'tall', size: 'medium'});
+});
+
+it('removes a card and puts it back at its place in the layout as it is by then, once', () => {
+  const layout = dashboardDefaults();
+  const {layout: removed, restore} = removeWidget(layout, 'upload');
+  expect(dashboardItems(removed).some(item => item.id === 'upload')).toBe(false);
+  const moved = stepWidget(removed, 'cpu', -1);
+  const restored = restore(moved);
+  expect(restored.sections.find(section => section.id === 'metrics')!.items.map(instanceId)).toEqual(['download', 'upload', 'connections', 'cpu', 'latency']);
+  expect(restore(restored)).toBe(restored);
+});
+it('puts a removed card back only while its module is under its instance limit', () => {
+  const cpu = (instance?: string) => ({...defaultWidget('cpu'), ...(instance ? {instance} : {})});
+  const layout = {
+    ...dashboardDefaults(),
+    sections: dashboardDefaults().sections.map(section => (section.id === 'extensions' ? {...section, items: [cpu('b'), cpu('c')]} : section))
+  };
+  const {layout: removed, restore, restorable} = removeWidget(layout, 'b');
+  expect(restorable(removed)).toBe(true);
+  const added = addInstance(dashboardItems(removed), 'cpu')!;
+  const full = {
+    ...removed,
+    sections: removed.sections.map(section => (section.id === 'extensions' ? {...section, items: [...section.items, added]} : section))
+  };
+  expect(restorable(full)).toBe(false);
+  expect(restore(full)).toBe(full);
+  expect(dashboardItems(full).filter(item => item.id === 'cpu')).toHaveLength(3);
 });

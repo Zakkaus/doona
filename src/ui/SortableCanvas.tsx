@@ -1,10 +1,11 @@
-import {useRef, type ReactNode} from 'react';
+import {useEffect, useRef, type ReactNode} from 'react';
 import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
 import {useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
 import './styles/widget-grid.css';
-import {tileAttributes, usePacking, type TileProps} from './DashboardTile';
+import {sectionGrid, tileAttributes, usePacking, type TileProps} from './DashboardTile';
 import DragHandle from './icons/DragHandle';
+import {DashboardGaps, dragStarted} from './DashboardGaps';
 import './styles/dashboard.css';
 import './styles/sortable.css';
 
@@ -56,6 +57,10 @@ export function SortableCanvas<T extends TileProps>({
   textValue,
   dragLabel,
   tools,
+  resize,
+  gapLabel,
+  refusal,
+  rearm,
   children,
   onPlace,
   ...props
@@ -66,11 +71,21 @@ export function SortableCanvas<T extends TileProps>({
   textValue: (item: T) => string;
   dragLabel: (item: T) => string;
   tools?: (item: T) => ReactNode;
+  resize?: (item: T) => ReactNode;
+  gapLabel?: (share: string) => string;
+  refusal?: string;
+  rearm?: {focus?: string} | null;
   children: (item: T) => ReactNode;
   onPlace: (id: string, place: CanvasPlace) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   usePacking(profile ? ref : unpacked);
+  // After a removal the canvas hides its card tools (data-rearm) until its owner clears it, and focus moves to the card
+  // that took the removed one's place, unless focus is already somewhere.
+  useEffect(() => {
+    if (!rearm?.focus || (document.activeElement && document.activeElement !== document.body)) return;
+    ref.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(rearm.focus)}"]`)?.focus();
+  }, [rearm]);
   const read = async (event: {items: Parameters<NonNullable<DragAndDropOptions['onRootDrop']>>[0]['items']}) => {
     for (const item of event.items) if (item.kind === 'text' && item.types.has(type)) return item.getText(type);
   };
@@ -79,7 +94,11 @@ export function SortableCanvas<T extends TileProps>({
     getAllowedDropOperations: () => ['move'],
     acceptedDragTypes: [type],
     getDropOperation: () => 'move',
-    onDragEnd: repairNextPress,
+    onDragStart: event => dragStarted(String([...event.keys][0])),
+    onDragEnd: () => {
+      dragStarted(undefined);
+      repairNextPress();
+    },
     renderDropIndicator: target => <DropIndicator target={target} className="rp-canvas-drop" />,
     onReorder: event => {
       for (const key of event.keys) onPlace(String(key), {target: String(event.target.key), after: event.target.dropPosition === 'after'});
@@ -93,7 +112,7 @@ export function SortableCanvas<T extends TileProps>({
       if (id) onPlace(id, {});
     }
   });
-  return (
+  const grid = (
     <GridList
       {...props}
       ref={ref}
@@ -101,9 +120,10 @@ export function SortableCanvas<T extends TileProps>({
       layout="grid"
       className={profile ? 'rp-dash-section' : 'rp-widget-grid rp-sortable-grid'}
       data-profile={profile}
+      data-grid={profile ? sectionGrid(items) : undefined}
       items={items}
       dragAndDropHooks={dragAndDropHooks}
-      dependencies={[children, tools]}
+      dependencies={[children, tools, resize]}
     >
       {item => (
         <GridListItem
@@ -121,8 +141,18 @@ export function SortableCanvas<T extends TileProps>({
           <div className="rp-dashboard-body" inert>
             {children(item)}
           </div>
+          {resize?.(item)}
         </GridListItem>
       )}
     </GridList>
+  );
+  // A dashboard section's row hints are an overlay beside its grid, in a frame of the section's visible box.
+  return profile ? (
+    <div className="rp-dashboard-canvas" data-rearm={rearm ? '' : undefined}>
+      {grid}
+      {gapLabel && <DashboardGaps section={ref} label={gapLabel} refusal={refusal} onPlace={onPlace} />}
+    </div>
+  ) : (
+    grid
   );
 }

@@ -19,10 +19,13 @@ import {useRankingCard} from './useRankingCard';
 
 export function ActivityCard({
   item,
+  scale = 1,
   selection,
   ranking
 }: {
-  item: {id: string};
+  item: {id: string; rows?: number};
+  // A chart's height as a multiple of its standard height.
+  scale?: number;
   ranking?: {by: string; setBy: (by: string) => void};
   selection?: {chosen: string; setChosen: (id: string) => void};
 }) {
@@ -34,9 +37,9 @@ export function ActivityCard({
     case 'latency':
       return <LatencyModule selection={selection} />;
     case 'ranking':
-      return <RankingModule selection={ranking} />;
+      return <RankingModule selection={ranking} limit={item.rows} />;
     case 'notices':
-      return <NoticesModule />;
+      return <NoticesModule limit={item.rows} />;
     case 'outbounds':
       return <OutboundsCard />;
     case 'download':
@@ -46,7 +49,7 @@ export function ActivityCard({
     case 'history':
     case 'memory':
     case 'status':
-      return <MetricModule kind={item.id} />;
+      return <MetricModule kind={item.id} scale={scale} />;
     default:
       return null;
   }
@@ -58,11 +61,11 @@ function LatencyModule({selection}: {selection?: {chosen: string; setChosen: (id
   return <NodeCard connections={undefined} selection={selection} />;
 }
 
-function RankingModule({selection}: {selection?: {by: string; setBy: (by: string) => void}}) {
-  return <RankingCard model={useRankingCard(true, selection)} />;
+function RankingModule({selection, limit}: {selection?: {by: string; setBy: (by: string) => void}; limit?: number}) {
+  return <RankingCard model={useRankingCard(true, selection, limit)} />;
 }
-function NoticesModule() {
-  return <Notices {...useNotices()} />;
+function NoticesModule({limit}: {limit?: number}) {
+  return <Notices {...useNotices()} limit={limit} />;
 }
 // The status card carries the runtime read's error; without it, the dashboard shows the same error and retry above
 // the cards that read runtime.
@@ -70,7 +73,7 @@ export function RuntimeAlert() {
   const vm = useActivity('status');
   return vm.error ? <ErrorMessage error={vm.error} onRetry={vm.retry} /> : null;
 }
-function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
+function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; scale: number}) {
   const t = useT();
   const vm = useActivity(kind);
   const {p, locale, range, ranges, setRange, traffic, spark, sparklines, cpuSpark, chartRate, count, cpuText, memorySeries, memoryBytes} = vm;
@@ -192,7 +195,7 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
                 timestamps={vm.trafficTimestamps}
                 fmt={chartRate}
                 locale={locale}
-                height={120}
+                height={120 * scale}
                 fill
                 window={vm.trafficBounds}
               />
@@ -222,7 +225,7 @@ function MetricModule({kind}: {kind: Parameters<typeof useActivity>[0]}) {
                 timestamps={vm.memoryTimestamps}
                 fmt={memoryBytes}
                 locale={locale}
-                height={150}
+                height={150 * scale}
                 fill
                 baseline="auto"
                 window={vm.memoryBounds}

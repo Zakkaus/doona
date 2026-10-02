@@ -406,7 +406,7 @@
 .rp-big {
   font-size: var(--rp-text-3xl);
   font-weight: 700;
-  line-height: 28px;
+  line-height: var(--rp-value-line);
 }
 /* Label icons keep their size when the label truncates. */
 .rp-tile-head > svg,
@@ -481,7 +481,8 @@
 }
 /* The widest value, 888 MB/s, is 98px at the value type in every locale; beside it go the 12px gap and the
    sparkline's 64px basis: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
-   narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. */
+   narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. This is
+   the one place the width is set: a dashboard row reads --rp-tile-stack to stack all its tiles (see packSection). */
 @container rp-tile (width < 174px) {
   /* Too narrow for the caption and a node name: the caption leaves the view, the icon and the picker stay, close
      enough that a short node name still fits, and the caption still names the tile, as the wordmark still names its
@@ -498,8 +499,9 @@
     white-space: nowrap;
   }
   .rp-tile-body {
+    --rp-tile-stack: 1;
     display: grid;
-    grid-template-rows: 28px 32px;
+    grid-template-rows: var(--rp-value-line) 32px;
     grid-template-columns: minmax(0, 1fr);
     align-items: center;
     justify-items: start;

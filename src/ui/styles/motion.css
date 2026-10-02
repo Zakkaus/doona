@@ -198,6 +198,8 @@
   --rp-text-3xl: 22px;
   --rp-text-4xl: 24px;
   --rp-text-5xl: 28px;
+  /* A tile value's line: its 3xl type, and the row a stacked tile keeps for it. */
+  --rp-value-line: 28px;
   --rp-space-half: 2px;
   --rp-space-1: 4px;
   --rp-space-1h: 6px;

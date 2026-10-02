@@ -62,13 +62,22 @@ export function useActivityNode(connections: ConnectionList | undefined, selecti
 }
 
 // The backend keeps no latency history, so the card records its node's latency at each read of the node list that
-// brings a change. The history is the card's own, kept in memory for the ten minutes the line
-// shows, and restarts when the card's selection changes or the line is switched back on; a preview records nothing.
+// brings a change. The history is kept in memory by selection for the ten minutes the line shows, outside the card, so
+// a card drawn again keeps its line; it restarts when the card's selection changes or the line is switched back on. A
+// preview (the dashboard editor draws its cards as previews) records nothing and shows the line its selection holds.
+const latencyHistories = new Map<string, LatencyHistory>();
 export function useLatencySpark(nodes: Node[] | undefined, id: string, key: string, enabled: boolean) {
   const preview = useContext(ResourcePreview);
   const source = enabled && !preview ? nodes : undefined;
   const current = enabled ? key : null;
-  const [history, setHistory] = useState<LatencyHistory>({source: undefined, key: current, samples: []});
+  const [history, setHistory] = useState<LatencyHistory>(
+    () => (current !== null && latencyHistories.get(current)) || {source: undefined, key: current, samples: []}
+  );
   if (history.source !== source || history.key !== current) setHistory(nextLatency(history, source, id, current, serverNow(), trafficRanges.m10.seconds));
+  useEffect(() => {
+    if (preview) return;
+    if (history.key === null) latencyHistories.clear();
+    else latencyHistories.set(history.key, history);
+  }, [history, preview]);
   return useMemo(() => sparkWindow({fine: history.samples, coarse: []}, trafficRanges.m10.seconds, foldCpu), [history.samples]);
 }
