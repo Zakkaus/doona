@@ -1,5 +1,14 @@
 import {createContext, useContext, useEffect, useId, useRef, useState, type ComponentPropsWithRef, type ReactNode, type RefObject} from 'react';
-import {Button as RButton, Link as RLink, Tooltip, TooltipTrigger, OverlayArrow, Focusable, composeRenderProps} from 'react-aria-components';
+import {
+  Button as RButton,
+  Link as RLink,
+  Tooltip,
+  TooltipTrigger,
+  TooltipTriggerStateContext,
+  OverlayArrow,
+  Focusable,
+  composeRenderProps
+} from 'react-aria-components';
 import {VisuallyHidden} from 'react-aria';
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
@@ -186,6 +195,71 @@ const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserve
 const REVEALS = 'button, a, [role="option"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="radio"]';
 const STOPS = REVEALS + ', [role="row"]';
 
+// Opens the tip where hover cannot: on keyboard focus of the stop around the text, and on a tap. It goes through the
+// trigger's own state, so an open also cancels a close the trigger scheduled when the pointer left.
+function Reveals({target, nested}: {target: RefObject<HTMLSpanElement | null>; nested: boolean}) {
+  const state = useContext(TooltipTriggerStateContext)!;
+  const latest = useRef(state);
+  useEffect(() => {
+    latest.current = state;
+  });
+  const [tapped, setTapped] = useState(false);
+  useEffect(() => {
+    const el = target.current;
+    const stop = nested ? el?.closest<HTMLElement>(REVEALS) : null;
+    if (!el || !stop) return;
+    const show = () => {
+      if (stop.matches(':focus-visible') && stop.querySelector('[data-tip]') === el) latest.current.open(true);
+    };
+    const hide = () => latest.current.close(true);
+    stop.addEventListener('focus', show);
+    stop.addEventListener('blur', hide);
+    // The text can turn truncated, or the listeners arrive, after the stop took focus.
+    if (document.activeElement === stop) show();
+    return () => {
+      stop.removeEventListener('focus', show);
+      stop.removeEventListener('blur', hide);
+    };
+  }, [target, nested]);
+  // A finger has no hover and a tap is not :focus-visible, so on a coarse pointer a tap on the cut text shows it whole,
+  // unless the text sits in something the tap presses (a button, a link) or in a table whose row press opens a detail
+  // showing the value in full: that press wins. A row press that does something else still happens beside the tip.
+  // The tip then stays until a press elsewhere, Escape or a scroll.
+  useEffect(() => {
+    const el = target.current;
+    if (!el) return;
+    const tap = () => {
+      if (!matchMedia('(pointer: coarse)').matches || el.closest(REVEALS) || el.closest('[data-row-detail]')) return;
+      setTapped(true);
+      latest.current.open(true);
+    };
+    el.addEventListener('click', tap);
+    return () => el.removeEventListener('click', tap);
+  }, [target]);
+  useEffect(() => {
+    if (!tapped) return;
+    const close = () => {
+      setTapped(false);
+      latest.current.close(true);
+    };
+    const away = (e: PointerEvent) => {
+      if (!target.current?.contains(e.target as Node)) close();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', key, true);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [tapped, target]);
+  return null;
+}
+
 // `cut="start"` drops the start of a value whose end matters more, as a host name's registrable domain.
 export function TextTooltip({
   children,
@@ -205,7 +279,6 @@ export function TextTooltip({
   // Not a tab stop until measured: a focusable span inside a row would swallow the row's own press.
   const [nested, setNested] = useState(true);
   const active = overflow || !!text;
-  const [open, setOpen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -227,61 +300,6 @@ export function TextTooltip({
     };
     // The span remounts when the trigger wraps it, so the observer follows `active` too.
   }, [text, active]);
-  useEffect(() => {
-    const el = ref.current;
-    const stop = active && nested ? el?.closest<HTMLElement>(REVEALS) : null;
-    if (!el || !stop) return;
-    const show = () => {
-      if (stop.matches(':focus-visible') && stop.querySelector('[data-tip]') === el) setOpen(true);
-    };
-    const hide = () => setOpen(false);
-    stop.addEventListener('focus', show);
-    stop.addEventListener('blur', hide);
-    // The text can turn truncated, or the listeners arrive, after the stop took focus.
-    if (document.activeElement === stop) show();
-    return () => {
-      stop.removeEventListener('focus', show);
-      stop.removeEventListener('blur', hide);
-      setOpen(false);
-    };
-  }, [active, nested]);
-  // A finger has no hover and a tap is not :focus-visible, so on a coarse pointer a tap on the cut text shows it whole,
-  // unless the text sits in something the tap presses (a button, a link) or in a table whose row press opens a detail
-  // showing the value in full: that press wins. A row press that does something else still happens beside the tip.
-  // The tip then stays until a press elsewhere, Escape or a scroll.
-  const tapped = useRef(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !active) return;
-    const tap = () => {
-      if (!matchMedia('(pointer: coarse)').matches || el.closest(REVEALS) || el.closest('[data-row-detail]')) return;
-      tapped.current = true;
-      setOpen(true);
-    };
-    el.addEventListener('click', tap);
-    return () => el.removeEventListener('click', tap);
-  }, [active]);
-  useEffect(() => {
-    if (!open || !tapped.current) return;
-    const close = () => {
-      tapped.current = false;
-      setOpen(false);
-    };
-    const away = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) close();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('pointerdown', away, true);
-    document.addEventListener('keydown', key, true);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      document.removeEventListener('pointerdown', away, true);
-      document.removeEventListener('keydown', key, true);
-      window.removeEventListener('scroll', close, true);
-    };
-  }, [open]);
   // New content can overflow without resizing the box, so it is measured again; the observer stays attached.
   useEffect(() => {
     const measure = ref.current && measures.get(ref.current);
@@ -300,8 +318,9 @@ export function TextTooltip({
   // A table mounts hundreds of these; the trigger and its focusable wrapper exist only once text overflows.
   if (!active) return span;
   return (
-    <TooltipTrigger delay={400} isOpen={open} onOpenChange={next => (tapped.current && !next ? undefined : setOpen(next))}>
+    <TooltipTrigger delay={400}>
       <Focusable>{span}</Focusable>
+      <Reveals target={ref} nested={nested} />
       <Tip>{text ?? tooltipText ?? children}</Tip>
     </TooltipTrigger>
   );

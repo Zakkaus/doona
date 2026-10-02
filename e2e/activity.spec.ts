@@ -557,10 +557,14 @@ for (const [width, lang] of [
       };
       const groups = await backend.api.groups();
       backend.handlers['GET groups'] = async () => groups.map(group => ({...group, name: `${group.name}-a-long-policy-group-name`}));
+      // The clock holds the trigger's own close timer, set when the pointer left the text, until focus has come back.
+      if (width === 1440) await page.clock.install();
       await page.goto('/#/activity');
       const trigger = page.locator('.rp-latency .rp-select');
       await trigger.click();
       await page.getByRole('menuitemradio', {name: 'proxy-a-long-policy-group-name', exact: true}).click();
+      // A slow round trip makes the target a past time, so the pause is tried again.
+      if (width === 1440) await expect(async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 50))).toPass();
       const tile = page.locator("[data-profile='metrics'] .rp-card").filter({has: page.locator('.rp-tile-head .rp-select')});
       const picker = tile.locator('.rp-tile-head .rp-select');
       await expect(picker).toContainText('-relay-through-a-long-provider-name');
@@ -594,10 +598,18 @@ for (const [width, lang] of [
       expect(chevron).toBe(20);
       if (width === 1440) {
         await expect(picker.locator('.rp-truncate')).toHaveAttribute('data-tip');
+        const tip = page.getByRole('tooltip').filter({hasText: (await picker.textContent())!});
         await picker.focus();
         await page.keyboard.press('Tab');
         await page.keyboard.press('Shift+Tab');
-        await expect(page.getByRole('tooltip').filter({hasText: (await picker.textContent())!})).toBeVisible();
+        await page.clock.runFor(700);
+        await expect(tip).toBeVisible();
+        // A tip that is closing stays in the DOM, marked, until its exit ends.
+        await expect(tip).not.toHaveAttribute('data-exiting');
+        await page.clock.resume();
+        await page.keyboard.press('Tab');
+        await expect(tip).toBeHidden();
+        await page.keyboard.press('Shift+Tab');
       }
       await picker.click();
       await expect(page.getByRole('menuitemradio', {name: 'proxy-a-long-policy-group-name', exact: true})).toBeVisible();
