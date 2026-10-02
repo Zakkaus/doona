@@ -14,6 +14,7 @@ const unknown: Engine = {
   redactedSections: () => [],
   daeText: false,
   globalSettings: null,
+  flowDemandGraceSeconds: null,
   uncheckedHooks: []
 };
 

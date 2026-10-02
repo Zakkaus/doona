@@ -35,6 +35,8 @@ export type EngineReason =
 // reason says nothing, so the page falls back to what the contract says.
 export type Engine = {
   id: 'honk' | 'unknown';
+  // Seconds the engine keeps recording flow demand after the last client read or stream; null when it does not say.
+  flowDemandGraceSeconds: number | null;
   // Why `subject` is off, given that the capabilities show it is; undefined when the engine does not say.
   reason(subject: EngineSubject, capabilities: Capabilities, recording?: RuntimeSettings['recording']): EngineReason | undefined;
   // Whether the engine refuses to write a source because its text holds credentials it will not write back.
