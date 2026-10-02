@@ -29,9 +29,19 @@ it.each<[Key, number | bigint, string]>([
   expect(translate('en', key, {n, names: 'a, {n}'})).toBe(expected);
 });
 
-it.each<['zh-TW' | 'zh-CN', string]>([
-  ['zh-TW', '更新訂閱'],
-  ['zh-CN', '更新订阅']
-])('labels subscription updates without implying multiple subscriptions in %s', (lang, label) => {
-  for (const n of [0, 1, 2]) expect(translate(lang, 'settings.refreshAll', {n})).toBe(`${label}（${n}）`);
+it.each<[Key, string, string, string, string]>([
+  ['settings.refreshAll', 'Update {n} subscription', 'Update {n} subscriptions', '更新 {n} 個訂閱', '更新 {n} 个订阅'],
+  ['rule.applyPending', 'Apply {n} rule', 'Apply {n} rules', '套用 {n} 條規則', '应用 {n} 条规则'],
+  ['toast.showAllCount', 'Show all {n} notification', 'Show all {n} notifications', '顯示全部 {n} 則通知', '显示全部 {n} 条通知'],
+  ['conn.groupCount', 'Example, {n} connection', 'Example, {n} connections', 'Example，{n} 條連線', 'Example，{n} 条连接'],
+  ['group.subscriptionCount', 'Example, {n} node', 'Example, {n} nodes', 'Example，{n} 個節點', 'Example，{n} 个节点'],
+  ['dns.chart.speed', 'Upstream latency for {n} lookup', 'Upstream latency for {n} lookups', '{n} 筆上游查詢的延遲', '{n} 条上游查询的延迟']
+])('writes the count into the label with locale plurals for %s', (key, one, other, tw, cn) => {
+  for (const n of [0, 1, 3])
+    for (const [lang, expected] of [
+      ['en', n === 1 ? one : other],
+      ['zh-TW', tw],
+      ['zh-CN', cn]
+    ] as const)
+      expect(translate(lang, key, {n, name: 'Example'})).toBe(expected.replace('{n}', String(n)));
 });

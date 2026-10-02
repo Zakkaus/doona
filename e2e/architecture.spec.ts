@@ -614,10 +614,10 @@ test('backend inventory failures expose independent retries without claiming zer
   const providers = page.getByRole('alert').filter({hasText: 'Provider inventory unavailable'});
   await expect(providers).toBeVisible();
   await expect(page.getByRole('button', {name: /^Update .*subscription/})).toBeDisabled();
-  await expect(page.getByRole('button', {name: /^Update .*subscription/})).not.toContainText('(0)');
+  await expect(page.getByRole('button', {name: /^Update .*subscription/})).not.toContainText('0 subscriptions');
   failProviders = false;
   await providers.getByRole('button', {name: 'Retry', exact: true}).click();
-  await expect(page.getByRole('button', {name: 'Update subscription (1)', exact: true})).toBeEnabled();
+  await expect(page.getByRole('button', {name: 'Update 1 subscription', exact: true})).toBeEnabled();
   await page.goto('/#/settings');
   await card.getByRole('link', {name: 'Open connections', exact: true}).click();
   const connections = page.getByRole('alert').filter({hasText: 'Connection inventory unavailable'});

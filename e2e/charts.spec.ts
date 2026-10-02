@@ -20,7 +20,7 @@ test('DNS opens on its statistics, with each figure labelled and its sample coun
   await expect(page.getByText(/^Loaded: \d+, uncached: \d+, sent upstream: \d+$/)).toBeVisible();
   const outcomes = page.getByRole('img', {name: /^Outcomes: /});
   for (const label of ['From the cache', 'Answered upstream', 'No such name', 'Failed']) await expect(outcomes).toHaveAccessibleName(new RegExp(label));
-  await expect(page.getByRole('img', {name: /^Upstream latency \(\d+ lookups\)$/})).toBeVisible();
+  await expect(page.getByRole('img', {name: /^Upstream latency for \d+ lookups$/})).toBeVisible();
   // A link that filters by domain lands on the log itself.
   await page.goto('/#/dns?domain=example.com');
   await expect(page.getByRole('tab', {name: 'Resolution log'})).toHaveAttribute('aria-selected', 'true');
@@ -305,7 +305,7 @@ for (const [served, note] of [
 test('the latency axis keeps its last label inside the chart on a phone', async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/dns');
-  const chart = page.getByRole('img', {name: /^Upstream latency \(\d+ lookups\)$/});
+  const chart = page.getByRole('img', {name: /^Upstream latency for \d+ lookups$/});
   await expect(chart).toBeVisible();
   const overflow = await chart.evaluate(svg => {
     const edge = svg.getBoundingClientRect().right;

@@ -91,9 +91,10 @@ export function useApplyHeld() {
   const {rules} = usePendingRules();
   const {apply, busy} = usePendingApply();
   const files = byFile(rules).length;
+  const label = t('rule.applyPending', {n: rules.length});
   return {
     count: rules.length,
-    label: files > 1 ? t('rule.applyFiles', {n: rules.length, files}, 'files') : t('rule.applyPending', {n: rules.length}),
+    label: files > 1 ? t('rule.applyFiles', {rules: label, files}, 'files') : label,
     busy,
     apply: async () => {
       const outcome = await apply(rules);

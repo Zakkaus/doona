@@ -110,10 +110,10 @@ it('splits the top bar into apply for held rules and reload for honk', () => {
   const two = {count: 2, label: t('rule.applyPending', {n: 2}), busy: false};
   expect(topBarCommands(none, true, false, t)).toEqual({apply: null, reload: {label: 'Reload honk', busy: false, blocked: false}});
   expect(topBarCommands(two, true, false, t)).toEqual({
-    apply: {label: 'Apply (2)', count: 2, busy: false, blocked: false},
+    apply: {label: 'Apply 2 rules', count: 2, busy: false, blocked: false},
     reload: {label: 'Reload honk', busy: false, blocked: false}
   });
-  expect(topBarCommands(two, false, false, t)).toEqual({apply: {label: 'Apply (2)', count: 2, busy: false, blocked: false}, reload: null});
+  expect(topBarCommands(two, false, false, t)).toEqual({apply: {label: 'Apply 2 rules', count: 2, busy: false, blocked: false}, reload: null});
   expect(topBarCommands(none, false, false, t)).toEqual({apply: null, reload: null});
   // Each waits while the other runs.
   expect(topBarCommands({...two, busy: true}, true, false, t).reload).toMatchObject({blocked: true, busy: false});

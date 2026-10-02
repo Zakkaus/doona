@@ -42,7 +42,7 @@ test('the desktop theme shortcut stays in sync with the appearance editor', asyn
 for (const [label, hash, control] of [
   ['System status', '#/overview?card=status', 'Suspend'],
   ['Open DNS cache', '#/dns?tab=cache', 'Clear all cache'],
-  ['Open subscriptions', '#/nodes?tab=list', 'Update (all )?subscription']
+  ['Open subscriptions', '#/nodes?tab=list', 'Update \\d+ subscription']
 ]) {
   test(`Settings jumps to ${label} without executing it`, async ({page}) => {
     const {requests} = await mockBackend(page);
