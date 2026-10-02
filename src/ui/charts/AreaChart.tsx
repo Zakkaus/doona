@@ -1,4 +1,4 @@
-import {useId, useLayoutEffect, useMemo, useState} from 'react';
+import {useCallback, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT} from '../../i18n';
 import {localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
@@ -33,24 +33,28 @@ function clockTicks(since: number, until: number): {ticks: number[]; step: numbe
   return {ticks, step};
 }
 
-function useTickSizes(labels: string[]) {
+// Measures the labels in the axis font. Labels that read the same in the same locale keep the sizes already measured,
+// without touching the DOM or the state.
+function useTickSizes(labels: string[], locale: string) {
   const [sizes, setSizes] = useState<Array<{width: number; height: number}>>([]);
+  const measured = useRef('');
   useLayoutEffect(() => {
+    const key = [locale, ...labels].join('\0');
+    if (key === measured.current) return;
+    measured.current = key;
     const el = document.createElement('span');
     el.className = 'rp-area-tick';
     Object.assign(el.style, {position: 'absolute', top: '-20000px', whiteSpace: 'pre'});
     document.body.appendChild(el);
-    const measure = () =>
-      setSizes(
-        labels.map(label => {
-          el.textContent = label;
-          const {width, height} = el.getBoundingClientRect();
-          return {width, height};
-        })
-      );
-    measure();
+    setSizes(
+      labels.map(label => {
+        el.textContent = label;
+        const {width, height} = el.getBoundingClientRect();
+        return {width, height};
+      })
+    );
     el.remove();
-  }, [labels]);
+  }, [labels, locale]);
   return sizes;
 }
 
@@ -128,9 +132,14 @@ export function AreaPlot({
   const h = size?.height ?? height;
   const bottom = h - 30;
   const right = width - 64;
-  const xDomain: [number, number] = [Math.min(domain[0], ...timestamps), Math.max(domain[1], ...timestamps)];
-  const x = (value: number) => linearPosition(value, xDomain, [20, right]);
-  const y = (value: number) => linearPosition(value, yDomain as [number, number], [bottom, 8]);
+  const xDomain = useMemo<[number, number]>(() => [Math.min(domain[0], ...timestamps), Math.max(domain[1], ...timestamps)], [domain, timestamps]);
+  const x = useCallback((value: number) => linearPosition(value, xDomain, [20, right]), [xDomain, right]);
+  const y = useCallback((value: number) => linearPosition(value, yDomain as [number, number], [bottom, 8]), [yDomain, bottom]);
+  const xs = useMemo(() => timestamps.map(x), [timestamps, x]);
+  const curves = useMemo(
+    () => series.map(s => timestamps.map((_, i) => (s.values[i] == null ? null : {x: xs[i], y: y(s.values[i]!)}))),
+    [series, timestamps, xs, y]
+  );
   const bounds = {x: 20, y: 8, width: right - 20, height: bottom - 8};
   const select = (index: number, pointerY?: number) => setSelectionPoint({index, y: pointerY});
   const clear = () => {
@@ -147,7 +156,7 @@ export function AreaPlot({
       return;
     }
     showAt({
-      x: x(timestamps[selected]),
+      x: xs[selected],
       y: selectionPoint?.y ?? (8 + bottom) / 2,
       width,
       bounds,
@@ -161,8 +170,8 @@ export function AreaPlot({
   const selection = useSelection(timestamps.length, select, clear);
   const tickLabels = useMemo(() => ticks.map(value => clock.format(value)), [ticks, clock]);
   const yLabels = useMemo(() => yTicks.map(fmt), [yTicks, fmt]);
-  const xSizes = useTickSizes(tickLabels);
-  const ySizes = useTickSizes(yLabels);
+  const xSizes = useTickSizes(tickLabels, locale);
+  const ySizes = useTickSizes(yLabels, locale);
   const xTicks = marks
     ? visibleTicks(
         ticks.map(x),
@@ -205,7 +214,7 @@ export function AreaPlot({
                 clear();
                 return;
               }
-              const index = nearestIndex(timestamps.map(x), px);
+              const index = nearestIndex(xs, px);
               select(index, py);
             }}
           >
@@ -220,23 +229,10 @@ export function AreaPlot({
               ))}
             </defs>
             {series.map((s, k) => (
-              <Curve
-                key={s.label}
-                points={timestamps.map((stamp, i) => (s.values[i] == null ? null : {x: x(stamp), y: y(s.values[i]!)}))}
-                baseline={y(Math.max(0, yDomain[0]))}
-                color={s.color}
-                id={uid + k}
-                strokeWidth={2}
-              />
+              <Curve key={s.label} points={curves[k]} baseline={y(Math.max(0, yDomain[0]))} color={s.color} id={uid + k} strokeWidth={2} />
             ))}
             {selected !== null && (
-              <path
-                d={`M${x(timestamps[selected])},8L${x(timestamps[selected])},${bottom}`}
-                stroke={p.subtle}
-                strokeDasharray="3 3"
-                fill="none"
-                pointerEvents="none"
-              />
+              <path d={`M${xs[selected]},8L${xs[selected]},${bottom}`} stroke={p.subtle} strokeDasharray="3 3" fill="none" pointerEvents="none" />
             )}
             <g>
               {xTicks.map(({index, position}) => (
@@ -259,7 +255,7 @@ export function AreaPlot({
             {selected !== null &&
               series.map(s =>
                 s.values[selected] == null ? null : (
-                  <circle key={s.label} cx={x(timestamps[selected])} cy={y(s.values[selected]!)} r={4} fill={s.color} stroke={p.base} strokeWidth={2} />
+                  <circle key={s.label} cx={xs[selected]} cy={y(s.values[selected]!)} r={4} fill={s.color} stroke={p.base} strokeWidth={2} />
                 )
               )}
           </svg>

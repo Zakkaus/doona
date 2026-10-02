@@ -20,7 +20,7 @@ export function useTrafficSeries(
 ) {
   const preview = useContext(ResourcePreview);
   const history = useTrafficHistory(windowSeconds, enabled ? capabilities : undefined);
-  const rings = useRings('traffic', preview || !enabled ? undefined : runtime, trafficSample, foldTraffic, enabled);
+  const rings = useRings('traffic', preview || !enabled ? undefined : runtime, trafficSample, foldTraffic, enabled, preview);
   const samples = useMemo(() => (history.data ? historyTrafficSamples(history.data) : []), [history.data]);
   const series = useMemo(
     () => trafficWindow(rings, samples, windowSeconds, anchored ? samples.at(-1)?.time : undefined),
@@ -36,7 +36,7 @@ export function useMemorySeries(
 ) {
   const preview = useContext(ResourcePreview);
   const history = useMemoryHistory(enabled ? capabilities : undefined);
-  const rings = useRings('memory', preview ? undefined : memory, memorySample, foldMemory, enabled);
+  const rings = useRings('memory', preview ? undefined : memory, memorySample, foldMemory, enabled, preview);
   const advertised = offered(capabilities?.resources, 'memory_history', {whileLoading: false});
   const seconds = windowSeconds ?? (advertised ? history.windowSeconds : 600);
   const converted = useMemo(() => (history.data && advertised ? historySamples(history.data) : []), [history.data, advertised]);
