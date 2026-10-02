@@ -98,8 +98,9 @@ for (const [lang] of LANGS) {
       const editor = page.locator('.cm-content[contenteditable="true"]');
       await editor.click();
       await page.keyboard.press('ControlOrMeta+End');
-      await page.keyboard.insertText('\ndns {\n  dom');
-      await page.keyboard.press('Control+Space');
+      await page.keyboard.insertText('\ndns {\n  ');
+      // Typing opens the list on its own; Ctrl+Space would query again and ignore clicks until that finishes.
+      await page.keyboard.type('dom');
       const suggestions = page.getByRole('listbox', {name: translate(lang, 'cm.completions'), exact: true});
       await expect(suggestions).toBeVisible();
       await suggestions.getByRole('option', {name: 'domain', exact: true}).click();
