@@ -135,8 +135,8 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     () =>
       accepted?.run.traces
         // Rule ids name rules within one generation, so only a trace from the listed generation joins the rule list.
-        .flatMap(trace => trace.evaluations.map(evaluation => ({evaluation, current: generation === trace.generation_id})))
-        .map(({evaluation, current}, index) => {
+        .flatMap(trace => trace.evaluations.map(evaluation => ({evaluation, traced: trace.generation_id, current: generation === trace.generation_id})))
+        .map(({evaluation, traced, current}, index) => {
           const matched = evaluation.rules.find(rule => rule.result === 'matched');
           const likely =
             evaluation.decision !== 'determinate' && !evaluation.outbound && current ? ((matched && rulesById.get(matched.rule_id)?.outbound) ?? null) : null;
@@ -148,7 +148,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
             ...view,
             rows: view.rows.map(row => ({...row, href: ruleHref(row.id, current && rulesById.has(row.id))})),
             links: chainLinks(selected, groupsListed, providersListed ? providers.data?.providers : [], t),
-            seed: traceSeed(accepted.input, evaluation)
+            seed: traceSeed(accepted.input, evaluation, traced)
           };
         }) ?? [],
     [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providersListed, providers.data, probe.canProbe, probe.busy, t, lang]

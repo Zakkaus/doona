@@ -248,9 +248,32 @@ test('adding a compound rule uses the same condition rows and previews the seria
   await page.getByRole('option', {name: 'Destination port', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Values'}).last().fill('443');
   await expect(dialog.locator('.rp-code')).toHaveText('!domain(suffix: example.com) && dport(443)');
+  // An expression edit carries back into the rows; one the rows cannot hold keeps the expression mode.
+  await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
+  const condition = dialog.getByRole('textbox', {name: 'Condition'});
+  await condition.fill('mac(aa:bb:cc:dd:ee:ff)');
+  await dialog.getByRole('radio', {name: 'Select', exact: true}).click();
+  await expect(condition).toHaveValue('mac(aa:bb:cc:dd:ee:ff)');
+  const hint = dialog.getByText('Condition rows cannot represent this expression.');
+  await expect(hint).toBeVisible();
+  await condition.fill('!domain(suffix: example.com) && dport(8443)');
+  await expect(hint).toBeHidden();
+  await dialog.getByRole('radio', {name: 'Select', exact: true}).click();
+  await expect(dialog.getByRole('textbox', {name: 'Values'}).last()).toHaveValue('8443');
+  await expect(dialog.locator('.rp-code')).toHaveText('!domain(suffix: example.com) && dport(8443)');
   await dialog.getByRole('button', {name: 'Add rule', exact: true}).click();
   await expect(dialog).toBeHidden();
-  await expect(rows(page).filter({hasText: '!domain(suffix: example.com) && dport(443)'})).toHaveCount(1);
+  await expect(rows(page).filter({hasText: '!domain(suffix: example.com) && dport(8443)'})).toHaveCount(1);
+});
+
+test('an emptied expression goes back to one empty condition row', async ({page}) => {
+  await page.goto('/#/rules?tab=list&view=advanced&add=domainSuffix:example.com');
+  const dialog = page.getByRole('dialog', {name: 'Add rule'});
+  await dialog.getByRole('button', {name: 'Add AND condition', exact: true}).click();
+  await dialog.getByRole('radio', {name: 'Expression', exact: true}).click();
+  await dialog.getByRole('textbox', {name: 'Condition'}).fill('');
+  await dialog.getByRole('radio', {name: 'Select', exact: true}).click();
+  await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue('');
 });
 
 test('editing an include refuses a changed generation and retains the condition draft', async ({page}) => {

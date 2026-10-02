@@ -394,15 +394,15 @@ it('seeds the add-rule dialog from the evaluated target and only a decided match
   const result = await createMockApi().routingTrace({input, resolve: 'none'});
   const matched = {rule_id: 'r5', expression: 'domain(geosite:telegram)', result: 'matched' as const, missing_inputs: [], conditions: []};
   const evaluation = {...result.evaluations[0], dst_ip: '1.1.1.1', decision: 'determinate' as const, outbound: 'proxy', rules: [matched]};
-  expect(traceSeed(input, evaluation)).toEqual({
+  expect(traceSeed(input, evaluation, 'g1')).toEqual({
     domain: 'a.example.',
     dip: '1.1.1.1',
     sip: '10.0.0.2',
     outbound: 'proxy',
-    matched: {id: 'r5', expression: 'domain(geosite:telegram)'}
+    matched: {id: 'r5', expression: 'domain(geosite:telegram)', generation: 'g1'}
   });
   // The traced address stands in when the evaluation resolved none; an undecided match is not vouched for.
-  const undecided = traceSeed({...input, dst_ip: '2001:db8::5'}, {...evaluation, dst_ip: null, decision: 'indeterminate', outbound: null});
+  const undecided = traceSeed({...input, dst_ip: '2001:db8::5'}, {...evaluation, dst_ip: null, decision: 'indeterminate', outbound: null}, 'g1');
   expect(undecided).toMatchObject({dip: '2001:db8::5', outbound: null, matched: null});
 });
 

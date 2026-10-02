@@ -45,6 +45,8 @@ export type RuleEditorModel = {
   submitDisabled: boolean;
   submitReason: string | null;
   changeMode: (mode: string) => void;
+  // Why the switch back to Select was refused, shown under the expression.
+  expressionHint: string | null;
 };
 export type RuleEditorOptions<R extends EditedRule> = {
   canWrite: boolean;
@@ -93,6 +95,7 @@ export function useRuleEditor<R extends EditedRule>({
   const pending = useRef(false);
   const [form, setForm] = useState<RuleForm>({condition: '', outbound: '', must: false, before: 'end'});
   const [pick, setPick] = useState(true);
+  const [refused, setRefused] = useState(false);
 
   const [conditions, setConditions] = useState<Array<RuleConditionRow & {id: number}> | null>(null);
   const [originalCondition, setOriginalCondition] = useState('');
@@ -131,6 +134,7 @@ export function useRuleEditor<R extends EditedRule>({
     setOriginalCondition(raw);
     setForm({condition: raw, outbound: edit?.outbound ?? target, must: edit?.must ?? false, before: positions[0]?.id ?? 'end'});
     setPick(true);
+    setRefused(false);
     setDialog({...next, generation: list.generation_id, sources, rules});
   };
   // A link opens its dialog once the list and sources are read in one generation; a refresh must not open it again.
@@ -257,7 +261,9 @@ export function useRuleEditor<R extends EditedRule>({
     submit,
     form,
     setForm: (next: RuleForm) => {
-      if (!pending.current) setForm(next);
+      if (pending.current) return;
+      if (next.condition !== form.condition) setRefused(false);
+      setForm(next);
     },
     conditions: conditionRows,
     setCondition: (id, row) => {
@@ -280,8 +286,24 @@ export function useRuleEditor<R extends EditedRule>({
     changeMode: (mode: string) => {
       if (pending.current) return;
       if (mode === 'text' && pick && condition) setForm({...form, condition});
+      // Back to the rows, the edited text becomes rows and empty text one empty row; text the rows cannot hold stays
+      // in the text mode with a hint.
+      const text = form.condition.trim();
+      if (mode === 'pick' && !pick) {
+        if (!text) setConditions([{id: 0, kind: kinds[0], value: '', negate: false}]);
+        else if (text !== serialized) {
+          const parsed = parseConditions(text, kinds);
+          if (!parsed) {
+            setRefused(true);
+            return;
+          }
+          setConditions(parsed.map((row, id) => ({...row, id})));
+        }
+      }
+      setRefused(false);
       setPick(mode === 'pick');
-    }
+    },
+    expressionHint: refused ? t('rule.expressionNoRows') : null
   };
   // `open` lets each list start an edit with its own target vocabulary.
   return {model, open};

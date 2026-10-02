@@ -5,9 +5,9 @@ import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {isWritableName, addSubtagsToGroup, citingGroups, groupsNamingTag, readGroupEntries, removeSubtagsFromGroup} from '../../dae/groups';
-import {isBareName, isQuotable} from '../../dae/text';
-import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionText} from '../../dae/subscriptions';
+import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
+import {isBareName} from '../../dae/text';
+import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
 import type {PageProps} from '../../shell/routes';
@@ -15,18 +15,17 @@ import {replaceRoute} from '../../shell/route';
 import {
   isNodeLink,
   editableSource,
+  joinableGroups,
   subscriptionPlace,
   subscriptionActionKind,
   nodeEditState,
   subscriptionRemoval,
-  keptOptions,
   nodeFormReason,
   nodeSource,
   ownedNodes,
   providerCreate,
   providerChanges,
   providerRows,
-  renameReferences,
   selectedProvider,
   type ProviderForm,
   type ProviderRow
@@ -35,6 +34,7 @@ import {useProviderTable} from './useProviderTable';
 import {draftInterval, intervalProblem} from '../shared/subscription';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
+import {useSubscriptionEditor, type SubscriptionEdit} from './useSubscriptionEditor';
 import {useDraftGuard} from '../../shell/draft';
 import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
@@ -51,7 +51,7 @@ type NodeDialog =
   | {kind: 'editNode'; source: ConfigSource; entry: NodeEntry}
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
-  | {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
+  | SubscriptionEdit;
 
 export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
   if (!action) return;
@@ -63,7 +63,6 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
-  const [updateGroups, setUpdateGroups] = useState(true);
   const session = useRef(0);
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
@@ -85,7 +84,6 @@ export function useNodesPage({go, query}: PageProps) {
   const open = useCallback((next: NodeDialog) => {
     session.current++;
     setForm(blank);
-    setUpdateGroups(true);
     setProblem(null);
     if (next.kind === 'editProvider')
       setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
@@ -118,10 +116,17 @@ export function useNodesPage({go, query}: PageProps) {
       for (const entry of readSubscriptionEntries(item.content)) found.set(entry.tag, [...(found.get(entry.tag) ?? []), {source: item, entry}]);
     return found;
   }, [sources]);
-  // The source is read again after a refused save, so the next save writes the entry as it is written now; null once
-  // no source, or more than one, declares it.
-  const editing = dialog?.kind === 'editProvider' ? declared.get(dialog.entry.tag) : undefined;
-  const editSource = editing?.length === 1 ? editing[0].source : null;
+  const groupsEverywhere = useMemo(() => [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))], [sources]);
+  const subscriptionEdit = useSubscriptionEditor({
+    dialog: dialog?.kind === 'editProvider' ? dialog : null,
+    form,
+    sources,
+    declared,
+    groups: groupsEverywhere,
+    createOptions,
+    lang,
+    t
+  });
   const editAction = useCallback(
     (item: ProviderRow, focus?: 'interval') => {
       if (!version || !resources) return null;
@@ -151,6 +156,8 @@ export function useNodesPage({go, query}: PageProps) {
     },
     [authored, providers.data, daeText, source.writable, isComplete, open]
   );
+  // Every source on this page is written through the one shared editor, so its busy flag covers each declaring source.
+  const joinable = useMemo(() => joinableGroups(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
   const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -282,28 +289,12 @@ export function useNodesPage({go, query}: PageProps) {
         }
         toast('positive', t('nodes.edited', {name: form.name.trim()}));
       } else if (dialog.kind === 'editProvider') {
-        const from = dialog.entry.tag;
         const tag = form.name.trim();
-        const url = form.value.trim();
-        const follow = tag !== from && updateGroups;
-        if (!editSource) {
-          refuse(t(declared.get(from)?.length ? 'nodes.tagTaken' : 'nodes.editMissing'));
+        if (!subscriptionEdit.source) {
+          refuse(t(declared.get(dialog.entry.tag)?.length ? 'nodes.tagTaken' : 'nodes.editMissing'));
           return;
         }
-        // Filters are read from the text being written, so a group changed meanwhile is still found.
-        const result = await apply(text => {
-          const written = writeSubscriptionEntry(text, from, {
-            tag,
-            url,
-            ...(changes?.interval ? {interval: draftInterval(form.interval)!} : {}),
-            ...(changes?.agent ? {ua: form.agent.trim() || null} : {}),
-            ...(changes?.cache ? {cache: form.cache} : {}),
-            // Following the routing rules is honk's default, so choosing it removes the route.
-            ...(changes?.route ? {route: (form.route || 'routing') === 'routing' ? null : form.route} : {})
-          });
-          if (!follow) return written;
-          return citingGroups(written, from).reduce((out, group) => removeSubtagsFromGroup(addSubtagsToGroup(out, group, [tag]), group, [from]), written);
-        }, editSource);
+        const result = await apply(subscriptionEdit.write, subscriptionEdit.source);
         const problem = editProblem(result, t);
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
@@ -343,38 +334,13 @@ export function useNodesPage({go, query}: PageProps) {
               : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const agentKey = agentProblem(form.agent, false);
   const agentError = agentKey && t(agentKey);
-  // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
-  const editAgentKey = agentProblem(form.agent, true);
-  const editAgentError = editAgentKey && t(editAgentKey);
-  // The switch shows the entry's cache, or the default a new subscription gets when the entry sets none.
-  const writtenCache = dialog?.kind === 'editProvider' ? (dialog.entry.cache ?? createOptions?.cache) : undefined;
-  // A kept name is valid as written; a new one is bare, as doona writes names, and free among the subscriptions.
-  const editName = form.name.trim();
-  const editNameError =
-    dialog?.kind !== 'editProvider' || editName === dialog.entry.tag || !editName
-      ? null
-      : !isBareName(editName)
-        ? t('nodes.nameInvalid')
-        : declared.has(editName)
-          ? t('nodes.tagTaken')
-          : null;
   const intervalKey = intervalProblem(form.interval);
   const intervalError = intervalKey && t(intervalKey);
-  const editUrlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
-  const references =
-    dialog?.kind === 'editProvider' && editName !== dialog.entry.tag
-      ? renameReferences(sources, editSource ?? dialog.source, dialog.entry.tag)
-      : {here: [], elsewhere: []};
   // Removing a subscription, or renaming it where the write cannot carry every filter along, would leave the groups
   // whose filters name it matching nothing, or everything once a last filter goes, so both wait until those groups
   // are changed on the Policies page.
   const removal = subscriptionRemoval(config.data?.sources, config.loading, dialog?.kind === 'removeProvider' ? dialog.item : null);
-  const blockedTag =
-    dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription'
-      ? dialog.item.name
-      : dialog?.kind === 'editProvider' && references.elsewhere.length
-        ? dialog.entry.tag
-        : null;
+  const blockedTag = dialog?.kind === 'removeProvider' && dialog.item.kind === 'subscription' ? dialog.item.name : subscriptionEdit.blockedTag;
   const blockers =
     dialog?.kind === 'editProvider' && blockedTag !== null
       ? [...new Set(sources.flatMap(item => groupsNamingTag(item.content, blockedTag)))]
@@ -387,30 +353,20 @@ export function useNodesPage({go, query}: PageProps) {
     dialog?.kind === 'editNode'
       ? nodeState!.valid
       : dialog?.kind === 'editProvider'
-        ? !!editName && editNameError === null && intervalSeconds !== null && editUrlValid && editAgentError === null && !references.elsewhere.length && edited
+        ? subscriptionEdit.valid
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
             ? form.name.trim() !== '' && isNodeLink(form.value)
             : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
-  const groupsEverywhere = [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))];
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
   // edit writes the options in the declaring source.
-  const subscriptionFields: SubscriptionFieldSet =
-    dialog?.kind === 'editProvider'
-      ? {
-          interval: dialog.entry.interval,
-          agent: {fallback: createOptions?.user_agent, description: t('nodes.agentDefault')},
-          cache: writtenCache,
-          // An engine that fetches subscriptions only directly leaves the route out of its providers.
-          routes: dialog.item.download === undefined ? undefined : groupsEverywhere
-        }
-      : {
-          interval: createOptions?.update_interval,
-          agent: createOptions?.user_agent === undefined ? undefined : {fallback: createOptions.user_agent},
-          cache: createOptions?.cache
-        };
+  const subscriptionFields: SubscriptionFieldSet = subscriptionEdit.fields ?? {
+    interval: createOptions?.update_interval,
+    agent: createOptions?.user_agent === undefined ? undefined : {fallback: createOptions.user_agent},
+    cache: createOptions?.cache
+  };
   const providerTable = useProviderTable({
     rows: list,
     loading: providers.loading && !providers.data,
@@ -460,6 +416,7 @@ export function useNodesPage({go, query}: PageProps) {
       }
     })(),
     source,
+    joinable,
     canManage: !!resources?.nodes.can_manage,
     busy: !!manage.busy,
     reload: refetchNodes,
@@ -505,12 +462,8 @@ export function useNodesPage({go, query}: PageProps) {
       dialog?.kind === 'editNode'
         ? (nodeEditError ?? nodeFormReason('node', form.name, form.value, t))
         : dialog?.kind === 'editProvider'
-          ? !editName
-            ? t('nodes.nameMissing')
-            : // A name error is shown on its field alone.
-              editUrlValid
-              ? null
-              : t('nodes.urlInvalid')
+          ? // A name error is shown on its field alone.
+            subscriptionEdit.reason
           : nodeFormReason(dialog?.kind, form.name, form.value, t),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
@@ -521,17 +474,14 @@ export function useNodesPage({go, query}: PageProps) {
       : dialog?.kind === 'editProvider' || dialog?.kind === 'editNode'
         ? t('policy.save')
         : t('nodes.add'),
-    editOptions:
-      dialog?.kind === 'editProvider' ? keptOptions(dialog.entry.options, {cache: writtenCache !== undefined, route: !!subscriptionFields.routes}) : [],
-    // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,
-    // unless another source or an expression names it too: a write across sources is not atomic, so the rename waits.
-    renameGroups: references.here.length && !references.elsewhere.length ? formatList(lang, references.here) : null,
+    editOptions: subscriptionEdit.options,
+    renameGroups: subscriptionEdit.renameGroups,
     referenced: blockers.length && blockedTag !== null ? {groups: formatList(lang, blockers), name: blockedTag, href: href('policies')} : null,
     checkingRemoval,
     renameFrom: dialog?.kind === 'editProvider' ? dialog.entry.tag : '',
-    updateGroups,
+    updateGroups: subscriptionEdit.updateGroups,
     setUpdateGroups: (next: boolean) => {
-      if (submitting.current !== dialog) setUpdateGroups(next);
+      if (submitting.current !== dialog) subscriptionEdit.setUpdateGroups(next);
     },
     subscription,
     setSubscription: (next: SubscriptionDraft) => {
@@ -539,7 +489,7 @@ export function useNodesPage({go, query}: PageProps) {
     },
     subscriptionFields,
     subscriptionErrors: {
-      ...(dialog?.kind === 'editProvider' ? {name: editName ? editNameError : null, agent: editAgentError} : {name: null, agent: agentError}),
+      ...(dialog?.kind === 'editProvider' ? subscriptionEdit.errors : {name: null, agent: agentError}),
       interval: intervalError
     }
   };

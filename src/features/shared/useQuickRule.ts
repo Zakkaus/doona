@@ -75,7 +75,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
   const listedDns = dnsList ? dnsRules.data?.[dnsList] : undefined;
   const generation = routing ? rules.data?.generation_id : dnsRules.data?.generation_id;
   const positions = routing
-    ? rulePositions(rules.data?.rules ?? [], sources, draft.seed.matched, t)
+    ? rulePositions(rules.data?.rules ?? [], rules.data?.generation_id, sources, draft.seed.matched, t)
     : dnsList
       ? dnsRulePositions(dnsList, listedDns ?? [], sources, t)
       : [];

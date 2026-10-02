@@ -28,6 +28,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - The page tab bars on Nodes, Connections, Flows, Rules, DNS and Config are 32px tall again on desktop, like the controls beside them: the tabs fill the bar instead of sitting 2px inside it. Other controls are unchanged. (#299)
 - On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
 - The full-name tooltip that keyboard focus opens on cut text no longer closes by itself shortly after the pointer has left it. (#317)
+- A group whose filter names a value with an apostrophe, such as `name("O'Reilly")`, opens in the group dialog with its filter as text instead of failing to open.
+- Group member previews and counts read `regex:` filters in honk's Rust syntax, such as `\p{Han}`, `\-` and `[[:alpha:]]`; a pattern doona cannot translate leaves the filter as text.
+- Renaming a subscription rewrites only the changed values inside its group filters; other values and other filter lines keep their spacing and quotes.
+- In the add-rule dialog, switching from Expression back to Select turns the edited expression into condition rows; an expression the rows cannot hold stays in Expression with a hint, and an emptied expression starts again from one empty row.
+- Adding a rule from a flow record or a trace offers "Before the matched rule" only when the match comes from the rule list's current generation.
+- Saving a subscription writes only the fields changed in the dialog, so a link or name updated in the source meanwhile is no longer overwritten.
+- On the Nodes page, Add to group lists the groups of every writable include as well as the main source, and stays available when only an include can be written; groups are not offered while a write is in progress.
 
 ## [0.1.0-beta.12] - 2026-09-30
 

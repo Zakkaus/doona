@@ -490,14 +490,14 @@ export function nameLinks(name: string, resources: Capabilities['resources'] | u
 }
 // What the add-rule dialog starts from for one evaluation: the traced target as the evaluation saw it, and the rule it
 // matched when the evaluation was decided.
-export function traceSeed(input: RoutingTraceRequest['input'], evaluation: RoutingEvaluation): QuickRuleSeed {
+export function traceSeed(input: RoutingTraceRequest['input'], evaluation: RoutingEvaluation, generation: string): QuickRuleSeed {
   const matched = evaluation.rules.find(rule => rule.result === 'matched');
   return {
     domain: input.domain ?? null,
     dip: evaluation.dst_ip ?? input.dst_ip ?? null,
     sip: input.src_ip ?? null,
     outbound: evaluation.outbound,
-    matched: matched && evaluation.decision === 'determinate' ? {id: matched.rule_id, expression: matched.expression ?? null} : null
+    matched: matched && evaluation.decision === 'determinate' ? {id: matched.rule_id, expression: matched.expression ?? null, generation} : null
   };
 }
 type DnsView = {id: string; heading: string; fields: [string, string][]};
