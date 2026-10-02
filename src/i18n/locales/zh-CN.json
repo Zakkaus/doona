@@ -1995,7 +1995,7 @@
   "widgets.edit": "编辑小工具",
   "widgets.empty": "暂无小工具。可在编辑模式下添加。",
   "widgets.expand": "展开小工具",
-  "widgets.form": "{name}显示形式",
+  "widgets.form": "显示形式",
   "widgets.gallery": "小工具库",
   "widgets.group": "快速切换组",
   "widgets.hide": "隐藏小工具",

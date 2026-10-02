@@ -1,6 +1,7 @@
 import {useContext, useRef, useState, useLayoutEffect, type CSSProperties, type ReactNode} from 'react';
 import {TitlesShown} from './Card';
 import './styles/widgets.css';
+import './styles/floating-panel.css';
 
 // A scrolling list of widgets. It fades at the edge while more lies beyond it, and keeps the selected row in view
 // in the editor's canvas.
@@ -97,9 +98,10 @@ export function WidgetSpeed({up, down, reserve}: {up: string; down: string; rese
     </div>
   );
 }
-// The panel's editor: the gallery, the canvas at the floating panel's `width`, and the inspector.
+// The preview keeps the live panel's width; only its display scale changes with the available space.
 export function WidgetEditorLayout({
-  width,
+  panelWidth,
+  header,
   gallery,
   canvas,
   inspector,
@@ -107,32 +109,63 @@ export function WidgetEditorLayout({
   canvasLabel,
   inspectorLabel
 }: {
+  panelWidth: number;
+  header: ReactNode;
   gallery: ReactNode;
   canvas: ReactNode;
   inspector: ReactNode;
   galleryLabel: string;
   canvasLabel: string;
   inspectorLabel: string;
-  width: number;
 }) {
+  const editor = useRef<HTMLDivElement>(null);
+  const space = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [threeColumns, setThreeColumns] = useState(false);
+  useLayoutEffect(() => {
+    const root = editor.current;
+    const column = space.current;
+    if (!root || !column) return;
+    const measure = () => {
+      const gap = Number.parseFloat(getComputedStyle(root.firstElementChild!).columnGap);
+      setThreeColumns(root.clientWidth >= panelWidth + 320 + 240 + gap * 2);
+      const style = getComputedStyle(column);
+      const room = column.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+      setScale(Math.min(1, room / panelWidth));
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(column);
+    measure();
+    return () => observer.disconnect();
+  }, [panelWidth]);
   return (
-    <div className="rp-widget-editor" style={{'--rp-panel-width': `${width}px`} as CSSProperties}>
-      <section className="rp-widget-gallery">
-        <h3 className="rp-h3">{galleryLabel}</h3>
-        <WidgetPanel label={galleryLabel} kind="gallery">
-          {gallery}
-        </WidgetPanel>
-      </section>
-      <section className="rp-widget-canvas">
-        <h3 className="rp-h3">{canvasLabel}</h3>
-        <WidgetPanel label={canvasLabel} kind="canvas">
-          {canvas}
-        </WidgetPanel>
-      </section>
-      <section className="rp-widget-inspector" aria-label={inspectorLabel}>
-        <h3 className="rp-h3">{inspectorLabel}</h3>
-        {inspector}
-      </section>
+    <div ref={editor} className="rp-widget-editor" style={{'--rp-panel-width': `${panelWidth}px`} as CSSProperties}>
+      <div className="rp-widget-editor-grid" data-three-columns={threeColumns || undefined}>
+        <section className="rp-widget-gallery">
+          <h3 className="rp-h3">{galleryLabel}</h3>
+          <WidgetPanel label={galleryLabel} kind="gallery">
+            {gallery}
+          </WidgetPanel>
+        </section>
+        <section className="rp-widget-canvas">
+          <h3 className="rp-h3">{canvasLabel}</h3>
+          <div ref={space} className="rp-widget-preview-space">
+            <div className="rp-floating-panel rp-widget-preview" style={{zoom: scale, '--rp-preview-scale': scale} as CSSProperties}>
+              <div className="rp-panel-head" inert>
+                {header}
+              </div>
+              <WidgetPanel label={canvasLabel} kind="canvas">
+                {canvas}
+              </WidgetPanel>
+            </div>
+          </div>
+        </section>
+        <section className="rp-widget-inspector" aria-label={inspectorLabel}>
+          <h3 className="rp-h3">{inspectorLabel}</h3>
+          {inspector}
+        </section>
+      </div>
     </div>
   );
 }

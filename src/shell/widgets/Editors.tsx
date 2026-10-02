@@ -5,7 +5,6 @@ import {useDraftGuard} from '../draft';
 import {saveDashboard} from './dashboardSettings';
 import {SortableCanvas, reorderKeys} from '../../ui/SortableCanvas';
 import {WidgetEditorLayout} from '../../ui/WidgetPanel';
-import {minPanelSize} from '../../ui/panelSize';
 import {WidgetContent} from './WidgetContent';
 import {readLayout, saveLayout} from './settings';
 import Settings from '../../ui/icons/Settings';
@@ -14,6 +13,9 @@ import {dashboardDefaults, dashboardItems, footprint, mapWidgets, type Dashboard
 import {placeWidget, sizesFor, stepWidget} from './dashboardEdit';
 import {instanceId, defaults, registry, restoredPanel, changesPanel, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
+import {minPanelSize} from '../../ui/panelSize';
+import type {BackendView} from '../view';
+import {PanelHeader} from './Widgets';
 
 type Draft = {draft: DashboardLayout; setDraft: (draft: DashboardLayout) => void};
 const replace = (draft: DashboardLayout, item: Widget) => mapWidgets(draft, old => (instanceId(old) === instanceId(item) ? item : old));
@@ -131,9 +133,10 @@ export function DashboardActions({draft, saved, setDraft, onClose}: Draft & {sav
   );
 }
 // The panel's editor: a dialog with the gallery, the panel's canvas and the selected widget's inspector.
-export function WidgetEditor({onClose}: {onClose: () => void}) {
+export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: BackendView}) {
   const t = useT();
-  const [original] = useState(() => readLayout().items);
+  const [layout] = useState(readLayout);
+  const original = layout.items;
   const [items, setItems] = useState(original);
   // Restoring the defaults also returns the panel to its corner and default size once saved.
   const [restored, setRestored] = useState(false);
@@ -165,7 +168,7 @@ export function WidgetEditor({onClose}: {onClose: () => void}) {
     <>
       <ModalDialog
         title={t('widgets.edit')}
-        size="large"
+        size="wide"
         scrollBody
         isOpen
         onOpenChange={open => {
@@ -196,7 +199,8 @@ export function WidgetEditor({onClose}: {onClose: () => void}) {
         )}
       >
         <WidgetEditorLayout
-          width={readLayout().size?.width ?? minPanelSize.width}
+          panelWidth={(restored ? undefined : layout.size)?.width ?? minPanelSize.width}
+          header={<PanelHeader backend={backend} preview />}
           galleryLabel={t('widgets.gallery')}
           canvasLabel={t('widgets.canvas')}
           inspectorLabel={active ? t(registry[active.id].label) : t('widgets.inspector')}
@@ -221,7 +225,7 @@ export function WidgetEditor({onClose}: {onClose: () => void}) {
                 announce(t('widgets.reordered'));
               }}
             >
-              {({item}) => <WidgetContent item={item} preview sample />}
+              {({item}) => <WidgetContent item={item} preview />}
             </SortableCanvas>
           }
           inspector={

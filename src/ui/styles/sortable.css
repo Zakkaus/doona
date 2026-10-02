@@ -3,41 +3,37 @@
   min-inline-size: 0;
   outline: none;
 }
+/* The frame below is the row's focus ring, so the global one stays off. */
 .rp-sortable-row[data-focus-visible] {
-  outline: var(--rp-focus-width) solid var(--rp-focus-color);
-  outline-offset: var(--rp-focus-offset);
-}
-.rp-sortable-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(64px, 1fr));
-  gap: 16px 8px;
-  min-block-size: 100px;
   outline: none;
 }
-.rp-sortable-grid > .rp-sortable-row {
-  grid-column: span 2;
-  padding-block: calc(var(--rp-control) + 16px);
-  padding-inline: var(--rp-widget-tile-padding);
-  align-self: start;
-  border-radius: var(--rp-r-md);
-  outline: 1px solid var(--rp-line);
-  background: var(--rp-base);
+.rp-sortable-row:is([data-focus-visible], [data-selected])::before {
+  content: '';
+  position: absolute;
+  inset: calc(0px - var(--rp-sortable-gap, var(--rp-space-2)) - var(--rp-focus-width));
+  border: var(--rp-focus-width) solid var(--rp-focus-color);
+  pointer-events: none;
 }
-.rp-sortable-grid > .rp-sortable-row[data-size='small'] {
-  grid-column: span 1;
+.rp-sortable-grid {
+  outline: none;
 }
-.rp-sortable-grid > .rp-sortable-row[data-size='large'] {
-  grid-row: span 2;
-}
-.rp-sortable-grid > .rp-sortable-row:is([data-selected], [data-focus-visible]) {
-  outline: var(--rp-focus-width) solid var(--rp-focus-color);
-  background: var(--rp-fill);
-  --rp-subtle: var(--rp-subtle-text);
+.rp-sortable-row > [role='gridcell'] {
+  display: contents;
 }
 .rp-sortable-grid[data-drop-target] {
   outline: 2px dashed var(--rp-accent);
 }
 .rp-sortable-grid .rp-dashboard-tools {
-  inset-block-start: 8px;
+  inset-block-start: calc(var(--rp-line-caption) / 2 - var(--rp-space-1));
   inset-inline-end: 0;
+  translate: 0 -50%;
+  background: transparent;
+}
+.rp-sortable-grid .rp-widget-label {
+  padding-inline-end: calc(var(--rp-control) + var(--rp-space-2));
+}
+.rp-sortable-row[data-module='divider'] .rp-dashboard-tools {
+  inset-block-start: 50%;
+  padding-inline-start: var(--rp-space-1);
+  background: var(--rp-surface);
 }

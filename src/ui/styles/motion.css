@@ -230,6 +230,8 @@
   --rp-z-toast: 20;
   --rp-sidebar-width: 240px;
   --rp-sidebar-padding: 16px;
+  /* The overlay scroll classes draw a scrollbar this thick. */
+  --rp-scrollbar: 6px;
   --rp-control: 32px;
   --rp-control-lg: 40px;
   /* L's inline padding and text size. Phones take M's (below), so a row of L controls fits as a row of M controls does. */
@@ -338,6 +340,16 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+/* Filling its container, the segments share the width equally and each label sits at the centre of its own segment. */
+.rp-segfit[data-fill] {
+  inline-size: 100%;
+}
+.rp-segfit[data-fill] > .rp-seg .rp-btn {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  justify-content: center;
+  text-align: center;
+}
 .rp-segfit[data-collapsed] > .rp-seg {
   visibility: hidden;
   overflow: hidden;
@@ -382,6 +394,8 @@
   min-height: 0;
   background: transparent;
   color: var(--rp-text);
+  /* Regular labels keep small ideograph counters open at 1x rasterisation. */
+  font-weight: 400;
   border-radius: var(--rp-r-md);
   border: 2px solid transparent;
   position: relative;

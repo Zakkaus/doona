@@ -2,12 +2,11 @@ import {useRef, type ReactNode} from 'react';
 import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
 import {useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
-import {cx} from './cx';
+import './styles/widget-grid.css';
 import {tileAttributes, usePacking, type TileProps} from './DashboardTile';
 import DragHandle from './icons/DragHandle';
 import './styles/dashboard.css';
 import './styles/sortable.css';
-import './styles/widget-tile.css';
 
 const type = 'application/x-doona-card';
 const unpacked = {current: null};
@@ -49,11 +48,7 @@ export function reorderKeys(ids: string[], moved: Set<string>, target: string, p
   return rest;
 }
 
-// The one sortable canvas. With a profile it is a dashboard section in edit mode: the page's own cells, packed, each
-// with a drag handle and the caller's tools in an overlay corner, so editing changes no box. Without one it is the
-// panel editor's two-column grid of tiles. Every drop is a move, into this canvas from any other or within it, and
-// `onPlace` receives it as one transaction. The drop indicator takes no cell: it is a line drawn beside the card it
-// precedes or follows.
+// Panel tools use the caption's end; dashboard tools have a reserved row above the live content.
 export function SortableCanvas<T extends TileProps>({
   label,
   profile,
@@ -104,7 +99,7 @@ export function SortableCanvas<T extends TileProps>({
       ref={ref}
       aria-label={label}
       layout="grid"
-      className={profile ? 'rp-dash-section' : 'rp-sortable-grid'}
+      className={profile ? 'rp-dash-section' : 'rp-widget-grid rp-sortable-grid'}
       data-profile={profile}
       items={items}
       dragAndDropHooks={dragAndDropHooks}
@@ -114,8 +109,8 @@ export function SortableCanvas<T extends TileProps>({
         <GridListItem
           id={item.id}
           textValue={textValue(item)}
-          className={cx('rp-dashboard-cell', !profile && 'rp-sortable-row rp-widget-tile')}
-          {...(profile ? tileAttributes(item) : {'data-size': item.size})}
+          className={profile ? 'rp-dashboard-cell' : 'rp-widget-cell rp-sortable-row'}
+          {...(profile ? tileAttributes(item) : {'data-size': item.size === 'wide' ? 'large' : item.size, 'data-module': item.module})}
         >
           <div className="rp-dashboard-tools">
             <RButton slot="drag" className={buttonClass({quiet: true, icon: true, small: !profile})} aria-label={dragLabel(item)}>

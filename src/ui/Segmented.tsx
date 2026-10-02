@@ -12,7 +12,8 @@ export function Segmented({
   onChange,
   label,
   isDisabled,
-  size
+  size,
+  fill
 }: {
   items: Array<[string, string]>;
   value: string;
@@ -20,6 +21,8 @@ export function Segmented({
   label: string;
   isDisabled?: boolean;
   size?: ControlSize;
+  // Takes the width of its container, every segment the same share of it.
+  fill?: boolean;
 }) {
   const [ref, pos] = useSlider(value);
   const controlSize = useControlSize(size);
@@ -41,7 +44,7 @@ export function Segmented({
     refocus.current = false;
   }, [ref, collapsed]);
   return (
-    <div className="rp-segfit" data-collapsed={collapsed || undefined}>
+    <div className="rp-segfit" data-collapsed={collapsed || undefined} data-fill={fill || undefined}>
       <ToggleButtonGroup
         ref={ref}
         className="rp-seg"

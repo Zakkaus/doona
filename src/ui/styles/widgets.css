@@ -79,9 +79,11 @@
   text-overflow: ellipsis;
 }
 .rp-widget-editor {
+  container: rp-widget-editor / inline-size;
+}
+.rp-widget-editor-grid {
   display: grid;
-  /* The canvas is the floating panel at its own width (set by the editor); its border and inset are the panel's. */
-  grid-template-columns: minmax(0, 1fr) var(--rp-panel-width) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--rp-space-6);
   align-items: start;
 }
@@ -99,82 +101,96 @@
 .rp-widget-gallery-list > .rp-widget-body-content {
   padding: var(--rp-space-1) var(--rp-space-1) var(--rp-space-6);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--rp-space-4);
 }
-@media (max-width: 1023.98px) {
-  .rp-widget-editor {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .rp-widget-gallery {
-    position: static;
-  }
-  .rp-widget-gallery-list > .rp-widget-body-content {
-    display: flex;
-    flex-direction: column;
-    max-block-size: none;
-    inline-size: 100%;
-    padding-inline-end: calc(var(--rp-space-1) + var(--rp-scrollbar-gutter, 0px));
-  }
-  .rp-widget-inspector {
-    position: static;
-    order: 2;
-  }
-  .rp-widget-canvas > :not(h3) {
-    inline-size: 100%;
-    align-self: center;
-  }
-  .rp-widget-canvas {
-    inline-size: 100%;
-    order: 1;
-  }
+.rp-widget-gallery-list .rp-widget-gallery-tile {
+  flex: 0 0 min(100%, 320px);
+  min-inline-size: min(100%, 320px);
+}
+.rp-widget-gallery-list .rp-widget-gallery-frame {
+  block-size: auto;
+  max-block-size: 200px;
+  mask-image: none;
+}
+.rp-widget-gallery-list .rp-widget-gallery-tile > .rp-cluster {
+  margin-block-start: auto;
 }
 
 .rp-widget-panel[data-more] > .rp-widget-body {
   mask-image: linear-gradient(to bottom, #000 calc(100% - var(--rp-space-4)), transparent);
 }
 
-.rp-widget-panel[data-kind='gallery'],
-.rp-widget-panel[data-kind='canvas'] {
-  --rp-widget-body-limit: calc(88dvh - 15 * var(--rp-space-4));
-}
-.rp-widget-panel[data-kind='gallery'] > .rp-widget-body,
+/* The dialog owns vertical scrolling; only the narrow gallery scrolls sideways. */
 .rp-widget-panel[data-kind='canvas'] > .rp-widget-body {
-  max-block-size: var(--rp-widget-body-limit);
-  padding: 0;
+  overflow: hidden;
 }
-@media (max-width: 1023.98px) {
-  .rp-widget-panel[data-kind='canvas'] {
-    --rp-widget-body-limit: min(60dvh, 30 * var(--rp-space-4));
-  }
-  .rp-widget-panel[data-kind='gallery'] > .rp-widget-body {
-    max-block-size: 28dvh;
-    padding-block-end: var(--rp-space-4);
-  }
+.rp-floating-panel.rp-widget-preview .rp-widget-body {
+  margin-inline: calc(0px - max(var(--rp-sidebar-padding), var(--rp-sortable-gap) + var(--rp-focus-width)));
 }
-
-.rp-widget-canvas > .rp-widget-panel {
-  background: var(--rp-fill);
-  border: 1px solid var(--rp-line);
-  border-radius: var(--rp-r-lg);
-  padding: 0;
+.rp-widget-panel[data-kind='canvas'] .rp-widget-body-content {
+  padding-block-start: calc(var(--rp-sortable-gap) + var(--rp-focus-width));
+  padding-inline: max(var(--rp-sidebar-padding), var(--rp-sortable-gap) + var(--rp-focus-width));
 }
-.rp-widget-canvas .rp-widget-body {
+.rp-widget-preview-space {
+  padding: var(--rp-space-3);
+}
+.rp-widget-panel[data-kind='gallery'] > .rp-widget-body {
   scrollbar-gutter: auto;
 }
-.rp-widget-canvas .rp-widget-body-content {
-  padding-block: var(--rp-space-4);
+.rp-widget-panel[data-kind='gallery'][data-more] > .rp-widget-body {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--rp-space-4)), transparent);
+}
+
+.rp-floating-panel.rp-widget-preview {
+  inline-size: var(--rp-panel-width);
+  max-block-size: none;
+  margin: 0;
+  --rp-sortable-gap: calc((var(--rp-space-2) + var(--rp-space-half)) / var(--rp-preview-scale));
 }
 .rp-widget-inspector {
-  border-inline-start: 1px solid var(--rp-line);
-  padding-inline-start: var(--rp-space-4);
+  border-block-start: 1px solid var(--rp-line);
+  padding-block-start: var(--rp-space-4);
 }
-@media (max-width: 1023.98px) {
+@container rp-widget-editor (width >= 624px) {
+  .rp-widget-editor-grid {
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-rows: min-content 1fr;
+  }
+  .rp-widget-gallery {
+    grid-row: 1 / 3;
+  }
   .rp-widget-inspector {
-    border-inline-start: 0;
-    border-block-start: 1px solid var(--rp-line);
-    padding-inline-start: 0;
-    padding-block-start: var(--rp-space-4);
+    grid-column: 2;
+    border-block-start: 0;
+    padding-block-start: 0;
+    border-inline-start: 1px solid var(--rp-line);
+    padding-inline-start: var(--rp-space-4);
+  }
+  .rp-widget-editor-grid[data-three-columns] {
+    grid-template-columns: 320px minmax(0, var(--rp-panel-width)) minmax(240px, 1fr);
+    grid-template-rows: auto;
+  }
+  .rp-widget-editor-grid[data-three-columns] > .rp-widget-gallery {
+    grid-row: auto;
+  }
+  .rp-widget-editor-grid[data-three-columns] > .rp-widget-inspector {
+    grid-column: 3;
+  }
+  .rp-widget-gallery-list > .rp-widget-body-content {
+    flex-direction: column;
+  }
+  .rp-widget-gallery-list .rp-widget-gallery-tile {
+    flex-basis: auto;
+    min-inline-size: 0;
+  }
+  .rp-widget-panel[data-kind='gallery'] > .rp-widget-body {
+    overflow: visible;
+  }
+  .rp-widget-editor-grid[data-three-columns] > .rp-widget-canvas,
+  .rp-widget-editor-grid[data-three-columns] > .rp-widget-inspector {
+    position: sticky;
+    inset-block-start: 0;
   }
 }
 .rp-widget-body-content .rp-kv .k,
@@ -182,33 +198,105 @@
   overflow-wrap: normal;
   white-space: normal;
 }
-/* Docked: the sidebar's last section, under a divider at its foot, as the backend indicator sits on main. It keeps
-   its height while the links scroll above it, and its list scrolls within, up to 45% of the sidebar. */
+/* Docked widgets form the sidebar's last group; links and widgets scroll independently. */
 .rp-side-dock {
+  position: relative;
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: var(--rp-space-2);
   min-block-size: 0;
   max-block-size: 45%;
-  margin-block-start: var(--rp-space-2);
+  margin-block-start: var(--rp-space-4);
+  margin-inline-end: calc(var(--rp-sidebar-inset-end) - var(--rp-sidebar-padding));
+  padding-inline: var(--rp-space-3) var(--rp-space-2);
+}
+.rp-side-dock > .rp-widget-header {
+  flex: none;
+  cursor: default;
+  padding-inline: 0;
+}
+.rp-dock-title {
+  margin: 0;
+  font: inherit;
+}
+.rp-side-dock .rp-widget-actions {
+  gap: 0;
+  margin-inline-end: calc(0px - var(--rp-space-2));
+}
+.rp-side-dock .rp-widget-actions .rp-btn.icon {
+  inline-size: calc(var(--rp-space-2h) + var(--rp-space-2) * 2);
+  color: inherit;
+}
+.rp-side-dock .rp-widget-actions svg {
+  inline-size: var(--rp-space-2h);
+  block-size: var(--rp-space-2h);
+}
+.rp-side-dock .rp-widget-collapse[aria-expanded='false'] > svg {
+  rotate: calc(-90deg * var(--rp-dir));
+}
+.rp-side-dock .rp-widget-body-content {
+  padding-block-start: var(--rp-space-2);
+  inline-size: var(--rp-sidebar-content-width);
+  padding-inline: 0;
+}
+.rp-side-dock .rp-widget-cell[data-size='small'] {
+  grid-column: 1 / -1;
+}
+.rp-side-dock .rp-kv .v {
+  text-align: end;
+}
+.rp-side-dock .rp-legend {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--rp-space-2);
+}
+.rp-side-dock .rp-legend b {
+  margin-inline-start: auto;
+}
+/* The mode action has no room beside the full-width choice: it takes its own row at the same width, label centred. */
+.rp-side-dock .rp-segfit + .rp-btn,
+.rp-side-dock .rp-segfit + .rp-tipwrap > .rp-btn {
+  flex: 1 1 100%;
+  justify-content: center;
 }
 /* The panel's list scrolls into the inset of its panel, sheet or sidebar, as the sidebar's links do, so its
    scrollbar sits there and the content keeps the header's inset. */
-:is(.rp-floating-panel, .rp-side-dock, .rp-drawer) .rp-widget-body {
+:is(.rp-floating-panel, .rp-drawer) .rp-widget-body {
   margin-inline: calc(0px - var(--rp-sidebar-padding));
 }
-/* The divider is the section's height handle; a set height still leaves the links a fifth of the sidebar. */
+.rp-side-dock .rp-widget-body {
+  margin-inline-end: calc(0px - var(--rp-space-2) - var(--rp-sidebar-inset-end));
+}
+/* The group boundary is the height handle; a set height still leaves the links a fifth of the sidebar. */
 .rp-side-dock[data-sized] {
   block-size: var(--rp-dock-height);
   max-block-size: 80%;
 }
 .rp-dock-edge {
-  position: relative;
-  flex: none;
+  position: absolute;
+  inset-block-start: calc(0px - var(--rp-space-4));
+  inset-inline: 0;
+  block-size: var(--rp-space-4);
 }
 .rp-dock-edge > .rp-panel-resize {
-  inset-block-start: calc(0px - var(--rp-space-1));
+  inset: 0;
+  block-size: 100%;
+}
+.rp-dock-edge > .rp-panel-resize::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--rp-space-3) var(--rp-space-2);
+  inset-block-start: 50%;
+  border-block-start: 1px solid transparent;
+}
+.rp-dock-edge > .rp-panel-resize:focus-visible::after {
+  border-color: var(--rp-accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  /* stylelint-disable-next-line selector-pseudo-class-disallowed-list -- guarded by the media query above */
+  .rp-dock-edge > .rp-panel-resize:hover::after {
+    border-color: var(--rp-accent);
+  }
 }
 .rp-side-dock > .rp-widget-panel {
   flex: 1 1 auto;
@@ -219,6 +307,7 @@
   height: auto;
   min-height: var(--rp-control);
   padding-block: var(--rp-space-1);
+  padding-inline: 0;
   white-space: normal;
   text-align: start;
 }

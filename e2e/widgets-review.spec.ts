@@ -30,7 +30,12 @@ test('metric forms change the renderer without acquiring history for key-value c
   await editPanel(page);
   const dialog = page.getByRole('dialog', {name: 'Edit widgets'});
   await dialog.getByRole('radio', {name: 'Sparkline', exact: true}).click();
-  await expect(dialog.locator('.rp-widget-canvas .rp-compact-chart svg').first()).toBeVisible();
+  const preview = dialog.locator('.rp-widget-canvas');
+  await expect(preview.locator('.rp-compact-chart')).toBeVisible();
+  await expect(preview.locator('.rp-kv')).toHaveCount(0);
+  // The canvas uses cached live readings, not gallery samples; an uncharted key-value card has no history to draw.
+  await expect(preview.locator('.rp-compact-chart svg')).toHaveCount(0);
+  expect(backend.requests.filter(request => /traffic\/history/.test(request.url()))).toHaveLength(0);
   await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(panel(page).locator('.rp-compact-chart svg').first()).toBeVisible();
 });

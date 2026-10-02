@@ -11,26 +11,28 @@ export function WidgetContent({
   item,
   preview = false,
   dashboard = false,
+  docked = false,
   sample = false,
   onChange
 }: {
   item: Widget;
   preview?: boolean;
   dashboard?: boolean;
+  docked?: boolean;
   sample?: boolean;
   onChange?: (item: Widget) => void;
 }) {
   const inherited = useContext(ResourcePreview);
   const [ref, visible] = useNearViewport(undefined, 0);
   return (
-    <div ref={ref} className="rp-module-content" data-size={item.size}>
+    <div ref={ref} className="rp-module-content" data-size={item.size} inert={preview || inherited || sample}>
       <ResourcePreview value={preview || inherited || !visible}>
         {sample ? (
           <SamplePreview id={item.id}>
-            <Content item={item} preview dashboard={dashboard} sample />
+            <Content item={item} dashboard={dashboard} docked={docked} sample />
           </SamplePreview>
         ) : (
-          <Content item={item} preview={preview || inherited || !visible} dashboard={dashboard} onChange={onChange} />
+          <Content item={item} dashboard={dashboard} docked={docked} onChange={onChange} />
         )}
       </ResourcePreview>
     </div>
@@ -38,14 +40,14 @@ export function WidgetContent({
 }
 function Content({
   item,
-  preview,
   dashboard,
+  docked,
   sample = false,
   onChange
 }: {
   item: Widget;
-  preview: boolean;
   dashboard: boolean;
+  docked: boolean;
   sample?: boolean;
   onChange?: (item: Widget) => void;
 }) {
@@ -56,10 +58,12 @@ function Content({
   return (
     <WidgetSection
       label={t(registry[item.id].label)}
-      hideLabel={dashboard || item.size === 'small' || singleMemory || ['connections', 'cpu', 'global', 'group', 'divider'].includes(item.id)}
+      hideLabel={
+        dashboard || item.size === 'small' || singleMemory || ['connections', 'cpu', 'global', 'group'].includes(item.id) || (item.id === 'divider' && !sample)
+      }
     >
       {sample || available(item.id, capabilities) ? (
-        <Contents item={item} preview={preview} dashboard={dashboard} onChange={onChange} />
+        <Contents item={item} dashboard={dashboard} docked={docked} onChange={onChange} />
       ) : (
         <span className="rp-label">{t(capabilities ? 'widgets.unavailable' : 'ui.loading')}</span>
       )}

@@ -143,8 +143,8 @@ section:not(:first-child) > .rp-sec-h {
   }
 }
 .rp-overlay-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: var(--rp-scrollbar);
+  height: var(--rp-scrollbar);
 }
 .rp-overlay-scroll::-webkit-scrollbar-button {
   display: none;

@@ -31,13 +31,13 @@ export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
 }
 export function Contents({
   item,
-  preview = false,
   dashboard = false,
+  docked = false,
   onChange
 }: {
   item: Widget;
-  preview?: boolean;
   dashboard?: boolean;
+  docked?: boolean;
   onChange?: (item: Widget) => void;
 }) {
   const form = canonicalForm(item, dashboard ? 'dashboard' : 'panel');
@@ -59,7 +59,7 @@ export function Contents({
       return <OutboundWidget item={item} />;
     case 'global':
     case 'mode':
-      return <ModeWidget preview={preview} targetOnly={item.id === 'global'} />;
+      return <ModeWidget targetOnly={item.id === 'global'} docked={docked} />;
     case 'latency':
       return <CurrentLatency item={item} dashboard={dashboard} onChange={onChange} />;
     case 'nodeLatency':
@@ -74,7 +74,7 @@ export function Contents({
     case 'dnsAnswers':
       return <Dns item={item} />;
     case 'group':
-      return <GroupWidget item={item} preview={preview} onChange={onChange} />;
+      return <GroupWidget item={item} onChange={onChange} />;
     case 'status':
       return <StatusWidget item={item} />;
     case 'notices':

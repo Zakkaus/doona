@@ -1,6 +1,8 @@
-import type {ComponentProps} from 'react';
+import {createContext, useContext, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
 import {AreaChart, Legend, Spark} from './Charts';
+
+export const WidgetChartInset = createContext(2);
 
 // A subpixel time interval cannot show two distinct samples in a narrow plot; retain its latest reading.
 export function compactSamples(timestamps: number[], minimumInterval = 1000): number[] {
@@ -14,6 +16,7 @@ export function compactSamples(timestamps: number[], minimumInterval = 1000): nu
 // Each sparkline's tip lists every series at the hovered time, as the full chart's does.
 export function WidgetAreaChart({size, ...props}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'}) {
   const t = useT();
+  const inset = useContext(WidgetChartInset);
   const legend = <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} />;
   if (size === 'normal')
     return (
@@ -37,7 +40,7 @@ export function WidgetAreaChart({size, ...props}: ComponentProps<typeof AreaChar
           values={indices.map(index => series.values[index])}
           timestamps={indices.map(index => props.timestamps[index])}
           color={series.color}
-          inset={2}
+          inset={inset}
           height={size === 'widget' ? 64 : 32}
           fmt={props.fmt}
           locale={props.locale}
