@@ -494,6 +494,7 @@ test('new group validation refusal retains the dialog and its name without a suc
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('retained-group');
@@ -518,7 +519,7 @@ test('main-source actions remain unavailable while display actions stay availabl
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
-  await expect(page.getByRole('menuitem', {name: 'New group…', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('menuitem', {name: 'Add to group', exact: true})).toHaveCount(0);
   await expect(page.getByRole('menuitem', {name: 'Change flag…', exact: true})).toBeVisible();
 });
 

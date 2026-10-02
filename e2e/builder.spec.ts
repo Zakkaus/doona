@@ -7,7 +7,8 @@ test('a node joins an existing group or a new one through the name filter', asyn
     .filter({has: page.getByRole('rowheader', {name: 'sg-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
-  const menu = page.getByRole('menu');
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+  const menu = page.getByRole('menu', {name: 'Add to group', exact: true});
   await expect(menu.getByRole('menuitem', {name: /^auto/})).toHaveCount(0);
   await menu.getByRole('menuitem', {name: /^gaming/}).click();
   await page.getByRole('dialog', {name: 'Edit group gaming'}).getByRole('button', {name: 'Apply', exact: true}).click();
@@ -18,6 +19,7 @@ test('a node joins an existing group or a new one through the name filter', asyn
     .filter({has: page.getByRole('rowheader', {name: 'us-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('visual-travel');
@@ -39,8 +41,8 @@ test('a group card edits its policy and filters in the main source', async ({pag
   await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('jp-01');
   await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-02');
   const policy = dialog.getByRole('button', {name: /Selection policy/});
-  // A policy the picker does not offer stays selected as written.
-  await expect(policy).toContainText('min_last_delay');
+  // The native value stays selected under its translated label.
+  await expect(policy).toContainText('Fastest on average');
   await policy.click();
   await expect(page.getByRole('option', {name: /^First available/})).toContainText('Uses the current node until it fails, then the next in order');
   await page.getByRole('option', {name: /^First available/}).click();
@@ -60,7 +62,7 @@ test('editing only filters preserves the native policy spelling', async ({page})
   await page.getByRole('region', {name: 'gaming'}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await dialog.getByRole('button', {name: 'Advanced', exact: true}).click();
-  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('min_last_delay');
+  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
   await dialog.getByRole('button', {name: 'Remove jp-01', exact: true}).click();
   await dialog.getByRole('button', {name: 'Remove hk-02', exact: true}).click();
   await dialog.getByRole('button', {name: 'Nodes', exact: true}).click();

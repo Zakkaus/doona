@@ -92,6 +92,7 @@ test('Nodes creates a group through visual AND conditions', async ({page}) => {
     .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
     .getByRole('button', {name: 'Node actions', exact: true})
     .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('visual');

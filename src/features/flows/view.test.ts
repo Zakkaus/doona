@@ -78,8 +78,6 @@ it('preserves input identifiers that collide with translated enum values in ever
   }
 });
 
-// honk treats these spellings alike (urltest, min_moving_avg, min_avg10, min_last_delay), so the map names the
-// behaviour as the policy cards do.
 it('names a policy by what it does, whatever the native spelling', async () => {
   const api = createMockApi();
   const groups = await api.groups();

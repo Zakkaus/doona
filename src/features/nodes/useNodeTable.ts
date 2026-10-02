@@ -14,7 +14,6 @@ import {compareNames} from '../../i18n/format';
 import {longList} from '../../ui/longList';
 import type {SearchSection} from '../../ui/SearchSelect';
 import {probeToast} from '../shared/probe';
-import {policyLabel} from '../shared/policyText';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {
@@ -115,18 +114,14 @@ export function useNodeTable(input: NodeTableInput) {
           },
           error => toastFailure(error, t, t('nodes.probeError', {name: node.name}))
         ),
-      menu: () => [
-        ...entries
-          .filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name))
-          .map(entry => ({id: entry.name, label: entry.name, desc: policyLabel(entry.policy, t)})),
-        ...(canCreate ? [{id: '/new', label: t('nodes.newGroup')}] : [])
-      ],
+      menu: () =>
+        entries.filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name)).map(entry => ({id: entry.name, label: entry.name})),
       join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, runProbe, t, entries, canCreate, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
+    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -154,6 +149,7 @@ export function useNodeTable(input: NodeTableInput) {
     busy: input.busy,
     writable: source.writable,
     canJoin: canCreate || entries.length > 0,
+    canCreate,
     sourceTip: source.error ? errorText(source.error, t) : undefined,
     clearNodes: selectedNodes
       ? () => {
@@ -180,7 +176,7 @@ export type NodeTableView = {
     removeLabel: string;
     canProbe: boolean;
     probe: () => void;
-    menu: () => Array<{id: string; label: string; desc?: string}>;
+    menu: () => Array<{id: string; label: string}>;
     join: (key: string) => void;
     removable: boolean;
     remove: () => void;
@@ -211,6 +207,7 @@ export type NodeTableView = {
   busy: boolean;
   writable: boolean;
   canJoin: boolean;
+  canCreate: boolean;
   sourceTip?: string;
   onAdd: () => void;
   clearNodes: (() => void) | null;
