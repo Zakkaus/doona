@@ -16,8 +16,10 @@ import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
 import {parseTraceLink, ruleHref} from '../shared/link';
+import {traceInput} from './traceInput';
 const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
-type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port'; key: Key};
+const isDscp = (value: string) => /^\d+$/.test(value) && Number(value) >= 0 && Number(value) <= 63;
+type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port' | 'dscp'; key: Key};
 export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 const blankForm = {
@@ -28,6 +30,7 @@ const blankForm = {
   src_ip: '',
   src_port: '',
   pname: '',
+  dscp: '',
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };
@@ -81,11 +84,13 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
             ? {field: 'src_ip', key: 'ui.invalidIp'}
             : form.src_port.trim() && !isPort(form.src_port)
               ? {field: 'src_port', key: 'rule.invalidPort'}
-              : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
-                ? {field: 'domain', key: 'rule.invalidLive'}
-                : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
-                  ? {field: 'dst_ip', key: 'rule.invalidLive'}
-                  : null;
+              : form.dscp.trim() && !isDscp(form.dscp)
+                ? {field: 'dscp', key: 'rule.invalidDscp'}
+                : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
+                  ? {field: 'domain', key: 'rule.invalidLive'}
+                  : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
+                    ? {field: 'dst_ip', key: 'rule.invalidLive'}
+                    : null;
   const touched = (Object.keys(blankForm) as Array<keyof typeof blankForm>).some(key => key !== 'resolve' && key !== 'network' && form[key] !== blankForm[key]);
   const shown = touched ? invalid : null;
   const resource = capabilities.data?.resources.routing_trace;
@@ -105,18 +110,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const canSubmit = !invalid && available && modes.includes(resolve);
   const submit = useCallback(async () => {
     if (busy || !canSubmit) return;
-    // `invalid` has already refused anything that is not an IP literal.
-    const address = (value: string) => ipLiteral(value)!;
-    // One of the two targets is always present; the address rides along with a domain when both are given.
-    const input: RoutingTraceRequest['input'] = {
-      network: form.network,
-      dst_port: Number(form.dst_port),
-      ...(form.domain.trim() ? {domain: form.domain.trim()} : {dst_ip: address(form.dst_ip)})
-    };
-    if (form.domain.trim() && form.dst_ip.trim()) input.dst_ip = address(form.dst_ip);
-    if (form.src_ip.trim()) input.src_ip = address(form.src_ip);
-    if (form.src_port.trim()) input.src_port = Number(form.src_port);
-    if (form.pname.trim()) input.pname = form.pname.trim();
+    const input = traceInput(form);
     const traced = await run('trace', signal =>
       routingTrace(
         {
@@ -191,9 +185,10 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
       dst_ip: shown?.field === 'dst_ip' ? t(shown.key) : undefined,
       dst_port: shown?.field === 'dst_port' ? t(shown.key) : undefined,
       src_ip: shown?.field === 'src_ip' ? t(shown.key) : undefined,
-      src_port: shown?.field === 'src_port' ? t(shown.key) : undefined
+      src_port: shown?.field === 'src_port' ? t(shown.key) : undefined,
+      dscp: shown?.field === 'dscp' ? t(shown.key) : undefined
     },
-    advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port',
+    advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port' || invalid?.field === 'dscp',
     setAdvanced,
     ipOnly: !invalid && !!form.dst_ip.trim() && !form.domain.trim(),
     result: result && {...result, evaluations: evaluations.map(({seed, ...evaluation}) => ({...evaluation, canAdd: quick.canAdd(seed)}))},

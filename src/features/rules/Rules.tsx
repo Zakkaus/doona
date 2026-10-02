@@ -130,6 +130,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
             <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
+            <TextField label={t('rule.dscp')} value={form.dscp} onChange={dscp => setForm({...form, dscp})} error={trace.errors.dscp} />
           </div>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
