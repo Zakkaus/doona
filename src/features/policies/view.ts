@@ -12,7 +12,7 @@ import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
 import {within} from '../../shell/route';
-const units: Record<string, Key> = {check_interval: 'policy.cfg.seconds', idle_timeout: 'policy.cfg.seconds', tolerance: 'policy.cfg.millis'};
+const units: Record<string, Key> = {check_interval: 'ui.seconds', idle_timeout: 'ui.seconds', tolerance: 'ui.latency'};
 // Known fields get a label and a unit; anything the contract adds later shows its raw name.
 export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
   return Object.entries(group.config)

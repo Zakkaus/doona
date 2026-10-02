@@ -53,7 +53,7 @@ export const registry = {
   upload: metric('ui.upload', 'runtime'),
   latency: {...list('act.latency', 'nodes'), sizes: ['medium']},
   history: metric('act.traffic', 'runtime'),
-  nodeLatency: {...list('dashboard.nodeLatency', 'nodes'), forms: ['dots', 'ranked'], compact: ['dots', 'ranked']},
+  nodeLatency: {...list('ui.nodeLatency', 'nodes'), forms: ['dots', 'ranked'], compact: ['dots', 'ranked']},
   sourceHealth: {...list('dashboard.sourceHealth', 'providers'), sizes: ['medium']},
   connectionOutbounds: share('dashboard.connectionOutbounds', 'connections'),
   connectionNetworks: {...share('dashboard.connectionNetworks', 'connections'), sizes: ['medium']},
