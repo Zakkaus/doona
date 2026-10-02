@@ -4,6 +4,7 @@ import {parse} from 'yaml';
 
 const load = name => parse(readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), 'utf8'));
 const release = load('release');
+const check = load('check');
 const uses = (job, name) => job.steps.find(step => step.uses?.startsWith(`${name}@`));
 
 it('keeps the release write token away from dependency and build steps', () => {
@@ -27,4 +28,10 @@ it('builds the release once and runs the browser tests against that build', () =
 it.each(['VERSION', 'PRERELEASE', 'ARCH_PRERELEASE', 'NPM', 'PACKAGE_RELEASE'])('hands %s from the build job to the release job', key => {
   expect(release.jobs.build.outputs[key]).toBe(`\${{ steps.version.outputs.${key} }}`);
   expect(release.jobs.release.env[key]).toBe(`\${{ needs.build.outputs.${key} }}`);
+});
+
+it('runs every browser test in every shard', () => {
+  const shard = check.jobs.e2e.steps.find(step => step.name === 'Run the browser shard');
+  expect(shard.run).not.toMatch(/grep/);
+  expect(check.jobs.changes.outputs).toEqual({lane: '${{ steps.route.outputs.lane }}'});
 });
