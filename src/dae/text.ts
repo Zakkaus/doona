@@ -137,7 +137,9 @@ export function blockFields(text: string, block: TextBlock, tokens: TextToken[])
     if (token.parens === 0 && (token.kind === 'comment' || (field && text.slice(field.valueTo, token.from).includes('\n')))) field = undefined;
     if (token.depth !== block.depth + 1 || token.kind === 'comment') continue;
     const next = tokens[i + 1];
-    if (token.parens === 0 && (token.kind === 'text' || token.kind === 'quoted') && next && text.slice(next.from, next.to) === ':') {
+    // Adjacent tokens and comma-separated items belong to the value, including address and URL colons.
+    const startsField = !field || (field.valueTo > field.valueFrom && token.from > field.valueTo && text.slice(tokens[i - 1].from, tokens[i - 1].to) !== ',');
+    if (startsField && token.parens === 0 && (token.kind === 'text' || token.kind === 'quoted') && next && text.slice(next.from, next.to) === ':') {
       field = {name: unquote(raw), from: token.from, to: next.to, valueFrom: next.to, valueTo: next.to, value: ''};
       fields.push(field);
       i++;

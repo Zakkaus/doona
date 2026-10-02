@@ -41,6 +41,20 @@ beforeEach(async () => {
   editor.apply.mockReset().mockResolvedValue({result: {}});
 });
 
+it.each([
+  ['bootstrap_resolver', '8.8.8.8:53', '1.1.1.1:53'],
+  ['bootstrap_resolver', '[2001:4860:4860::8888]:53', '[2606:4700:4700::1111]:53'],
+  ['tcp_check_url', 'http://example.com:80/check, https://example.org/check', 'https://example.net/check'],
+  ['udp_check_dns', 'dns.google.com:53, 8.8.8.8:53, 2001:4860:4860::8888', '1.1.1.1:53']
+])('reads and replaces the whole bare %s value', async (key, stored, next) => {
+  const source = config.data!.sources[0];
+  source.content = `global { ${key}: ${stored} mptcp: false # keep\n}\n`;
+  expect(field(key).value).toBe(stored);
+  field(key).change(next);
+  await read().save();
+  expect(editor.apply).toHaveBeenCalledWith(source, source.content.replace(stored, `'${next}'`));
+});
+
 it('writes an unrelated setting while preserving an accepted legacy quoted list', async () => {
   const source = config.data!.sources[0];
   source.content = "global {\n    udp_check_dns: 'dns.google.com:53,8.8.8.8,2001:4860:4860::8888'\n}\nrouting { fallback: direct }\n";

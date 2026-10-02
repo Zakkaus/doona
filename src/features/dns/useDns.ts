@@ -14,7 +14,8 @@ import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText} from '../../api/error';
 import {wait} from '../../api/wait';
 import {cacheCard, cacheCardState} from './cache';
-import {dnsMatcher, dnsPattern, matchKinds, matchListMax, type MatchKind} from './match';
+import {dnsPattern, matchKinds, matchListMax, type MatchKind} from './match';
+import {useCacheMatches} from './useCacheMatches';
 import {sectionSourceHref} from '../shared/link';
 import {useQuickRule} from '../shared/useQuickRule';
 
@@ -140,18 +141,14 @@ export function useDnsCacheTab(domain: string) {
   useLinked(domain, setMatchText);
   const types = [...new Set([...(dns.capabilities.data?.resources.dns_query.record_types ?? []), ...(dns.cache.data?.entries ?? []).map(entry => entry.type)])];
   const pattern = useMemo(() => ({kind: matchKind, text: matchText}), [matchKind, matchText]);
-  // The cache is matched once typing pauses, so a slow regular expression does not run on every keystroke.
+  // The cache is matched once typing pauses; regex execution stays off the rendering thread.
   const settled = useDebounced(pattern, 250);
   const settling = settled !== pattern;
-  const matcher = useMemo(() => dnsMatcher(settled.kind, settled.text), [settled]);
   const entries = dns.cache.data?.entries;
   // Every listed entry the pattern and type pick, whatever the table's own filter shows.
   // An exact name goes in one request; anything else deletes the listed entries one by one.
   const byName = matchKind === 'full' && !!matchText.trim() && view.deleteBy.name;
-  const matched = useMemo(
-    () => (matcher ? (entries ?? []).filter(entry => (matchType === 'all' || entry.type === matchType) && matcher(entry.domain)) : []),
-    [entries, matcher, matchType]
-  );
+  const {matches: matched, error: matchError, pending: matching} = useCacheMatches(entries, settled, matchType);
   const {remove: removeEntry} = dns;
   // Stable, so the cache table's columns, which call it, stay the same across polls.
   const remove = useCallback(
@@ -185,13 +182,22 @@ export function useDnsCacheTab(domain: string) {
     },
     matchKinds: matchKinds.map(kind => ({id: kind.id, label: t(kind.label)})),
     matchTypes: [{id: 'all', label: t('dns.allTypes')}, ...types.map(id => ({id, label: id}))],
-    matchError: matcher ? undefined : t(settled.kind === 'regex' ? 'dns.invalidRegex' : 'dns.invalidName'),
+    matchError: matchError ? t(matchError) : undefined,
     // Without per-entry deletion, only an exact name can go.
     matchReason: !view.deleteBy.entry && view.deleteBy.name && !byName && !dns.busy ? t('dns.matchNameOnly') : null,
     matchPending: dns.busy === 'delete-match',
     // An empty pattern deletes a whole record type, so it needs one.
-    matchDisabled: !!dns.busy || settling || !matcher || !matched.length || (!matchText.trim() && matchType === 'all') || !(view.deleteBy.entry || byName),
-    matchConfirmation: t('dns.deleteMatchingConfirm', {n: matched.length}),
+    matchDisabled:
+      !!dns.busy ||
+      settling ||
+      matching ||
+      !!matchError ||
+      (!byName && !matched.length) ||
+      (!matchText.trim() && matchType === 'all') ||
+      !(view.deleteBy.entry || byName),
+    matchConfirmation: byName
+      ? t('dns.deleteNameConfirm', {name: matchText.trim(), type: matchType === 'all' ? t('dns.allTypes') : matchType})
+      : t('dns.deleteMatchingConfirm', {n: matched.length}),
     // The entries the count above is of, as far as the confirmation lists them.
     matchListed: matched.slice(0, matchListMax),
     matchMore: matched.length > matchListMax ? t('dns.matchMore', {n: matched.length - matchListMax}) : null,
