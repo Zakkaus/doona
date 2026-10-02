@@ -78,9 +78,10 @@ test('phone logs keep the message visible and reveal its full text and fields', 
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/logs');
   const grid = page.getByRole('grid', {name: 'Logs', exact: true});
-  // The activity heatmap sits above the list; on a phone the list starts below it.
-  await grid.scrollIntoViewIfNeeded();
   await expect(grid.locator('[role=row][data-key]').first()).toBeVisible();
+  // The activity heatmap mounts with the first record and pushes the list down; scroll once it has, or the list
+  // ends up half below the viewport.
+  await grid.scrollIntoViewIfNeeded();
   await scrollTableToEnd(grid);
   await expect(grid.getByRole('columnheader', {name: /^Message /})).toBeInViewport({ratio: 1});
   // The truncated cell carries the tooltip once it has measured its overflow.
