@@ -1,12 +1,10 @@
 import {translate, type Translator} from '../src/i18n';
-import {test, type Page} from '@playwright/test';
-import {createMockApi} from '../src/api/mock';
-import {ApiError} from '../src/api/error';
+import type {Page} from '@playwright/test';
 import {allGroupNames} from '../src/dae/sources';
 import {writeTemplate} from '../src/dae/setup';
 import {scanConfig} from '../src/dae/text';
 import legacy from '../src/dae/templates.legacy.json' with {type: 'json'};
-import {box, expect, loadCatalogues} from './fixtures';
+import {box, expect, test, mockBackend, loadCatalogues} from './fixtures';
 
 const templateShots = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_TEMPLATE_SHOTS;
 const t: Translator = (key, params) => translate('en', key, params);
@@ -16,49 +14,8 @@ test.use({viewport: {width: 1440, height: 1000}});
 
 // The demo backend served over HTTP, so a spec can change its files as another client would.
 async function backend(page: Page, lang = 'en') {
-  const api = createMockApi();
-  const capabilities = await api.capabilities();
-  capabilities.resources.events.available = false;
-  await page.addInitScript(language => {
-    localStorage.setItem('doona-api', location.origin);
-    localStorage.setItem('doona-lang', language);
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 2, items: [], visible: false}));
-  }, lang);
-  const reads: Record<string, () => Promise<unknown>> = {
-    capabilities: async () => capabilities,
-    version: () => api.version(),
-    config: () => api.config(),
-    rules: () => api.rules(),
-    'dns/rules': () => api.dnsRules(),
-    groups: () => api.groups(),
-    nodes: () => api.nodes({limit: 1000}),
-    providers: () => api.providers({limit: 1000}),
-    flows: () => api.flows({detail: 'full', limit: 1000}),
-    connections: () => api.connections({detail: 'full', limit: 1000}),
-    runtime: () => api.runtime(),
-    geodata: () => api.geodata(),
-    'runtime/settings': () => api.runtimeSettings(),
-    'runtime/outbounds': () => api.runtimeOutbounds()
-  };
-  await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname.replace('/api/v1/', '');
-    try {
-      if (reads[path]) return await route.fulfill({json: await reads[path]()});
-      if (path === 'config/validate') return await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-      if (path.startsWith('config/sources/'))
-        return await route.fulfill({
-          json: await api.replaceConfigSource(path.split('/').pop()!, route.request().postDataJSON().content, route.request().headers()['if-match'])
-        });
-      if (path.startsWith('operations/')) return await route.fulfill({json: await api.operation(path.split('/').pop()!)});
-      throw new Error(`Unexpected request: ${route.request().method()} ${path}`);
-    } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
-      await route.fulfill({
-        status: error.status,
-        json: {request_id: 'templates-test', error: {code: error.code, message: error.message, details: error.details}}
-      });
-    }
-  });
+  const {api} = await mockBackend(page);
+  await page.addInitScript(l => localStorage.setItem('doona-lang', l), lang);
   const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!;
   // Writes the main file as another client would and waits for the reload to take it in.
   const write = async (change: (text: string) => string) => {
