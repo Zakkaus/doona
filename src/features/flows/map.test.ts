@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../api/mock';
 import type {GroupSummary} from '../../api/model';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import {flowsThrough, nodeNames, pinnedLabel, routingTree, treeIndex, treeRows} from './map';
 
 it('lays the config out as a tree and weights it with retained flows', async () => {
@@ -106,6 +107,27 @@ it('keeps one transport through a nested chain and hides a group only reached th
   expect(proxy.groups.map(group => group.name)).toEqual(['proxy', 'gaming']);
   expect(proxy.node).toBe('node:' + inner.selection.udp_member_id);
   expect(tree.outbounds.some(outbound => outbound.label === 'gaming')).toBe(rules.rules.some(rule => rule.outbound === 'gaming'));
+});
+
+it('leaves no node behind for a group hidden inside another one', async () => {
+  const api = createMockApi();
+  const [groups, nodes, rules] = await Promise.all([api.groups(), api.nodes({limit: 1000}), api.rules()]);
+  const inner = groups.find(group => group.name === 'gaming')!;
+  const picked = new Set(groups.flatMap(group => [group.selection.tcp_member_id, group.selection.udp_member_id]));
+  const [tcp, udp] = nodes.nodes.filter(node => !isBuiltinOutbound(node.name) && !picked.has(node.id));
+  // proxy follows gaming for UDP while gaming itself selects another node for TCP; no rule names gaming.
+  const nested = groups.map(group =>
+    group.name === 'proxy'
+      ? {...group, selection: {tcp_member_id: null, udp_member_id: inner.id}}
+      : group.name === 'gaming'
+        ? {...group, selection: {tcp_member_id: tcp.id, udp_member_id: udp.id}}
+        : group
+  );
+  const unused = {...rules, rules: rules.rules.filter(rule => rule.outbound !== 'gaming')};
+  const tree = routingTree([], nested, nodes.nodes, unused);
+  expect(tree.outbounds.some(outbound => outbound.label === 'gaming')).toBe(false);
+  expect(tree.nodes.map(node => node.id)).not.toContain('node:' + tcp.id);
+  expect(tree.nodes.every(node => tree.links.some(link => link.target === node.id))).toBe(true);
 });
 
 it('keeps a retained flow from an earlier generation apart from the rule that now holds its id', async () => {

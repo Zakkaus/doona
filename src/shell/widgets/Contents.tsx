@@ -364,7 +364,9 @@ function OutboundWidget({item}: {item: Widget}) {
 function Connections({item}: {item: Widget}) {
   const t = useT();
   const resource = useConnections(undefined, true, false, poll.summary);
-  const usage = useRuntimeOutbounds(item.id === 'connectionOutbounds');
+  // Connection statistics work without outbound traffic; the colours come only from a backend that has it.
+  const outboundsAvailable = useCapabilities().data?.resources.runtime_outbounds.available === true;
+  const usage = useRuntimeOutbounds(item.id === 'connectionOutbounds' && outboundsAvailable);
   const palette = usePalette();
   const rows = useMemo(() => {
     const colors = new Map(outboundUsage(usage.data).rows.map((row, i) => [row.name, outboundColor(row, i, palette)]));

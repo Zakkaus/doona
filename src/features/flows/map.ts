@@ -154,12 +154,15 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   const nested = new Set([...outboundItems.values()].flatMap(outbound => outbound.groups.slice(1).map(group => group.name)));
   const outbounds = [...outboundItems.values()].filter(outbound => outbound.count || referenced.has(outbound.id) || !nested.has(outbound.label));
   const kept = new Set(outbounds.map(outbound => outbound.id));
+  const keptLinks = [...links.values()].filter(link => kept.has(link.source) || kept.has(link.target));
+  // A hidden nested group's own node goes with it, unless a shown outbound reaches the node as well.
+  const reached = new Set(keptLinks.map(link => link.target));
   return {
     by,
     leaves: [...leafItems.values()],
     outbounds,
-    nodes: [...nodeItems.values()],
-    links: [...links.values()].filter(link => kept.has(link.source) || kept.has(link.target))
+    nodes: [...nodeItems.values()].filter(node => reached.has(node.id)),
+    links: keptLinks
   };
 }
 

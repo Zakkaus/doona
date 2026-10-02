@@ -71,6 +71,7 @@ export function GeodataSettingsCard() {
                   />
                 )}
               </div>
+              {m.route.group !== null && <ErrorMessage error={m.route.groupsError} onRetry={m.route.retryGroups} />}
             </div>
           )}
           {m.checksum && (
@@ -111,6 +112,9 @@ export function GeodataSettingsCard() {
                     {t('settings.geodataUpdateNow')}
                   </Button>
                 )}
+                <Button isDisabled={m.busy} onPress={m.reset.ask}>
+                  {t('settings.geodataReset')}
+                </Button>
               </div>
             </ActionHelp>
           </div>
@@ -124,6 +128,18 @@ export function GeodataSettingsCard() {
           )}
           {m.lifecycleNote && <span className="rp-label">{m.lifecycleNote}</span>}
         </div>
+      )}
+      {m.reset.dialog && (
+        <ConfirmDialog
+          title={m.reset.dialog.title}
+          tone="accent"
+          isOpen
+          onCancel={m.reset.dialog.cancel}
+          confirmLabel={m.reset.dialog.confirm}
+          onConfirm={m.reset.dialog.save}
+        >
+          <p className="rp-label">{m.reset.dialog.help}</p>
+        </ConfirmDialog>
       )}
       {m.lacking && (
         <ConfirmDialog title={m.lacking.title} tone="accent" isOpen onCancel={m.lacking.cancel} confirmLabel={m.lacking.confirm} onConfirm={m.lacking.save}>
