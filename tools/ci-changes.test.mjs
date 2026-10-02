@@ -27,6 +27,9 @@ it.each([
   'nested/docs-like/file.md',
   '.github/workflows/check.yml',
   'package.json',
+  'src/ui/Button.tsx',
+  'src/shell/routes.ts',
+  'src/features/example.css',
   'docs-like/file.md'
 ])('requires full checks for %s', path => expect(classifyChanges(`M\0${path}\0`).lane).toBe('full'));
 
@@ -40,11 +43,7 @@ it('checks both ends of renames and copies and mixed paths', () => {
 });
 
 it.each(['', 'M\0README.md', 'M\0\0', 'R100\0README.md\0', '?\0README.md\0'])('falls back on empty or malformed diff %j', diff => {
-  expect(classifyChanges(diff)).toEqual({lane: 'full', matrix: true});
-});
-
-it.each(['src/ui/Button.tsx', 'src/shell/routes.ts', 'src/features/example.css'])('includes the matrix for %s', path => {
-  expect(classifyChanges(`R100\0${path}\0docs/guide.md\0`).matrix).toBe(true);
+  expect(classifyChanges(diff)).toEqual({lane: 'full'});
 });
 
 it('uses the event SHAs and diffs from their merge base', () => {
@@ -60,7 +59,7 @@ it('uses the event SHAs and diffs from their merge base', () => {
     ['merge-base', base, head],
     ['diff', '--name-status', '-z', '-M', ancestor, head]
   ]);
-  expect(result).toEqual({lane: 'docs', matrix: false});
+  expect(result).toEqual({lane: 'docs'});
 });
 
 it('falls back on git errors, missing event SHAs and empty output', () => {
@@ -69,9 +68,9 @@ it('falls back on git errors, missing event SHAs and empty output', () => {
     detectChanges(sha, sha, () => {
       throw new Error('diff failed');
     })
-  ).toEqual({lane: 'full', matrix: true});
-  expect(detectChanges(undefined, sha)).toEqual({lane: 'full', matrix: true});
-  expect(detectChanges(sha, sha, args => (args[0] === 'merge-base' ? sha : ''))).toEqual({lane: 'full', matrix: true});
+  ).toEqual({lane: 'full'});
+  expect(detectChanges(undefined, sha)).toEqual({lane: 'full'});
+  expect(detectChanges(sha, sha, args => (args[0] === 'merge-base' ? sha : ''))).toEqual({lane: 'full'});
 });
 
 it.each([false, true])('fetches event histories with a full-history fallback: %s', deep => {
@@ -89,7 +88,7 @@ it.each([false, true])('fetches event histories with a full-history fallback: %s
       }
       return args[0] === 'diff' ? 'M\0README.md\0' : '';
     })
-  ).toEqual({lane: 'docs', matrix: false});
+  ).toEqual({lane: 'docs'});
   expect(calls).toEqual([
     ['merge-base', base, head],
     ['fetch', '--no-tags', '--depth=64', 'origin', base, head],

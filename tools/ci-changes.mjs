@@ -2,7 +2,7 @@ import {execFileSync} from 'node:child_process';
 import {appendFileSync, readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 
-const full = {lane: 'full', matrix: true};
+const full = {lane: 'full'};
 const docs = /^(?:README(?:\.[^/]*)?\.md|CONTRIBUTING\.md|CHANGELOG\.md|LICENSE(?:\.[^/]*)?|docs\/[\s\S]+|\.github\/ISSUE_TEMPLATE\/[\s\S]+)$/;
 
 export function classifyChanges(diff) {
@@ -18,8 +18,7 @@ export function classifyChanges(diff) {
     paths.push(...changed);
   }
   return {
-    lane: paths.every(path => docs.test(path)) ? 'docs' : 'full',
-    matrix: paths.some(path => path.endsWith('.css') || /^(?:src\/ui\/|src\/shell\/)/.test(path))
+    lane: paths.every(path => docs.test(path)) ? 'docs' : 'full'
   };
 }
 
@@ -55,5 +54,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       result = full;
     }
   }
-  appendFileSync(process.env.GITHUB_OUTPUT, `lane=${result.lane}\nmatrix=${result.matrix}\n`);
+  appendFileSync(process.env.GITHUB_OUTPUT, `lane=${result.lane}\n`);
 }

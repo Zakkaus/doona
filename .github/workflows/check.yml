@@ -21,7 +21,6 @@ jobs:
     timeout-minutes: 3
     outputs:
       lane: ${{ steps.route.outputs.lane }}
-      matrix: ${{ steps.route.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: route
@@ -98,15 +97,9 @@ jobs:
         env:
           PLAYWRIGHT_VERSION: 1.63.0
       - name: Run the browser shard
-        run: |
-          if [ "$RUN_MATRIX" = true ]; then
-            pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,blob,json
-          else
-            pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,blob,json --grep-invert '@matrix'
-          fi
+        run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,blob,json
         env:
           DOONA_E2E_WEBKIT: '1'
-          RUN_MATRIX: ${{ needs.changes.outputs.matrix }}
           PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/e2e-${{ matrix.shard }}.json
       - name: Summarize the shard
         if: always()
@@ -189,7 +182,6 @@ jobs:
           const selected = lane === 'docs' ? ['check-lite'] : lane === 'full' ? ['check', 'e2e', 'merge-reports'] : [];
           const lanes = ['check-lite', 'check', 'e2e', 'merge-reports'];
           const ok = needs.changes.result === 'success' && selected.length > 0 &&
-            ['true', 'false'].includes(needs.changes.outputs.matrix) &&
             lanes.every(job => needs[job].result === (selected.includes(job) ? 'success' : 'skipped'));
           if (!ok) {
             console.error('CI lane did not complete successfully', needs);
