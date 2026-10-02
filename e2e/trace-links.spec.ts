@@ -21,7 +21,13 @@ test('optional DSCP validates the contract bounds and reaches the trace evaluato
   const source = (await api.config()).sources.find(source => source.kind === 'main')!;
   const content = source.content!.replace(/^routing\s*\{/m, 'routing {\n  dscp(0,46,63) -> direct');
   await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
-  handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
+  // Read each reply from the handler: Chromium can drop a response body before the test reads it.
+  const results: Array<Awaited<ReturnType<typeof api.routingTrace>>> = [];
+  handlers['POST routing/trace'] = async request => {
+    const result = await api.routingTrace(request.postDataJSON());
+    results.push(result);
+    return result;
+  };
   await page.goto('/#/rules?tab=trace&domain=example.org&dst_ip=198.51.100.20&dst_port=443');
   await page.getByRole('button', {name: 'Advanced', exact: true}).click();
   await page.getByRole('textbox', {name: 'Process name', exact: true}).fill('curl');
@@ -39,10 +45,10 @@ test('optional DSCP validates the contract bounds and reaches the trace evaluato
     await dscp.fill(value);
     await expect(dscp).not.toHaveAttribute('aria-invalid', 'true');
     await expect(run).toBeEnabled();
-    const response = page.waitForResponse('**/api/v1/routing/trace');
+    const count = results.length;
     await run.click();
-    const result = await (await response).json();
-    expect(result.evaluations[0]).toMatchObject(
+    await expect.poll(() => results.length).toBe(count + 1);
+    expect(results.at(-1)!.evaluations[0]).toMatchObject(
       value === '' ? {decision: 'indeterminate', missing_inputs: ['dscp']} : {decision: 'determinate', outbound: 'direct'}
     );
     const input = requests
