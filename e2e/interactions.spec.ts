@@ -1,5 +1,5 @@
 import {test as browserTest} from '@playwright/test';
-import {expect, routes, test} from './fixtures';
+import {expect, routes, test, settleFrames, box} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 
 test('Disclosure toggles with Enter and Space and keeps focus on its trigger', async ({page}) => {
@@ -138,7 +138,7 @@ test('shared controls distinguish a held press from hover without moving', async
     await expect(control).toHaveAttribute('data-pressed');
     expect(await control.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(hovered);
     // The press scales the control about its centre; nothing around it moves.
-    const pressed = (await control.boundingBox())!;
+    const pressed = await box(control);
     expect(pressed.x + pressed.width / 2).toBeCloseTo(bounds!.x + bounds!.width / 2, 0);
     expect(pressed.y + pressed.height / 2).toBeCloseTo(bounds!.y + bounds!.height / 2, 0);
     await page.mouse.move(0, 0);
@@ -227,7 +227,7 @@ test('a segmented marker inside a hidden tab panel keeps its place', async ({pag
   await page.getByRole('tab').first().click();
   await expect(by).toBeHidden();
   // The resize observer reports the hidden size before the next frame; the frame after it shows what it did.
-  await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+  await settleFrames(page);
   expect(await slider.evaluate(el => (el as HTMLElement).style.left)).toBe(left);
 });
 
@@ -237,9 +237,9 @@ test('a tile whose value links to its source answers hover as a linked card', as
   const card = page.locator('.rp-card', {has: page.getByRole('button', {name: /^Groups: /})});
   const link = card.locator('.rp-tile-val > .rp-link');
   await expect(link).toBeVisible();
-  const box = (await card.boundingBox())!;
+  const rect = await box(card);
   // The empty lower corner of the card, away from the value, still hovers the link.
-  await page.mouse.move(box.x + box.width - 12, box.y + box.height - 8);
+  await page.mouse.move(rect.x + rect.width - 12, rect.y + rect.height - 8);
   await expect(link).toHaveAttribute('data-hovered', 'true');
   const style = await link.evaluate(el => {
     const s = getComputedStyle(el);

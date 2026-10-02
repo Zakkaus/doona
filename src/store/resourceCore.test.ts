@@ -1,3 +1,4 @@
+import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
@@ -11,7 +12,7 @@ vi.mock('./events', () => ({subscribeEvents: vi.fn(() => vi.fn())}));
 const disposers: Array<() => void> = [];
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
 });
 afterEach(() => {
   disposers.splice(0).forEach(dispose => dispose());

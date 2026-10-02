@@ -1,6 +1,7 @@
 import {test as base, expect, type Download, type Locator, type Page, type Request, type Route} from '@playwright/test';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
+import {sha256} from '../src/api/hash';
 import type {OperationAccepted} from '../src/api/model';
 import {languages, loadLanguage, type Catalogue} from '../src/i18n';
 
@@ -170,6 +171,16 @@ export const setAppearance = (page: Page, lang: string, scheme: string) =>
       localStorage.setItem('doona-scheme', scheme);
     },
     {lang, scheme}
+  );
+// Waits for painted frames, two unless a count says otherwise; a frame count does not shift with machine load as a sleep does.
+export const settleFrames = (page: Page, count = 2) =>
+  page.evaluate(
+    frames =>
+      new Promise<void>(resolve => {
+        const next = (left: number) => (left ? requestAnimationFrame(() => next(left - 1)) : resolve());
+        next(frames);
+      }),
+    count
   );
 export const box = async (locator: Locator) => (await locator.boundingBox())!;
 // The sine of an element's turn. The down chevron turned to the right has -1, turned to the left 1.
@@ -346,4 +357,46 @@ export async function expectTextInside(cell: Locator) {
       return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1;
     })
   ).toBe(true);
+}
+
+// The dialog starts with no outbound, so a rule is written only after one is chosen.
+export async function pickOutbound(dialog: Locator, name: string) {
+  await dialog.getByRole('button', {name: /Outbound$/}).click();
+  await dialog.page().getByRole('option', {name, exact: true}).click();
+}
+
+export const rejectedReload = () => ({
+  operation_id: 'op-rejected',
+  kind: 'reload',
+  status: 'failed',
+  created_at: new Date().toISOString(),
+  started_at: new Date().toISOString(),
+  finished_at: new Date().toISOString(),
+  result: null,
+  error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
+});
+
+// Bare included rules need a routing section before doona can place new rules beside them.
+export function setupIncludedRouting({api, handlers}: Pick<Awaited<ReturnType<typeof mockBackend>>, 'api' | 'handlers'>, {refuseWrite = false} = {}) {
+  const wrap = (text: string) => 'routing {\n' + text + '}\n';
+  handlers['GET config'] = async () => {
+    const config = await api.config();
+    const sources = config.sources.map(async source =>
+      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
+    );
+    return {...config, sources: await Promise.all(sources)};
+  };
+  handlers['GET rules'] = async () => {
+    const list = await api.rules();
+    return {
+      ...list,
+      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
+    };
+  };
+  if (refuseWrite)
+    handlers['PUT config/sources/src-rules'] = async () => {
+      throw new ApiError(422, 'validation_failed', 'invalid', null, {
+        diagnostics: [{level: 'error', source_id: 'src-rules', line: 7, column: 1, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
+      });
+    };
 }

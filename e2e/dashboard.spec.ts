@@ -1,4 +1,4 @@
-import {test, expect} from './fixtures';
+import {test, expect, box} from './fixtures';
 import type {Page} from '@playwright/test';
 const open = (page: Page) => page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
 const tile = (page: Page, id: string) => page.locator(`.rp-dashboard-cell[data-instance="${id}"]`);
@@ -16,8 +16,8 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   await open(page);
   // A pointer drag by the handle: the gap-line indicator shows the slot, and the drop moves the card there.
   const handle = tile(page, 'download').locator('[slot="drag"]');
-  const target = (await tile(page, 'connections').boundingBox())!;
-  const start = (await handle.boundingBox())!;
+  const target = await box(tile(page, 'connections'));
+  const start = await box(handle);
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.mouse.move(start.x + 20, start.y + 20, {steps: 4});
@@ -150,9 +150,9 @@ test('packs short cards beside a tall one, ends columns level and lines columns 
     for (const key of ['left', 'right', 'top', 'bottom'] as const)
       expect(edit[id][key] - (key === 'top' || key === 'bottom' ? shift : 0), `${id} ${key}`).toBeCloseTo(live[id][key], 0);
   // The edit tools sit inside the card's header row, clear of its title.
-  const card = (await tile(page, 'dnsAnswers').locator('.rp-card').boundingBox())!;
-  const tools = (await tile(page, 'dnsAnswers').locator('.rp-dashboard-tools').boundingBox())!;
-  const title = (await tile(page, 'dnsAnswers').getByRole('heading').first().boundingBox())!;
+  const card = await box(tile(page, 'dnsAnswers').locator('.rp-card'));
+  const tools = await box(tile(page, 'dnsAnswers').locator('.rp-dashboard-tools'));
+  const title = await box(tile(page, 'dnsAnswers').getByRole('heading').first());
   expect(tools.y).toBeGreaterThanOrEqual(card.y);
   expect(tools.x + tools.width).toBeLessThanOrEqual(card.x + card.width);
   expect(title.x + title.width).toBeLessThanOrEqual(tools.x);
@@ -160,47 +160,49 @@ test('packs short cards beside a tall one, ends columns level and lines columns 
 
 // Control cards in a row share one of two layouts and one height, and end at their content, at every width.
 for (const lang of ['en', 'zh-TW'])
-  test(`control cards in a row share their layout and height ${lang}`, async ({page}) => {
-    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
-    await page.goto('/#/activity');
-    await expect(page.locator('.rp-control-card')).toHaveCount(3);
-    for (const width of [390, 768, 1024, 1280, 1440, 1920]) {
-      await page.setViewportSize({width, height: 900});
-      const cards = () =>
-        page.locator('.rp-control-card').evaluateAll(nodes =>
-          nodes.map(node => {
-            // The layout the section would choose now: inline when every card's line fits while probing.
-            const section = node.closest<HTMLElement>('.rp-dash-section')!;
-            const chosen = section.dataset.controls;
-            section.dataset.controls = 'probe';
-            const fits = [...section.querySelectorAll('.rp-control-card > .rp-row')].every(row => row.scrollWidth <= row.clientWidth + 0.5);
-            section.dataset.controls = chosen;
-            const card = node.getBoundingClientRect();
-            const row = node.querySelector(':scope > .rp-row')!;
-            const first = row.firstElementChild!.getBoundingClientRect();
-            const last = row.lastElementChild!.getBoundingClientRect();
-            const style = getComputedStyle(node);
-            const inner = card.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth);
-            const mode =
-              Math.abs(first.top + first.height / 2 - (last.top + last.height / 2)) < 4 ? 'inline' : last.top >= first.bottom - 1 ? 'stacked' : 'other';
-            return {
-              top: Math.round(card.top),
-              height: card.height,
-              mode,
-              settled: mode === (fits ? 'inline' : 'stacked'),
-              empty: inner - row.getBoundingClientRect().bottom
-            };
-          })
-        );
-      // A new width lays the cards out again in the next frame, so the layout left from the previous width is waited out.
-      await expect.poll(async () => (await cards()).every(card => card.settled && Math.abs(card.empty) <= 1), `${width}px`).toBe(true);
-      const all = await cards();
-      for (const card of all)
-        for (const other of all.filter(other => Math.abs(other.top - card.top) <= 1)) {
-          expect(other.mode, `${width}px layout`).toBe(card.mode);
-          expect(Math.abs(other.height - card.height), `${width}px height`).toBeLessThanOrEqual(1);
-        }
-      // One column keeps every card on one line, as the phone layout did.
-      if (lang === 'zh-TW' && width === 390) expect(all.map(card => card.mode)).toEqual(['inline', 'inline', 'inline']);
-    }
+  test.describe(`control cards ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    test('share their layout and height in a row', async ({page}) => {
+      await page.goto('/#/activity');
+      await expect(page.locator('.rp-control-card')).toHaveCount(3);
+      for (const width of [390, 768, 1024, 1280, 1440, 1920]) {
+        await page.setViewportSize({width, height: 900});
+        const cards = () =>
+          page.locator('.rp-control-card').evaluateAll(nodes =>
+            nodes.map(node => {
+              // The layout the section would choose now: inline when every card's line fits while probing.
+              const section = node.closest<HTMLElement>('.rp-dash-section')!;
+              const chosen = section.dataset.controls;
+              section.dataset.controls = 'probe';
+              const fits = [...section.querySelectorAll('.rp-control-card > .rp-row')].every(row => row.scrollWidth <= row.clientWidth + 0.5);
+              section.dataset.controls = chosen;
+              const card = node.getBoundingClientRect();
+              const row = node.querySelector(':scope > .rp-row')!;
+              const first = row.firstElementChild!.getBoundingClientRect();
+              const last = row.lastElementChild!.getBoundingClientRect();
+              const style = getComputedStyle(node);
+              const inner = card.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth);
+              const mode =
+                Math.abs(first.top + first.height / 2 - (last.top + last.height / 2)) < 4 ? 'inline' : last.top >= first.bottom - 1 ? 'stacked' : 'other';
+              return {
+                top: Math.round(card.top),
+                height: card.height,
+                mode,
+                settled: mode === (fits ? 'inline' : 'stacked'),
+                empty: inner - row.getBoundingClientRect().bottom
+              };
+            })
+          );
+        // A new width lays the cards out again in the next frame, so the layout left from the previous width is waited out.
+        await expect.poll(async () => (await cards()).every(card => card.settled && Math.abs(card.empty) <= 1), `${width}px`).toBe(true);
+        const all = await cards();
+        for (const card of all)
+          for (const other of all.filter(other => Math.abs(other.top - card.top) <= 1)) {
+            expect(other.mode, `${width}px layout`).toBe(card.mode);
+            expect(Math.abs(other.height - card.height), `${width}px height`).toBeLessThanOrEqual(1);
+          }
+        // One column keeps every card on one line, as the phone layout did.
+        if (lang === 'zh-TW' && width === 390) expect(all.map(card => card.mode)).toEqual(['inline', 'inline', 'inline']);
+      }
+    });
   });

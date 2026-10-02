@@ -1,4 +1,4 @@
-import {expect, manyDevices, test} from './fixtures';
+import {expect, manyDevices, test, box} from './fixtures';
 
 // Below 600px the Connections toolbar keeps the filter field and folds the secondary filters into one menu beside it
 // (src/features/connections/Connections.tsx), badged with how many are in force.
@@ -10,7 +10,7 @@ test.describe('390px', () => {
     const field = page.getByRole('searchbox', {name: 'Filter', exact: true});
     const filters = page.getByRole('button', {name: 'Filters', exact: true});
     await expect(filters).toBeVisible();
-    const [a, b] = [(await field.boundingBox())!, (await filters.boundingBox())!];
+    const [a, b] = [await box(field), await box(filters)];
     expect(Math.abs(a.y + a.height / 2 - (b.y + b.height / 2))).toBeLessThan(2);
     await expect(page.getByRole('radiogroup', {name: 'Network protocol'})).toHaveCount(0);
     await expect(page.locator('.rp-toolbar').first().locator('.rp-count')).toHaveCount(0);

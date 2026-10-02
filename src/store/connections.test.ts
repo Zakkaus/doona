@@ -1,3 +1,4 @@
+import {stubVisibleDocument} from './testHelpers';
 import {afterEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import {ApiError} from '../api/error';
@@ -194,7 +195,7 @@ afterEach(() => {
 // A connections list read through the resource store; each read watches the list, lets its fetch finish and leaves.
 function watchedLists() {
   vi.useFakeTimers();
-  vi.stubGlobal('document', Object.assign(new EventTarget(), {hidden: false}));
+  stubVisibleDocument();
   const clock = {ms: 0};
   const api = {connections: async () => snapshot(clock.ms, [['a', String(clock.ms)]])} as unknown as Api;
   const read = async (src: string) => {

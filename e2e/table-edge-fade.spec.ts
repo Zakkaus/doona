@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {expect, scrollTableToEnd, test} from './fixtures';
+import {expect, scrollTableToEnd, test, box} from './fixtures';
 
 // Removing the phone wrapper/gradient or its scroll observer must fail these rendered-edge assertions.
 const edges = (table: Locator) =>
@@ -68,11 +68,11 @@ for (const scheme of ['light', 'dark'])
         await header.scrollIntoViewIfNeeded();
         await expect(header).toHaveAccessibleName(/Actions/);
         await expect(header.locator('svg')).toHaveCount(0);
-        expect((await header.boundingBox())!.width).toBeGreaterThanOrEqual(72);
+        expect((await box(header)).width).toBeGreaterThanOrEqual(72);
         const label = header.locator('.rp-th');
         await expect(label).toHaveText('Actions');
-        expect((await label.boundingBox())!.width).toBeLessThanOrEqual(1);
-        expect((await label.boundingBox())!.height).toBeLessThanOrEqual(1);
+        expect((await box(label)).width).toBeLessThanOrEqual(1);
+        expect((await box(label)).height).toBeLessThanOrEqual(1);
       }
       await page.setViewportSize({width: 1440, height: 900});
       const label = tables

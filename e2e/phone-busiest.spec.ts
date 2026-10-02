@@ -1,12 +1,11 @@
 import type {Locator, Page} from '@playwright/test';
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, box} from './fixtures';
 
 // The traffic view's fact tiles (src/features/connections/Traffic.tsx, FactStrip's `lead`): on a phone the busiest
 // connection takes the first row alone and download and upload share the second; wide, the three share one row.
 test.use({storage: {'doona-lang': 'en'}});
 
 const tile = (page: Page, label: string) => page.locator('.rp-facts > div').filter({has: page.locator('dt', {hasText: new RegExp(`^${label}$`)})});
-const box = async (locator: Locator) => (await locator.boundingBox())!;
 const long = 'cn-gdfs-ct-01-12.upos-sz-mirrorcos.vod.bilivideo.com';
 
 // The mock's busiest connection under a host too long even for a phone's full row.

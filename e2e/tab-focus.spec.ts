@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, test, box} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 
 const phase = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_OWNER_SHOTS;
@@ -63,7 +63,7 @@ for (const width of [390, 768, 1440]) {
         const list = track.locator('.rp-tablist');
         const placeholder = Number(await list.getAttribute('data-placeholder-height'));
         expect(placeholder).toBeGreaterThan(0);
-        expect(placeholder).toBe((await list.boundingBox())!.height);
+        expect(placeholder).toBe((await box(list)).height);
         await focusEdges(page, track);
       });
       for (const route of ['activity', 'connections', 'flows', 'dns', 'policies', 'rules', 'nodes', 'config']) {

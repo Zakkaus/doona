@@ -1,7 +1,5 @@
-import {detail, expect, mockBackend, test} from './fixtures';
+import {detail, expect, mockBackend, test, rejectedReload, setupIncludedRouting} from './fixtures';
 import {createMockApi} from '../src/api/mock';
-import {ApiError} from '../src/api/error';
-import {sha256} from '../src/api/hash';
 
 type Page = import('@playwright/test').Page;
 test.use({viewport: {width: 1440, height: 900}});
@@ -259,16 +257,7 @@ test('a DNS rule written whose reload failed closes the dialog without offering 
     operation_id: 'op-rejected',
     href: '/api/v1/operations/op-rejected'
   });
-  handlers['GET operations/op-rejected'] = async () => ({
-    operation_id: 'op-rejected',
-    kind: 'reload',
-    status: 'failed',
-    created_at: new Date().toISOString(),
-    started_at: new Date().toISOString(),
-    finished_at: new Date().toISOString(),
-    result: null,
-    error: {code: 'reload_rejected', message: 'Reload rejected', details: {written: true, committed: false}}
-  });
+  handlers['GET operations/op-rejected'] = async () => rejectedReload();
   const card = await query(page);
   await card.getByRole('button', {name: 'Add rule', exact: true}).click();
   await pick(page, /Action$/, /^reject/);
@@ -281,27 +270,7 @@ test('a DNS rule written whose reload failed closes the dialog without offering 
 
 test('an apply that fails in a later file keeps the rule it could not write and says the DNS rule was written', async ({page}) => {
   const {api, handlers, requests} = await backend(page, true);
-  // The mock's include holds bare rules, which doona cannot place; give it a routing section so it takes a rule.
-  const wrap = (text: string) => 'routing {\n' + text + '}\n';
-  handlers['GET config'] = async () => {
-    const config = await api.config();
-    const sources = config.sources.map(async source =>
-      source.id === 'src-rules' ? {...source, content: wrap(source.content!), content_sha256: await sha256(wrap(source.content!))} : source
-    );
-    return {...config, sources: await Promise.all(sources)};
-  };
-  handlers['GET rules'] = async () => {
-    const list = await api.rules();
-    return {
-      ...list,
-      rules: list.rules.map(rule => (rule.source?.source_id === 'src-rules' ? {...rule, source: {...rule.source, line: rule.source.line + 1}} : rule))
-    };
-  };
-  handlers['PUT config/sources/src-rules'] = async () => {
-    throw new ApiError(422, 'validation_failed', 'invalid', null, {
-      diagnostics: [{level: 'error', source_id: 'src-rules', line: 7, column: 1, span: null, code: 'unknown-outbound', message: 'no group proxy'}]
-    });
-  };
+  setupIncludedRouting({api, handlers}, {refuseWrite: true});
   const connections = await createMockApi().connections();
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await holdRequest(page, /^asis/);

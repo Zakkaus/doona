@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, box} from './fixtures';
 import {sha256} from '../src/api/hash';
 
 const reason = 'No loaded configuration file defines this group';
@@ -30,8 +30,8 @@ for (const touch of [false, true]) {
           if (touch) await lock.tap();
           else await lock.click();
           await expect(dialog).toContainText(reason);
-          const content = (await page.locator('.rp-content').boundingBox())!;
-          const bubble = (await page.locator('.rp-popover').boundingBox())!;
+          const content = await box(page.locator('.rp-content'));
+          const bubble = await box(page.locator('.rp-popover'));
           expect(bubble.x).toBeGreaterThanOrEqual(content.x);
           expect(bubble.x + bubble.width).toBeLessThanOrEqual(content.x + content.width);
           expect(bubble.y).toBeGreaterThanOrEqual(content.y);
@@ -72,20 +72,20 @@ test('the popover fits a narrow content column and dismisses on an outside press
   await expect(page.getByRole('dialog', {name: label})).toContainText(reason);
   await page.setViewportSize({width: 320, height: 844});
   await expect(page.locator('.rp-popover')).toHaveCSS('max-width', '264px');
-  const content = (await page.locator('.rp-content').boundingBox())!;
-  const bubble = (await page.locator('.rp-popover').boundingBox())!;
+  const content = await box(page.locator('.rp-content'));
+  const bubble = await box(page.locator('.rp-popover'));
   expect(bubble.x).toBeGreaterThanOrEqual(content.x);
   expect(bubble.x + bubble.width).toBeLessThanOrEqual(content.x + content.width);
-  const heading = (await page.getByRole('heading', {level: 1}).boundingBox())!;
+  const heading = await box(page.getByRole('heading', {level: 1}));
   await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
   await expect(page.getByRole('dialog', {name: label})).toHaveCount(0);
 });
 
 test('a pen press opens the lock explanation', async ({page}) => {
   const lock = page.getByRole('button', {name: label});
-  const box = (await lock.boundingBox())!;
+  const rect = await box(lock);
   const session = await page.context().newCDPSession(page);
-  const position = {x: box.x + box.width / 2, y: box.y + box.height / 2, button: 'left' as const, pointerType: 'pen' as const, clickCount: 1};
+  const position = {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, button: 'left' as const, pointerType: 'pen' as const, clickCount: 1};
   await session.send('Input.dispatchMouseEvent', {...position, type: 'mousePressed', buttons: 1});
   await session.send('Input.dispatchMouseEvent', {...position, type: 'mouseReleased', buttons: 0});
   await expect(page.getByRole('dialog', {name: label})).toContainText(reason);

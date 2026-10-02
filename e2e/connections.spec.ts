@@ -1,5 +1,5 @@
 import type {Locator} from '@playwright/test';
-import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem} from './fixtures';
+import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem, box} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {ApiError} from '../src/api/error';
 
@@ -295,7 +295,7 @@ test.describe('short connection lists', () => {
     const node = grid.getByRole('columnheader', {name: 'Node'});
     await expect(source).toBeVisible();
     // Columns are whole pixels, so the ratio of two flexible columns is only as exact as a pixel of rounding.
-    await expect.poll(async () => (await source.boundingBox())!.width / (await node.boundingBox())!.width).toBeCloseTo(128 / 120, 1);
+    await expect.poll(async () => (await box(source)).width / (await box(node)).width).toBeCloseTo(128 / 120, 1);
     await expect(grid.locator('[data-key="1"]').getByRole('rowheader')).toHaveText('10.0.0.12');
     await grid.locator('[data-key="1"]').focus();
     await page.keyboard.press('d');
@@ -725,9 +725,9 @@ test('an empty connection list keeps its message in view on a narrow screen', as
   // Inside the same sticky wrapper DataTable uses, so a table wider than the screen cannot carry it out of view.
   const message = page.locator('.rp-table-empty').getByText('No matching connections', {exact: true});
   await expect(message).toBeVisible();
-  const box = (await message.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(360);
+  const rect = await box(message);
+  expect(rect.x).toBeGreaterThanOrEqual(0);
+  expect(rect.x + rect.width).toBeLessThanOrEqual(360);
 });
 
 test('plain connection cells truncate with a tooltip like other tables', async ({page}) => {

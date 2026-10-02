@@ -1,11 +1,15 @@
 import type {Page} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, settleFrames, test} from './fixtures';
 
 // Headless Chromium hides scrollbars by default; classic scrollbars, as in Chromium on Linux and Windows, give the
 // table scroller its gutter. A table in a kept tab panel measures zero while hidden; the first frame it is shown again
 // used to lay its rows out with every column at its minimum width, and the next frame at the width the header had.
 test.use({viewport: {width: 1920, height: 1080}, launchOptions: {ignoreDefaultArgs: ['--hide-scrollbars']}});
 test.skip(({browserName}) => browserName !== 'chromium', 'classic scrollbars are a Chromium launch option');
+
+// Frames the table is left hidden before it comes back, and frames watched after it does.
+const settleAfterHide = 18;
+const observed = 30;
 
 // Every frame, note the cell boxes of the first rows of each table in the shown panel. A resize observer made last,
 // on a probe resized every frame, runs after the page's own observers and before the paint, so it sees what the frame
@@ -38,7 +42,7 @@ async function watchFrames(page: Page) {
 }
 
 // Leave the tab the page opened on for another, come back, and compare the first frame that shows its rows with one
-// half a second later. `resize` changes the window while the table is hidden.
+// after a counted run of painted frames. `resize` changes the window while the table is hidden.
 async function switchBack(page: Page, path: string, resize?: {width: number; height: number}) {
   await page.goto(`/#/${path}`);
   const tabs = page.getByRole('tablist').first().getByRole('tab');
@@ -49,12 +53,14 @@ async function switchBack(page: Page, path: string, resize?: {width: number; hei
   await tabs.filter({hasNotText: label}).first().click();
   await expect(table).toHaveCount(0);
   if (resize) await page.setViewportSize(resize);
-  await page.waitForTimeout(300);
+  await settleFrames(page, settleAfterHide);
   await watchFrames(page);
   await tabs.filter({hasText: label}).click();
-  await page.waitForTimeout(500);
+  await expect(table.first().locator('[role=row]:has([role=gridcell])').first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await settleFrames(page, observed);
   const frames = await page.evaluate(() => (window as unknown as {frames: string[]}).frames);
-  expect(frames.length).toBeGreaterThan(1);
+  expect(frames.length, 'frames sampled after the switch').toBeGreaterThanOrEqual(observed / 2);
   expect(frames[0], 'first frame after the switch').toBe(frames.at(-1));
 }
 

@@ -1,10 +1,4 @@
-import {detail, expect, mockBackend, test} from './fixtures';
-
-// The dialog starts with no outbound, so a rule is written only after one is chosen.
-async function pick(dialog: import('@playwright/test').Locator, name: string) {
-  await dialog.getByRole('button', {name: /Outbound$/}).click();
-  await dialog.page().getByRole('option', {name, exact: true}).click();
-}
+import {detail, expect, mockBackend, test, pickOutbound} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 const dialogOf = (page: import('@playwright/test').Page) => page.getByRole('dialog', {name: 'Add rule', exact: true});
@@ -30,7 +24,7 @@ test('the connection list toolbar adds a rule for the selected row', async ({pag
   await page.goto('/#/connections?tab=list&id=1');
   await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
   await add.click();
-  await pick(dialogOf(page), 'proxy');
+  await pickOutbound(dialogOf(page), 'proxy');
   await expect(dialogOf(page).locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   // The destination address is offered beside the domain, as one host.
   await dialogOf(page)
@@ -76,7 +70,7 @@ test('a trace result adds a rule for the traced target', async ({page}) => {
 test('adding and reloading ends with View rule, which selects the new rule in the list', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await pick(dialogOf(page), 'proxy');
+  await pickOutbound(dialogOf(page), 'proxy');
   await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'});
   await toast.getByRole('button', {name: 'View rule', exact: true}).click();
@@ -87,7 +81,7 @@ test('adding and reloading ends with View rule, which selects the new rule in th
 test('holding ends with Review held rules, which opens the held section', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await pick(dialogOf(page), 'proxy');
+  await pickOutbound(dialogOf(page), 'proxy');
   await dialogOf(page).getByRole('button', {name: 'Hold', exact: true}).click();
   await page.locator('.rp-toast.positive', {hasText: 'Rule held'}).getByRole('button', {name: 'Review held rules', exact: true}).click();
   await expect(page).toHaveURL(/#\/rules\?tab=list&held=1$/);
@@ -98,24 +92,24 @@ test('a rule already listed or held with the same condition and outbound is name
   await page.goto('/#/connections?tab=list&id=1');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
   const dialog = dialogOf(page);
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog).not.toContainText('same condition and outbound');
   await dialog.getByRole('button', {name: 'Hold', exact: true}).click();
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog).toContainText('A held rule already has the same condition and outbound.');
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeEnabled();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   // A rule the list already holds is named by its number.
   await page.goto('/#/connections?tab=list&id=2');
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await pick(dialog, 'direct');
+  await pickOutbound(dialog, 'direct');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: cdn.bilibili.com) -> direct');
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await detail(page).getByRole('button', {name: 'Add rule', exact: true}).click();
-  await pick(dialog, 'direct');
+  await pickOutbound(dialog, 'direct');
   await expect(dialog).toContainText(/Rule \d+ already has the same condition and outbound\./);
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
 });
@@ -129,7 +123,7 @@ test('without a writable configuration the dialog still opens and copies the rul
   const dialog = dialogOf(page);
   // Without an outbound there is no rule to copy yet.
   await expect(dialog.getByRole('button', {name: 'Copy rule', exact: true})).toBeDisabled();
-  await pick(dialog, 'proxy');
+  await pickOutbound(dialog, 'proxy');
   await expect(dialog.locator('.rp-code')).toHaveText('domain(full: api.telegram.org) -> proxy');
   await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   await expect(dialog.getByRole('button', {name: 'Hold', exact: true})).toBeDisabled();

@@ -399,25 +399,27 @@ test('Policies member lists, folded selection, default members and member picker
 });
 
 for (const lang of ['en', 'zh-TW'] as const)
-  test(`Activity keeps the flag and node name visible on a phone in ${lang}`, async ({page}) => {
-    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
-    await page.setViewportSize({width: 390, height: 844});
-    await mockBackend(page);
-    await page.goto('/#/activity');
-    const card = page.locator('.rp-latency');
-    const picker = card.locator('.rp-select');
-    await expect(picker).toContainText('hk-01');
-    await expect(picker.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
-    const geometry = await card.evaluate(card => {
-      const caption = card.querySelector('.rp-tile-caption')!.getBoundingClientRect();
-      const controls = card.querySelector('.rp-tile-controls')!.getBoundingClientRect();
-      const picker = card.querySelector('.rp-select')!;
-      const box = card.getBoundingClientRect();
-      return {
-        nextLine: controls.top >= caption.bottom,
-        inside: controls.left >= box.left && controls.right <= box.right,
-        clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1)
-      };
+  test.describe(`phone Activity ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    test('keeps the flag and node name visible', async ({page}) => {
+      await page.setViewportSize({width: 390, height: 844});
+      await mockBackend(page);
+      await page.goto('/#/activity');
+      const card = page.locator('.rp-latency');
+      const picker = card.locator('.rp-select');
+      await expect(picker).toContainText('hk-01');
+      await expect(picker.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
+      const geometry = await card.evaluate(card => {
+        const caption = card.querySelector('.rp-tile-caption')!.getBoundingClientRect();
+        const controls = card.querySelector('.rp-tile-controls')!.getBoundingClientRect();
+        const picker = card.querySelector('.rp-select')!;
+        const box = card.getBoundingClientRect();
+        return {
+          nextLine: controls.top >= caption.bottom,
+          inside: controls.left >= box.left && controls.right <= box.right,
+          clipped: [...picker.querySelectorAll<HTMLElement>('*')].some(el => el.scrollWidth > el.clientWidth + 1)
+        };
+      });
+      expect(geometry).toEqual({nextLine: true, inside: true, clipped: false});
     });
-    expect(geometry).toEqual({nextLine: true, inside: true, clipped: false});
   });

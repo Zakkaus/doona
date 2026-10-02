@@ -1,4 +1,4 @@
-import {expect, mockBackend, test} from './fixtures';
+import {expect, mockBackend, test, box} from './fixtures';
 import {writeMode} from '../src/dae/outboundMode';
 
 test('the desktop theme shortcut stays in sync with the appearance editor', async ({page}) => {
@@ -89,8 +89,8 @@ test('a managed outbound rule opens Activity with separate mode and target cards
   const row = page.getByRole('row').filter({has: page.getByRole('link', {name: 'Edit outbound mode'})});
   await expect(row.getByRole('button', {name: /^(Edit rule|Remove rule)$/})).toHaveCount(0);
   const edit = row.getByRole('link', {name: 'Edit outbound mode'});
-  const linkBox = (await edit.boundingBox())!;
-  const cellBox = (await edit.locator('..').locator('..').boundingBox())!;
+  const linkBox = await box(edit);
+  const cellBox = await box(edit.locator('..').locator('..'));
   expect(linkBox.x + linkBox.width).toBeLessThanOrEqual(cellBox.x + cellBox.width);
   await edit.click();
   const card = page.getByRole('region', {name: 'Outbound mode', exact: true});
@@ -191,8 +191,8 @@ for (const width of [390, 768]) {
     const help = limits.getByRole('button', {name: 'How to turn on'});
     await expect
       .poll(async () => {
-        const button = (await help.boundingBox())!;
-        const navigation = (await page.locator('.rp-hubbar').boundingBox())!;
+        const button = await box(help);
+        const navigation = await box(page.locator('.rp-hubbar'));
         return button.y >= 0 && button.y + button.height <= navigation.y;
       })
       .toBe(true);

@@ -1,4 +1,4 @@
-import {expect, loadCatalogues, test} from './fixtures';
+import {expect, loadCatalogues, test, settleFrames} from './fixtures';
 import type {BrowserContext, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 
@@ -244,7 +244,7 @@ test('a worker of the build the page already runs takes over without a notice', 
     if (controller.state !== 'activated') await new Promise(resolve => controller.addEventListener('statechange', resolve, {once: true}));
   });
   await controllerBuild(page);
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await settleFrames(page);
   await expect(page.locator('.rp-toast.info')).toHaveCount(0);
 });
 

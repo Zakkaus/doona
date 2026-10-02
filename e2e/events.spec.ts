@@ -1,4 +1,4 @@
-import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, test, box} from './fixtures';
 
 test('event kind selection exports only the visible records', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
@@ -67,7 +67,7 @@ test('a single event takes one row, not a blank one beneath it', async ({page}) 
   await page.goto('/#/events');
   const table = page.locator('.rp-table', {has: page.getByRole('grid', {name: 'Events', exact: true})});
   await expect(table.getByRole('rowheader')).toHaveCount(1);
-  await expect.poll(async () => (await table.boundingBox())!.height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
+  await expect.poll(async () => (await box(table)).height).toBeLessThanOrEqual(2 + 37 + 40 + 1);
 });
 
 test('events say where a reconnect could not recover what was sent meanwhile', async ({page}) => {
@@ -106,8 +106,8 @@ test('a long gap summary on a phone keeps its help button in view', async ({page
   await expect(cell).toContainText(id);
   const help = cell.getByRole('button', {name: 'About records reached the retention limit', exact: true});
   await expect(help).toBeInViewport({ratio: 1});
-  const [box, bounds] = [(await help.boundingBox())!, (await cell.boundingBox())!];
-  expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+  const [helpBox, cellBox] = [await box(help), await box(cell)];
+  expect(helpBox.x + helpBox.width).toBeLessThanOrEqual(cellBox.x + cellBox.width);
   await help.click();
   await expect(page.getByRole('dialog').getByText('Some flow records could not be kept.', {exact: false})).toBeVisible();
 });

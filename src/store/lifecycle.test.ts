@@ -6,7 +6,7 @@ import {createMockApi} from '../api/mock';
 import {version} from '../api/mock/fixtures';
 import type {Version} from '../api/model';
 import {refetchAll, watchResource as subscribeResource} from './resourceCore';
-import {deferred} from './testHelpers';
+import {deferred, stubVisibleDocument} from './testHelpers';
 
 function watchResource(
   {api, key, every}: {api: Api; key: ResourceKey; every: number},
@@ -18,12 +18,11 @@ function watchResource(
   return resource;
 }
 
-const visibility = Object.assign(new EventTarget(), {hidden: false});
+let visibility: ReturnType<typeof stubVisibleDocument>;
 const disposers: Array<() => void> = [];
 beforeEach(() => {
   vi.useFakeTimers();
-  visibility.hidden = false;
-  vi.stubGlobal('document', visibility);
+  visibility = stubVisibleDocument();
 });
 afterEach(() => {
   disposers.splice(0).forEach(dispose => dispose());

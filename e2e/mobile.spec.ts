@@ -1,7 +1,7 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
 import {demoRouting, demoRoutingInclude} from '../src/dae/startingRouting';
-import {expect, isLive, mockBackend, routes, scrollTableToEnd, test} from './fixtures';
+import {expect, isLive, mockBackend, routes, scrollTableToEnd, test, box} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
@@ -132,8 +132,8 @@ test('language, theme and palette are each two taps away in the overflow menu', 
   await expect(top.getByRole('button', {name: 'Reload honk'})).toBeHidden();
   for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
   const more = top.getByRole('button', {name: 'More options'});
-  const box = (await more.boundingBox())!;
-  expect(box.x + box.width).toBeGreaterThan((await top.boundingBox())!.width - 24);
+  const rect = await box(more);
+  expect(rect.x + rect.width).toBeGreaterThan((await box(top)).width - 24);
   // The menu is three short rows, each naming its current value, then Reload honk and the Backend row; a row opens its
   // choices in the same popover.
   await more.click();
@@ -148,7 +148,7 @@ test('language, theme and palette are each two taps away in the overflow menu', 
     await page.getByRole('menuitem', {name: row}).click();
     // A palette's name continues with its variants, so the name only has to start with the item.
     const choice = page.getByRole('menuitemradio', {name: new RegExp(`^${item}`)});
-    const {x, width} = (await choice.boundingBox())!;
+    const {x, width} = await box(choice);
     expect(x).toBeGreaterThanOrEqual(0);
     expect(x + width).toBeLessThanOrEqual(390);
     await choice.click();
@@ -210,7 +210,7 @@ test.describe('between phone and desktop widths', () => {
     await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
     await page.getByRole('menuitem', {name: 'Palette'}).click();
     await expect(page.getByRole('menu')).toHaveCount(2);
-    const {x, width} = (await page.getByRole('menu', {name: 'Palette'}).boundingBox())!;
+    const {x, width} = await box(page.getByRole('menu', {name: 'Palette'}));
     expect(x).toBeGreaterThanOrEqual(0);
     expect(x + width).toBeLessThanOrEqual(800);
     await page.getByRole('menuitemradio', {name: /^Nord/}).click();
@@ -565,8 +565,8 @@ async function expectReason(page: Page, button: ReturnType<Page['getByRole']>, r
   const line = page.getByText(reason, {exact: true});
   await expect(line).toBeVisible();
   await expect(button).toHaveAccessibleDescription(reason);
-  const box = (await line.boundingBox())!;
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  const rect = await box(line);
+  expect(rect.x + rect.width).toBeLessThanOrEqual(390);
   return line;
 }
 
@@ -580,7 +580,7 @@ test('the DNS cache says in view that the backend cannot clear or delete entries
   const grid = page.getByRole('grid', {name: 'Cache', exact: true});
   const line = page.getByText('This backend does not support deleting cache entries', {exact: true});
   await expect(line).toBeVisible();
-  expect((await line.boundingBox())!.y).toBeLessThan((await grid.boundingBox())!.y);
+  expect((await box(line)).y).toBeLessThan((await box(grid)).y);
   // The Delete column sits past the phone's width until the table is scrolled sideways.
   await scrollTableToEnd(grid);
   await expectReason(page, grid.getByRole('button', {name: /^Delete the /}).first(), 'This backend does not support deleting cache entries');

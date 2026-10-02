@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-import {detail, expect, mockBackend, test} from './fixtures';
+import {detail, expect, mockBackend, test, box} from './fixtures';
 
 // A finger cannot hover and a tap is not :focus-visible, so a truncated cell in a table whose rows open nothing shows
 // its full text on a tap (TextTooltip in src/ui/Button.tsx). Where a row press opens a detail, the press wins.
@@ -76,7 +76,7 @@ test.describe('on a phone', () => {
       await cell.tap();
       const tip = page.getByRole('tooltip');
       await expect(tip).toBeVisible();
-      const [a, b] = [(await cell.boundingBox())!, (await tip.boundingBox())!];
+      const [a, b] = [await box(cell), await box(tip)];
       expect(b.x).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width).toBeLessThanOrEqual(360);
       expect(Math.abs(b.y + b.height - a.y)).toBeLessThan(24);
