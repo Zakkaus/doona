@@ -22,6 +22,7 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   detail.trace.steps.reverse();
   const view = {...flowRecordsView([{...list.flows[0], input: undefined}], list, undefined, new Map(), t, 'en'), detail: flowDetailView(detail, t, 'en')};
   expect(view.rows[0].target).toBe(list.flows[0].id);
+  expect(view.rows[0].seed).toMatchObject({domain: null, dip: null, sip: null});
   // Only a flow routed by the listed generation links to the listed rule; the others keep the recorded text alone.
   const routed = list.flows.find(flow => flow.rule_id && flow.rule_expression)!;
   const links = (rule_generation_id: string | null) =>
@@ -29,11 +30,13 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(links(routed.rule_generation_id)).toMatchObject({ruleId: routed.rule_id, expression: routed.rule_expression});
   expect(links('older')).toMatchObject({ruleId: null, expression: routed.rule_expression});
   expect(links(null)).toMatchObject({ruleId: null, expression: routed.rule_expression});
-  expect(view.detail!.seed).toMatchObject({
+  const ipv6 = flowRecordsView([{...detail, input: {...detail.input, src: '[2001:db8::12]:51234'}}], list, undefined, new Map(), t, 'en').rows[0];
+  expect(ipv6.seed).toMatchObject({
     domain: null,
     dip: '2001:db8::5',
+    sip: '2001:db8::12',
     outbound: detail.outbound,
-    matched: detail.rule_id ? {id: detail.rule_id, expression: detail.rule_expression} : null
+    matched: detail.rule_id ? {id: detail.rule_id, expression: detail.rule_expression, generation: detail.rule_generation_id} : null
   });
   const inputStep = detail.trace.steps.find(step => step.stage === 'input')!;
   expect(view.detail!.steps.map(step => step.id)).toEqual(detail.trace.steps.map(step => step.seq).sort((a, b) => a - b));
@@ -44,7 +47,7 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(fields).toContainEqual([t('conn.rule'), 'domain(geosite:cn)']);
   expect(flowDetailView(undefined, t, 'en')).toBeNull();
   // A match the backend did not record is not vouched for.
-  expect(flowDetailView({...detail, rule_id: 'r5', rule_source: 'unknown'}, t, 'en')!.seed.matched).toBeNull();
+  expect(flowRecordsView([{...detail, rule_id: 'r5', rule_source: 'unknown'}], list, undefined, new Map(), t, 'en').rows[0].seed.matched).toBeNull();
 });
 
 it('prepares tile labels with configured destinations, nested policies and unknown nodes', async () => {

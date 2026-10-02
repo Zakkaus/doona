@@ -33,7 +33,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
       {
         id: 'status',
         label: t('ui.state'),
-        minWidth: 100,
+        minWidth: 128,
         grow: 0,
         drop: 7,
         render: row =>

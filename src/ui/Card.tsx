@@ -62,7 +62,7 @@ export function Card({
   // What the title means, in a help popover beside it.
   help?: Help;
   aside?: ReactNode;
-  // Why the card's actions cannot run, as an ActionHelp line at its end.
+  // Why the card's disabled actions cannot run.
   reason?: string | null;
   id?: string;
   // Layout for what the card holds.

@@ -40,18 +40,17 @@ export function useFlowRecords({go, query}: PageProps) {
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false})).data;
   const detailView = useMemo(() => {
     const shown = flowDetailView(detail.data ?? undefined, t, lang, row);
-    return shown && {...shown, outboundTag: outboundTag(shown.seed.outbound, groups, t)};
+    return shown && {...shown, outboundTag: outboundTag(detail.data!.outbound, groups, t)};
   }, [detail.data, t, lang, row, groups]);
   const quick = useQuickRule(go);
   return {
     ...view,
     detail: detailView,
-    // The dialog keeps the record's input from when it opened, so it stays usable after the record expires.
     rule: {
-      canAdd: !!detailView && quick.canAdd(detailView.seed),
-      open: () => {
-        if (detailView) quick.open(detailView.seed);
-      },
+      canAdd: quick.canAdd,
+      open: quick.open,
+      label: (target: string) => t('conn.addRuleFor', {target}),
+      noTarget: t('flow.ruleNoTarget'),
       dialog: quick.dialog
     },
     network,

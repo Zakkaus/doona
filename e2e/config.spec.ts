@@ -459,11 +459,11 @@ test('rule writes require a stable source ID even when the display path matches'
   await page.goto('/#/rules?tab=list&view=advanced');
   const add = page.getByRole('button', {name: 'Add rule', exact: true});
   await expect(add).toBeDisabled();
-  // The button is disabled while the configuration loads too, but gains its reason, a line under the toolbar, only once
-  // it arrives.
   const reason = 'No rule is in a file doona can write, so there is no place to insert.';
-  await expect(page.getByText(reason, {exact: true})).toBeVisible();
   await expect(add).toHaveAccessibleDescription(reason);
+  await page.mouse.move(0, 0);
+  await add.locator('..').hover();
+  await expect(page.getByRole('tooltip')).toHaveText(reason);
   // Remove stays in each row, disabled with the reason, rather than disappearing.
   const remove = page.getByRole('button', {name: 'Remove rule', exact: true});
   await expect(remove.first()).toHaveAccessibleDescription("Cannot locate this rule's line in its config file; it cannot be edited here");

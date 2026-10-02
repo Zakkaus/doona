@@ -12,7 +12,7 @@ test.describe(() => {
     expect(total).toBeGreaterThan(1);
     await expect(page.locator('.rp-panel')).toHaveCount(0);
     await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
-    await rows.filter({hasText: 'api.telegram.org'}).first().click();
+    await rows.filter({hasText: 'api.telegram.org'}).first().getByRole('rowheader').click();
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
     const panel = page.locator('.rp-panel');
     await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
@@ -90,22 +90,49 @@ test('old rules and flows addresses open the flows page on the matching tab', as
 });
 
 test('a flow opens the add-rule dialog for its target on the flows page', async ({page}) => {
-  await page.goto('/#/flows?tab=records&id=flow-1');
-  const panel = page.locator('.rp-panel');
-  await panel.getByRole('button', {name: 'Add a rule for this target', exact: true}).click();
+  await page.goto('/#/flows?tab=records');
+  const telegram = page.locator('.rp-table [data-key="flow-1"]').getByRole('button', {name: 'Add routing rule for api.telegram.org', exact: true});
+  await settle(page);
+  await page.evaluate(() => document.fonts.ready);
+  await page.mouse.move(0, 0);
+  await telegram.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Add routing rule for api.telegram.org');
+  await telegram.click();
   const dialog = page.getByRole('dialog', {name: 'Add rule', exact: true});
   await expect(dialog.locator('.rp-code')).toContainText('domain(full: api.telegram.org)');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
-  // Another record opens the dialog with its own target.
-  await page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').filter({hasText: 'cdn.bilibili.com'}).first().click();
-  await panel.getByRole('button', {name: 'Add a rule for this target', exact: true}).click();
+  await expect(page).toHaveURL(/#\/flows\?tab=records$/);
+  await page.locator('.rp-table [data-key="flow-1"]').getByRole('rowheader').click();
+  const panel = page.locator('.rp-panel');
+  await expect(panel.getByRole('heading', {name: 'api.telegram.org', exact: true})).toBeVisible();
+  await expect(panel.getByRole('button', {name: /Add.*rule/})).toHaveCount(0);
+  // A different row uses its own target, not the selected record's.
+  await page.locator('.rp-table [data-key="flow-2"]').getByRole('button', {name: 'Add routing rule for cdn.bilibili.com', exact: true}).click();
   await expect(dialog.locator('.rp-code')).toContainText('domain(full: cdn.bilibili.com)');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(panel.getByRole('heading', {name: 'api.telegram.org', exact: true})).toBeVisible();
+  await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
   // The rule list still takes a seeded condition from its address.
   await page.goto('/#/rules?tab=list&add=dip:203.0.113.5');
   await expect(page.getByRole('dialog', {name: 'Add rule', exact: true}).locator('.rp-code')).toHaveText('dip(203.0.113.5)');
+});
+
+test('a flow without recorded input explains why its row action is disabled', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  handlers['GET flows'] = async () => {
+    const list = await api.flows({detail: 'full', limit: 1000});
+    return {...list, flows: list.flows.map(flow => (flow.id === 'flow-1' ? {...flow, input: undefined} : flow))};
+  };
+  await page.goto('/#/flows?tab=records');
+  const add = page.locator('.rp-table [data-key="flow-1"]').getByRole('button', {name: 'Add routing rule for flow-1', exact: true});
+  await expect(add).toBeDisabled();
+  await expect(add).toHaveAccessibleDescription('This flow has no domain or IP address to match');
+  await settle(page);
+  await page.evaluate(() => document.fonts.ready);
+  await page.mouse.move(0, 0);
+  await add.locator('..').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('This flow has no domain or IP address to match');
 });
 
 test('filters narrow the list and the connection chip clears its filter', async ({page}) => {

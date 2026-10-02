@@ -1,6 +1,6 @@
 import {OutboundTag} from '../shared/OutboundTag';
 import '../../ui/styles/routing.css';
-import {useMemo} from 'react';
+import {useLayoutEffect, useMemo, useRef} from 'react';
 import Tree from './Tree';
 import {NodeName} from '../../ui/NodeName';
 import {
@@ -26,6 +26,7 @@ import {Coverage} from '../shared/Coverage';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
+import AddCircle from '../../ui/icons/AddCircle';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
 import {ruleHref} from '../shared/link';
@@ -99,6 +100,10 @@ function FlowRecords(props: PageProps) {
   const t = useT();
   const view = useFlowRecords(props);
   const detail = view.detail;
+  const latest = useRef(view.rule);
+  useLayoutEffect(() => {
+    latest.current = view.rule;
+  });
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<FlowRow>[] => [
@@ -131,8 +136,32 @@ function FlowRecords(props: PageProps) {
         )
       },
       {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: row => row.network},
-      {id: 'state', label: t('ui.state'), minWidth: 80, grow: 0, drop: 5, render: row => row.state},
-      {id: 'started', label: t('ui.started'), minWidth: 80, grow: 0, drop: 4, render: row => <TimeCell at={row.startedAt} />}
+      {id: 'state', label: t('ui.state'), minWidth: 112, grow: 0, drop: 5, render: row => row.state},
+      {id: 'started', label: t('ui.started'), minWidth: 140, grow: 0, drop: 4, render: row => <TimeCell at={row.startedAt} />},
+      {
+        id: 'actions',
+        actions: true,
+        label: t('ui.actions'),
+        minWidth: 88,
+        grow: 0,
+        render: row => {
+          const action = latest.current;
+          const disabled = !action.canAdd(row.seed);
+          return (
+            <Button
+              quiet
+              icon
+              small
+              label={action.label(row.target)}
+              tip={disabled ? action.noTarget : undefined}
+              isDisabled={disabled}
+              onPress={() => latest.current.open(row.seed)}
+            >
+              <AddCircle />
+            </Button>
+          );
+        }
+      }
     ],
     [t, view.rulesListed]
   );
@@ -201,11 +230,6 @@ function FlowRecords(props: PageProps) {
                   <Link appearance="button" small href={detail.connectionHref}>
                     {t('flow.viewConnection')}
                   </Link>
-                )}
-                {view.rule.canAdd && (
-                  <Button small onPress={view.rule.open}>
-                    {t('flow.addRule')}
-                  </Button>
                 )}
               </div>
               <div className="rp-list">

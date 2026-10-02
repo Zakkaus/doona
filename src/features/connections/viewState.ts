@@ -11,7 +11,7 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'src', label: 'ui.device', minWidth: 128, sortable: true, drop: 5},
   {id: 'node', label: 'conn.node', minWidth: 120, drop: 3},
   {id: 'rule', label: 'conn.rule', minWidth: 220, drop: 2},
-  {id: 'state', label: 'ui.state', minWidth: 88, sortable: true, drop: 7},
+  {id: 'state', label: 'ui.state', minWidth: 112, sortable: true, drop: 7},
   {id: 'down', label: 'ui.download', minWidth: 96, sortable: true, drop: 4},
   {id: 'downRate', label: 'conn.f.downloadRate', minWidth: 128, sortable: true, drop: 1},
   {id: 'age', label: 'ui.started', minWidth: 132, sortable: true, drop: 6}

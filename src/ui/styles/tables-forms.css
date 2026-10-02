@@ -211,11 +211,6 @@
   gap: var(--rp-space-2);
   padding-top: var(--rp-space-2);
 }
-/* An ActionHelp line under the footer says why its actions are disabled, aligned with them. */
-.rp-dialog > .foot + .rp-label {
-  margin-block-start: -8px;
-  text-align: end;
-}
 .rp-dialog h2:not(.rp-h3) {
   margin: 0;
   font-size: var(--rp-text-xl);

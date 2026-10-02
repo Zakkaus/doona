@@ -21,31 +21,20 @@ export function buttonClass({quiet, secondary, small, icon, accent, negative}: B
   return cx(base, quiet && 'quiet', secondary && 'secondary', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
 }
 
-// The id of the ActionHelp line around a button, which its disabled buttons name as their description.
-const ReasonId = createContext<string | undefined>(undefined);
-// The reason line a control describes itself with, given only while the control is disabled.
-export function useReasonId(disabled?: boolean) {
-  const id = useContext(ReasonId);
-  return disabled ? id : undefined;
+const ActionReason = createContext<{id: string; text: string} | undefined>(undefined);
+export function useActionReason(disabled?: boolean) {
+  const reason = useContext(ActionReason);
+  return disabled ? reason : undefined;
 }
 
-// Why the actions in `children` cannot run, as S2 help text: a line under them, in view on every width. A tooltip never
-// opens on touch, so it cannot be the only place a reason is given. Nothing is added while there is no reason.
-// `above` puts the line before the actions, for ones spread down a tall region such as a table's rows, whose end is
-// out of view on a phone.
-export function ActionHelp({reason, above, children}: {reason?: string | null; above?: boolean; children: ReactNode}) {
+// Reasons describe disabled controls without adding a line to their layout.
+export function ActionHelp({reason, children}: {reason?: string | null; children: ReactNode}) {
   const id = useId();
-  const line = reason && (
-    <span id={id} className="rp-label">
-      {reason}
-    </span>
-  );
   return (
-    <ReasonId.Provider value={reason ? id : undefined}>
-      {above && line}
+    <ActionReason.Provider value={reason ? {id, text: reason} : undefined}>
       {children}
-      {!above && line}
-    </ReasonId.Provider>
+      {reason && <VisuallyHidden id={id}>{reason}</VisuallyHidden>}
+    </ActionReason.Provider>
   );
 }
 
@@ -84,11 +73,11 @@ export function Button({
   const ref = useRef<HTMLButtonElement>(null);
   // A pending button keeps its colour and stays focusable, so the wrapper must not add a second tab stop.
   const disabled = isDisabled && !isPending;
-  const reasonId = useReasonId(disabled);
-  const reasoned = !!reasonId;
+  const reason = useActionReason(disabled);
+  const [tipOpen, setTipOpen] = useState(false);
   // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
   const tipId = useId();
-  const tipReason = disabled && !reasoned && !!tip;
+  const tipReason = disabled && !reason && !!tip;
   // An icon marked rp-spin-on-press (the refresh arrows) turns once per press and keeps turning while the button is
   // pending, always finishing a whole turn; one animation owns the rotation, so a long refetch never hands over.
   const spin = useRef<Animation | null>(null);
@@ -137,7 +126,7 @@ export function Button({
       data-toggle-selected={isSelected || undefined}
       aria-pressed={isSelected}
       aria-expanded={expanded}
-      aria-describedby={reasonId ?? (tipReason ? tipId : undefined)}
+      aria-describedby={reason?.id ?? (tipReason ? tipId : undefined)}
       isDisabled={disabled}
       isPending={isPending}
       type={type}
@@ -147,17 +136,23 @@ export function Button({
       {children}
     </RButton>
   );
-  // A tip adds what the name cannot say (why the button is disabled), so it wins; the label stays the accessible name.
-  // Once an ActionHelp line gives the reason, the tip would only repeat it.
-  const text = reasoned ? label : (tip ?? label);
+  // A disabled reason takes precedence over the action label.
+  const text = (disabled ? (tip ?? reason?.text) : tip) ?? label;
   if (!text) return btn;
   // Keep one wrapper shape so busy/disabled transitions do not remount the button and lose focus. The wrapper accepts
   // focus and pointer events only when the native button cannot.
   return (
-    <TooltipTrigger delay={400}>
+    <TooltipTrigger delay={400} isOpen={tipOpen} onOpenChange={setTipOpen}>
       <Focusable>
-        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop */}
-        <span className="rp-tipwrap" tabIndex={disabled ? 0 : -1} data-passive={disabled ? undefined : ''}>
+        <span
+          className="rp-tipwrap"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the wrapper is the disabled button's only focus stop
+          tabIndex={disabled ? 0 : -1}
+          data-passive={disabled ? undefined : ''}
+          onPointerDown={event => {
+            if (disabled && event.pointerType === 'touch') setTipOpen(open => !open);
+          }}
+        >
           {btn}
           {tipReason && <VisuallyHidden id={tipId}>{tip}</VisuallyHidden>}
         </span>
