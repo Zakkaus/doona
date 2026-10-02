@@ -168,11 +168,11 @@ it('seeds a new rule from the typed answer records, the client address and the u
 });
 
 it.each([
-  {available: true, delete_name: true, shown: true},
-  {available: true, delete_name: false, shown: false},
-  {available: true, delete_name: undefined, shown: false},
-  {available: false, delete_name: true, shown: false}
-])('gates name deletion on the cache capability %j', ({available, delete_name, shown}) => {
-  const resources = {...capabilities.resources, dns_cache: {...capabilities.resources.dns_cache, available, delete_name}};
-  expect(dnsCacheView(dnsCache, resources, '', null, 'en', t, contains).canDeleteName).toBe(shown);
+  {available: true, delete_name: true, delete_entry: false, by: {name: true, entry: false}},
+  {available: true, delete_name: false, delete_entry: true, by: {name: false, entry: true}},
+  {available: true, delete_name: undefined, delete_entry: undefined, by: {name: false, entry: false}},
+  {available: false, delete_name: true, delete_entry: true, by: {name: false, entry: false}}
+])('gates pattern deletion on the cache capabilities %j', ({available, delete_name, delete_entry, by}) => {
+  const resources = {...capabilities.resources, dns_cache: {...capabilities.resources.dns_cache, available, delete_name, delete_entry}};
+  expect(dnsCacheView(dnsCache, resources, '', null, 'en', t, contains).deleteBy).toEqual(by);
 });

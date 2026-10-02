@@ -4,7 +4,18 @@ import {capabilities} from '../api/mock/fixtures';
 import type {Api} from '../api/api';
 import type {DnsCacheList, DnsCacheQuery} from '../api/model';
 import {createMockApi} from '../api/mock';
-import {deleteCacheName, deleteCacheEntry, dnsCacheListing, dnsLogLimit, flushCache, readCacheUsage, smallerOnRefusal, walkCache, queryTypes} from './dns';
+import {
+  deleteCacheEntries,
+  deleteCacheName,
+  deleteCacheEntry,
+  dnsCacheListing,
+  dnsLogLimit,
+  flushCache,
+  readCacheUsage,
+  smallerOnRefusal,
+  walkCache,
+  queryTypes
+} from './dns';
 
 afterEach(() => void vi.useRealTimers());
 const budget = (retryAfter: number | null = 1) =>
@@ -233,4 +244,33 @@ it('preserves bypass cache mode and cancellation signal across every record type
     ['example.com', ['TXT'], signal, 'bypass']
   ]);
   expect(result.cache_mode).toBe('bypass');
+});
+
+it('deletes entries four at a time, counts the failures but not the ones already gone, and still deletes the rest', async () => {
+  const api = createMockApi();
+  const ids = (await api.dnsCache({limit: 1000})).entries.slice(0, 10).map(entry => entry.entry_id);
+  let running = 0;
+  let peak = 0;
+  const remove = api.deleteDnsEntry;
+  api.deleteDnsEntry = async (id, signal) => {
+    running++;
+    peak = Math.max(peak, running);
+    await new Promise(resolve => setTimeout(resolve, 1));
+    running--;
+    if (id === ids[3]) throw new ApiError(500, 'internal', 'broken');
+    if (id === ids[5]) throw new ApiError(404, 'not_found', 'gone');
+    return remove(id, signal);
+  };
+  await expect(deleteCacheEntries(api, ids, new AbortController().signal)).resolves.toEqual({deleted: 8, failed: 1});
+  expect(peak).toBe(4);
+  const left = (await api.dnsCache({limit: 1000})).entries.map(entry => entry.entry_id);
+  expect(ids.filter(id => left.includes(id))).toEqual([ids[3], ids[5]]);
+});
+
+it('stops deleting when the run is aborted', async () => {
+  const api = createMockApi();
+  const ids = (await api.dnsCache({limit: 1000})).entries.slice(0, 6).map(entry => entry.entry_id);
+  const controller = new AbortController();
+  controller.abort();
+  await expect(deleteCacheEntries(api, ids, controller.signal)).rejects.toThrow();
 });

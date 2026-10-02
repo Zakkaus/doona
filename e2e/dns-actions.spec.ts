@@ -1,3 +1,4 @@
+import type {Locator, Page, Request} from '@playwright/test';
 import {ApiError} from '../src/api/error';
 import {expect, mockBackend, query, test, settleFrames, box} from './fixtures';
 
@@ -186,32 +187,181 @@ test('a hidden cache tab stops walking the cache until it is shown again', async
   expect(walks()).toBe(hidden + 1);
 });
 
-test('exact-name cache deletion filters record types and requires its capability', async ({page}) => {
+const pick = async (page: Page, current: string, label: string, option: string) => {
+  await page.getByRole('button', {name: `${current} ${label}`, exact: true}).click();
+  await page.getByRole('option', {name: option, exact: true}).click();
+};
+// What the confirmation lists: each entry's name and record type, in the order the cache holds them.
+const listed = (dialog: Locator) =>
+  dialog
+    .getByRole('listitem')
+    .allInnerTexts()
+    .then(rows => rows.map(row => row.replace(/\s+/g, ' ').trim()));
+const named = (entries: Array<{domain: string; type: string}>) => entries.map(entry => `${entry.domain} ${entry.type}`);
+const deletes = (requests: Request[]) => requests.filter(request => request.method() === 'DELETE');
+
+test('pattern deletion shows how many entries match and deletes them one by one', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries;
+  const matches = entries.filter(entry => entry.domain.endsWith('bilibili.com.'));
+  expect(matches.length).toBeGreaterThan(1);
+  await page.goto('/#/dns?tab=cache');
+  const button = page.getByRole('button', {name: 'Delete matching', exact: true});
+  const pattern = page.getByRole('textbox', {name: 'Pattern', exact: true});
+  await expect(button).toBeDisabled();
+  await pick(page, 'Domain suffix', 'Match by', 'Domain regex');
+  await pattern.fill('(');
+  await expect(pattern).toHaveAttribute('aria-invalid', 'true');
+  await page.getByRole('button', {name: 'About Pattern', exact: true}).click();
+  await expect(page.getByRole('dialog', {name: 'Pattern', exact: true})).toContainText('JavaScript regex syntax');
+  await page.keyboard.press('Escape');
+  await expect(button).toBeDisabled();
+  await pick(page, 'Domain regex', 'Match by', 'Domain suffix');
+  await pattern.fill('.');
+  await expect(pattern).toHaveAttribute('aria-invalid', 'true');
+  await expect(button).toBeDisabled();
+  await pick(page, 'Domain suffix', 'Match by', 'Domain regex');
+  await pattern.fill('*.bilibili.com');
+  await expect(pattern).toHaveValue('bilibili.com');
+  await expect(page.getByRole('button', {name: 'Domain suffix Match by', exact: true})).toBeVisible();
+  await button.click();
+  const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
+  await expect(dialog).toContainText(`Delete ${matches.length} cache entries?`);
+  expect(await listed(dialog)).toEqual(named(matches));
+  await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText(`Deleted ${matches.length} cache entries`);
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toHaveAttribute('aria-rowcount', String(entries.length - matches.length + 1));
+  expect(deletes(requests).map(request => new URL(request.url()).pathname)).toEqual(
+    expect.arrayContaining(matches.map(entry => `/api/v1/dns/cache/${encodeURIComponent(entry.entry_id)}`))
+  );
+  expect(deletes(requests)).toHaveLength(matches.length);
+});
+
+test('the confirmation lists at most 100 entries and counts the rest', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const cache = await api.dnsCache();
+  const entries = Array.from({length: 103}, (_, i) => ({
+    ...cache.entries[0],
+    entry_id: `bulk-${i}`,
+    domain: `host-${String(i).padStart(3, '0')}${i === 0 ? '-'.padEnd(120, 'x') : ''}.bulk.example.`,
+    type: 'A'
+  }));
+  handlers['GET dns/cache'] = async () => ({...cache, entries, next_cursor: null});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/dns?tab=cache');
+  await page.getByRole('textbox', {name: 'Pattern', exact: true}).fill('bulk.example');
+  await page.getByRole('button', {name: 'Delete matching', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
+  await expect(dialog).toContainText('Delete 103 cache entries?');
+  const rows = await listed(dialog);
+  expect(rows).toHaveLength(101);
+  expect(rows.slice(0, 100)).toEqual(named(entries.slice(0, 100)));
+  expect(rows[100]).toBe('and 3 more');
+  // A long name is cut inside the phone dialog, not scrolled sideways.
+  await expect.poll(() => dialog.locator('.rp-dialog-body').evaluate(body => body.scrollWidth - body.clientWidth)).toBe(0);
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  expect(deletes(requests)).toHaveLength(0);
+});
+
+test('the delete-matching row keeps its controls and height whichever match kind is picked', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/dns?tab=cache');
+  const row = page.locator('.rp-toolbar').filter({has: page.getByRole('button', {name: 'Delete matching', exact: true})});
+  const controls = [
+    page.getByRole('textbox', {name: 'Pattern', exact: true}).locator('..'),
+    page.getByRole('button', {name: /Match by$/}),
+    page.getByRole('button', {name: /Type$/}),
+    page.getByRole('button', {name: 'Delete matching', exact: true})
+  ];
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({width, height: 900});
+    const heights: number[] = [];
+    for (const [current, kind] of [
+      ['Domain suffix', 'Full domain'],
+      ['Full domain', 'Domain regex']
+    ]) {
+      await pick(page, current, 'Match by', kind);
+      await expect(page.getByRole('button', {name: 'About Pattern', exact: true})).toHaveCount(kind === 'Domain regex' ? 1 : 0);
+      const boxes = await Promise.all(controls.map(box));
+      expect(new Set(boxes.map(b => b.height)).size).toBe(1);
+      // A phone stacks the controls, one per line; a wide row shares one line.
+      if (width > 600) expect(new Set(boxes.map(b => b.y)).size).toBe(1);
+      heights.push((await box(row)).height);
+    }
+    expect(heights[1]).toBe(heights[0]);
+    await pick(page, 'Domain regex', 'Match by', 'Domain suffix');
+  }
+});
+
+test('an empty pattern with a record type deletes that whole type', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries;
+  const type = 'AAAA';
+  const matches = entries.filter(entry => entry.type === type);
+  await page.goto('/#/dns?tab=cache');
+  const button = page.getByRole('button', {name: 'Delete matching', exact: true});
+  await expect(button).toBeDisabled();
+  await pick(page, 'All supported types', 'Type', type);
+  await button.click();
+  const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
+  await expect(dialog).toContainText(`Delete ${matches.length} cache entries?`);
+  expect(await listed(dialog)).toEqual(named(matches));
+  await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toHaveAttribute('aria-rowcount', String(entries.length - matches.length + 1));
+  await expect(page.getByRole('button', {name: new RegExp(`^Delete the ${type} cache entry`)})).toHaveCount(0);
+  expect(deletes(requests)).toHaveLength(matches.length);
+});
+
+test('an exact name goes in one request, and the row needs a delete capability', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   const entries = (await api.dnsCache()).entries;
   const entry = entries.find(entry => entry.type === 'AAAA')!;
   await page.goto('/#/dns?tab=cache');
-  const button = page.getByRole('button', {name: 'Delete by name', exact: true});
-  await expect(button).toBeDisabled();
-  await page.getByRole('textbox', {name: 'Exact name', exact: true}).fill(entry.domain.toUpperCase());
-  await page.getByRole('button', {name: 'All supported types Type', exact: true}).click();
-  await page.getByRole('option', {name: entry.type, exact: true}).click();
+  const button = page.getByRole('button', {name: 'Delete matching', exact: true});
+  await pick(page, 'Domain suffix', 'Match by', 'Full domain');
+  await page.getByRole('textbox', {name: 'Pattern', exact: true}).fill(entry.domain.toUpperCase());
+  await pick(page, 'All supported types', 'Type', entry.type);
   await button.click();
-  const dialog = page.getByRole('alertdialog', {name: 'Delete by name', exact: true});
-  await expect(dialog).toContainText(entry.domain.toUpperCase());
-  await dialog.getByRole('button', {name: 'Delete by name', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
+  expect(await listed(dialog)).toEqual(named([entry]));
+  await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', {name: `Delete the ${entry.type} cache entry for ${entry.domain}`, exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: `Delete the A cache entry for ${entry.domain}`, exact: true})).toBeVisible();
-  const sent = requests.find(request => request.method() === 'DELETE')!;
-  expect(new URL(sent.url()).searchParams.getAll('type')).toEqual([entry.type]);
-  handlers['GET capabilities'] = async () => {
-    const capabilities = await api.capabilities();
-    capabilities.resources.events.available = false;
-    capabilities.resources.dns_cache.delete_name = false;
-    return capabilities;
+  const sent = deletes(requests);
+  expect(sent).toHaveLength(1);
+  expect(new URL(sent[0].url()).searchParams.getAll('type')).toEqual([entry.type]);
+  const offer = (delete_name: boolean, delete_entry: boolean) => {
+    handlers['GET capabilities'] = async () => {
+      const capabilities = await api.capabilities();
+      capabilities.resources.events.available = false;
+      capabilities.resources.dns_cache.delete_name = delete_name;
+      capabilities.resources.dns_cache.delete_entry = delete_entry;
+      return capabilities;
+    };
+    return page.reload();
   };
-  await page.reload();
+  // Without a delete-by-name request, the same name goes entry by entry.
+  await offer(false, true);
+  await pick(page, 'Domain suffix', 'Match by', 'Full domain');
+  await page.getByRole('textbox', {name: 'Pattern', exact: true}).fill(entry.domain);
+  await pick(page, 'All supported types', 'Type', 'A');
+  const before = deletes(requests).length;
+  await button.click();
+  await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', {name: `Delete the A cache entry for ${entry.domain}`, exact: true})).toHaveCount(0);
+  const entryDeletes = deletes(requests).slice(before);
+  expect(entryDeletes.map(request => new URL(request.url()).pathname)).toEqual([expect.stringMatching(/^\/api\/v1\/dns\/cache\/[^/]+$/)]);
+  // Only an exact name can go when entries cannot be deleted one by one.
+  await offer(true, false);
+  await pick(page, 'Domain suffix', 'Match by', 'Domain keyword');
+  await page.getByRole('textbox', {name: 'Pattern', exact: true}).fill('bilibili');
+  await expect(page.getByText('This backend deletes cache entries by full domain only', {exact: true})).toBeVisible();
+  await expect(button).toBeDisabled();
+  await offer(false, false);
   await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toBeVisible();
   await expect(button).toHaveCount(0);
 });

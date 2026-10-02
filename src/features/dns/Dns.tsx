@@ -30,6 +30,7 @@ import {
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
 import {DnsStats} from './Analysis';
+import type {MatchKind} from './match';
 import {RuleDialog} from '../shared/RuleDialog';
 import type {useQuickRule} from '../shared/useQuickRule';
 
@@ -191,19 +192,44 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           />
         </div>
       </ActionHelp>
-      {vm.canDeleteName && (
-        <div className="rp-toolbar">
-          <TextField side label={t('dns.exactName')} value={vm.deleteName} onChange={vm.setDeleteName} width={280} placeholder="example.com" />
-          <LabeledSelect side label={t('ui.type')} value={vm.deleteType} onChange={vm.setDeleteType} items={vm.deleteChoices} />
-          <ConfirmButton
-            label={t('dns.deleteName')}
-            confirmationText={vm.deleteNameConfirmation}
-            isPending={vm.deleteNamePending}
-            isDisabled={vm.deleteNameDisabled}
-            onConfirm={vm.removeName}
-            onAbort={vm.abortFlush}
-          />
-        </div>
+      {(vm.deleteBy.name || vm.deleteBy.entry) && (
+        <ActionHelp reason={vm.matchReason}>
+          <div className="rp-toolbar">
+            <LabeledSelect side label={t('rule.kind')} value={vm.matchKind} onChange={k => vm.setMatchKind(k as MatchKind)} items={vm.matchKinds} />
+            <TextField
+              side
+              label={t('dns.pattern')}
+              value={vm.matchText}
+              onChange={vm.setMatchText}
+              error={vm.matchError}
+              help={vm.matchKind === 'regex' ? {title: t('dns.pattern'), text: t('dns.regexHelp')} : undefined}
+              width={280}
+              placeholder="example.com"
+            />
+            <LabeledSelect side label={t('ui.type')} value={vm.matchType} onChange={vm.setMatchType} items={vm.matchTypes} />
+            <ConfirmButton
+              label={t('dns.deleteMatching')}
+              confirmationText={vm.matchConfirmation}
+              details={
+                <ul className="rp-impact">
+                  {vm.matchListed.map(entry => (
+                    <li key={entry.entry_id}>
+                      <span className="rp-cluster nowrap">
+                        <TextTooltip className="rp-code">{entry.domain}</TextTooltip>
+                        <span className="rp-note">{entry.type}</span>
+                      </span>
+                    </li>
+                  ))}
+                  {vm.matchMore && <li className="rp-note">{vm.matchMore}</li>}
+                </ul>
+              }
+              isPending={vm.matchPending}
+              isDisabled={vm.matchDisabled}
+              onConfirm={vm.removeMatching}
+              onAbort={vm.abortFlush}
+            />
+          </div>
+        </ActionHelp>
       )}
       <ActionHelp reason={vm.deleteReason} above>
         <DataTable

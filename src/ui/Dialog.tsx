@@ -345,10 +345,12 @@ export function ConfirmDialog({
 
 // A negative trigger button and its ConfirmDialog. `onConfirm` resolves to the failure to show, if any; the dialog
 // closes once it resolves without one. Cancel or unmounting while it is pending calls `onAbort` and ignores the late
-// result. `open`/`setOpen` let a caller act when the dialog opens.
+// result. `open`/`setOpen` let a caller act when the dialog opens. `details` sits under the sentence, in a dialog whose
+// body scrolls.
 export function ConfirmButton({
   label,
   confirmationText,
+  details,
   isDisabled,
   isPending,
   onConfirm,
@@ -358,6 +360,7 @@ export function ConfirmButton({
 }: {
   label: string;
   confirmationText: ReactNode;
+  details?: ReactNode;
   isDisabled?: boolean;
   isPending?: boolean;
   onConfirm: () => Promise<string | null | undefined | void>;
@@ -413,8 +416,18 @@ export function ConfirmButton({
       <Button negative quiet isDisabled={isDisabled} isPending={isPending || running} onPress={() => change(true)}>
         {label}
       </Button>
-      <ConfirmDialog title={label} confirmLabel={label} isOpen={isOpen} isPending={running} error={error} onCancel={cancel} onConfirm={() => void confirm()}>
+      <ConfirmDialog
+        title={label}
+        confirmLabel={label}
+        isOpen={isOpen}
+        isPending={running}
+        error={error}
+        scrollBody={!!details}
+        onCancel={cancel}
+        onConfirm={() => void confirm()}
+      >
         <p className="rp-label">{confirmationText}</p>
+        {details}
       </ConfirmDialog>
     </>
   );

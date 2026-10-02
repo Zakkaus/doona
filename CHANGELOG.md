@@ -6,7 +6,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
+- The DNS cache tab deletes entries by full name, suffix, keyword or regex, by record type, or both, after showing how many match, when the backend supports it. (#306, #314)
 
 ### Changed
 

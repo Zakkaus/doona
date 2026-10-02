@@ -106,6 +106,28 @@ export function deleteCacheEntry(api: Api, id: string, signal: AbortSignal) {
 export function deleteCacheName(api: Api, query: Parameters<Api['deleteDnsCacheByName']>[0], signal: AbortSignal) {
   return api.deleteDnsCacheByName(query, signal).finally(() => changed(api));
 }
+const DELETE_CONCURRENCY = 4;
+// Deletes the entries a few at a time; the client itself waits out a 429 or 503 with Retry-After. A failed entry is
+// counted and the rest still go, so the result says how far it got. An entry that is already gone (404) is not a failure.
+export async function deleteCacheEntries(api: Api, ids: string[], signal: AbortSignal) {
+  let next = 0;
+  let deleted = 0;
+  let failed = 0;
+  const worker = async () => {
+    while (next < ids.length) {
+      signal.throwIfAborted();
+      try {
+        const result = await deleteCacheEntry(api, ids[next++], signal);
+        deleted += result.deleted;
+      } catch (error) {
+        signal.throwIfAborted();
+        if (!(error instanceof ApiError && error.status === 404)) failed++;
+      }
+    }
+  };
+  await Promise.all(Array.from({length: Math.min(DELETE_CONCURRENCY, ids.length)}, worker));
+  return {deleted, failed};
+}
 // Otherwise one entry is enough to read the usage and coverage.
 export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheList> {
   const recent = walks.get(api);
@@ -154,10 +176,22 @@ export function useDnsControl(paused = false) {
     ),
     removeName: useCallback(
       (query: Parameters<Api['deleteDnsCacheByName']>[0]) =>
-        run('delete-name', async signal => {
+        run('delete-match', async signal => {
           const value = await deleteCacheName(api, query, signal);
           refetch();
           return value;
+        }),
+      [api, run, refetch]
+    ),
+    removeMany: useCallback(
+      (ids: string[]) =>
+        run('delete-match', async signal => {
+          // Read again even when the run was cut short, which may have deleted some.
+          try {
+            return await deleteCacheEntries(api, ids, signal);
+          } finally {
+            refetch();
+          }
         }),
       [api, run, refetch]
     ),

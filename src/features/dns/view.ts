@@ -113,7 +113,8 @@ export function dnsCacheView(
             })
           }))
       : [],
-    canDeleteName: !!cache?.available && cache.delete_name === true,
+    // What the pattern deletion can use: one request for an exact name, or the entries one by one.
+    deleteBy: {name: !!cache?.available && cache.delete_name === true, entry: !!cache?.available && cache.delete_entry === true},
     filterText: domain ? t('dns.cacheFilter', {domain}) : '',
     confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
