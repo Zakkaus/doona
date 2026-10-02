@@ -45,10 +45,8 @@ export function recordingNote(recording: RuntimeSettings['recording'] | undefine
   if (!recording.events) return null;
   return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
 }
-// honk retains flow demand after the last read or stream; api/mock/recording.ts models the same grace.
-const flowDemandGraceSeconds = 60;
-export const flowRecordingNote = (choice: RecorderChoice, t: Translator) =>
-  choice === 'auto' ? t('settings.recordFlowsAuto', {n: flowDemandGraceSeconds}) : null;
+export const flowRecordingNote = (choice: RecorderChoice, grace: number | null, t: Translator) =>
+  choice === 'auto' && grace !== null ? t('settings.recordFlowsAuto', {n: grace}) : null;
 export const numericAccess: Record<
   Numeric,
   // read is undefined when the engine omits the section or member.

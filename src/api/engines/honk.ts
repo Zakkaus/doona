@@ -72,6 +72,7 @@ const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => l
 
 export const honk: Engine = {
   id: 'honk',
+  flowDemandGraceSeconds: 60,
   globalSettings: honkGlobal,
   reason,
   // Reading these back takes a BPF_PROG_QUERY per hook, or a switch into the daens namespace for dae0peer.

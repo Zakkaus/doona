@@ -19,6 +19,8 @@ const listener = "experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}";
 describe('engineOf', () => {
   it('knows honk by its engine name and nothing else', () => {
     expect(honk.id).toBe('honk');
+    expect(honk.flowDemandGraceSeconds).toBe(60);
+    expect(other.flowDemandGraceSeconds).toBeNull();
     expect(other.id).toBe('unknown');
     expect(engineOf(undefined).id).toBe('unknown');
   });

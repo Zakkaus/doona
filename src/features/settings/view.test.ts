@@ -80,8 +80,9 @@ it('names the pages that make automatic flow recording capture', () => {
   const auto = (id: 'record_flows' | 'record_logs') => recorderView(id, 'auto', undefined, t).items.find(item => item.id === 'auto')?.label;
   expect(auto('record_flows')).toBe('On flow demand');
   expect(auto('record_logs')).toBe('On log demand');
-  expect(flowRecordingNote('auto', t)).toContain('60');
-  expect(flowRecordingNote('on', t)).toBeNull();
+  expect(flowRecordingNote('auto', 60, t)).toContain('60');
+  expect(flowRecordingNote('auto', null, t)).toBeNull();
+  expect(flowRecordingNote('on', 60, t)).toBeNull();
   for (const lang of ['zh-TW', 'zh-CN'] as const)
     for (const key of ['settings.record.autoFlows', 'settings.recordFlowsAuto'] as const) expect(translate(lang, key)).not.toBe(translate('en', key));
 });
