@@ -1,6 +1,6 @@
 import {useId, useState} from 'react';
 import {useT} from '../../i18n';
-import type {ProbeChoice, ProbeOptions} from '../../store/probeOptions';
+import {latencyProbeChoice, useProbeOptions, type ProbeChoice, type ProbeOptions} from '../../store/probeOptions';
 import {Button, DialogForm, LabeledSelect, ModalDialog, Switch} from '../../ui/ui';
 
 export type ProbeOptionsDialogModel = {
@@ -14,9 +14,11 @@ export type ProbeOptionsDialogModel = {
 export function ProbeOptionsDialog({model: m}: {model: ProbeOptionsDialogModel}) {
   const t = useT();
   const form = useId();
-  const [choice, setChoice] = useState(m.choices[0]?.id ?? '');
-  const [cold, setCold] = useState(false);
-  const [leaves, setLeaves] = useState(false);
+  // Starts from the Latency probes settings; a change here applies to this probe only.
+  const stored = useProbeOptions();
+  const [choice, setChoice] = useState(latencyProbeChoice(m.choices, stored.choice)?.id ?? '');
+  const [cold, setCold] = useState(stored.cold);
+  const [leaves, setLeaves] = useState(stored.leaves);
   const disabled = m.busy || !m.choices.some(item => item.id === choice);
   return (
     <ModalDialog
@@ -38,7 +40,7 @@ export function ProbeOptionsDialog({model: m}: {model: ProbeOptionsDialogModel})
         id={form}
         onSubmit={event => {
           event.preventDefault();
-          if (!disabled) m.submit({choice, cold, leaves});
+          if (!disabled) m.submit({...stored, choice, cold, leaves});
         }}
       >
         <LabeledSelect label={t('probe.kind')} value={choice} onChange={setChoice} items={m.choices.map(item => ({id: item.id, label: t(item.label)}))} />

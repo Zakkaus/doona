@@ -3,12 +3,13 @@ import type {Key} from '../../i18n';
 
 // The page's cards in order. The page renders them in this order and search lists the same
 // cards, so both take their titles from here; `?card=` scrolls to the card's heading, id `settings-{id}`.
-export type SettingsCardId = 'backend' | 'runtime' | 'geodata' | 'actions' | 'appearance' | 'about';
+export type SettingsCardId = 'backend' | 'runtime' | 'geodata' | 'actions' | 'appearance' | 'probes' | 'about';
 export const settingsCards: ReadonlyArray<{id: SettingsCardId; titleKey: Key}> = [
   {id: 'backend', titleKey: 'settings.backend'},
   {id: 'runtime', titleKey: 'settings.runtime'},
   {id: 'geodata', titleKey: 'settings.geodata'},
   {id: 'appearance', titleKey: 'settings.appearance'},
+  {id: 'probes', titleKey: 'settings.probes'},
   {id: 'actions', titleKey: 'settings.actions'},
   {id: 'about', titleKey: 'settings.about'}
 ];

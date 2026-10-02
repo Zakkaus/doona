@@ -1,9 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
-import {latencyProbe} from './action';
-import {optionsProbe} from './probeOptions';
-import {groupActions, groupConflict, patchConfig, probeGroup} from './groups';
+import {optionsProbe, probeDefaults} from './probeOptions';
+import {groupActions, groupConflict, groupProbeProtocols, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
 
@@ -39,7 +38,7 @@ it.each([
   caps.resources.probes.limits!.max_results_per_job = maxResults;
   const group = await api.group('backup');
   expect(group.members).toHaveLength(120);
-  const request = optionsProbe(caps, {type: 'group', group_id: group.id}, {choice: 'dns_both', cold: true, leaves}, group)!;
+  const request = optionsProbe(caps, {type: 'group', group_id: group.id}, {...probeDefaults, choice: 'dns_both', cold: true, leaves}, group)!;
   const size = Math.min(caps.resources.probes.limits!.max_members_per_job, Math.floor(maxResults / 4));
   const start = api.startProbe;
   api.startProbe = vi.fn(async (batch, signal) => {
@@ -59,7 +58,7 @@ it.each([
 it('rejects oversized direct jobs in mock admission', async () => {
   const api = createMockApi();
   const caps = await api.capabilities();
-  const request = latencyProbe(caps, {type: 'group', group_id: 'backup'})!;
+  const request = optionsProbe(caps, {type: 'group', group_id: 'backup'})!;
   await expect(api.startProbe(request)).rejects.toMatchObject({status: 413, code: 'request_too_large'});
 });
 
@@ -142,4 +141,40 @@ it('offers a group only the actions the backend offers for groups as a whole', a
   // A discovery without the flags leaves the group's own in charge.
   expect(offered({selection: undefined, config_patch: undefined})).toEqual(group.capabilities);
   expect(group.capabilities.mutable_config).toEqual(['interrupt_connections', 'check_url']);
+});
+
+it('inspects nested group leaves before choosing a common probe kind', async () => {
+  const api = createMockApi();
+  const nodes = (await api.nodes({limit: 1000})).nodes;
+  const group = await api.group('backup');
+  const parent = {...group, id: 'parent', members: [{id: group.id, name: group.name, kind: 'group' as const}]};
+  const protocols = await groupProbeProtocols(api, parent, nodes);
+  expect(protocols).toHaveLength(group.members.length);
+  expect(protocols).toContain('hysteria2');
+  const request = optionsProbe(await api.capabilities(), {type: 'group', group_id: parent.id}, {...probeDefaults, choice: 'tcp_connect'}, parent, protocols);
+  expect(request).toMatchObject({kind: 'http', transport: ['tcp']});
+});
+
+it('mock accepts QUIC TCP connect as a failed measurement, while HTTP still succeeds', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
+  for (const kind of ['tcp_connect', 'http'] as const) {
+    const accepted = await api.startProbe({target: {type: 'node', node_id: node.id}, kind, transport: ['tcp'], ip_version: 'ipv4', warmth: 'warm'});
+    await vi.runAllTimersAsync();
+    const result = await api.operation(accepted.operation_id);
+    expect(result).toMatchObject({
+      status: 'succeeded',
+      result: {results: [expect.objectContaining(kind === 'http' ? {state: 'healthy', error: null} : {state: 'unavailable', error: 'probe_failed'})]}
+    });
+  }
+});
+
+it('mock rejects VMess UDP at admission', async () => {
+  const api = createMockApi();
+  await api.createNode({name: 'vmess-probe', link: 'vmess://demo@vmess.example.net:443'});
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.name === 'vmess-probe')!;
+  await expect(
+    api.startProbe({target: {type: 'node', node_id: node.id}, kind: 'dns', transport: ['udp'], ip_version: 'ipv4', warmth: 'cold'})
+  ).rejects.toMatchObject({status: 422, code: 'unsupported_value'});
 });

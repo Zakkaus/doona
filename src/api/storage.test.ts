@@ -16,6 +16,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-flag-overrides',
     'doona-toast-placement',
     'doona-start-page',
+    'doona-latency-probe',
     'doona-profiles',
     'doona-profile',
     'doona-api',

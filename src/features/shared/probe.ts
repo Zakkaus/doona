@@ -1,7 +1,7 @@
 import type {ProbeResult} from '../../api/model';
 import {foldFamilies} from '../../api/selectors';
 import {millis} from '../../api/u64';
-import type {Translator} from '../../i18n';
+import type {Key, Translator} from '../../i18n';
 import {backendCode, knownCode} from '../../i18n/backend';
 
 // The node's rows fold as the latency column folds them: one answering family makes it available, and a probe that
@@ -14,4 +14,8 @@ export function probeToast(result: ProbeResult, id: string, name: string, t: Tra
   if (row?.state === 'unavailable') return {kind: 'negative' as const, text: t('nodes.probeFailed', {name})};
   const error = items.find(item => item.error && knownCode(item.error))?.error;
   return {kind: 'neutral' as const, text: error ? t('nodes.probeUnknownWhy', {name, error: backendCode(error, t)}) : t('nodes.probeUnknown', {name})};
+}
+
+export function probeFallbackNotice(fallback: {from: Key; to: Key} | undefined, name: string, t: Translator): string {
+  return fallback ? ` ${t('probe.fallback', {name, requested: t(fallback.from), used: t(fallback.to)})}` : '';
 }

@@ -8,6 +8,7 @@ import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
 import {BackendActionsCard} from './BackendActions';
 import {GeodataSettingsCard} from './GeodataSettings';
+import {ProbeSettingsCard} from './ProbeSettings';
 import {useCopyDiagnostics, useDiagnostics} from '../shared/useCopyDiagnostics';
 import {About} from '../../shell/About';
 import {openShortcuts} from '../../shell/shortcuts';
@@ -230,6 +231,7 @@ export function Settings({query}: PageProps) {
         </div>
       </Card>
     ),
+    probes: <ProbeSettingsCard />,
     actions: <BackendActionsCard />,
     about: (
       <Card level={2} title={t(cards.about.titleKey)} titleId={cards.about.headingId}>

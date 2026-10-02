@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
-import type {Capabilities, Operation, OperationAccepted, OperationState, ProbeRequest} from '../api/model';
+import type {Operation, OperationAccepted, OperationState} from '../api/model';
 import {ApiError, LocalError} from '../api/error';
 import {refetchAll} from './resourceCore';
 import {waitOutRefusal} from '../api/refusal';
@@ -148,25 +148,4 @@ export function activationError(failure: unknown, {written = false} = {}): Local
             ? 'ui.activationDegradedSaved'
             : 'ui.activationDegraded';
   return new LocalError(key, message ?? null, code ?? null, details);
-}
-// A warm latency probe through the node over every reachable IP version; a group target probes its direct members, a
-// node target must not name members. HTTP dials the configured check URL through the node, as honk's own health check
-// does; `tcp_connect` only reaches the node's server endpoint, which a UDP-only protocol such as Hysteria2 or TUIC
-// never accepts, so it is the fallback for a backend that offers no HTTP probe.
-export function latencyProbe(capabilities: Capabilities | undefined, target: ProbeRequest['target']): ProbeRequest | null {
-  const probes = capabilities?.resources.probes;
-  const kind = probes?.kinds?.includes('http') ? 'http' : probes?.kinds?.includes('tcp_connect') ? 'tcp_connect' : null;
-  if (!probes?.available || !kind || !probes.transports?.includes('tcp') || !probes.targets?.includes(target.type)) return null;
-  const ipv4 = probes.ip_versions?.includes('ipv4');
-  const ipv6 = probes.ip_versions?.includes('ipv6');
-  if (!ipv4 && !ipv6) return null;
-  const request: Omit<ProbeRequest, 'members'> & {members?: ProbeRequest['members']} = {
-    target,
-    kind,
-    transport: ['tcp'],
-    warmth: 'warm',
-    ip_version: ipv4 && ipv6 ? 'any' : ipv6 ? 'ipv6' : 'ipv4'
-  };
-  if (target.type === 'group') request.members = 'direct';
-  return request;
 }

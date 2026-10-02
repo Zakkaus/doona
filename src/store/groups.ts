@@ -1,13 +1,14 @@
 import {useCallback, useMemo} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
-import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
+import type {Capabilities, Group, Node, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
-import {activationError, etag, finished, settle, latencyProbe, readBackUnconfirmed, useAction} from './action';
+import {activationError, etag, finished, settle, readBackUnconfirmed, useAction} from './action';
 import {useSharedControl} from './sharedControl';
-import {optionsProbe, probeChoices, type ProbeOptions} from './probeOptions';
+import {optionsProbe, probeChoices, probeFallback, useProbeOptions, type ProbeOptions} from './probeOptions';
+import {useNodes} from './nodes';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
@@ -16,7 +17,7 @@ export async function probeGroup(
   capabilities: Capabilities,
   group: Group,
   signal: AbortSignal,
-  request: ProbeRequest | null = latencyProbe(capabilities, {type: 'group', group_id: group.id})
+  request: ProbeRequest | null = optionsProbe(capabilities, {type: 'group', group_id: group.id})
 ): Promise<ProbeResult> {
   const limits = capabilities.resources.probes.limits;
   if (!request || !limits || request.transport.some(transport => !group.capabilities.probe_transports.includes(transport)))
@@ -53,6 +54,22 @@ export async function probeGroup(
     });
   }
   return result!;
+}
+// Include descendants because options can expand leaves and a child's selected node can change.
+export async function groupProbeProtocols(api: Pick<Api, 'group'>, group: Group, nodes: Node[], signal?: AbortSignal): Promise<Array<string | null>> {
+  const seen = new Set<string>();
+  const visit = async (current: Group): Promise<Array<string | null>> => {
+    if (seen.has(current.id)) return [];
+    seen.add(current.id);
+    return (
+      await Promise.all(
+        current.members.map(async member =>
+          member.kind === 'node' ? [nodes.find(node => node.id === member.id)?.protocol ?? null] : visit(await api.group(member.id, signal))
+        )
+      )
+    ).flat();
+  };
+  return visit(group);
 }
 // Applies patch ops at the group's current configuration revision and waits for the reload that applies them. A 200
 // answers with the config document only; the caller refetches the group.
@@ -92,8 +109,10 @@ export function useGroups(enabled = true, every: number = poll.inventory) {
   return useResource({key: ['groups'], every, fetch: signal => api.groups(signal)}, {enabled});
 }
 export function useGroupControl(id: string, refetchGroups: () => unknown, refetchNodes: () => unknown, paused = false) {
+  const stored = useProbeOptions();
   const api = getApi();
   const capabilities = useCapabilities().data;
+  const nodes = useNodes().data;
   const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
   const data = useMemo(() => resource.data && groupActions(resource.data, capabilities), [resource.data, capabilities]);
@@ -110,16 +129,33 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
     },
     [act, refetchShown]
   );
-  // A TCP probe needs the backend to offer it and the group to accept it.
-  const request = latencyProbe(capabilities, {type: 'group', group_id: id});
+  // Only a group with nested groups reads them; until they arrive its direct nodes decide, so the card keeps its size.
+  const nested = resource.data?.members.some(member => member.kind === 'group') ?? false;
+  const {data: leaves} = useResource(
+    {
+      key: ['groupProbeProtocols', {id, revision: resource.data?.config_revision}],
+      every: poll.inventory,
+      fetch: signal => groupProbeProtocols(api, resource.data!, nodes!, signal)
+    },
+    {enabled: nested && !!nodes, paused}
+  );
+  const direct = useMemo(
+    () =>
+      resource.data && nodes
+        ? resource.data.members.filter(member => member.kind === 'node').map(member => nodes.find(node => node.id === member.id)?.protocol ?? null)
+        : [null],
+    [resource.data, nodes]
+  );
+  const protocols = (nested && leaves) || direct;
+  const request = optionsProbe(capabilities, {type: 'group', group_id: id}, stored, resource.data, protocols);
   const limits = capabilities?.resources.probes.limits;
   const canProbe =
     request !== null &&
     !!limits &&
     limits.max_members_per_job > 0 &&
-    limits.max_results_per_job >= (request.ip_version === 'any' ? 2 : 1) &&
+    limits.max_results_per_job >= request.transport.length * (request.ip_version === 'any' ? 2 : 1) &&
     !!resource.data?.members.length &&
-    resource.data.capabilities.probe_transports.includes('tcp');
+    request.transport.every(transport => resource.data!.capabilities.probe_transports.includes(transport));
   const patch = useCallback(
     (ops: JsonPatch) =>
       run('config', async signal => {
@@ -145,7 +181,7 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
     setNetwork,
     busy: action.busy,
     canProbe,
-    probeChoices: resource.data ? probeChoices(capabilities, 'group', resource.data) : [],
+    probeChoices: resource.data ? probeChoices(capabilities, 'group', resource.data, protocols) : [],
     select: useCallback(
       (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal).catch(readBackUnconfirmed(refetchShown, signal))),
       [api, id, network, run, refetchShown]
@@ -159,16 +195,16 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
         run('probe', async signal => {
           if (!capabilities || !resource.data || (!options && !canProbe)) throw new LocalError('ui.probeUnsupported');
           try {
-            const request = options
-              ? optionsProbe(capabilities, {type: 'group', group_id: id}, options, resource.data)
-              : latencyProbe(capabilities, {type: 'group', group_id: id});
-            return await probeGroup(api, capabilities, resource.data, signal, request);
+            const chosen = options ?? stored;
+            const request = optionsProbe(capabilities, {type: 'group', group_id: id}, chosen, resource.data, protocols);
+            const result = await probeGroup(api, capabilities, resource.data, signal, request);
+            return {...result, fallback: request ? probeFallback(chosen.choice, request) : undefined};
           } catch (error) {
             if (!signal.aborted) void refetchShown();
             throw error;
           }
         }),
-      [api, id, capabilities, resource.data, canProbe, run, refetchShown]
+      [api, id, capabilities, resource.data, protocols, stored, canProbe, run, refetchShown]
     ),
     patchConfig: patch,
     // Turning off a value the group never set clears it again rather than writing false.

@@ -1,5 +1,5 @@
 import {test as browserTest, type Page} from '@playwright/test';
-import {expect, expectLoadFailures, loadCatalogues, mockBackend, test} from './fixtures';
+import {expect, expectLoadFailures, loadCatalogues, mockBackend, moreAction, test} from './fixtures';
 import {translate} from '../src/i18n';
 import {capabilities} from '../src/api/mock/fixtures';
 
@@ -12,7 +12,7 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(6);
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(7);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
@@ -397,4 +397,52 @@ test('appearance uses labeled pickers with balanced insets and matching type', a
   await page.keyboard.press('Escape');
   await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Backend', exact: true})).toHaveCount(0);
+});
+
+test('latency probes have their own card, persist and shape node and group probes', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.goto('/#/settings?card=probes');
+  const card = page.getByRole('region', {name: 'Latency probes', exact: true});
+  const runtime = page.getByRole('region', {name: 'Temporary runtime overrides', exact: true});
+  await expect(card).toContainText('Saved in this browser.');
+  await expect(runtime.getByRole('button', {name: /Probe method/})).toHaveCount(0);
+  for (const label of ['Probe method', 'IP family', 'Measurement', 'Group probes']) await expect(card.getByText(label, {exact: true})).toHaveCount(1);
+  const choose = async (picker: string, option: string) => {
+    await card.getByRole('button', {name: new RegExp(picker)}).click();
+    await page.getByRole('option', {name: option, exact: true}).click();
+  };
+  await choose('Probe method', 'TCP connect');
+  await choose('IP family', 'IPv6');
+  await choose('Measurement', 'Cold (new connection)');
+  await choose('Group probes', 'Every leaf node');
+  await page.reload();
+  await expect(card.getByRole('button', {name: /Probe method/})).toContainText('TCP connect');
+  await expect(card.getByRole('button', {name: /IP family/})).toContainText('IPv6');
+  await expect(card.getByRole('button', {name: /Measurement/})).toContainText('Cold (new connection)');
+  await expect(card.getByRole('button', {name: /Group probes/})).toContainText('Every leaf node');
+  await card.getByRole('link', {name: 'Edit health checks in Configuration', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config\?tab=global$/);
+  const probes = () => requests.filter(request => request.method() === 'POST' && request.url().endsWith('/probes')).map(request => request.postDataJSON());
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
+  await expect
+    .poll(probes)
+    .toEqual([
+      expect.objectContaining({target: expect.objectContaining({type: 'node'}), kind: 'tcp_connect', transport: ['tcp'], ip_version: 'ipv6', warmth: 'cold'})
+    ]);
+  expect(probes()[0]).not.toHaveProperty('members');
+  await page.goto('/#/policies');
+  await moreAction(page.getByRole('region', {name: 'gaming', exact: true}), 'Test all');
+  await expect
+    .poll(() => probes().slice(1))
+    .toEqual([expect.objectContaining({target: {type: 'group', group_id: 'gaming'}, ip_version: 'ipv6', warmth: 'cold', members: 'leaves'})]);
+});
+
+test('the latency probes card shows the unavailable note without probes', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  capabilities.resources.probes.available = false;
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: 'Latency probes', exact: true});
+  await expect(card).toContainText('This backend does not provide latency probes');
+  await expect(card.getByRole('button', {name: /Probe method/})).toHaveCount(0);
 });

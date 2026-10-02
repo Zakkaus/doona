@@ -1,3 +1,4 @@
+import {nodeProbeSupport} from '../../dae/probes';
 import type {Group, HealthObservation, JsonPatch, Node, ProbeRequest, ProbeResult} from '../model';
 import {ApiError} from '../error';
 import {policyKindLabels, safeHttpUrl} from '../selectors';
@@ -46,7 +47,9 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
       const versions: Array<'ipv4' | 'ipv6'> = request.ip_version === 'any' ? ['ipv4', 'ipv6'] : [request.ip_version];
       for (const ip_version of versions) {
         const previous = node?.health.find(h => h.transport === transport && h.ip_version === ip_version);
-        const latency_ms = previous?.state === 'healthy' ? previous.latency_ms : null;
+        const support = nodeProbeSupport(node?.protocol ?? null);
+        const usable = request.kind === 'tcp_connect' ? support.connect : support.stream;
+        const latency_ms = usable && previous?.state === 'healthy' ? previous.latency_ms : null;
         const state = latency_ms === null ? 'unavailable' : 'healthy';
         const warmth = latency_ms === null ? 'unknown' : request.kind === 'http' ? request.warmth : 'cold';
         // A success folds into both averages, the 10-sample one as a tenth so the mock keeps no window; a failure

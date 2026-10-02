@@ -1296,8 +1296,10 @@ test('node probe options send DNS over UDP with a cold session', async ({page}) 
     body = request.postDataJSON();
     return api.startProbe(request.postDataJSON());
   };
-  await page.goto('/#/nodes?provider=inline');
-  const row = nodeRows(page).filter({hasText: 'hk-01'});
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
+  await page.goto('/#/nodes');
+  await page.getByRole('searchbox', {name: 'Search nodes'}).fill(node.name);
+  const row = nodeRows(page).filter({hasText: node.name});
   await row.getByRole('button', {name: 'Node actions', exact: true}).click();
   await page.getByRole('menuitem', {name: 'Probe with options…', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Probe options'});
@@ -1308,9 +1310,9 @@ test('node probe options send DNS over UDP with a cold session', async ({page}) 
   await dialog.getByRole('switch', {name: 'Cold', exact: true}).press('Space');
   await dialog.getByRole('button', {name: 'Probe', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(() => body).toEqual({target: {type: 'node', node_id: 'hk-01'}, kind: 'dns', transport: ['udp'], ip_version: 'any', warmth: 'cold'});
-  await expect(page.locator('.rp-toast.positive')).toContainText('hk-01');
-  expect((await api.nodes()).nodes.find(node => node.id === 'hk-01')?.health).toContainEqual(
+  await expect.poll(() => body).toEqual({target: {type: 'node', node_id: node.id}, kind: 'dns', transport: ['udp'], ip_version: 'any', warmth: 'cold'});
+  await expect(page.locator('.rp-toast.positive')).toContainText(node.name);
+  expect((await api.nodes()).nodes.find(item => item.id === node.id)?.health).toContainEqual(
     expect.objectContaining({purpose: 'dns', measurement: 'dns_round_trip', transport: 'udp', warmth: 'cold', sample_source: 'probe'})
   );
 });
@@ -1365,10 +1367,64 @@ for (const available of [false, true]) {
     capabilities.resources.probes.kinds = ['dns'];
     await page.goto('/#/nodes?provider=inline');
     const row = nodeRows(page).filter({hasText: 'hk-01'});
-    await expect(row.getByRole('button', {name: 'Test hk-01', exact: true})).toHaveCount(0);
+    await expect(row.getByRole('button', {name: 'Test hk-01', exact: true})).toHaveCount(available ? 1 : 0);
     await row.getByRole('button', {name: 'Node actions', exact: true}).click();
     const options = page.getByRole('menuitem', {name: 'Probe with options…', exact: true});
-    if (available) await expect(options).toBeDisabled();
+    if (available) await expect(options).toBeEnabled();
     else await expect(options).toHaveCount(0);
   });
 }
+
+test('node Probe uses the latency preference and options preselect it', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
+  await page.goto('/#/settings');
+  await page
+    .getByRole('region', {name: 'Latency probes', exact: true})
+    .getByRole('button', {name: /Probe method/})
+    .click();
+  await page.getByRole('option', {name: 'DNS (UDP)', exact: true}).click();
+  await page.evaluate(() => {
+    location.hash = '#/nodes';
+  });
+  await page.getByRole('searchbox', {name: 'Search nodes'}).fill(node.name);
+  const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/probes'));
+  await page.getByRole('button', {name: `Test ${node.name}`, exact: true}).click();
+  expect((await request).postDataJSON()).toMatchObject({kind: 'dns', transport: ['udp'], target: {type: 'node', node_id: node.id}});
+  await expect(page.getByRole('button', {name: `Test ${node.name}`, exact: true})).toBeEnabled();
+  const row = nodeRows(page).filter({hasText: node.name});
+  await moreAction(row, 'Probe with options…', 'Node actions');
+  await expect(page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: /Kind/})).toContainText('DNS (UDP)');
+  await page.getByRole('dialog', {name: 'Probe options'}).getByRole('button', {name: 'Cancel', exact: true}).click();
+});
+
+test('QUIC nodes fall back to HTTP once and omit TCP connect from options', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const node = (await api.nodes({limit: 1000})).nodes.find(node => node.protocol === 'hysteria2')!;
+  const requests: unknown[] = [];
+  handlers['POST probes'] = async request => {
+    requests.push(request.postDataJSON());
+    return api.startProbe(request.postDataJSON());
+  };
+  await page.goto('/#/settings');
+  await page
+    .getByRole('region', {name: 'Latency probes', exact: true})
+    .getByRole('button', {name: /Probe method/})
+    .click();
+  await page.getByRole('option', {name: 'TCP connect', exact: true}).click();
+  await page.evaluate(() => {
+    location.hash = '#/nodes';
+  });
+  await page.getByRole('searchbox', {name: 'Search nodes'}).fill(node.name);
+  const row = nodeRows(page).filter({hasText: node.name});
+  await row.getByRole('button', {name: `Test ${node.name}`, exact: true}).click();
+  const notice = page.locator('.rp-toast', {hasText: `${node.name} cannot use TCP connect; used HTTP.`});
+  await expect(notice).toHaveCount(1);
+  await expect(notice).toHaveClass(/positive/);
+  expect(requests).toEqual([expect.objectContaining({kind: 'http', transport: ['tcp'], target: {type: 'node', node_id: node.id}})]);
+  await moreAction(row, 'Probe with options…', 'Node actions');
+  const dialog = page.getByRole('dialog', {name: 'Probe options'});
+  await expect(dialog.getByRole('button', {name: /Kind/})).toContainText('HTTP');
+  await dialog.getByRole('button', {name: /Kind/}).click();
+  await expect(page.getByRole('option')).toHaveText(['HTTP', 'DNS (TCP)', 'DNS (UDP)', 'DNS (TCP + UDP)']);
+});

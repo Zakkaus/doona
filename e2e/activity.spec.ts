@@ -591,7 +591,13 @@ test('the latency sparkline restarts when the tile picks another group', async (
   await page.clock.runFor(61000);
   await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(3);
   await page.locator('.rp-latency .rp-select').click();
-  await page.getByRole('menuitemradio', {checked: false}).last().click();
+  const group = page.getByRole('menuitemradio', {name: 'proxy', exact: true});
+  // The virtual menu restores pointer events on a timer after scrolling; let it run while picking.
+  await page.clock.resume();
+  await scrollIntoList(group);
+  await group.click();
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 50))).toPass();
   // One sample is no line; the box stays.
   await expect(curve).toHaveCount(0);
   await expectNoLoneSample(page);

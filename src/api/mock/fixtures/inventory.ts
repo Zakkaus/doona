@@ -97,7 +97,16 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     const alive = rnd() > 0.06 || !faults;
     const tcp = Math.round(base + rnd() * base * 0.8);
     const udp = alive ? tcp + Math.round(rnd() * 20) : null;
-    const entry = node(region + ' ' + n + (tag ? ' ' + tag : ''), alive ? tcp : null, udp, rnd() > 0.5, 'harbor', 'shadowsocks', drift());
+    const entry = node(
+      region + ' ' + n + (tag ? ' ' + tag : ''),
+      alive ? tcp : null,
+      udp,
+      rnd() > 0.5,
+      'harbor',
+      i === 0 ? 'hysteria2' : 'shadowsocks',
+      drift()
+    );
+    if (entry.protocol === 'hysteria2') for (const sample of entry.health) if (sample.transport === 'tcp') sample.measurement = 'http_headers';
     if (i % 50 === 49) entry.health = [];
     airport.push(entry);
   }

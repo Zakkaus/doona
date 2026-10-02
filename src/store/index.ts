@@ -1,5 +1,4 @@
 export {refetchAll, useCredentialRefusal} from './resourceCore';
-export {latencyProbe} from './action';
 export {
   useVersion,
   useRuntime,

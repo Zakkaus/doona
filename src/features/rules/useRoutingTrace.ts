@@ -11,7 +11,7 @@ import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail, toastFailure, useLinked} from '../../ui/ui';
 import {chainLinks, dnsView, evaluationView, nameLinks, queryView, traceReason, traceSeed, traceStatusView} from './view';
-import {probeToast} from '../shared/probe';
+import {probeFallbackNotice, probeToast} from '../shared/probe';
 import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
@@ -57,6 +57,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
   const rules = useRules(offered(resources, 'rules', {whileLoading: false}));
   const probe = useNodeProbe(nodes.refetch);
+  const {choices: probeChoices} = probe;
   const quick = useQuickRule(go);
   const groupsByName = useMemo(() => new Map(groups.data?.map(group => [group.name, group]) ?? []), [groups.data]);
   const groupsById = useMemo(() => new Map(groups.data?.map(group => [group.id, group]) ?? []), [groups.data]);
@@ -137,7 +138,17 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
           const outbound = evaluation.outbound ?? likely;
           const selected =
             outbound && !isBuiltinOutbound(outbound) ? resolveSelectedLeaf(outbound, accepted.input.network, groupsByName, groupsById, nodesById) : null;
-          const view = evaluationView(evaluation, index, accepted.input.domain ?? undefined, likely, selected, probe.canProbe, probe.busy, t, lang);
+          const view = evaluationView(
+            evaluation,
+            index,
+            accepted.input.domain ?? undefined,
+            likely,
+            selected,
+            !!selected?.node && probeChoices(selected.node).length > 0,
+            probe.busy,
+            t,
+            lang
+          );
           return {
             ...view,
             rows: view.rows.map(row => ({...row, href: ruleHref(row.id, current && rulesById.has(row.id))})),
@@ -145,7 +156,7 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
             seed: traceSeed(accepted.input, evaluation, traced)
           };
         }) ?? [],
-    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providersListed, providers.data, probe.canProbe, probe.busy, t, lang]
+    [accepted, generation, rulesById, groupsByName, groupsById, nodesById, groupsListed, providersListed, providers.data, probeChoices, probe.busy, t, lang]
   );
   const result = useMemo(
     () =>
@@ -162,10 +173,10 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
     const node = nodesById.get(id);
     if (!node) return;
     try {
-      const result = await probe.probe(id);
+      const result = await probe.probe(node);
       if (!result) return;
       const {kind, text} = probeToast(result, id, node.name, t);
-      toast(kind, text);
+      toast(kind, text + probeFallbackNotice(result.fallback, node.name, t));
     } catch (error) {
       toastFailure(error, t, t('nodes.probeError', {name: node.name}));
     }

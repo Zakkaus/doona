@@ -1,6 +1,5 @@
 import {href} from '../../shell/route';
 import {useCallback, useMemo, useState} from 'react';
-import {isBuiltinOutbound} from '../../dae/vocab';
 import {useFilter} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
@@ -15,7 +14,7 @@ import {nodeRows, nodeRowView} from './view';
 import {compareNames} from '../../i18n/format';
 import {longList} from '../../ui/longList';
 import type {SearchSection} from '../../ui/SearchSelect';
-import {probeToast} from '../shared/probe';
+import {probeFallbackNotice, probeToast} from '../shared/probe';
 import {errorText} from '../../api/error';
 
 type NodeTableInput = {
@@ -101,7 +100,7 @@ export function useNodeTable(input: NodeTableInput) {
   const canCreate = source.writable && !source.busy && !!source.main;
   const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
   const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
-  const {probe: runProbe, canProbe, busy: probeBusy} = probe;
+  const {probe: runProbe, choices, busy: probeBusy} = probe;
   // A row per node object, rebuilt only when the node or what every row reads changes. The running probe is not part
   // of a row: the table reads it, so a probe starting or ending does not rebuild every row.
   const build = useCallback(
@@ -109,15 +108,15 @@ export function useNodeTable(input: NodeTableInput) {
       ...nodeRowView(node, names, lang, t),
       source: sourceOf(node),
       groupLinks: node.group_ids.map(id => ({id, label: names.get(id) ?? id, href: href('policies', {group: id})})),
-      canProbe: canProbe && !isBuiltinOutbound(node.protocol),
+      canProbe: choices(node).length > 0,
       probeOptions: () => setProbeTarget(node),
-      canProbeOptions: probe.choices.length > 0 && !isBuiltinOutbound(node.protocol),
+      canProbeOptions: choices(node).length > 0,
       probe: (options?: ProbeOptions) =>
-        void runProbe(node.id, options).then(
+        void runProbe(node, options).then(
           result => {
             if (!result) return;
             const {kind, text} = probeToast(result, node.id, node.name, t);
-            toast(kind, text);
+            toast(kind, text + probeFallbackNotice(result.fallback, node.name, t));
           },
           error => toastFailure(error, t, t('nodes.probeError', {name: node.name}))
         ),
@@ -129,7 +128,7 @@ export function useNodeTable(input: NodeTableInput) {
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, probe.choices.length, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
+    [names, lang, sourceOf, choices, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -140,7 +139,7 @@ export function useNodeTable(input: NodeTableInput) {
       ? {
           name: probeTarget.name,
           group: false,
-          choices: probe.choices,
+          choices: choices(probeTarget),
           busy: !!probeBusy,
           close: () => setProbeTarget(null),
           submit: (options: ProbeOptions) => {

@@ -1,4 +1,4 @@
-import {Button as RButton, Select, SelectValue, Popover, ListBox, ListBoxItem, Label, type Key} from 'react-aria-components';
+import {Button as RButton, Select, SelectValue, Popover, ListBox, ListBoxItem, Label, Text, type Key} from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
 import {ItemLabel, ItemText, type Item} from './Select';
@@ -20,8 +20,18 @@ function SelectBody({
   className,
   layout,
   cut,
-  takeFocus
-}: Picked & {items: Item[]; label: string; isDisabled?: boolean; className: string; layout?: 'field' | 'side'; cut?: 'start' | 'path'; takeFocus?: boolean}) {
+  takeFocus,
+  description
+}: Picked & {
+  items: Item[];
+  label: string;
+  isDisabled?: boolean;
+  className: string;
+  layout?: 'field' | 'side';
+  cut?: 'start' | 'path';
+  takeFocus?: boolean;
+  description?: string;
+}) {
   return (
     <Select
       aria-label={layout ? undefined : label}
@@ -38,6 +48,11 @@ function SelectBody({
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} cut={cut} /> : value)}</SelectValue>
         <ChevronDown />
       </RButton>
+      {description && (
+        <Text slot="description" className="rp-label">
+          {description}
+        </Text>
+      )}
       <Popover className="rp-popover" placement="bottom start">
         <ListBox items={items}>
           {i => (
@@ -64,7 +79,8 @@ export function LabeledSelect({
   side,
   bare,
   cut,
-  takeFocus
+  takeFocus,
+  description
 }: {
   label: string;
   items: Item[];
@@ -76,6 +92,7 @@ export function LabeledSelect({
   // Path values truncate the directory while reserving the basename and revealing the full path.
   cut?: 'start' | 'path';
   takeFocus?: boolean;
+  description?: string;
 }) {
   return (
     <SelectBody
@@ -88,6 +105,7 @@ export function LabeledSelect({
       layout={bare ? undefined : side ? 'side' : 'field'}
       cut={cut}
       takeFocus={takeFocus}
+      description={description}
     />
   );
 }

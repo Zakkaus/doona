@@ -7,6 +7,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Added
 
 - Routing traces accept an optional DSCP value from 0 to 63 to evaluate `dscp(...)` rules. (#332)
+- A Latency probes card on Settings, saved in this browser, sets the probe method, IP family, warm or cold measurement and the members a group probe covers. Node and group Probe buttons use these settings, the probe options dialog starts from them, and the card links to the background health checks in Configuration. (#334)
 - Nodes and policy groups offer probe options for HTTP, TCP connect and DNS over TCP or UDP, cold probes, and nodes in nested groups. (#334)
 - The DNS cache tab deletes entries by full name, suffix, keyword or regex, by record type, or both, after showing how many match, when the backend supports it. (#306, #314)
 - The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
@@ -27,6 +28,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Internal: page-only components and helpers load with their pages, shrinking the shell bundle by about 20 KB gzip; no visible change. (#347)
 - Node actions put group choices in an Add to group submenu without policy descriptions, with New group after a separator. Native policy labels follow honk's normalised behaviour in all three languages. (#336)
 - Count labels name subscriptions, rules, notifications, connections, nodes and DNS lookups instead of appending counts in parentheses, with English singular and plural forms. (#339)
+- Probe actions use a supported method for each node or group and report any fallback; QUIC nodes retain HTTP probes. (#334)
 - The runtime overrides card on Settings links to the persistent settings in Config with a button instead of a plain text link. (#294)
 - A write that changes a setting only a restart applies is refused with a notice that stays on the global settings form and the source editor. It lists the settings, says nothing was written, and gives the restart command with a link to the install guide's Reload and restart section. The demo refuses a changed `data_dir` the same way. (#295)
 
