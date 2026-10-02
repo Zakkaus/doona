@@ -75,7 +75,7 @@ const definitions = {
     shortcut: 'p',
     nav: {titleKey: 'nav.policies', hintKey: 'hint.policies', Icon: Share},
     ...lazyPage(() => import('../features/policies/Policies').then(m => ({default: m.Policies}))),
-    requires: {resources: ['groups']}
+    requires: {resources: ['groups', 'config']}
   },
   rules: {
     shortcut: 'r',

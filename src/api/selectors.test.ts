@@ -123,14 +123,16 @@ it('lists every labelled event kind', () => {
   expect(eventKinds).toEqual(['stream.ready', 'runtime.updated', 'flow.updated', 'flow.gap', 'operation.updated', 'generation.changed']);
 });
 
-it('counts a backend as without node sources only once both lists load empty of subscriptions and own nodes', () => {
-  const builtin = {protocol: 'direct'};
-  expect(noNodeSources(undefined, [])).toBe(false);
-  expect(noNodeSources([], undefined)).toBe(false);
-  expect(noNodeSources([], [builtin])).toBe(true);
-  expect(noNodeSources([{kind: 'inline'}], [builtin])).toBe(true);
-  expect(noNodeSources([{kind: 'subscription'}], [])).toBe(false);
-  expect(noNodeSources([], [builtin, {protocol: 'vless'}])).toBe(false);
+it.each([
+  [undefined, [], false],
+  [[], undefined, false],
+  [[], [{protocol: 'direct'}], true],
+  [[{kind: 'inline'}], [{protocol: 'direct'}], true],
+  [[{kind: 'subscription'}], [], false],
+  [[{kind: 'file'}], [{protocol: 'direct'}, {protocol: 'block'}], false],
+  [[], [{protocol: 'direct'}, {protocol: 'vless'}], false]
+] as const)('detects node sources after both inventories load: %j, %j', (providers, nodes, expected) => {
+  expect(noNodeSources(providers, nodes)).toBe(expected);
 });
 
 it("keeps a connection row's identity across snapshots that re-read it unchanged", () => {

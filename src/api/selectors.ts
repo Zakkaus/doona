@@ -125,9 +125,14 @@ export function ipLiteral(text: string): string | undefined {
 // nodes. The owner's id is its kind, lengthened while a real provider already uses that id.
 export type PseudoOwner = 'builtin' | 'unattributed';
 export const pseudoOwner = (node: Pick<Node, 'protocol'>): PseudoOwner => (isBuiltinOutbound(node.protocol) ? 'builtin' : 'unattributed');
-// Whether the backend, once both lists have loaded, has no subscription and no node beyond the built-in outbounds.
+// Whether the loaded lists have no subscription or file provider and no node beyond the built-in outbounds.
 export function noNodeSources(providers: readonly Pick<Provider, 'kind'>[] | undefined, nodes: readonly Pick<Node, 'protocol'>[] | undefined): boolean {
-  return !!providers && !!nodes && !providers.some(provider => provider.kind === 'subscription') && nodes.every(node => pseudoOwner(node) === 'builtin');
+  return (
+    !!providers &&
+    !!nodes &&
+    !providers.some(provider => provider.kind === 'subscription' || provider.kind === 'file') &&
+    nodes.every(node => pseudoOwner(node) === 'builtin')
+  );
 }
 export function pseudoOwnerId(kind: PseudoOwner, providers: ReadonlyArray<{id: string}>): string {
   let id: string = kind;

@@ -917,7 +917,7 @@
   "nodes.removeProviderHelp": "從主組態刪除此節點來源及其節點，並重載。",
   "nodes.removeProviderTitle": "移除節點來源 {name}",
   "nodes.removed": "{name} 已移除",
-  "nodes.renameElsewhere": "其他來源中的群組引用此節點。請先修改引用，再重新命名。",
+  "nodes.renameElsewhere": "其他來源引用此節點。請先修改引用，再重新命名。",
   "nodes.renameGroups": "同時更新 {groups} 中的訂閱篩選條件",
   "nodes.renameGroupsHelp": "否則這些群組將失去 {name} 的節點。",
   "nodes.routeHelp": "只影響擷取訂閱本身，不影響其節點的流量。",

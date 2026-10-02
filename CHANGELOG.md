@@ -31,6 +31,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- Renaming a node updates DNS upstream detours in its declaring source and is blocked while another source refers to it. (#353)
+- Add to group on Nodes keeps the shared Policies editor available for new and existing groups when the runtime groups API is unavailable. (#353)
+- Empty file providers remain visible on Nodes, including their status and removal action. (#353)
 - Disabled page and card actions show their reasons without hovering, including on touch devices. (#340)
 - Small action buttons size their icons to the text line height, so the edit pencil fits beside the policy group menu.
 - Small action buttons size their icons to the text line height, so the edit pencil fits beside the policy group menu. (#349)

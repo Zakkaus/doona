@@ -18,6 +18,23 @@ it('offers the rules page for its DNS rules alone', () => {
   expect(navAvailable('rules', dnsRules)).toBe(true);
 });
 
+it.each([
+  [false, false, false],
+  [false, true, true],
+  [true, false, true]
+])('offers Policies for runtime groups or configuration (%s, %s)', (groups, config, expected) => {
+  expect(
+    navAvailable('policies', {
+      ...capabilitiesBase,
+      resources: {
+        ...capabilitiesBase.resources,
+        groups: {...capabilitiesBase.resources.groups, available: groups},
+        config: {...capabilitiesBase.resources.config, available: config}
+      }
+    })
+  ).toBe(expected);
+});
+
 it('registers a page for every route id', () => {
   expect(features.map(feature => feature.path)).toEqual([...routePaths]);
 });

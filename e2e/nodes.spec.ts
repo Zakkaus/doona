@@ -1136,6 +1136,25 @@ test('with no subscription and no node the page says so and offers Add subscript
   await expect(page.getByRole('dialog', {name: 'Add subscription'})).toBeVisible();
 });
 
+test('an empty file provider keeps its status and removal action with only built-in nodes', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const template = (await api.providers()).providers[0];
+  handlers['GET providers'] = async () => ({
+    providers: [{...template, id: 'empty-file', name: 'empty-file', kind: 'file', node_count: 0, status: 'error'}],
+    next_cursor: null
+  });
+  const listed = await api.nodes();
+  handlers['GET nodes'] = async () => ({
+    ...listed,
+    nodes: ['direct', 'block'].map(protocol => ({...listed.nodes[0], id: protocol, name: protocol, protocol, provider_id: null, group_ids: [], health: []}))
+  });
+  await page.goto('/#/nodes');
+  const sources = page.locator('.rp-table').first();
+  await expect(rows(sources).filter({hasText: 'empty-file'})).toContainText('Failed');
+  await moreAction(sources, 'Remove empty-file', 'More actions for empty-file');
+  await expect(page.getByRole('alertdialog').getByRole('button', {name: 'Remove empty-file', exact: true})).toBeEnabled();
+});
+
 test('the add-subscription parameter is consumed when subscriptions cannot be managed', async ({page}) => {
   const backend = await mockBackend(page);
   backend.capabilities.resources.providers.can_manage = false;
@@ -1202,7 +1221,13 @@ test('node editing writes in place and renames group references', async ({page})
   const {api} = await mockBackend(page);
   let source = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.pollOperation(
-    await api.replaceConfigSource(source.id, source.content.replace('filter: name(jp-01, hk-02)', 'filter: name(hk-01, hk-02)'), `"${source.content_sha256}"`)
+    await api.replaceConfigSource(
+      source.id,
+      source.content
+        .replace('filter: name(jp-01, hk-02)', 'filter: name(hk-01, hk-02)')
+        .replace("cloudflare: 'tls://1.1.1.1:853'", "cloudflare: 'tls://1.1.1.1:853' -> hk-01"),
+      `"${source.content_sha256}"`
+    )
   );
   source = (await api.config()).sources.find(source => source.kind === 'main')!;
   await page.goto('/#/nodes?provider=inline');
@@ -1221,6 +1246,7 @@ test('node editing writes in place and renames group references', async ({page})
       .replace("'hk-01': 'vless://demo@hk-01.example.net:443?security=tls#hk-01'", "'edge one': 'socks5://127.0.0.1:1080'")
       .replaceAll('name(hk-01', "name('edge one'")
       .replace('default: hk-01', "default: 'edge one'")
+      .replace("cloudflare: 'tls://1.1.1.1:853' -> hk-01", "cloudflare: 'tls://1.1.1.1:853' -> 'edge one'")
   );
 });
 

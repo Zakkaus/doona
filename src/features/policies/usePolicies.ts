@@ -45,9 +45,20 @@ export function usePolicies({go, query}: PageProps) {
   const sources = config.data?.sources;
   const owners = useMemo(() => groupOwners(sources ?? []), [sources]);
   const isComplete = useCompleteness(useMemo(() => sources ?? [], [sources]));
+  const runtimeGroups = offered(resources, 'groups', {whileLoading: true});
+  const declarations = useMemo(
+    () =>
+      runtimeGroups
+        ? []
+        : [...owners].map(([name, owner]) => ({
+            name,
+            declaration: {owner, complete: owner !== 'ambiguous' ? isComplete(owner.origin) : undefined, loaded: !!sources, error: config.error}
+          })),
+    [runtimeGroups, owners, isComplete, sources, config.error]
+  );
   const cards = useMemo(
     () =>
-      (groups.data ?? []).map(group => {
+      (runtimeGroups ? (groups.data ?? []) : []).map(group => {
         const owner = owners.get(group.name);
         return {
           id: group.id,
@@ -64,10 +75,10 @@ export function usePolicies({go, query}: PageProps) {
           }
         };
       }),
-    [groups.data, owners, isComplete, sources, config.error]
+    [runtimeGroups, groups.data, owners, isComplete, sources, config.error]
   );
   // Rebuilt only when a name, a declaration or a shown latency changes, so a poll that changes none keeps the cards memoised.
-  const groupKey = (groups.data ?? []).map(group => group.name).join('\n');
+  const groupKey = (runtimeGroups ? (groups.data ?? []).map(group => group.name) : [...owners.keys()]).join('\n');
   const nodeKey = (nodes.data ?? []).map(node => `${node.id}\u0000${node.name}`).join('\n');
   const [named, setNamed] = useState<{key: string; nodes: Array<{id: string; name: string}>}>({key: '', nodes: []});
   if (named.key !== nodeKey) setNamed({key: nodeKey, nodes: (nodes.data ?? []).map(({id, name}) => ({id, name}))});
@@ -122,16 +133,17 @@ export function usePolicies({go, query}: PageProps) {
   const {refetch: refreshGroups} = groups;
   const {refetch: refreshNodes} = nodes;
   const reload = useCallback(() => {
-    refreshGroups();
+    if (runtimeGroups) refreshGroups();
+    else retry();
     refreshNodes();
-  }, [refreshGroups, refreshNodes]);
+  }, [runtimeGroups, refreshGroups, refreshNodes, retry]);
   const create = useGroupDialog({
     mode: 'create',
     source,
     taken: new Set([...outbounds.groups, ...owners.keys()]),
     outbounds,
     nodes: nodes.data ?? [],
-    onCreated: name => openGroup(go, name)
+    onCreated: name => (runtimeGroups ? openGroup(go, name) : go('policies', within('', {group: name})))
   });
   const openCreate = useEffectEvent(() => {
     create.show(params.has('node') && isWritableName(params.get('node')!) ? [`name(${quoteName(params.get('node')!)})`] : []);
@@ -143,6 +155,7 @@ export function usePolicies({go, query}: PageProps) {
     if (newRequested && source.main && source.writable) openCreate();
   }, [newRequested, source.main, source.writable]);
   return {
+    declarations,
     cards: kinds.shown,
     nodes: nodes.data ?? [],
     providers: providers.data?.providers ?? [],
@@ -162,11 +175,14 @@ export function usePolicies({go, query}: PageProps) {
     health: health.map,
     outbounds,
     source,
-    error: groups.error ?? nodes.error,
+    error: groups.error ?? nodes.error ?? (!runtimeGroups ? config.error : null),
     // A card's size depends on its members' health as well, so the cards wait for the node list too, and for the
     // capabilities that say whether it is offered.
-    loading: (groups.loading && !groups.data) || (!resources && !capabilities.error) || (nodesOffered && !nodes.data && !nodes.error),
-    empty: groups.data?.length === 0,
+    loading:
+      (runtimeGroups ? groups.loading && !groups.data : config.loading && !sources) ||
+      (!resources && !capabilities.error) ||
+      (nodesOffered && !nodes.data && !nodes.error),
+    empty: runtimeGroups ? groups.data?.length === 0 : !!sources && declarations.length === 0,
     reload,
     refreshGroups: groups.refetch,
     refreshNodes: nodes.refetch,

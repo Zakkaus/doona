@@ -120,6 +120,34 @@ test('membership jumps stage the node without writing and node links focus their
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
+for (const target of ['new', 'main', 'include'] as const)
+  test(`Nodes edits a ${target} group without runtime group inventory`, async ({page}) => {
+    const {api, capabilities, requests} = await mockBackend(page);
+    capabilities.resources.groups.available = false;
+    if (target === 'include')
+      await api.pollOperation(await api.createConfigSource('config.d/extra.dae', 'group {\n extra {\n filter: name(jp-01)\n policy: min_moving_avg\n }\n}\n'));
+    const name = target === 'new' ? 'config-only' : target === 'include' ? 'extra' : 'gaming';
+    await page.goto('/#/nodes?provider=inline');
+    await page
+      .getByRole('row')
+      .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+      .getByRole('button', {name: 'Node actions', exact: true})
+      .click();
+    await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+    await page.getByRole('menuitem', {name: target === 'new' ? 'New group…' : name, exact: true}).click();
+    const dialog = page.getByRole('dialog', {name: target === 'new' ? 'New group' : `Edit group ${name}`, exact: true});
+    await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toBeVisible();
+    if (target === 'new') await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill(name);
+    await dialog.getByRole('button', {name: target === 'new' ? 'Create' : 'Apply', exact: true}).click();
+    await expect(dialog).toHaveCount(0);
+    const sources = (await api.config()).sources;
+    const declaring = sources.find(source => readGroupEntries(source.content).some(group => group.name === name))!;
+    expect(declaring.kind).toBe(target === 'include' ? 'include' : 'main');
+    expect(readGroupEntries(declaring.content).find(group => group.name === name)!.filters).toContain('name(hk-01)');
+    await expect(cardFor(page, name).getByRole('button', {name: 'Edit group', exact: true})).toBeEnabled();
+    expect(requests.filter(request => /\/api\/v1\/groups(?:\/|$)/.test(new URL(request.url()).pathname))).toHaveLength(0);
+  });
+
 for (const reason of ['read-only', 'ambiguous'] as const)
   test(`pencil is disabled with the ${reason} reason`, async ({page}) => {
     const {api, handlers} = await regionalGroup(page);
