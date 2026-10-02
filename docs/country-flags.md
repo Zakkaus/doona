@@ -87,8 +87,10 @@ node-name chart tooltips, flag editing, browser persistence and kit control size
 `src/features/shared/countryFlags.test.ts` covers override resolution, both scripts, English,
 letter boundaries, ambiguous codes, existing flags and bounded cache behavior.
 
-For the optional screenshot matrix, set `DOONA_FLAGS_SHOTS=after` (or `before` when
-serving the baseline build) and `DOONA_FLAGS_SHOTS_DIR` to an output directory,
-then run `playwright test e2e/flags-shots.spec.ts`. It captures Nodes, a policy
+For the optional screenshot matrix, set `DOONA_FLAGS_SHOTS=after` (or `before` in
+the baseline checkout) and `DOONA_FLAGS_SHOTS_DIR` to an output directory. From
+the repository root with dependencies installed, run
+`pnpm e2e e2e/flags-shots.spec.ts --project=chromium`; it builds the app before
+starting the preview servers. It captures Nodes, a policy
 picker including Macau, and Settings Appearance with both preference values, in English desktop light/dark and Chinese
 phone light. The baseline has no preference, so its on/off images are identical.

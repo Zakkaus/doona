@@ -23,7 +23,7 @@ doona is a static web UI for the native API the daeuniverse engines share: honk 
 <details>
 <summary><strong>Every palette</strong></summary>
 
-Twelve palettes support light and dark modes: Rosé Pine (two flavours), Catppuccin (three), Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China (Day shift / Night shift). In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar or on the sign-in page.
+Twelve palettes support light and dark modes: Rosé Pine (two flavours), Catppuccin (three), Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China (Day shift / Night shift). In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar, or open Settings > Appearance from the sign-in page's appearance button.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
@@ -65,7 +65,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 | Routing log   | The routing map and flow records                                                                                                                                                  |
 | DNS           | Queries with their answers, cache, resolution log and statistics; create a DNS rule for a logged domain when writable; flush the cache                                            |
 | Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                   |
-| Rules         | Routing and DNS request and response rules, editable in their source when writable; rule hits and trace simulation                                                                |
+| Rules         | Routing and DNS request and response rules, editable in their source when writable; template settings in the simple view; rule hits and trace simulation                          |
 | Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe and join a group                                                                                    |
 | Configuration | Create source files and edit them in place, diagnostics, validation and export                                                                                                    |
 | Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                           |
@@ -75,7 +75,7 @@ A page is marked unavailable only when every resource it needs is unavailable. T
 
 `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
 
-Sign-in is a page of its own with language and palette menus and a scheme toggle. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
+Sign-in is a page of its own with an appearance button that opens Settings > Appearance for language, palette and theme settings. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
@@ -95,7 +95,7 @@ The Traffic tab of Connections plots each connection's upload against its downlo
 
 ### DNS
 
-The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. A resolution log entry can open a new DNS request rule for its domain, with a suffix condition that also matches subdomains, when DNS rules and configuration writes are available.
+The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. When DNS rules and configuration writes are available, a resolution log entry can open a new DNS request rule for its domain. The default condition matches the exact domain; select a suffix condition to include subdomains.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 
@@ -119,7 +119,7 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 ## On a phone
 
-Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Activity, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme, palette and wordmark move into the top bar's overflow menu, a submenu each.
+Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Activity, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme and palette move into the top bar's overflow menu, a submenu each. Choose the wordmark in Settings > Appearance.
 
 Below 600 pixels wide, tables keep every column and scroll sideways; on wider screens they drop the columns that do not fit, in a set order. Toolbars wrap onto more rows. On Events and Logs, press a row to read its full text below the table. On System status, DNS and Logs, the first page action stays a button and the rest move into a menu.
 
