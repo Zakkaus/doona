@@ -37,7 +37,15 @@ for (const width of [1440, 390]) {
       }, scheme);
       await mockBackend(page);
       await page.goto('/#/policies?group=proxy');
-      await page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: '編輯群組', exact: true}).click();
+      const edit = page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: '編輯群組', exact: true});
+      const iconSize = await edit.evaluate(button => ({
+        lineHeight: parseFloat(getComputedStyle(button).lineHeight),
+        width: button.querySelector('svg')!.getBoundingClientRect().width,
+        height: button.querySelector('svg')!.getBoundingClientRect().height
+      }));
+      expect(iconSize.width).toBe(iconSize.lineHeight);
+      expect(iconSize.height).toBe(iconSize.lineHeight);
+      await edit.click();
       let dialog = page.getByRole('dialog');
       await alignedForm(dialog);
       const disclosures = dialog.locator('form > section > .rp-disclosure');
