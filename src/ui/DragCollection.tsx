@@ -1,5 +1,6 @@
 import type {ComponentProps, ReactNode} from 'react';
-import {Button, DropZone, GridList, GridListItem, ListLayout, Virtualizer, useDragAndDrop, type Selection} from 'react-aria-components';
+import {Button, DropZone, GridList, GridListItem, ListLayout, Virtualizer, type Selection} from 'react-aria-components';
+import {useDragAndDrop} from './dragAndDrop';
 import {cardClass} from './Card';
 import {buttonClass, TextTooltip} from './Button';
 import {Check} from './Check';

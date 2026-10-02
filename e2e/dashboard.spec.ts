@@ -28,6 +28,7 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   // The keyboard: Enter picks the card up, an arrow chooses the slot, Enter drops it.
   await tile(page, 'cpu').locator('[slot="drag"]').focus();
   await page.keyboard.press('Enter');
+  await expect(page.locator('.rp-canvas-drop[data-drop-target]')).toHaveCount(1);
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('Enter');
   await expect.poll(() => order(page)).not.toEqual(['upload', 'connections', 'download', 'latency', 'cpu']);
@@ -168,6 +169,12 @@ for (const lang of ['en', 'zh-TW'])
       const cards = () =>
         page.locator('.rp-control-card').evaluateAll(nodes =>
           nodes.map(node => {
+            // The layout the section would choose now: inline when every card's line fits while probing.
+            const section = node.closest<HTMLElement>('.rp-dash-section')!;
+            const chosen = section.dataset.controls;
+            section.dataset.controls = 'probe';
+            const fits = [...section.querySelectorAll('.rp-control-card > .rp-row')].every(row => row.scrollWidth <= row.clientWidth + 0.5);
+            section.dataset.controls = chosen;
             const card = node.getBoundingClientRect();
             const row = node.querySelector(':scope > .rp-row')!;
             const first = row.firstElementChild!.getBoundingClientRect();
@@ -176,10 +183,17 @@ for (const lang of ['en', 'zh-TW'])
             const inner = card.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth);
             const mode =
               Math.abs(first.top + first.height / 2 - (last.top + last.height / 2)) < 4 ? 'inline' : last.top >= first.bottom - 1 ? 'stacked' : 'other';
-            return {top: Math.round(card.top), height: card.height, mode, empty: inner - row.getBoundingClientRect().bottom};
+            return {
+              top: Math.round(card.top),
+              height: card.height,
+              mode,
+              settled: mode === (fits ? 'inline' : 'stacked'),
+              empty: inner - row.getBoundingClientRect().bottom
+            };
           })
         );
-      await expect.poll(async () => (await cards()).every(card => card.mode !== 'other' && Math.abs(card.empty) <= 1), `${width}px`).toBe(true);
+      // A new width lays the cards out again in the next frame, so the layout left from the previous width is waited out.
+      await expect.poll(async () => (await cards()).every(card => card.settled && Math.abs(card.empty) <= 1), `${width}px`).toBe(true);
       const all = await cards();
       for (const card of all)
         for (const other of all.filter(other => Math.abs(other.top - card.top) <= 1)) {
