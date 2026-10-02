@@ -64,7 +64,8 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
     return {
       text: noticeText(notice, t),
       lines: [],
-      ...(notice.requestId ? {toastText: noticeText(notice, t, false), requestId: notice.requestId} : {})
+      ...(notice.requestId ? {toastText: noticeText(notice, t, false), requestId: notice.requestId} : {}),
+      ...(notice.kind === 'neutral' ? {neutral: true as const} : {})
     };
   }
   const errors = found.filter(item => item.level === 'error').length;
@@ -107,9 +108,19 @@ function heldPlace(rule: PendingRule, sources: ConfigSource[], t: Translator): s
   return rule.before && rule.before.kind !== 'fallback' ? t('rule.positionBefore', {n: rule.before.index + 1}) : t('rule.positionEnd');
 }
 
-// A failure after earlier files were written: those rules are in place and reloaded, so it leads with them.
+// A failure after earlier files were written: those rules are in place and reloaded, so it leads with them. Rules
+// still held make it a failure; with none left, a last file whose outcome is unknown keeps the neutral notice.
 export function partialFailure(failure: PendingFailure, written: number, held: number, t: Translator): PendingFailure {
   return written
-    ? {text: t('rule.partial', {n: written, held}), lines: [failure.text, ...failure.lines], ...(failure.requestId ? {requestId: failure.requestId} : {})}
+    ? {
+        text: t('rule.partial', {n: written, held}),
+        lines: [failure.text, ...failure.lines],
+        ...(failure.requestId ? {requestId: failure.requestId} : {}),
+        ...(failure.neutral && !held ? {neutral: true as const} : {})
+      }
     : failure;
 }
+
+// The toast for an apply that did not finish: neutral when the write's outcome is unknown.
+export const failureToast = (failure: PendingFailure) =>
+  [failure.neutral ? 'neutral' : 'negative', failure.toastText ?? failure.text, {requestId: failure.requestId}] as const;

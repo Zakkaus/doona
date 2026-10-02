@@ -33,9 +33,10 @@ import {ModeSwitch, NoticeList, noticeRows, activityGroupView, nodeView, useActi
 import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyGroups, latencyMax, latencyRange, providerRowView} from '../../features/nodes/widgets';
 import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
+import {selectMember} from '../../features/shared/selectMember';
 import {Donut, Waffle, MarkerPlot, usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
-import {Bar, Button, ChoiceMenu, ContextualHelp, Divider, Empty, ErrorMessage, Kv, Light, Link, Loading, Segmented, toast} from '../../ui/ui';
+import {Bar, Button, ChoiceMenu, ContextualHelp, Divider, Empty, ErrorMessage, Kv, Light, Link, Loading, Segmented} from '../../ui/ui';
 import {href} from '../route';
 import {contentLimit, canonicalForm, instanceId, registry, type ModuleForm, type Widget} from './layout';
 import {saveLayout} from './settings';
@@ -511,19 +512,7 @@ function GroupControl({id, refresh, preview}: {id: string; refresh: () => unknow
           value={selected ?? ''}
           isDisabled={preview || !!control.busy || !canSelect}
           items={(g?.members ?? []).map(m => ({id: m.id, label: m.name}))}
-          onChange={member => {
-            if (member === selected) return;
-            void control.select(member).then(result => {
-              if (result && g)
-                toast(
-                  'positive',
-                  t(result.source === 'override' ? 'policy.pinned' : result.connections_interrupted ? 'policy.selectedInterrupted' : 'policy.selectedKept', {
-                    name: g.name,
-                    member: name(result.member_id)
-                  })
-                );
-            });
-          }}
+          onChange={member => selectMember(control.select, member, selected, g?.name, name, t)}
         >
           {name(selected)}
         </ChoiceMenu>

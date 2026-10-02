@@ -6,7 +6,7 @@ import {engineOf} from '../../api/engines';
 import {href} from '../../shell/route';
 import type {RuntimeSettingField, RuntimeSettings, RuntimeSettingsPatch} from '../../api/model';
 import {useT, useLang, LOCALE} from '../../i18n';
-import {toast, toastErrorDetail} from '../../ui/ui';
+import {toast, toastFailure} from '../../ui/ui';
 import {
   numericFields,
   numericAccess,
@@ -93,7 +93,7 @@ export function useRuntimeSettingsForm() {
         setDraft(current => (current === submitted ? null : current));
         toast('positive', t('settings.runtimeSaved'));
       },
-      (error: unknown) => toast('negative', t('settings.runtimeFailed'), toastErrorDetail(error, t))
+      (error: unknown) => toastFailure(error, t, t('settings.runtimeFailed'))
     );
   };
   return {

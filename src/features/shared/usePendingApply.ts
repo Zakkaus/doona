@@ -5,7 +5,7 @@ import type {ConfigSource} from '../../api/model';
 import {pendingRules, readConfigFresh, refetchAll, useConfigEditor, usePendingRules, type PendingFailure, type PendingRule} from '../../store';
 import {toast} from '../../ui/ui';
 import {useT} from '../../i18n';
-import {byFile, insertRules, partialFailure, ruleFailure} from './pending';
+import {byFile, failureToast, insertRules, partialFailure, ruleFailure} from './pending';
 import {ruleWritten} from './rule';
 
 // How many rules reached their files, and the failure that stopped the rest, if any.
@@ -100,7 +100,7 @@ export function useApplyHeld() {
       if (!outcome) return;
       pendingRules.fail(outcome.failure);
       if (outcome.failure) {
-        toast('negative', outcome.failure.toastText ?? outcome.failure.text, {requestId: outcome.failure.requestId});
+        toast(...failureToast(outcome.failure));
         return;
       }
       const notice = ruleWritten('rule.applied', t, rules.length);
