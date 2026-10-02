@@ -63,6 +63,11 @@ const known: Record<string, Key> = {
   probe_cancelled: 'ui.backend.probeCancelled',
   probe_deadline: 'ui.backend.probeDeadline',
   probe_failed: 'ui.backend.probeFailed',
+  // Per-result codes from honk's native_api/probes/wire.rs.
+  address_unavailable: 'ui.backend.probeAddressUnavailable',
+  cancelled: 'ui.backend.probeCancelled',
+  deadline: 'ui.backend.probeDeadline',
+  local_refusal: 'ui.backend.probeLocalRefusal',
   // Codes honk sets on runtime degradations.
   persistence_unavailable: 'ui.backend.persistenceUnavailable',
   state_cache_unavailable: 'ui.backend.stateCacheUnavailable',

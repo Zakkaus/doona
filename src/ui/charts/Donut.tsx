@@ -56,12 +56,12 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
           height={height}
           viewBox={`0 0 ${width} ${height}`}
           style={{display: 'block'}}
-          role="application"
+          role={data.length ? 'application' : 'img'}
           aria-label={label}
-          tabIndex={0}
-          onFocus={selection.onFocus}
+          tabIndex={data.length ? 0 : undefined}
+          onFocus={data.length ? selection.onFocus : undefined}
           onBlur={selection.onBlur}
-          onKeyDown={selection.onKeyDown}
+          onKeyDown={data.length ? selection.onKeyDown : undefined}
         >
           <g transform={`translate(${width / 2},${height / 2})`}>
             {sectors.map((sector, index) => (

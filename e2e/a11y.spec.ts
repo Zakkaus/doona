@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, offered, routes, test, detail, mockBackend} from './fixtures';
+import {expect, isLive, offered, routes, test, detail, mockBackend} from './fixtures';
 
 // Palettes carry their official values, so their own secondary text on their own base and surface is a known
 // exception: Rosé Pine Dawn's subtle is 4.0:1 and Moon's 4.5:1. Any other pairing fails. Glass is not checked for
@@ -67,6 +67,7 @@ const menus = [
 ] as const;
 for (const [route, scope, name] of menus)
   test(`the More menu on ${route.split('?')[0]} passes axe`, async ({page}) => {
+    test.skip(isLive, 'Requires demo connection, policy and node rows for the More menus');
     await mockBackend(page);
     await page.setViewportSize({width: 1440, height: 900});
     await page.goto(`/#/${route}`);
