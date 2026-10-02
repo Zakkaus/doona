@@ -204,13 +204,16 @@ export function useNodesPage({go, query}: PageProps) {
     [go, t]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
-  const newGroup = (node: Node) => {
-    if (!isWritableName(node.name)) {
-      toast('negative', t('config.unquotable'));
-      return;
-    }
-    go('policies', within('', {new: '1', node: node.name}));
-  };
+  const newGroup = useCallback(
+    (node: Node) => {
+      if (!isWritableName(node.name)) {
+        toast('negative', t('config.unquotable'));
+        return;
+      }
+      go('policies', within('', {new: '1', node: node.name}));
+    },
+    [go, t]
+  );
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
   // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.
   const shown = useRef<string | null>(query);
