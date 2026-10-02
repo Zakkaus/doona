@@ -2,7 +2,7 @@ import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {createFeed} from './feed';
 import {eventFeed, noticeFeed} from './logs';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import type {ApiEvent} from '../api/model';
 
 beforeEach(() => {

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {offered} from './capabilities';
-import {capabilitiesBase} from './mock/fixtures';
+import {capabilitiesBase} from '../../mock/fixtures';
 import type {Capabilities} from './model';
 
 it('answers from the capabilities once known and from whileLoading until then', () => {

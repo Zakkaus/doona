@@ -1,5 +1,5 @@
 import {expect, mockBackend, setAppearance, settle, test} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 
 const rows = (page: import('@playwright/test').Page) =>
   page.getByRole('tabpanel', {name: 'Routing rules'}).locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');

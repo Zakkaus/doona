@@ -3,7 +3,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import {ApiError} from '../api/error';
 import type {BulkCloseQuery, Connection, ConnectionList} from '../api/model';
-import {connections as fixture} from '../api/mock/fixtures';
+import {connections as fixture} from '../../mock/fixtures';
 import {closeInBatches, connectionsResource, withRates} from './connections';
 import {watchResource} from './resourceCore';
 

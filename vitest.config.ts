@@ -5,13 +5,13 @@ export default defineConfig({
   plugins: [startupTextPlugin()],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}', 'tools/*.test.mjs'],
+    include: ['src/**/*.test.{ts,tsx}', 'mock/**/*.test.ts', 'tools/*.test.mjs'],
     setupFiles: ['src/i18n/setup.test-env.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**'],
-      exclude: ['src/api/types.ts', 'src/api/mock/**'],
+      exclude: ['src/api/types.ts', 'mock/**'],
       thresholds: {lines: 15, statements: 15}
     }
   }

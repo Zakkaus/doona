@@ -1,9 +1,9 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {ApiError} from '../api/error';
-import {capabilities} from '../api/mock/fixtures';
+import {capabilities} from '../../mock/fixtures';
 import type {Api} from '../api/api';
 import type {DnsCacheList, DnsCacheQuery} from '../api/model';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {
   deleteCacheEntries,
   deleteCacheName,

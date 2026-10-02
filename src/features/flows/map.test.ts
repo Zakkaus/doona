@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import type {GroupSummary} from '../../api/model';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {flowsThrough, nodeNames, pinnedLabel, routingTree, treeIndex, treeRows} from './map';

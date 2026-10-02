@@ -1,6 +1,6 @@
 import {test as browserTest} from '@playwright/test';
 import {expect, routes, test, settleFrames, box} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 
 test('Disclosure toggles with Enter and Space and keeps focus on its trigger', async ({page}) => {
   await page.goto('/#/rules?tab=trace');

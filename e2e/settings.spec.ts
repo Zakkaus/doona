@@ -1,7 +1,7 @@
 import {test as browserTest, type Page} from '@playwright/test';
 import {expect, expectLoadFailures, loadCatalogues, mockBackend, moreAction, test} from './fixtures';
 import {translate} from '../src/i18n';
-import {capabilities} from '../src/api/mock/fixtures';
+import {capabilities} from '../mock/fixtures';
 
 // The specs read the catalogues the page loads on demand.
 test.beforeAll(loadCatalogues);

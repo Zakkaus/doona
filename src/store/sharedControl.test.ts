@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {sharedControl} from './sharedControl';
 
 it('shares drafts within a backend and preserves them without subscribers', () => {

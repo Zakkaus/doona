@@ -28,7 +28,7 @@ function visit(node, callback) {
   callback(node);
   ts.forEachChild(node, child => visit(child, callback));
 }
-const sources = files('src').filter(path => /\.(?:ts|tsx)$/.test(path));
+const sources = [...files('src'), ...files('mock')].filter(path => /\.(?:ts|tsx)$/.test(path));
 const references = new Set();
 for (const key of startupKeys) references.add(key);
 const literals = [];

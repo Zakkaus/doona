@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {connections} from '../../api/mock/fixtures';
+import {connections} from '../../../mock/fixtures';
 import {closeSelection, connectionDetail, connectionStateHelp, connectionsExport, filterMenu} from './view';
 import {connectionsView} from './tableRows';
 import {translate, type Translator} from '../../i18n';

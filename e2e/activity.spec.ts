@@ -1,5 +1,5 @@
 import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, settle, test, box, settleFrames, expectTextInside} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
 import {scanConfig} from '../src/dae/text';

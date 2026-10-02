@@ -5,6 +5,7 @@ path = [
   "*",
   ".github/**",
   "src/**",
+  "mock/**",
   "e2e/**",
   "tools/**",
   "install/**",

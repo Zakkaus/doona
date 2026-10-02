@@ -1,5 +1,5 @@
 import {detail, expect, test} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 
 const open = async (page: import('@playwright/test').Page, text: string) => {
   await page.keyboard.press('Control+K');

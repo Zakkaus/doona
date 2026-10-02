@@ -6,14 +6,14 @@ import {sessionToken} from './session';
 
 let selected: Api | undefined;
 let configuration = '';
-let mockFactory: typeof import('./mock').createMockApi | undefined;
+let mockFactory: typeof import('../../mock').createMockApi | undefined;
 // Every store hook asks for the client on every render; storage is read again only once something may have changed it.
 let checked = -1;
 if (typeof window !== 'undefined') window.addEventListener('storage', touchStorage);
 
 export async function initializeApi(): Promise<Api> {
   const base = pinnedProfile()?.api;
-  if (isDemoApi(base)) mockFactory = (await import('./mock')).createMockApi;
+  if (isDemoApi(base)) mockFactory = (await import('../../mock')).createMockApi;
   return getApi();
 }
 
@@ -39,7 +39,7 @@ export function getApi(): Api {
       selectServerClock(createServerClock());
     } else if (selected) {
       // This tab saved the mock and reloads: keep serving the current backend until the mock has loaded.
-      void import('./mock').then(module => {
+      void import('../../mock').then(module => {
         mockFactory = module.createMockApi;
       });
       return selected;

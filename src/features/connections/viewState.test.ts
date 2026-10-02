@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {connections} from '../../api/mock/fixtures';
+import {connections} from '../../../mock/fixtures';
 import {collapseAll, columns, isCollapsed, revealTarget, readView, toggleGroup} from './viewState';
 import {fitColumns} from '../../ui/ui';
 

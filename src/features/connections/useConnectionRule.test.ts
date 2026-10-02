@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {ruleTargets} from '../shared/rule';
 import {connectionSeed} from './useConnectionRule';
 

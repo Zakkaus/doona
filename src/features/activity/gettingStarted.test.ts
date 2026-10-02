@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import type {ConfigSource, GroupSummary, Node} from '../../api/model';
-import {configSources} from '../../api/mock/fixtures/configuration';
-import {nodeFixtures, providers as providerFixtures} from '../../api/mock/fixtures/inventory';
+import {configSources} from '../../../mock/fixtures/configuration';
+import {nodeFixtures, providers as providerFixtures} from '../../../mock/fixtures/inventory';
 import {demoRouting, demoRoutingInclude} from '../../dae/startingRouting';
 import {templates, templateRules, type RuleTemplate, type TemplateOptions} from '../../dae/templates';
 import {setupCompletion} from './gettingStarted';

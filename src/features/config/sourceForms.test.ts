@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {engineOf} from '../../api/engines';
-import {version} from '../../api/mock/fixtures';
+import {version} from '../../../mock/fixtures';
 import {locatedForms, sourceForms} from './sourceForms';
 const engine = engineOf(version);
 it.each([1, 2, 3, 4, 5, 6, null])('selects form links by their line interval at %s', focus => {

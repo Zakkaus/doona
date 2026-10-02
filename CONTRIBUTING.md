@@ -19,6 +19,7 @@ Before opening a pull request, run the same gates as CI from the repository root
 ### Where things are
 
 - `src/`: the app, in the layers described below.
+- `mock/`: the demo backend and its fixtures, shared by the app and tests.
 - `e2e/`: Playwright tests.
 - `tools/`: build, check and release scripts.
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
@@ -84,7 +85,7 @@ Outside `src/api`, code reaches `src/api/engines` only through its `index.ts`. `
 
 | Folder            | Owns                                                                                                             |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `src/api`         | The transport client, contract types, error model, selectors and the demo backend (`mock/`)                      |
+| `src/api`         | The transport client, contract types, error model and selectors                                                  |
 | `src/api/engines` | Everything doona knows about a particular engine; the rest of the app gets engine-neutral data and reasons       |
 | `src/store`       | Watched server reads: resources, caches and live feeds, and the action hooks                                     |
 | `src/dae`         | The dae text vocabulary, scanner and group-entry helpers shared by the editor, the features and the demo backend |

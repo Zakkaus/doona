@@ -2,7 +2,7 @@ import type {Page} from '@playwright/test';
 import {test, expect, box} from './fixtures';
 import {freshBackend} from './getting-started';
 import {writeTemplate} from '../src/dae/setup';
-import {nodeFixtures} from '../src/api/mock/fixtures/inventory';
+import {nodeFixtures} from '../mock/fixtures/inventory';
 import {translate, type Translator} from '../src/i18n';
 import {loadCatalogues} from './fixtures';
 import {ApiError} from '../src/api/error';

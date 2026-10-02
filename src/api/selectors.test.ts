@@ -16,7 +16,7 @@ import {
   shortId
 } from './selectors';
 import {formatNumber, LOCALE, readLang, translate} from '../i18n';
-import {createMockApi} from './mock';
+import {createMockApi} from '../../mock';
 
 const gap = (reason: string, resource_id: string | null): ApiEvent =>
   ({

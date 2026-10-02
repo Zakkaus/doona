@@ -1,6 +1,6 @@
 import {beforeEach, expect, it, vi} from 'vitest';
-import {capabilities, version} from '../../api/mock/fixtures';
-import {createMockApi} from '../../api/mock';
+import {capabilities, version} from '../../../mock/fixtures';
+import {createMockApi} from '../../../mock';
 import type {EffectiveConfig, ConfigValidationResult} from '../../api/model';
 import {hookHarness} from '../../store/testHelpers';
 import {useLinked} from '../../ui/hooks';

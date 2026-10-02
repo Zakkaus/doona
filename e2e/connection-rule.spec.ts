@@ -1,5 +1,5 @@
 import {detail, expect, expectLoadFailures, mockBackend, test, moreAction, pickOutbound, rejectedReload, setupIncludedRouting, box} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 
 test.use({viewport: {width: 1440, height: 900}});

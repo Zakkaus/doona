@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities, ReportedCapabilities, RuntimeSettings, Version} from '../../api/model';
-import {capabilities as demoCapabilities, capabilitiesBase, capabilitiesM1, version} from '../../api/mock/fixtures';
+import {capabilities as demoCapabilities, capabilitiesBase, capabilitiesM1, version} from '../../../mock/fixtures';
 import {translate, type Key, type Translator} from '../../i18n';
 import {backendLimits, type LimitCause, type LimitGroup} from './limits';
 import {docsHref} from './docs';

@@ -1,10 +1,10 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {createMockApi} from './mock';
+import {createMockApi} from '../../mock';
 import {chainLabel, ipLiteral, memoryTone, outboundUsage, preferredHealth, sourceIp} from './selectors';
 import {addU64} from './u64';
 import type {ApiEvent, ProbeRequest} from './model';
-import {connectionFixtures, trafficHistory} from './mock/fixtures';
-import {faultMemoryLimit, runtimeMemory} from './mock/fixtures/runtime';
+import {connectionFixtures, trafficHistory} from '../../mock/fixtures';
+import {faultMemoryLimit, runtimeMemory} from '../../mock/fixtures/runtime';
 import {geodataPresets} from '../dae/geodata';
 
 afterEach(() => {

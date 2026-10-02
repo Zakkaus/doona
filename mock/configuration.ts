@@ -1,0 +1,446 @@
+import type {Api} from '../src/api/api';
+import type {Capabilities, ConfigSource, RuleList, Runtime} from '../src/api/model';
+import {ApiError} from '../src/api/error';
+import {logLevelLabels} from '../src/api/selectors';
+import * as fixtures from './fixtures/configuration';
+import {found} from './common';
+import {diagnose, includedFiles, includePaths, sectionLines, stored, validate} from './config';
+import {globMatch, newSourcePathProblem, resolveIncludePath} from '../src/dae/newSource';
+import type {MockLifecycle} from './lifecycle';
+import type {MockGeodataState} from './geodata';
+import {faultRules} from './rules';
+import {dnsRulesOf} from './dnsRules';
+import {dnsUpstreamNames} from '../src/dae/ruleText';
+import {unquote} from '../src/dae/text';
+import {createRevisions} from './revisions';
+import {createRecording} from './recording';
+import {readGroupEntries} from '../src/dae/groups';
+
+type ConfigurationApi = Pick<
+  Api,
+  | 'exportConfig'
+  | 'importConfig'
+  | 'configRevisions'
+  | 'activateConfigRevision'
+  | 'rules'
+  | 'dnsRules'
+  | 'config'
+  | 'validateConfig'
+  | 'replaceConfigSource'
+  | 'createConfigSource'
+  | 'runtimeSettings'
+  | 'patchRuntimeSettings'
+  | 'startReload'
+  | 'startSuspend'
+  | 'startResume'
+>;
+type Effects = Pick<MockLifecycle, 'enqueue' | 'log' | 'publish' | 'eventData'> & {trimRecords(): void};
+export function createConfiguration(
+  capabilities: Capabilities,
+  runtime: Pick<Runtime, 'generation' | 'lifecycle'>,
+  {enqueue, log, publish, eventData, trimRecords}: Effects,
+  groupNames: () => Set<string>,
+  activateInventory: (text: string, revision: string) => void,
+  geodata: MockGeodataState,
+  faults = false
+) {
+  const configured = faults ? fixtures.faultSettings : fixtures.runtimeSettings;
+  const settings = structuredClone(configured);
+  const recording = createRecording(settings);
+  const withGeodata = () => {
+    recording.refresh();
+    const value = structuredClone(settings);
+    if (capabilities.resources.geodata.configurable_sources === true) value.geodata = geodata.settings();
+    return value;
+  };
+  let sources: (ConfigSource & {content: string})[] | null = null;
+  let disk: (ConfigSource & {content: string})[] = [];
+  let loading: Promise<(ConfigSource & {content: string})[]> | undefined;
+  const loadSources = () =>
+    (loading ??= Promise.all([
+      Promise.all((faults ? fixtures.faultSources : fixtures.configSources).map(stored)),
+      faults ? Promise.all(fixtures.faultDisk.map(stored)) : null
+    ]).then(async ([list, files]) => {
+      sources = list;
+      disk = files ?? [...list];
+      await revisions.initialize(list);
+      return list;
+    }));
+  const revisions = createRevisions(capabilities, enqueue, loadSources, candidate => {
+    const check = validate({sources: sourceSet(undefined, candidate), mode: 'full'}, String(configRevision), {active: sourceSet()});
+    if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Revision validation failed', null, {diagnostics: check.diagnostics});
+    disk = candidate as typeof disk;
+    return advance();
+  });
+  let configRevision = 40;
+  let created = 0;
+  // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
+  const ruleFile = (source: {kind: string}) => source.kind === 'main' || source.kind === 'include';
+  function sourceSet(replacement?: {id: string; content: string}, files = disk) {
+    const candidate: Array<{id: string; path: string; content: string}> = [];
+    const main = files.find(source => source.kind === 'main');
+    const include = (item: (typeof disk)[number]) => {
+      if (candidate.some(source => source.id === item.id)) return;
+      const content = item.id === replacement?.id ? replacement.content : item.content;
+      candidate.push({id: item.id, path: item.path, content});
+      for (const {path} of includePaths(content)) includedFiles(files, main!.path, path).forEach(include);
+    };
+    if (main) include(main);
+    return candidate;
+  }
+  // honk's size limits on a source write: the shared JSON body limit on the request, the content limit on the text.
+  function withinLimits(content: string, body: unknown) {
+    const bytes = (text: string) => new TextEncoder().encode(text).length;
+    if (bytes(JSON.stringify(body)) > capabilities.limits.max_json_body_bytes) throw new ApiError(413, 'request_too_large', 'Request body exceeds its limit');
+    const max = capabilities.resources.config.max_bytes;
+    if (max !== undefined && bytes(content) > max) throw new ApiError(413, 'request_too_large', `Source content exceeds ${max} bytes`);
+  }
+  // Advancing a generation increments the revision, restores configured runtime settings, and notifies listeners.
+  function advance(): string {
+    const nextRevision = String(configRevision + 1);
+    const candidate = sourceSet();
+    if (candidate.length) activateInventory(candidate.map(source => source.content).join('\n'), nextRevision);
+    if (sources) {
+      sources = [...disk];
+      geodata.follow(routingOf(sources).rules.flatMap(rule => (rule.kind === 'rule' ? [rule.expression] : [])));
+    }
+    configRevision += 1;
+    Object.assign(settings, structuredClone(configured), {observed_at: new Date().toISOString()});
+    log('info', 'honk::routing', 'Routing generation published.', {generation_id: String(configRevision)});
+    const generation = String(configRevision);
+    runtime.generation = {...runtime.generation, active_id: generation, config_revision: generation, activated_at: new Date().toISOString()};
+    publish({id: '', event: 'generation.changed', data: {...eventData(), generation_id: generation, previous_generation_id: String(configRevision - 1)}});
+    return generation;
+  }
+  // Node/provider writes target main; a group PATCH targets its last accepted declaration.
+  async function editSource(edit: (text: string) => string, groupName?: string) {
+    await loadSources();
+    const id =
+      groupName === undefined
+        ? disk.find(source => source.kind === 'main')?.id
+        : sourceSet()
+            .filter(source => readGroupEntries(source.content).some(group => group.name === groupName))
+            .at(-1)?.id;
+    const source = found(
+      disk.find(source => source.id === id),
+      'Configuration source'
+    );
+    if (!capabilities.resources.config.writable || !source.writable)
+      throw new ApiError(404, 'capability_not_supported', 'This source is read-only', null, {reason: source.read_only_reason});
+    const next = await stored({...source, content: edit(source.content), loaded_at: new Date().toISOString()});
+    const record = await revisions.prepare(
+      disk.map(item => (item.id === source.id ? next : item)),
+      'write'
+    );
+    return () => {
+      if (disk.find(item => item.id === source.id) !== source) throw new ApiError(412, 'stale_revision', 'The source changed before activation');
+      disk = disk.map(item => (item.id === source.id ? next : item));
+      const generation = advance();
+      record();
+      return generation;
+    };
+  }
+  // Preserve fixture IDs for unchanged rules; new rules use their source location.
+  function routingOf(list: (ConfigSource & {content: string})[]): {rules: RuleList['rules']; fallback: RuleList['fallback'] | null} {
+    const main = list.find(item => item.kind === 'main');
+    const byPath = new Map(list.map(item => [resolveIncludePath(undefined, item.path), item]));
+    const known = new Map(
+      [...fixtures.configRules.rules, ...faultRules].map(rule => [rule.cond + ' -> ' + rule.target + (rule.must ? '(must)' : ''), rule.id])
+    );
+    const entries: RuleList['rules'] = [];
+    let fallback: RuleList['fallback'] | null = null;
+    const visited = new Set<string>();
+    const read = (file: (typeof list)[number], bare: boolean) => {
+      if (visited.has(file.id)) return;
+      visited.add(file.id);
+      sectionLines(file.content, 'routing', bare).forEach(({code, raw, line}) => {
+        const include = /^include\s+(\S+)$/.exec(code);
+        if (include) {
+          const dependency = byPath.get(resolveIncludePath(main!.path, include[1]));
+          if (dependency) read(dependency, true);
+          return;
+        }
+        const fb = /^fallback:\s*(\S+)$/.exec(code);
+        const rule = /^(.+?)\s*->\s*(\S+)$/.exec(code);
+        if (!fb && !rule) return;
+        const firstToken = raw.search(/\S/);
+        const column = new TextEncoder().encode(raw.slice(0, firstToken)).length + 1;
+        const source = {file: file.path.split('/').pop()!, source_id: file.id, line, column};
+        if (fb) {
+          fallback = {outbound: fb[1], source};
+          entries.push({rule_id: 'fallback', index: entries.length, expression: code, outbound: fb[1], must: false, source, kind: 'fallback'});
+          return;
+        }
+        const must = rule![2].endsWith('(must)');
+        const outbound = rule![2].replace(/\(must\)$/, '');
+        // The condition alone, as honk renders it and as flows quote it; the outbound is its own field.
+        entries.push({
+          rule_id: known.get(code) ?? `${source.file}:${source.line}`,
+          index: entries.length,
+          expression: rule![1],
+          outbound,
+          must,
+          source,
+          kind: 'rule'
+        });
+      });
+      for (const {path} of includePaths(file.content)) includedFiles(list, main!.path, path).forEach(dependency => read(dependency, true));
+    };
+    if (main) read(main, false);
+    return {rules: entries, fallback};
+  }
+  const ruleSnapshot = async (): Promise<RuleList> => {
+    await loadSources();
+    const {rules, fallback} = routingOf(sources!);
+    if (!fallback) throw new ApiError(503, 'snapshot_unavailable', 'The routing section has no fallback', null, null, 1);
+    return {generation_id: String(configRevision), rules, fallback};
+  };
+  const api: ConfigurationApi = {
+    ...revisions.api,
+    rules: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
+      return ruleSnapshot();
+    },
+    dnsRules: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.dns_rules.available) throw new ApiError(404, 'capability_not_supported', 'The DNS rule list is unavailable');
+      await loadSources();
+      return dnsRulesOf(sources!.filter(ruleFile), String(configRevision));
+    },
+    config: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
+      await loadSources();
+      const list = sources!;
+      const generation = String(configRevision);
+      const known = groupNames();
+      return {
+        generation_id: generation,
+        revision: generation,
+        sources: list.map(source => ({...source})),
+        diagnostics: [
+          ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
+          ...(faults ? fixtures.configNotes : [])
+        ],
+        'x-honk': {store: revisions.store()},
+        secrets_redacted: true
+      };
+    },
+    validateConfig: async (request, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config_validate.available) throw new ApiError(404, 'capability_not_supported', 'Validation is unavailable');
+      if (!capabilities.resources.config_validate.modes?.includes(request.mode))
+        throw new ApiError(400, 'invalid_request', `Mode ${request.mode} is not advertised`);
+      if (request.mode === 'full') await loadSources();
+      return validate(request, String(configRevision), {local: disk.filter(ruleFile), active: sourceSet()});
+    },
+    // Global write admission precedes HTTP checks; source permission and revision checks follow the body limits.
+    replaceConfigSource: async (sourceId, content, ifMatch, signal) => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.config.available) throw new ApiError(404, 'capability_not_supported', 'Configuration readback is unavailable');
+      if (!capabilities.resources.config.writable) throw new ApiError(403, 'permission_denied', 'Configuration writes are disabled');
+      if (!ifMatch) throw new ApiError(428, 'precondition_required', 'If-Match is required');
+      withinLimits(content, {content});
+      await loadSources();
+      const list = disk;
+      const source = found(
+        list.find(item => item.id === sourceId),
+        'Configuration source'
+      );
+      if (!source.writable) throw new ApiError(403, 'permission_denied', 'This source is read-only', null, {reason: source.read_only_reason});
+      if (ifMatch.replace(/^"|"$/g, '') !== source.content_sha256)
+        throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
+      const candidate = sourceSet({id: sourceId, content});
+      const check = validate({sources: candidate, mode: 'full'}, String(configRevision), {active: sourceSet()});
+      if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
+      const next = await stored({...source, content, loaded_at: new Date().toISOString()});
+      const record = await revisions.prepare(
+        disk.map(item => (item.id === sourceId ? next : item)),
+        'write'
+      );
+      // A concurrent write may have landed while this one was stored.
+      if (disk.find(item => item.id === sourceId) !== source)
+        throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
+      disk = disk.map(item => (item.id === sourceId ? next : item));
+      log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
+      return enqueue('reload', () => {
+        const generation = advance();
+        record();
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
+    },
+    // The creation contract in order: capability, write switch, path shape, no existing file, room under max_sources,
+    // an include that loads it, then full validation of the resulting set, the write and a reload.
+    createConfigSource: async (path, content, signal) => {
+      signal?.throwIfAborted();
+      const config = capabilities.resources.config;
+      if (!config.available || !config.create) throw new ApiError(404, 'capability_not_supported', 'Creating configuration sources is unavailable');
+      if (!config.writable) throw new ApiError(403, 'permission_denied', 'Configuration writes are disabled');
+      withinLimits(content, {path, content});
+      if (newSourcePathProblem(path) || new TextEncoder().encode(path).length > 1024)
+        throw new ApiError(400, 'invalid_request', 'path must be a relative .dae path with normal segments');
+      await loadSources();
+      const main = found(
+        disk.find(item => item.kind === 'main'),
+        'Main source'
+      );
+      const target = resolveIncludePath(main.path, path);
+      // Checked again after the write below, which awaits: a concurrent create may have added a source meanwhile.
+      const vacant = () => {
+        if (disk.some(item => resolveIncludePath(undefined, item.path) === target)) throw new ApiError(409, 'state_conflict', `${path} already exists`);
+        if (config.max_sources !== undefined && disk.length >= config.max_sources)
+          throw new ApiError(413, 'request_too_large', 'Source count exceeds the advertised max_sources');
+      };
+      vacant();
+      // Any file the configuration loads may hold the include; honk resolves every pattern from the main source's directory.
+      const loaded = sourceSet().some(source => includePaths(source.content).some(include => globMatch(resolveIncludePath(main.path, include.path), target)));
+      if (!loaded) {
+        const diagnostic = {level: 'error', source_id: main.id, line: null, column: null, span: null, code: 'source-not-included'} as const;
+        throw new ApiError(
+          422,
+          'unsupported_value',
+          'No include pattern matches the path; nothing was written',
+          null,
+          {diagnostics: [{...diagnostic, message: `No include pattern matches ${path}`, params: {path}}]},
+          null,
+          {key: 'config.diagnostic.sourceNotIncluded', params: {path}}
+        );
+      }
+      const next = await stored({id: `src-new-${++created}`, path: target, kind: 'include', writable: true, loaded_at: new Date().toISOString(), content});
+      vacant();
+      const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision), {active: sourceSet()});
+      if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
+      const record = await revisions.prepare([...disk, next], 'write');
+      vacant();
+      disk = [...disk, next];
+      log('info', 'honk::config', 'Configuration source created; reloading.', {source_id: next.id});
+      return enqueue('reload', () => {
+        const generation = advance();
+        record();
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
+    },
+    runtimeSettings: async signal => {
+      signal?.throwIfAborted();
+      if (!capabilities.resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      return withGeodata();
+    },
+    // Merge semantics: every value is checked against its ceiling before anything changes.
+    patchRuntimeSettings: async (patch, signal) => {
+      signal?.throwIfAborted();
+      const resources = capabilities.resources;
+      if (!resources.runtime_settings.available) throw new ApiError(404, 'capability_not_supported', 'Runtime settings are unavailable');
+      const allowed = new Set(resources.runtime_settings.fields ?? []);
+      const ceilings = {
+        'log.buffered_records': resources.logs.max_buffered_records ?? 0,
+        'dns_log.max_records': resources.dns_log.max_records ?? 0,
+        'flows.max_flows': resources.flows.max_flows ?? 0,
+        'flows.retention_seconds': resources.flows.retention_seconds ?? 0
+      };
+      // An absent minimum means 1.
+      const floors = {
+        'log.buffered_records': resources.logs.min_buffered_records ?? 1,
+        'dns_log.max_records': resources.dns_log.min_records ?? 1,
+        'flows.max_flows': resources.flows.min_flows ?? 1,
+        'flows.retention_seconds': 1
+      };
+      const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
+      // A field or level the backend does not advertise is semantic, not malformed.
+      const unsupported = (message: string) => new ApiError(422, 'unsupported_value', message);
+      // geodata is stored apart from the other settings and leaves the top-level source alone.
+      const {geodata: geodataPatch, ...rest} = patch;
+      if (geodataPatch !== undefined && (!allowed.has('geodata') || resources.geodata.configurable_sources !== true))
+        throw unsupported('geodata cannot be changed on this backend');
+      patch = rest;
+      // Recorder modes sit at the top level; demand determines whether auto captures.
+      const recorders = {record_flows: 'flows', record_logs: 'logs', record_dns_log: 'dns_log'} as const;
+      const modes = Object.entries(recorders).flatMap(([field, store]) => {
+        const value = patch[field as keyof typeof recorders];
+        return value === undefined ? [] : [[field, store, value] as const];
+      });
+      for (const [field, store, value] of modes) {
+        if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
+        if (value !== 'auto' && value !== 'on' && value !== 'off') throw invalid(`${field} must be on, off or auto`);
+        if (value === 'on' && !settings.recording?.[store]?.allowed) throw unsupported(`${field} is forbidden by the configuration`);
+      }
+      const fields = Object.entries(patch)
+        .filter(([section]) => !(section in recorders))
+        .flatMap(([section, values]) =>
+          Object.entries((values ?? {}) as Record<string, unknown>).map(([field, value]) => [`${section}.${field}`, value] as const)
+        );
+      for (const [field, value] of fields) {
+        if (!allowed.has(field as never)) throw unsupported(`${field} cannot be changed on this backend`);
+        if (field === 'log.level') {
+          if (!((value as string) in logLevelLabels)) throw invalid(`${value} is not a log level`);
+          if (!(resources.logs.levels ?? []).includes(value as never)) throw unsupported(`${value} is not an advertised log level`);
+          continue;
+        }
+        const ceiling = ceilings[field as keyof typeof ceilings];
+        const floor = floors[field as keyof typeof floors];
+        if (!Number.isInteger(value) || (value as number) < floor || (value as number) > ceiling) throw invalid(`${field} must lie in [${floor}, ${ceiling}]`);
+      }
+      // Checks its own fields before storing any of them, so it runs last of the checks and first of the changes.
+      if (geodataPatch !== undefined) {
+        geodata.patch(geodataPatch);
+        if (!Object.keys(rest).length) {
+          log('info', 'honk::geodata', 'Geodata settings stored.', {});
+          return withGeodata();
+        }
+      }
+      if (patch.log) settings.log = {...settings.log, ...patch.log};
+      if (patch.dns_log) settings.dns_log = {...settings.dns_log, ...patch.dns_log} as typeof settings.dns_log;
+      if (patch.flows) settings.flows = {...settings.flows, ...patch.flows};
+      for (const [, store, value] of modes) {
+        const state = settings.recording?.[store];
+        if (!state) continue;
+        state.mode = value;
+      }
+      recording.refresh();
+      // A smaller ring drops its oldest records at once, not when the next one arrives.
+      trimRecords();
+      settings.source = 'runtime';
+      settings.observed_at = new Date().toISOString();
+      log('info', 'honk::settings', 'Runtime settings changed.', {fields: fields.map(([field]) => field)});
+      return withGeodata();
+    },
+    startReload: async signal => {
+      signal?.throwIfAborted();
+      await loadSources();
+      return enqueue('reload', () => {
+        const generation = advance();
+        return {active_generation_id: generation, datapath_generation_id: generation};
+      });
+    },
+    startSuspend: async signal => {
+      signal?.throwIfAborted();
+      return enqueue('suspend', () => {
+        runtime.lifecycle.state = 'suspended';
+        return {runtime_state: 'suspended'};
+      });
+    },
+    startResume: async signal => {
+      signal?.throwIfAborted();
+      return enqueue('resume', () => {
+        runtime.lifecycle.state = 'running';
+        return {runtime_state: 'running'};
+      });
+    }
+  };
+  return {
+    api,
+    recording,
+    flowRecorder: () => settings.recording?.flows,
+    ruleSnapshot,
+    // The upstreams the rule files define, as the query's upstream names them.
+    dnsUpstreams: async () => {
+      await loadSources();
+      return sources!.filter(ruleFile).flatMap(source => dnsUpstreamNames(source.content).map(unquote));
+    },
+    advance,
+    editSource,
+    revision: () => String(configRevision),
+    networkSettings: () => settings,
+    logSettings: () => settings.log
+  };
+}

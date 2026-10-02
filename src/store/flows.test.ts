@@ -1,5 +1,5 @@
 import {expect, it, vi} from 'vitest';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {routingTrace} from './flows';
 import type {DnsQueryResponse} from '../api/model';
 

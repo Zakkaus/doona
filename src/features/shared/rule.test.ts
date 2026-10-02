@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {PendingRule} from '../../store';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {translate, type Translator} from '../../i18n';
 import {ruleLine} from '../../dae/ruleText';
 import {

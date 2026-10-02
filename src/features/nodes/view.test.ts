@@ -24,8 +24,8 @@ import {
 } from './view';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
-import {createMockApi} from '../../api/mock';
-import {nodeFixtures} from '../../api/mock/fixtures';
+import {createMockApi} from '../../../mock';
+import {nodeFixtures} from '../../../mock/fixtures';
 import {formatBytes} from '../../i18n/format';
 const contains = (value: string, query: string) => value.toLowerCase().includes(query.toLowerCase());
 const t: Translator = (key, params) => translate('en', key, params);

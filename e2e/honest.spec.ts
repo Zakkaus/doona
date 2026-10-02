@@ -1,5 +1,5 @@
 import {detail, expect, test} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 
 test('native activity shows the API version and follows runtime events', async ({page}) => {
   const version = await createMockApi().version();

@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {ApiError, LocalError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import type {ConfigSource} from '../../api/model';

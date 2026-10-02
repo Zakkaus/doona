@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import type {ConfigSource, DnsRoutingRule, ReportedCapabilities, RoutingRule} from '../../api/model';
 import {normalizeCapabilities} from '../../api/capabilities';
 import {translate, type Translator} from '../../i18n';

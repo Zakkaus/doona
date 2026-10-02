@@ -1,5 +1,5 @@
 import {detail, expect, mockBackend, test, rejectedReload, setupIncludedRouting} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 
 type Page = import('@playwright/test').Page;
 test.use({viewport: {width: 1440, height: 900}});

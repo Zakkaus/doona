@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {ApiError} from '../api/error';
-import {capabilitiesBase, version} from '../api/mock/fixtures';
+import {capabilitiesBase, version} from '../../mock/fixtures';
 import {readSettings} from './preferences';
 import {translate} from '../i18n';
 import {accessError, shellView, topBarCommands} from './view';

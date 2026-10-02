@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {normalizeCapabilities} from '../capabilities';
-import {capabilities, version} from '../mock/fixtures';
+import {capabilities, version} from '../../../mock/fixtures';
 import type {Capabilities, ReportedCapabilities} from '../model';
 import {scanConfig} from '../../dae/text';
 import {engineOf, type EngineSubject} from '.';

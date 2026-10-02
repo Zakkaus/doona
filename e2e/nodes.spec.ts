@@ -2,7 +2,7 @@ import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {editorText, box} from './fixtures';
 import {expect, expectFittedGroupTags, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 import type {ProbeResult, Provider} from '../src/api/model';
