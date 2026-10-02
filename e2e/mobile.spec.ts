@@ -85,12 +85,14 @@ test('another page opens at its top, while a change within the page keeps the sc
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.locator('.rp-content > *').first()).toBeVisible();
-  // Tall enough that keeping the old offset would have left it at 400; WebKit fills the rows in a little later.
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight + 400)).toBe(true);
+  // Tall enough that keeping the old offset would have left it at 400; WebKit fills the rows in a little later. A live
+  // backend may have no connections to fill the page.
+  if (!isLive) await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight + 400)).toBe(true);
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
 test('Back and Forward return a page to where it was left, while a link still opens at the top', async ({page}) => {
+  test.skip(isLive, 'The page must be taller than the viewport, which the demo’s connections make it');
   await page.goto('/#/activity');
   await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
@@ -288,7 +290,7 @@ test('the About dialog shows the doona version on a phone, where the top bar lea
 test.describe('desktop', () => {
   test.use({viewport: {width: 1280, height: 900}});
   test('moving between pages in the side navigation adds history entries that Back retraces', async ({page}) => {
-    await page.goto('/logo.svg');
+    await page.goto('logo.svg');
     await page.goto('/#/overview');
     const nav = (route: string) => page.locator(`.rp-side .rp-nav[href="#/${route}"]`);
     for (const route of ['dns', 'rules', 'policies']) {
@@ -316,7 +318,8 @@ test.describe('desktop', () => {
     await expect(page.locator('.rp-hubnav')).toBeHidden();
     // Page actions stay separate buttons.
     const content = page.locator('.rp-content');
-    for (const name of ['Export state JSON', 'Reload', 'Suspend']) await expect(content.getByRole('button', {name, exact: true})).toBeVisible();
+    for (const name of ['Export state JSON', 'Reload', ...(isLive ? [] : ['Suspend'])])
+      await expect(content.getByRole('button', {name, exact: true})).toBeVisible();
     await expect(content.getByRole('button', {name: 'More actions'})).toBeHidden();
     // The top bar keeps its separate language, palette and theme controls.
     const top = page.locator('.rp-top');
@@ -479,7 +482,7 @@ test.describe('360px actions', () => {
 
   test('moving between hubs and their pages adds history entries that Back retraces', async ({page}) => {
     // A same-origin page before the app stands for wherever the user came from.
-    await page.goto('/logo.svg');
+    await page.goto('logo.svg');
     await page.goto('/#/overview');
     await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
     const pages = page.locator('.rp-hubnav');
@@ -504,6 +507,7 @@ test.describe('360px actions', () => {
   });
 
   test('toolbar actions past the first move into a menu', async ({page}) => {
+    test.skip(isLive, 'The menus list Suspend and Load older records, which depend on the backend’s capabilities and records');
     for (const [route, visible, collapsed] of [
       ['dns?tab=log', 'Refresh', ['Export CSV', 'Add rule', 'DNS rules', 'Recording settings', 'Load older records']],
       ['logs', 'Clear', ['Export', 'Recording settings']],
@@ -551,6 +555,7 @@ for (const [width, columns] of [
 test.describe('on a touch screen', () => {
   test.use({hasTouch: true, isMobile: true});
   test('a tap into a read-only source draws no caret or active line and shows the read-only notice', async ({page}) => {
+    test.skip(isLive, 'The source and its path are the demo’s');
     await page.goto('/#/config?tab=source&source=src-generated');
     const editor = page.locator('.cm-content[aria-label="/var/lib/honk/generated/backup.dae"]');
     await expect(editor).toContainText('backup');
@@ -598,6 +603,7 @@ test('the outbound mode keeps Apply disabled without a line until a mode is pick
 });
 
 test('the profile actions say a profile is created by saving the backend', async ({page}) => {
+  test.skip(isLive, 'A live run starts from a saved profile');
   await page.goto('/#/settings');
   await expectReason(page, page.getByRole('button', {name: 'Rename profile', exact: true}), 'No profile yet; saving the backend creates one');
   await expect(page.getByRole('button', {name: 'Delete profile', exact: true})).toHaveAccessibleDescription('No profile yet; saving the backend creates one');
@@ -627,6 +633,7 @@ for (const [width, columns] of [
   test.describe(`${width}px node grids`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
     test('a large group lines up with a small one and keeps its tiles off the scrollbar', async ({page}) => {
+      test.skip(isLive, 'The groups and their names are the demo’s');
       await page.goto('/#/policies?group=gaming');
       await expect(page.getByRole('region', {name: 'gaming', exact: true}).locator('.rp-node').first()).toBeVisible();
       const large = page.getByRole('region', {name: 'backup'});

@@ -173,7 +173,9 @@ export const setAppearance = (page: Page, lang: string, scheme: string) =>
     {lang, scheme}
   );
 // A reload or offline switch while lazy chunks are still loading cancels them, and the browser logs the cancelled imports.
-export const settle = (page: Page) => page.waitForLoadState('networkidle');
+// A live backend streams events and logs for as long as the page is open, so the network never idles there; the load
+// event stands in, since the app's chunks come with the pages it opens.
+export const settle = (page: Page) => page.waitForLoadState(isLive ? 'load' : 'networkidle');
 // Waits for painted frames, two unless a count says otherwise; a frame count does not shift with machine load as a sleep does.
 export const settleFrames = (page: Page, count = 2) =>
   page.evaluate(
