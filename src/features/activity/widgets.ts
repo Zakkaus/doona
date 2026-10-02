@@ -1,5 +1,5 @@
 export {ActivityCard, RuntimeAlert} from './ActivityCard';
-export {activityGroupView, nodeView, noticeRows} from './view';
+export {activityGroupView, nodeView, noticeRows, outboundColor} from './view';
 
 export {ModeSwitch} from './ModeSwitch';
 export {NoticeList} from './Notices';

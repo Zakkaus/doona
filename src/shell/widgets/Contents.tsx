@@ -29,7 +29,7 @@ import {cpuSample, foldCpu} from '../../features/shared/widgetSeries';
 import {connectionRanking} from '../../features/shared/ranking';
 import {engineStatus} from '../../features/shared/engineStatus';
 import {useMode} from '../../features/shared/useMode';
-import {ModeSwitch, NoticeList, noticeRows, activityGroupView, nodeView, useActivityNode, GroupMenu} from '../../features/activity/widgets';
+import {ModeSwitch, NoticeList, noticeRows, activityGroupView, nodeView, useActivityNode, GroupMenu, outboundColor} from '../../features/activity/widgets';
 import {isSlowerThanUsual, latencyAverage, latencyAverages, latencyGroups, latencyMax, latencyRange, providerRowView} from '../../features/nodes/widgets';
 import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
@@ -350,7 +350,7 @@ function OutboundWidget({item}: {item: Widget}) {
   const resource = useRuntimeOutbounds(true);
   const p = usePalette();
   const usage = useMemo(() => outboundUsage(resource.data), [resource.data]);
-  const rows = usage.rows.map((row, i) => ({name: row.name, count: Number(row.bytes ?? 0n), color: row.name === 'block' ? p.love : p.cat[i % p.cat.length]}));
+  const rows = usage.rows.map((row, i) => ({name: row.name, count: Number(row.bytes ?? 0n), color: outboundColor(row, i, p)}));
   return (
     <Reading state={resource}>
       <Shares item={item} rows={rows} bytes empty={t('ui.empty')} />
@@ -366,9 +366,7 @@ function Connections({item}: {item: Widget}) {
   const usage = useRuntimeOutbounds(item.id === 'connectionOutbounds');
   const palette = usePalette();
   const rows = useMemo(() => {
-    const colors = new Map(
-      outboundUsage(usage.data).rows.map((row, i) => [row.name, row.name === 'block' ? palette.love : palette.cat[i % palette.cat.length]])
-    );
+    const colors = new Map(outboundUsage(usage.data).rows.map((row, i) => [row.name, outboundColor(row, i, palette)]));
     const summary = ranked(
       connectionRows(resource.data).map(row => (item.id === 'connectionOutbounds' ? row.outbound : row.network)),
       6
