@@ -160,20 +160,24 @@ function listedRows<R extends Listed>(
     return byId.get(source.source_id);
   };
   const scans = new Map<string, ReturnType<typeof scanConfig>>();
+  const scanned = (source: ConfigSource) => {
+    let scan = scans.get(source.id);
+    if (!scan) scans.set(source.id, (scan = scanConfig(source.content)));
+    return scan;
+  };
   // Why doona cannot locate a rule's line to rewrite it, or null when it can.
   const unanchored = (rule: R): string | null => {
     const source = rule.source && byId.get(rule.source.source_id);
     if (!source) return rule.kind === 'fallback' && end ? null : t('rule.notLocated');
     if (!source.writable) return t('config.readOnlyAttempt');
-    if (!scans.has(source.id)) scans.set(source.id, scanConfig(source.content));
-    if (anchor(source, rule, scans.get(source.id)!) !== null) return null;
+    if (anchor(source, rule, scanned(source)) !== null) return null;
     return t('rule.notLocated');
   };
   const rows = rules.map(rule => {
     const linked = resolve(rule.source);
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
     const editReason = unanchored(rule);
-    const at = linked ? anchor(linked, rule, scans.get(linked.id) ?? scanConfig(linked.content)) : null;
+    const at = linked ? anchor(linked, rule, scanned(linked)) : null;
     const visual =
       rule.kind === 'fallback'
         ? !!at || !!end

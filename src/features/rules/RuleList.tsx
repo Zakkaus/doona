@@ -29,8 +29,8 @@ import {RuleDialogs} from './RuleDialogs';
 
 export function RuleList(props: PageProps) {
   const t = useT();
-  const view = useRuleList(props);
   const templates = useRuleTemplates(props);
+  const view = useRuleList(props, templates.available && templates.mode === 'simple');
   if (view.kind !== 'dictionary') return <Distribution view={view} />;
   if (!templates.available) return <RuleDictionary view={view} />;
   // The view switch ends the list's toolbar row in both views, after the rule count and Add rule.
