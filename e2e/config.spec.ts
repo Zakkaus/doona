@@ -1,6 +1,5 @@
-import {test as httpTest, type Page, type Route} from '@playwright/test';
-import {createMockApi} from '../src/api/mock';
-import {ApiError} from '../src/api/error';
+import type {Page, Route} from '@playwright/test';
+import type {createMockApi} from '../src/api/mock';
 import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend, box} from './fixtures';
 import {sha256} from '../src/api/hash';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';
@@ -231,7 +230,7 @@ test.describe(() => {
 });
 
 test('identical diagnostics share one row with their count, and a known code keeps the backend words as detail', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   const duplicate = {
     level: 'warning',
@@ -271,55 +270,9 @@ test.describe('without configuration readback', () => {
   });
 });
 
-async function configBackend(page: Page) {
-  const api = createMockApi();
-  const capabilities = await api.capabilities();
-  capabilities.resources.events.available = false;
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-api', location.origin);
-    localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 2, items: [], visible: false}));
-  });
-  const reads: Record<string, () => Promise<unknown>> = {
-    capabilities: async () => capabilities,
-    version: () => api.version(),
-    config: () => api.config(),
-    rules: () => api.rules(),
-    'dns/rules': () => api.dnsRules(),
-    groups: () => api.groups(),
-    nodes: () => api.nodes({limit: 1000}),
-    providers: () => api.providers({limit: 1000}),
-    flows: () => api.flows({detail: 'full', limit: 1000}),
-    connections: () => api.connections({detail: 'full', limit: 1000}),
-    runtime: () => api.runtime(),
-    'runtime/memory': () => api.runtimeMemory(),
-    'runtime/traffic/history': () => api.trafficHistory(),
-    geodata: () => api.geodata(),
-    'runtime/settings': () => api.runtimeSettings(),
-    'runtime/outbounds': () => api.runtimeOutbounds()
-  };
-  await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname.replace('/api/v1/', '');
-    try {
-      if (reads[path]) return await route.fulfill({json: await reads[path]()});
-      if (path === 'config/validate') return await route.fulfill({json: await api.validateConfig(route.request().postDataJSON())});
-      if (path.startsWith('config/sources/'))
-        return await route.fulfill({
-          json: await api.replaceConfigSource(path.split('/').pop()!, route.request().postDataJSON().content, route.request().headers()['if-match'])
-        });
-      if (path.startsWith('operations/')) return await route.fulfill({json: await api.operation(path.split('/').pop()!)});
-      throw new Error(`Unexpected request: ${route.request().method()} ${path}`);
-    } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
-      await route.fulfill({status: error.status, json: {request_id: 'config-test', error: {code: error.code, message: error.message, details: error.details}}});
-    }
-  });
-  return {api, capabilities};
-}
-
 // An include is validated by the replacement itself, in its full source set; a refusal writes nothing.
-httpTest('validation refusal keeps the draft and never replaces the source', async ({page}) => {
-  const {api} = await configBackend(page);
+test('validation refusal keeps the draft and never replaces the source', async ({page}) => {
+  const {api} = await mockBackend(page);
   const original = (await api.config()).sources.find(source => source.id === 'src-rules')!.content;
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
@@ -332,7 +285,7 @@ httpTest('validation refusal keeps the draft and never replaces the source', asy
 });
 
 test('a source over the advertised body limit is refused before anything is sent, naming the limit', async ({page}) => {
-  const {capabilities} = await configBackend(page);
+  const {capabilities} = await mockBackend(page);
   capabilities.limits.max_json_body_bytes = 200;
   const writes: string[] = [];
   page.on('request', request => {
@@ -347,7 +300,7 @@ test('a source over the advertised body limit is refused before anything is sent
 });
 
 test('a 413 on a config write names the tighter advertised limit', async ({page}) => {
-  await configBackend(page);
+  await mockBackend(page);
   await page.route('**/api/v1/config/sources/*', route =>
     route.fulfill({
       status: 413,
@@ -363,7 +316,7 @@ test('a 413 on a config write names the tighter advertised limit', async ({page}
 });
 
 test('source application works without the optional full validation endpoint', async ({page}) => {
-  const {capabilities} = await configBackend(page);
+  const {capabilities} = await mockBackend(page);
   capabilities.resources.config_validate.available = false;
   let validations = 0;
   page.on('request', request => {
@@ -379,7 +332,7 @@ test('source application works without the optional full validation endpoint', a
 });
 
 test('incomplete sources cannot be transformed by rule edits', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   for (const source of config.sources) source.content = source.content.replace('direct', 'redacted');
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -401,7 +354,7 @@ test('incomplete sources cannot be transformed by rule edits', async ({page}) =>
 
 // The main source is checked before replacement; a discarded draft must not turn into a write afterwards.
 test('leaving the editor aborts validation before any replacement', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const hold = new Promise<void>(resolve => {
     release = resolve;
@@ -436,8 +389,8 @@ test('leaving the editor aborts validation before any replacement', async ({page
   expect(writes).toBe(0);
 });
 
-httpTest('a file changed on disk under a draft blocks saving until the draft is kept over it', async ({page}) => {
-  const {api} = await configBackend(page);
+test('a file changed on disk under a draft blocks saving until the draft is kept over it', async ({page}) => {
+  const {api} = await mockBackend(page);
   await page.goto('/#/config?source=src-rules');
   const editor = page.locator('.cm-content');
   await editor.fill((await editor.innerText()) + '\n# local draft\n');
@@ -466,7 +419,7 @@ httpTest('a file changed on disk under a draft blocks saving until the draft is 
 });
 
 test('rule writes require a stable source ID even when the display path matches', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const rules = await api.rules();
   for (const rule of rules.rules) if (rule.source) rule.source.source_id = 'unknown-source';
   await page.route('**/api/v1/rules', route => route.fulfill({json: rules}));
@@ -486,7 +439,7 @@ test('rule writes require a stable source ID even when the display path matches'
 });
 
 test('the dns and routing module cards open their rule lists', async ({page}) => {
-  await configBackend(page);
+  await mockBackend(page);
   await page.goto('/#/config');
   const modules = page.getByRole('tabpanel', {name: 'Modules'});
   await modules.getByRole('region', {name: 'dns', exact: true}).getByRole('link', {name: 'Open page', exact: true}).click();
@@ -517,7 +470,7 @@ test('code scrolled sideways passes under the line numbers', async ({page}) => {
 });
 
 test('explicit include validation sends the main-first set with source paths', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   config.sources.reverse();
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -534,8 +487,9 @@ test('explicit include validation sends the main-first set with source paths', a
   });
 });
 
-httpTest('rejected saves show cross-source diagnostics without marking the edited file', async ({page}) => {
-  const {capabilities} = await configBackend(page);
+test('rejected saves show cross-source diagnostics without marking the edited file', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  expectLoadFailures(page, /\/config\/sources\//);
   capabilities.resources.config_validate.available = false;
   await page.route('**/api/v1/config/sources/*', route =>
     route.fulfill({
@@ -566,7 +520,7 @@ httpTest('rejected saves show cross-source diagnostics without marking the edite
 });
 
 test('redacted includes do not disable main validation or background diagnostics', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   const include = config.sources.find(source => source.kind === 'include')!;
   include.content = include.content.replace('direct', 'redacted');
@@ -583,7 +537,7 @@ test('redacted includes do not disable main validation or background diagnostics
 });
 
 test('source redaction does not certify exports or diagnose the redacted include', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   config.secrets_redacted = true;
   const main = config.sources.find(source => source.kind === 'main')!;
@@ -608,7 +562,7 @@ test('source redaction does not certify exports or diagnose the redacted include
 });
 
 test('configuration diagnostics wrap on phones', async ({page}) => {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   await page.setViewportSize({width: 390, height: 844});
   const config = await api.config();
   const main = config.sources.find(source => source.kind === 'main')!;
@@ -626,7 +580,7 @@ test('configuration diagnostics wrap on phones', async ({page}) => {
 });
 
 test('a validation run gives way to the accepted diagnostics after a reload', async ({page}) => {
-  const {api, capabilities} = await configBackend(page);
+  const {api, capabilities} = await mockBackend(page);
   capabilities.resources.events.available = true;
   let changed!: () => void;
   const generation = new Promise<void>(resolve => {
@@ -682,8 +636,9 @@ const restartRefusal = {
   }
 };
 
-httpTest('a restart-only change is refused with the setting named, and the next write goes through', async ({page}) => {
-  await configBackend(page);
+test('a restart-only change is refused with the setting named, and the next write goes through', async ({page}) => {
+  await mockBackend(page);
+  expectLoadFailures(page, /\/config\/sources\//);
   let refused = false;
   await page.route('**/api/v1/config/sources/*', route => {
     if (refused) return route.fallback();
@@ -711,8 +666,9 @@ httpTest('a restart-only change is refused with the setting named, and the next 
   await expect(page.locator('.rp-toast.positive', {hasText: 'written'})).toContainText('configuration reloaded');
 });
 
-httpTest('a file ahead of the running configuration is explained when the refusal repeats', async ({page}) => {
-  await configBackend(page);
+test('a file ahead of the running configuration is explained when the refusal repeats', async ({page}) => {
+  await mockBackend(page);
+  expectLoadFailures(page, /\/config\/sources\//);
   await page.route('**/api/v1/config/sources/*', route =>
     route.fulfill({status: 412, json: {request_id: 'ahead', error: {code: 'stale_revision', message: 'Source changed on disk', details: null}}})
   );
@@ -727,8 +683,8 @@ httpTest('a file ahead of the running configuration is explained when the refusa
   await expect(editor).toContainText('# ahead draft');
 });
 
-httpTest('a reload refused after the write says the file was written but not applied', async ({page}) => {
-  await configBackend(page);
+test('a reload refused after the write says the file was written but not applied', async ({page}) => {
+  await mockBackend(page);
   const href = '/api/v1/operations/op-rejected';
   await page.route('**/api/v1/config/sources/*', route =>
     route.fulfill({
@@ -792,7 +748,7 @@ test('a new file in the include directory is created empty and opens in the sour
 
 // Holds every create request until `release` runs, then answers it with `answer`.
 async function heldCreate(page: Page, answer: (route: Route, body: {path: string; content: string}, api: ReturnType<typeof createMockApi>) => Promise<void>) {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const held = new Promise<void>(resolve => (release = resolve));
   await page.route('**/api/v1/config/sources', async route => {
@@ -852,7 +808,7 @@ test('a new file name is checked for what the path rules refuse', async ({page})
 
 // The main source's include section as given, with every create request answered by a refusal and kept for checking.
 async function newSourceBackend(page: Page, include: string) {
-  const {api} = await configBackend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   const main = config.sources.find(source => source.kind === 'main')!;
   main.content = main.content!.replace(/include \{[^}]*\}/, include);

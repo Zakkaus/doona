@@ -1,47 +1,12 @@
-import {test as httpTest, type Locator, type Page} from '@playwright/test';
-import {createMockApi} from '../src/api/mock';
+import type {Locator} from '@playwright/test';
 import {sha256} from '../src/api/hash';
 import {ApiError} from '../src/api/error';
-import {expect, test, moreAction, settleFrames} from './fixtures';
-
-async function backend(page: Page) {
-  const api = createMockApi();
-  const capabilities = await api.capabilities();
-  capabilities.resources.events.available = false;
-  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
-  const reads: Record<string, () => Promise<unknown>> = {
-    capabilities: async () => capabilities,
-    version: () => api.version(),
-    config: () => api.config(),
-    rules: () => api.rules(),
-    'dns/rules': () => api.dnsRules(),
-    groups: () => api.groups(),
-    nodes: () => api.nodes({limit: 1000}),
-    providers: () => api.providers({limit: 1000}),
-    flows: () => api.flows({detail: 'full', limit: 1000}),
-    connections: () => api.connections({detail: 'full', limit: 1000}),
-    runtime: () => api.runtime(),
-    datapath: () => api.datapath('full'),
-    geodata: () => api.geodata(),
-    'runtime/settings': () => api.runtimeSettings(),
-    'runtime/memory': () => api.runtimeMemory(),
-    'runtime/memory/history': () => api.memoryHistory(),
-    'runtime/traffic/history': () => api.trafficHistory(),
-    'runtime/outbounds': () => api.runtimeOutbounds()
-  };
-  await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname.replace('/api/v1/', '');
-    if (reads[path]) return route.fulfill({json: await reads[path]()});
-    if (route.request().method() === 'GET' && path.startsWith('groups/')) return route.fulfill({json: await api.group(decodeURIComponent(path.slice(7)))});
-    throw new Error(`Unexpected request: ${route.request().method()} ${path}`);
-  });
-  return api;
-}
+import {expect, test, mockBackend, moreAction, settleFrames, expectLoadFailures} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
 test('a node probe with an unknown result says so and why in words, instead of unreachable', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   await page.route('**/api/v1/probes', async route => {
     await route.fulfill({json: await api.startProbe(route.request().postDataJSON())});
   });
@@ -82,7 +47,7 @@ test('source drafts survive cancelled sidebar and hash navigation', async ({page
 });
 
 test('source editing stays frozen through validation and save', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let releaseValidation!: () => void;
   const validation = new Promise<void>(resolve => {
     releaseValidation = resolve;
@@ -128,7 +93,7 @@ test('source editing stays frozen through validation and save', async ({page}) =
 
 for (const all of [false, true]) {
   test(`${all ? 'Cancel abandons bulk' : 'navigation cancels single'} close without announcing success`, async ({page}) => {
-    await backend(page);
+    await mockBackend(page);
     let release!: () => void;
     const gate = new Promise<void>(resolve => {
       release = resolve;
@@ -158,7 +123,7 @@ for (const all of [false, true]) {
 }
 
 test('Add refuses changed rule generations while its dialog is open', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const rules = await api.rules();
   const config = await api.config();
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -201,7 +166,7 @@ test('Add refuses changed rule generations while its dialog is open', async ({pa
 });
 
 test('a source shifted since the rule list was read offers no rule edits', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   const main = config.sources.find(source => source.kind === 'main')!;
   main.content = main.content!.replace('routing {', 'routing {\n  dport(65535) -> direct');
@@ -215,7 +180,7 @@ test('a source shifted since the rule list was read offers no rule edits', async
 });
 
 test('routing map shows a failed rules request and retries it', async ({page}) => {
-  await backend(page);
+  await mockBackend(page);
   await page.route('**/api/v1/rules', route => route.fulfill({contentType: 'application/json', body: 'invalid JSON'}), {times: 1});
   await page.goto('/#/flows?tab=map');
   const panel = page.getByRole('tabpanel');
@@ -225,7 +190,7 @@ test('routing map shows a failed rules request and retries it', async ({page}) =
 });
 
 test('node probe announcements retain sub-ten-millisecond precision', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   await page.route('**/api/v1/probes', async route => {
     await route.fulfill({json: await api.startProbe(route.request().postDataJSON())});
   });
@@ -245,7 +210,7 @@ test('node probe announcements retain sub-ten-millisecond precision', async ({pa
 });
 
 test('discarding source inside Config cancels its transaction and releases the next editor', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -287,7 +252,7 @@ test('discarding source inside Config cancels its transaction and releases the n
 });
 
 test('global target cannot change during a pending mode apply', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -317,7 +282,7 @@ test('global target cannot change during a pending mode apply', async ({page}) =
 });
 
 test('trace headings and selected leaves retain the submitted domain and network', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   await api.selectGroup('office', {member_id: 'hk-01', network: 'tcp'});
   await api.selectGroup('office', {member_id: 'sg-01', network: 'udp'});
   let release!: () => void;
@@ -351,7 +316,7 @@ test('trace headings and selected leaves retain the submitted domain and network
 });
 
 test('search keeps the keyboard target when an earlier connection disappears', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const snapshot = await api.connections({detail: 'full', limit: 1000});
   snapshot.tcp = snapshot.tcp.slice(0, 3).map((connection, index) => ({...connection, domain: `stable-${index}.example`}));
   snapshot.udp = [];
@@ -371,13 +336,10 @@ test('search keeps the keyboard target when an earlier connection disappears', a
   await expect(page).toHaveURL(new RegExp(`connections\\?id=${target.id}$`));
 });
 
-httpTest('policy drafts survive a completeness recheck and reject a changed original digest', async ({page}) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
-  });
-  const api = await backend(page);
+test('policy drafts survive a completeness recheck and reject a changed original digest', async ({page}) => {
+  const {api} = await mockBackend(page);
   const capabilities = await api.capabilities();
+  expectLoadFailures(page, /\/config\/sources\//);
   await page.route('**/api/v1/capabilities', route => route.fulfill({json: capabilities}));
   await page.route('**/api/v1/groups/*', async route => {
     await route.fulfill({json: await api.group(new URL(route.request().url()).pathname.split('/').pop()!)});
@@ -422,7 +384,7 @@ httpTest('policy drafts survive a completeness recheck and reject a changed orig
 });
 
 test('policy details load near the viewport and a deep link explicitly mounts a distant group', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const base = await api.group('proxy');
   const snapshot = await api.groups();
   const summary = snapshot[0];
@@ -444,7 +406,7 @@ test('policy details load near the viewport and a deep link explicitly mounts a 
 });
 
 test('cancelled runtime saves do not announce success and keep editing frozen until navigation', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -482,7 +444,7 @@ test('cancelled runtime saves do not announce success and keep editing frozen un
 });
 
 test('runtime drafts survive a changed poll and explicit discard loads the current values', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const settings = await api.runtimeSettings();
   await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: settings}));
   await page.clock.install();
@@ -503,7 +465,7 @@ test('runtime drafts survive a changed poll and explicit discard loads the curre
 });
 
 test('sparse runtime settings hide the controls the engine omits', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const {log, dns_log} = await api.runtimeSettings();
   // The log's record count and the whole flows section are left out; the members that remain keep their controls.
   await page.route('**/api/v1/runtime/settings', route => route.fulfill({json: {log: {level: log!.level}, dns_log}}));
@@ -516,7 +478,7 @@ test('sparse runtime settings hide the controls the engine omits', async ({page}
 });
 
 test('new group validation refusal retains the dialog and its name without a success toast', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -546,7 +508,7 @@ test('new group validation refusal retains the dialog and its name without a suc
 });
 
 test('main-source actions remain unavailable while display actions stay available for incomplete content', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   config.sources.find(source => source.kind === 'main')!.content = 'redacted';
   await page.route('**/api/v1/config', route => route.fulfill({json: config}));
@@ -561,7 +523,7 @@ test('main-source actions remain unavailable while display actions stay availabl
 });
 
 test('a completed provider creation cannot close a newer node draft or clear its guard', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -602,7 +564,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
 });
 
 test('provider host labels cannot enable interval writes without node tag metadata', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const config = await api.config();
   const main = config.sources.find(source => source.kind === 'main')!;
   main.content = "subscription {\n  main: {\n    url: 'https://shared.example/sub'\n    interval: '2h'\n  }\n}\n";
@@ -631,12 +593,9 @@ test('provider host labels cannot enable interval writes without node tag metada
   }
 });
 
-httpTest('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
-  const api = await backend(page);
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
-  });
+test('backend inventory failures expose independent retries without claiming zero counts', async ({page}) => {
+  const {api} = await mockBackend(page);
+  expectLoadFailures(page, /\/api\/v1\/(providers|connections)\?/);
   let failProviders = true;
   let failConnections = true;
   const failure = (message: string) => ({status: 503, json: {request_id: 'inventory', error: {code: 'service_unavailable', message, details: null}}});
@@ -668,12 +627,9 @@ httpTest('backend inventory failures expose independent retries without claiming
   await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeEnabled();
 });
 
-httpTest('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
-  const api = await backend(page);
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-lang', 'en');
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
-  });
+test('failed reads on activity, DNS and settings each offer a retry', async ({page}) => {
+  const {api} = await mockBackend(page);
+  expectLoadFailures(page, /\/api\/v1\/(runtime\/outbounds|dns\/cache|geodata)/);
   let fail = true;
   const failure = (message: string) => ({status: 503, json: {request_id: 'retry', error: {code: 'service_unavailable', message, details: null}}});
   await page.route('**/api/v1/runtime/outbounds', async route => route.fulfill(fail ? failure('Outbounds unavailable') : {json: await api.runtimeOutbounds()}));
@@ -696,7 +652,7 @@ httpTest('failed reads on activity, DNS and settings each offer a retry', async 
 });
 
 test('routing map selections separate missing outbounds from a backend name of unknown', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const snapshot = await api.flows({detail: 'full', limit: 1000});
   const base = snapshot.flows[0];
   snapshot.flows = [
@@ -718,7 +674,7 @@ test('routing map selections separate missing outbounds from a backend name of u
 });
 
 test('node creation freezes its submitted draft until the response arrives', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   let release!: () => void;
   const gate = new Promise<void>(resolve => {
     release = resolve;
@@ -751,7 +707,7 @@ test('node creation freezes its submitted draft until the response arrives', asy
 });
 
 test('redacted rule labels edit accepted source and freeze the draft through validation', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   await page.route('**/api/v1/rules', async route => {
     const rules = await api.rules();
     rules.rules = rules.rules.map(rule => ({...rule, expression: rule.kind === 'fallback' ? rule.expression : 'domain(<redacted>)'}));
@@ -805,7 +761,7 @@ test('redacted rule labels edit accepted source and freeze the draft through val
 });
 
 test('a large routing dictionary reveals bounded batches without changing tile geometry', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const dictionary = await api.rules();
   dictionary.rules = Array.from({length: 4096}, (_, i) => ({
     ...dictionary.rules[0],
@@ -838,7 +794,7 @@ test('a large routing dictionary reveals bounded batches without changing tile g
 });
 
 test('flow input identifiers stay literal beside localized enums and incomplete coverage', async ({page}) => {
-  const api = await backend(page);
+  const {api} = await mockBackend(page);
   const detail = await api.flow('flow-1');
   const input = detail.trace.steps.find(step => step.stage === 'input')!;
   input.data.values = {...input.data.values, domain: 'cache', pname: 'drop'};
