@@ -4,6 +4,7 @@ import type {Api} from '../api/api';
 import type {Capabilities, Operation, OperationAccepted, OperationState, ProbeRequest} from '../api/model';
 import {ApiError, LocalError} from '../api/error';
 import {refetchAll} from './resourceCore';
+import {waitOutRefusal} from '../api/refusal';
 
 type ActionState = {busy: string | null; error: Error | null};
 function createAction() {
@@ -72,17 +73,28 @@ export function useAction<K extends string>({scope, rethrow = false, shared}: {s
   const run = useCallback(<T>(kind: K, action: (signal: AbortSignal) => Promise<T>) => cell.run(kind, action, rethrow), [cell, rethrow]);
   return {...state, busy: state.busy as K | null, setError: cell.setError, run, cancel: cell.cancel};
 }
-// The backend forgets an operation when it restarts or the record expires, so a 404 while polling leaves the
-// outcome unknown: everything shown is re-read rather than reporting the operation missing.
+// Once the backend has accepted an operation, a poll that fails leaves its outcome unknown rather than failed: the
+// backend forgets an operation when it restarts or the record expires, and a connection may stay down. Everything
+// shown is re-read instead. A cancelled poll stays cancelled, and a failed operation is returned for `finished`.
 export async function settle(api: Api, accepted: OperationAccepted, signal?: AbortSignal): Promise<OperationState> {
   try {
     return await api.pollOperation(accepted, signal);
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    if (signal?.aborted) throw error;
     void refetchAll();
     throw new LocalError('ui.operationUnknown');
   }
 }
+// A direct write refused with 503 temporarily_unavailable may still have changed what it wrote, so the resource is
+// read back. The action stays busy until that read lands and the Retry-After the backend asked for has passed, so the
+// control cannot send again sooner.
+export const readBackUnconfirmed =
+  (refetch: () => unknown, signal?: AbortSignal) =>
+  async (error: unknown): Promise<never> => {
+    if (error instanceof ApiError && error.status === 503 && error.code === 'temporarily_unavailable')
+      await Promise.all([Promise.resolve(refetch()).catch(() => undefined), error.retryAfter && waitOutRefusal(503, error.retryAfter, signal)]);
+    throw error;
+  };
 // If-Match carries the revision as a quoted entity tag.
 export const etag = (revision: string) => '"' + revision + '"';
 export type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
