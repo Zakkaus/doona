@@ -175,6 +175,8 @@ export type NodeTableView = {
     latencyClass: string;
     groups: string;
     groupLinks: Array<{id: string; label: string; href: string}>;
+    probeKinds: Array<{label: string; value: string; tone: string}>;
+    showProbeKinds: boolean;
     probeLabel: string;
     removeLabel: string;
     canProbe: boolean;

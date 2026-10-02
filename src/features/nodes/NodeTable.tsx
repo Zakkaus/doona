@@ -176,6 +176,12 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                           ]
                         ]}
                       />
+                      {row.showProbeKinds && (
+                        <div className="rp-list">
+                          <span className="rp-label">{t('nodes.probeKinds')}</span>
+                          <Kv items={row.probeKinds.map(line => [line.label, <span className={line.tone}>{line.value}</span>])} />
+                        </div>
+                      )}
                       <FlagField
                         name={row.name}
                         value={settings.ap.flagOverrides[flagKey(row.name)] ?? 'automatic'}

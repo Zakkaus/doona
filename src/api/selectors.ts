@@ -44,11 +44,11 @@ const measurementRank: Record<string, number> = {
   unknown: 5,
   dns_round_trip: 6
 };
+const observationRank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 10 + (measurementRank[h.measurement] ?? 5);
 export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
-  const rank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 10 + (measurementRank[h.measurement] ?? 5);
   const data = health.filter(h => h.transport === 'tcp' && h.purpose === 'data');
-  const best = Math.min(...data.map(rank));
-  return foldFamilies(data.filter(h => rank(h) === best));
+  const best = Math.min(...data.map(observationRank));
+  return foldFamilies(data.filter(h => observationRank(h) === best));
 }
 // One state for the IPv4 and IPv6 rows of one measurement: available when any family answered, unavailable when every
 // family that finished failed, unknown only when none finished. The row returned carries that state, IPv4 first.
@@ -62,6 +62,32 @@ export function foldFamilies<T extends Pick<HealthObservation, 'state' | 'latenc
   );
 }
 export const preferredHealth = (node: Node) => preferredObservation(node.health);
+
+// A node's latest result per probe kind: DNS for a DNS probe, UDP for a UDP data probe, and HTTP or TCP for a TCP data
+// probe by its measurement. Keep the latest per family, rank by warmth and measurement, then fold IPv4 and IPv6.
+export type ProbeKind = 'TCP' | 'HTTP' | 'UDP' | 'DNS';
+const probeKindOrder: ProbeKind[] = ['TCP', 'HTTP', 'UDP', 'DNS'];
+const probeKind = (h: HealthObservation): ProbeKind =>
+  h.purpose === 'dns' ? 'DNS' : h.transport === 'udp' ? 'UDP' : h.measurement.startsWith('http') ? 'HTTP' : 'TCP';
+export function probeKinds<T extends HealthObservation>(health: T[]) {
+  const kinds = new Map<string, {kind: ProbeKind; transport: T['transport']; rows: T[]}>();
+  for (const h of health) {
+    const kind = probeKind(h);
+    const key = kind + '/' + h.transport;
+    const entry = kinds.get(key);
+    if (entry) entry.rows.push(h);
+    else kinds.set(key, {kind, transport: h.transport, rows: [h]});
+  }
+  return [...kinds.values()]
+    .map(({kind, transport, rows}) => {
+      const latest = new Map<T['ip_version'], number>();
+      for (const h of rows) latest.set(h.ip_version, Math.max(latest.get(h.ip_version) ?? -Infinity, Date.parse(h.observed_at)));
+      const current = rows.filter(h => Date.parse(h.observed_at) === latest.get(h.ip_version));
+      const best = Math.min(...current.map(observationRank));
+      return {kind, transport, observation: foldFamilies(current.filter(h => observationRank(h) === best))!};
+    })
+    .sort((a, b) => probeKindOrder.indexOf(a.kind) - probeKindOrder.indexOf(b.kind) || a.transport.localeCompare(b.transport));
+}
 export const healthMillis = (health: Pick<HealthObservation, 'state' | 'latency_ms'> | undefined) =>
   health?.state === 'healthy' && health.latency_ms != null ? health.latency_ms : undefined;
 export const compareLatency = (a: number | undefined, b: number | undefined) => (a ?? Infinity) - (b ?? Infinity) || 0;
