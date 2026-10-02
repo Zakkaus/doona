@@ -18,6 +18,7 @@ export function useCacheMatches(entries: Entries | undefined, pattern: {kind: Ma
     if (!asynchronous) return;
     const worker = new Worker(new URL('./match.worker.ts', import.meta.url), {type: 'module'});
     let active = true;
+    let timer: number | undefined;
     const finish = (indices: number[] | null, error?: Key) => {
       if (!active) return;
       active = false;
@@ -30,14 +31,18 @@ export function useCacheMatches(entries: Entries | undefined, pattern: {kind: Ma
         error: error ?? (indices === null ? 'dns.invalidRegex' : undefined)
       });
     };
-    // Termination bounds the entire batch, even when one name causes catastrophic backtracking.
-    const timer = setTimeout(() => finish([], 'dns.regexTimeout'), 1000);
-    worker.onmessage = (event: MessageEvent<number[] | null>) => finish(event.data);
+    worker.onmessage = (event: MessageEvent<'ready' | number[] | null>) => {
+      if (!active) return;
+      if (event.data === 'ready') {
+        // Bound execution, not the time spent downloading and starting the worker.
+        timer = window.setTimeout(() => finish([], 'dns.regexTimeout'), 1000);
+        worker.postMessage({text: pattern.text, names: candidates.map(entry => entry.domain)});
+      } else finish(event.data);
+    };
     worker.onerror = event => {
       event.preventDefault();
       finish([], 'dns.matchFailed');
     };
-    worker.postMessage({text: pattern.text, names: candidates.map(entry => entry.domain)});
     return () => {
       active = false;
       clearTimeout(timer);
