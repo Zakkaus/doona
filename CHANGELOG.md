@@ -22,7 +22,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - Internal: 39 icons share one SVG shell; no visible change. (#357)
-- Internal: update fast-uri and brace-expansion to address development-tool security advisories.
+- Internal: update fast-uri and brace-expansion to address development-tool security advisories. (#359)
 - Internal: the Noto fonts come from Fontsource packages instead of 208 committed files; the built fonts are unchanged. (#351)
 - Internal: ring history state, its persistence and hook live in the store instead of the API layer; no visible change. (#341)
 - Internal: production builds minify with Terser, cutting total JavaScript by about 16 KB gzip; no visible change. (#352)
@@ -40,6 +40,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Import and restore retain an accepted operation whose outcome is unknown after closing the dialog or leaving Configuration. Reopening offers recovery without sending another write; failures retain their backend details in Copy error and Settings' recent errors. (#337)
 - Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0.
+- Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0. (#359)
 - Renaming a node updates DNS upstream detours in its declaring source and is blocked while another source refers to it. (#353)
 - Add to group on Nodes keeps the shared Policies editor available for new and existing groups when the runtime groups API is unavailable. (#353)
 - Empty file providers remain visible on Nodes, including their status and removal action. (#353)

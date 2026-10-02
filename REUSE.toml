@@ -4,7 +4,6 @@ version = 1
 path = [
   "*",
   ".github/**",
-  ".batch7-logs/**",
   "src/**",
   "e2e/**",
   "tools/**",
