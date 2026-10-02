@@ -238,28 +238,41 @@ test('pattern deletion shows how many entries match and deletes them one by one'
   expect(deletes(requests)).toHaveLength(matches.length);
 });
 
-test('a backtracking regex times out without blocking the cache controls or permitting partial deletion', async ({page}) => {
-  const {api, handlers, requests} = await mockBackend(page);
-  const cache = await api.dnsCache();
-  const entries = [
-    {...cache.entries[0], entry_id: 'safe', domain: 'example.com.', type: 'A'},
-    {...cache.entries[0], entry_id: 'ptr', domain: 'a.'.repeat(32) + 'ip6.arpa.', type: 'PTR'}
-  ];
-  handlers['GET dns/cache'] = async () => ({...cache, entries, next_cursor: null});
-  await page.goto('/#/dns?tab=cache');
-  await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader')).toHaveCount(2);
-  await pick(page, 'Domain suffix', 'Match by', 'Domain regex');
-  const pattern = page.getByRole('textbox', {name: 'Pattern', exact: true});
-  const button = page.getByRole('button', {name: 'Delete matching', exact: true});
-  await pattern.fill('^(.+\\.)*example\\.com$');
-  await expect(page.getByText('Regex matching timed out. Use a simpler pattern.', {exact: true})).toBeVisible();
-  await expect(button).toBeDisabled();
-  expect(deletes(requests)).toHaveLength(0);
-  await pattern.fill('^example\\.com$');
-  await button.click();
-  const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
-  expect(await listed(dialog)).toEqual(named([entries[0]]));
-  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+test.describe('regex worker', () => {
+  // Service-worker precaching bypasses request interception.
+  test.use({serviceWorkers: 'block'});
+
+  test('a backtracking regex times out without blocking the cache controls or permitting partial deletion', async ({page}) => {
+    const {api, handlers, requests} = await mockBackend(page);
+    const cache = await api.dnsCache();
+    const entries = [
+      {...cache.entries[0], entry_id: 'safe', domain: 'example.com.', type: 'A'},
+      {...cache.entries[0], entry_id: 'ptr', domain: 'a.'.repeat(32) + 'ip6.arpa.', type: 'PTR'}
+    ];
+    handlers['GET dns/cache'] = async () => ({...cache, entries, next_cursor: null});
+    await page.goto('/#/dns?tab=cache');
+    await expect(page.getByRole('grid', {name: 'Cache', exact: true}).getByRole('rowheader')).toHaveCount(2);
+    await pick(page, 'Domain suffix', 'Match by', 'Domain regex');
+    const pattern = page.getByRole('textbox', {name: 'Pattern', exact: true});
+    const button = page.getByRole('button', {name: 'Delete matching', exact: true});
+    await pattern.fill('^(.+\\.)*example\\.com$');
+    await expect(page.getByText('Regex matching timed out. Use a simpler pattern.', {exact: true})).toBeVisible();
+    await expect(button).toBeDisabled();
+    expect(deletes(requests)).toHaveLength(0);
+    let delayed = false;
+    await page.route('**/assets/match.worker-*.js', async route => {
+      // A slow chunk download must not consume the regex execution deadline.
+      await page.waitForTimeout(1500);
+      delayed = true;
+      await route.continue();
+    });
+    await pattern.fill('^example\\.com$');
+    await button.click();
+    const dialog = page.getByRole('alertdialog', {name: 'Delete matching', exact: true});
+    expect(delayed).toBe(true);
+    expect(await listed(dialog)).toEqual(named([entries[0]]));
+    await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  });
 });
 
 test('the confirmation lists at most 100 entries and counts the rest', async ({page}) => {
