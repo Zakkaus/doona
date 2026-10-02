@@ -32,6 +32,7 @@
 :root[data-family='rose-pine'] {
   --rp-negative-text: var(--rp-text);
   --rp-notice-text: var(--rp-text);
+  --rp-on-notice: var(--rp-text);
   --rp-positive-text: var(--rp-text);
   --rp-accent-tile-text: var(--rp-text);
   --rp-info-tile-text: var(--rp-text);
@@ -68,6 +69,7 @@
   --rp-fill: var(--rp-hl-med);
   /* Pine is under 4.5:1 as text here and under pale text on it; Main's base reads on it. */
   --rp-on-accent: #191724;
+  --rp-on-notice: var(--rp-on-accent);
   --rp-accent-text: var(--rp-text);
   --rp-negative-text: var(--rp-negative);
   --rp-notice-text: var(--rp-notice);
@@ -104,5 +106,6 @@
   --rp-on-accent: #ffffff;
   --rp-on-positive: var(--rp-base);
   --rp-on-negative: var(--rp-base);
+  --rp-on-notice: var(--rp-base);
   --rp-negative-tile-text: var(--rp-negative);
 }

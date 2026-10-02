@@ -307,6 +307,9 @@
 :root[data-family='glass'] .rp-toast.negative {
   background: color-mix(in srgb, var(--rp-negative) 84%, transparent);
 }
+:root[data-family='glass'] .rp-toast.warning {
+  background: color-mix(in srgb, var(--rp-notice) 84%, transparent);
+}
 :root[data-family='glass'] .rp-toast.info {
   background: color-mix(in srgb, var(--rp-info) 84%, transparent);
 }

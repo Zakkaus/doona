@@ -61,6 +61,7 @@
   --rp-on-accent: #ffffff;
   --rp-on-positive: var(--rp-base);
   --rp-on-negative: var(--rp-base);
+  --rp-on-notice: var(--rp-base);
   --rp-on-text: #141414;
   --rp-line: #303030;
   --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);

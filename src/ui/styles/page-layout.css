@@ -84,7 +84,8 @@
 }
 :root {
   --rp-code-comment: var(--rp-muted);
-  --rp-code-string: var(--rp-gold);
+  /* Strings read the notice tone as text, so a palette whose gold is under 4.5:1 sets body text for both. */
+  --rp-code-string: var(--rp-notice-text);
   --rp-code-keyword: var(--rp-love);
   --rp-code-number: var(--rp-iris);
   --rp-code-propertyName: var(--rp-pine);
@@ -231,7 +232,7 @@
 .rp-badge.warn {
   border-color: transparent;
   background: var(--rp-notice);
-  color: var(--rp-on-accent);
+  color: var(--rp-on-notice);
 }
 .rp-badge.negative {
   border-color: transparent;

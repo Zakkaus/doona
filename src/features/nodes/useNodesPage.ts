@@ -258,7 +258,7 @@ export function useNodesPage({go, query}: PageProps) {
             void refreshing.refresh(created.id).then(
               result => {
                 if (!result) return;
-                if ('degraded' in result) toast('info', t('nodes.refreshedDegraded', {name}), {action: viewNodes(created.id)});
+                if ('degraded' in result) toast('warning', t('nodes.refreshedDegraded', {name}), {action: viewNodes(created.id)});
                 else toast('positive', t('nodes.addedRefreshed', {name, n: result.node_count}), {action: viewNodes(created.id)});
               },
               error => toastFailure(error, t, t('nodes.addedRefreshFailed', {name}), {label: t('ui.retry'), onAction: fetchAdded, closeOnAction: true})

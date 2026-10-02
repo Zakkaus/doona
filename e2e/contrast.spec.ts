@@ -2,7 +2,7 @@ import {expect, test} from './fixtures';
 import type {PaletteId} from '../src/shell/preferences';
 
 // Every palette, both schemes: the accent, the status tones and secondary text as text on the base, the surface, a
-// tile (the overlay) and a selected tile, text on an accent, success and error fill, and body text.
+// tile (the overlay) and a selected tile, text on an accent, success, error and notice fill, and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.
 // Glass is left out: its surfaces are translucent over a gradient.
 const palettes = {
@@ -39,13 +39,19 @@ const subtleFloors: Record<string, [number, number]> = {
 // its tones sit at the same level and its accent, info and tile secondary text fall back to that body text. Its
 // page-level subtle keeps the lower floors above.
 const karyFloors: Record<string, number> = {base: 4, surface: 4.2, tile: 3.8, 'selected tile': 3.4};
-// Toast text on a success or error fill where no colour of the palette reaches 4.5:1 on that tone; the fill keeps its
-// on-accent text.
+// Text on a success or error fill (a toast) or a notice fill (a badge) that stays under 4.5:1 because no colour of the palette
+// reaches it on that tone; the fill keeps the palette's own on-colour. Each floor sits just under the measured ratio,
+// which the notice entries give: 4.24:1 on Rose Pine light and 3.05:1 on Catppuccin light.
 const fillFloors: Record<string, number> = {
   'rose-pine/main light text on positive': 3.2,
   'rose-pine/main light text on negative': 4,
   'rose-pine/moon light text on positive': 3.2,
   'rose-pine/moon light text on negative': 4,
+  'rose-pine/main light text on notice': 4.2,
+  'rose-pine/moon light text on notice': 4.2,
+  'catppuccin/frappe light text on notice': 3,
+  'catppuccin/macchiato light text on notice': 3,
+  'catppuccin/mocha light text on notice': 3,
   'catppuccin/frappe light text on positive': 3.7,
   'catppuccin/macchiato light text on positive': 3.7,
   'catppuccin/mocha light text on positive': 3.7,
@@ -58,14 +64,16 @@ const fillFloors: Record<string, number> = {
 const known = new Map<string, number>([
   ...Object.entries(fillFloors),
   ...Object.entries(karyFloors).flatMap(([ground, floor]) =>
-    ['text', 'subtle text', ...roles.map(role => `${role} text`)].map(name => [`kary/kary light ${name} on ${ground}`, floor] as const)
+    ['text', 'subtle text', 'code string', ...roles.map(role => `${role} text`)].map(name => [`kary/kary light ${name} on ${ground}`, floor] as const)
   ),
   ...Object.entries(subtleFloors).flatMap(([look, [base, surface]]) => [
     [`${look} subtle text on base`, base] as const,
     [`${look} subtle text on surface`, surface] as const
   ])
 ]);
-test('accent, status and secondary text and accent fills reach 4.5:1 in every palette, and tones keep their colour where they read', async ({page}) => {
+test('accent, status and secondary text and text on accent, success, error and notice fills reach 4.5:1 in every palette, and tones keep their colour where they read', async ({
+  page
+}) => {
   await page.goto('/#/activity');
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
@@ -135,6 +143,10 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
             'text on accent': ratio('var(--rp-on-accent)', 'var(--rp-accent)'),
             'text on positive': ratio('var(--rp-on-positive, transparent)', 'var(--rp-positive)'),
             'text on negative': ratio('var(--rp-on-negative, transparent)', 'var(--rp-negative)'),
+            'text on notice': ratio('var(--rp-on-notice, transparent)', 'var(--rp-notice)'),
+            // The editor and the highlighted code read their own string colour on the base.
+            'code string on base': ratio('var(--rp-code-string, transparent)', 'var(--rp-base)'),
+            'code string on surface': ratio('var(--rp-code-string, transparent)', 'var(--rp-surface)'),
             ...Object.fromEntries(each('text', on('var(--rp-text)')))
           };
           return {ratios, faded};
@@ -147,6 +159,31 @@ test('accent, status and secondary text and accent fills reach 4.5:1 in every pa
     }
   }
   expect(failures).toEqual([]);
+});
+
+// A warning toast takes the same text, icon and close button colour as the info toast in every palette and scheme,
+// Glass included; the notice fill's own text colour is for badges.
+test('the warning toast takes the text colour of the info toast in every palette', async ({page}) => {
+  await page.goto('/#/activity');
+  const differing = await page.evaluate(palettes => {
+    const colour = (className: string) => {
+      const toast = document.createElement('div');
+      toast.className = `rp-toast ${className}`;
+      document.body.append(toast);
+      const {color} = getComputedStyle(toast);
+      toast.remove();
+      return color;
+    };
+    return palettes.flatMap(palette =>
+      ['light', 'dark'].flatMap(scheme => {
+        const [family, flavour] = palette.split('/');
+        Object.assign(document.documentElement.dataset, {family, flavour, scheme});
+        const [warning, info] = [colour('warning'), colour('info')];
+        return warning === info ? [] : [`${palette} ${scheme}: ${warning} against ${info}`];
+      })
+    );
+  }, Object.keys(palettes));
+  expect(differing).toEqual([]);
 });
 
 // Table rows, card dividers, hover and empty cells draw --rp-line and --rp-fill on a card. Several palettes set
