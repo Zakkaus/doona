@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, HelpRow, ConfirmDialog, Empty, ErrorMessage, InlineAlert, Link, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {Button, HelpRow, ConfirmDialog, Empty, ErrorMessage, Link, ProblemAlert, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
@@ -107,11 +107,7 @@ export function Nodes(props: PageProps) {
           </>
         )}
       >
-        {problem && (
-          <InlineAlert key={problem.id} takeFocus>
-            {problem.text}
-          </InlineAlert>
-        )}
+        {problem && <ProblemAlert key={problem.id} problem={problem} />}
         {(dialog?.kind === 'provider' || dialog?.kind === 'editProvider') && (
           <div className="rp-list">
             <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>

@@ -5,6 +5,18 @@ import {readMode} from '../src/dae/outboundMode';
 
 test.use({widgets: true, serviceWorkers: 'block'});
 
+test('a backend without outbound traffic does not ask for it for connection statistics', async ({page}) => {
+  const {capabilities, requests} = await mockBackend(page);
+  capabilities.resources.runtime_outbounds.available = false;
+  await page.addInitScript(value => localStorage.setItem('doona-widgets', JSON.stringify(value)), {
+    ...defaults(),
+    items: [{...defaultWidget('connectionOutbounds'), form: 'kv'}]
+  });
+  await page.goto('/#/settings');
+  await expect(panel(page).locator('.rp-kv').first()).toBeVisible();
+  expect(requests.filter(request => new URL(request.url()).pathname === '/api/v1/runtime/outbounds')).toEqual([]);
+});
+
 test('metric forms change the renderer without acquiring history for key-value cards', async ({page}) => {
   const backend = await mockBackend(page);
   await page.addInitScript(

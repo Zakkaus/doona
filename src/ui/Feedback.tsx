@@ -74,6 +74,17 @@ export function InlineAlert({
   );
 }
 
+// A form's refusal or unconfirmed outcome: a neutral one is information, not an error. The caller keys it by `id`,
+// which moves focus to it again.
+export type Problem = {id: number; text: string; kind?: 'neutral' | 'negative'};
+export function ProblemAlert({problem}: {problem: Problem}) {
+  return (
+    <InlineAlert tone={problem.kind === 'neutral' ? 'informative' : 'negative'} takeFocus>
+      {problem.text}
+    </InlineAlert>
+  );
+}
+
 // Retry refetches the failed resource rather than reloading the page.
 // `message` words the error for a failed action instead of as a load failure; the backend's detail goes below it.
 export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: (error: string) => string}) {

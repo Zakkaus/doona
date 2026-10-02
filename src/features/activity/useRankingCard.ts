@@ -28,7 +28,8 @@ export function useRankingCard(enabled = true, selection?: {by: string; setBy: (
     setBy,
     rows,
     state,
-    error: connections.data ? undefined : connections.error,
+    // A refresh that fails keeps the list read before; the card says so above it.
+    error: connections.error ?? undefined,
     retry: connections.refetch,
     truncated: !!connections.data?.truncated
   };

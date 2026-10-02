@@ -58,6 +58,12 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     [runtime.data, t, resources?.runtime.available, locale, datapath.data?.state]
   );
   const version = useVersion(kind === 'status');
+  const {refetch: refetchRuntime} = runtime;
+  const {refetch: refetchDatapath} = datapath;
+  const retry = useCallback(() => {
+    void refetchRuntime();
+    void refetchDatapath();
+  }, [refetchRuntime, refetchDatapath]);
   // System status lists these with their reasons; here the status card only counts them.
   const limited = useMemo(
     () =>
@@ -85,10 +91,10 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     ready: !!capabilities.data,
     // The shell reports a failed discovery above every page; this page reports only its own reads.
     discoveryFailed: !!capabilities.error,
-    error: runtime.error,
+    error: runtime.error ?? datapath.error,
     // The last figures stay while a read fails, marked as out of date.
     stale: !!runtime.error && !!runtime.data,
-    retry: runtime.refetch,
+    retry,
     history: {
       error: history.error,
       retry: history.refetch,

@@ -31,7 +31,7 @@ import {href} from '../../shell/route';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
 import type {ConfigSource, Group, Node} from '../../api/model';
-import {toast} from '../../ui/ui';
+import {toast, type Problem} from '../../ui/ui';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {LocalError, noticeText} from '../../api/error';
 import {groupEditSafe, groupNameError, manualPolicy} from './policyText';
@@ -68,7 +68,7 @@ export type GroupDialogView = {
   tip?: string;
   busy: boolean;
   // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
-  problem: {id: number; text: string} | null;
+  problem: Problem | null;
   policy: string | null;
   membershipFilters: string[] | null;
   invalid: boolean;
@@ -216,7 +216,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const nameProblem = creating && draft ? groupNameError(draft.name.trim(), input.taken, t) : null;
   const session = useDialogSession();
   const [problem, setProblem] = useState<GroupDialogView['problem']>(null);
-  const refuse = (text: string) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
+  const refuse = (text: string, kind?: Problem['kind']) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
   const guard = useDraftGuard(
     !!draft &&
       ((creating && !!draft.name) ||
@@ -270,7 +270,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
         // A refusal after the dialog closed has nowhere inline to go.
         if (problem) {
           if (open) {
-            refuse(noticeText(problem, t));
+            refuse(noticeText(problem, t), problem.kind);
             setDraft(prev => (prev ? {...prev, refused: true} : prev));
           } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId, error: problem.error});
         }

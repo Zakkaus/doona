@@ -3,7 +3,7 @@ import {useT, useLang, formatList} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
@@ -67,7 +67,7 @@ export function useNodesPage({go, query}: PageProps) {
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
-  const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
   const intervalSeconds = draftInterval(form.interval);
   const resources = useCapabilities().data?.resources;
   const createOptions = resources?.providers.create_options;
@@ -230,11 +230,11 @@ export function useNodesPage({go, query}: PageProps) {
     const submitted = session.current;
     const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
-    const refuse = (text: string, toastText = text, error?: unknown) => {
-      if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text}));
-      else toast('negative', toastText, {requestId: error === undefined ? undefined : requestIdOf(error), error});
+    const refuse = (text: string, toastText = text, error?: unknown, kind: Notice['kind'] = 'negative') => {
+      if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
+      else toast(kind, toastText, {requestId: error === undefined ? undefined : requestIdOf(error), error});
     };
-    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error);
+    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error, problem.kind);
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.

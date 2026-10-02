@@ -169,6 +169,16 @@ it('localizes notice kinds and shortens UUIDs without changing event identity', 
   expect(interestingNotice({id: 'runtime', event: 'runtime.updated', data: {...event.data, href: '/api/v1/runtime'}})).toBe(false);
 });
 
+it.each([
+  ['failed', 'err', 'Error'],
+  ['succeeded', 'info', 'Notice']
+] as const)('projects an operation that %s as a %s notice', (status, tone, kind) => {
+  const data = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z', resource_id: 'op-1', status, href: '/api/v1/operations/op-1'};
+  const [row] = noticeRows([{id: status, event: 'operation.updated', data}], t);
+  expect(row.tone).toBe(tone);
+  expect(row.kindText).toBe(kind);
+});
+
 it('selects duplicate node labels by ID and preserves independent health', () => {
   const {nodes} = nodeFixtures(0, true);
   const first = {...nodes.find(node => node.name === 'hk-01')!, id: 'provider-a/hk', name: 'HK', provider_id: 'provider-a'};

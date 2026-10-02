@@ -34,7 +34,7 @@ import {useT} from '../i18n';
 import {errorText} from '../api/error';
 import {cx} from './cx';
 import {ActionHelp, Button} from './Button';
-import {InlineAlert} from './Feedback';
+import {ProblemAlert, type Problem} from './Feedback';
 import {useSlider, useScrollStrip, useMediaQuery, panelQuery, escapeLayers} from './hooks';
 
 // `flush` aligns the chevron with the content; `aside` keeps a status beside the trigger.
@@ -304,7 +304,7 @@ export function ConfirmDialog({
   dismissOnly?: boolean;
   // Why Confirm is disabled, under the footer.
   reason?: string | null;
-  error?: {id: number; text: string} | null;
+  error?: Problem | null;
   scrollBody?: boolean;
   children: ReactNode;
 }) {
@@ -333,11 +333,7 @@ export function ConfirmDialog({
         )
       }
     >
-      {error && (
-        <InlineAlert key={error.id} takeFocus>
-          {error.text}
-        </InlineAlert>
-      )}
+      {error && <ProblemAlert key={error.id} problem={error} />}
       {children}
     </ModalDialog>
   );

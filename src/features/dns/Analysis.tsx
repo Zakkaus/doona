@@ -28,8 +28,8 @@ export function DnsStats({enabled, links}: {enabled: boolean | undefined; links:
   // Not known yet, or capabilities failed: the page says why above the tabs.
   if (enabled === undefined) return null;
   // A failed log read shows once above the charts it feeds, which only say they have nothing; the cache card reads
-  // on its own.
-  const failed = log.data ? null : log.error;
+  // on its own. A refresh that fails keeps the records read before and says so above them.
+  const failed = log.error;
   const pending = log.data ? null : failed ? <Empty>{t('dns.chart.noLog')}</Empty> : <Loading />;
   const notice = failed ? (
     <ErrorMessage error={failed} onRetry={log.refetch} />
