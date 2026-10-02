@@ -4,6 +4,7 @@ version = 1
 path = [
   "*",
   ".github/**",
+  ".batch7-logs/**",
   "src/**",
   "e2e/**",
   "tools/**",
@@ -99,3 +100,15 @@ path = ["src/ui/assets/TwemojiCountryFlags.woff2"]
 precedence = "override"
 SPDX-FileCopyrightText = ["Twitter and other contributors", "2016-2018 Mozilla Foundation"]
 SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = ["patches/react-aria@3.52.1.patch"]
+precedence = "override"
+SPDX-FileCopyrightText = ["2020 Adobe. All rights reserved.", "doona contributors"]
+SPDX-License-Identifier = "Apache-2.0 AND GPL-3.0-only"
+
+[[annotations]]
+path = ["src/fonts.css", "src/fonts-tc.css", "src/fonts-sc.css"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2014-2021 Adobe"
+SPDX-License-Identifier = "OFL-1.1"

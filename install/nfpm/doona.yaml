@@ -13,7 +13,7 @@ maintainer: Zakkaus <zakk@gentoozh.org>
 vendor: Zakkaus
 homepage: https://github.com/Zakkaus/doona
 # The bundled npm packages, the Spectrum icons, the palette images and the GitHub mark add to doona's own licence.
-license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
+license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
 description: |
   Web UI for the daeuniverse engines
   Static files for /usr/share/doona; configure the engine or a web server to serve that directory.
@@ -37,6 +37,10 @@ contents:
     dst: /usr/share/doc/doona/LICENSES/CC-BY-3.0.txt
     type: license
     packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/CC-BY-4.0.txt
+    dst: /usr/share/doc/doona/LICENSES/CC-BY-4.0.txt
+    type: license
+    packager: rpm
   - src: build/stage/doona/usr/share/doc/doona/LICENSES/CC-BY-SA-4.0.txt
     dst: /usr/share/doc/doona/LICENSES/CC-BY-SA-4.0.txt
     type: license
@@ -47,6 +51,10 @@ contents:
     packager: rpm
   - src: build/stage/doona/usr/share/doc/doona/LICENSES/LicenseRef-GitHub-Logos.txt
     dst: /usr/share/doc/doona/LICENSES/LicenseRef-GitHub-Logos.txt
+    type: license
+    packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/LICENSES/OFL-1.1.txt
+    dst: /usr/share/doc/doona/LICENSES/OFL-1.1.txt
     type: license
     packager: rpm
   - src: build/stage/doona/usr/share/doc/doona/THIRD-PARTY-NOTICES.txt

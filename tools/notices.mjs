@@ -10,8 +10,8 @@ export const NOTICES = 'THIRD-PARTY-NOTICES.txt';
 // as fonts/OFL.txt; GPL-2.0-only covers repository files that are never shipped.
 export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'CC-BY-4.0', 'CC-BY-3.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'LicenseRef-GitHub-Logos'];
 
-// Build tools that write code of their own into dist/. Only that helper code ships, so each entry takes the sections
-// of the tool's LICENSE.md that cover it: a heading, or one name in a heading that lists several packages.
+// Build tools that write code of their own into dist/. Include only the shipped helpers' licence texts,
+// not the tools' build-only dependency closure.
 export const BUILD_RUNTIME = [
   {
     name: 'vite',
@@ -24,6 +24,13 @@ export const BUILD_RUNTIME = [
     from: ['vite'],
     sections: ['Rollup core license'],
     note: 'Only the module namespace objects that Rollup writes into the build ship.'
+  },
+  {
+    name: '@react-aria/optimize-locales-plugin',
+    from: [],
+    file: 'LICENSE',
+    license: 'Apache-2.0',
+    note: 'Only the empty.js locale helper emitted by the plugin ships.'
   }
 ];
 
@@ -77,15 +84,19 @@ export function dependencyLicenses(root = ROOT) {
     const key = `${meta.name}@${meta.version}`;
     const entry = {name: meta.name, version: meta.version, license: licenseId(meta)};
     pending.push(...Object.keys(meta.dependencies ?? {}).map(dep => [directory, dep]));
-    const file = readdirSync(directory)
-      .filter(name => LICENSE_FILE.test(name))
-      .sort()[0];
+    // The Noto font name tables credit Adobe, unlike the packages' generic Google licence header.
+    const noto = ['@fontsource-variable/noto-sans-tc', '@fontsource-variable/noto-sans-sc'].includes(meta.name);
+    const file = noto
+      ? 'LICENSES/OFL-1.1.txt'
+      : readdirSync(directory)
+          .filter(name => LICENSE_FILE.test(name))
+          .sort()[0];
     if (!file) {
       skipped.set(key, entry);
       continue;
     }
     // Normalise line endings so a checkout's settings cannot change the archive.
-    const text = readFileSync(join(directory, file), 'utf8').replace(/\r\n?/g, '\n');
+    const text = readFileSync(join(noto ? checkout : directory, file), 'utf8').replace(/\r\n?/g, '\n');
     packages.set(key, {...entry, file, text});
   }
   return {packages: [...packages.values()].sort(byNameVersion), skipped: [...skipped.values()].sort(byNameVersion)};
@@ -117,15 +128,15 @@ export function licenseSections(text, names, source) {
 // BUILD_RUNTIME resolved against the installed build tools.
 export function buildRuntimeLicenses(root = ROOT) {
   const checkout = realpathSync(root);
-  return BUILD_RUNTIME.map(({name, from, sections, note}) => {
+  return BUILD_RUNTIME.map(({name, from, sections, note, file = 'LICENSE.md', license}) => {
     const directory = resolvePackage(
       from.reduce((start, parent) => resolvePackage(start, parent), checkout),
       name
     );
     const meta = readJson(join(directory, 'package.json'));
-    const file = 'LICENSE.md';
-    const text = licenseSections(readFileSync(join(directory, file), 'utf8'), sections, `${name}/${file}`);
-    return {name: meta.name, version: meta.version, license: licenseId(meta), file, text: `${note}\n\n${text}\n`};
+    const source = readFileSync(join(directory, file), 'utf8').replace(/\r\n?/g, '\n');
+    const text = sections ? licenseSections(source, sections, `${name}/${file}`) : source;
+    return {name: meta.name, version: meta.version, license: license ?? licenseId(meta), file, text: `${note}\n\n${text}\n`};
   });
 }
 

@@ -67,3 +67,7 @@ archive has a `fonts/` directory containing the Vite-bundled [Fontsource subsets
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.
 Nix unpacks the release archives under `$out/share/doona`. nfpm stages the same archives for its packages.
 The default local invocation uses the version in `package.json`.
+
+For local distribution, run `pnpm build && pnpm package` from the repository root and deploy the program archive
+from `release/`, plus the font archive if needed. Do not distribute raw `dist/`: it lacks the program's licence
+and notice files.

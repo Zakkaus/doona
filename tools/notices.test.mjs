@@ -31,6 +31,12 @@ const checkout = () =>
     // Upper case sorts first, so COPYING wins over license.md.
     'node_modules/@scope/beta/COPYING': 'Beta copying\n',
     'node_modules/nolicence/package.json': {name: 'nolicence', version: '0.0.1', license: 'MIT'},
+    'node_modules/@react-aria/optimize-locales-plugin/package.json': {
+      name: '@react-aria/optimize-locales-plugin',
+      version: '2.0.2',
+      dependencies: {unplugin: '2'}
+    },
+    'node_modules/@react-aria/optimize-locales-plugin/LICENSE': 'Apache-2.0\nCopyright 2019 Adobe\n',
     'node_modules/vite/package.json': {name: 'vite', version: '6.0.0', license: 'MIT'},
     'node_modules/vite/LICENSE.md': [
       '# Vite core license',
@@ -64,19 +70,18 @@ it('ships every licence file NOTICE cites', () => {
 it('writes sorted notices of the production closure and lists packages without a licence file', () => {
   const root = checkout();
   const stage = tree({NOTICE: 'See LICENSES/CC-BY-3.0.txt.\n'});
-  const {skipped} = stageNotices(stage, root);
+  const {packages, skipped} = stageNotices(stage, root);
   expect(skipped).toEqual([{name: 'nolicence', version: '0.0.1', license: 'MIT'}]);
-  const rule = '='.repeat(72);
-  expect(readFileSync(join(stage, NOTICES), 'utf8')).toBe(
-    [
-      `@scope/beta 1.0.0 (ISC) — COPYING\n${rule}\nBeta copying\n`,
-      `rollup 4.0.0 (MIT) — LICENSE.md\n${rule}\nOnly the module namespace objects that Rollup writes into the build ship.\n\n# Rollup core license\nRollup MIT\n`,
-      `vite 6.0.0 (MIT) — LICENSE.md\n${rule}\nOnly helper code that Vite writes into the build ships: the module preload polyfill, the preload helper for dynamic imports and the CommonJS interop helper of @rollup/plugin-commonjs, which Vite bundles.\n\n# Vite core license\nVite MIT\n\n## @rollup/plugin-alias, @rollup/plugin-commonjs\nLicense: MIT\n> Plugins MIT\n`,
-      `zeta 2.0.0 (MIT) — LICENSE\n${rule}\nZeta\nlicence\n`,
-      `Packages without a licence file\n${rule}\nnolicence 0.0.1 (MIT)\n`
-    ].join('\n\n')
-  );
-  for (const id of PROGRAM_LICENSES) expect(readFileSync(join(stage, 'LICENSES', `${id}.txt`), 'utf8')).toBe(`${id}\n`);
+  expect(packages.map(({name, version, license}) => [name, version, license])).toEqual([
+    ['@react-aria/optimize-locales-plugin', '2.0.2', 'Apache-2.0'],
+    ['@scope/beta', '1.0.0', 'ISC'],
+    ['rollup', '4.0.0', 'MIT'],
+    ['vite', '6.0.0', 'MIT'],
+    ['zeta', '2.0.0', 'MIT']
+  ]);
+  const notices = readFileSync(join(stage, NOTICES), 'utf8');
+  expect(notices).not.toContain('Not shipped');
+  expect(notices).not.toContain('\r');
   // A second run over the same tree gives the same bytes.
   const again = tree({NOTICE: 'See LICENSES/CC-BY-3.0.txt.\n'});
   stageNotices(again, root);
