@@ -43,16 +43,19 @@ for (const [width, url, heading, columns] of [
   });
 }
 
-// The DNS cache keeps every column on the narrowest phone and scrolls to its Delete column.
-test('the DNS cache table keeps every column at 320px and scrolls to Delete', async ({page}) => {
+// The DNS cache keeps every column on the narrowest phone and scrolls to its row actions.
+test('the DNS cache table keeps every column at 320px and scrolls to Actions', async ({page}) => {
   await page.setViewportSize({width: 320, height: 800});
   await page.goto('/#/dns?tab=cache');
   const panel = page.getByRole('tabpanel', {name: 'Cache'});
   const table = panel.locator('.rp-table').first();
-  await expect(table.locator('[role=row][data-key]').first()).toBeVisible();
-  expect((await columnNames(table.locator('[role=grid]'))).sort()).toEqual(['Delete', 'Domain', 'Expires', 'Stale until', 'State', 'Type']);
+  const row = table.locator('[role=row][data-key]').first();
+  await expect(row).toBeVisible();
+  expect((await columnNames(table.locator('[role=grid]'))).sort()).toEqual(['Actions', 'Domain', 'Expires', 'Stale until', 'State', 'Type']);
   await scrollTableToEnd(table.locator('[role=grid]'));
-  await expect(table.getByRole('columnheader', {name: 'Delete'})).toBeInViewport({ratio: 1});
+  await expect(table.getByRole('columnheader', {name: /^Actions /})).toBeInViewport({ratio: 1});
+  await expect(row.getByRole('button', {name: /^Add (DNS request|routing) rule for /})).toBeInViewport({ratio: 1});
+  await expect(row.getByRole('button', {name: /^Delete the /})).toBeInViewport({ratio: 1});
 });
 
 // A finger needs a bigger hit target on the column resizer than a mouse does, without moving the visible line at the

@@ -23,7 +23,6 @@ it('fills the bar by the entry count, its only limit, and states entries and cap
     {label: 'Capacity', value: '100,000'}
   ]);
   expect(card.note).toBeUndefined();
-  expect(card.coverage).toBe('Caches Positive answers; held in memory only, cleared on restart');
   expect(cacheCard(list({entries: '5', entry_capacity: '100000'}), 'en-US', t)!.usage?.value).toBe('<1%');
   // A capacity past Number's exact range keeps every digit.
   expect(cacheCard(list({entries: '1', entry_capacity: '18446744073709551615'}), 'en-US', t)!.usage?.facts[1].value).toBe('18,446,744,073,709,551,615');

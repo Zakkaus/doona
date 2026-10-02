@@ -510,7 +510,7 @@ test.describe('360px actions', () => {
   test('toolbar actions past the first move into a menu', async ({page}) => {
     test.skip(isLive, 'The menus list Suspend and Load older records, which depend on the backend’s capabilities and records');
     for (const [route, visible, collapsed] of [
-      ['dns?tab=log', 'Refresh', ['Export CSV', 'Add rule', 'DNS rules', 'Recording settings', 'Load older records']],
+      ['dns?tab=log', 'Refresh', ['Export CSV', 'DNS rules', 'Recording settings', 'Load older records']],
       ['logs', 'Clear', ['Export', 'Recording settings']],
       ['overview', 'Export state JSON', ['Reload', 'Suspend']]
     ] as const) {

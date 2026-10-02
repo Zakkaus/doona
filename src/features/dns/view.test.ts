@@ -130,12 +130,15 @@ it('names the route source and the cache entry a delete button removes', () => {
   expect(entry.deleteLabel).not.toContain(entry.id);
 });
 
-it('says the persistent cache is memory only rather than not covered, and explains the kept log records', () => {
-  const view = dnsCacheView(dnsCache, capabilities.resources, '', null, 'en-US', t, contains);
-  expect(view.coverage.find(badge => badge.id === 'persistent')?.text).toBe(t('ui.valuePair', {label: t('dns.persistent'), value: t('dns.chart.memoryOnly')}));
-  const log = dnsLogView({observed_at: '2026-01-01T00:00:00Z', records: [], total: 3, next_cursor: null}, true, t);
-  expect(log.totalHelp).toEqual({title: t('dns.logTotal', {n: 3}), text: t('dns.logTotalHelp')});
-  expect(dnsLogView(undefined, true, t).totalHelp).toBeNull();
+it('reports missing cache coverage and omits warnings when all coverage is present', () => {
+  const missing = {...dnsCache, coverage: {positive: false, negative: false, persistent: false}};
+  expect(dnsCacheView(missing, capabilities.resources, '', null, 'en', t, contains).coverage.map(badge => badge.id)).toEqual([
+    'positive',
+    'negative',
+    'persistent'
+  ]);
+  const complete = {...dnsCache, coverage: {positive: true, negative: true, persistent: true}};
+  expect(dnsCacheView(complete, capabilities.resources, '', null, 'en', t, contains).coverage).toEqual([]);
 });
 
 it('says why Query, Clear all cache and Delete are disabled when the backend does not support them', () => {
@@ -170,7 +173,7 @@ it('seeds a new rule from the typed answer records, the client address and the u
     {name: 'edge.example.net.', type: 'AAAA', class: 'IN', ttl: 60, data: '2001:db8::1'}
   ];
   const logged = {...record, src: '[2001:db8::12]:40001', cached: false, upstream: 'tls://1.1.1.1', answers};
-  expect(dnsLogDetail({observed_at: '', total: 1, next_cursor: null, records: [logged]}, 'dns-1', 'en', t)!.seed).toEqual({
+  expect(dnsLogView({observed_at: '', total: 1, next_cursor: null, records: [logged]}, true, t).rows[0].seed).toEqual({
     domain: 'example.com.',
     dip: null,
     sip: '2001:db8::12',

@@ -18,6 +18,13 @@ import {dnsPattern, matchKinds, matchListMax, type MatchKind} from './match';
 import {useCacheMatches} from './useCacheMatches';
 import {sectionSourceHref} from '../shared/link';
 import {useQuickRule} from '../shared/useQuickRule';
+import type {QuickRuleSeed} from '../shared/rule';
+
+export type DnsRowRule = {
+  canAdd: (seed: QuickRuleSeed) => boolean;
+  open: (seed: QuickRuleSeed) => void;
+  label: (domain: string) => string;
+};
 
 export function useDns({go, query}: PageProps) {
   const t = useT();
@@ -90,7 +97,10 @@ export function useDns({go, query}: PageProps) {
   }, [runLinked]);
   return {
     ...view,
-    rule,
+    rule: {
+      ...rule,
+      label: (domain: string) => t(offered(resources, 'dns_rules', {whileLoading: false}) ? 'dns.addRequestRuleFor' : 'dns.addRoutingRuleFor', {domain})
+    },
     domain,
     setDomain,
     type,
@@ -132,9 +142,6 @@ export function useDnsCacheTab(domain: string) {
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, contains),
     [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t, contains]
   );
-  // The selected entry, while it is still listed, starts a new rule.
-  const [selected, setSelected] = useState<string | null>(null);
-  const picked = view.rows.find(row => row.id === selected);
   const [matchKind, setMatchKind] = useState<MatchKind>('suffix');
   const [matchText, setMatchText] = useState(domain);
   const [matchType, setMatchType] = useState('all');
@@ -217,9 +224,6 @@ export function useDnsCacheTab(domain: string) {
         return t('dns.deleteMatchingFailed', {error: errorText(error, t)});
       }
     },
-    selected: picked ? selected : null,
-    setSelected,
-    seed: picked?.seed ?? null,
     // Delete failures arrive as toasts, flush failures in its dialog, and the shell reports the capabilities.
     error: dns.cache.error,
     retry: dns.cache.refetch,

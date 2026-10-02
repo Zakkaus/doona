@@ -111,13 +111,10 @@ export function dnsCacheView(
           .filter(key => !data.coverage[key])
           .map(key => ({
             id: key,
-            text: t('ui.valuePair', {
-              label: t(
-                {positive: 'dns.positive', negative: 'dns.negative', persistent: 'dns.persistent'}[key] as 'dns.positive' | 'dns.negative' | 'dns.persistent'
-              ),
-              // The backend has no persistent cache: the records are only held in memory.
-              value: t(key === 'persistent' ? 'dns.chart.memoryOnly' : 'dns.notCovered')
-            })
+            text:
+              key === 'persistent'
+                ? t('dns.memoryOnly')
+                : t('ui.valuePair', {label: t(key === 'positive' ? 'dns.positive' : 'dns.negative'), value: t('dns.notCovered')})
           }))
       : [],
     // What the pattern deletion can use: one request for an exact name, or the entries one by one.
@@ -152,7 +149,6 @@ export function dnsLogDetail(data: DnsLogList | undefined, selected: string | nu
     id: record.id,
     title: record.question.name,
     answers: answer.answers,
-    seed: nameSeed(record.question.name, record.question.type, record.answers, record.upstream, record.src),
     fields: [
       [t('ui.type'), record.question.type],
       [t('ui.device'), record.src ?? '—'],
@@ -177,6 +173,7 @@ export function dnsLogView(data: DnsLogList | undefined, enabled: boolean | unde
       observedAt: record.observed_at,
       name: record.question.name,
       type: record.question.type,
+      seed: nameSeed(record.question.name, record.question.type, record.answers, record.upstream, record.src),
       source: record.src ?? '—',
       resultError: record.status !== 'NOERROR',
       result: record.status !== 'NOERROR' ? record.status : record.answers.map(answer => answer.data).join(', ') || '—',

@@ -1,5 +1,6 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
+import AddCircle from '../../ui/icons/AddCircle';
 import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
@@ -28,16 +29,13 @@ import {
   type TableColumn
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
-import {useDns, useDnsCacheTab, useDnsLogTab} from './useDns';
+import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
 import {DnsStats} from './Analysis';
 import type {MatchKind} from './match';
 import {RuleDialog} from '../shared/RuleDialog';
-import type {useQuickRule} from '../shared/useQuickRule';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
-// What a tab needs of the page's add-rule dialog.
-type QuickRule = Pick<ReturnType<typeof useQuickRule>, 'canAdd' | 'open'>;
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -128,7 +126,7 @@ export function Dns(props: PageProps) {
   );
 }
 
-function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () => void; rule: QuickRule}) {
+function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () => void; rule: DnsRowRule}) {
   const t = useT();
   const vm = useDnsCacheTab(domain);
   const {remove} = vm;
@@ -145,24 +143,29 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
       },
       // Wide enough for a six-letter type, DNSKEY (about 52px), with the cell's padding.
       {id: 't', label: t('ui.type'), minWidth: 88, grow: 0, drop: 3, render: entry => entry.type},
-      {id: 's', label: t('ui.state'), minWidth: 104, grow: 0, render: entry => entry.status},
+      {id: 's', label: t('ui.state'), minWidth: 128, grow: 0, render: entry => entry.status},
       // Wide enough for the longest relative time ahead, English "in 59 minutes" (about 90px), with the cell's padding.
       {id: 'e', label: t('dns.expires'), minWidth: 128, drop: 2, render: entry => <TimeCell at={entry.expiresAt} />},
       {id: 'st', label: t('dns.staleUntil'), minWidth: 128, drop: 1, render: entry => <TimeCell at={entry.staleUntil} />},
       {
         id: 'a',
         actions: true,
-        label: t('ui.delete'),
-        minWidth: 80,
+        label: t('ui.actions'),
+        minWidth: 104,
         grow: 0,
         render: entry => (
-          <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => remove(entry.id)}>
-            <Delete />
-          </Button>
+          <div className="rp-cluster nowrap">
+            <Button quiet icon small label={rule.label(entry.domain)} isDisabled={!rule.canAdd(entry.seed)} onPress={() => rule.open(entry.seed)}>
+              <AddCircle />
+            </Button>
+            <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => remove(entry.id)}>
+              <Delete />
+            </Button>
+          </div>
         )
       }
     ],
-    [t, remove]
+    [t, remove, rule]
   );
   return (
     <>
@@ -180,13 +183,6 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           </Button>
         )}
         <span className="rp-grow" />
-        <div className="rp-col">
-          <ActionHelp reason={vm.seed ? null : t('ui.selectRow')}>
-            <Button isDisabled={!vm.seed || !rule.canAdd(vm.seed)} onPress={() => vm.seed && rule.open(vm.seed)}>
-              {t('rule.add')}
-            </Button>
-          </ActionHelp>
-        </div>
         <div className="rp-col">
           <ActionHelp reason={vm.flushReason}>
             <ConfirmButton
@@ -240,17 +236,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
         </ActionHelp>
       )}
       <ActionHelp reason={vm.deleteReason} above>
-        <DataTable
-          label={t('ui.cache')}
-          height={442}
-          fit
-          rows={vm.rows}
-          selected={vm.selected}
-          onSelect={vm.setSelected}
-          loading={vm.loading}
-          empty={vm.empty}
-          cols={columns}
-        />
+        <DataTable label={t('ui.cache')} height={442} fit rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} />
       </ActionHelp>
     </>
   );
@@ -267,11 +253,10 @@ function DnsLog({
   initialName: string;
   initialSrc: string;
   links: Action[];
-  rule: QuickRule;
+  rule: DnsRowRule;
 }) {
   const t = useT();
   const vm = useDnsLogTab(enabled, initialName, initialSrc);
-  const seed = vm.detail?.seed;
   // Stable column definitions: a new array on every poll would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<DnsLogRow>[] => [
@@ -310,42 +295,45 @@ function DnsLog({
           )
       },
       // Wide enough for four digits and the unit, "9999 ms" (about 55px), with the cell's padding.
-      {id: 'e', label: t('ui.elapsed'), minWidth: 88, grow: 0, drop: 4, render: record => record.elapsed}
+      {id: 'e', label: t('ui.elapsed'), minWidth: 88, grow: 0, drop: 4, render: record => record.elapsed},
+      {
+        id: 'a',
+        actions: true,
+        label: t('ui.actions'),
+        minWidth: 88,
+        grow: 0,
+        render: record => (
+          <Button quiet icon small label={rule.label(record.name)} isDisabled={!rule.canAdd(record.seed)} onPress={() => rule.open(record.seed)}>
+            <AddCircle />
+          </Button>
+        )
+      }
     ],
-    [t]
+    [t, rule]
   );
   return (
     <>
-      <ActionHelp reason={seed ? null : t('ui.selectRow')}>
-        <div className="rp-toolbar">
-          <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
-          <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-          <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
-          {vm.total && (
-            <HelpRow help={vm.totalHelp}>
-              <span className="rp-label">{vm.total}</span>
-            </HelpRow>
-          )}
-          {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
-          <span className="rp-grow" />
-          <ActionGroup
-            actions={[
-              // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
-              {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
-              {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
-              {
-                id: 'rule',
-                label: t('rule.add'),
-                isDisabled: !seed || !rule.canAdd(seed),
-                reason: seed ? undefined : t('ui.selectRow'),
-                onAction: () => seed && rule.open(seed)
-              },
-              ...links,
-              ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
-            ]}
-          />
-        </div>
-      </ActionHelp>
+      <div className="rp-toolbar">
+        <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
+        <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
+        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
+        {vm.total && (
+          <HelpRow help={vm.totalHelp}>
+            <span className="rp-label">{vm.total}</span>
+          </HelpRow>
+        )}
+        {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
+        <span className="rp-grow" />
+        <ActionGroup
+          actions={[
+            // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
+            {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+            {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+            ...links,
+            ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
+          ]}
+        />
+      </div>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}
       <div className="rp-with-panel" data-open={vm.detail ? '' : undefined}>
@@ -364,13 +352,6 @@ function DnsLog({
         <DetailPanel open={!!vm.detail} title={vm.detailTitle} onClose={() => vm.setSelected(null)}>
           {vm.detail && (
             <>
-              {rule.canAdd(vm.detail.seed) && (
-                <div className="rp-cluster">
-                  <Button small onPress={() => rule.open(vm.detail!.seed)}>
-                    {t('rule.add')}
-                  </Button>
-                </div>
-              )}
               <Kv inline items={vm.detail.fields} />
               {vm.detail.answers.length ? (
                 <div className="rp-list">
