@@ -53,6 +53,25 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 [文件](https://zakkaus.github.io/doona-docs/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
 
+## v0.1.0-beta.13 更新
+
+以下為相較 beta.12 的更新；完整記錄見 [CHANGELOG](CHANGELOG.md#010-beta13---2026-10-03)。
+
+- 以視覺化表單編輯 routing 與 DNS 條件，保留註解，不支援的運算式仍可用文字編輯。
+- 套用分流範本前預覽差異，並分別設定廣告封鎖、QUIC 封鎖與 NetworkManager 直連。
+- 在同一對話框中建立與編輯策略群組，可搜尋成員選項，並在儲存前復原變更。
+- 直接編輯節點名稱與分享連結，並設定訂閱更新間隔、User-Agent、快取與下載路由。
+- 在組態檔編輯器旁檢視診斷，於獨立表單修改持久全域設定；後端支援時，可匯出組態、匯入伺服器啟動檔案並還原組態修訂版本。
+- 為節點與巢狀群組選擇延遲探測方法及 IP 協定族，並檢視各類探測的最新延遲或失敗原因。
+- 選擇 DNS 查詢上游，預覽並刪除符合條件的快取記錄，直接從快取或解析記錄列建立規則。
+- 以任一介面語言搜尋設定欄位、組態區段與新增訂閱等功能入口，並直接開啟對應的頁面、欄位或列。
+- 依寬度與高度預設或拖曳邊緣調整儀表板卡片大小，編輯時顯示每列的剩餘空間。
+- 在浮動、固定或手機抽屜式面板中排列小工具，於小工具編輯器中依實際寬度預覽面板，並將未固定且未停靠的面板隱藏在螢幕邊緣。
+- 在活動頁檢視群組目前節點的延遲、CPU 與延遲趨勢，以及首次設定引導。
+- 頁面工具列、分頁列與分段控制項統一為 40px 高；鍵盤焦點環與內容保持間距，也不再被容器裁切。
+
+Debian 與 Ubuntu 使用者請注意：deb 套件已更名為 `doona-web`，安裝至 `/usr/share/doona-web`，因為這兩個發行版內建一個無關的 `doona` 套件；請將 honk 的 `ui` 改為新路徑。
+
 ## 頁面
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
@@ -123,6 +142,8 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 組態頁顯示目前生效的組態版本。模組分頁為每個組態區塊顯示一行摘要，並連結到管理該區塊的頁面。後端支援時，全域設定編輯引擎的持久設定；設定檔分頁編輯選取的可寫入來源，並匯出顯示的內容，匯出檔案可能包含憑證。若寫入涉及必須重新啟動才能生效的設定，則整次寫入遭拒；提示會列出設定，並提供重新啟動指令及安裝指南連結。
 
+<!-- Screenshot publication: add config-source-light.webp and config-global-light.webp after the documentation deployment publishes them. -->
+
 設定頁的地理資料卡片列出地理資料檔案，並在後端支援時顯示狀態與更新操作。重設為預設值經確認後移除所有地理資料覆寫及取自組態檔的值，恢復內建來源與預設值。重新載入、DNS 快取、訂閱與連線操作保留在各自頁面，不放在設定頁。錯誤通知與操作結果未知的提示提供複製錯誤；設定頁的關於卡片可複製記憶體中保留的最近 20 條錯誤，不含密鑰與請求內文。
 
 ### 小工具
@@ -149,4 +170,4 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ## 授權與致謝
 
-[GPL-3.0-only](LICENSE)。[Noto Sans TC 與 SC](docs/fonts.md) 由 Fontsource npm 套件提供，版權歸 Adobe 所有，採用 [Open Font License](LICENSES/OFL-1.1.txt)；[NOTICE](NOTICE) 註明 Adobe Spectrum 圖示（Apache-2.0）。鴨子是維護者繪製的原創作品。
+[GPL-3.0-only](LICENSE)。[Noto Sans TC 與 SC](docs/fonts.md) 由 Fontsource npm 套件提供，版權歸 Adobe 所有，採用 [Open Font License](LICENSES/OFL-1.1.txt)。[NOTICE](NOTICE) 註明 Adobe Spectrum 圖示（Apache-2.0）。

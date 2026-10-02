@@ -53,6 +53,25 @@ From v0.1.0-beta.8 on, until honk publishes a release with the native API, each 
 
 The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
+## What's new in v0.1.0-beta.13
+
+Changes since beta.12; see the [full changelog](CHANGELOG.md#010-beta13---2026-10-03).
+
+- Edit routing and DNS conditions visually while preserving comments and keeping unsupported expressions editable as text.
+- Preview routing template changes before applying them, with separate switches for ad blocking, QUIC blocking and NetworkManager direct access.
+- Create and edit policy groups in one dialog with searchable member pickers and undo before saving.
+- Edit node names and share links in place, and configure subscription refresh intervals, User-Agent, cache and download routes.
+- Edit configuration sources beside diagnostics and persistent global settings in their own form, and, when the backend supports it, export configuration, import server startup files and restore earlier revisions.
+- Choose latency probe methods and IP families for nodes and nested groups, then inspect each probe kind's latest latency or failure reason.
+- Choose DNS query upstreams, preview and delete matching cache entries, and create rules directly from cache or resolution-log rows.
+- Search Settings fields, configuration sections and entry points such as Add subscription in any interface language, and open the matching page, field or row.
+- Size dashboard cards by width and height presets or by dragging their edges, with a hint for the space left in each row while editing.
+- Arrange widgets in a floating, pinned or phone-drawer panel, preview the panel at its real width in the widget editor, and hide an unpinned, undocked panel at the screen edge.
+- Follow a group's active-node latency on Activity and view CPU and latency trends alongside first-run setup guidance.
+- Page toolbars, tab rows and segmented controls share one 40px height, and keyboard focus rings keep clear of their content and are no longer clipped.
+
+Debian and Ubuntu users: the deb is now `doona-web` and installs into `/usr/share/doona-web`, because both distributions ship an unrelated `doona` package; set honk's `ui` to the new path.
+
 ## Pages
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
@@ -123,6 +142,8 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 Configuration shows the version of the configuration in effect. Modules shows one summary per configuration section and links to the page that manages it. Global settings edits the engine's persistent settings when supported; Config files edits the selected writable source and exports its displayed content, which may contain credentials. A write that changes settings requiring a restart is refused without writing; the notice lists the settings and provides a restart command and an install-guide link.
 
+<!-- Screenshot publication: add config-source-light.webp and config-global-light.webp after the documentation deployment publishes them. -->
+
 Settings > Geodata lists the geodata files and shows status and update controls when supported. Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Reload, DNS cache, subscription and connection actions remain on their respective pages, not in Settings. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
 
 ### Widgets
@@ -149,4 +170,4 @@ Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/i
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). [Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0). The duck is the maintainer's own artwork.
+[GPL-3.0-only](LICENSE). [Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0).
