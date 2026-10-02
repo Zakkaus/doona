@@ -9,9 +9,9 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await page.goto('/#/dns?tab=cache');
   const grid = page.getByRole('grid', {name: 'Cache', exact: true});
   await expect(grid).toHaveAttribute('aria-rowcount', String(entries.length + 1));
-  const deleteHeader = page.getByRole('columnheader', {name: /^Delete /}).locator('.rp-th');
+  const actionsHeader = page.getByRole('columnheader', {name: /^Actions /}).locator('.rp-th');
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
-  expect(await deleteHeader.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await actionsHeader.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('button', {name: `Delete the ${entries[0].type} cache entry for ${entries[0].domain}`, exact: true}).click();
   await expect(page.getByRole('button', {name: `Delete the ${entries[0].type} cache entry for ${entries[0].domain}`, exact: true})).toHaveCount(0);
   await expect(grid).toHaveAttribute('aria-rowcount', String(entries.length));
@@ -30,6 +30,30 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
     ['DELETE', `/api/v1/dns/cache/${encodeURIComponent(entries[0].entry_id)}`],
     ['POST', '/api/v1/dns/cache/flush']
   ]);
+});
+
+test.describe('Traditional Chinese cache labels', () => {
+  test.use({viewport: {width: 1280, height: 900}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': 'dark'}});
+
+  test('the stale deadline and memory-only badge fit without truncation', async ({page}) => {
+    await mockBackend(page);
+    await page.goto('/#/dns?tab=cache');
+    const header = page.getByRole('columnheader', {name: /^逾期可用至 /}).locator('.rp-th');
+    const badge = page.getByText('快取僅存於記憶體，重新啟動後清空', {exact: true});
+    await expect(header).toBeVisible();
+    await expect(badge).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    for (const label of [header, badge]) expect(await label.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const status = page.getByRole('gridcell', {name: 'NXDOMAIN', exact: true}).first();
+    expect(await status.evaluate(cell => [cell, ...cell.querySelectorAll('*')].every(node => node.scrollWidth <= node.clientWidth))).toBe(true);
+    await expect(page.getByText('請先選取一列', {exact: true})).toHaveCount(0);
+    const row = page.getByRole('row', {name: 'api.telegram.org.', exact: true});
+    const add = row.getByRole('button', {name: '為 api.telegram.org. 新增 DNS 請求規則', exact: true});
+    const remove = row.getByRole('button', {name: '刪除 api.telegram.org. 的 A 快取項目', exact: true});
+    const addBox = await box(add);
+    const removeBox = await box(remove);
+    expect({width: addBox.width, height: addBox.height}).toEqual({width: removeBox.width, height: removeBox.height});
+  });
 });
 
 test('a cache deletion toast omits its request ID and logs it', async ({page}) => {

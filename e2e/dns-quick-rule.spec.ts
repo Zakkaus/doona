@@ -42,18 +42,20 @@ async function holdRouting(page: Page, id: string) {
   await expect(dialogOf(page)).toHaveCount(0);
 }
 
-test('the DNS log adds a rule for the selected record from its toolbar and its detail', async ({page}) => {
+test('the DNS log row opens its request rule without selecting a record', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
   await backend(page);
   await page.goto('/#/dns?tab=log');
-  const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
-  await expect(add).toBeDisabled();
   const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
   await expect(first).toBeVisible();
-  await expect(page.getByText('Select a row first', {exact: true})).toBeVisible();
-  await expect(add).toHaveAccessibleDescription('Select a row first');
-  const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
-  await first.click();
-  await add.click();
+  const header = page.getByRole('columnheader', {name: /^Actions /}).locator('.rp-th');
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  expect(await header.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expect(page.getByText('Select a row first', {exact: true})).toHaveCount(0);
+  await expect(page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
+  const domain = (await first.getByRole('rowheader').innerText()).trim();
+  const name = domain.replace(/\.$/, '');
+  await first.getByRole('button', {name: `Add DNS request rule for ${domain}`, exact: true}).click();
   const dialog = dialogOf(page);
   await expect(dialog.getByRole('button', {name: /Rule list$/})).toContainText('DNS request rules');
   // The newest record was answered by udp://223.5.5.5, which the configuration names alidns with its port.
@@ -73,10 +75,6 @@ test('the DNS log adds a rule for the selected record from its toolbar and its d
   await expect(dialog.locator('.rp-code')).toHaveText(`domain(full: ${name})`);
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  // The detail opens the same dialog, again with no action chosen.
-  await page.locator('.rp-panel').getByRole('button', {name: 'Add rule', exact: true}).click();
-  await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name})`);
-  await expect(dialog).toContainText('Current: alidns');
 });
 
 test('a query result adds a response rule for an answered address, then queries again', async ({page}) => {
@@ -135,22 +133,24 @@ test('a DNS rule written without DNS queries on offer does not offer to query ag
   };
   await page.goto('/#/dns?tab=log');
   const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
-  await first.click();
-  await page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true}).click();
+  await first.getByRole('button', {name: /^Add DNS request rule for /}).click();
   await pick(page, /Action$/, /^reject/);
   await dialogOf(page).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
   await expect(page.getByRole('button', {name: 'Query again', exact: true})).toHaveCount(0);
 });
 
-test('the DNS cache adds a rule for the selected entry by its name and type', async ({page}) => {
-  await backend(page);
+test('the DNS cache row writes a request rule for its domain through the dialog', async ({page}) => {
+  const {api, requests} = await backend(page);
+  const entry = (await api.dnsCache()).entries[1];
   await page.goto('/#/dns?tab=cache');
-  const add = page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true});
-  await expect(add).toBeDisabled();
-  const first = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]').first();
-  const name = (await first.getByRole('rowheader').innerText()).trim().replace(/\.$/, '');
-  await first.getByRole('rowheader').click();
+  await expect(page.getByText('Select a row first', {exact: true})).toHaveCount(0);
+  await expect(page.locator('.rp-toolbar').getByRole('button', {name: 'Add rule', exact: true})).toHaveCount(0);
+  const name = entry.domain.replace(/\.$/, '');
+  const add = page.locator(`[role=row][data-key="${entry.entry_id}"]`).getByRole('button', {name: `Add DNS request rule for ${entry.domain}`, exact: true});
+  await page.mouse.move(0, 0);
+  await add.hover();
+  await expect(page.getByRole('tooltip')).toHaveText(`Add DNS request rule for ${entry.domain}`);
   await add.click();
   const dialog = dialogOf(page);
   await expect(dialog.locator('.rp-code')).toHaveText(`qname(full: ${name})`);
@@ -158,6 +158,24 @@ test('the DNS cache adds a rule for the selected entry by its name and type', as
   // An entry is listed without its answers, so only a request or routing rule is offered.
   await dialog.getByRole('button', {name: /Rule list$/}).click();
   await expect(page.getByRole('option')).toHaveText(['DNS request rules', 'Routing rules']);
+  await page.getByRole('option', {name: 'DNS request rules', exact: true}).click();
+  await pick(page, /Action$/, /^reject/);
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'New rule is in effect'})).toBeVisible();
+  const writes = requests.filter(request => request.method() === 'PUT');
+  expect(writes.map(request => new URL(request.url()).pathname)).toEqual(['/api/v1/config/sources/src-main']);
+  expect(writes[0].postDataJSON().content).toContain(`      qname(full: ${name}) -> reject\n      fallback: cloudflare`);
+  await page.goto('/#/rules?tab=dns');
+  await expect(page.getByRole('rowheader', {name: `qname(full: ${name})`, exact: true})).toBeVisible();
+});
+
+test('a cache row names the routing destination when DNS rules are unavailable', async ({page}) => {
+  const {capabilities} = await backend(page);
+  capabilities.resources.dns_rules.available = false;
+  await page.goto('/#/dns?tab=cache');
+  await page.getByRole('button', {name: 'Add routing rule for api.telegram.org.', exact: true}).click();
+  await expect(dialogOf(page).locator('.rp-code')).toHaveText('domain(full: api.telegram.org)');
+  await expect(dialogOf(page).getByRole('button', {name: /Outbound$/})).toBeVisible();
 });
 
 test('DNS and routing rules held together apply in one write, each listed with its own tab', async ({page}) => {
