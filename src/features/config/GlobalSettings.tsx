@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField} from '../../ui/ui';
+import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField, Toolbar} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
@@ -17,11 +17,11 @@ export function GlobalSettings(props: PageProps) {
         void m.save();
       }}
     >
-      <div className="rp-toolbar">
+      <Toolbar page>
         <span className="rp-cluster nowrap rp-source-pick">
           <LabeledSelect side cut="path" label={t('config.source')} value={m.selected} items={m.choices} onChange={m.select} isDisabled={m.busy || !m.source} />
         </span>
-      </div>
+      </Toolbar>
       <span className="rp-label">{t('config.globalNote')}</span>
       {m.unread && <InlineAlert tone="informative">{m.unread}</InlineAlert>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
@@ -31,7 +31,7 @@ export function GlobalSettings(props: PageProps) {
       {m.source && !m.writable && <InlineAlert>{t('config.readOnly')}</InlineAlert>}
       {m.groups.map(group => (
         <Card key={group.id} title={group.title}>
-          <div className="rp-toolbar top rp-fieldgrid">
+          <Toolbar className="top rp-fieldgrid">
             {group.fields.map(field => (
               <div key={field.key} className="rp-field" data-setting={field.key}>
                 {field.items ? (
@@ -64,10 +64,10 @@ export function GlobalSettings(props: PageProps) {
                 {field.duplicate && <span className="rp-label">{t('config.globalDuplicate')}</span>}
               </div>
             ))}
-          </div>
+          </Toolbar>
         </Card>
       ))}
-      <div className="rp-toolbar">
+      <Toolbar page>
         <Button accent type="submit" isPending={m.busy} isDisabled={m.blocked}>
           {t('config.globalSave')}
         </Button>
@@ -76,7 +76,7 @@ export function GlobalSettings(props: PageProps) {
             {t('config.discard')}
           </Button>
         )}
-      </div>
+      </Toolbar>
     </form>
   );
 }

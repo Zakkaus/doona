@@ -20,7 +20,8 @@ import {
   Empty,
   Link,
   Tabs,
-  type TableColumn
+  type TableColumn,
+  Toolbar
 } from '../../ui/ui';
 import {Coverage} from '../shared/Coverage';
 import type {PageProps} from '../../shell/routes';
@@ -43,7 +44,7 @@ export function Flows(props: PageProps) {
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
-      <Tabs label={t('nav.flows')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
+      <Tabs page label={t('nav.flows')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
     </div>
   );
 }
@@ -53,19 +54,13 @@ function RoutingMap(props: PageProps) {
   const view = useRoutingMap(props);
   return (
     <section className="rp-col" aria-label={t('flow.map')}>
-      <div className="rp-toolbar">
-        {view.pinLabel ? (
-          <Button small onPress={view.viewPinned}>
-            {view.pinLabel}
-          </Button>
-        ) : (
-          <span className="rp-label">{t('flow.mapFilterHint')}</span>
-        )}
+      <Toolbar page>
+        {view.pinLabel ? <Button onPress={view.viewPinned}>{view.pinLabel}</Button> : <span className="rp-label">{t('flow.mapFilterHint')}</span>}
         <span className="rp-grow" />
-        <Button small quiet isDisabled={!view.pinLabel} onPress={() => view.pin(null)}>
+        <Button quiet isDisabled={!view.pinLabel} onPress={() => view.pin(null)}>
           {t('flow.clearMapFilter')}
         </Button>
-      </div>
+      </Toolbar>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <Card
         title={t('flow.topology')}
@@ -168,7 +163,7 @@ function FlowRecords(props: PageProps) {
   return (
     <>
       <ErrorMessage error={view.error} onRetry={view.retry} />
-      <div className="rp-toolbar">
+      <Toolbar page>
         <Segmented
           label={t('ui.network')}
           value={view.network}
@@ -181,13 +176,13 @@ function FlowRecords(props: PageProps) {
         />
         <LabeledSelect label={t('ui.state')} side value={view.state} onChange={view.setState} items={view.stateOptions} />
         {view.pinLabel && (
-          <Button small label={t('ui.valuePair', {label: t('flow.clearMapFilter'), value: view.pinLabel})} onPress={view.clearPin}>
+          <Button label={t('ui.valuePair', {label: t('flow.clearMapFilter'), value: view.pinLabel})} onPress={view.clearPin}>
             {view.pinLabel}
             <Close />
           </Button>
         )}
         {view.connectionLabel && (
-          <Button small label={t('ui.valuePair', {label: t('flow.clearConnectionFilter'), value: view.connectionLabel})} onPress={view.clearConnection}>
+          <Button label={t('ui.valuePair', {label: t('flow.clearConnectionFilter'), value: view.connectionLabel})} onPress={view.clearConnection}>
             {view.connectionLabel}
             <Close />
           </Button>
@@ -196,12 +191,12 @@ function FlowRecords(props: PageProps) {
         {view.recordingHref && (
           <>
             <span className="rp-grow" />
-            <Link appearance="button" quiet small href={view.recordingHref}>
+            <Link appearance="button" quiet href={view.recordingHref}>
               {t('ui.recordingSettings')}
             </Link>
           </>
         )}
-      </div>
+      </Toolbar>
       <div className="rp-with-panel" data-open={view.panelOpen ? '' : undefined}>
         <DataTable
           label={t('flow.records')}

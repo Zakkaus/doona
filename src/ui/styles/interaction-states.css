@@ -193,17 +193,10 @@ h3.rp-label {
 .rp-btn.icon[data-pending] > svg:not(.rp-refresh) {
   display: none;
 }
-.rp-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  min-height: var(--rp-control);
-}
 :where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
   background-color: var(--rp-hl-med);
 }
-:is(.rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear, .rp-node)[data-pressed] {
+:is(.rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input :is(.clear, .reveal), .rp-node, .rp-tree-tile)[data-pressed] {
   background-color: var(--rp-hl-high);
 }
 .rp-node[data-hovered]:not([data-disabled]) {
@@ -354,7 +347,10 @@ h3.rp-label {
    Controls in the tile (a node menu, a help button, a status light) sit above the cover. */
 .rp-card:has(.rp-tile-val > .rp-link) {
   position: relative;
-  transition: border-color var(--rp-duration) var(--rp-ease);
+  transition:
+    border-color var(--rp-duration) var(--rp-ease),
+    background-color var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 .rp-tile-val > .rp-link::after {
   content: '';
@@ -394,12 +390,7 @@ h3.rp-label {
   }
   .rp-btn {
     max-width: 100%;
-    height: auto;
-    min-height: var(--rp-control);
     white-space: normal;
-  }
-  .rp-btn.icon {
-    height: var(--rp-control);
   }
   .rp-seg .rp-btn {
     white-space: nowrap;

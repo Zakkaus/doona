@@ -31,7 +31,7 @@ export function ModeWidget({preview, targetOnly}: {preview: boolean; targetOnly:
             >
               {m.targetText}
             </ChoiceMenu>
-            {targetOnly && <ModeApply model={model} small={false} />}
+            {targetOnly && <ModeApply model={model} />}
           </span>
         </WidgetRow>
       )}

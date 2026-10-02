@@ -44,7 +44,8 @@
   outline: none;
   transition:
     border-color var(--rp-duration) var(--rp-ease),
-    background var(--rp-duration) var(--rp-ease);
+    background var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
 }
 .rp-card-link[data-hovered] {
   border-color: var(--rp-accent);
@@ -161,8 +162,8 @@
   min-width: 0;
   background: var(--rp-base);
 }
-/* The showcase is a game surface, not a link: the default cursor, and presses must not select text, zoom on double tap
-   or flash a tap highlight. Its focus ring stays keyboard only (see loginGame.ts) and inside the panel edge. */
+/* The showcase is a game surface, not a link: the default cursor, and presses must not select text or zoom on double
+   tap. Its focus ring stays keyboard only (see loginGame.ts) and inside the panel edge. */
 .rp-login-game {
   all: unset;
   display: block;
@@ -172,7 +173,6 @@
   cursor: default;
   touch-action: manipulation;
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 .rp-login-game:focus-visible {
   outline: 2px solid var(--rp-accent);

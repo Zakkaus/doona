@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Badge, Button, ErrorMessage, HelpRow, Kv, LabeledSelect, Light, Loading, Tabs, TextTooltip} from '../../ui/ui';
+import {Badge, Button, ErrorMessage, HelpRow, Kv, LabeledSelect, Light, Loading, Tabs, TextTooltip, Toolbar} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage} from './useConfigPage';
@@ -38,7 +38,7 @@ export function Config(props: PageProps) {
     global: <GlobalSettings {...props} />,
     source: (
       <>
-        <div className="rp-toolbar">
+        <Toolbar page>
           <span className="rp-cluster nowrap rp-source-pick">
             <LabeledSelect side cut="path" label={t('config.source')} value={selectedId} onChange={select} items={sourceOptions} />
             {sourceModel && (
@@ -65,7 +65,7 @@ export function Config(props: PageProps) {
               )}
             </span>
           )}
-        </div>
+        </Toolbar>
         {sourceModel && <span className="rp-label">{t('config.exportWarning')}</span>}
         {sourceProps && <SourceCard key={sourceModel!.id} {...sourceProps} />}
       </>
@@ -76,7 +76,7 @@ export function Config(props: PageProps) {
       <ErrorMessage error={error} onRetry={reload} />
       {loading && <Loading />}
       {ready && (
-        <div className="rp-toolbar">
+        <Toolbar page>
           <Kv row items={metadata} />
           <Light small tone={summaryTone}>
             {summaryText}
@@ -86,9 +86,9 @@ export function Config(props: PageProps) {
               {t('config.redacted')}
             </Light>
           )}
-        </div>
+        </Toolbar>
       )}
-      {tabsReady && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
+      {tabsReady && <Tabs page label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
     </div>
   );
 }

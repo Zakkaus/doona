@@ -1,5 +1,5 @@
 import {useT, useLang, LOCALE} from '../../i18n';
-import {LabeledSelect, Switch, TextField} from '../../ui/ui';
+import {LabeledSelect, Switch, TextField, Toolbar} from '../../ui/ui';
 import {changeTypedInterval, intervalItems, intervalTyped, startTyping} from './subscription';
 
 // A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
@@ -73,7 +73,7 @@ export function SubscriptionFields({
             onChange={next => set({interval: next === 'typed' ? startTyping(interval) : next})}
           />
           {typed && (
-            <div className="rp-toolbar top">
+            <Toolbar className="top">
               <TextField
                 isDisabled={isDisabled}
                 label={t('nodes.intervalCount')}
@@ -92,7 +92,7 @@ export function SubscriptionFields({
                 isDisabled={isDisabled}
                 onChange={unit => set({interval: changeTypedInterval(typed.count, unit as 'm' | 'h')})}
               />
-            </div>
+            </Toolbar>
           )}
         </>
       )}

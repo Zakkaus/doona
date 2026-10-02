@@ -101,9 +101,9 @@ for (const width of [1440, 768, 390])
           await expect.soft(picker).toHaveAccessibleName(translate(lang, 'ui.valuePair', {label: translate(lang, 'policy.pickGroups'), value: 'hk-01'}));
           expect.soft(geometry.hiddenCaption).toBe(width === 390);
           expect.soft(geometry.titleFits).toBe(true);
-          expect.soft(geometry.help.slice(1)).toEqual([geometry.control, geometry.control]);
+          expect.soft(geometry.help.slice(1)).toEqual([24, 24]);
           expect.soft(geometry.picker[1]).toBe(geometry.control);
-          expect.soft(geometry.help[0]).toBe(geometry.picker[0]);
+          expect.soft(geometry.help[0] + geometry.help[2] / 2).toBe(geometry.picker[0] + geometry.picker[1] / 2);
           expect.soft(geometry.headerHeight).toBe(geometry.control);
           expect.soft(geometry.controlsFit).toBe(true);
           expect.soft(geometry.valueFits).toBe(true);

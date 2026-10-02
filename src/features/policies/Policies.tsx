@@ -36,7 +36,8 @@ import {
   Tags,
   LinkTag,
   TextTooltip,
-  MoreMenu
+  MoreMenu,
+  Toolbar
 } from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
 import {NodeName} from '../../ui/NodeName';
@@ -231,16 +232,16 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
             // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
             // its light beside the summary while they are folded.
             <Disclosure title={<NodeText text={m.summaryText} names={m.members} />} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
-              {network && <div className="rp-toolbar">{network}</div>}
+              {network && <Toolbar>{network}</Toolbar>}
               {grid}
             </Disclosure>
           ) : (
             <>
               {(network || pin) && (
-                <div className="rp-toolbar">
+                <Toolbar>
                   {network}
                   {pin}
-                </div>
+                </Toolbar>
               )}
               {grid}
             </>
@@ -366,14 +367,14 @@ export function Policies(props: PageProps) {
   return (
     <div className="rp-page">
       <ActionHelp reason={m.createDisabled ? m.create.tip : null}>
-        <div className="rp-toolbar">
+        <Toolbar page>
           {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
           <span className="rp-grow" />
           <Button secondary isDisabled={m.createDisabled} onPress={() => m.create.show()}>
             <AddCircle />
             {t('group.newGroup')}
           </Button>
-        </div>
+        </Toolbar>
       </ActionHelp>
       <GroupDialog id="policies-create" model={m.create} details={null} />
       {groups}

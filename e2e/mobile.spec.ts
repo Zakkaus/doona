@@ -676,3 +676,80 @@ for (const [width, columns] of [
     });
   });
 }
+
+// A touch browser's own tap highlight is a square box that ignores the control's radius, so it is off everywhere and
+// each control shows its own press, after S2: a fill on its own box, or the selected shape for the bottom bar, and the
+// `pressScale` sink. Chromium holds a real touch; Playwright cannot hold one in WebKit, so it gets a touch pointer's
+// events, which React Aria reads the same way.
+const pressCases: {name: string; width: number; route: string; target: string; layer?: string; shape?: string; open?: string}[] = [
+  {name: 'button', width: 390, route: 'config', target: '.rp-content .rp-btn:not(.icon, .quiet, .rp-seg .rp-btn, [aria-current])'},
+  {name: 'icon button', width: 390, route: 'overview', target: '.rp-top .rp-btn.icon'},
+  {name: 'tab', width: 390, route: 'config', target: '.rp-tab:not([data-selected])'},
+  {name: 'segment', width: 390, route: 'rules', target: '.rp-seg .rp-btn:not([data-selected])'},
+  {name: 'side navigation link', width: 1280, route: 'rules', target: '.rp-nav:not([aria-current])'},
+  {
+    name: 'bottom bar item',
+    width: 390,
+    route: 'overview',
+    target: '.rp-hubbar > a:not([aria-current])',
+    layer: '.rp-hubbar-pill',
+    shape: '.rp-hubbar > [aria-current] .rp-hubbar-pill'
+  },
+  {name: 'menu item', width: 390, route: 'overview', open: '.rp-top .rp-btn.icon[aria-haspopup]', target: '[role=menuitem].rp-item'},
+  {name: 'list row', width: 390, route: 'connections?tab=list', target: '.rp-table [role=row][data-react-aria-pressable]'},
+  {name: 'picker', width: 390, route: 'settings', target: '.rp-selectbtn:not([disabled])'}
+];
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  for (const width of [390, 1280]) {
+    test.describe(`a held press at ${width}px, ${reducedMotion} motion`, () => {
+      test.use({viewport: {width, height: 844}, hasTouch: true, isMobile: true, reducedMotion});
+      for (const c of pressCases.filter(c => c.width === width)) {
+        test(`a ${c.name} shows its own rounded press`, async ({page, browserName}) => {
+          await page.goto('/#/' + c.route);
+          if (c.open) await page.locator(c.open).filter({visible: true}).first().tap();
+          const target = page.locator(c.target).filter({visible: true}).first();
+          // Clear of the fixed top and bottom bars, which would take the touch.
+          await target.evaluate(el => el.scrollIntoView({block: 'center'}));
+          const layer = c.layer ? target.locator(c.layer) : target;
+          const look = () =>
+            layer.evaluate(el => {
+              const style = getComputedStyle(el);
+              return {transform: style.transform, background: style.backgroundColor, radius: style.borderRadius};
+            });
+          await settle(page);
+          const rest = await look();
+          expect(await target.evaluate(el => getComputedStyle(el).getPropertyValue('-webkit-tap-highlight-color'))).toBe('rgba(0, 0, 0, 0)');
+          const {x, y, width: w, height: h} = (await target.boundingBox())!;
+          // A wide table row runs past the screen; the touch lands in its visible part.
+          const at = {x: Math.round(x + (Math.min(x + w, width) - x) / 2), y: Math.round(y + h / 2)};
+          const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null;
+          const touch = (type: string) =>
+            page.evaluate(
+              ({type, at}) => {
+                const init = {bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: 'touch', isPrimary: true};
+                const point = {clientX: at.x, clientY: at.y, button: 0, buttons: type === 'pointerdown' ? 1 : 0, width: 10, height: 10, pressure: 0.5};
+                document.elementFromPoint(at.x, at.y)!.dispatchEvent(new PointerEvent(type, {...init, ...point}));
+              },
+              {type, at}
+            );
+          if (cdp) await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [at]});
+          else await touch('pointerdown');
+          await expect(target).toHaveAttribute('data-pressed');
+          // Table rows take the fill only, as in S2; with reduced motion every control does.
+          const sinks = c.name !== 'list row' && reducedMotion === 'no-preference';
+          if (sinks) await expect.poll(async () => (await look()).transform).toContain('matrix3d');
+          else await expect.poll(async () => (await look()).background).not.toBe(rest.background);
+          const pressed = await look();
+          if (!sinks) expect(pressed.transform).toBe(rest.transform);
+          // The pressed layer keeps the control's own radius (the bottom bar's, its selected pill's).
+          const shape = c.shape ? await page.locator(c.shape).evaluate(el => getComputedStyle(el).borderRadius) : rest.radius;
+          expect(pressed.radius).toBe(shape);
+          if (c.name !== 'list row') expect(pressed.radius).not.toBe('0px');
+          if (cdp) await cdp.send('Input.dispatchTouchEvent', {type: 'touchCancel', touchPoints: []});
+          else await touch('pointercancel');
+          await expect(target).not.toHaveAttribute('data-pressed');
+        });
+      }
+    });
+  }
+}

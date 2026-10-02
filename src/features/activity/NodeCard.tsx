@@ -24,7 +24,7 @@ export function NodeCard({connections, selection}: {connections: ConnectionList 
       title={t('act.latency')}
       tile={{icon: <Clock />, tint: 5, kind: 'metric', layout: 'responsive'}}
       aside={
-        <HelpRow size="control" help={{title: t('act.latency'), text: t('act.groupPickHelp')}}>
+        <HelpRow help={{title: t('act.latency'), text: t('act.groupPickHelp')}}>
           <GroupMenu label={t('policy.pickGroups')} model={vm} />
         </HelpRow>
       }

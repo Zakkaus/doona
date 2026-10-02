@@ -67,7 +67,8 @@
   white-space: nowrap;
   min-height: var(--rp-control);
   padding: 0 var(--rp-space-3);
-  border-radius: var(--rp-r-md);
+  /* The slider's radius: the tab fills the bar flush, so its box (the pressed fill, the focus ring) meets the bar's corners as the slider does. */
+  border-radius: var(--rp-r-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -79,6 +80,21 @@
   color: var(--rp-text);
   cursor: pointer;
   outline: none;
+  transition:
+    background-color var(--rp-duration) var(--rp-ease),
+    transform var(--rp-duration) var(--rp-ease);
+}
+/* The selected tab's slider is its fill; another tab takes the pressed fill on its own box. */
+.rp-tab[data-pressed]:not([data-selected]) {
+  background-color: var(--rp-hl-high);
+}
+.rp-tabbar[data-size='L'] .rp-tablist {
+  min-height: var(--rp-control-lg);
+}
+.rp-tab[data-size='L'] {
+  min-height: var(--rp-control-lg);
+  padding-inline: var(--rp-lg-inset-field);
+  font-size: var(--rp-lg-text);
 }
 /* Laid out, not display: none: a table or chart in a hidden panel keeps measuring the width it shows again, so the
    first frame back is already at it, even after a resize while hidden. React Aria marks the panel inert, which keeps
@@ -198,7 +214,7 @@
   padding-inline-start: var(--rp-space-3);
   margin-block-end: var(--rp-space-1);
   border: 0;
-  border-radius: 0;
+  border-radius: var(--rp-r-md);
   background: transparent;
   cursor: pointer;
   gap: var(--rp-space-1);
@@ -220,9 +236,6 @@
 .rp-side:has(.rp-disclosure:not([data-expanded]) [aria-current='page']) .rp-nav-slider {
   visibility: hidden;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .rp-disclosure[data-variant='nav'] .rp-disclosure-trigger[data-pressed] {
-    transform: scale(0.98);
-  }
+.rp-disclosure[data-variant='nav'] .rp-disclosure-trigger[data-pressed] {
+  background-color: var(--rp-hl-high);
 }

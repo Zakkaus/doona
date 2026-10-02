@@ -2,6 +2,8 @@ import {useDeferredValue, useState, type ReactNode} from 'react';
 import {Tabs as RTabs, TabList, Tab, TabPanel} from 'react-aria-components';
 import {TabShown} from './useTabShown';
 import {useSlider, useScrollStrip} from './hooks';
+import {useControlSize} from './controlSize';
+import {Toolbar} from './Toolbar';
 
 // Tabs: the selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
 export function Tabs({
@@ -10,7 +12,8 @@ export function Tabs({
   value,
   onChange,
   keepMounted,
-  actions
+  actions,
+  page
 }: {
   label: string;
   items: Array<{id: string; label: string; content: ReactNode}>;
@@ -22,9 +25,13 @@ export function Tabs({
   // Controls at the end of the tab row, such as a filter for the panel shown; they wrap under the tabs on a phone.
   // Passing the prop, even as null, keeps the row, so the tab bar is not remounted when the controls come and go.
   actions?: ReactNode;
+  // A page's own tab row: its tabs and controls are L, as page toolbars are.
+  page?: boolean;
 }) {
   // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
+  const inherited = useControlSize();
+  const controlSize = page ? 'L' : inherited;
   // On a phone the bar scrolls: the selected tab stays in view and a faded end shows there are more tabs.
   useScrollStrip(ref, value);
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
@@ -38,11 +45,11 @@ export function Tabs({
   if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
   const visible = kept.has(value) ? value : shown;
   const bar = (
-    <div className="rp-tabbar" ref={ref}>
+    <div className="rp-tabbar" ref={ref} data-size={controlSize} data-page-tabrow={page || undefined}>
       {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       <TabList aria-label={label} className="rp-tablist">
         {items.map(item => (
-          <Tab key={item.id} id={item.id} className="rp-tab">
+          <Tab key={item.id} id={item.id} className="rp-tab" data-size={controlSize}>
             {item.label}
           </Tab>
         ))}
@@ -54,10 +61,10 @@ export function Tabs({
       {actions === undefined ? (
         bar
       ) : (
-        <div className="rp-tabhead">
+        <Toolbar page={page} className="rp-tabhead">
           {bar}
           {actions}
-        </div>
+        </Toolbar>
       )}
       {items
         .filter(item => kept.has(item.id) || item.id === shown)

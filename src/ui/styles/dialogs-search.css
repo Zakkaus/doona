@@ -12,6 +12,12 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
 }
+.rp-select[data-size='L'] {
+  height: var(--rp-control-lg);
+  padding-inline: var(--rp-lg-inset-compact);
+  font-size: var(--rp-lg-text-compact);
+  line-height: var(--rp-line-body);
+}
 .rp-select[data-hovered] {
   background: var(--rp-fill);
 }
@@ -68,16 +74,17 @@
   border-radius: var(--rp-r-md);
   background: var(--rp-base);
 }
-.rp-input.lg {
-  height: 40px;
-  border-radius: var(--rp-r-lg);
+.rp-input[data-size='L'] {
+  height: var(--rp-control-lg);
+  padding-inline: var(--rp-lg-inset-field);
+  font-size: var(--rp-lg-text);
 }
 /* The field's own glyphs match button icons: 16px in the 32px field, 20px in the large header search. */
 .rp-input .rp-icon {
   width: 16px;
   height: 16px;
 }
-.rp-input.lg > .rp-icon {
+.rp-input[data-size='L'] > .rp-icon {
   width: 20px;
   height: 20px;
 }

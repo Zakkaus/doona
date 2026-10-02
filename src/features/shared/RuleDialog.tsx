@@ -1,7 +1,7 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch} from '../../ui/ui';
+import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch, Toolbar} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
 
 export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
@@ -55,7 +55,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
               {dialog.type}
             </Switch>
           )}
-          <div className="rp-toolbar top">
+          <Toolbar className="top">
             {dialog.outboundSections ? (
               <SearchSelect
                 isDisabled={dialog.busy}
@@ -85,7 +85,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
                 items={dialog.positions}
               />
             )}
-          </div>
+          </Toolbar>
           {dialog.current && <span className="rp-label">{dialog.current}</span>}
           {dialog.unchanged && <InlineAlert tone="informative">{t('rule.unchanged')}</InlineAlert>}
           {dialog.moved && <InlineAlert tone="informative">{t('conn.ruleMoved')}</InlineAlert>}

@@ -18,7 +18,8 @@ import {
   RuleRef,
   Tabs,
   TextField,
-  type TableColumn
+  type TableColumn,
+  Toolbar
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {RuleDialog} from '../shared/RuleDialog';
@@ -40,7 +41,7 @@ export function Rules(props: PageProps) {
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
-      <Tabs label={t('nav.rules')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
+      <Tabs page label={t('nav.rules')} items={view.tabs.map(tab => ({...tab, content: content[tab.id]}))} value={view.tab} onChange={view.changeTab} />
     </div>
   );
 }
@@ -89,7 +90,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
         }}
       >
         <ActionHelp reason={trace.reason}>
-          <div className="rp-toolbar top">
+          <Toolbar className="top">
             <LabeledSelect
               label={t('ui.network')}
               value={form.network}
@@ -123,25 +124,25 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
             <Button accent className="rp-field-row" isPending={trace.busy} isDisabled={!trace.canSubmit} type="submit">
               {t('rule.run')}
             </Button>
-          </div>
+          </Toolbar>
         </ActionHelp>
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
-          <div className="rp-toolbar">
+          <Toolbar>
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
             <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
             <TextField label={t('rule.dscp')} value={form.dscp} onChange={dscp => setForm({...form, dscp})} error={trace.errors.dscp} />
-          </div>
+          </Toolbar>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
       </form>
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
-          <div className="rp-toolbar">
+          <Toolbar>
             <TextTooltip text={t('rule.note')} className="rp-label">
               {trace.result.status}
             </TextTooltip>
-          </div>
+          </Toolbar>
           {trace.result.query && (
             <Card>
               <div className="rp-row">

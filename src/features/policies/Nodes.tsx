@@ -1,4 +1,4 @@
-import {LabeledSelect, ChoiceMenu, Switch, TextField, Empty} from '../../ui/ui';
+import {LabeledSelect, ChoiceMenu, Switch, TextField, Empty, Toolbar} from '../../ui/ui';
 import type {MemberView} from './view';
 import {useT} from '../../i18n';
 import {useNodeGrid} from './useNodeGrid';
@@ -39,7 +39,7 @@ export function NodeGrid({
   if (!m.big) return grid;
   return (
     <div className="rp-form">
-      <div className="rp-toolbar">
+      <Toolbar>
         <TextField search label={t('policy.filter')} value={m.q} onChange={m.setQ} width={240} />
         <ChoiceMenu quiet label={t('policy.region')} value={m.region} onChange={m.setRegion} items={m.regions}>
           {m.regionLabel}
@@ -59,7 +59,7 @@ export function NodeGrid({
         </Switch>
         <span className="rp-grow" />
         <span className="rp-label">{m.count}</span>
-      </div>
+      </Toolbar>
       {grid}
     </div>
   );

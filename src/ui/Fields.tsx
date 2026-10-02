@@ -17,6 +17,7 @@ import VisibilityOff from './icons/VisibilityOff';
 import {useT} from '../i18n';
 import {cx} from './cx';
 import {HelpRow, type Help} from './ContextualHelp';
+import {useControlSize, type ControlSize} from './controlSize';
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
@@ -26,7 +27,8 @@ export function Switch({
   isDisabled,
   'aria-label': label,
   'aria-describedby': describedBy,
-  description
+  description,
+  size
 }: {
   children?: ReactNode;
   isSelected: boolean;
@@ -35,11 +37,14 @@ export function Switch({
   'aria-label'?: string;
   'aria-describedby'?: string;
   description?: string;
+  size?: ControlSize;
 }) {
   const id = useId();
+  const controlSize = useControlSize(size);
   const control = (
     <RSwitch
       className="rp-switch"
+      data-size={controlSize}
       isSelected={isSelected}
       onChange={onChange}
       isDisabled={isDisabled}
@@ -65,7 +70,7 @@ export function TextField({
   label,
   width,
   search,
-  large,
+  size,
   side,
   className,
   placeholder,
@@ -88,7 +93,7 @@ export function TextField({
     label: string;
     width?: number;
     search?: boolean;
-    large?: boolean;
+    size?: ControlSize;
     side?: boolean;
     className?: string;
     placeholder?: string;
@@ -104,6 +109,7 @@ export function TextField({
     suffix?: string;
   }) {
   const t = useT();
+  const controlSize = useControlSize(size);
   const affixId = useId();
   // An error text marks the field invalid for assistive technology too, unless the caller says otherwise.
   const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
@@ -119,7 +125,7 @@ export function TextField({
         className={cx('rp-search-field', className)}
         style={width ? {width} : undefined}
       >
-        <span className={cx('rp-input', large && 'lg')}>
+        <span className="rp-input" data-size={controlSize}>
           <Search />
           <RInput placeholder={placeholder ?? label} autoComplete={autoComplete} spellCheck={spellCheck} />
           <RButton className="clear" aria-label={t('ui.clear')}>
@@ -136,7 +142,7 @@ export function TextField({
     );
   }
   const input = (
-    <span className={cx('rp-input', (side || !!action) && 'rp-grow', (prefix || suffix) && 'affixed')}>
+    <span className={cx('rp-input', (side || !!action) && 'rp-grow', (prefix || suffix) && 'affixed')} data-size={controlSize}>
       {prefix && (
         <span className="affix" id={`${affixId}-prefix`}>
           {prefix}

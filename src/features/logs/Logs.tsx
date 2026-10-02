@@ -1,7 +1,7 @@
 import {useCallback, useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {ActionGroup, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn} from '../../ui/ui';
+import {ActionGroup, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn, Toolbar} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
@@ -73,7 +73,7 @@ export function Logs({go}: PageProps) {
   );
   return (
     <div className="rp-page">
-      <div className="rp-toolbar">
+      <Toolbar page>
         <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
         {vm.filtersTarget && (
           <TextField search label={t('log.target')} value={vm.target} width={240} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
@@ -93,7 +93,7 @@ export function Logs({go}: PageProps) {
             ...(vm.openRecording ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: vm.openRecording}] : [])
           ]}
         />
-      </div>
+      </Toolbar>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
       <DataTable label={t('nav.logs')} stream flow rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} detail={detail} />

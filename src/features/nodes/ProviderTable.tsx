@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, MoreMenu, TextTooltip, TimeCell, type TableColumn} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Badge, Button, DataTable, Light, MoreMenu, TextTooltip, TimeCell, type TableColumn, Toolbar} from '../../ui/ui';
 import {phoneQuery, useMediaQuery} from '../../ui/hooks';
 import Refresh from '../../ui/icons/Refresh';
 import {primaryFirst} from './tableColumns';
@@ -96,7 +96,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
     <>
       {(m.canManage || m.refreshAll) && (
         <ActionHelp reason={m.refreshAll?.reason}>
-          <div className="rp-toolbar">
+          <Toolbar page>
             <span className="rp-grow" />
             <ActionGroup
               actions={[
@@ -114,7 +114,7 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                 ...(m.canManage ? [{id: 'add', label: t('nodes.addProvider'), onAction: m.onAdd}] : [])
               ]}
             />
-          </div>
+          </Toolbar>
         </ActionHelp>
       )}
       <DataTable

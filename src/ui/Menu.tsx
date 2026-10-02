@@ -23,6 +23,7 @@ import {LazySearchList, preloadSearchList} from './LazySearchList';
 import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
 import {ItemText, type Item} from './Select';
+import {useControlSize, type ControlSize} from './controlSize';
 
 export const pickMenuKey = (on: (k: string) => void) => (k: 'all' | Set<Key>) => {
   if (k === 'all') return;
@@ -43,6 +44,7 @@ type MenuButtonProps = {
   content: ReactNode;
   label: string;
   quiet?: boolean;
+  size?: ControlSize;
   small?: boolean;
   chevron?: boolean;
   isDisabled?: boolean;
@@ -60,6 +62,7 @@ export function MenuButton({
   label,
   quiet,
   small,
+  size,
   chevron = true,
   isDisabled,
   appearance,
@@ -74,11 +77,13 @@ export function MenuButton({
   ) : null;
   const reason = useActionReason(isDisabled);
   const [tipOpen, setTipOpen] = useState(false);
+  const controlSize = useControlSize(size);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const trigger = (
     <RButton
       ref={triggerRef}
       className={appearance ? 'rp-select' : buttonClass({quiet, small, icon: !chevron})}
+      data-size={controlSize}
       aria-label={label}
       aria-describedby={reason?.id}
       isDisabled={isDisabled}

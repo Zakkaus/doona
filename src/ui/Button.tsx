@@ -12,9 +12,10 @@ import {
 import {VisuallyHidden} from 'react-aria';
 import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
+import {useControlSize, type ControlSize} from './controlSize';
 
 // Button and LinkButton treatments: secondary is outlined, accent / negative use colour, and the default is filled.
-export type ButtonStyle = {quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
+export type ButtonStyle = {size?: ControlSize; quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
 
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
 export function buttonClass({quiet, secondary, small, icon, accent, negative}: ButtonStyle, base = 'rp-btn') {
@@ -51,6 +52,7 @@ export function Button({
   className,
   isSelected,
   expanded,
+  size,
   ...style
 }: {
   children?: ReactNode;
@@ -75,6 +77,7 @@ export function Button({
   const disabled = isDisabled && !isPending;
   const reason = useActionReason(disabled);
   const [tipOpen, setTipOpen] = useState(false);
+  const controlSize = useControlSize(size);
   // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
   const tipId = useId();
   const tipReason = disabled && !reason && !!tip;
@@ -121,6 +124,7 @@ export function Button({
     <RButton
       ref={ref}
       className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
+      data-size={controlSize}
       onPress={press}
       aria-label={label}
       data-toggle-selected={isSelected || undefined}
@@ -335,6 +339,7 @@ export function Link({
   icon,
   accent,
   negative,
+  size,
   ...props
 }: ComponentPropsWithRef<typeof RLink> &
   ButtonStyle & {
@@ -344,12 +349,14 @@ export function Link({
     label?: string;
   }) {
   const base = appearance === 'button' ? buttonClass({quiet, secondary, small, icon, accent, negative}) : `rp-${appearance}`;
+  const controlSize = useControlSize(size);
   return (
     <RLink
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={label}
       data-layout={layout}
+      data-size={controlSize}
       {...props}
       className={appearance ? composeRenderProps(className, value => cx(base, value)) : className}
     />

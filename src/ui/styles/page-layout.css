@@ -454,7 +454,7 @@
   flex: 1 1 20rem;
 }
 .rp-source-pick > .rp-cluster {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .rp-source-pick .rp-label {
   flex: none;

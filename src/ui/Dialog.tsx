@@ -8,6 +8,7 @@ import {cx} from './cx';
 import {ActionHelp, Button} from './Button';
 import {ProblemAlert, type Problem} from './Feedback';
 import {useMediaQuery, panelQuery, escapeLayers} from './hooks';
+import {ControlSizeContext} from './controlSize';
 
 export function ModalDialog({
   trigger,
@@ -51,7 +52,7 @@ export function ModalDialog({
       {description}
     </Text>
   );
-  const modal = (
+  const overlay = (
     <ModalOverlay
       className="rp-underlay"
       data-size={size}
@@ -96,6 +97,8 @@ export function ModalDialog({
       </Modal>
     </ModalOverlay>
   );
+  // Its controls are M even when the trigger sits in an L page toolbar.
+  const modal = <ControlSizeContext value={null}>{overlay}</ControlSizeContext>;
   return trigger ? (
     <DialogTrigger>
       {trigger}
@@ -183,7 +186,7 @@ export function PopoverDialog({
     | {trigger: ReactElement; triggerRef?: never; isOpen?: never; onOpenChange?: never}
     | {trigger?: never; triggerRef: RefObject<Element | null>; isOpen: boolean; onOpenChange: (open: boolean) => void}
   )) {
-  const popover = (
+  const surface = (
     <Popover
       boundaryElement={boundaryElement}
       style={() => (boundaryElement ? {maxWidth: boundaryElement.clientWidth - 24} : undefined)}
@@ -210,6 +213,7 @@ export function PopoverDialog({
       )}
     </Popover>
   );
+  const popover = <ControlSizeContext value={null}>{surface}</ControlSizeContext>;
   return trigger ? (
     <DialogTrigger>
       {trigger}
