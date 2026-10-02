@@ -21,8 +21,11 @@ export {Segmented} from './Segmented';
 export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
 export {Checkbox} from './Checkbox';
-export {InlineSelect, LabeledSelect, MenuButton, MenuChoice, ChoiceMenu, ItemLabel, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
-export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure, Tabs, useTabShown} from './Dialog';
+export {InlineSelect, LabeledSelect} from './Picker';
+export {MenuButton, MenuChoice, ChoiceMenu, ItemLabel, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
+export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure} from './Dialog';
+export {Tabs} from './Tabs';
+export {useTabShown} from './useTabShown';
 export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
 export {TimeCell} from './TimeCell';
 export {

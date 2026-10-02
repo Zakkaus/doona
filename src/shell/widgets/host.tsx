@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import {Button, VisuallyHidden, phoneQuery, useMediaQuery} from '../../ui/ui';
 import {LoadBoundary} from '../../ui/LoadBoundary';
 import WidgetsIcon from '../../ui/icons/Widgets';
-import {useModeDraft} from '../../features/shared/useMode';
+import {useModeDraft} from '../../features/shared/useModeDraft';
 import {useDraftGuard} from '../draft';
 import {BackendIndicator} from '../Backend';
 import type {BackendView} from '../view';

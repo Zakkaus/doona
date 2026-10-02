@@ -6,7 +6,7 @@ import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
 import {fileName, restartRequired} from '../../dae/sources';
 import {dnsListEnd, dnsRuleAnchor, ruleAnchor, ruleLine, type RuleAnchor} from '../../dae/ruleText';
-import {dnsEndPosition} from './rule';
+import {dnsEndPosition} from './ruleNotice';
 
 // Where a held rule goes in the text as it is now, or null when the rule it names is no longer where the list said. A
 // rule for the end of a DNS list goes where that list ends now, and only while that is in the file it was held for.

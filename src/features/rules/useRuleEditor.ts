@@ -7,7 +7,7 @@ import {parseConditions, serializeConditions, type RuleConditionRow} from '../..
 import type {RuleConditionKind} from '../../dae/groups';
 import {addFallback, addRule, removeRule, replaceRule, type RuleAnchor} from '../../dae/ruleText';
 import type {RuleSeed} from '../shared/link';
-import {ruleWritten} from '../shared/rule';
+import {ruleWritten} from '../shared/ruleNotice';
 import {addRuleReason, addRuleTip, removalView, ruleDraftView, type ReasonKeys, type RuleDraftView} from './view';
 import {useDraftGuard} from '../../shell/draft';
 

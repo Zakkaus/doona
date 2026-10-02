@@ -2,7 +2,8 @@ import {expect, it, vi} from 'vitest';
 import {createMockApi} from '../index';
 import {writeTemplate} from '../../../dae/setup';
 import {defaultTemplateOptions, detectTemplate, templateRules, templates} from '../../../dae/templates';
-import {groupAdmits, nestedIn, readGroupEntries} from '../../../dae/groups';
+import {nestedIn, readGroupEntries} from '../../../dae/groups';
+import {groupAdmits} from '../../../dae/groupFilters';
 import {scanConfig} from '../../../dae/text';
 import {configMain} from './configuration';
 

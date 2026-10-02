@@ -1,5 +1,6 @@
 import type {Node, Provider} from '../../api/model';
-import {compileFilters, describeFilters, exactTokens, isWritableName, quoteName} from '../../dae/groups';
+import {describeFilters, exactTokens, isWritableName, quoteName} from '../../dae/groups';
+import {compileFilters} from '../../dae/groupFilters';
 import {regions} from '../../dae/regions';
 import {flagChoices} from '../../dae/flags';
 import {regionGroups} from '../../dae/templates';

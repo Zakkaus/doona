@@ -26,12 +26,12 @@ import {
   ruleOutbounds,
   rulePositions,
   ruleTargets,
-  ruleWritten,
   typedCondition,
   type PositionPin,
   type QuickRuleSeed,
   type RuleList
 } from './rule';
+import {ruleWritten} from './ruleNotice';
 
 export type {QuickRuleSeed} from './rule';
 // `typed` narrows a DNS rule to the record type the seed asked for.

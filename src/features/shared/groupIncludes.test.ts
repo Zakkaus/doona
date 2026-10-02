@@ -1,7 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import type {Provider} from '../../api/model';
 import {nodeFixtures} from '../../api/mock/fixtures';
-import {compileFilters, readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {readGroupEntries, writeGroupEntry} from '../../dae/groups';
+import {compileFilters} from '../../dae/groupFilters';
 import {flagChoices, regionFlag} from '../../dae/flags';
 import {regions} from '../../dae/regions';
 import {flagForName} from './countryFlags';

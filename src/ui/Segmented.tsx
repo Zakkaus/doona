@@ -1,7 +1,7 @@
 import {useCallback, useLayoutEffect, useRef} from 'react';
 import {ToggleButton, ToggleButtonGroup} from 'react-aria-components';
 import {useOverflow, useSlider} from './hooks';
-import {LabeledSelect} from './Select';
+import {LabeledSelect} from './Picker';
 
 // S2 does not scroll a segmented control: one too wide for its space collapses into a picker, as S2 Tabs do. The hidden
 // track keeps its box, so the switch moves nothing, and is measured to tell when the items fit again.

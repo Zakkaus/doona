@@ -1,5 +1,6 @@
+import {compileFilters} from '../src/dae/groupFilters';
 import {expect, mockBackend, test, box} from './fixtures';
-import {nestedIn, compileFilters, readGroupEntries, writeGroupEntry} from '../src/dae/groups';
+import {nestedIn, readGroupEntries, writeGroupEntry} from '../src/dae/groups';
 import {regionFilters} from '../src/features/shared/groupIncludes';
 
 test.use({storage: {'doona-lang': 'en'}});
