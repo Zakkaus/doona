@@ -15,6 +15,7 @@ const fields: Record<string, keyof RoutingTraceInput | 'mac'> = {
   pname: 'pname',
   l4proto: 'network',
   dport: 'dst_port',
+  dscp: 'dscp',
   dip: 'dst_ip',
   sip: 'src_ip',
   ipversion: 'dst_ip',
@@ -62,6 +63,11 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
         : ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '169.254.0.0/16'].some(range => subnet(ip, range))
       : arg.split(',').some(range => subnet(ip, range.trim()));
   } else if (kind === 'ipversion') matched = arg === (String(value).includes(':') ? '6' : '4');
+  else if (kind === 'dscp')
+    matched = arg.split(',').some(item => {
+      const term = unquote(item.trim());
+      return /^(?:\d+|0x[\da-f]+)$/i.test(term) && Number(term) === value;
+    });
   else matched = arg.split(',').some(item => item.trim() === String(value));
   return {result: matched !== Boolean(negated) ? 'matched' : 'not_matched', missing_inputs: []};
 }

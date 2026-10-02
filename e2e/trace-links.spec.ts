@@ -16,6 +16,44 @@ test('a trace link fills in the form without running it', async ({page}) => {
   expect(traced).toBe(false);
 });
 
+test('optional DSCP validates the contract bounds and reaches the trace evaluator', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = source.content!.replace(/^routing\s*\{/m, 'routing {\n  dscp(0,46,63) -> direct');
+  await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
+  handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
+  await page.goto('/#/rules?tab=trace&domain=example.org&dst_ip=198.51.100.20&dst_port=443');
+  await page.getByRole('button', {name: 'Advanced', exact: true}).click();
+  await page.getByRole('textbox', {name: 'Process name', exact: true}).fill('curl');
+  const dscp = page.getByRole('textbox', {name: 'DSCP', exact: true});
+  const run = page.getByRole('button', {name: 'Run trace', exact: true});
+  for (const value of ['-1', '64', '1.5', 'invalid']) {
+    await dscp.fill(value);
+    await expect(dscp).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByRole('group', {name: 'Advanced', exact: true}).getByText('DSCP must be an integer from 0 to 63.', {exact: true})).toBeVisible();
+    await expect(dscp).toHaveAccessibleDescription('DSCP must be an integer from 0 to 63.');
+    await expect(run).toBeDisabled();
+  }
+  expect(requests.filter(request => request.url().endsWith('/routing/trace'))).toHaveLength(0);
+  for (const value of ['0', '46', '63', '']) {
+    await dscp.fill(value);
+    await expect(dscp).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(run).toBeEnabled();
+    const response = page.waitForResponse('**/api/v1/routing/trace');
+    await run.click();
+    const result = await (await response).json();
+    expect(result.evaluations[0]).toMatchObject(
+      value === '' ? {decision: 'indeterminate', missing_inputs: ['dscp']} : {decision: 'determinate', outbound: 'direct'}
+    );
+    const input = requests
+      .filter(request => request.url().endsWith('/routing/trace'))
+      .at(-1)!
+      .postDataJSON().input;
+    if (value === '') expect(input).not.toHaveProperty('dscp');
+    else expect(input.dscp).toBe(Number(value));
+  }
+});
+
 test('a connection opens the trace of its target and source', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
   await moreAction(detail(page), 'Trace this connection');
