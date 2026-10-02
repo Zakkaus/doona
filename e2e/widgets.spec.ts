@@ -186,7 +186,8 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   const sideBox = await box(side);
   const slot = side.locator('.rp-dock-slot');
   await expect(slot).toBeHidden();
-  await page.mouse.move(head.x + head.width / 2, head.y + head.height / 2);
+  // The header's free stretch between the backend light and its buttons.
+  await page.mouse.move(head.x + head.width / 4, head.y + head.height / 2);
   await page.mouse.down();
   await page.mouse.move(head.x - 40, head.y, {steps: 2});
   await expect(slot).toHaveText('Drop here to dock');
@@ -248,6 +249,228 @@ test('an unpinned panel collapses on another page and a pinned one stays open', 
   await expect(floating(page).getByRole('button', {name: 'Collapse widgets', exact: true})).toBeVisible();
 });
 
+test.describe('header and edge at 1440', () => {
+  test.use({viewport: {width: 1440, height: 900}});
+  const handle = (page: Page) => page.locator('.rp-edge-handle');
+  const options = (page: Page) => floating(page).getByRole('button', {name: 'Panel options', exact: true});
+  test('edit stays in the menu, header speeds fit, and the menu sets hiding at an edge', async ({page}) => {
+    const backend = await mockBackend(page);
+    backend.handlers['GET runtime'] = async () => {
+      const runtime = await backend.api.runtime();
+      return {...runtime, traffic: {...runtime.traffic, rates: {upload_bytes_per_second: '999000000', download_bytes_per_second: '3500000'}}};
+    };
+    await page.goto('/#/settings');
+    const header = floating(page).locator('.rp-widget-header');
+    await expect(header.getByRole('button', {name: 'Edit widgets', exact: true})).toHaveCount(0);
+    const sizes = await header.getByRole('button').evaluateAll(buttons => buttons.map(button => `${button.clientWidth}x${button.clientHeight}`));
+    expect(sizes.length).toBeGreaterThanOrEqual(4);
+    expect(new Set(sizes).size).toBe(1);
+    // Content actions first, then the window controls with collapse last; the tab order is the visual order.
+    const order = await header
+      .locator('.rp-widget-actions button')
+      .evaluateAll(items => items.map(item => [item.getBoundingClientRect().left, item.getAttribute('aria-label')]));
+    expect(order.map(([, name]) => name)).toEqual(['Panel options', 'Pin panel', 'Collapse widgets']);
+    expect(order.map(([left]) => left)).toEqual(order.map(([left]) => left).sort((a, b) => Number(a) - Number(b)));
+    await openEditor(page);
+    await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
+    await expect(editor(page)).toHaveCount(0);
+    await header.getByRole('button', {name: 'Collapse widgets', exact: true}).click();
+    const speeds = header.locator('.rp-widget-speed > span');
+    await expect(speeds).toHaveText(['↑ 999 MB/s', '↓ 3.5 MB/s']);
+    for (const speed of await speeds.all()) expect(await speed.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await options(page).click();
+    await expect(page.getByRole('menuitem', {name: 'Edit widgets'})).toBeVisible();
+    const edge = page.getByRole('menuitemcheckbox', {name: 'Hide at edge', exact: true});
+    await expect(edge).toHaveAttribute('aria-checked', 'false');
+    await edge.click();
+    await expect(edge).toHaveAttribute('aria-checked', 'true');
+    // The open menu keeps the panel out; closed by a click away, the panel hides behind its handle.
+    await expect(floating(page)).toBeVisible();
+    await page.mouse.click(400, 400);
+    await expect(floating(page)).toBeHidden();
+    await page.reload();
+    await expect(handle(page)).toHaveAttribute('data-edge', 'right');
+    await expect(floating(page)).toBeHidden();
+  });
+  for (const [edge, layout] of [
+    ['right', {}],
+    ['left', {offset: {x: 5000, y: 300}}],
+    ['top', {offset: {x: 560, y: 0, top: true as const}, collapsed: true}],
+    ['bottom', {offset: {x: 560, y: 0}, collapsed: true}]
+  ] as const)
+    test(`a panel near the ${edge} edge hides there behind its handle`, async ({page}) => {
+      await save(page, {...defaults(), ...layout, edge: true});
+      await page.goto('/#/settings');
+      await expect(handle(page)).toHaveAttribute('data-edge', edge);
+      await expect(floating(page)).toBeHidden();
+      const tab = await box(handle(page));
+      const reach = {right: tab.x + tab.width - 1440, left: tab.x, top: tab.y, bottom: tab.y + tab.height - 900}[edge];
+      expect(Math.abs(reach)).toBeLessThanOrEqual(1);
+      await expect(handle(page).locator('.rp-light')).toBeVisible();
+      await expect(handle(page).locator('.rp-widget-speed')).toContainText('↓');
+      const geometry = await handle(page).evaluate((el, side) => {
+        const style = getComputedStyle(el);
+        const header = el.querySelector('.rp-widget-header')!;
+        const content = [...header.children].reduce((width, child) => width + child.getBoundingClientRect().width, 0);
+        const corners = {
+          left: [style.borderTopLeftRadius, style.borderBottomLeftRadius],
+          right: [style.borderTopRightRadius, style.borderBottomRightRadius],
+          top: [style.borderTopLeftRadius, style.borderTopRightRadius],
+          bottom: [style.borderBottomLeftRadius, style.borderBottomRightRadius]
+        };
+        return {
+          contentWidth:
+            content +
+            parseFloat(getComputedStyle(header).columnGap) +
+            parseFloat(style.paddingLeft) +
+            parseFloat(style.paddingRight) +
+            parseFloat(style.borderLeftWidth) +
+            parseFloat(style.borderRightWidth),
+          corners: corners[side],
+          border: style.getPropertyValue(`border-${side}-width`)
+        };
+      }, edge);
+      expect(Math.abs(tab.width - geometry.contentWidth)).toBeLessThanOrEqual(2);
+      expect(tab.width).toBeLessThan(208 * 0.75);
+      expect(geometry.corners).toEqual(['0px', '0px']);
+      expect(geometry.border).toBe('0px');
+    });
+  test('the hidden summary is narrower than the unchanged docked collapsed row', async ({page}) => {
+    await save(page, {...defaults(), docked: true, collapsed: true, edge: true});
+    await page.goto('/#/settings');
+    const row = await box(page.locator('.rp-side-dock .rp-widget-header'));
+    await moreAction(page.locator('.rp-side-dock'), 'Undock', 'Panel options');
+    await expect(floating(page)).toBeHidden();
+    const summary = await box(handle(page));
+    expect(row.width).toBe(208);
+    expect(summary.width).toBeLessThan(row.width * 0.75);
+    expect(Math.abs(summary.height - row.height)).toBeLessThanOrEqual(1);
+  });
+  test('hover and keyboard focus show the hidden panel; leaving or Escape hides it again', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    await expect(floating(page)).toBeHidden();
+    await handle(page).hover();
+    await expect(floating(page)).toBeVisible();
+    // Out, the panel is the target and its handle is gone.
+    await expect(handle(page)).toBeHidden();
+    await floating(page).locator('.rp-panel-head').hover();
+    await page.mouse.move(400, 400);
+    await expect(floating(page)).toBeHidden();
+    await expect(handle(page)).toBeVisible();
+    // Focus moved while the reader uses the keyboard brings the panel out and into focus.
+    await page.keyboard.press('Tab');
+    await handle(page).focus();
+    await expect(floating(page)).toBeVisible();
+    await expect(floating(page).getByRole('button', {name: 'Move panel', exact: true})).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(floating(page)).toBeHidden();
+    await expect(handle(page)).toBeFocused();
+  });
+  test('the summary keeps its edge when the window resizes', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    await expect(handle(page)).toHaveAttribute('data-edge', 'right');
+    await page.setViewportSize({width: 1200, height: 800});
+    await expect.poll(async () => Math.round((await box(handle(page))).x + (await box(handle(page))).width)).toBe(1200);
+    await expect(floating(page)).toBeHidden();
+  });
+  test('a panel out under the pointer hides once moving to another page collapses it away from the pointer', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    await handle(page).hover();
+    const cell = floating(page).locator('.rp-widget-cell').last();
+    await cell.hover();
+    await page.evaluate(() => (location.hash = '#/overview'));
+    await expect(floating(page).locator('.rp-widget-cell')).toHaveCount(0);
+    await expect(floating(page)).toBeHidden();
+    await expect(handle(page)).toBeVisible();
+  });
+  test('a drag that carries the pointer outside the panel keeps it out until the drag ends', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    await handle(page).hover();
+    // Hovering waits for the panel to finish sliding out, so the press lands on its header.
+    await floating(page).locator('.rp-panel-head').hover();
+    const head = await box(floating(page).locator('.rp-widget-header'));
+    await page.mouse.move(head.x + head.width / 4, head.y + head.height / 2);
+    await page.mouse.down();
+    // The panel stops at the window's corner while the pointer goes on, past the hide delay.
+    await page.mouse.move(1430, 890, {steps: 4});
+    const out = await box(floating(page));
+    expect(out.x + out.width < 1430 || out.y + out.height < 890).toBe(true);
+    await page.waitForTimeout(600);
+    await expect(floating(page)).toBeVisible();
+    await page.mouse.up();
+    await page.mouse.move(400, 400);
+    await expect(floating(page)).toBeHidden();
+  });
+  test('Escape in a text field in the panel stays with the field', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    await handle(page).hover();
+    await floating(page).locator('.rp-panel-head').hover();
+    await floating(page)
+      .locator('.rp-widget-body')
+      .evaluate(body => body.append(Object.assign(document.createElement('input'), {ariaLabel: 'Probe'})));
+    await floating(page).getByRole('textbox', {name: 'Probe'}).focus();
+    await page.keyboard.press('Escape');
+    await expect(floating(page)).toBeVisible();
+    await floating(page).getByRole('button', {name: 'Move panel', exact: true}).focus();
+    await page.keyboard.press('Escape');
+    await expect(floating(page)).toBeHidden();
+  });
+  for (const [name, layout] of [
+    ['pinned', {pinned: true}],
+    ['docked', {docked: true}]
+  ] as const)
+    test(`a ${name} panel ignores hiding at an edge`, async ({page}) => {
+      await save(page, {...defaults(), ...layout, edge: true});
+      await page.goto('/#/settings');
+      await expect(
+        page
+          .locator(name === 'docked' ? '.rp-side-dock' : '.rp-floating-panel')
+          .locator('.rp-widget-cell')
+          .first()
+      ).toBeVisible();
+      await expect(handle(page)).toHaveCount(0);
+    });
+});
+
+test.describe('edge on touch at 1024', () => {
+  test.use({viewport: {width: 1024, height: 768}, hasTouch: true});
+  test('a tap on the handle shows the hidden panel and a tap outside hides it', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    const handle = page.locator('.rp-edge-handle');
+    await expect(floating(page)).toBeHidden();
+    await handle.tap();
+    await expect(floating(page)).toBeVisible();
+    await expect(handle).toBeHidden();
+    // A tap inside the panel keeps it out.
+    const head = await box(floating(page).locator('.rp-widget-header'));
+    await page.touchscreen.tap(head.x + head.width / 4, head.y + head.height / 2);
+    await expect(floating(page)).toBeVisible();
+    const main = await box(page.locator('main'));
+    await page.touchscreen.tap(main.x + 8, main.y + 8);
+    await expect(floating(page)).toBeHidden();
+    await expect(handle).toBeVisible();
+  });
+  test('with a menu open, one tap outside closes the menu and hides the panel', async ({page}) => {
+    await save(page, {...defaults(), edge: true});
+    await page.goto('/#/settings');
+    const handle = page.locator('.rp-edge-handle');
+    await handle.tap();
+    await floating(page).getByRole('button', {name: 'Panel options', exact: true}).tap();
+    await expect(page.getByRole('menu')).toBeVisible();
+    const main = await box(page.locator('main'));
+    await page.touchscreen.tap(main.x + 8, main.y + 8);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(floating(page)).toBeHidden();
+    await expect(handle).toBeVisible();
+  });
+});
+
 test('editor previews never rewrite a saved latency group, even without cached groups', async ({page}) => {
   await save(page, {...defaults(), collapsed: true, items: [{id: 'latency', form: 'kv', size: 'medium', group: 'custom-only'}]});
   await page.goto('/#/settings');
@@ -288,7 +511,7 @@ for (const viewport of [
       await expect(page.locator('.rp-drawer')).toHaveCount(0);
       const start = await box(floating(page));
       const head = await box(floating(page).locator('.rp-widget-header'));
-      const x = head.x + head.width / 2 - 40;
+      const x = head.x + head.width / 4;
       const y = head.y + head.height / 2;
       const cdp = await page.context().newCDPSession(page);
       await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x, y}]});

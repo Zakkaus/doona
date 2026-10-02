@@ -1,6 +1,34 @@
-import {useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode} from 'react';
-import {VisuallyHidden, useLocale, useMove} from 'react-aria';
-import {anchorPanelOffset, fitPanelOffset, minPanelSize, resizePanel, type PanelEdge, type PanelOffset, type PanelSize} from './panelSize';
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  type RefObject
+} from 'react';
+import {flushSync} from 'react-dom';
+import {VisuallyHidden, useFocusVisible, useLocale, useMove} from 'react-aria';
+import {
+  anchorPanelOffset,
+  edgePlacement,
+  fitPanelOffset,
+  minPanelSize,
+  nearestEdge,
+  resizePanel,
+  type PanelEdge,
+  type PanelBox,
+  type PanelOffset,
+  type PanelSize,
+  type ScreenEdge
+} from './panelSize';
+import {escapeLayers} from './hooks';
 import './styles/floating-panel.css';
 
 const step = 16;
@@ -76,6 +104,204 @@ function useViewportSize() {
   }, []);
 }
 
+// How long a panel hidden at an edge stays out after the pointer and keyboard focus leave it, a tooltip's delay.
+const hideDelay = 400;
+type EdgeHide = {handle: ReactNode; label: string; keepOut: boolean};
+type Placement = {edge: ScreenEdge; at: number; shift: {x: number; y: number}};
+type Box = PanelBox & {right: number; bottom: number};
+// Where the panel is laid out in its frame, without the translate that slides it to or from an edge.
+function layoutBox(frame: HTMLElement | null, panel: HTMLElement | null): Box | null {
+  if (!frame || !panel) return null;
+  const at = frame.getBoundingClientRect();
+  const [left, top, width, height] = [at.left + panel.offsetLeft, at.top + panel.offsetTop, panel.offsetWidth, panel.offsetHeight];
+  return {left, top, width, height, right: left + width, bottom: top + height};
+}
+const within = (el: Element | null, {x, y}: {x: number; y: number}) => {
+  const r = el?.getBoundingClientRect();
+  return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+};
+// The menus and popovers the panel opened: each trigger marks itself expanded with the overlay it controls.
+const openTriggers = (panel: HTMLElement | null) => [...(panel?.querySelectorAll('[aria-expanded="true"][aria-controls]') ?? [])];
+// Whether `target` is in the panel or in one of the overlays it opened.
+const ownedBy = (panel: HTMLElement | null, target: Node | null) =>
+  !!target &&
+  (!!panel?.contains(target) ||
+    openTriggers(panel).some(trigger => {
+      const overlay = document.getElementById(trigger.getAttribute('aria-controls') ?? '');
+      return !!(overlay?.closest('[data-trigger]') ?? overlay)?.contains(target);
+    }));
+// Elements that take Escape themselves, so the panel leaves it to them: text fields, menus, lists, dialogs and popovers,
+// and an open trigger.
+const ownsEscape = `${escapeLayers}, input:not([type="radio"], [type="checkbox"]), textarea, [role="menu"], [role="listbox"], [aria-expanded="true"]`;
+const describedByTooltip = (el: Element) =>
+  !!el
+    .getAttribute('aria-describedby')
+    ?.split(' ')
+    .some(id => document.getElementById(id)?.getAttribute('role') === 'tooltip');
+// A panel hidden at an edge comes out while the pointer is over its handle or over the panel, while keyboard focus is in
+// the panel, while a pointer drags or resizes it, while a menu or popover it opened is open, and while `keepOut`. A
+// press on the handle, or the keyboard reaching it, holds it out until a press outside the panel and its overlays or
+// focus moving away. It goes back `hideDelay` after all of them end, or at once on Escape, which returns focus to the
+// handle. The handle, the panel's collapsed summary, shows only while the panel is hidden: reached by keyboard, it
+// brings the panel out and moves focus into it. Its edge and the handle's place are measured from where the panel is
+// laid out, once no gesture moves it; the pointer's last place is checked again after each measurement.
+function useEdgeHide(edge: EdgeHide | undefined, settled: boolean, laidOut: string, box: () => Box | null, panel: RefObject<HTMLElement | null>) {
+  const on = !!edge;
+  const handle = useRef<HTMLButtonElement>(null);
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [lingering, setLingering] = useState(false);
+  // Focus counts while the reader moves it by keyboard, not where a pointer press left it.
+  const {isFocusVisible} = useFocusVisible();
+  const want = on && !dismissed && (hover || (focus && isFocusVisible) || held || menu || !settled || !!edge?.keepOut);
+  const [wanted, setWanted] = useState(want);
+  if (wanted !== want) {
+    setWanted(want);
+    setLingering(!want && !dismissed);
+  }
+  useEffect(() => {
+    if (!lingering) return;
+    const timer = setTimeout(() => setLingering(false), hideDelay);
+    return () => clearTimeout(timer);
+  }, [lingering]);
+  const shown = want || (lingering && !dismissed);
+  const [place, setPlace] = useState<Placement | null>(null);
+  useEffect(() => {
+    const el = panel.current;
+    if (!on || !el) return;
+    const check = () => setMenu(openTriggers(el).length > 0);
+    const observer = new MutationObserver(check);
+    observer.observe(el, {subtree: true, attributes: true, attributeFilter: ['aria-expanded']});
+    check();
+    return () => observer.disconnect();
+  }, [on, panel]);
+  // The pointer counts over the panel and over the handle's place, which stays measurable while the handle is hidden.
+  // Its last place is kept, so a panel that changes under a still pointer is checked again.
+  const pointer = useRef<{x: number; y: number} | null>(null);
+  const inside = useRef(false);
+  const recheck = useEffectEvent(() => {
+    const at = pointer.current;
+    const next = !!at && (within(panel.current, at) || within(handle.current, at));
+    if (next && !inside.current) setDismissed(false);
+    inside.current = next;
+    setHover(next);
+  });
+  // Measured again whenever `laidOut` changes and whenever the panel's content resizes it.
+  useLayoutEffect(() => {
+    const [inner, tab] = [panel.current, handle.current];
+    if (!on || !settled || !inner || !tab) return;
+    const measure = () => {
+      const at = box();
+      if (!at) return;
+      const view = {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight};
+      const side = nearestEdge(at, view);
+      const next = {edge: side, ...edgePlacement(at, view, side, side === 'left' || side === 'right' ? tab.offsetHeight : tab.offsetWidth)};
+      setPlace(last => (JSON.stringify(last) === JSON.stringify(next) ? last : next));
+      recheck();
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(inner);
+    observer.observe(tab);
+    return () => observer.disconnect();
+  }, [on, settled, laidOut, box, panel]);
+  // The handle moved to its new place.
+  useLayoutEffect(() => recheck(), [place]);
+  useEffect(() => {
+    if (!on) return;
+    const move = (event: globalThis.PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      pointer.current = {x: event.clientX, y: event.clientY};
+      recheck();
+    };
+    const away = () => {
+      pointer.current = null;
+      recheck();
+    };
+    addEventListener('pointermove', move);
+    document.documentElement.addEventListener('pointerleave', away);
+    return () => {
+      removeEventListener('pointermove', move);
+      document.documentElement.removeEventListener('pointerleave', away);
+    };
+  }, [on]);
+  // A press outside the panel, its handle and the menus and popovers it opened lets a held panel go.
+  useEffect(() => {
+    if (!held) return;
+    const press = (event: globalThis.PointerEvent) => {
+      const target = event.target as Node;
+      if (!ownedBy(panel.current, target) && !handle.current?.contains(target)) setHeld(false);
+    };
+    addEventListener('pointerdown', press, true);
+    return () => removeEventListener('pointerdown', press, true);
+  }, [held, panel]);
+  const pressedBy = useRef('');
+  const escaping = useRef(false);
+  if (!edge) return {handle: null, panelProps: {}, frameProps: {}};
+  const hold = () => {
+    setDismissed(false);
+    setHeld(true);
+  };
+  // Brings the panel out for the keyboard and moves focus to its header, the panel's own keyboard handle.
+  const reveal = () => {
+    flushSync(hold);
+    panel.current?.querySelector<HTMLElement>('.rp-panel-move')?.focus();
+  };
+  return {
+    handle: (
+      <button
+        ref={handle}
+        type="button"
+        className="rp-edge-handle"
+        data-edge={place?.edge}
+        data-out={shown || undefined}
+        aria-label={edge.label}
+        style={place ? ({'--rp-edge-at': `${place.at}px`} as CSSProperties) : undefined}
+        onFocus={event => !escaping.current && event.currentTarget.matches(':focus-visible') && reveal()}
+        onPointerDown={event => (pressedBy.current = event.pointerType)}
+        onClick={() => {
+          // A tap opens the panel, which no hover shows on touch; a click or a key also moves focus into it.
+          if (pressedBy.current === 'touch') hold();
+          else reveal();
+          pressedBy.current = '';
+        }}
+      >
+        {edge.handle}
+      </button>
+    ),
+    panelProps: {
+      'data-edge': place?.edge,
+      'data-tucked': shown || !place ? undefined : '',
+      style: place && {'--rp-edge-shift': `${place.shift.x}px ${place.shift.y}px`}
+    },
+    frameProps: {
+      onFocus: () => setFocus(true),
+      onBlur: (event: FocusEvent) => {
+        const to = event.relatedTarget as Node | null;
+        if (event.currentTarget.contains(to) || ownedBy(panel.current, to)) return;
+        setFocus(false);
+        setDismissed(false);
+        // Focus moved elsewhere; a press that only drops focus is the press handler's to judge.
+        if (to) setHeld(false);
+      },
+      onKeyDown: (event: KeyboardEvent) => {
+        const target = event.target as Element;
+        if (event.key !== 'Escape' || !shown || edge.keepOut || target.closest(ownsEscape) || describedByTooltip(target)) return;
+        flushSync(() => {
+          setDismissed(true);
+          setHeld(false);
+          setHover(false);
+        });
+        escaping.current = true;
+        handle.current?.focus();
+        escaping.current = false;
+      }
+    }
+  };
+}
 // The widget panel, in a frame between the top bar and the dock, at its bottom inline-end corner above the content until
 // the reader moves it by its header, by pointer or by arrow keys on the header in steps of 16px. Every corner and edge
 // resizes it by pointer with the opposite side fixed, up to its content's height, and the top inline-start corner also
@@ -83,7 +309,7 @@ function useViewportSize() {
 // frame's upper half keeps its top edge and one in the lower half its bottom edge, so expanding or resizing grows it
 // towards the room; the frame keeps it inside the viewport. Dropping the header over `dockTarget` docks the panel
 // instead of moving it. A collapsed panel is its header alone and keeps only its width; expanding restores the stored
-// height.
+// height. With `edge` the panel hides at the screen edge nearest to it behind a handle, as useEdgeHide describes.
 export function FloatingPanel({
   label,
   resizeLabel,
@@ -97,7 +323,8 @@ export function FloatingPanel({
   collapsed = false,
   children,
   dockTarget,
-  onDock
+  onDock,
+  edge: edgeHide
 }: {
   label: string;
   resizeLabel: string;
@@ -112,6 +339,7 @@ export function FloatingPanel({
   children?: ReactNode;
   dockTarget?: () => HTMLElement | null;
   onDock?: () => void;
+  edge?: EdgeHide;
 }) {
   const rtl = useLocale().direction === 'rtl';
   const frame = useRef<HTMLDivElement>(null);
@@ -121,8 +349,9 @@ export function FloatingPanel({
   const inward = (dx: number) => (rtl ? dx : -dx);
   const room = () =>
     frame.current?.getBoundingClientRect() ?? {width: innerWidth - 32, height: innerHeight, left: 0, right: innerWidth, top: 0, bottom: innerHeight};
-  const box = () =>
-    panel.current?.getBoundingClientRect() ?? {width: size?.width ?? defaultWidth, height: minPanelSize.height, left: 0, right: 0, top: 0, bottom: 0};
+  // Measured from the layout, so a gesture that starts while the panel slides to or from an edge starts where it rests.
+  const laidOutBox = useCallback(() => layoutBox(frame.current, panel.current), []);
+  const box = () => laidOutBox() ?? {width: size?.width ?? defaultWidth, height: minPanelSize.height, left: 0, right: 0, top: 0, bottom: 0};
   // The offset as drawn, measured from the edge the panel keeps: a stored offset beyond a smaller window neither hides
   // the panel nor lags the pointer.
   const drawn = (): PanelOffset => {
@@ -176,6 +405,13 @@ export function FloatingPanel({
     }
   );
   useViewportSize();
+  const hiding = useEdgeHide(
+    edgeHide,
+    !move.live && !resize.live,
+    edgeHide ? [offset?.x, offset?.y, offset?.top, size?.width, size?.height, collapsed, innerWidth, innerHeight].join() : '',
+    laidOutBox,
+    panel
+  );
   // Presses on the header's own controls stay theirs; the rest of the header drags the panel.
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     if ((event.target as Element).closest('button:not(.rp-panel-move), a, input, [role="button"]')) return;
@@ -194,13 +430,17 @@ export function FloatingPanel({
       className="rp-floating-frame"
       data-anchor={shownOffset?.top ? 'top' : undefined}
       style={shownOffset && ({'--rp-panel-x': `${shownOffset.x}px`, '--rp-panel-y': `${shownOffset.y}px`} as CSSProperties)}
+      {...hiding.frameProps}
     >
+      {hiding.handle}
       <section
         ref={panel}
         className="rp-floating-panel"
         aria-label={label}
+        {...hiding.panelProps}
         style={
           {
+            ...hiding.panelProps.style,
             '--rp-panel-width': `${shownSize?.width ?? defaultWidth}px`,
             ...(shownSize && !collapsed && {'--rp-panel-height': `${shownSize.height}px`})
           } as CSSProperties

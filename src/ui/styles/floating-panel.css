@@ -153,3 +153,72 @@
 .rp-floating-panel[data-docking] {
   outline: 2px solid var(--rp-accent);
 }
+/* Hidden at an edge, the panel moves just past the screen edge nearest to it and turns hidden once there; it slides
+   back on the same path. Reduced motion drops both transitions, so it shows and hides at once. */
+.rp-floating-panel[data-edge] {
+  transition:
+    translate var(--rp-duration-panel) var(--rp-ease),
+    visibility 0s;
+}
+.rp-floating-panel[data-tucked] {
+  translate: var(--rp-edge-shift);
+  visibility: hidden;
+  transition:
+    translate var(--rp-duration-panel) var(--rp-ease),
+    visibility 0s linear var(--rp-duration-panel);
+}
+/* The hidden panel's summary hugs its light and reserved rate width, flush with the screen edge. */
+.rp-edge-handle {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  inline-size: max-content;
+  block-size: var(--rp-control);
+  padding: 0 var(--rp-space-2);
+  border: 1px solid var(--rp-popover-border);
+  font: inherit;
+  color: var(--rp-text);
+  text-align: start;
+  background: var(--rp-surface);
+  box-shadow: var(--rp-elevated);
+  pointer-events: auto;
+}
+.rp-edge-handle .rp-widget-speed::before {
+  content: attr(data-reserve);
+  block-size: 0;
+  visibility: hidden;
+}
+.rp-edge-handle:is(:not([data-edge]), [data-out]) {
+  visibility: hidden;
+}
+.rp-edge-handle:is([data-edge='left'], [data-edge='right']) {
+  top: var(--rp-edge-at);
+}
+.rp-edge-handle:is([data-edge='top'], [data-edge='bottom']) {
+  left: var(--rp-edge-at);
+}
+.rp-edge-handle[data-edge='right'] {
+  right: 0;
+  border-right: 0;
+  border-radius: var(--rp-r-lg) 0 0 var(--rp-r-lg);
+}
+.rp-edge-handle[data-edge='left'] {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 var(--rp-r-lg) var(--rp-r-lg) 0;
+}
+.rp-edge-handle[data-edge='top'] {
+  top: 0;
+  border-top: 0;
+  border-radius: 0 0 var(--rp-r-lg) var(--rp-r-lg);
+}
+.rp-edge-handle[data-edge='bottom'] {
+  bottom: 0;
+  border-bottom: 0;
+  border-radius: var(--rp-r-lg) var(--rp-r-lg) 0 0;
+}
+.rp-edge-handle:focus-visible {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: -2px;
+}

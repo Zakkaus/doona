@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef, type CSSProperties} from 'react';
+import {useEffect, useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties} from 'react';
 import {createPortal} from 'react-dom';
 import {useT} from '../../i18n';
 import {Button, DetailPanel, Divider, Light, MoreMenu} from '../../ui/ui';
@@ -24,6 +24,7 @@ export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendVi
   const t = useT();
   const collapsed = layout.collapsed;
   const docked = dockable && !!layout.docked;
+  const editing = useSyncExternalStore(editorState.subscribe, editorState.snapshot);
   useLayoutEffect(() => arriveFromDock(docked), [docked]);
   const dock = (next: boolean) => {
     rememberDock(!next);
@@ -69,6 +70,18 @@ export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendVi
       summary={collapsed ? <SpeedSummary /> : undefined}
       actions={
         <>
+          <MoreMenu
+            quiet
+            label={t('widgets.panelOptions')}
+            actions={[
+              {id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)},
+              ...(dockable ? [{id: 'dock', label: t(docked ? 'widgets.undock' : 'widgets.dock'), onAction: () => dock(!docked)}] : []),
+              ...(docked
+                ? []
+                : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
+              {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
+            ]}
+          />
           {!docked && (
             <Button
               quiet
@@ -90,15 +103,6 @@ export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendVi
           >
             <ChevronDown />
           </Button>
-          <MoreMenu
-            quiet
-            label={t('widgets.panelOptions')}
-            actions={[
-              {id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)},
-              ...(dockable ? [{id: 'dock', label: t(docked ? 'widgets.undock' : 'widgets.dock'), onAction: () => dock(!docked)}] : []),
-              {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
-            ]}
-          />
         </>
       }
     />
@@ -135,6 +139,15 @@ export function PanelHost({backend, honk, dockable, onDock}: {backend: BackendVi
       collapsed={collapsed}
       dockTarget={() => document.querySelector('.rp-dock-slot')}
       onDock={() => dock(true)}
+      edge={
+        layout.edge && !layout.pinned
+          ? {
+              handle: <WidgetHeader backend={<Light tone={backend.tone} small />} summary={<SpeedSummary reserveWidth />} />,
+              label: t('widgets.title'),
+              keepOut: editing
+            }
+          : undefined
+      }
     >
       {!collapsed && <SavedGrid />}
     </FloatingPanel>,

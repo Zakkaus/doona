@@ -3,7 +3,7 @@ import {expect, it} from 'vitest';
 import {WidgetGrid, WidgetCell} from './WidgetGrid';
 import {WidgetGalleryTile} from './WidgetGalleryTile';
 import {FloatingPanel} from './FloatingPanel';
-import {anchorPanelOffset, fitPanelOffset, minPanelSize, resizePanel} from './panelSize';
+import {anchorPanelOffset, edgePlacement, fitPanelOffset, minPanelSize, nearestEdge, resizePanel} from './panelSize';
 const panel = {label: 'honk', resizeLabel: 'Resize', moveLabel: 'Move', movedText: 'Moved', onResize: () => {}, onMove: () => {}, header: 'head'};
 it('renders widget size metadata', () => {
   expect(
@@ -97,3 +97,23 @@ it('draws eight resize hit areas, one of them a keyboard stop', () => {
   expect(html.match(/class="rp-panel-resize"/g)).toHaveLength(8);
   expect(html.match(/tabindex="-1"/g)).toHaveLength(7);
 });
+const view = {width: 1440, height: 900};
+// The summary is a control high along a side edge and as wide as the docked section along the top or bottom.
+it.each([
+  ['the default corner hides sideways', {left: 1104, top: 500, width: 320, height: 300}, 'right', 32, {at: 634, shift: {x: 336, y: 0}}],
+  ['near the left', {left: 40, top: 300, width: 320, height: 300}, 'left', 32, {at: 434, shift: {x: -360, y: 0}}],
+  ['near the top', {left: 600, top: 20, width: 320, height: 200}, 'top', 208, {at: 656, shift: {x: 0, y: -220}}],
+  ['near the bottom', {left: 600, top: 780, width: 320, height: 100}, 'bottom', 208, {at: 656, shift: {x: 0, y: 120}}],
+  ['a side summary stays inside the viewport', {left: 1120, top: 0, width: 320, height: 20}, 'right', 32, {at: 0, shift: {x: 320, y: 0}}],
+  ['a bottom summary stays inside the viewport', {left: 1350, top: 880, width: 80, height: 20}, 'bottom', 208, {at: 1232, shift: {x: 0, y: 20}}]
+] as const)('%s', (_name, box, edge, length, placement) => {
+  expect(nearestEdge(box, view)).toBe(edge);
+  expect(edgePlacement(box, view, edge, length)).toEqual(placement);
+});
+// Equal gaps go to the first of right, left, bottom and top.
+it.each([
+  ['right over bottom', {left: 1120, top: 580, width: 320, height: 320}, 'right'],
+  ['right over left', {left: 0, top: 300, width: 1440, height: 300}, 'right'],
+  ['left over bottom', {left: 0, top: 600, width: 320, height: 300}, 'left'],
+  ['bottom over top', {left: 560, top: 0, width: 320, height: 900}, 'bottom']
+] as const)('a tie: %s', (_name, box, edge) => expect(nearestEdge(box, view)).toBe(edge));

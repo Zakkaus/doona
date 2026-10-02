@@ -65,3 +65,30 @@ export function resizePanel(
   );
   return {size: {width, height}, offset: {x, y, ...(base.offset.top && {top: base.offset.top})}};
 }
+// A panel hidden at an edge goes past the screen edge nearest to it and leaves a handle there. Equal gaps go to the
+// first of right, left, bottom and top.
+export type ScreenEdge = 'right' | 'left' | 'bottom' | 'top';
+export type PanelBox = {left: number; top: number; width: number; height: number};
+export function nearestEdge(box: PanelBox, view: PanelSize): ScreenEdge {
+  const gaps: [ScreenEdge, number][] = [
+    ['right', view.width - box.left - box.width],
+    ['left', box.left],
+    ['bottom', view.height - box.top - box.height],
+    ['top', box.top]
+  ];
+  return gaps.reduce((nearest, gap) => (gap[1] < nearest[1] ? gap : nearest))[0];
+}
+// The handle's start along `edge`, `length` long, centred on the panel and kept inside the viewport, and the shift that
+// moves the panel just past that edge.
+export function edgePlacement(box: PanelBox, view: PanelSize, edge: ScreenEdge, length: number) {
+  const side = edge === 'left' || edge === 'right';
+  const [start, size, room] = side ? [box.top, box.height, view.height] : [box.left, box.width, view.width];
+  const at = Math.round(Math.max(0, Math.min(room - length, start + (size - length) / 2)));
+  const shift = {
+    right: {x: view.width - box.left, y: 0},
+    left: {x: -(box.left + box.width), y: 0},
+    bottom: {x: 0, y: view.height - box.top},
+    top: {x: 0, y: -(box.top + box.height)}
+  }[edge];
+  return {at, shift};
+}

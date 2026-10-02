@@ -2120,6 +2120,7 @@
   "widgets.downloadSummary": "↓ {down}",
   "widgets.drag": "Reorder {name}",
   "widgets.dropToDock": "Drop here to dock",
+  "widgets.edgeHide": "Hide at edge",
   "widgets.edit": "Edit widgets",
   "widgets.empty": "No widgets. Edit to add one.",
   "widgets.expand": "Expand widgets",

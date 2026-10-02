@@ -78,19 +78,20 @@ export function WidgetRow({label, children}: {label: string; children: ReactNode
     </div>
   );
 }
-// The panel's one header row, collapsed or not: the backend's light (not when docked), the rates while collapsed, then the actions.
-export function WidgetHeader({backend, actions, summary}: {backend?: ReactNode; actions: ReactNode; summary?: ReactNode}) {
+// The panel's one header row, collapsed or not: the backend's light (not when docked), the rates while collapsed, then the
+// actions; without actions it is the summary a panel hidden at an edge leaves there.
+export function WidgetHeader({backend, actions, summary}: {backend?: ReactNode; actions?: ReactNode; summary?: ReactNode}) {
   return (
     <div className="rp-widget-header">
       {backend && <div className="rp-widget-backend">{backend}</div>}
       {summary}
-      <div className="rp-widget-actions">{actions}</div>
+      {actions && <div className="rp-widget-actions">{actions}</div>}
     </div>
   );
 }
-export function WidgetSpeed({up, down}: {up: string; down: string}) {
+export function WidgetSpeed({up, down, reserve}: {up: string; down: string; reserve?: string}) {
   return (
-    <div className="rp-widget-speed">
+    <div className="rp-widget-speed" data-reserve={reserve}>
       <span>{up}</span>
       <span>{down}</span>
     </div>
