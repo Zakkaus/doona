@@ -124,6 +124,12 @@ export function useDnsCacheTab(domain: string) {
   // The selected entry, while it is still listed, starts a new rule.
   const [selected, setSelected] = useState<string | null>(null);
   const picked = view.rows.find(row => row.id === selected);
+  const [deleteName, setDeleteName] = useState(domain);
+  const [deleteType, setDeleteType] = useState('all');
+  useLinked(domain, setDeleteName);
+  const deleteTypes = [
+    ...new Set([...(dns.capabilities.data?.resources.dns_query.record_types ?? []), ...(dns.cache.data?.entries ?? []).map(entry => entry.type)])
+  ];
   const {remove: removeEntry} = dns;
   // Stable, so the cache table's columns, which call it, stay the same across polls.
   const remove = useCallback(
@@ -144,6 +150,25 @@ export function useDnsCacheTab(domain: string) {
   };
   return {
     ...view,
+    deleteName,
+    setDeleteName,
+    deleteType,
+    setDeleteType,
+    deleteChoices: [{id: 'all', label: t('dns.allTypes')}, ...deleteTypes.map(id => ({id, label: id}))],
+    deleteNamePending: dns.busy === 'delete-name',
+    deleteNameDisabled: !!dns.busy || !deleteName.trim() || (deleteType !== 'all' && !deleteTypes.includes(deleteType)),
+    deleteNameConfirmation:
+      deleteType === 'all'
+        ? t('dns.deleteNameConfirmAll', {domain: deleteName.trim()})
+        : t('dns.deleteNameConfirm', {domain: deleteName.trim(), type: deleteType}),
+    removeName: async () => {
+      try {
+        const result = await dns.removeName({name: deleteName.trim(), type: deleteType === 'all' ? undefined : [deleteType]});
+        if (result) toast('positive', t('dns.flushed', {matched: result.matched, deleted: result.deleted}));
+      } catch (error) {
+        return t('dns.flushFailed', {error: errorText(error, t)});
+      }
+    },
     selected: picked ? selected : null,
     setSelected,
     seed: picked?.seed ?? null,

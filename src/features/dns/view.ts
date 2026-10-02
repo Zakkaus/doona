@@ -113,6 +113,7 @@ export function dnsCacheView(
             })
           }))
       : [],
+    canDeleteName: !!cache?.available && cache.delete_name === true,
     filterText: domain ? t('dns.cacheFilter', {domain}) : '',
     confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,

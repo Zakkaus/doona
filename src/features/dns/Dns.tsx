@@ -191,6 +191,20 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           />
         </div>
       </ActionHelp>
+      {vm.canDeleteName && (
+        <div className="rp-toolbar">
+          <TextField side label={t('dns.exactName')} value={vm.deleteName} onChange={vm.setDeleteName} width={280} placeholder="example.com" />
+          <LabeledSelect side label={t('ui.type')} value={vm.deleteType} onChange={vm.setDeleteType} items={vm.deleteChoices} />
+          <ConfirmButton
+            label={t('dns.deleteName')}
+            confirmationText={vm.deleteNameConfirmation}
+            isPending={vm.deleteNamePending}
+            isDisabled={vm.deleteNameDisabled}
+            onConfirm={vm.removeName}
+            onAbort={vm.abortFlush}
+          />
+        </div>
+      )}
       <ActionHelp reason={vm.deleteReason} above>
         <DataTable
           label={t('ui.cache')}

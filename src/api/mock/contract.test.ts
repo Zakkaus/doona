@@ -67,6 +67,7 @@ const calls: Call[] = [
   ['createConfigSource', 202, api => api.createConfigSource('config.d/contract.dae', '')],
   ['createConfigSource', 422, api => api.createConfigSource('unmatched.dae', '')],
   ['deleteDnsCacheEntry', 200, async api => api.deleteDnsEntry((await first(api.dnsCache().then(list => list.entries)))?.entry_id ?? 'missing')],
+  ['deleteDnsCacheByName', 200, api => api.deleteDnsCacheByName({name: 'example.com.', type: ['A']})],
   ['flushDnsCache', 200, api => api.flushDnsCache()],
   ['closeConnections', 200, api => api.closeConnections({all: true})],
   ['startReload', 202, api => api.startReload()],

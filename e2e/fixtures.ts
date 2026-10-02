@@ -298,7 +298,10 @@ export async function mockBackend(page: Page, options: {faults?: boolean; includ
       else if (method === 'POST' && path === 'operations/resume') result = await api.startResume();
       else if (method === 'POST' && path === 'dns/cache/flush') result = await api.flushDnsCache();
       else if (method === 'POST' && path === 'geodata/update') result = await api.updateGeodata();
-      else if (method === 'DELETE' && parts[0] === 'dns' && parts[1] === 'cache') result = await api.deleteDnsEntry(parts[2]);
+      else if (method === 'DELETE' && path === 'dns/cache') {
+        const params = new URL(request.url()).searchParams;
+        result = await api.deleteDnsCacheByName({name: params.get('name') ?? '', type: params.has('type') ? params.getAll('type') : undefined});
+      } else if (method === 'DELETE' && parts[0] === 'dns' && parts[1] === 'cache') result = await api.deleteDnsEntry(parts[2]);
       else throw new Error(`Unexpected request: ${method} ${path}`);
       if (result && typeof result === 'object' && 'href' in result && 'operation_id' in result) return fulfillAccepted(route, result as OperationAccepted);
       const headers: Record<string, string> = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'};

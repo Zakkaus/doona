@@ -329,6 +329,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     createConfigSource: async (path, content, signal) => accepted(await starts.POST('/api/v1/config/sources', {body: {path, content}, signal})),
     patchRuntimeSettings: async (body, signal) => read(await client.PATCH('/api/v1/runtime/settings', {body, signal})),
     deleteDnsEntry: async (entry_id, signal) => read(await client.DELETE('/api/v1/dns/cache/{entry_id}', {params: {path: {entry_id}}, signal})),
+    deleteDnsCacheByName: async (query, signal) => read(await client.DELETE('/api/v1/dns/cache', {params: {query}, signal})),
     flushDnsCache: async signal => read(await client.POST('/api/v1/dns/cache/flush', {body: {}, signal})),
     // Readable also drops SimulationDnsData.attempt_id, whose contract value is null.
     routingTrace: async (body, signal) => read(await client.POST('/api/v1/routing/trace', {body, signal})) as RoutingTraceResponse,

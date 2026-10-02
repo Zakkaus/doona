@@ -185,3 +185,33 @@ test('a hidden cache tab stops walking the cache until it is shown again', async
   await expect(grid.getByRole('rowheader', {name: `walk-${hidden + 1}.example`, exact: true})).toBeVisible();
   expect(walks()).toBe(hidden + 1);
 });
+
+test('exact-name cache deletion filters record types and requires its capability', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries;
+  const entry = entries.find(entry => entry.type === 'AAAA')!;
+  await page.goto('/#/dns?tab=cache');
+  const button = page.getByRole('button', {name: 'Delete by name', exact: true});
+  await expect(button).toBeDisabled();
+  await page.getByRole('textbox', {name: 'Exact name', exact: true}).fill(entry.domain.toUpperCase());
+  await page.getByRole('button', {name: 'All supported types Type', exact: true}).click();
+  await page.getByRole('option', {name: entry.type, exact: true}).click();
+  await button.click();
+  const dialog = page.getByRole('alertdialog', {name: 'Delete by name', exact: true});
+  await expect(dialog).toContainText(entry.domain.toUpperCase());
+  await dialog.getByRole('button', {name: 'Delete by name', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', {name: `Delete the ${entry.type} cache entry for ${entry.domain}`, exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: `Delete the A cache entry for ${entry.domain}`, exact: true})).toBeVisible();
+  const sent = requests.find(request => request.method() === 'DELETE')!;
+  expect(new URL(sent.url()).searchParams.getAll('type')).toEqual([entry.type]);
+  handlers['GET capabilities'] = async () => {
+    const capabilities = await api.capabilities();
+    capabilities.resources.events.available = false;
+    capabilities.resources.dns_cache.delete_name = false;
+    return capabilities;
+  };
+  await page.reload();
+  await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toBeVisible();
+  await expect(button).toHaveCount(0);
+});
