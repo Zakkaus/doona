@@ -1,8 +1,8 @@
 import {expect, it, vi} from 'vitest';
 import {InflightRegistry, normalizeResourceKey} from '../api/inflight';
 import {invalidations, shouldRefetch, type ResourceName} from '../api/invalidation';
-import {createMockApi} from '../api/mock';
-import {capabilities} from '../api/mock/fixtures';
+import {createMockApi} from '../../mock';
+import {capabilities} from '../../mock/fixtures';
 import type {ApiEvent, Capabilities, EventKind} from '../api/model';
 import {optionsProbe} from './probeOptions';
 import {deferred} from './testHelpers';

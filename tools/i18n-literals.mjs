@@ -14,8 +14,8 @@ const dataFiles = new Map([
   ['src/i18n/languages.ts', 'each language named in itself'],
   ['src/dae/regions.ts', 'shared region names and node-name detection aliases'],
   ['src/dae/templates.ts', 'generated routing comments and bilingual node-name match patterns'],
-  ['src/api/mock/fixtures/configuration.ts', 'demo backend data, as honk would send it'],
-  ['src/api/mock/fixtures/inventory.ts', 'demo backend data, as honk would send it']
+  ['mock/fixtures/configuration.ts', 'demo backend data, as honk would send it'],
+  ['mock/fixtures/inventory.ts', 'demo backend data, as honk would send it']
 ]);
 // Literals that read as words but are names, keywords or sample input, each in the one file and place it may appear:
 // JSX text, or the attribute it fills.

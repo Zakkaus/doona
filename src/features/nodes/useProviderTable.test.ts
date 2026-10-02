@@ -1,5 +1,5 @@
 import {expect, it, vi} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {translate, type Translator} from '../../i18n';
 import {providerRows} from './view';

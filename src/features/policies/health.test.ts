@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {memberHealth, sameHealth} from './health';
 
 it('prefers group TCP data observations by warmth, measurement and IP version before falling back to node health', async () => {

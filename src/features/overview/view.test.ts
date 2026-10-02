@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {capabilities, datapath as healthy, runtime, runtimeMemory, version} from '../../api/mock/fixtures';
-import {datapathFault} from '../../api/mock/fixtures/runtime';
+import {capabilities, datapath as healthy, runtime, runtimeMemory, version} from '../../../mock/fixtures';
+import {datapathFault} from '../../../mock/fixtures/runtime';
 import {translate, type Translator} from '../../i18n';
 import {datapathFields, datapathValue, memoryFields, overviewExport, overviewView} from './view';
 import {formatBytes} from '../../i18n/format';

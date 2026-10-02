@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Provider} from '../../api/model';
-import {nodeFixtures} from '../../api/mock/fixtures';
+import {nodeFixtures} from '../../../mock/fixtures';
 import {groupFilterDraft, groupFilterTexts, newGroupFilter} from '../../dae/groupConditions';
 import {readGroupEntries, writeGroupEntry} from '../../dae/groups';
 import {compileFilters} from '../../dae/groupFilters';

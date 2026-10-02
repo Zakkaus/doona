@@ -1,8 +1,8 @@
 import {expect, it, onTestFinished, vi} from 'vitest';
 import * as apiSelection from '../api/index';
 import {ApiError, LocalError} from '../api/error';
-import {createMockApi} from '../api/mock';
-import {capabilities} from '../api/mock/fixtures';
+import {createMockApi} from '../../mock';
+import {capabilities} from '../../mock/fixtures';
 // The mocked react reads hookHarness, so testHelpers loads before the modules that import react.
 import {hookHarness, stubVisibleDocument} from './testHelpers';
 import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, useConfigRevisionAction, withinLimits} from './config';

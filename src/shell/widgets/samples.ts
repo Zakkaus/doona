@@ -5,7 +5,7 @@ export const sampleCpu: CpuSample[] = [12, 18, 15, 27, 22, 19, 24].map((value, i
 const sampleNotices: ApiEvent[] = [{id: 'sample-ready', event: 'stream.ready', data: {instance_id: 'sample-engine', observed_at: new Date(now).toISOString()}}];
 
 async function createSamples() {
-  const {createMockApi} = await import('../../api/mock');
+  const {createMockApi} = await import('../../../mock');
   const api = createMockApi({isolated: true});
   const [
     capabilities,

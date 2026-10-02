@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../api/mock/fixtures';
+import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../../mock/fixtures';
 import type {Connection, ConnectionList, GroupSummary} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {pickMenuKey} from '../../ui/ui';

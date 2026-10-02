@@ -1,6 +1,6 @@
 import type {Locator} from '@playwright/test';
 import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem, box, settleFrames} from './fixtures';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 
 // The flat list exercises the virtualizer; grouping (the default) gets its own test below.

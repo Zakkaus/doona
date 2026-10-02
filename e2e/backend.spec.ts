@@ -1,5 +1,5 @@
 import {expect, isLive, test} from './fixtures';
-import {version} from '../src/api/mock/fixtures';
+import {version} from '../mock/fixtures';
 
 test.use({storage: {'doona-lang': 'en'}});
 test.skip(isLive, 'The facts and the state are the demo backend’s');

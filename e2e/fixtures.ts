@@ -1,5 +1,5 @@
 import {test as base, expect, type Download, type Locator, type Page, type Request, type Route} from '@playwright/test';
-import {createMockApi} from '../src/api/mock';
+import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 import type {OperationAccepted} from '../src/api/model';

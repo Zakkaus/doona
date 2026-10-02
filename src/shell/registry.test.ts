@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {capabilities, capabilitiesBase} from '../api/mock/fixtures';
+import {capabilities, capabilitiesBase} from '../../mock/fixtures';
 import {features, navAvailable} from './registry';
 import {routePaths} from './routes';
 

@@ -1,6 +1,6 @@
 import {stubVisibleDocument} from './testHelpers';
 import {afterEach, expect, it, vi} from 'vitest';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {normalizeResourceKey} from '../api/inflight';
 import {getApi} from '../api';
 import {useEvents} from './events';

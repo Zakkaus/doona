@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {translate} from '../../i18n';
 import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {configNotes, version} from '../../api/mock/fixtures';
-import {createMockApi} from '../../api/mock';
+import {configNotes, version} from '../../../mock/fixtures';
+import {createMockApi} from '../../../mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
 import {
@@ -18,7 +18,7 @@ import {
 } from './view';
 import type {ConfigSource} from '../../api/model';
 import {validationSources} from '../../dae/sources';
-import {diagnose} from '../../api/mock/config';
+import {diagnose} from '../../../mock/config';
 const t: Translator = (key, params) => translate('en', key, params);
 const honk = engineOf(version);
 it('keeps hidden source paths out of source labels', async () => {

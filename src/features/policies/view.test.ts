@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
-import {nodeFixtures} from '../../api/mock/fixtures';
-import {patchGroupConfig} from '../../api/mock/control';
+import {nodeFixtures} from '../../../mock/fixtures';
+import {patchGroupConfig} from '../../../mock/control';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
 import type {ConfigSource, Group} from '../../api/model';

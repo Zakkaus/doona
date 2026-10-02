@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {ApiError} from '../api/error';
 import {optionsProbe, probeDefaults} from './probeOptions';
 import {groupActions, groupConflict, groupProbeProtocols, patchConfig, probeGroup} from './groups';

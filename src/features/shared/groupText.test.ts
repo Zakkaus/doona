@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {nodeFixtures} from '../../api/mock/fixtures';
+import {nodeFixtures} from '../../../mock/fixtures';
 import {translate, type Translator} from '../../i18n';
 import {draftMembers, healthStatus, memberSections} from './groupText';
 

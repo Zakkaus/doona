@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import type {FlowSummary} from '../../api/model';
-import {flows} from '../../api/mock/fixtures';
+import {flows} from '../../../mock/fixtures';
 import {ruleDistribution} from './distribution';
 
 const flow: FlowSummary = {...flows[0], rule_id: 'r1', rule_expression: 'domain(suffix: example.com)', rule_source: 'kernel'};

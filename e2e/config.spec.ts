@@ -1,6 +1,6 @@
 import type {Page, Route} from '@playwright/test';
 import {ApiError} from '../src/api/error';
-import type {createMockApi} from '../src/api/mock';
+import type {createMockApi} from '../mock';
 import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend, box} from './fixtures';
 import {sha256} from '../src/api/hash';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';

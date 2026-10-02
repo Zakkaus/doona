@@ -1,0 +1,159 @@
+import type {DnsCacheList, RuleList, RoutingTraceInput, RoutingTraceRequest, RoutingTraceResponse} from '../src/api/model';
+import {ApiError} from '../src/api/error';
+import {scanConfig, unquote} from '../src/dae/text';
+import {instanceId} from './fixtures/clock';
+
+type Evaluation = RoutingTraceResponse['evaluations'][number];
+type Condition = Evaluation['rules'][number]['conditions'][number];
+const geosites: Record<string, string[]> = {
+  cn: ['cn', 'bilibili.com', 'baidu.com', 'qq.com'],
+  telegram: ['telegram.org', 'telegram.me', 't.me', 'telegra.ph'],
+  openai: ['openai.com', 'chatgpt.com', 'oaistatic.com']
+};
+const fields: Record<string, keyof RoutingTraceInput | 'mac'> = {
+  domain: 'domain',
+  pname: 'pname',
+  l4proto: 'network',
+  dport: 'dst_port',
+  dscp: 'dscp',
+  dip: 'dst_ip',
+  sip: 'src_ip',
+  ipversion: 'dst_ip',
+  mac: 'mac'
+};
+const domainName = (name: string) => name.toLowerCase().replace(/\.$/, '');
+const suffix = (name: string, value: string) => name === value || name.endsWith('.' + value);
+function subnet(ip: string, range: string): boolean {
+  const [base, bits = '32'] = range.split('/');
+  if (ip.includes(':') || base.includes(':')) return ip.toLowerCase() === base.toLowerCase();
+  const number = (value: string) => value.split('.').reduce((n, part) => (n << 8) | Number(part), 0) >>> 0;
+  const mask = Number(bits) === 0 ? 0 : (0xffffffff << (32 - Number(bits))) >>> 0;
+  return (number(ip) & mask) === (number(base) & mask);
+}
+function predicate(expression: string, input: RoutingTraceInput): Pick<Condition, 'result' | 'missing_inputs'> {
+  const match = /^(!?)\s*(\w+)\((.*)\)$/.exec(expression.trim());
+  // A condition the demo cannot evaluate is reported as undecided rather than guessed.
+  if (!match) return {result: 'indeterminate', missing_inputs: []};
+  const [, negated, kind, arg] = match;
+  const field = fields[kind];
+  const value = field === 'mac' ? undefined : input[field];
+  if (value == null || value === '') return {result: 'indeterminate', missing_inputs: [field ?? kind]};
+  let matched = false;
+  if (kind === 'domain') {
+    const name = domainName(String(value));
+    const commas = scanConfig(arg).tokens.filter(token => token.kind === 'symbol' && arg.slice(token.from, token.to) === ',');
+    const items = [0, ...commas.map(token => token.to)].map((start, i) => arg.slice(start, commas[i]?.from ?? arg.length).trim());
+    matched = items.some(item => {
+      const colon = item.indexOf(':');
+      const mode = item.slice(0, colon).trim();
+      const term = unquote(item.slice(colon + 1).trim());
+      return mode === 'geosite'
+        ? (geosites[term] ?? []).some(s => suffix(name, s))
+        : mode === 'suffix'
+          ? suffix(name, domainName(term))
+          : mode === 'full'
+            ? name === domainName(term)
+            : mode === 'keyword' && name.includes(domainName(term));
+    });
+  } else if (kind === 'dip' || kind === 'sip') {
+    const ip = String(value).toLowerCase();
+    matched = /^geoip:\s*private$/.test(arg)
+      ? ip.includes(':')
+        ? /^(f[cd]|fe[89ab])/.test(ip) || ip === '::1'
+        : ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '169.254.0.0/16'].some(range => subnet(ip, range))
+      : arg.split(',').some(range => subnet(ip, range.trim()));
+  } else if (kind === 'ipversion') matched = arg === (String(value).includes(':') ? '6' : '4');
+  else if (kind === 'dscp')
+    matched = arg.split(',').some(item => {
+      const term = unquote(item.trim());
+      return /^(?:\d+|0x[\da-f]+)$/i.test(term) && Number(term) === value;
+    });
+  else matched = arg.split(',').some(item => item.trim() === String(value));
+  return {result: matched !== Boolean(negated) ? 'matched' : 'not_matched', missing_inputs: []};
+}
+function evaluate(input: RoutingTraceInput, snapshot: RuleList): Evaluation {
+  let matched = false,
+    outbound: string | null = null;
+  const missing = new Set<string>();
+  const rules: Evaluation['rules'] = snapshot.rules
+    .filter(rule => rule.kind === 'rule')
+    .map(rule => {
+      const conditions = rule.expression.split(/\s*&&\s*/).map((expression, i): Condition => ({
+        id: rule.rule_id + '/' + i,
+        expression,
+        ...(matched ? {result: 'skipped', missing_inputs: []} : predicate(expression, input))
+      }));
+      const result = matched
+        ? 'skipped'
+        : conditions.some(c => c.result === 'not_matched')
+          ? 'not_matched'
+          : conditions.some(c => c.result === 'indeterminate')
+            ? 'indeterminate'
+            : 'matched';
+      const missing_inputs = result === 'indeterminate' ? [...new Set(conditions.flatMap(c => c.missing_inputs))] : [];
+      for (const field of missing_inputs) missing.add(field);
+      if (result === 'matched') {
+        matched = true;
+        outbound = rule.outbound;
+      }
+      return {rule_id: rule.rule_id, expression: rule.expression + ' -> ' + rule.outbound + (rule.must ? '(must)' : ''), result, missing_inputs, conditions};
+    });
+  rules.push({
+    rule_id: 'fallback',
+    expression: 'fallback: ' + snapshot.fallback.outbound,
+    result: matched ? 'skipped' : 'matched',
+    missing_inputs: [],
+    conditions: []
+  });
+  if (!matched) outbound = snapshot.fallback.outbound;
+  // A later match cannot resolve an earlier undecided rule.
+  const undecided = rules.some(rule => rule.result === 'indeterminate');
+  return {
+    dst_ip: input.dst_ip ?? null,
+    decision: undecided ? 'indeterminate' : 'determinate',
+    outbound: undecided ? null : outbound,
+    missing_inputs: [...missing],
+    rules
+  };
+}
+export function routingTrace({input, resolve}: RoutingTraceRequest, snapshot: RuleList, dnsCache: DnsCacheList): RoutingTraceResponse {
+  if (!input.domain && !input.dst_ip) throw new ApiError(400, 'invalid_request', 'A domain or destination IP is required');
+  if (resolve === 'live' && (!input.domain || input.dst_ip))
+    throw new ApiError(400, 'invalid_request', 'Live resolution requires a domain and no destination IP');
+  const response: RoutingTraceResponse = {
+    mode: 'simulation',
+    instance_id: instanceId,
+    generation_id: snapshot.generation_id,
+    observed_at: new Date().toISOString(),
+    evaluations: [],
+    dns: []
+  };
+  if (resolve === 'none') {
+    response.evaluations.push(evaluate(input, snapshot));
+    return response;
+  }
+  const name = domainName(input.domain!) + '.';
+  const entries = dnsCache.entries.filter(e => e.domain === name && (e.type === 'A' || e.type === 'AAAA'));
+  const addresses = [...new Set(entries.flatMap(e => (e.answers ?? []).filter(a => a.type === 'A' || a.type === 'AAAA').map(a => a.data)))];
+  response.dns.push({
+    lookup_id: 'simulation-dns-1',
+    parent_lookup_id: null,
+    attempt_id: null,
+    purpose: 'dial_target',
+    name,
+    qtype: entries.length === 1 ? entries[0].type : 'ANY',
+    source: 'cache',
+    upstream_transport: null,
+    carrier_transport: null,
+    cache: entries.length ? 'hit' : 'miss',
+    cache_entry_id: entries.length === 1 ? entries[0].entry_id : null,
+    upstream: null,
+    route_evaluation_ids: [],
+    status: addresses.length ? 'NOERROR' : (entries[0]?.status ?? 'SERVFAIL'),
+    addresses,
+    selected_ip: null,
+    error: entries.length ? null : 'No address in mock DNS cache'
+  });
+  response.evaluations = addresses.map(dst_ip => evaluate({...input, dst_ip}, snapshot));
+  return response;
+}

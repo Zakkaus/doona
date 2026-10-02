@@ -25,7 +25,7 @@ const cssMinify = (() => {
 })();
 
 // The mock backend, loaded only by the demo and development profiles.
-const mockEntry = /\/src\/api\/mock\/index\.ts$/;
+const mockEntry = /\/mock\/index\.ts$/;
 
 // The modules a module reaches by static imports; the Activity chunk takes those the shell entry does not reach.
 const statics = (start: string, getModuleInfo: (id: string) => {importedIds: readonly string[]} | null) => {

@@ -13,7 +13,7 @@ const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + p
 
 // The demo backend signs in through the in-browser mock, loaded only when that backend is asked. Its one account is
 // published on the sign-in page, so it guards nothing.
-const demoAuth = () => import('./mock/auth');
+const demoAuth = () => import('../../mock/auth');
 export const DEMO_ACCOUNT = {username: 'demo', password: 'demo'} as const;
 
 // Discovery is public, so it is read without a token. An engine that still reports the old API name serves an API

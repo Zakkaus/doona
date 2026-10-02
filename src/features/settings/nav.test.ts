@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities} from '../../api/model';
-import {capabilities, capabilitiesBase} from '../../api/mock/fixtures/capabilities';
+import {capabilities, capabilitiesBase} from '../../../mock/fixtures/capabilities';
 import {geodataConfigurable, settingsCardList} from './nav';
 
 describe('capability', () => {

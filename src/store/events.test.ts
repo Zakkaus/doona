@@ -1,9 +1,9 @@
 import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {ApiError} from '../api/error';
 import {normalizeResourceKey} from '../api/inflight';
-import {capabilities} from '../api/mock/fixtures';
+import {capabilities} from '../../mock/fixtures';
 import {eventStatus, historyLost, holdFlowDemand, reopenEvents, subscribeEvents, wantsFlowDemand} from './events';
 import {refetchResource, watchResource} from './resourceCore';
 import type {ApiEvent, EventOptions} from '../api/model';

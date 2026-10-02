@@ -1,7 +1,7 @@
 import {beforeEach, expect, it, vi} from 'vitest';
 import type * as React from 'react';
 import type * as I18n from '../../i18n';
-import {capabilities} from '../../api/mock/fixtures';
+import {capabilities} from '../../../mock/fixtures';
 import {hookHarness} from '../../store/testHelpers';
 import {useDnsCacheTab} from './useDns';
 

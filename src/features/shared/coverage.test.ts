@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {translate, type Translator} from '../../i18n';
 import {coverageView} from './coverage';
 

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {engineOf} from '../api/engines';
-import {version} from '../api/mock/fixtures';
+import {version} from '../../mock/fixtures';
 import {globalKeys} from './vocab';
 import {serializeSetting, settingGroups, settingValue, writeSettings} from './settings';
 import en from '../i18n/locales/en.json';

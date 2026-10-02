@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {capabilities, dnsCache} from '../../api/mock/fixtures';
+import {capabilities, dnsCache} from '../../../mock/fixtures';
 import type {ConfigSource, DnsLogRecord, DnsQueryResponse} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';

@@ -2,7 +2,7 @@ import {stubVisibleDocument} from './testHelpers';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import {normalizeResourceKey, type ResourceKey} from '../api/inflight';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import * as apiSelection from '../api/index';
 import {subscribeEvents} from './events';
 import {credentialRefusal, refetchAll, retainInactive, watchResource} from './resourceCore';

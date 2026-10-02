@@ -47,7 +47,7 @@ export default [
     }
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],
     languageOptions: {globals: globals.browser}
   },
   {
@@ -56,7 +56,7 @@ export default [
   },
   {
     ...reactHooks.configs.flat.recommended,
-    files: ['src/**/*.{ts,tsx}']
+    files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts']
   },
   {
     ...jsxA11y.flatConfigs.recommended,
@@ -64,7 +64,7 @@ export default [
   },
   {
     // G1 layers and G2 cycles. Dynamic imports are left out of cycles: the lazy page loaders in registry.ts close them all.
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],
     plugins: {'import-x': importX},
     settings: {
       'import-x/resolver-next': [importX.createNodeResolver({extensions: ['.ts', '.tsx', '.js']})],
@@ -76,7 +76,7 @@ export default [
         'error',
         {
           zones: [
-            {target: './src/ui', from: ['./src/features', './src/store', './src/shell'], message: 'src/ui takes data as props.'},
+            {target: './src/ui', from: ['./src/features', './src/store', './src/shell', './mock'], message: 'src/ui takes data as props.'},
             {
               target: './src/ui',
               from: './src/api',
@@ -84,7 +84,7 @@ export default [
               message: 'src/ui takes data as props; from src/api it may use only the error model, the types and the server clock.'
             },
             {target: './src/store', from: ['./src/features', './src/shell', './src/ui']},
-            {target: ['./src/api', './src/dae', './src/i18n'], from: ['./src/features', './src/shell', './src/store', './src/ui']},
+            {target: ['./src/api', './src/dae', './src/i18n', './mock'], from: ['./src/features', './src/shell', './src/store', './src/ui']},
             {
               target: ['./src/dae', './src/features', './src/i18n', './src/shell', './src/store', './src/ui'],
               from: './src/api/engines',
@@ -118,7 +118,7 @@ export default [
   {files: ['src/shell/registry.ts'], rules: {'import-x/no-restricted-paths': 'off'}},
   {
     // G3 raw React Aria, G4 native controls and kit classes, G5 heavy libraries, G7 colour literals
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],
     ignores: ['src/ui/**'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
@@ -161,8 +161,8 @@ export default [
   },
   {
     // Routers serve doona over plain HTTP on the LAN, where these exist only in secure contexts.
-    files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/api/hash.ts', 'src/**/*.test.*'],
+    files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],
+    ignores: ['src/api/hash.ts', 'src/**/*.test.*', 'mock/**/*.test.*'],
     rules: {
       'no-restricted-properties': [
         'error',

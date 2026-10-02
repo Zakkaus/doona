@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
-import {geodata, runtimeSettings} from '../../api/mock/fixtures';
-import {capabilities} from '../../api/mock/fixtures/capabilities';
-import {version} from '../../api/mock/fixtures/runtime';
+import {geodata, runtimeSettings} from '../../../mock/fixtures';
+import {capabilities} from '../../../mock/fixtures/capabilities';
+import {version} from '../../../mock/fixtures/runtime';
 import type {Capabilities, RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {

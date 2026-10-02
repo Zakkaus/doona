@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createMockApi} from '../../api/mock';
+import {createMockApi} from '../../../mock';
 import {cpuSample, foldCpu, latencySample, nextLatency, sparkWindow, thin, type LatencyHistory} from './widgetSeries';
 
 it('preserves unknown CPU readings and multicore percentages', async () => {
