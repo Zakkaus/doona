@@ -1175,6 +1175,7 @@
   "policy.editNoConfig": "配置尚未准备好，无法编辑",
   "policy.editNoEntry": "已读取的配置文件中没有此组的定义，无法编辑",
   "policy.editReadOnly": "此组定义于 {file}，该文件只读，无法编辑",
+  "policy.editReopen": "配置中的同一字段已被改为其他值，因此未写入。关闭并重新打开此对话框，以编辑当前配置。",
   "policy.editTitle": "编辑组 {name}",
   "policy.editUnsafe": "筛选或策略必须写在同一行，括号成对，且不含注释或大括号。",
   "policy.empty": "暂无组",

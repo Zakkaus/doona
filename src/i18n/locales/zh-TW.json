@@ -1175,6 +1175,7 @@
   "policy.editNoConfig": "組態尚未就緒，無法編輯",
   "policy.editNoEntry": "已讀取的設定檔中沒有此群組的定義，無法編輯",
   "policy.editReadOnly": "此群組定義於 {file}，該檔案唯讀，無法編輯",
+  "policy.editReopen": "組態中的同一欄位已被改為其他值，因此未寫入。關閉並重新開啟此對話框，以編輯目前的組態。",
   "policy.editTitle": "編輯群組 {name}",
   "policy.editUnsafe": "篩選或策略必須寫在同一行，括號成對，且不含註解或大括號。",
   "policy.empty": "沒有群組",

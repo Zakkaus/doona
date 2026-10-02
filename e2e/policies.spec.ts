@@ -1,4 +1,6 @@
+import type {Page} from '@playwright/test';
 import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem, scrollIntoList, editorText} from './fixtures';
+import {readGroupEntries, writeGroupEntry} from '../src/dae/groups';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
   const {requests} = await mockBackend(page);
@@ -459,6 +461,46 @@ test('a group edit retried after a refusal writes against the declaration read a
   // The unchanged member keeps the spelling on disk, so the retry took its baseline from the fresh read.
   const saved = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
   expect(saved).toMatch(/office \{[^}]*filter: name\('hk-01'\)[^}]*default: 'hk-01'[^}]*\}/);
+});
+
+// Opens office with one filter and the select policy, changes its policy to Score, and lets the given edit land on disk before Apply.
+async function refusedPolicyEdit(page: Page, concurrent: (text: string) => string) {
+  const {api, requests} = await mockBackend(page);
+  const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!;
+  const initial = await main();
+  const opened = writeGroupEntry(initial.content!, 'office', {filters: ['name(hk-01)'], policy: 'select'});
+  await api.pollOperation(await api.replaceConfigSource(initial.id, opened, `"${initial.content_sha256}"`));
+  await page.goto('/#/policies?group=office');
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
+  await dialog.getByRole('button', {name: /Selection policy/}).click();
+  await page.getByRole('option', {name: /^Score/}).click();
+  const origin = await main();
+  const changed = concurrent(origin.content!);
+  await api.pollOperation(await api.replaceConfigSource(origin.id, changed, `"${origin.content_sha256}"`));
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
+  await apply.click();
+  await rejected;
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  return {dialog, apply, main, changed, puts: () => requests.filter(request => request.method() === 'PUT').length};
+}
+
+test('a group edit retried after a refusal writes only the changed fields and keeps the filter changed on disk', async ({page}) => {
+  const {dialog, apply, main} = await refusedPolicyEdit(page, text => writeGroupEntry(text, 'office', {filters: ['name(hk-02)'], policy: 'select'}));
+  await apply.click();
+  await expect(dialog).toHaveCount(0);
+  expect(readGroupEntries((await main()).content).find(entry => entry.name === 'office')).toMatchObject({filters: ['name(hk-02)'], policy: 'score'});
+});
+
+test('a group edit retried after a refusal writes nothing when the same field changed on disk to another value', async ({page}) => {
+  const {dialog, apply, main, changed, puts} = await refusedPolicyEdit(page, text =>
+    writeGroupEntry(text, 'office', {filters: ['name(hk-01)'], policy: 'min_moving_avg'})
+  );
+  await apply.click();
+  await expect(dialog.getByRole('alert')).toContainText('The same field was changed to a different value');
+  expect(puts()).toBe(1);
+  expect((await main()).content).toBe(changed);
 });
 
 test('a long group name truncates with a tooltip and keeps the More menu on its title row', async ({page}) => {

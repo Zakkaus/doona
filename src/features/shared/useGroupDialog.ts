@@ -26,7 +26,7 @@ import {
   setIncludes,
   type IncludeKind
 } from './groupIncludes';
-import {nameText, readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../../dae/groups';
+import {nameText, readGroupEntries, writeGroupEntry, type GroupEntry, type GroupEntryUpdate} from '../../dae/groups';
 import {href} from '../../shell/route';
 import {unquote} from '../../dae/text';
 import {editProblem, type MainSourceEdit} from '../../store/mainSource';
@@ -159,10 +159,11 @@ const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound
 // The file's key for each field, as the draft holds it.
 const routeKeys = {default_member_id: 'default', final_outbound: 'final'} as const;
 // `origin` is the source the dialog opened on, so a change on disk refuses the first save; once refused, a save goes against the source as it is
-// declared then, since the sources are read again after a refusal.
+// declared then, since the sources are read again after a refusal. `opened` is the entry as the dialog opened on it, null when creating.
 type Draft = {
   name: string;
   origin: ConfigSource | null;
+  opened: GroupEntry | null;
   refused: boolean;
   policy: string | null;
   filters: GroupFilterDraft[];
@@ -263,6 +264,20 @@ export function useGroupDialog(input: Input): GroupDialogView {
     const group = creating ? draft.name.trim() : draft.name;
     const update: GroupEntryUpdate = {filters, policy: draft.policy, ...(!creating ? {interrupt: draft.interrupt} : {})};
     for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
+    if (draft.refused && draft.opened && entry) {
+      // A retry writes only the fields changed since the dialog opened and keeps the rest as read again, so another client's edits stay;
+      // a field changed both here and on disk, to different values, is not written.
+      const {opened} = draft;
+      const keys = ['filters', 'policy', 'interrupt', ...routes.map(id => routeKeys[id])] as const;
+      const read = (from: GroupEntry, key: (typeof keys)[number]) => JSON.stringify(key === 'default' || key === 'final' ? routeValue(from[key]) : from[key]);
+      const mine = (key: (typeof keys)[number]) => JSON.stringify(key === 'filters' ? filters : draft[key]);
+      const changed = keys.filter(key => mine(key) !== read(opened, key));
+      if (changed.some(key => read(entry, key) !== read(opened, key) && read(entry, key) !== mine(key))) {
+        refuse(t('policy.editReopen'));
+        return;
+      }
+      for (const key of keys) if (!changed.includes(key)) Object.assign(update, {[key]: key === 'filters' || key === 'policy' ? entry[key] : undefined});
+    }
     saving.current = true;
     const current = session.start();
     const origin = draft.refused ? (creating ? source.main : declared?.origin) : draft.origin;
@@ -440,6 +455,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
         setDraft({
           name: '',
           origin: source.main,
+          opened: null,
           refused: false,
           policy: newGroupPolicies[0].id,
           filters: filters.map(filter => groupFilterDraft(filter)),
@@ -451,6 +467,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
         setDraft({
           name: declared.entry.name,
           origin: declared.origin,
+          opened: declared.entry,
           refused: false,
           policy: declared.entry.policy,
           filters: (filters.length
