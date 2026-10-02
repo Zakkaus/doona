@@ -222,7 +222,8 @@ export function useDnsCacheTab(domain: string) {
 
 // The statistics tab: the latest page of the log, unfiltered, the same records the log tab opens with, and the cache.
 export function useDnsStatsTab(enabled: boolean | undefined) {
-  const log = useDnsLog({}, enabled === true);
+  // A kept tab stays mounted while hidden; its log is read only while the tab is on screen.
+  const log = useDnsLog({}, enabled === true, !useTabShown());
   const resources = useCapabilities().data?.resources;
   // The upstreams the statistics chart, and the rules that pick them, are written in the configuration's `dns` section.
   const configReadable = offered(resources, 'config', {whileLoading: false});
@@ -275,7 +276,7 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
   if (!srcInvalid && parsedSrc !== validSrc) setValidSrc(parsedSrc);
   const filter = {name: useDebounced(name), type, src: srcInvalid ? validSrc : parsedSrc};
   const key = JSON.stringify(filter);
-  const log = useDnsLog(filter, enabled === true);
+  const log = useDnsLog(filter, enabled === true, !useTabShown());
   const [held, setHeld] = useState<NonNullable<typeof log.data> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const paging = useAction<'older'>({scope: key});
