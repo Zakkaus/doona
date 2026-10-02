@@ -42,10 +42,12 @@ type NodeTableInput = {
   onAdd: () => void;
   onNewGroup: (node: Node) => void;
   onRemove: (node: Node) => void;
+  // Whether the node's declaring source rules out removing it here.
+  inInclude: (node: Node) => boolean;
   edit: (node: Node) => (() => void) | null;
 };
 export function useNodeTable(input: NodeTableInput) {
-  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf, edit} = input;
+  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf, edit, inInclude} = input;
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -118,10 +120,11 @@ export function useNodeTable(input: NodeTableInput) {
         entries.filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name)).map(entry => ({id: entry.name, label: entry.name})),
       join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
+      removeReason: inInclude(node) ? t('nodes.removeInclude') : null,
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, edit]
+    [names, lang, sourceOf, canProbe, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
@@ -179,6 +182,7 @@ export type NodeTableView = {
     menu: () => Array<{id: string; label: string}>;
     join: (key: string) => void;
     removable: boolean;
+    removeReason: string | null;
     remove: () => void;
     edit: (() => void) | null;
   }>;

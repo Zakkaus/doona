@@ -909,6 +909,7 @@
   "nodes.refreshed": "{name} 已更新，{n} 个节点",
   "nodes.refreshedDegraded": "{name}：节点已应用，但数据路径未恢复，经用户空间代理的新连接会被拒绝。详见系统状态页。",
   "nodes.remove": "移除 {name}",
+  "nodes.removeInclude": "声明于主配置文件以外的文件，请在该文件中移除。",
   "nodes.removeNodeHelp": "从主配置的 node 区段删除，并重载。",
   "nodes.removeNodeTitle": "移除节点 {name}",
   "nodes.removeProviderHelp": "从主配置删除此节点来源及其节点，并重载。",

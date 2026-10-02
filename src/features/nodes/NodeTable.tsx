@@ -121,7 +121,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
               </ChoiceMenu>
             )}
             {row.removable && (
-              <Button small quiet icon isDisabled={busy} label={row.removeLabel} onPress={row.remove}>
+              <Button small quiet icon isDisabled={busy || !!row.removeReason} tip={row.removeReason ?? undefined} label={row.removeLabel} onPress={row.remove}>
                 <Close />
               </Button>
             )}

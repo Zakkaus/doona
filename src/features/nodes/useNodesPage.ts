@@ -19,6 +19,7 @@ import {
   subscriptionPlace,
   subscriptionActionKind,
   nodeEditState,
+  declaredInInclude,
   subscriptionRemoval,
   nodeFormReason,
   nodeSource,
@@ -158,6 +159,8 @@ export function useNodesPage({go, query}: PageProps) {
   );
   // Every source on this page is written through the one shared editor, so its busy flag covers each declaring source.
   const joinable = useMemo(() => joinableGroups(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
+  const nodeInInclude = useCallback((node: Node) => declaredInInclude(authored.filter(item => item.entry.name === node.name)), [authored]);
+  const providerInInclude = useCallback((item: ProviderRow) => declaredInInclude(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : []), [declared]);
   const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -395,6 +398,7 @@ export function useNodesPage({go, query}: PageProps) {
     refreshAll,
     onAdd: () => open({kind: 'provider'}),
     onRemove: item => open({kind: 'removeProvider', item}),
+    inInclude: providerInInclude,
     editAction
   });
   const nodeTable = useNodeTable({
@@ -427,6 +431,7 @@ export function useNodesPage({go, query}: PageProps) {
     onAdd: addNode,
     onNewGroup: newGroup,
     onRemove: removeNode,
+    inInclude: nodeInInclude,
     edit: nodeEdit
   });
   const tabs = nodesTabs(resources);

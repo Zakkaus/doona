@@ -60,6 +60,34 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await expect(page.locator('.rp-toolbar').first()).toContainText('42');
 });
 
+test('include declarations block removal even when the main source also declares them', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const reason = 'Declared outside the main configuration file. Remove it from that file.';
+  const content = "subscription {\n  edge: 'https://edge.example.net/sub'\n}\nnode {\n  'eu-01': 'trojan://demo@eu-01.example.net:443#eu-01'\n}\n";
+  await api.pollOperation(await api.createConfigSource('config.d/edge.dae', content));
+  await page.goto('/#/nodes?provider=inline');
+  const removeNode = (name: string) => page.getByRole('button', {name: `Remove ${name}`, exact: true});
+  await expect(removeNode('hk-01')).toBeEnabled();
+  await expect(removeNode('eu-01')).toBeDisabled();
+  const sources = page.locator('.rp-table').first();
+  const harbor = await moreItem(sources, 'Remove harbor', 'More actions for harbor');
+  await expect(harbor).not.toHaveAttribute('aria-disabled', 'true');
+  await page.keyboard.press('Escape');
+  const edge = await moreItem(sources, 'Remove edge', 'More actions for edge');
+  await expect(edge).toHaveAttribute('aria-disabled', 'true');
+  await expect(edge).toContainText(reason);
+  await page.keyboard.press('Escape');
+
+  const duplicate =
+    "subscription {\n  harbor: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n}\nnode {\n  hk-01: 'vless://demo@hk-01.example.net:443?security=tls#hk-01'\n}\n";
+  await api.pollOperation(await api.createConfigSource('config.d/duplicate.dae', duplicate));
+  await page.reload();
+  await expect(removeNode('hk-01')).toBeDisabled();
+  const duplicatedProvider = await moreItem(sources, 'Remove harbor', 'More actions for harbor');
+  await expect(duplicatedProvider).toHaveAttribute('aria-disabled', 'true');
+  await expect(duplicatedProvider).toContainText(reason);
+});
+
 // The contract creates a provider unfetched; the page refreshes it right away so the person sees nodes, not "stale".
 test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
   await page.goto('/#/nodes?tab=list');

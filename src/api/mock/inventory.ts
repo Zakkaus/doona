@@ -10,6 +10,8 @@ import type {MockGeodataState} from './geodata';
 import {activateInventory, writeGroupConfig} from './activation';
 import {quote} from '../../dae/text';
 import {quoteName} from '../../dae/groups';
+import {readNodeEntries} from '../../dae/nodes';
+import {readSubscriptionEntries} from '../../dae/subscriptions';
 
 // The backend refuses a value the configuration cannot hold instead of altering it.
 function configLine(format: () => string): string {
@@ -20,7 +22,15 @@ function configLine(format: () => string): string {
   }
 }
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Removal edits the main source only, as honk does.
+const removedFromMain = (find: (text: string) => {from: number; to: number} | undefined) => (text: string) => {
+  const entry = find(text);
+  if (!entry) throw new ApiError(404, 'capability_not_supported', 'Only entries of the main source can be removed');
+  const start = text.lastIndexOf('\n', entry.from - 1) + 1;
+  const end = text.indexOf('\n', entry.to) + 1;
+  const whole = /^[ \t\r]*$/.test(text.slice(start, entry.from)) && end > 0 && /^[ \t\r]*$/.test(text.slice(entry.to, end - 1));
+  return whole ? text.slice(0, start) + text.slice(end) : text.slice(0, entry.from) + text.slice(entry.to);
+};
 type InventoryApi = Pick<
   Api,
   | 'nodes'
@@ -290,8 +300,7 @@ export function createInventory(
       if (index < 0) return {deleted: 0};
       if (providers[index].kind === 'inline') throw new ApiError(404, 'capability_not_supported', 'The inline provider is the node section itself');
       const provider = providers[index];
-      const name = escapeRegExp(provider.name);
-      const activate = await editSource(text => text.replace(new RegExp(`^\\s*${name}:\\s*\\{\\n[\\s\\S]*?\\n\\s*\\}\\n|^\\s*${name}:.*\\n`, 'm'), ''));
+      const activate = await editSource(removedFromMain(text => readSubscriptionEntries(text).find(entry => entry.tag === provider.name)));
       log('info', 'honk::subscription', 'Subscription removed.', {provider: provider.name});
       const finish = () => {
         activate();
@@ -326,7 +335,7 @@ export function createInventory(
       if (!node) return {deleted: 0};
       if (node.provider_id !== 'inline')
         throw new ApiError(404, 'capability_not_supported', 'Only inline nodes can be deleted; refresh or delete the provider instead');
-      const activate = await editSource(text => text.replace(new RegExp(`^\\s*'${escapeRegExp(node.name)}':.*\\n`, 'm'), ''));
+      const activate = await editSource(removedFromMain(text => readNodeEntries(text).find(entry => entry.name === node.name)));
       log('info', 'honk::config', 'Node removed.', {node: node.name});
       const finish = () => {
         activate();

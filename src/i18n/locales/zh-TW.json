@@ -909,6 +909,7 @@
   "nodes.refreshed": "{name} 已更新，{n} 個節點",
   "nodes.refreshedDegraded": "{name}：節點已套用，但資料路徑未恢復，經使用者空間代理的新連線會被拒絕。詳見系統狀態頁。",
   "nodes.remove": "移除 {name}",
+  "nodes.removeInclude": "宣告於主設定檔以外的檔案，請在該檔案中移除。",
   "nodes.removeNodeHelp": "從主組態的 node 區段刪除，並重載。",
   "nodes.removeNodeTitle": "移除節點 {name}",
   "nodes.removeProviderHelp": "從主組態刪除此節點來源及其節點，並重載。",

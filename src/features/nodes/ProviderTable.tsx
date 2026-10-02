@@ -69,7 +69,18 @@ export function ProviderTable({model: m}: {model: ProviderTableView}) {
                     : row.action?.kind === 'open'
                       ? [{id: 'open', label: t('rule.openSource'), onAction: row.action.run}]
                       : []),
-                  ...(row.removable ? [{id: 'remove', label: row.removeLabel, negative: true, isDisabled: busy, onAction: row.remove}] : [])
+                  ...(row.removable
+                    ? [
+                        {
+                          id: 'remove',
+                          label: row.removeLabel,
+                          negative: true,
+                          isDisabled: busy || !!row.removeReason,
+                          reason: row.removeReason ?? undefined,
+                          onAction: row.remove
+                        }
+                      ]
+                    : [])
                 ]}
               />
             )}
