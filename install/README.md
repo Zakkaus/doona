@@ -63,7 +63,7 @@ as its own commit before the package.
 The release workflow runs `tools/package.sh --git-version` to produce the program and fonts archives in the table.
 The program archive has `index.html`, assets, `LICENSE`, `LICENSES/`, `NOTICE` and `THIRD-PARTY-NOTICES.txt` at its
 root; `THIRD-PARTY-NOTICES.txt` carries the licence texts of the npm packages compiled into the build. The separate font
-archive has a `fonts/` directory containing the subsets, `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
+archive has a `fonts/` directory containing the Vite-bundled [Fontsource subsets](../docs/fonts.md), `OFL.txt` and `README`. OpenWrt and Alpine unpack these into
 separate staging directories and install them under `/usr/share/doona` and `/usr/share/doona/fonts`.
 Nix unpacks the release archives under `$out/share/doona`. nfpm stages the same archives for its packages.
 The default local invocation uses the version in `package.json`.

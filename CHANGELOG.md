@@ -18,6 +18,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
+- Internal: the Noto fonts come from Fontsource packages instead of 208 committed files; the built fonts are unchanged. (#351)
 - Internal: floating widget contents are split by widget family; no visible change. (#344)
 - Node actions put group choices in an Add to group submenu without policy descriptions, with New group after a separator. Native policy labels follow honk's normalised behaviour in all three languages. (#336)
 - Count labels name subscriptions, rules, notifications, connections, nodes and DNS lookups instead of appending counts in parentheses, with English singular and plural forms. (#339)

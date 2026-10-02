@@ -9,9 +9,12 @@ Source: https://github.com/adobe/react-spectrum
 Noto Sans TC and Noto Sans SC
 Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name
 'Source'.
-The fonts in public/fonts are the Google Fonts subsets of Noto Sans TC and SC
-from https://github.com/notofonts/noto-cjk.
-Licensed under the SIL Open Font License, Version 1.1; see public/fonts/OFL.txt.
+The self-hosted subsets are bundled from the npm packages
+@fontsource-variable/noto-sans-tc and @fontsource-variable/noto-sans-sc:
+https://fontsource.org/fonts/noto-sans-tc
+https://fontsource.org/fonts/noto-sans-sc
+Upstream: https://github.com/notofonts/noto-cjk.
+Licensed under the SIL Open Font License, Version 1.1; see LICENSES/OFL-1.1.txt.
 
 src/ui/styles/palettes/qiangguo/wall-*.webp are cropped, tinted and faded from
 "Great Wall of China" by j4p4n, public domain, via Openclipart:

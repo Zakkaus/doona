@@ -65,6 +65,17 @@ export default defineConfig({
     react(),
     startupTextPlugin(),
     {
+      name: 'font-notices',
+      generateBundle() {
+        for (const [fileName, path] of [
+          ['fonts/OFL.txt', 'LICENSES/OFL-1.1.txt'],
+          ['fonts/README', 'docs/fonts.md']
+        ]) {
+          this.emitFile({type: 'asset', fileName, source: readFileSync(new URL(path, import.meta.url), 'utf8')});
+        }
+      }
+    },
+    {
       // The stored theme and language are stamped on <html> by an inline script before the stylesheet can paint,
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
       name: 'first-paint-stamp',
@@ -137,6 +148,8 @@ export default defineConfig({
   // Catalogues are read whole as their default export, so each key needs no named export of its own.
   json: {namedExports: false},
   build: {
+    // Even small slices stay separate so unicode-range controls their downloads.
+    assetsInlineLimit: file => (/noto-sans-(tc|sc)-.*\.woff2$/.test(file) ? false : undefined),
     manifest: true,
     target: ['es2022'],
     cssTarget: ['chrome120', 'safari17', 'firefox121', 'edge120'],
@@ -146,6 +159,9 @@ export default defineConfig({
         index: fileURLToPath(new URL('index.html', import.meta.url))
       },
       output: {
+        // Keep optional CJK subsets out of the shell precache and in the separate font archive.
+        assetFileNames: asset =>
+          asset.names.some(name => /^noto-sans-(tc|sc)-.*\.woff2$/.test(name)) ? 'fonts/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]',
         // Locale catalogues are named apart, so the service worker can leave them out of its precache.
         chunkFileNames: chunk =>
           chunk.facadeModuleId && /\/src\/i18n\/locales\//.test(chunk.facadeModuleId) ? 'assets/locale-[name]-[hash].js' : 'assets/[name]-[hash].js',

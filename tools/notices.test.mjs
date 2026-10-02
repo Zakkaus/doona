@@ -84,8 +84,8 @@ it('writes sorted notices of the production closure and lists packages without a
 });
 
 it('fails when NOTICE cites a licence file the archive lacks', () => {
-  const stage = tree({NOTICE: 'See LICENSES/CC-BY-3.0.txt and LICENSES/OFL-1.1.txt.\n'});
-  expect(() => stageNotices(stage, checkout())).toThrow('NOTICE cites licence files the program archive lacks: LICENSES/OFL-1.1.txt');
+  const stage = tree({NOTICE: 'See LICENSES/CC-BY-3.0.txt and LICENSES/LicenseRef-Missing.txt.\n'});
+  expect(() => stageNotices(stage, checkout())).toThrow('NOTICE cites licence files the program archive lacks: LICENSES/LicenseRef-Missing.txt');
 });
 
 it('checks every LICENSES/ path NOTICE cites, whatever its extension or depth', () => {

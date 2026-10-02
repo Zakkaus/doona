@@ -149,4 +149,4 @@ Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/i
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). Noto Sans TC and SC are copyright Adobe and licensed under the [Open Font License](public/fonts/OFL.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0). The duck is the maintainer's own artwork.
+[GPL-3.0-only](LICENSE). [Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0). The duck is the maintainer's own artwork.

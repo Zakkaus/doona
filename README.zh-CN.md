@@ -149,4 +149,4 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ## 许可与致谢
 
-[GPL-3.0-only](LICENSE)。Noto Sans TC 与 SC 版权归 Adobe 所有，采用 [Open Font License](public/fonts/OFL.txt)；[NOTICE](NOTICE) 注明 Adobe Spectrum 图标（Apache-2.0）。鸭子是维护者自己画的。
+[GPL-3.0-only](LICENSE)。[Noto Sans TC 与 SC](docs/fonts.md) 由 Fontsource npm 包提供，版权归 Adobe 所有，采用 [Open Font License](LICENSES/OFL-1.1.txt)；[NOTICE](NOTICE) 注明 Adobe Spectrum 图标（Apache-2.0）。鸭子是维护者自己画的。

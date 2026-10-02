@@ -1,3 +1,5 @@
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
 This Font Software is licensed under the SIL Open Font License,
 Version 1.1.
 
