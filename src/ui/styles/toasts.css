@@ -24,7 +24,7 @@
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
-  z-index: 20;
+  z-index: var(--rp-z-toast);
   outline: none;
 }
 .rp-toasts[data-placement='top'] {
@@ -79,8 +79,8 @@
   grid-template-areas:
     'icon msg close'
     '. foot foot';
-  padding-block: 12px;
-  padding-inline: 16px 8px;
+  padding-block: var(--rp-space-3);
+  padding-inline: var(--rp-space-4) var(--rp-space-2);
   min-height: 56px;
   min-width: min(336px, 100vw - 32px);
   max-width: min(560px, 100vw - 32px);

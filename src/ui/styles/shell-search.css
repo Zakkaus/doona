@@ -8,7 +8,7 @@
 }
 @media (min-width: 1024px) {
   .rp-shell {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: var(--rp-sidebar-width) minmax(0, 1fr);
   }
 }
 /* The top bar's height; toasts placed at the top start below it. */
@@ -38,7 +38,7 @@
 }
 @media (min-width: 1024px) {
   .rp-top {
-    grid-template-columns: 216px minmax(0, 1fr) auto;
+    grid-template-columns: calc(var(--rp-sidebar-width) - var(--rp-space-6)) minmax(0, 1fr) auto;
   }
 }
 .rp-brand {
@@ -279,7 +279,7 @@
   margin: 0;
 }
 /* Below 400px the brand, the compact search and the five actions no longer fit with the wide gutter: the bar
-   would push the whole page sideways. The gutter and the gaps narrow, and the version drops out of the top bar's brand. */
+   would push the whole page sideways. The gutter and the gaps narrow. */
 @media (max-width: 399px) {
   .rp-top {
     padding: 0 var(--rp-space-3);
@@ -287,9 +287,6 @@
   }
   .rp-brand {
     gap: var(--rp-space-2);
-  }
-  .rp-brand .rp-brand-version {
-    display: none;
   }
   .rp-main {
     padding-inline: var(--rp-space-4);

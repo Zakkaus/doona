@@ -147,7 +147,7 @@
 }
 .rp-waffle .grid > span {
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
 }
 @container rp-waffle (width >= 480px) {
   .rp-waffle .body {
@@ -176,7 +176,7 @@
 .rp-waffle .legend .sw {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
 }
 .rp-waffle .legend b {
   font-variant-numeric: tabular-nums;
@@ -344,7 +344,7 @@
 }
 .rp-heatmap .cell {
   height: 22px;
-  border-radius: 3px;
+  border-radius: var(--rp-r-xs);
   background: var(--rp-fill);
 }
 .rp-heatmap .cell.t1 {
@@ -484,7 +484,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .rp-charttip-bounded {
-    transition: transform var(--rp-duration-slow) ease;
+    transition: transform var(--rp-duration-slow) var(--rp-ease);
   }
 }
 

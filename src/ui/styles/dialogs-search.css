@@ -54,7 +54,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 12dvh;
-  z-index: 10;
+  z-index: var(--rp-z-modal);
 }
 .rp-input {
   display: flex;
