@@ -92,7 +92,8 @@ export function parseGroupConditions(source: string): GroupConditionRow[] | null
               .map(value => value.trim())
               .filter(Boolean)
           : [value];
-      if (!values.length) return null;
+      // A value with an apostrophe cannot be written back as a quoted argument, so the filter stays text.
+      if (!values.length || !values.every(isQuotable)) return null;
       const previous = terms.at(-1);
       if (previous?.kind === kind) previous.value = conditionValues([...parseConditionValues(previous.value)!, ...values]);
       else terms.push({id: nextId++, kind, value: conditionValues(values)});

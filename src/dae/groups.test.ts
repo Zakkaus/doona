@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   addSubtagsToGroup,
+  removeSubtagsFromGroup,
   groupAdmits,
   groupsNamingTag,
   groupNameProblem,
@@ -259,6 +260,14 @@ describe('group filters decide membership as honk does', () => {
     expect(groupAdmits(["!subtag(regex: '.*')"], own)).toBe(true);
     expect(groupAdmits(["subtag(regex: '.*')"], own)).toBe(false);
   });
+  it.each([
+    ["name(regex: '\\p{Han}')", String.fromCodePoint(0x9999, 0x6e2f) + '01', true],
+    ["name(regex: '\\p{Han}')", 'HK 01', false],
+    ["name(regex: '(?i)^\\pL+ \\d')", 'hk 01', true],
+    ["name(regex: '^\\\\pL')", 'HK 01', false]
+  ])('matches Unicode regex %s against %s', (filter, name, admitted) => {
+    expect(groupAdmits([filter], {name, subscription_tag: null})).toBe(admitted);
+  });
   it('holds every node without a filter, none with only subgroups, and a built-in only by exact name', () => {
     expect(groupAdmits([], jp)).toBe(true);
     expect(groupAdmits(["group('hk')"], jp)).toBe(false);
@@ -365,4 +374,15 @@ group { dup { filter: name(current) policy: select final: block } }`;
   const added = addSubtagsToGroup(source, 'dup', ['new']);
   expect(added).toContain(earlier);
   expect(readGroupEntries(added).at(-1)).toMatchObject({filters: ['name(current)', 'subtag(new)'], policy: 'select', final: 'block'});
+});
+
+it.each([
+  ['renames inside a spaced list', "subtag(  'old', keep  )", ['subtag(  keep, new  )']],
+  ['leaves an untouched second list byte for byte', 'subtag(old)\n            filter: subtag(  untouched  )', ['subtag(new)', 'subtag(  untouched  )']],
+  ['keeps the separator style of remaining values', 'subtag(a ,old,  b)', ['subtag(a ,b, new)']],
+  ['skips an empty list before the one holding the value', 'subtag()\n            filter: subtag(old)', ['subtag()', 'subtag(new)']]
+])('splices a subscription rename into exact filters: %s', (_, filters, expected) => {
+  const source = `group {\n    g {\n        filter: ${filters}\n        policy: min\n    }\n}\n`;
+  const renamed = removeSubtagsFromGroup(addSubtagsToGroup(source, 'g', ['new']), 'g', ['old']);
+  expect(readGroupEntries(renamed)[0].filters).toEqual(expected);
 });

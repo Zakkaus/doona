@@ -36,10 +36,17 @@ describe('visual group conditions', () => {
     const nodes = ['hk-01', 'HK 01', 'AUS 01', 'CN2 回国 HK', 'shk-01'].map((name, i) => ({name, subscription_tag: i === 1 ? 'free' : 'paid'}));
     expect(nodes.filter(compileFilters([first, `name('AUS 01')`])).map(node => node.name)).toEqual(['hk-01', 'AUS 01', 'CN2 回国 HK']);
   });
-  it.each(['group(auto) && name(hk)', '!group(auto)', 'name(hk) || name(jp)', 'unknown(hk)', 'name(hk) &&', 'name()', "name('unterminated)"])(
-    'retains unrepresentable source as raw: %s',
-    source => expect(parseGroupConditions(source)).toBeNull()
-  );
+  it.each([
+    'group(auto) && name(hk)',
+    '!group(auto)',
+    'name(hk) || name(jp)',
+    'unknown(hk)',
+    'name(hk) &&',
+    'name()',
+    "name('unterminated)",
+    `name("O'Reilly", "other")`,
+    `name("O'Reilly")`
+  ])('retains unrepresentable source as raw: %s', source => expect(parseGroupConditions(source)).toBeNull());
   it('keeps incomplete values in drafts and refuses to serialize them', () => {
     const fresh = newGroupFilter();
     expect(groupFilterText(fresh)).toBeNull();
