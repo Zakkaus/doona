@@ -103,9 +103,7 @@ export function geodataRows(assets: GeoData['assets'], locale: string) {
     modifiedAt: asset.modified_at,
     sha: asset.sha256.slice(0, 12),
     shaTitle: asset.sha256,
-    source: asset.source_redacted ?? '—',
-    fetched: asset.fetched_url_redacted ?? '—',
-    verified: asset.verified === true
+    source: asset.source_redacted ?? '—'
   }));
 }
 export function profileView(
@@ -139,9 +137,7 @@ export function geodataUpdateReason({busy, loaded, failed}: {busy: boolean; load
   return !busy && !loaded && failed ? t('settings.geodataUnread') : null;
 }
 
-// Where the sources cannot be edited here but an update can run, the engine may take the download URLs from the
-// configuration file; the note names its settings and says what editing them here needs. Null where the engine does
-// not say so.
+// Where sources cannot be edited here, the engine may take download URLs from the configuration file.
 export function geodataFromConfig(
   capabilities: Capabilities | undefined,
   version: Pick<Version, 'engine'> | undefined,

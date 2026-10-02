@@ -21,6 +21,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
+- Settings removes the Backend actions navigation card and moves its geodata files table into the Geodata card; backend operations remain on their owning pages. (#365)
 - Internal: 39 icons share one SVG shell; no visible change. (#357)
 - Internal: update fast-uri and brace-expansion to address development-tool security advisories. (#359)
 - Internal: remove unused components, hooks and adapters and simplify the picker; no visible change. (#356)

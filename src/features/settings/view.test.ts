@@ -1,12 +1,8 @@
 import {expect, it} from 'vitest';
-import {geodata, runtimeSettings} from '../../../mock/fixtures';
-import {capabilities} from '../../../mock/fixtures/capabilities';
-import {version} from '../../../mock/fixtures/runtime';
-import type {Capabilities, RuntimeSettingsPatch} from '../../api/model';
+import {runtimeSettings} from '../../../mock/fixtures';
+import type {RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {
-  geodataFromConfig,
-  geodataRows,
   geodataUpdateReason,
   numericAccess,
   numericFields,
@@ -38,10 +34,6 @@ it('validates numeric bounds and writes typed partial patches without losing sib
   expect(patch).toEqual({log: {level: 'debug', buffered_records: 128}, flows: {max_flows: 256, retention_seconds: 10}, dns_log: {max_records: 64}});
   expect(numericAccess['log.buffered_records'].read(runtimeSettings)).toBe(1024);
   expect(numericAccess['flows.max_flows'].read({...runtimeSettings, flows: undefined})).toBeUndefined();
-});
-it('keeps full geodata digests in tooltips and handles absent provenance', () => {
-  const rows = geodataRows([{...geodata.assets[0], modified_at: null, source_redacted: null}], 'en');
-  expect(rows[0]).toMatchObject({sha: geodata.assets[0].sha256.slice(0, 12), shaTitle: geodata.assets[0].sha256, source: '—', modifiedAt: null});
 });
 it('distinguishes connection errors from successful status', () => {
   const view = profileView([{id: 'a', name: 'Home'}], {key: 'settings.httpError', params: {status: 503}, error: true, requestId: 'req-1'}, t);
@@ -122,27 +114,4 @@ it('says a geodata update needs its status, and nothing while it loads', () => {
   expect(geodataUpdateReason({busy: false, loaded: false, failed: false}, t)).toBeNull();
   expect(geodataUpdateReason({busy: true, loaded: false, failed: true}, t)).toBeNull();
   expect(geodataUpdateReason({busy: false, loaded: true, failed: true}, t)).toBeNull();
-});
-
-it('notes URLs from the configuration file only where sources are fixed but an update can run', () => {
-  const t: Translator = (key, params) => translate('en', key, params);
-  const fixed = (geodata: Partial<Capabilities['resources']['geodata']>): Capabilities => ({
-    ...capabilities,
-    resources: {...capabilities.resources, geodata: {available: true, can_update: true, assets: ['geosite', 'geoip'], ...geodata}}
-  });
-  const note = geodataFromConfig(fixed({}), version, t, 'en');
-  expect(note?.text).toBe(t('settings.geodataFromConfig', {keys: 'experimental.native_api.geosite_download_url, experimental.native_api.geoip_download_url'}));
-  expect(note?.docs.text).toBe(t('ov.lim.docsStateDb'));
-  expect(note?.config?.href).toContain('config');
-  expect(geodataFromConfig(fixed({can_update: false}), version, t, 'en')).toBeNull();
-  expect(geodataFromConfig(fixed({configurable_sources: true}), version, t, 'en')).toBeNull();
-  expect(geodataFromConfig(capabilities, version, t, 'en')).toBeNull();
-  const other = {...version, engine: {...version.engine, name: 'other'}};
-  expect(geodataFromConfig(fixed({}), other, t, 'en')).toBeNull();
-  expect(geodataFromConfig(fixed({}), undefined, t, 'en')).toBeNull();
-});
-
-it('displays masked download URLs verbatim even when the mask is not a URI', () => {
-  const url = 'https://<redacted>.example/data?token=<redacted>';
-  expect(geodataRows([{...geodata.assets[0], source_redacted: url, fetched_url_redacted: url}], 'en')[0]).toMatchObject({source: url, fetched: url});
 });

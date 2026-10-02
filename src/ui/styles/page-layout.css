@@ -297,7 +297,7 @@
     display: none;
   }
 }
-/* Backend actions: one labelled row per subsystem, buttons wrapping beside the label. */
+/* Settings geodata: labelled rows with controls wrapping beside the label. */
 .rp-ops {
   display: flex;
   flex-direction: column;
@@ -317,16 +317,16 @@
   gap: var(--rp-space-2);
   margin-top: var(--rp-space-2);
 }
+/* Configuration keys wrap rather than widen a phone card. */
+.rp-geodata-from-config {
+  overflow-wrap: anywhere;
+}
 /* Settings geodata: a lite source's missing categories and a failed update take their tone's text colour. */
 .rp-geodata-note.notice {
   color: var(--rp-notice-text);
 }
 .rp-geodata-note.negative {
   color: var(--rp-negative-text);
-}
-/* The configuration keys in the note are long unbroken names; they wrap anywhere rather than widen a phone card. */
-.rp-geodata-from-config {
-  overflow-wrap: anywhere;
 }
 /* One asset per line, wrapping, so its size, host and route read whole; the full URL is the tooltip. */
 .rp-geodata-details .rp-kv {

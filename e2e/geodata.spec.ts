@@ -392,18 +392,22 @@ for (const width of [320, 360])
     expect(buttonsBelowInput).toBe(true);
   });
 
-test('without configurable sources the page keeps the plain geodata table in the actions card', async ({page}) => {
-  const {capabilities} = await mockBackend(page);
+test('without configurable sources the Geodata card keeps its files, config note and one update action', async ({page}) => {
+  const {capabilities, sent} = await traffic(page);
   delete capabilities.resources.geodata.configurable_sources;
   await page.goto('/#/settings');
   await expect(page.getByRole('region', {name: t('settings.runtime')})).toBeVisible();
-  await expect(page.getByRole('region', {name: t('settings.geodata'), exact: true})).toHaveCount(0);
-  const actions = page.getByRole('region', {name: t('settings.actions')});
-  await expect(actions.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
-  await expect(actions.getByRole('button', {name: t('settings.geodataUpdate'), exact: true})).toBeVisible();
-  await expect(actions).not.toContainText(t('settings.geodataVerifiedYes'));
-  // honk takes the URLs from its configuration file then; the note names both keys and links the state database docs.
-  await expect(actions).toContainText('experimental.native_api.geosite_download_url');
-  await expect(actions.getByRole('link', {name: t('ov.lim.docsStateDb')})).toBeVisible();
-  await expect(actions.getByRole('link', {name: t('nav.config'), exact: true})).toHaveAttribute('href', /config/);
+  const geodata = section(page);
+  await expect(geodata.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
+  await expect(geodata.getByRole('button', {name: t('settings.geodataSource')})).toHaveCount(0);
+  await expect(geodata.getByRole('button', {name: t('settings.geodataReset')})).toHaveCount(0);
+  await expect(geodata).toContainText('experimental.native_api.geosite_download_url');
+  await expect(geodata.getByRole('link', {name: t('ov.lim.docsStateDb')})).toBeVisible();
+  await expect(geodata.getByRole('link', {name: t('nav.config'), exact: true})).toHaveAttribute('href', /config/);
+  const update = geodata.getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true});
+  await expect(update).toHaveCount(1);
+  await update.click();
+  await expect(page.locator('.rp-toast.positive', {hasText: t('settings.geodataUpdated')})).toBeVisible();
+  expect(sent).toEqual(['update']);
+  await expect(page.locator('#settings-actions')).toHaveCount(0);
 });

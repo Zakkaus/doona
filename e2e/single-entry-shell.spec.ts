@@ -39,41 +39,9 @@ test('the desktop theme shortcut stays in sync with the appearance editor', asyn
   await expect(page.locator('html')).toHaveAttribute('data-wordmark', 'plain');
 });
 
-for (const [label, hash, control] of [
-  ['System status', '#/overview?card=status', 'Suspend'],
-  ['Open DNS cache', '#/dns?tab=cache', 'Clear all cache'],
-  ['Open subscriptions', '#/nodes?tab=list', 'Update \\d+ subscription']
-]) {
-  test(`Settings jumps to ${label} without executing it`, async ({page}) => {
-    const {requests} = await mockBackend(page);
-    await page.goto('/#/settings?card=actions');
-    const actions = page.getByRole('region', {name: 'Backend actions'});
-    await expect(actions.getByRole('button', {name: label, exact: true})).toHaveCount(0);
-    await actions.getByRole('link', {name: label, exact: true}).click();
-    expect(new URL(page.url()).hash).toBe(hash);
-    await expect(page.getByRole('button', {name: new RegExp(`^${control}`)}).first()).toBeVisible();
-    expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
-  });
-}
-
-test('the close-all jump discards every previous connection filter and confirms the full scope', async ({page}) => {
+test('full-scope connections respect filters added before confirmation', async ({page}) => {
   const {requests} = await mockBackend(page);
-  await page.goto('/#/connections?tab=list&network=tcp&out=direct&rule=old&src=192.168.1.2&q=stale');
-  await expect(page.getByRole('button', {name: 'Clear filters', exact: true})).toBeVisible();
-  await page.locator('.rp-nav[href="#/settings"]').click();
-  await page.getByRole('region', {name: 'Backend actions'}).getByRole('link', {name: 'Open connections'}).click();
-  const params = new URLSearchParams(new URL(page.url()).hash.split('?')[1]);
-  expect(Object.fromEntries(params)).toEqual({tab: 'list', network: 'all', out: 'all', rule: 'all', src: '', q: '', scope: 'all'});
-  await expect(page.getByRole('button', {name: 'Clear filters', exact: true})).toHaveCount(0);
-  await page.getByRole('button', {name: 'Close all', exact: true}).click();
-  await expect(page.getByRole('alertdialog')).toContainText('any device');
-  expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
-});
-
-test('a full-scope connection jump respects filters added before confirmation', async ({page}) => {
-  const {requests} = await mockBackend(page);
-  await page.goto('/#/settings');
-  await page.getByRole('region', {name: 'Backend actions'}).getByRole('link', {name: 'Open connections'}).click();
+  await page.goto('/#/connections?tab=list&network=all&out=all&rule=all&src=&q=&scope=all');
   await page.getByRole('searchbox', {name: 'Filter', exact: true}).fill('telegram');
   await page.getByRole('button', {name: 'Close all', exact: true}).click();
   await expect(page.getByRole('alertdialog')).toContainText(/Closes the [\d,]+ listed connection/);

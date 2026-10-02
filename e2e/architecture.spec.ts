@@ -609,11 +609,7 @@ test('backend inventory failures expose independent retries without claiming zer
   await page.route('**/api/v1/connections?*', async route =>
     route.fulfill(failConnections ? failure('Connection inventory unavailable') : {json: await api.connections({detail: 'full', limit: 1000})})
   );
-  await page.goto('/#/settings');
-  const card = page.getByRole('region', {name: 'Backend actions'});
-  await expect(card.getByRole('link', {name: 'Open subscriptions', exact: true})).toBeEnabled();
-  await expect(card.getByRole('link', {name: 'Open connections', exact: true})).toBeEnabled();
-  await card.getByRole('link', {name: 'Open subscriptions', exact: true}).click();
+  await page.goto('/#/nodes?tab=list');
   const providers = page.getByRole('alert').filter({hasText: 'Provider inventory unavailable'});
   await expect(providers).toBeVisible();
   await expect(page.getByRole('button', {name: /^Update .*subscription/})).toBeDisabled();
@@ -621,8 +617,7 @@ test('backend inventory failures expose independent retries without claiming zer
   failProviders = false;
   await providers.getByRole('button', {name: 'Retry', exact: true}).click();
   await expect(page.getByRole('button', {name: 'Update 1 subscription', exact: true})).toBeEnabled();
-  await page.goto('/#/settings');
-  await card.getByRole('link', {name: 'Open connections', exact: true}).click();
+  await page.goto('/#/connections?tab=list');
   const connections = page.getByRole('alert').filter({hasText: 'Connection inventory unavailable'});
   await expect(connections).toBeVisible();
   await expect(page.getByRole('button', {name: 'Close all', exact: true})).toBeDisabled();
