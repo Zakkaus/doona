@@ -219,10 +219,12 @@
   padding: var(--rp-control-block-inset) var(--rp-control-inset);
   position: relative;
 }
-/* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. */
+/* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. The
+   track hugs its items in a column or a grid too, where a flex or grid item would otherwise stretch. */
 .rp-segfit {
   position: relative;
   display: inline-flex;
+  width: fit-content;
   min-width: 0;
   max-width: 100%;
 }

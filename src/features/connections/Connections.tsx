@@ -148,7 +148,7 @@ export function Connections(props: PageProps) {
               <Kv items={cur.fields} />
               <Kv
                 items={[
-                  [t('ui.outbound'), <OutboundTag name={cur.outbound} />],
+                  [t('ui.outbound'), <OutboundTag {...cur.outboundTag} />],
                   [t('conn.chain'), cur.chain]
                 ]}
               />

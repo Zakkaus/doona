@@ -31,8 +31,8 @@
 .rp-widget-label {
   margin: 0;
 }
-/* Controls keep their own width, as on the main pages: a segmented control or a button does not stretch. */
-.rp-widget > :is(.rp-segfit, .rp-cluster, .rp-btn) {
+/* Controls keep their own width, as on the main pages: a button does not stretch. */
+.rp-widget > :is(.rp-cluster, .rp-btn) {
   align-self: flex-start;
 }
 .rp-widget-row {
