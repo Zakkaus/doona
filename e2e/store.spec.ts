@@ -65,9 +65,7 @@ test('query simulation traces the first IPv4 and IPv6 answer and lists every ans
   const traced = requests
     .filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace'))
     .map(request => request.postDataJSON().input.dst_ip);
-  expect(traced.every(ip => ip === '192.0.2.10' || ip === '2001:db8::10')).toBe(true);
-  expect(traced.length).toBeGreaterThan(0);
-  expect(traced.length).toBeLessThanOrEqual(2);
+  expect([...traced].sort()).toEqual(['192.0.2.10', '2001:db8::10']);
 });
 
 // Five-second polls are for what changes by the second; these lists and rings refresh far less often.

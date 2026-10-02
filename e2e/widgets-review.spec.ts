@@ -1,6 +1,7 @@
 import {panel, editPanel} from './widget-helpers';
 import {test, expect, mockBackend, expectLoadFailures} from './fixtures';
 import {defaults, defaultWidget} from '../src/shell/widgets/layout';
+import {readMode} from '../src/dae/outboundMode';
 
 test.use({widgets: true, serviceWorkers: 'block'});
 
@@ -22,7 +23,7 @@ test('metric forms change the renderer without acquiring history for key-value c
   await expect(panel(page).locator('.rp-compact-chart svg').first()).toBeVisible();
 });
 
-test('panel mode and global target stage one shared draft until Apply', async ({page}) => {
+test('panel mode stages a draft until Apply and writes the chosen mode', async ({page}) => {
   const backend = await mockBackend(page);
   await page.addInitScript(value => localStorage.setItem('doona-widgets', JSON.stringify(value)), {
     ...defaults(),
@@ -35,7 +36,8 @@ test('panel mode and global target stage one shared draft until Apply', async ({
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   expect(backend.requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
   await panel(page).getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect.poll(() => backend.requests.filter(request => request.method() !== 'GET').length).toBeGreaterThan(0);
+  await expect.poll(async () => readMode((await backend.api.config()).sources.find(source => source.kind === 'main')!.content!).mode).toBe('direct');
+  await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
 });
 
 test('visible panels keep the gallery code unloaded until editing', async ({page}) => {
