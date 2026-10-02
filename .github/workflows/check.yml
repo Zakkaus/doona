@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     outputs:
       lane: ${{ steps.route.outputs.lane }}
@@ -29,7 +29,7 @@ jobs:
   check-lite:
     needs: [changes]
     if: needs.changes.outputs.lane == 'docs'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,7 +46,7 @@ jobs:
   check:
     needs: [changes]
     if: needs.changes.outputs.lane == 'full'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,7 +74,7 @@ jobs:
   e2e:
     needs: [changes]
     if: needs.changes.outputs.lane == 'full'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     # Update the tag and digest together with @playwright/test.
     container:
@@ -135,7 +135,7 @@ jobs:
   merge-reports:
     if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
     needs: [e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -169,7 +169,7 @@ jobs:
   ci-ok:
     needs: [changes, check-lite, check, e2e, merge-reports]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     steps:
       - name: Require the selected lane
@@ -191,7 +191,7 @@ jobs:
 
   nightly:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 25
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
@@ -239,7 +239,7 @@ jobs:
   notify-nightly:
     needs: [ci-ok, nightly]
     if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (needs.ci-ok.result != 'success' || needs.nightly.result != 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     permissions:
       contents: read
