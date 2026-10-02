@@ -134,7 +134,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     setToken(value);
     resetProbe();
   };
-  const persist = (profiles: Profile[], activeId: string, destination?: {route: RoutePath; query: string}) => {
+  const write = (profiles: Profile[], activeId: string, destination?: {route: RoutePath; query: string}) => {
     if (saveLock.current) return;
     saveLock.current = true;
     flushSync(() => setSaving(true));
@@ -158,6 +158,9 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };
+  // Whatever other form holds unsaved changes is answered for before the saved backend changes, not at the reload.
+  const persist = (profiles: Profile[], activeId: string, destination?: {route: RoutePath; query: string}) =>
+    guard.leave(() => write(profiles, activeId, destination));
   const editedProfiles = () => {
     const base = validate(api);
     if (base === null) return null;

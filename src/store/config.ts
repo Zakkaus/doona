@@ -132,7 +132,10 @@ export function useConfigCreate(refetch: () => void) {
   };
 }
 
-export function useConfigEditor(refetch: () => void, {rethrow = false, shared}: {rethrow?: boolean; shared?: string} = {}) {
+// `refetch` may return the read it starts: the write then settles once the new configuration is read back, so a caller that
+// drops its draft on success is not left showing the old text with the old digest. A read that fails after the write
+// landed ends the action with `ui.writtenNotRead`, so the draft stays until the read succeeds.
+export function useConfigEditor(refetch: () => unknown, {rethrow = false, shared}: {rethrow?: boolean; shared?: string} = {}) {
   const api = getApi();
   const capabilities = useCapabilities().data;
   const validation = capabilities?.resources.config_validate;
@@ -198,8 +201,10 @@ export function useConfigEditor(refetch: () => void, {rethrow = false, shared}: 
           signal.throwIfAborted();
           const operation = await settle(api, accepted, signal);
           signal.throwIfAborted();
-          refetch();
-          return {result: finished(operation, 'reload', {written: true})};
+          const read = (await refetch()) as {ok?: boolean; error?: Error} | undefined;
+          const result = finished(operation, 'reload', {written: true});
+          if (read?.ok === false && read.error?.name !== 'AbortError') throw new LocalError('ui.writtenNotRead');
+          return {result};
         }),
       [api, canValidate, validateConfig, writeMax, body, run, refetch]
     )

@@ -1,14 +1,38 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {useLinked} from '../ui/hooks';
 
-export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number}>({setDirty: () => {}, revision: 0});
+export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number; ask: (action: () => void) => void}>({
+  setDirty: () => {},
+  revision: 0,
+  ask: action => action()
+});
 
 const drafts = new WeakMap<(dirty: boolean) => void, Set<symbol>>();
+
+// The shell calls this once the person agreed to lose every draft: their reload prompts stop at once, ahead of the
+// forms dropping the drafts themselves.
+export function dropDrafts(setDirty: (dirty: boolean) => void) {
+  drafts.get(setDirty)?.clear();
+}
+
+// Runs `action` at once when no form but `own` holds unsaved changes; otherwise the shell asks to discard them first and
+// runs it after they are gone, so an action that changes the saved backend or credentials never lands before the answer.
+export function useLeave(own?: symbol) {
+  const {setDirty, ask} = useContext(DraftContext);
+  return useCallback(
+    (action: () => void) => {
+      if ([...(drafts.get(setDirty) ?? [])].some(owner => owner !== own)) ask(action);
+      else action();
+    },
+    [setDirty, ask, own]
+  );
+}
 
 // `onDiscard` runs when the user confirms leaving with unsaved changes; the caller drops its draft there.
 export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
   const {setDirty, revision} = useContext(DraftContext);
   const [id] = useState(() => Symbol());
+  const leave = useLeave(id);
   const clear = useCallback(() => {
     const owners = drafts.get(setDirty);
     owners?.delete(id);
@@ -30,7 +54,7 @@ export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
     };
   }, [dirty, id, setDirty, clear, revision]);
   useLinked(revision, onDiscard);
-  return {clear, revision};
+  return {clear, revision, leave};
 }
 
 // Numbers each opening of a dialog, so a request that settles after its dialog closed, or after it was opened again,

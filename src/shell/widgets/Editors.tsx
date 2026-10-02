@@ -12,7 +12,7 @@ import Settings from '../../ui/icons/Settings';
 import {ModuleGallery, ModuleInspector} from './ModuleControls';
 import {dashboardDefaults, dashboardItems, footprint, mapWidgets, type DashboardLayout} from './dashboardLayout';
 import {placeWidget, sizesFor, stepWidget} from './dashboardEdit';
-import {instanceId, defaults, registry, restoredPanel, type Widget, type WidgetId} from './layout';
+import {instanceId, defaults, registry, restoredPanel, changesPanel, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
 
 type Draft = {draft: DashboardLayout; setDraft: (draft: DashboardLayout) => void};
@@ -141,7 +141,9 @@ export function WidgetEditor({onClose}: {onClose: () => void}) {
   const [confirm, setConfirm] = useState(false);
   const [announcement, setAnnouncement] = useState({text: '', serial: 0});
   const announce = (text: string) => setAnnouncement(previous => ({text, serial: previous.serial + 1}));
-  const dirty = useMemo(() => JSON.stringify(original) !== JSON.stringify(items), [original, items]);
+  // Saving a reset also moves the panel, so a reset counts as a change whenever the panel is not already at its default.
+  const panelMoves = restored && changesPanel(readLayout());
+  const dirty = useMemo(() => JSON.stringify(original) !== JSON.stringify(items), [original, items]) || panelMoves;
   useDraftGuard(dirty, onClose);
   const cancel = () => (dirty ? setConfirm(true) : onClose());
   const update = (item: Widget) => setItems(previous => previous.map(old => (instanceId(old) === instanceId(item) ? item : old)));

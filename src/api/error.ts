@@ -209,7 +209,8 @@ export const requestIdOf = (error: unknown): string | undefined =>
 // What to tell the person about a failed action: the action's summary, with the error as its detail. An operation
 // whose outcome is unknown did not fail: it is reported on its own, neutrally. A file written but not applied is
 // reported under its own summary too, since the action's would say the write failed, and so is an activation that
-// left the change active or its outcome unknown.
+// left the change active or its outcome unknown. A write that landed but could not be read back is not a failure of the
+// write: it is told neutrally, and the failed read keeps its own error and Retry.
 // `error` is the failure it reports, for a toast to record and offer to copy; an invalid edit has none.
 export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; requestId?: string; error?: unknown};
 const ownSummary = new Set<Key>([
@@ -221,7 +222,8 @@ const ownSummary = new Set<Key>([
   'ui.activationUnknown'
 ]);
 export function failureNotice(error: unknown, t: Translator, summary: string): Notice {
-  if (error instanceof LocalError && error.key === 'ui.operationUnknown') return {kind: 'neutral', text: t(error.key), error};
+  if (error instanceof LocalError && (error.key === 'ui.operationUnknown' || error.key === 'ui.writtenNotRead'))
+    return {kind: 'neutral', text: t(error.key), error};
   if (error instanceof LocalError && ownSummary.has(error.key)) return {kind: 'negative', text: t(error.key), detail: localDetail(error, t), error};
   return {kind: 'negative', text: summary, detail: errorText(error, t, false), requestId: requestIdOf(error), error};
 }

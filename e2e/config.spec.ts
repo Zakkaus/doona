@@ -1,4 +1,5 @@
 import type {Page, Route} from '@playwright/test';
+import {ApiError} from '../src/api/error';
 import type {createMockApi} from '../src/api/mock';
 import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend, box} from './fixtures';
 import {sha256} from '../src/api/hash';
@@ -919,6 +920,32 @@ test('a located global jumps to its field, writes only the value, and survives n
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page).toHaveURL(/#\/config/);
+});
+
+test('a global write that cannot be read back keeps the draft and offers Retry', async ({page}) => {
+  const backend = await mockBackend(page);
+  const {api} = backend;
+  const main = (await api.config()).sources[0];
+  const seeded = main.content.replace('tproxy_port: 12345', 'tproxy_port: 12345\n  sniffing_timeout: 100ms');
+  await api.pollOperation(await api.replaceConfigSource(main.id, seeded, `"${main.content_sha256}"`));
+  await page.goto('/#/config?tab=global');
+  const panel = page.getByRole('tabpanel', {name: 'Global settings'});
+  const field = panel.getByRole('textbox', {name: 'Sniffing timeout', exact: true});
+  await field.fill('200ms');
+  let offline = false;
+  backend.handlers['GET config'] = async () => {
+    if (offline) throw new ApiError(503, 'temporarily_unavailable', 'Backend unavailable');
+    return api.config();
+  };
+  offline = true;
+  await panel.getByRole('button', {name: 'Write and reload'}).click();
+  await expect(panel.getByRole('status')).toContainText('The change was saved, but the configuration could not be read back');
+  await expect(panel.getByRole('button', {name: 'Retry'})).toBeVisible();
+  await expect(field).toHaveValue('200ms');
+  expect((await api.config()).sources[0].content).toContain('sniffing_timeout: 200ms');
+  offline = false;
+  await panel.getByRole('button', {name: 'Retry'}).click();
+  await expect(panel.getByRole('button', {name: 'Retry'})).toBeHidden();
 });
 
 test('global setting fields keep one width across groups', async ({page}) => {

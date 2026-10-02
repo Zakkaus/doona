@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {dropDrafts} from './draft';
 import {shouldOpenSettings} from './preferences';
 import {defaultRoute, hasRoute, isRoutePath, type Go, type RoutePath} from './routes';
 
@@ -116,6 +117,9 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
   }, []);
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<PendingRoute | null>(null);
+  // An action that must not land before the drafts are answered for, as a profile switch or a sign-out.
+  const [leaving, setLeaving] = useState<(() => void) | null>(null);
+  const ask = useCallback((action: () => void) => setLeaving(() => action), []);
   const push = useCallback((next: Route, replace = false) => {
     if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
     else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
@@ -175,12 +179,30 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
     return () => removeEventListener('popstate', on);
   }, [api, loc]);
   const discard = () => {
-    if (!pending) return;
+    if (!pending && !leaving) return;
+    dropDrafts(setDirty);
     dirty.current = false;
     setRevision(value => value + 1);
+    if (!pending) {
+      setLeaving(null);
+      leaving?.();
+      return;
+    }
     if (pending.delta !== undefined) history.go(pending.delta);
     else push(pending, pending.replace);
     setPending(null);
   };
-  return {...loc, go, setDirty, revision, pending, discard, cancel: () => setPending(null)};
+  return {
+    ...loc,
+    go,
+    setDirty,
+    ask,
+    revision,
+    confirming: pending !== null || leaving !== null,
+    discard,
+    cancel: () => {
+      setPending(null);
+      setLeaving(null);
+    }
+  };
 }

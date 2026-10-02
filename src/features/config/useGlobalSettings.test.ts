@@ -1,7 +1,7 @@
 import {beforeEach, expect, it, vi} from 'vitest';
 import {capabilities, version} from '../../api/mock/fixtures';
 import {createMockApi} from '../../api/mock';
-import {ApiError} from '../../api/error';
+import {ApiError, LocalError} from '../../api/error';
 import type {ConfigDiagnostic, ConfigSource, EffectiveConfig} from '../../api/model';
 import {hookHarness} from '../../store/testHelpers';
 import {useGlobalSettings} from './useGlobalSettings';
@@ -167,4 +167,15 @@ it.each(['include', 'absent'])('writes the %s section without changing other tex
   expect(editor.apply).toHaveBeenCalledWith(source, content);
   expect(editor.validate.mock.calls[0][0].sources.find((item: {id: string}) => item.id === source.id).content).toBe(content);
   expect(read(query).dirty).toBe(false);
+});
+
+it('tells a write that could not be read back apart from a failed read, and keeps the draft', async () => {
+  const failure = new Error('offline');
+  config.error = failure;
+  field('mptcp').change('true');
+  editor.error = new LocalError('ui.writtenNotRead');
+  const m = read();
+  expect(m).toMatchObject({unread: 'The change was saved, but the configuration could not be read back. Retry to show it', error: failure, dirty: true});
+  editor.error = new Error('refused');
+  expect(read()).toMatchObject({unread: null, error: editor.error});
 });

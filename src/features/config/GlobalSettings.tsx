@@ -23,6 +23,7 @@ export function GlobalSettings(props: PageProps) {
         </span>
       </div>
       <span className="rp-label">{t('config.globalNote')}</span>
+      {m.unread && <InlineAlert tone="informative">{m.unread}</InlineAlert>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.failure && <InlineAlert>{m.failure}</InlineAlert>}
       {m.restart.length > 0 && <RestartNotice settings={m.restart} sources={m.sources} />}
