@@ -1,24 +1,15 @@
 // Drawn for doona, not an Adobe icon: three horizontal dots on the Spectrum 20px grid for the overflow menu of a top bar.
 import type {SVGProps} from 'react';
-import {cx} from '../cx';
+import IconSvg from './IconSvg';
 
-export default function MoreHorizontal({className, ...props}: SVGProps<SVGSVGElement>) {
+export default function MoreHorizontal(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={20}
-      height={20}
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-      focusable="false"
-      className={cx('rp-icon', className)}
-      {...props}
-    >
+    <IconSvg {...props}>
       <path
         transform="rotate(90 10 10)"
         fill="currentColor"
         d="M10 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m0 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m0 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"
       />
-    </svg>
+    </IconSvg>
   );
 }
