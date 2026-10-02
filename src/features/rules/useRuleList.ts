@@ -62,13 +62,14 @@ export type RuleListModel = DictionaryModel & {
   source: string;
   setSource: (source: string) => void;
 };
-export function useRuleList({go, query}: PageProps): RuleListModel {
+// `simple` says the simple view is up, which shows no rule table, so the flows that count its hits are held, keeping what was read.
+export function useRuleList({go, query}: PageProps, simple: boolean): RuleListModel {
   const t = useT();
   const lang = useLang();
   const resources = useCapabilities().data?.resources;
   const dictionary = offered(resources, 'rules', {whileLoading: false});
   const rules = useRules(dictionary);
-  const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}));
+  const flows = useFlows({}, offered(resources, 'flows', {whileLoading: true}), dictionary && simple);
   const groups = useGroups(dictionary && offered(resources, 'groups', {whileLoading: false}));
   // The sources are read wherever the configuration is, for the links to each rule's line; only writing needs `writable`.
   const readable = dictionary && offered(resources, 'config', {whileLoading: false});

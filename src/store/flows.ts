@@ -48,7 +48,7 @@ export async function routingTrace(
 // The whole retained set, one snapshot per poll: a cursor is bound to a snapshot, so pages cannot be added to
 // a list that the next poll replaces. Network and state narrow the walk on the backend instead.
 export type FlowFilter = {connection_id?: string; network?: NonNullable<FlowQuery>['network']; state?: NonNullable<FlowQuery>['state']};
-export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFilter = {}, enabled = true) {
+export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFilter = {}, enabled = true, paused = false) {
   const api = getApi();
   const {data: capabilities, error: capabilitiesError} = useCapabilities();
   const limit = pageSize(capabilities, capabilities?.resources.flows.max_page_size);
@@ -66,7 +66,7 @@ export function useFlows({connection_id, network = 'all', state = 'all'}: FlowFi
           }
         )
     },
-    gated(capabilities, capabilitiesError, enabled)
+    {...gated(capabilities, capabilitiesError, enabled), paused}
   );
 }
 
