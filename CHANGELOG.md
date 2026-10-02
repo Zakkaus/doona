@@ -21,6 +21,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
+- Release archives bundle the honk debug build of commit 5ad13ac (native API rebased onto honk main 71166f6).
 - Settings removes the Backend actions navigation card and moves its geodata files table into the Geodata card; backend operations remain on their owning pages. (#365)
 - Internal: 39 icons share one SVG shell; no visible change. (#357)
 - Internal: update fast-uri and brace-expansion to address development-tool security advisories. (#359)
