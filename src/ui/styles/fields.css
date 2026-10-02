@@ -175,8 +175,8 @@
   max-width: 100%;
 }
 /* In a toolbar the error adds height below the box only, so the row aligns by the top of its controls and centres its
-   text in a control-high line, instead of lifting the box above its neighbours. */
-.rp-toolbar:has(> .rp-search-field[data-invalid]) {
+   text in a control-high line, instead of lifting the box above its neighbours. A side-labelled field does the same. */
+.rp-toolbar:has(> :is(.rp-search-field, .rp-cluster)[data-invalid]) {
   align-items: flex-start;
 }
 .rp-toolbar:has(> .rp-search-field[data-invalid]) > .rp-label {

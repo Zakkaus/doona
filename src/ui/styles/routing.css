@@ -133,8 +133,8 @@
   font-variant-numeric: tabular-nums;
   color: var(--rp-subtle);
 }
-/* The apply dialog's group lists: each group's name and label, and any warning under them. Groups to create run in
-   two columns where the dialog is wide enough. */
+/* The apply dialog's group lists and a delete confirmation's entry list: each name and its label, and any warning under
+   them. Groups to create run in two columns where the dialog is wide enough. */
 .rp-impact-section {
   display: flex;
   flex-direction: column;
@@ -163,4 +163,8 @@
 }
 .rp-impact > li > .rp-cluster {
   gap: var(--rp-space-2);
+  max-width: 100%;
+}
+.rp-impact > li > .rp-cluster > .rp-note {
+  flex: none;
 }

@@ -16,6 +16,7 @@ import Visibility from './icons/Visibility';
 import VisibilityOff from './icons/VisibilityOff';
 import {useT} from '../i18n';
 import {cx} from './cx';
+import {HelpRow, type Help} from './ContextualHelp';
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
@@ -69,6 +70,7 @@ export function TextField({
   className,
   placeholder,
   description,
+  help,
   error,
   action,
   reveal,
@@ -91,6 +93,8 @@ export function TextField({
     className?: string;
     placeholder?: string;
     description?: string;
+    // An info button after the label, for a hint that must not change the field's height.
+    help?: Help;
     error?: string;
     action?: ReactNode;
     // A secret's show or hide toggle, inside the field as in S2; `label` names what pressing it does now.
@@ -151,6 +155,12 @@ export function TextField({
       )}
     </span>
   );
+  const name = (
+    <Label className="rp-label">
+      {label}
+      {props.isRequired && <span aria-hidden="true"> *</span>}
+    </Label>
+  );
   return (
     <RTextField
       {...validity}
@@ -160,10 +170,7 @@ export function TextField({
       className={cx(side ? 'rp-cluster' : 'rp-field', className)}
       style={width ? {width} : undefined}
     >
-      <Label className="rp-label">
-        {label}
-        {props.isRequired && <span aria-hidden="true"> *</span>}
-      </Label>
+      {help ? <HelpRow help={help}>{name}</HelpRow> : name}
       {action ? (
         <div className="rp-toolbar">
           {input}
