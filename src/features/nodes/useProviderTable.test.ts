@@ -37,11 +37,14 @@ it('looks up opaque provider intervals by verified tags and keeps editing in the
     refreshAll: {refreshing: false, run: vi.fn(), disabled: false, reason: null, label: ''},
     onAdd: vi.fn(),
     onRemove: vi.fn(),
+    inInclude: () => false,
     editAction: () => ({kind: 'edit', run: vi.fn()})
   };
   const row = providerTable(input).rows.find(item => item.id === 'harbor')!;
   expect(row.interval).toBe('Every 1 hour');
   expect(row.action?.kind).toBe('edit');
+  expect(row.removeReason).toBeNull();
+  expect(providerTable({...input, inInclude: () => true}).rows.find(item => item.id === 'harbor')!.removeReason).toBe(translate('en', 'nodes.removeInclude'));
   for (const kind of ['open', null] as const) {
     const view = providerTable({...input, editAction: () => (kind ? {kind, run: vi.fn()} : null)});
     expect(view.rows.find(item => item.id === 'harbor')!.action?.kind ?? null).toBe(kind);

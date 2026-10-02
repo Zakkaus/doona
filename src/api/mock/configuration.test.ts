@@ -488,3 +488,35 @@ it('keeps a live-flow cursor when a smaller capacity only evicts terminal flows'
   expect(next.flows[0].id).not.toBe(first.flows[0].id);
   expect(next.flows.every(flow => flow.ended_at === null)).toBe(true);
 });
+
+it('refuses to remove a node or subscription declared in an include, as honk does', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  await api.createConfigSource(
+    'config.d/edge.dae',
+    "subscription {\n  edge: 'https://edge.example.net/sub'\n}\nnode {\n  'eu-01': 'trojan://demo@eu-01.example.net:443#eu-01'\n}\n"
+  );
+  await vi.advanceTimersByTimeAsync(1000);
+  const refused = {status: 404, code: 'capability_not_supported'};
+  await expect(api.deleteNode('eu-01')).rejects.toMatchObject(refused);
+  await expect(api.deleteProvider('edge')).rejects.toMatchObject(refused);
+  await expect(api.deleteNode('hk-01')).resolves.toEqual({deleted: 1});
+});
+
+it.each([false, true])('removes quoted (%s) and unquoted main declarations', async quoted => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = main.content.replace("'hk-01':", quoted ? "'hk-01':" : 'hk-01:').replace('harbor:', quoted ? "'harbor':" : 'harbor:');
+  const accepted = await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.operation(accepted.operation_id)).status).toBe('succeeded');
+  await expect(api.deleteNode('hk-01')).resolves.toEqual({deleted: 1});
+  await expect(api.deleteProvider('harbor')).resolves.toEqual({deleted: 1});
+  const after = (await api.config()).sources.find(source => source.kind === 'main')!.content;
+  expect(after).not.toContain('hk-01.example.net');
+  expect(after).not.toContain('sub.example.net');
+  expect(after).toContain("'hk-02':");
+  expect((await api.nodes({limit: 1000})).nodes.some(node => node.id === 'hk-01')).toBe(false);
+  expect((await api.providers()).providers.some(provider => provider.id === 'harbor')).toBe(false);
+});

@@ -95,6 +95,9 @@ export function nodeEditState(sources: ConfigSource[], source: ConfigSource, ent
   };
 }
 
+// honk removes only the main declaration; any include declaration would return on reload.
+export const declaredInInclude = (places: Array<{source: ConfigSource}>) => places.some(({source}) => source.kind !== 'main');
+
 export function subscriptionRemoval(sources: ConfigSource[] | undefined, loading: boolean, item: Provider | null) {
   const subscription = item?.kind === 'subscription';
   return {

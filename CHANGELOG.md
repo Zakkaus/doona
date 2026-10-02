@@ -53,6 +53,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Switching profile or signing out while another form has unsaved changes asks first and changes nothing if declined; before, the saved profile or token changed first and the page stayed busy after the prompt was declined. (#331)
 - A write that was accepted but whose result is not confirmed shows as a notice instead of a failure in the group and node dialogs. (#331)
 - The connection outbounds widget no longer asks a backend without outbound traffic for it. The Geodata card shows when the groups for the download route cannot be read and offers Retry. The routing tree no longer draws a node left over from a group hidden inside another group. Cancelling the widget editor after Restore defaults moved the panel asks to discard the change. Saving a source or the global settings keeps the draft until the new configuration is read back; when the read fails after the write landed, the draft stays and Retry is offered. (#331)
+- Remove is disabled, with the reason shown, for a node or subscription declared in an include file, which the backend only removes from the main source. (#333)
 
 ## [0.1.0-beta.12] - 2026-09-30
 

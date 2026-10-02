@@ -4,6 +4,7 @@ import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {
   nodeFormReason,
   editableSource,
+  declaredInInclude,
   subscriptionPlace,
   nodeEditState,
   subscriptionRemoval,
@@ -399,6 +400,16 @@ it.each([
     source => source.id === 'inc' && busy
   );
   expect(joinable.map(entry => entry.name)).toEqual(expected);
+});
+
+it.each([
+  [[], false],
+  [['main'], false],
+  [['main', 'include'], true],
+  [['include'], true],
+  [['include', 'include'], true]
+] as const)('refuses removal when any non-main source declares it (%j)', (kinds, expected) => {
+  expect(declaredInInclude(kinds.map(kind => ({source: {...main, kind}})))).toBe(expected);
 });
 
 it('locates the declaring subscription and opens ambiguous names without editing', () => {

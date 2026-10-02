@@ -21,6 +21,8 @@ type ProviderTableInput = {
   refreshAll: ReturnType<typeof useRefreshAll>;
   onAdd: () => void;
   onRemove: (item: Provider) => void;
+  // Whether the declaring source of a subscription rules out removing it here.
+  inInclude: (item: ProviderRow) => boolean;
   // Edit where the declaring source takes the write, otherwise the source file to open; null when neither applies.
   editAction: (item: ProviderRow) => {kind: 'edit' | 'open'; run: () => void} | null;
 };
@@ -46,6 +48,7 @@ export function useProviderTable(input: ProviderTableInput) {
         error => toastFailure(error, t, t('nodes.refreshFailed', {name: item.name}))
       ),
     removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
+    removeReason: input.inInclude(item) ? t('nodes.removeInclude') : null,
     remove: () => {
       if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
     }
@@ -89,6 +92,7 @@ export type ProviderTableView = {
     refreshDisabled: boolean;
     refresh: () => void;
     removable: boolean;
+    removeReason: string | null;
     remove: () => void;
   }>;
   loading: boolean;

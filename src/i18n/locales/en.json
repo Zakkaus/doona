@@ -1059,6 +1059,7 @@
   },
   "nodes.refreshedDegraded": "{name}: nodes applied, but the datapath did not recover, so new connections proxied through userspace are refused. See System status for details.",
   "nodes.remove": "Remove {name}",
+  "nodes.removeInclude": "Declared outside the main configuration file. Remove it from that file.",
   "nodes.removeNodeHelp": "Deletes it from the node section of the main configuration and reloads.",
   "nodes.removeNodeTitle": "Remove node {name}",
   "nodes.removeProviderHelp": "Deletes this node source and its nodes from the main configuration and reloads.",
