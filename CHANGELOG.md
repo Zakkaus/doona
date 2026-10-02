@@ -8,6 +8,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - The runtime overrides card on Settings links to the persistent settings in Config with a button instead of a plain text link. (#294)
 
+### Fixed
+
+- On a phone, the About dialog stacks its links full width instead of leaving one alone, scrolls its content between the title and the Close button, and every dialog keeps its bottom margin above a mobile browser's toolbar. The desktop layout is unchanged.
+
 ## [0.1.0-beta.12] - 2026-09-30
 
 ### Changed

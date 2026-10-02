@@ -323,6 +323,24 @@ test('the About card opens the keyboard shortcuts and links the guide', async ({
   await expect(page.getByRole('main').getByRole('link', {name: /^Guide/})).toHaveAttribute('href', /^https:\/\/zakkaus\.github\.io\/doona-docs\//);
 });
 
+test('About doona lists its links in full-width rows on a phone and keeps its footer clear of the screen edge', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto('/#/settings?card=about');
+  await page.getByRole('button', {name: 'About doona', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'About doona', exact: true});
+  await expect(dialog.getByRole('button', {name: 'Close', exact: true})).toBeInViewport();
+  const rows = await dialog.locator('.rp-about-links a').evaluateAll(links =>
+    links.map(link => {
+      const {width, height, left} = link.getBoundingClientRect();
+      return {width, height, left};
+    })
+  );
+  expect(rows).toHaveLength(3);
+  for (const row of rows) expect(row).toEqual(rows[0]);
+  const modal = await dialog.locator('xpath=ancestor::*[contains(@class,"rp-modal")]').boundingBox();
+  expect(844 - (modal!.y + modal!.height)).toBeGreaterThanOrEqual(24);
+});
+
 test('appearance uses labeled pickers with balanced insets and matching type', async ({page}) => {
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});

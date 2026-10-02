@@ -69,6 +69,22 @@
   gap: var(--rp-space-4);
   text-align: center;
 }
+/* A phone stacks the links full width, so none is left alone on a second row, and spaces the sections evenly. */
+@media (max-width: 599.98px) {
+  .rp-about > p {
+    margin: 0;
+  }
+  .rp-about-links {
+    align-self: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--rp-space-2);
+  }
+  .rp-about-links > .rp-link {
+    align-self: stretch;
+    justify-content: center;
+  }
+}
 .rp-about-duck {
   position: relative;
   border: 0;
