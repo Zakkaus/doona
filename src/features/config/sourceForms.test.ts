@@ -18,6 +18,6 @@ it('routes located globals to their sole form', () => {
 
 it('links subscriptions to their editor only in the main source', () => {
   const before = "subscription {\n sub: 'https://example.com' {\n cache: true\n }\n}";
-  expect(sourceForms(before, 'main', engine).find(link => link.label === 'sub')?.href).toBe('#/nodes?editSubscription=sub');
+  expect(sourceForms(before, 'main', engine).find(link => link.label === 'sub')?.href).toBe('#/nodes?editSubscriptionTag=sub');
   expect(sourceForms(before, 'include', engine, 'include')).toEqual([]);
 });

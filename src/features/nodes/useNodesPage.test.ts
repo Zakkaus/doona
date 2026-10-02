@@ -9,11 +9,11 @@ vi.mock('../../shell/route', async importOriginal => ({
   replaceRoute: vi.fn()
 }));
 
-it.each(['edit', 'open'])('consumes action parameters before a subscription %s without losing list filters', kind => {
+it.each(['editSubscription', 'editSubscriptionTag'])('consumes %s before a subscription action without losing list filters', parameter => {
   const events: string[] = [];
   vi.mocked(replaceRoute).mockImplementation((path, query) => events.push(`${path}?${query}`));
-  runSubscriptionAction('editSubscription=harbor&focus=interval&tab=list&q=first&provider=inline', {run: () => events.push(kind)});
-  expect(events).toEqual(['nodes?tab=list&q=first&provider=inline', kind]);
+  runSubscriptionAction(`${parameter}=harbor&focus=interval&tab=list&q=first&provider=inline`, {run: () => events.push('edit')});
+  expect(events).toEqual(['nodes?tab=list&q=first&provider=inline', 'edit']);
 });
 
 it.each([true, false])('waits for source validation before consuming a subscription link (%s)', complete => {

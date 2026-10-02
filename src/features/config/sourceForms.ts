@@ -40,7 +40,7 @@ export function sourceForms(text: string, source: string, engine: Engine, kind: 
               to: entry.to,
               label: entry.tag,
               line: entry.line,
-              href: href('nodes', {editSubscription: entry.tag})
+              href: href('nodes', {editSubscriptionTag: entry.tag})
             }));
     if (block.name === 'dns')
       return block.children
