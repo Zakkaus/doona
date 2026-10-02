@@ -7,11 +7,15 @@ export type Version = Schema['Version'];
 // The contract makes every resource but runtime optional; normalizeCapabilities fills the absent ones, so the rest of
 // the app reads each key as present.
 export type ReportedCapabilities = Schema['Capabilities'];
-// The declared resources only: the contract's index signature is for x-<engine> members, which doona does not read.
+// Engine extensions are retained separately from the declared resource keys.
 type Resources = {
   [K in keyof ReportedCapabilities['resources'] as string extends K ? never : K]-?: NonNullable<ReportedCapabilities['resources'][K]>;
 };
-export type Capabilities = Omit<ReportedCapabilities, 'resources'> & {resources: Resources; unreported?: ReadonlyArray<keyof Resources>};
+export type Capabilities = Omit<ReportedCapabilities, 'resources'> & {
+  resources: Resources;
+  extensions?: Record<string, unknown>;
+  unreported?: ReadonlyArray<keyof Resources>;
+};
 export type Runtime = Schema['Runtime'];
 export type RuntimeOutbounds = Schema['RuntimeOutbounds'];
 export type TrafficHistory = Schema['TrafficHistory'];
@@ -107,6 +111,18 @@ export type RuleSource = NonNullable<Schema['RuleSource']>;
 export type RoutingRule = Schema['RoutingRule'];
 export type RoutingEvaluation = Schema['RoutingEvaluation'];
 export type EffectiveConfig = Schema['EffectiveConfig'];
+export type ConfigExport = {content: string; filename: string; contentType: string};
+export type ConfigRevision = {
+  revision: number;
+  parent: number | null;
+  created_at: string;
+  principal: string;
+  origin: string;
+  content_sha256: string;
+  bytes: number;
+  sources: {path: string; sha256: string}[];
+};
+export type ConfigRevisionList = {active: number | null; max_revisions: number; revisions: ConfigRevision[]};
 export type ConfigSource = Schema['ConfigSource'];
 // The demo's own validation sends the values its words name as params; honk sends none.
 export type ConfigDiagnostic = Schema['ConfigDiagnostic'] & {params?: Record<string, string>};

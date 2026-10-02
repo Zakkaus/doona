@@ -12,11 +12,16 @@ import {faultRules} from './rules';
 import {dnsRulesOf} from './dnsRules';
 import {dnsUpstreamNames} from '../../dae/ruleText';
 import {unquote} from '../../dae/text';
+import {createRevisions} from './revisions';
 import {createRecording} from './recording';
 import {readGroupEntries} from '../../dae/groups';
 
 type ConfigurationApi = Pick<
   Api,
+  | 'exportConfig'
+  | 'importConfig'
+  | 'configRevisions'
+  | 'activateConfigRevision'
   | 'rules'
   | 'dnsRules'
   | 'config'
@@ -55,11 +60,18 @@ export function createConfiguration(
     (loading ??= Promise.all([
       Promise.all((faults ? fixtures.faultSources : fixtures.configSources).map(stored)),
       faults ? Promise.all(fixtures.faultDisk.map(stored)) : null
-    ]).then(([list, files]) => {
+    ]).then(async ([list, files]) => {
       sources = list;
       disk = files ?? [...list];
+      await revisions.initialize(list);
       return list;
     }));
+  const revisions = createRevisions(capabilities, enqueue, loadSources, candidate => {
+    const check = validate({sources: sourceSet(undefined, candidate), mode: 'full'}, String(configRevision), {active: sourceSet()});
+    if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Revision validation failed', null, {diagnostics: check.diagnostics});
+    disk = candidate as typeof disk;
+    return advance();
+  });
   let configRevision = 40;
   let created = 0;
   // Only dae rule files are checked; subscription and generated sources hold node lists the checker does not read.
@@ -116,10 +128,16 @@ export function createConfiguration(
     if (!capabilities.resources.config.writable || !source.writable)
       throw new ApiError(404, 'capability_not_supported', 'This source is read-only', null, {reason: source.read_only_reason});
     const next = await stored({...source, content: edit(source.content), loaded_at: new Date().toISOString()});
+    const record = await revisions.prepare(
+      disk.map(item => (item.id === source.id ? next : item)),
+      'write'
+    );
     return () => {
       if (disk.find(item => item.id === source.id) !== source) throw new ApiError(412, 'stale_revision', 'The source changed before activation');
       disk = disk.map(item => (item.id === source.id ? next : item));
-      return advance();
+      const generation = advance();
+      record();
+      return generation;
     };
   }
   // Preserve fixture IDs for unchanged rules; new rules use their source location.
@@ -178,6 +196,7 @@ export function createConfiguration(
     return {generation_id: String(configRevision), rules, fallback};
   };
   const api: ConfigurationApi = {
+    ...revisions.api,
     rules: async signal => {
       signal?.throwIfAborted();
       if (!capabilities.resources.rules.available) throw new ApiError(404, 'capability_not_supported', 'The rule list is unavailable');
@@ -204,6 +223,7 @@ export function createConfiguration(
           ...list.filter(ruleFile).flatMap(source => diagnose(source.id, source.content, known, 'full').filter(item => item.level !== 'error')),
           ...(faults ? fixtures.configNotes : [])
         ],
+        'x-honk': {store: revisions.store()},
         secrets_redacted: true
       };
     },
@@ -235,6 +255,10 @@ export function createConfiguration(
       const check = validate({sources: candidate, mode: 'full'}, String(configRevision), {active: sourceSet()});
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
       const next = await stored({...source, content, loaded_at: new Date().toISOString()});
+      const record = await revisions.prepare(
+        disk.map(item => (item.id === sourceId ? next : item)),
+        'write'
+      );
       // A concurrent write may have landed while this one was stored.
       if (disk.find(item => item.id === sourceId) !== source)
         throw new ApiError(412, 'stale_revision', 'The source changed on disk; fetch it again before retrying');
@@ -242,6 +266,7 @@ export function createConfiguration(
       log('info', 'honk::config', 'Configuration source replaced; reloading.', {source_id: sourceId});
       return enqueue('reload', () => {
         const generation = advance();
+        record();
         return {active_generation_id: generation, datapath_generation_id: generation};
       });
     },
@@ -286,10 +311,13 @@ export function createConfiguration(
       vacant();
       const check = validate({sources: sourceSet(undefined, [...disk, next]), mode: 'full'}, String(configRevision), {active: sourceSet()});
       if (!check.valid) throw new ApiError(422, 'unsupported_value', 'Validation found errors; nothing was written', null, {diagnostics: check.diagnostics});
+      const record = await revisions.prepare([...disk, next], 'write');
+      vacant();
       disk = [...disk, next];
       log('info', 'honk::config', 'Configuration source created; reloading.', {source_id: next.id});
       return enqueue('reload', () => {
         const generation = advance();
+        record();
         return {active_generation_id: generation, datapath_generation_id: generation};
       });
     },

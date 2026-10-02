@@ -64,7 +64,8 @@ const noChoices: ReadonlyMap<string, DiagnosticsChoice> = new Map();
 export function useConfigPage({go, query}: PageProps) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const resources = useCapabilities().data?.resources;
+  const capabilities = useCapabilities();
+  const resources = capabilities.data?.resources;
   const config = useConfig(offered(resources, 'config', {whileLoading: true}));
   const editor = useConfigEditorController(config.refetch);
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -88,7 +89,7 @@ export function useConfigPage({go, query}: PageProps) {
   // The engine names the secrets that make a source read-only.
   const version = useVersion().data;
   const engine = useMemo(() => engineOf(version), [version]);
-  const tabs = configTabs(!!engine.globalSettings);
+  const tabs = configTabs(!!engine.globalSettings, capabilities.data);
   const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
   const canWrite = !!source && !readOnly;
   // Each source keeps the person's last open or collapse of its diagnostics, and the card reports the errors it shows
@@ -124,10 +125,14 @@ export function useConfigPage({go, query}: PageProps) {
   const newSourceProps: NewSourceProps | null =
     resources?.config.create === true && resources.config.writable === true ? {sources, refetch: config.refetch, open: id => openSource(id, null)} : null;
   return {
-    error: config.error,
-    reload: config.refetch,
+    error: capabilities.error ?? config.error,
+    reload: () => {
+      void capabilities.refetch();
+      void config.refetch();
+    },
     loading: config.loading && !config.data,
     ready: !!config.data,
+    tabsReady: !!config.data || tabs.some(item => item.id === 'history'),
     metadata: config.data ? configMetadata(config.data.revision, t) : [],
     redacted: !!config.data?.secrets_redacted,
     tabs: tabs.map(item => ({

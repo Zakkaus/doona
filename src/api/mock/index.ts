@@ -15,7 +15,14 @@ export type MockApi = Api & OperationReader;
 // the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
 // specs' in-process backend. `acceptWrites` answers node and provider writes with 202 and an operation, as a honk
 // that runs them in the background does.
-export type MockOptions = {faults?: boolean; signIn?: true; session?: string | null; acceptWrites?: boolean; isolated?: boolean};
+export type MockOptions = {
+  capabilities?: typeof fullCapabilities;
+  faults?: boolean;
+  signIn?: true;
+  session?: string | null;
+  acceptWrites?: boolean;
+  isolated?: boolean;
+};
 
 export function createMockApi(options: MockOptions = {}): MockApi {
   let count = 120;
@@ -49,6 +56,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     } catch {
       /* Storage can be unavailable. */
     }
+  capabilities = options.capabilities ?? capabilities;
   const runtime = createRuntime(capabilities, big, () => configuration.flowRecorder(), faults);
   const geodata = createGeodataState(capabilities, () => inventory.groupIds(), faults);
   const configuration = createConfiguration(

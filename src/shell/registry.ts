@@ -1,3 +1,4 @@
+import {configManagement} from '../api/engines';
 import type {Key} from '../i18n';
 import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
@@ -147,6 +148,10 @@ export function warmAllPages() {
 }
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
+  if (path === 'config') {
+    const management = configManagement(capabilities);
+    if (management.export || management.import || management.revisions) return true;
+  }
   const requires = features.find(feature => feature.path === path)?.requires;
   const resources = requires?.resources;
   return !capabilities || !resources || resources.some(key => capabilities.resources[key].available !== false);

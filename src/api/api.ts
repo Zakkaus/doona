@@ -1,4 +1,6 @@
 import type {
+  ConfigExport,
+  ConfigRevisionList,
   Version,
   Capabilities,
   Runtime,
@@ -58,6 +60,10 @@ import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
 
 export interface Api {
+  exportConfig(signal?: AbortSignal): Promise<ConfigExport>;
+  importConfig(replace: boolean, signal?: AbortSignal): Promise<OperationAccepted>;
+  configRevisions(signal?: AbortSignal): Promise<ConfigRevisionList>;
+  activateConfigRevision(revision: number, signal?: AbortSignal): Promise<OperationAccepted>;
   discovery(signal?: AbortSignal): Promise<components['schemas']['Discovery']>;
   version(signal?: AbortSignal): Promise<Version>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;

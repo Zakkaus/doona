@@ -1,11 +1,20 @@
 import type {Capabilities} from '../../model';
 import {observedAt} from './clock';
 import {eventKinds, logLevels} from '../../selectors';
+const extensions = {
+  'x-honk': {
+    config_export: {available: true},
+    config_import: {available: true, replace_required: true},
+    config_revisions: {available: true, can_activate: true, max_revisions: 50}
+  }
+};
 export const capabilities: Capabilities = {
+  extensions,
   observed_at: observedAt,
   profiles: ['base', 'full_transparency'],
   limits: {max_request_target_bytes: 4096, max_header_bytes: 16384, max_json_body_bytes: 65536},
   resources: {
+    ...extensions,
     runtime: {available: true},
     runtime_memory: {
       available: true,
@@ -134,11 +143,14 @@ export const capabilities: Capabilities = {
     resume: {available: true}
   }
 };
+const standardResources = {...capabilities.resources};
+delete (standardResources as Record<string, unknown>)['x-honk'];
 export const capabilitiesBase: Capabilities = {
   ...capabilities,
+  extensions: {},
   profiles: ['base'],
   resources: {
-    ...capabilities.resources,
+    ...standardResources,
     groups: {...capabilities.resources.groups, config_patch: false},
     runtime_outbounds: {available: false},
     traffic_history: {available: false},
@@ -163,9 +175,10 @@ export const capabilitiesBase: Capabilities = {
 // The M1 profile exposes runtime and userspace-observed connections only, without close support.
 export const capabilitiesM1: Capabilities = {
   ...capabilities,
+  extensions: {},
   profiles: ['base'],
   resources: {
-    ...Object.fromEntries(Object.keys(capabilities.resources).map(key => [key, {available: false}])),
+    ...Object.fromEntries(Object.keys(standardResources).map(key => [key, {available: false}])),
     runtime: {available: true},
     connections: {available: true, can_close: false, max_bulk_close: 1000},
     config: {available: false, create: false}

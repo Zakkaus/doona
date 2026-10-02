@@ -11,7 +11,7 @@ test.use({viewport: {width: 1440, height: 1000}});
 test('the removed quick setup address opens the default tab', async ({page}) => {
   await page.goto('/#/config?tab=setup');
   const tabs = page.getByRole('tablist', {name: 'Configuration'});
-  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Global settings', 'Config files']);
+  await expect(tabs.getByRole('tab')).toHaveText(['Modules', 'Global settings', 'Config files', 'Backups and revisions']);
   await expect(tabs.getByRole('tab', {name: 'Modules'})).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -553,7 +553,7 @@ test('source redaction does not certify exports or diagnose the redacted include
   await expect(page.locator('.rp-content')).toContainText('Exports preserve the displayed file bytes and may contain credentials');
   await expect(page.getByRole('button', {name: 'About Export', exact: true})).toHaveCount(0);
   const downloading = page.waitForEvent('download');
-  await page.getByRole('button', {name: 'Export', exact: true}).click();
+  await page.getByRole('button', {name: 'Download source file', exact: true}).click();
   expect(await downloadText(await downloading)).toBe(main.content);
   await page.getByRole('button', {name: /Config file/}).click();
   await page.getByRole('option', {name: /Include src-rule/}).click();
@@ -1012,3 +1012,201 @@ test('located subscriptions open the existing editor and groups focus their card
   await expect(page).toHaveURL(/#\/policies\?group=/);
   await expect(page.getByRole('region', {name: group.name, exact: true})).toBeInViewport();
 });
+
+async function revisionBackend(page: Page) {
+  const backend = await mockBackend(page);
+  const {api, handlers} = backend;
+  handlers['GET x-honk/config/revisions'] = () => api.configRevisions();
+  handlers['POST x-honk/config/import'] = request => api.importConfig(request.postDataJSON().replace);
+  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(1);
+  return backend;
+}
+
+test('history is hidden without its extension and export-only downloads the response filename and bytes', async ({page}) => {
+  const {api, capabilities} = await revisionBackend(page);
+  capabilities.extensions = {};
+  delete (capabilities.resources as Record<string, unknown>)['x-honk'];
+  await page.goto('/#/config?tab=history');
+  await expect(page.getByRole('tab', {name: 'Config files', exact: true})).toBeVisible();
+  await expect(page.getByRole('tab', {name: 'Backups and revisions'})).toHaveCount(0);
+  const extensions = {'x-honk': {config_export: {available: true}}};
+  capabilities.extensions = extensions;
+  Object.assign(capabilities.resources, extensions, {config: {available: false, create: false}});
+  const exported = await api.exportConfig();
+  await page.route('**/api/v1/x-honk/config/export', route =>
+    route.fulfill({body: exported.content, contentType: exported.contentType, headers: {'Content-Disposition': `attachment; filename="${exported.filename}"`}})
+  );
+  await page.reload();
+  await page.getByRole('tab', {name: 'Backups and revisions'}).click();
+  await expect(page.getByRole('button', {name: 'Import server files', exact: true})).toHaveCount(0);
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Export configuration', exact: true}).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(exported.filename);
+  expect(await downloadText(file)).toBe(exported.content);
+});
+
+test('server import cancels without a write, then succeeds and lists a revision with details', async ({page}) => {
+  const {api, requests} = await revisionBackend(page);
+  await page.goto('/#/config?tab=history');
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Replace configuration from server files?'});
+  await expect(dialog).toContainText('-c');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  expect(requests.filter(request => request.method() === 'POST')).toHaveLength(0);
+  expect((await api.configRevisions()).revisions).toHaveLength(1);
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Import server files', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Server configuration imported');
+  const row = page.getByRole('row').filter({hasText: 'Database head'});
+  await expect(row).toContainText('2');
+  await row.click();
+  const details = page.getByRole('dialog', {name: 'Revision details'});
+  const revision = (await api.configRevisions()).revisions[0];
+  await expect(details).toContainText(revision.content_sha256);
+  await expect(details).toContainText(revision.sources[0].path);
+  await expect(details).toContainText('demo');
+  await expect(details.getByRole('button', {name: 'Restore revision', exact: true})).toBeDisabled();
+});
+
+test('server import stays available when the revisions list fails', async ({page}) => {
+  const {handlers, requests} = await revisionBackend(page);
+  handlers['GET x-honk/config/revisions'] = () => {
+    throw new ApiError(503, 'service_unavailable', 'Revisions unavailable');
+  };
+  await page.goto('/#/config?tab=history');
+  await expect(page.getByRole('button', {name: 'Retry', exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Replace configuration from server files?'});
+  await expect(dialog).not.toContainText('Database head');
+  await dialog.getByRole('button', {name: 'Import server files', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'POST')).toHaveLength(1);
+});
+
+test('an unknown import survives closing and navigation, and refresh reads the accepted operation', async ({page}) => {
+  const {api, handlers, requests} = await revisionBackend(page);
+  let operationId = '';
+  handlers['POST x-honk/config/import'] = async request => {
+    const accepted = await api.importConfig(request.postDataJSON().replace);
+    operationId = accepted.operation_id;
+    handlers[`GET operations/${operationId}`] = () => {
+      throw new ApiError(503, 'service_unavailable', 'Operation unavailable');
+    };
+    return accepted;
+  };
+  await page.goto('/#/config?tab=history');
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Replace configuration from server files?'});
+  const confirm = dialog.getByRole('button', {name: 'Import server files', exact: true});
+  await confirm.click();
+  await expect(dialog).toContainText('Could not confirm the result of the operation');
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  await expect(confirm).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: 'Refresh', exact: true})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('link', {name: 'Settings', exact: true}).click();
+  await page.getByRole('link', {name: 'Configuration', exact: true}).click();
+  await page.getByRole('tab', {name: 'Backups and revisions', exact: true}).click();
+  await page.getByRole('button', {name: 'Import server files', exact: true}).click();
+  await expect(confirm).toBeDisabled();
+  expect(requests.filter(request => request.method() === 'POST')).toHaveLength(1);
+  handlers[`GET operations/${operationId}`] = () => api.operation(operationId);
+  await dialog.getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'POST')).toHaveLength(1);
+  expect(requests.filter(request => new URL(request.url()).pathname.endsWith(`/operations/${operationId}`))).toHaveLength(2);
+});
+
+test('restore confirms, shows 422 diagnostics, then creates a new revision', async ({page}) => {
+  const {api, handlers, requests} = await revisionBackend(page);
+  await api.pollOperation(await api.importConfig(true));
+  handlers['POST x-honk/config/revisions/1/activate'] = () => {
+    throw new ApiError(422, 'unsupported_value', 'Revision validation failed', 'restore-request', {
+      diagnostics: [
+        {level: 'error', source_id: 'former-source', line: 4, column: 1, code: 'invalid_config', message: 'Historical source cannot be activated', span: null}
+      ]
+    });
+  };
+  await page.goto('/#/config?tab=history');
+  await page.getByRole('rowheader', {name: '1', exact: true}).click();
+  await page.getByRole('button', {name: 'Restore revision', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Restore revision 1?'});
+  expect(requests.filter(request => request.method() === 'POST')).toHaveLength(0);
+  await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
+  await expect(dialog).toContainText('Historical source cannot be activated');
+  await expect(dialog.getByRole('button', {name: /Open config file|Go to line/})).toHaveCount(0);
+  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(1);
+  await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Revision restored');
+  await expect(page.getByRole('row').filter({hasText: 'Database head'})).toContainText('3');
+  const list = await api.configRevisions();
+  expect(list.revisions[0]).toMatchObject({revision: 3, parent: 2, origin: 'activate'});
+});
+
+test('a committed restore failure retains inline diagnostics and copies its original error from both surfaces', async ({page, context}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const {api, handlers} = await revisionBackend(page);
+  await api.pollOperation(await api.importConfig(true));
+  let operationId = '';
+  handlers['POST x-honk/config/revisions/1/activate'] = async () => {
+    const accepted = await api.activateConfigRevision(1);
+    operationId = accepted.operation_id;
+    handlers[`GET operations/${operationId}`] = async () => ({
+      ...(await api.pollOperation(accepted)),
+      status: 'failed',
+      result: null,
+      error: {
+        code: 'store_unavailable',
+        message: 'Revision store fsync failed on the backend volume',
+        details: {
+          committed: true,
+          diagnostics: [{level: 'error', source_id: null, line: null, column: null, code: 'invalid_config', message: 'Backend volume is read-only', span: null}]
+        }
+      }
+    });
+    return accepted;
+  };
+  await page.goto('/#/config?tab=history');
+  await page.getByRole('rowheader', {name: '1', exact: true}).click();
+  await page.getByRole('button', {name: 'Restore revision', exact: true}).click();
+  const dialog = page.getByRole('alertdialog', {name: 'Restore revision 1?'});
+  await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
+  await expect(dialog).toContainText('Backend volume is read-only');
+  await expect(dialog).toContainText('The change is active but was not saved');
+  await expect(dialog.getByRole('button', {name: 'Restore revision', exact: true})).toBeEnabled();
+  await page.locator('.rp-toast.negative').getByRole('button', {name: 'Copy error', exact: true}).click();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain('code: store_unavailable');
+  expect(copied).toContain('message: Revision store fsync failed on the backend volume');
+  expect(copied).toContain(`operation: ${operationId} reload failed`);
+  expect(copied).toContain('"committed":true');
+  await page.locator('.rp-toast.positive', {hasText: 'Error details copied'}).getByRole('button', {name: 'Close', exact: true}).click();
+  await page.locator('.rp-toast.negative').getByRole('button', {name: 'Close', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.getByRole('link', {name: 'Settings', exact: true}).click();
+  await page.getByRole('button', {name: 'Copy recent errors', exact: true}).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(copied.split('\n\n')[1]);
+});
+
+for (const tab of ['source', 'global'])
+  test(`entering history guards a ${tab} draft before requesting revisions`, async ({page}) => {
+    const {requests} = await revisionBackend(page);
+    await page.goto(`/#/config?tab=${tab}&source=src-main`);
+    const editor = tab === 'source' ? page.locator('.cm-content') : page.getByRole('textbox', {name: 'Sniffing timeout', exact: true});
+    await expect(editor).toBeEditable();
+    await editor.fill(tab === 'source' ? (await editor.innerText()) + '\n# unsaved history draft' : '100ms');
+    await page.getByRole('tab', {name: 'Backups and revisions'}).click();
+    const dialog = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
+    await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+    if (tab === 'source') await expect(editor).toContainText('unsaved history draft');
+    else await expect(editor).toHaveValue('100ms');
+    expect(requests.some(request => request.url().includes('/x-honk/'))).toBe(false);
+    await page.getByRole('tab', {name: 'Backups and revisions'}).click();
+    await dialog.getByRole('button', {name: 'Discard changes', exact: true}).click();
+    await expect(page.getByRole('grid', {name: 'Backups and revisions'})).toBeVisible();
+  });

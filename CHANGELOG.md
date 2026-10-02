@@ -9,6 +9,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Routing traces accept an optional DSCP value from 0 to 63 to evaluate `dscp(...)` rules. (#332)
 - A Latency probes card on Settings, saved in this browser, sets the probe method, IP family, warm or cold measurement and the members a group probe covers. Node and group Probe buttons use these settings, the probe options dialog starts from them, and the card links to the background health checks in Configuration. (#334)
 - Nodes and policy groups offer probe options for HTTP, TCP connect and DNS over TCP or UDP, cold probes, and nodes in nested groups. (#334)
+- Config offers configuration export, server-file import and revision metadata with confirmed restore when the backend advertises these capabilities. Import reads the server startup files; it does not upload a local backup. Exports omit listener secrets and may retain other credentials. (#337)
 - The DNS cache tab deletes entries by full name, suffix, keyword or regex, by record type, or both, after showing how many match, when the backend supports it. (#306, #314)
 - The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
 - A failure toast, and the notice for an operation with an unknown result, has a Copy error action on its button row, after the toast's own button if it has one. It copies the request, status, error code, backend message, request ID and operation for a bug report, so the browser console is no longer needed. Settings > About has a Copy recent errors button for the last 20, kept in memory only, with secrets and request bodies left out. (#304)
@@ -36,6 +37,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- Import and restore retain an accepted operation whose outcome is unknown after closing the dialog or leaving Configuration. Reopening offers recovery without sending another write; failures retain their backend details in Copy error and Settings' recent errors. (#337)
 - Renaming a node updates DNS upstream detours in its declaring source and is blocked while another source refers to it. (#353)
 - Add to group on Nodes keeps the shared Policies editor available for new and existing groups when the runtime groups API is unavailable. (#353)
 - Empty file providers remain visible on Nodes, including their status and removal action. (#353)
