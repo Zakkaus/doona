@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {translate, type Translator} from '../../i18n';
-import {groupEditSafe, memberCountText, groupPolicyText, policyChoices, policyLabel} from './policyText';
+import {groupEditSafe, groupPolicyText, policyChoices, policyLabel} from './policyText';
 const t: Translator = (key, params) => translate('en', key, params);
 
 for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
@@ -70,15 +70,4 @@ it('offers score as its own choice, selected and named in words', () => {
   expect(policyLabel('score', t)).toBe('Score');
   expect(groupPolicyText({kind: 'score', native: 'score'}, t)).toEqual({label: 'Score', id: 'score'});
   expect(groupEditSafe(['name(a)'], 'score', {filters: ['name(a)'], policy: 'select'})).toBe(true);
-});
-
-it('counts nodes and groups separately with locale plurals', () => {
-  expect(memberCountText(132, 7, t)).toBe('125 nodes, 7 groups');
-  expect(memberCountText(2, 1, t)).toBe('1 node, 1 group');
-  expect(memberCountText(1, 0, t)).toBe('1 node');
-  expect(memberCountText(1, 1, t)).toBe('0 nodes, 1 group');
-  const tw: Translator = (key, params) => translate('zh-TW', key, params);
-  const cn: Translator = (key, params) => translate('zh-CN', key, params);
-  expect(memberCountText(132, 7, tw)).toBe('125 個節點，7 個群組');
-  expect(memberCountText(132, 7, cn)).toBe('125 个节点，7 个组');
 });

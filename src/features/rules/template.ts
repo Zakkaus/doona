@@ -83,9 +83,6 @@ function detectedTemplate(sources: ConfigSource[]) {
   const holders = routingSources(sources);
   return holders.length === 1 ? detectTemplate(holders[0].content!) : null;
 }
-export function currentTemplate(sources: ConfigSource[]): RuleTemplate | null {
-  return detectedTemplate(sources)?.template ?? null;
-}
 
 export type TemplatesView = TemplateOptions & {current: TemplateChoice | null; primary: TemplateChoice[]; more: TemplateChoice[]};
 export function templatesView(sources: ConfigSource[], t: Translator): TemplatesView {

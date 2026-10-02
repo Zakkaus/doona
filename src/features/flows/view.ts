@@ -207,7 +207,6 @@ type FlowDetailView = {
   revision: string;
   fields: [string, string][];
   connectionHref: string | null;
-  // What the add-rule dialog starts from.
   seed: QuickRuleSeed;
   steps: {id: number; stage: string; observed: string; elapsed: string; fields: [string, string][] | null; raw: string}[];
 };

@@ -56,11 +56,6 @@ export async function dnsCacheListing(api: Api, signal?: AbortSignal) {
     return listing();
   }
 }
-export function useDnsFlush() {
-  const api = getApi();
-  const {busy, run, cancel} = useAction<'flush'>({rethrow: true});
-  return {busy: busy !== null, cancel, flush: useCallback(() => run('flush', signal => flushCache(api, signal)), [api, run])};
-}
 export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true, paused = false) {
   const api = getApi();
   const name = query.name?.trim() || undefined;

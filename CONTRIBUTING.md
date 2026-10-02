@@ -216,7 +216,7 @@ Each role has one kit component in `src/ui`. Variants are typed props, never cla
 | Button, LinkButton                | `Button` (secondary outline, accent fill), `Link` |
 | ActionGroup                       | `ActionGroup`                                     |
 | Menu, ActionMenu                  | `ChoiceMenu`                                      |
-| Picker                            | `LabeledSelect`, `InlineSelect`                   |
+| Picker                            | `LabeledSelect`                                   |
 | Checkbox, CheckboxGroup           | `Checkbox`, `CheckboxSet`                         |
 | Searchable single/multiple choice | `SearchSelect`, `SearchMultiSelect`               |
 | SegmentedControl                  | `Segmented`                                       |
