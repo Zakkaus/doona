@@ -22,6 +22,7 @@ Run the gates for the CI lane selected by `tools/ci-changes.mjs`, from the repos
 - `mock/`: the demo backend and its fixtures, shared by the app and tests.
 - `e2e/`: Playwright tests.
 - `tools/`: build, check and release scripts.
+- `changes/`: one changelog fragment per pull request; release tooling collects them into `CHANGELOG.md`.
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
 - `public/`: app icons, logo, manifest and service-worker template. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
 - `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
@@ -282,6 +283,16 @@ Branch from `main`. Keep pull requests small and limited to one theme. Keep CI g
 Use the GitHub issue and pull request templates, including their Chinese variants. Name the human responsible and report only verified results.
 
 Write the pull request body in English with one short paragraph under each of `## Problem`, `## How I fixed it` and `## Verified`, in that order: what is wrong, what changed, and what was checked, not the reasoning that led there. Verified lists the commands you ran and what they reported; link long evidence instead of pasting it.
+
+### Changelog fragments
+
+Add `changes/<branch-slug>.md` in the same commit as the change, following [the fragment format](changes/README.md). Use one of `Added`, `Changed`, `Fixed`, `Removed`, `Security`, or `Internal` on the first line, then one or more bullet lines. Do not edit `CHANGELOG.md` or add PR numbers to fragments; `pnpm changelog:render` resolves the PR from the commit that added each file.
+
+CI requires a new fragment for PRs touching `src/`, `mock/`, `install/`, or `public/`. Maintainers can apply `no-changelog` when no entry is needed. Fragment-only and documentation-only changes use the documentation lane.
+
+For a release, run `pnpm changelog:release <version> <date>` from the repository root with a version without `v` and a `YYYY-MM-DD` date. It writes the version section and comparison links, then deletes the consumed fragments. Authenticate `gh` to include PR numbers; offline rendering warns and leaves them out. Review the output and commit it with the release changes.
+
+### Release versions
 
 Use [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Start with `0.1.0`
 and number pre-releases as `-alpha.N`, `-beta.N` or `-rc.N`. Tag each tested
