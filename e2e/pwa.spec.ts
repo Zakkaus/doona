@@ -1,4 +1,4 @@
-import {expect, loadCatalogues, test, settleFrames} from './fixtures';
+import {expect, loadCatalogues, settle, test, settleFrames} from './fixtures';
 import type {BrowserContext, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 
@@ -25,6 +25,7 @@ test('API requests bypass the worker even when a cached response exists', async 
   const page = await context.newPage();
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await settle(page);
   await page.reload();
   expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await page.evaluate(async () => {
@@ -56,7 +57,9 @@ test('shell reloads offline and fonts and icons are cached on first use', async 
   const page = await context.newPage();
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await settle(page);
   await page.reload();
+  await settle(page);
   const online = await page.reload();
   expect(online?.headers()['x-doona-sw']).toBeUndefined();
   const paths = ['./fonts/OFL.txt', './icons/icon-192.png'];
@@ -72,6 +75,7 @@ test('shell reloads offline and fonts and icons are cached on first use', async 
     return (await cache.keys()).filter(request => new URL(request.url).pathname.endsWith('.woff2')).length;
   });
   expect(cachedFonts).toBeLessThan(105);
+  await settle(page);
   await context.setOffline(true);
   const offline = await page.reload();
   expect(offline?.headers()['x-doona-sw']).toBe('hit');
@@ -104,6 +108,7 @@ test('the mock backend is cached on first use rather than installed up front', a
   await expect.poll(() => page.evaluate(async url => (await caches.match(new URL(url, location.href).href)) !== undefined, mock[0])).toBe(true);
   // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
   if (browserName === 'webkit') return;
+  await settle(page);
   await context.setOffline(true);
   const offline = await page.reload();
   expect(offline?.headers()['x-doona-sw']).toBe('hit');
@@ -132,6 +137,7 @@ test('an English visit caches only English and starts offline in it', async ({co
   expect(fetched.filter(path => other.test(path))).toEqual([]);
   // Playwright's WebKit fails every navigation under setOffline, even one the service worker answers.
   if (browserName === 'webkit') return;
+  await settle(page);
   await context.setOffline(true);
   const offline = await page.reload();
   expect(offline?.headers()['x-doona-sw']).toBe('hit');
@@ -150,6 +156,7 @@ test('after an update the new build caches only the language in use and starts o
   await expect.poll(() => holds(first, 'en')).toBe(true);
   // The reader switches to zh-TW, so the build being replaced holds both catalogues.
   await page.evaluate(() => localStorage.setItem('doona-lang', 'zh-TW'));
+  await settle(page);
   await page.reload();
   await expect.poll(() => holds(first, 'zh-TW')).toBe(true);
   // Let the old build's resource requests settle before starting the update.
@@ -191,6 +198,7 @@ async function takeOver(context: BrowserContext, page: Page, current: boolean) {
   await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   // Only a page the old build already controls announces the new one.
+  await settle(page);
   await page.reload();
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
@@ -253,6 +261,7 @@ test('a worker that does not report its build is taken for a new one', async ({c
   test.skip(browserName === 'webkit', 'WebKit rechecks the worker without the page’s cookies');
   await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await settle(page);
   await page.reload();
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
@@ -276,6 +285,7 @@ test('a new build taking over before the catalogue loads is announced in the rea
   await page.addInitScript(() => localStorage.setItem('doona-lang', 'zh-TW'));
   await page.goto('http://127.0.0.1:4186/ui/');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await settle(page);
   await page.reload();
   await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
   await page.waitForLoadState('networkidle');

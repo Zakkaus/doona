@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, test, box, settleFrames, expectTextInside} from './fixtures';
+import {expect, expectLoadFailures, faults, mockBackend, scrollIntoList, setAppearance, settle, test, box, settleFrames, expectTextInside} from './fixtures';
 import {createMockApi} from '../src/api/mock';
 import {test as browserTest, type Page} from '@playwright/test';
 import {sha256} from '../src/api/hash';
@@ -396,6 +396,7 @@ test.describe(() => {
     for (const lang of ['zh-TW', 'en']) {
       for (const scheme of ['light', 'dark']) {
         await setAppearance(page, lang, scheme);
+        await settle(page);
         await page.reload();
         const notices = page.locator('.rp-feed');
         await notices.scrollIntoViewIfNeeded();
@@ -969,6 +970,7 @@ test('the notices card says what is missing to route through a proxy until it is
   delete backend.handlers['GET providers'];
   delete backend.handlers['GET nodes'];
   await page.goto('/#/activity');
+  await settle(page);
   await page.reload();
   await expect(card.getByText('No subscriptions yet')).toHaveCount(0);
   await expect(card.getByText('No routing rules configured')).toHaveCount(0);

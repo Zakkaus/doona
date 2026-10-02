@@ -1,4 +1,4 @@
-import {box, expect, faults, mockBackend, setAppearance, test, moreAction} from './fixtures';
+import {box, expect, faults, mockBackend, setAppearance, settle, test, moreAction} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
@@ -243,6 +243,7 @@ test.describe('narrow screens', () => {
     for (const lang of ['zh-TW', 'en']) {
       for (const scheme of ['light', 'dark']) {
         await setAppearance(page, lang, scheme);
+        await settle(page);
         await page.reload();
         const map = page.locator('.rp-topology');
         await expect(map.locator('.rp-tree-hint')).toBeVisible();

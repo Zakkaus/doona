@@ -1,4 +1,4 @@
-import {expect, faults, mockBackend, setAppearance, test, box} from './fixtures';
+import {expect, faults, mockBackend, setAppearance, settle, test, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 
 test.use({storage: {'doona-lang': 'en'}});
@@ -320,6 +320,7 @@ test('the narrow latency plot keeps its annotations clear of axis labels', async
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
       await setAppearance(page, lang, scheme);
+      await settle(page);
       await page.reload();
       const chart = page.locator('.rp-swarm svg').first();
       await expect(chart).toBeVisible();
@@ -340,6 +341,7 @@ test('DNS summaries use their card height at 1024 px', async ({page}) => {
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
       await setAppearance(page, lang, scheme);
+      await settle(page);
       await page.reload();
       await expect(page.locator('.rp-waffle')).toBeVisible();
       const gaps = await page.locator('.rp-chart-page > .rp-g21 > .rp-card:nth-child(2)').evaluateAll(cards =>
