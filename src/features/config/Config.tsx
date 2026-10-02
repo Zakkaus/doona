@@ -3,6 +3,7 @@ import {Badge, Button, ErrorMessage, HelpRow, Kv, LabeledSelect, Light, Loading,
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
 import {useConfigPage} from './useConfigPage';
+import {ConfigHistory} from './ConfigHistory';
 import {Modules} from './Modules';
 import {GlobalSettings} from './GlobalSettings';
 import {NewSource} from './NewSource';
@@ -14,6 +15,7 @@ export function Config(props: PageProps) {
     reload,
     loading,
     ready,
+    tabsReady,
     metadata,
     redacted,
     tabs,
@@ -31,6 +33,7 @@ export function Config(props: PageProps) {
     summaryText
   } = useConfigPage(props);
   const content = {
+    history: <ConfigHistory />,
     modules: modulesProps && <Modules {...modulesProps} />,
     global: <GlobalSettings {...props} />,
     source: (
@@ -85,7 +88,7 @@ export function Config(props: PageProps) {
           )}
         </div>
       )}
-      {ready && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
+      {tabsReady && <Tabs label={t('nav.config')} value={tab} onChange={setTab} items={tabs.map(item => ({...item, content: content[item.id]}))} />}
     </div>
   );
 }

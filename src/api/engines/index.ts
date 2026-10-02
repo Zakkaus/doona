@@ -27,3 +27,5 @@ export function engineOf(version: Pick<Version, 'engine'> | undefined): Engine {
       return unknown;
   }
 }
+
+export {configManagement, configStore, configPaths, exportFilename, type ConfigPaths} from './honkConfig';

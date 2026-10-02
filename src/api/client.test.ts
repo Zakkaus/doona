@@ -797,3 +797,40 @@ it.each([undefined, ['A', 'AAAA']])('sends exact-name DNS deletion with repeated
   expect(url.searchParams.get('name')).toBe('example.org.');
   expect(url.searchParams.getAll('type')).toEqual(type ?? []);
 });
+
+it.each([
+  ['import', (api: Api) => api.importConfig(true), 'POST', '/import', {replace: true}],
+  ['revisions', (api: Api) => api.configRevisions(), 'GET', '/revisions', null],
+  ['activate', (api: Api) => api.activateConfigRevision(42), 'POST', '/revisions/42/activate', null]
+] as const)('sends the configuration %s contract', async (_name, call, method, path, body) => {
+  const fetcher = vi.fn(async () => json(method === 'GET' ? {active: null, max_revisions: 50, revisions: []} : acceptedBody, method === 'GET' ? 200 : 202));
+  vi.stubGlobal('fetch', fetcher);
+  await call(createApi('https://honk.test/prefix', 'token'));
+  const request = (fetcher.mock.calls as unknown as [Request][])[0][0];
+  expect(request.url).toBe('https://honk.test/prefix/api/v1/x-honk/config' + path);
+  expect(request.method).toBe(method);
+  expect(await request.text()).toBe(body === null ? '' : JSON.stringify(body));
+  expect(request.headers.has('Idempotency-Key')).toBe(method === 'POST');
+  expect(request.headers.has('If-Match')).toBe(false);
+  expect(request.headers.get('Authorization')).toBe('Bearer token');
+});
+it.each([
+  ['attachment; filename="honk-r42.dae"', 'honk-r42.dae'],
+  ['attachment; filename="../../safe.dae"', 'safe.dae'],
+  [null, 'honk.dae']
+])('exports response bytes with filename %s', async (disposition, filename) => {
+  const content = '# listener secrets omitted\nrouting { fallback: direct }\n';
+  let sent: Request | undefined;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (request: Request) => {
+      sent = request;
+      return new Response(content, {headers: {'Content-Type': 'text/plain; charset=utf-8', ...(disposition ? {'Content-Disposition': disposition} : {})}});
+    })
+  );
+  expect(await createApi('https://honk.test/prefix').exportConfig()).toEqual({content, filename, contentType: 'text/plain; charset=utf-8'});
+  expect(sent!.url).toBe('https://honk.test/prefix/api/v1/x-honk/config/export');
+  expect(sent!.method).toBe('GET');
+  expect(sent!.headers.get('Accept')).toBe('text/plain');
+  expect(await sent!.text()).toBe('');
+});

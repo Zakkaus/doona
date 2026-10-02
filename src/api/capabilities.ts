@@ -36,7 +36,8 @@ export function normalizeCapabilities(raw: ReportedCapabilities): Capabilities {
   const resources = {...raw.resources} as Record<string, unknown>;
   const unreported = resourceKeys.filter(key => !resources[key] || typeof resources[key] !== 'object');
   for (const key of unreported) resources[key] = {available: false};
-  return {...raw, resources: resources as Capabilities['resources'], unreported};
+  const extensions = Object.fromEntries(Object.entries(raw.resources).filter(([key]) => key.startsWith('x-')));
+  return {...raw, extensions, resources: resources as Capabilities['resources'], unreported};
 }
 
 // Whether the backend offers a resource. `whileLoading` answers while the capabilities are absent, before they arrive

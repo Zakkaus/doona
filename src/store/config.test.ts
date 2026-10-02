@@ -5,7 +5,7 @@ import {createMockApi} from '../api/mock';
 import {capabilities} from '../api/mock/fixtures';
 // The mocked react reads hookHarness, so testHelpers loads before the modules that import react.
 import {hookHarness, stubVisibleDocument} from './testHelpers';
-import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, withinLimits} from './config';
+import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, useConfigRevisionAction, withinLimits} from './config';
 import {watchResource} from './resourceCore';
 
 vi.mock('react', async original => ({
@@ -18,6 +18,25 @@ vi.mock('./runtime', () => ({useCapabilities: () => ({data: capabilities})}));
 
 const source = {id: 'main', content_sha256: 'aaa'};
 const refused = new ApiError(412, 'precondition_failed', 'Precondition failed');
+
+it.each([null, 1])('requires confirmation again when the fresh head differs before applying revision %s', async revision => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+  });
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const list = await api.configRevisions();
+  const fresh = vi.spyOn(api, 'configRevisions').mockResolvedValue({...list, active: 12345});
+  const importing = vi.spyOn(api, 'importConfig');
+  const activating = vi.spyOn(api, 'activateConfigRevision');
+  const action = hookHarness.render(useConfigRevisionAction);
+  expect(await action.apply(revision, true, list.active)).toEqual({changed: 12345});
+  expect(fresh).toHaveBeenCalledWith(expect.any(AbortSignal));
+  expect(importing).not.toHaveBeenCalled();
+  expect(activating).not.toHaveBeenCalled();
+});
 
 it('passes the 412 on and forgets nothing when the file changed or the refetch failed', () => {
   expect(refusalOutcome(refused, source, 'bbb', 'main:aaa')).toEqual({error: refused, lastRefused: 'main:aaa'});

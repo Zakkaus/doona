@@ -255,3 +255,19 @@ test.describe('phone editor keyboard', () => {
     await expect(page.locator('.cm-panel input')).toBeFocused();
   });
 });
+
+test.describe('phone configuration history', () => {
+  test.use({viewport: {width: 390, height: 900}});
+  test('the revision list and details do not overflow the viewport', async ({page}) => {
+    await page.goto('/#/config?tab=history');
+    await expect(page.getByRole('grid', {name: 'Backups and revisions'})).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.getByRole('row').filter({hasText: 'Database head'}).click();
+    const dialog = page.getByRole('dialog', {name: 'Revision details'});
+    await expect(dialog).toContainText('SHA-256');
+    const bounds = await box(dialog);
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});

@@ -20,6 +20,7 @@ export type ResourceName =
   | 'dnsCache'
   | 'dnsLog'
   | 'runtimeSettings'
+  | 'configRevisions'
   | 'config'
   | 'providers'
   | 'geodata'
@@ -55,6 +56,7 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
       'runtime',
       'runtimeSettings',
       'config',
+      'configRevisions',
       'groups',
       'group',
       'groupProbeProtocols',

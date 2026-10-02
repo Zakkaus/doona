@@ -1,14 +1,16 @@
 import {ApiError, clientError} from '../api/error';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getApi} from '../api/index';
-import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../api/model';
+import type {ConfigSource, ConfigValidationRequest, ConfigValidationResult, OperationAccepted} from '../api/model';
 import {LocalError} from '../api/error';
 import {sha256} from '../api/hash';
 import {useResource} from './resource';
 import {useCapabilities} from './runtime';
 import {activationError, etag, finished, settle, useAction} from './action';
 import type {Api} from '../api/api';
+import {refetchAll} from './resourceCore';
 import {sourceAt} from '../dae/newSource';
+import {sharedControl, useSharedControl} from './sharedControl';
 
 export function useConfig(enabled = true) {
   const api = getApi();
@@ -208,5 +210,51 @@ export function useConfigEditor(refetch: () => unknown, {rethrow = false, shared
         }),
       [api, canValidate, validateConfig, writeMax, body, run, refetch]
     )
+  };
+}
+
+export function useConfigRevisions(enabled: boolean) {
+  const api = getApi();
+  return useResource({key: ['configRevisions'], every: 0, fetch: signal => api.configRevisions(signal)}, {enabled});
+}
+type RevisionPending = {revision: number | null; head: number | null | undefined; operation: OperationAccepted};
+export function useConfigRevisionAction() {
+  const api = getApi();
+  const action = useAction<'import' | 'activate' | 'read'>({shared: 'config-revisions', rethrow: true});
+  const [pending, setPending] = useSharedControl<RevisionPending | null>('config-revisions-pending', null);
+  return {
+    ...action,
+    pending,
+    apply: (revision: number | null, replace: boolean, head: number | null | undefined) =>
+      action.run(revision === null ? 'import' : 'activate', async signal => {
+        if (sharedControl<RevisionPending | null>(api, 'config-revisions-pending', null).value) return;
+        try {
+          if (head !== undefined) {
+            const fresh = await api.configRevisions(signal);
+            if (fresh.active !== head) return {changed: fresh.active};
+          }
+          const accepted = await (revision === null ? api.importConfig(replace, signal) : api.activateConfigRevision(revision, signal)).catch(error => {
+            throw activationError(error) ?? error;
+          });
+          setPending({revision, head, operation: accepted});
+          const operation = await settle(api, accepted, signal);
+          setPending(null);
+          return {result: finished(operation, 'reload')};
+        } finally {
+          if (getApi() === api) void refetchAll();
+        }
+      }),
+    reread: () =>
+      action.run('read', async signal => {
+        const retained = sharedControl<RevisionPending | null>(api, 'config-revisions-pending', null).value;
+        if (!retained) return;
+        try {
+          const operation = await settle(api, retained.operation, signal);
+          setPending(null);
+          return {result: finished(operation, 'reload')};
+        } finally {
+          if (getApi() === api) void refetchAll();
+        }
+      })
   };
 }
