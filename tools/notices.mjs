@@ -6,9 +6,9 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const NOTICES = 'THIRD-PARTY-NOTICES.txt';
-// Licences of files compiled into dist/, besides GPL-3.0-only in LICENSE. OFL-1.1 travels in the font archive as
-// fonts/OFL.txt; GPL-2.0-only covers repository files that are never shipped.
-export const PROGRAM_LICENSES = ['Apache-2.0', 'CC-BY-4.0', 'CC-BY-3.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'LicenseRef-GitHub-Logos'];
+// Licences of files compiled into dist/, besides GPL-3.0-only in LICENSE. OFL-1.1 also travels in the font archive
+// as fonts/OFL.txt; GPL-2.0-only covers repository files that are never shipped.
+export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'CC-BY-4.0', 'CC-BY-3.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'LicenseRef-GitHub-Logos'];
 
 // Build tools that write code of their own into dist/. Only that helper code ships, so each entry takes the sections
 // of the tool's LICENSE.md that cover it: a heading, or one name in a heading that lists several packages.

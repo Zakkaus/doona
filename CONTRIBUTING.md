@@ -22,7 +22,7 @@ Before opening a pull request, run the same gates as CI from the repository root
 - `e2e/`: Playwright tests.
 - `tools/`: build, check and release scripts.
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
-- `public/`: fonts, icons and the logo, served as they are.
+- `public/`: icons and the logo, served as they are. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
 - `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
 - `docs/`: the README's screenshots.
 - `patches/`: pnpm patches to dependencies.

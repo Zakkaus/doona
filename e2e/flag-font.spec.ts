@@ -1,5 +1,38 @@
 import {test, expect, mockBackend, query} from './fixtures';
 
+for (const lang of ['zh-TW', 'zh-CN']) {
+  test(`Noto slices are self-hosted and retain the ${lang} font stack`, async ({page}) => {
+    await mockBackend(page);
+    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
+    const fonts = new Set<string>();
+    page.on('request', request => {
+      if (request.resourceType() === 'font') fonts.add(request.url());
+    });
+    await page.goto('/#/settings');
+    await expect(page.locator('#settings-backend')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => true));
+    const family = lang === 'zh-TW' ? '"Noto Sans TC"' : '"Noto Sans SC", "Noto Sans TC"';
+    const stacks = await page.locator('body, h1, h2, h3').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).fontFamily));
+    expect(stacks.every(stack => stack === `"Twemoji Country Flags", ${family}, system-ui, sans-serif`)).toBe(true);
+    const faces = await page.evaluate(() =>
+      [...document.fonts]
+        .filter(face => face.family.includes('Noto Sans'))
+        .map(face => ({weight: face.weight, display: face.display, range: face.unicodeRange}))
+    );
+    expect(faces.length).toBeGreaterThan(1);
+    expect(faces.every(face => face.weight === '100 900' && face.display === 'optional' && face.range !== 'U+0-10FFFF')).toBe(true);
+    const slices = [...fonts].filter(url => new URL(url).pathname.includes('/fonts/'));
+    expect(slices.length).toBeGreaterThan(0);
+    expect(slices.length).toBeLessThan(faces.length);
+    for (const url of slices) {
+      expect(new URL(url).origin).toBe(new URL(page.url()).origin);
+      expect(new URL(url).pathname).toMatch(/\/fonts\/noto-sans-(tc|sc)-.+\.woff2$/);
+    }
+    const worker = await (await page.request.get('/sw.js')).text();
+    expect(worker).not.toMatch(/fonts\/noto-sans-/);
+  });
+}
+
 test('Chromium renders regional indicators with the self-hosted colour flag font', async ({page, context}) => {
   const {api, handlers} = await mockBackend(page);
   handlers['GET nodes'] = async request => {
