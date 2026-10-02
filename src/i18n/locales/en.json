@@ -374,10 +374,7 @@
   "conn.filterHint": "Domain, IP, device, process",
   "conn.filterPick": "Filter devices and rules",
   "conn.filters": "Filters",
-  "conn.filtersActive": {
-    "one": "Filters, {n} applied",
-    "other": "Filters, {n} applied"
-  },
+  "conn.filtersActive": "Filters, {n} applied",
   "conn.group": "Group by",
   "conn.groupCount": "{name} ({n})",
   "conn.latency.hint": "Each dot is one node, at the TCP latency the Nodes page shows.",
@@ -525,10 +522,7 @@
   "dns.log": "Resolution log",
   "dns.logEmpty": "No matching resolutions",
   "dns.logFilterHint": "Name contains",
-  "dns.logLoaded": {
-    "one": "{n} loaded; the export covers loaded records only",
-    "other": "{n} loaded; the export covers loaded records only"
-  },
+  "dns.logLoaded": "{n} loaded; the export covers loaded records only",
   "dns.logTotal": {
     "one": "{n} record kept",
     "other": "{n} records kept"
@@ -1009,14 +1003,8 @@
   "nodes.latency.showAll": "Show all {n}",
   "nodes.latency.slower": "Slower than usual",
   "nodes.latency.unavailable": "Unavailable",
-  "nodes.latency.unavailableList": {
-    "one": "{n} unavailable: {names}",
-    "other": "{n} unavailable: {names}"
-  },
-  "nodes.latency.unmeasuredList": {
-    "one": "{n} not measured: {names}",
-    "other": "{n} not measured: {names}"
-  },
+  "nodes.latency.unavailableList": "{n} unavailable: {names}",
+  "nodes.latency.unmeasuredList": "{n} not measured: {names}",
   "nodes.link": "Node link",
   "nodes.linkInvalid": "The node link must look like vless://…",
   "nodes.manualOnly": "Manual only",
