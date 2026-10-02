@@ -1,7 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import type {Api} from '../api/api';
 import type {Capabilities, Node} from '../api/model';
-import {createMockApi} from '../api/mock';
+import {createMockApi} from '../../mock';
 import {normalizeResourceKey} from '../api/inflight';
 import {stubVisibleDocument} from './testHelpers';
 import {refetchResource, snapshot, watchResource, type Resource} from './resourceCore';
