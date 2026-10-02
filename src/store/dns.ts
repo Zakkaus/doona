@@ -61,7 +61,7 @@ export function useDnsFlush() {
   const {busy, run, cancel} = useAction<'flush'>({rethrow: true});
   return {busy: busy !== null, cancel, flush: useCallback(() => run('flush', signal => flushCache(api, signal)), [api, run])};
 }
-export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true) {
+export function useDnsLog(query: {name?: string; type?: string; src?: string}, enabled = true, paused = false) {
   const api = getApi();
   const name = query.name?.trim() || undefined;
   const type = query.type && query.type !== 'all' ? query.type : undefined;
@@ -77,7 +77,7 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
         return {...result.page, limit: result.limit};
       }
     },
-    {enabled}
+    {enabled, paused}
   );
   return {...resource, limit: resource.data ? resource.data.limit : limit};
 }
