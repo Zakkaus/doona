@@ -31,18 +31,18 @@ test('each hub opens its first page, then the page last seen in it', async ({pag
     expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
 });
 
-test('every page is at most two taps away: its hub, then its page', async ({page}) => {
+test.describe('every page is at most two taps away: its hub, then its page', () => {
   for (const [index, hub] of hubs.entries()) {
     for (const route of hub.pages) {
-      await page.goto(`/#/${index ? 'activity' : 'settings'}`);
-      await page.evaluate(() => sessionStorage.clear());
-      await bar(page).getByRole('link').nth(index).click();
-      if (!page.url().endsWith(`#/${route}`)) {
-        const label = await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent();
-        await page.locator('.rp-hubnav').getByText(label!, {exact: true}).click();
-      }
-      await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-      await expect(page.locator('.rp-hubnav [aria-current="page"]')).toHaveText((await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent())!);
+      test(route, async ({page}) => {
+        await page.goto(`/#/${index ? 'activity' : 'settings'}`);
+        await bar(page).getByRole('link').nth(index).click();
+        const pages = page.locator('.rp-hubnav');
+        await expect(pages.locator('[aria-current="page"]')).toHaveAttribute('href', `#/${hub.pages[0]}`);
+        if (route !== hub.pages[0]) await pages.locator(`[href="#/${route}"]`).click();
+        await expect(page).toHaveURL(new RegExp(`#/${route}$`));
+        await expect(pages.locator('[aria-current="page"]')).toHaveText((await page.locator(`.rp-side .rp-nav[href="#/${route}"]`).textContent())!);
+      });
     }
   }
 });
