@@ -2,6 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from '../api/mock';
 import {ApiError} from '../api/error';
 import {latencyProbe} from './action';
+import {optionsProbe} from './probeOptions';
 import {groupActions, groupConflict, patchConfig, probeGroup} from './groups';
 
 afterEach(() => vi.useRealTimers());
@@ -15,7 +16,7 @@ it.each([256, 6])('probes every direct member within member and result budgets (
   const start = api.startProbe;
   api.startProbe = vi.fn(async (request, signal) => {
     expect(Array.isArray(request.members)).toBe(true);
-    expect(request.members.length).toBeLessThanOrEqual(Math.min(64, Math.floor(maxResults / 2)));
+    expect(request.members!.length).toBeLessThanOrEqual(Math.min(64, Math.floor(maxResults / 2)));
     return start(request, signal);
   });
   const result = probeGroup(api, caps, group, new AbortController().signal);
@@ -24,6 +25,35 @@ it.each([256, 6])('probes every direct member within member and result budgets (
   expect(new Set(completed.results.map(row => row.member_id))).toEqual(new Set(group.members.map(member => member.id)));
   expect(completed.results).toHaveLength(group.members.length * 2);
   expect(completed.selection_before).toEqual(completed.selection_after);
+});
+
+it.each([
+  [256, false],
+  [6, false],
+  [256, true],
+  [6, true]
+] as const)('batches chosen DNS options for 120 members (%i results, leaves %s)', async (maxResults, leaves) => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const caps = await api.capabilities();
+  caps.resources.probes.limits!.max_results_per_job = maxResults;
+  const group = await api.group('backup');
+  expect(group.members).toHaveLength(120);
+  const request = optionsProbe(caps, {type: 'group', group_id: group.id}, {choice: 'dns_both', cold: true, leaves}, group)!;
+  const size = Math.min(caps.resources.probes.limits!.max_members_per_job, Math.floor(maxResults / 4));
+  const start = api.startProbe;
+  api.startProbe = vi.fn(async (batch, signal) => {
+    expect(batch).toMatchObject({target: request.target, kind: 'dns', transport: ['tcp', 'udp'], ip_version: 'any', warmth: 'cold'});
+    expect(Array.isArray(batch.members)).toBe(true);
+    expect(batch.members!.length).toBeLessThanOrEqual(size);
+    return start(batch, signal);
+  });
+  const outcome = probeGroup(api, caps, group, new AbortController().signal, request);
+  await vi.runAllTimersAsync();
+  const result = await outcome;
+  expect(api.startProbe).toHaveBeenCalledTimes(Math.ceil(120 / size));
+  expect(result.results).toHaveLength(120 * 4);
+  expect(new Set(result.results.map(row => row.member_id))).toEqual(new Set(group.members.map(member => member.id)));
 });
 
 it('rejects oversized direct jobs in mock admission', async () => {

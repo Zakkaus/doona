@@ -1,3 +1,4 @@
+import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
 import Edit from '../../ui/icons/Edit';
 import AddCircle from '../../ui/icons/AddCircle';
 import {FilterSummary} from '../shared/FilterSummary';
@@ -185,11 +186,13 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
               </Button>
               <GroupDialog id={g.id} model={m.edit} details={m.details} />
               <CheckEdit model={m.check} />
+              {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
               <MoreMenu
                 actions={[
                   ...(!m.edit.editable ? [{id: 'config', label: t('policy.viewConfig'), onAction: m.edit.view}] : []),
                   ...(m.check.available ? [{id: 'check', label: t('policy.checkEdit'), isDisabled: m.check.busy, onAction: m.check.show}] : []),
                   {id: 'probe', label: m.probeText, isPending: m.probing, isDisabled: m.probeDisabled, reason: m.probeTip, onAction: m.probe},
+                  ...(m.canProbeOptions ? [{id: 'probe-options', label: t('probe.options'), isDisabled: m.probeDisabled, onAction: m.openProbeOptions}] : []),
                   ...(g.pinned ? [{id: 'release', label: t('policy.releaseOverride'), isPending: m.releasing, isDisabled: m.busy, onAction: m.release}] : [])
                 ]}
               />

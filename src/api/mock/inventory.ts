@@ -188,6 +188,7 @@ export function createInventory(
       signal?.throwIfAborted();
       const probes = capabilities.resources.probes;
       if (!probes.available) throw new ApiError(404, 'capability_not_supported', 'Probes are unavailable');
+      if (request.target.type === 'node' && request.members !== undefined) throw new ApiError(400, 'invalid_request', 'Node probes must not specify members');
       const versions = request.ip_version === 'any' ? (['ipv4', 'ipv6'] as const) : [request.ip_version];
       if (
         !probes.targets?.includes(request.target.type) ||

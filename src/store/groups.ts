@@ -1,22 +1,32 @@
 import {useCallback, useMemo} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
-import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeResult} from '../api/model';
+import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
 import {activationError, etag, finished, settle, latencyProbe, readBackUnconfirmed, useAction} from './action';
 import {useSharedControl} from './sharedControl';
+import {optionsProbe, probeChoices, type ProbeOptions} from './probeOptions';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
-export async function probeGroup(api: Api, capabilities: Capabilities, group: Group, signal: AbortSignal): Promise<ProbeResult> {
-  const request = latencyProbe(capabilities, {type: 'group', group_id: group.id});
+export async function probeGroup(
+  api: Api,
+  capabilities: Capabilities,
+  group: Group,
+  signal: AbortSignal,
+  request: ProbeRequest | null = latencyProbe(capabilities, {type: 'group', group_id: group.id})
+): Promise<ProbeResult> {
   const limits = capabilities.resources.probes.limits;
-  if (!request || !limits || !group.capabilities.probe_transports.includes('tcp')) throw new LocalError('ui.probeUnsupported');
+  if (!request || !limits || request.transport.some(transport => !group.capabilities.probe_transports.includes(transport)))
+    throw new LocalError('ui.probeUnsupported');
   const dimensions = request.transport.length * (request.ip_version === 'any' ? 2 : 1);
   const size = Math.min(limits.max_members_per_job, Math.floor(limits.max_results_per_job / dimensions));
   if (size < 1 || !group.members.length) throw new LocalError('ui.probeUnsupported');
+  // honk cannot filter descendant IDs; flat groups can use direct IDs for the same leaves.
+  if (request.members === 'leaves' && (group.members.length <= size || group.members.some(member => member.kind === 'group')))
+    return finished(await settle(api, await api.startProbe(request, signal), signal), 'probe');
   let result: ProbeResult | undefined;
   try {
     for (let offset = 0; offset < group.members.length; offset += size) {
@@ -135,6 +145,7 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
     setNetwork,
     busy: action.busy,
     canProbe,
+    probeChoices: resource.data ? probeChoices(capabilities, 'group', resource.data) : [],
     select: useCallback(
       (member_id: string) => run('selection', signal => api.selectGroup(id, {member_id, network}, signal).catch(readBackUnconfirmed(refetchShown, signal))),
       [api, id, network, run, refetchShown]
@@ -144,17 +155,20 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
       [api, id, network, run, refetchShown]
     ),
     probe: useCallback(
-      () =>
+      (options?: ProbeOptions) =>
         run('probe', async signal => {
-          if (!capabilities || !resource.data || !canProbe) throw new LocalError('ui.probeUnsupported');
+          if (!capabilities || !resource.data || (!options && !canProbe)) throw new LocalError('ui.probeUnsupported');
           try {
-            return await probeGroup(api, capabilities, resource.data, signal);
+            const request = options
+              ? optionsProbe(capabilities, {type: 'group', group_id: id}, options, resource.data)
+              : latencyProbe(capabilities, {type: 'group', group_id: id});
+            return await probeGroup(api, capabilities, resource.data, signal, request);
           } catch (error) {
             if (!signal.aborted) void refetchShown();
             throw error;
           }
         }),
-      [api, capabilities, resource.data, canProbe, run, refetchShown]
+      [api, id, capabilities, resource.data, canProbe, run, refetchShown]
     ),
     patchConfig: patch,
     // Turning off a value the group never set clears it again rather than writing false.

@@ -1,3 +1,4 @@
+import type {ProbeOptions} from '../../store/probeOptions';
 import {href} from '../../shell/route';
 import {selectedIncludeLabels, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
 import {quoteName, isWritableName} from '../../dae/groups';
@@ -41,6 +42,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused, focused} = input;
   const t = useT();
   const lang = useLang();
+  const [probeOptionsOpen, setProbeOptionsOpen] = useState(false);
   const control = useGroupControl(id, refreshGroups, refreshNodes, paused && !focused);
   // A language switch does not repeat the toast. The notice decides its kind, so an unknown outcome stays neutral; the
   // group's own summary already carries the error and adds no detail.
@@ -124,8 +126,8 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const conflict = groupConflict(control.actionError);
   const check = useCheckEdit(g, control.patchConfig, !!control.busy, conflict);
   const memberName = (id: string) => members.find(member => member.id === id)?.name ?? id;
-  const probe = () =>
-    void control.probe().then(result => {
+  const probe = (options?: ProbeOptions) =>
+    void control.probe(options).then(result => {
       if (result && g) {
         const summary = probeSummary(result);
         toast('positive', t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}));
@@ -205,6 +207,21 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     untestedHelp: untestedHelp(card?.untested ?? null, !!control.canProbe, t),
     probeText: t(control.busy === 'probe' ? 'policy.probing' : 'policy.probeAll'),
     probe,
+    canProbeOptions: control.probeChoices.length > 0,
+    openProbeOptions: () => setProbeOptionsOpen(true),
+    probeOptions: probeOptionsOpen
+      ? {
+          name: input.name,
+          group: true,
+          choices: control.probeChoices,
+          busy: !!control.busy,
+          close: () => setProbeOptionsOpen(false),
+          submit: (options: ProbeOptions) => {
+            probe(options);
+            setProbeOptionsOpen(false);
+          }
+        }
+      : null,
     release,
     releasing: control.busy === 'selection',
     interrupt,

@@ -5,6 +5,7 @@ import {getApi} from '../api/index';
 import type {Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
 import {activationError, finished, settle, latencyProbe, useAction, type SucceededResult} from './action';
+import {optionsProbe, probeChoices, type ProbeOptions} from './probeOptions';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -131,8 +132,9 @@ export function useNodeProbe(refetch: () => void) {
   const {busy, run} = useAction<string>({rethrow: true});
   const canProbe = latencyProbe(capabilities.data, {type: 'node', node_id: '-'}) !== null;
   const probe = useCallback(
-    (nodeId: string) => {
-      const request = latencyProbe(capabilities.data, {type: 'node', node_id: nodeId});
+    (nodeId: string, options?: ProbeOptions) => {
+      const target = {type: 'node' as const, node_id: nodeId};
+      const request = options ? optionsProbe(capabilities.data, target, options) : latencyProbe(capabilities.data, target);
       if (!request) return Promise.resolve(undefined);
       return run(nodeId, async signal => {
         const accepted = await api.startProbe(request, signal);
@@ -143,7 +145,7 @@ export function useNodeProbe(refetch: () => void) {
     },
     [api, capabilities.data, run, refetch]
   );
-  return {busy, canProbe, probe};
+  return {busy, canProbe, probe, choices: probeChoices(capabilities.data, 'node')};
 }
 export function useGeodata(enabled = true) {
   const api = getApi();
