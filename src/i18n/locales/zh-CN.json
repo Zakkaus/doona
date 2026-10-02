@@ -1919,6 +1919,7 @@
   "widgets.downloadSummary": "↓ {down}",
   "widgets.drag": "重新排列{name}",
   "widgets.dropToDock": "放到这里嵌入",
+  "widgets.edgeHide": "收至边缘",
   "widgets.edit": "编辑小工具",
   "widgets.empty": "暂无小工具。可在编辑模式下添加。",
   "widgets.expand": "展开小工具",

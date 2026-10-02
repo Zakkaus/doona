@@ -38,3 +38,25 @@ it('describes a disabled item with its reason, and an enabled one with none', ()
   expect(markup).toContain('aria-disabled="true"');
   expect(markup).not.toContain('unused while enabled');
 });
+
+it('checks the settings among the actions in one section and keeps the labels in one column', () => {
+  const markup = renderToStaticMarkup(
+    <MoreActionsList
+      label="Panel options"
+      actions={[
+        {id: 'dock', label: 'Dock', onAction: noop},
+        {id: 'edge', label: 'Hide at edge', checked: true, onAction: noop},
+        {id: 'hide', label: 'Hide', onAction: noop},
+        {id: 'snap', label: 'Snap', checked: false, onAction: noop}
+      ]}
+    />
+  );
+  expect(markup).toMatch(/role="menuitemcheckbox"[^>]*aria-checked="true"[^>]*data-key="edge"|data-key="edge"[^>]*aria-checked="true"/);
+  expect(markup).toMatch(/role="menuitem"[^>]*data-key="dock"|data-key="dock"[^>]*role="menuitem"/);
+  expect(markup).not.toContain('rp-item plain');
+  expect(markup.match(/rp-check-mark/g)).toHaveLength(4);
+  expect(markup.match(/role="group"/g)).toHaveLength(1);
+  // The section stands where its first setting does, holding both.
+  expect([...markup.matchAll(/data-key="(\w+)"/g)].map(match => match[1])).toEqual(['dock', 'edge', 'snap', 'hide']);
+  expect(markup).toMatch(/data-key="snap"[^>]*aria-checked="false"|aria-checked="false"[^>]*data-key="snap"/);
+});

@@ -93,6 +93,11 @@ it.each([
   ['floats a panel saved before docking existed', {}, undefined],
   ['drops the old floating flag', {floating: false}, undefined]
 ])('%s', (_name, value, docked) => expect(parseLayout({...defaults(), ...value}).docked).toBe(docked));
+it.each([
+  ['keeps hiding at an edge on', {edge: true}, true],
+  ['keeps it off when absent', {}, undefined],
+  ['drops a value that is not true', {edge: 'right'}, undefined]
+])('%s', (_name, value, edge) => expect(parseLayout({...defaults(), ...value}).edge).toBe(edge));
 it('restoring defaults floats a docked panel at its own size', () => {
   const saved = parseLayout({...defaults(), docked: true, dockHeight: 300.4, size: {width: 400, height: 300}, offset: {x: -20, y: -40}});
   expect(saved.docked).toBe(true);

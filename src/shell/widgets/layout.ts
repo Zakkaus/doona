@@ -89,6 +89,8 @@ export type Layout = {
   docked?: boolean;
   // The docked section's height, set by its top edge; absent until the reader drags it.
   dockHeight?: number;
+  // The floating, unpinned panel hides at the screen edge nearest to it until hovered; absent while off.
+  edge?: boolean;
   visible: boolean;
 };
 export const defaults = (): Layout => ({
@@ -159,6 +161,7 @@ export function parseLayout(value: unknown): Layout {
     pinned: value.pinned === true,
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),
+    ...(value.edge === true ? {edge: true} : {}),
     visible: value.visible !== false
   };
 }

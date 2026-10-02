@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react';
-import {Menu, MenuItem, Text} from 'react-aria-components';
+import {Menu, MenuItem, MenuSection, Text} from 'react-aria-components';
+import {Check} from './Check';
 import MoreVertical from './icons/MoreVertical';
 import {useT} from '../i18n';
 import {Button} from './Button';
@@ -18,6 +19,8 @@ export type Action = {
   // A destructive action, which the caller puts last.
   negative?: boolean;
   accent?: boolean;
+  // A setting the item turns on and off, checked while on; the menu stays open after it, as S2's does.
+  checked?: boolean;
 };
 
 const ActionButton = ({action}: {action: Action}) => (
@@ -62,26 +65,40 @@ export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Acti
 }
 
 // The menu a MoreMenu opens. A disabled item keeps its reason as its description, the way a disabled button names its
-// ActionHelp line.
+// ActionHelp line. A menu with a setting in it keeps the checkmark column on every item, so the labels line up.
 export function MoreActionsList({actions, label}: {actions: Action[]; label: string}) {
+  // The settings among the actions share one section, where the first of them stands.
+  const checks = actions.filter(action => action.checked !== undefined);
+  const first = actions.findIndex(action => action.checked !== undefined);
+  const checkable = checks.length > 0;
+  const item = (action: Action) => (
+    <MenuItem key={action.id} id={action.id} className={cx('rp-item', !checkable && 'plain', action.negative && 'negative')} textValue={action.label}>
+      {checkable && <Check />}
+      <span className="rp-item-text">
+        <Text slot="label">{action.label}</Text>
+        {action.isDisabled && action.reason && (
+          <Text slot="description" className="desc reason">
+            {action.reason}
+          </Text>
+        )}
+      </span>
+    </MenuItem>
+  );
   return (
     <Menu
       aria-label={label}
       disabledKeys={actions.filter(action => action.isDisabled || action.isPending).map(action => action.id)}
       onAction={key => actions.find(action => action.id === key)?.onAction()}
     >
-      {actions.map(action => (
-        <MenuItem key={action.id} id={action.id} className={cx('rp-item plain', action.negative && 'negative')} textValue={action.label}>
-          <span className="rp-item-text">
-            <Text slot="label">{action.label}</Text>
-            {action.isDisabled && action.reason && (
-              <Text slot="description" className="desc reason">
-                {action.reason}
-              </Text>
-            )}
-          </span>
-        </MenuItem>
-      ))}
+      {actions.map((action, index) =>
+        action.checked === undefined
+          ? item(action)
+          : index === first && (
+              <MenuSection key="checks" selectionMode="multiple" selectedKeys={checks.filter(check => check.checked).map(check => check.id)}>
+                {checks.map(item)}
+              </MenuSection>
+            )
+      )}
     </Menu>
   );
 }

@@ -1,6 +1,6 @@
 import {useContext, useMemo, type ReactNode} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {formatBytes, formatRate, formatCpu, formatDuration, formatLatency, localTime} from '../../i18n/format';
+import {formatBytes, formatRate, formatUnit, formatCpu, formatDuration, formatLatency, localTime} from '../../i18n/format';
 import {
   useCapabilities,
   useNodes,
@@ -54,7 +54,7 @@ function Reading<T>({state, children}: {state: ResourceState<T> & {refetch: () =
     </>
   );
 }
-export function SpeedSummary() {
+export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
@@ -62,6 +62,7 @@ export function SpeedSummary() {
   const rates = runtime.data?.traffic.rates;
   return (
     <WidgetSpeed
+      reserve={reserveWidth ? t('widgets.uploadSummary', {up: formatUnit(999.9, locale, 'unit.megabytePerSecond', 1)}) : undefined}
       up={t('widgets.uploadSummary', {up: formatRate(rates?.upload_bytes_per_second ?? null, locale)})}
       down={t('widgets.downloadSummary', {down: formatRate(rates?.download_bytes_per_second ?? null, locale)})}
     />

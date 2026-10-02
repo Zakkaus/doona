@@ -10,6 +10,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - The DNS cache tab deletes entries by exact name and record type when the backend supports it. (#306)
 - A failure toast, and the notice for an operation with an unknown result, has a Copy error action on its button row, after the toast's own button if it has one. It copies the request, status, error code, backend message, request ID and operation for a bug report, so the browser console is no longer needed. Settings > About has a Copy recent errors button for the last 20, kept in memory only, with secrets and request bodies left out. (#304)
 - The DNS query tab can send a query to one of the upstreams the configuration's `dns.upstream` defines instead of the one `dns.routing` picks. The picker appears when the configuration is readable and names at least one upstream. (#330)
+- The floating widget panel's menu adds Hide at edge: an unpinned, undocked panel hides at its nearest screen edge behind a summary sized to its backend light and speed text, with square corners and no border against that edge. Hovering, focusing or tapping the summary reveals the panel. Edit widgets stays in the menu so the collapsed header has room for both speeds. (#322)
 
 ### Changed
 
