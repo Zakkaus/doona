@@ -24,6 +24,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "conformance": "node tools/conformance.mjs",
+    "changelog:render": "node tools/changelog.mjs render",
+    "changelog:release": "node tools/changelog.mjs release",
     "e2e:live": "pnpm build && DOONA_LIVE_OBSERVE=1 playwright test e2e/a11y.spec.ts e2e/mobile.spec.ts e2e/keyboard.spec.ts",
     "gen:api": "openapi-typescript contract/api-standardize/openapi.yaml -o \"${OPENAPI_OUTPUT:-src/api/types.ts}\"",
     "lint": "eslint . && stylelint \"src/**/*.css\"",

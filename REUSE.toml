@@ -10,6 +10,7 @@ path = [
   "tools/**",
   "install/**",
   "docs/**",
+  "changes/**",
   "contract/**",
   "public/**",
 ]

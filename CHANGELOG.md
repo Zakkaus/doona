@@ -4,6 +4,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+Entries live in [changes/](changes/) until release.
+
 ## [0.1.0-beta.13] - 2026-10-03
 
 ### Added

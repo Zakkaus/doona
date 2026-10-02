@@ -1,14 +1,17 @@
 import {execFileSync} from 'node:child_process';
 import {appendFileSync, readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
+import {parseFragment} from './changelog.mjs';
 
-const full = {lane: 'full'};
-const docs = /^(?:README(?:\.[^/]*)?\.md|CONTRIBUTING\.md|CHANGELOG\.md|LICENSE(?:\.[^/]*)?|docs\/[\s\S]+|\.github\/ISSUE_TEMPLATE\/[\s\S]+)$/;
+const full = {lane: 'full', needsFragment: true};
+const docs =
+  /^(?:README(?:\.[^/]*)?\.md|CONTRIBUTING\.md|CHANGELOG\.md|changes\/[a-z0-9]+(?:-[a-z0-9]+)*\.md|changes\/README\.md|LICENSE(?:\.[^/]*)?|docs\/[\s\S]+|\.github\/ISSUE_TEMPLATE\/[\s\S]+)$/;
 
-export function classifyChanges(diff) {
+export function classifyChanges(diff, readFragment) {
   if (!diff || !diff.endsWith('\0')) return full;
   const fields = diff.slice(0, -1).split('\0');
   const paths = [];
+  let fragmentAdded = false;
   while (fields.length) {
     const status = fields.shift();
     const count = /^[RC]\d+$/.test(status) ? 2 : /^[ADMTUXB]$/.test(status) ? 1 : 0;
@@ -16,14 +19,26 @@ export function classifyChanges(diff) {
     const changed = fields.splice(0, count);
     if (changed.some(path => !path)) return full;
     paths.push(...changed);
+    const file = changed.at(-1);
+    if (readFragment && status !== 'D' && /^changes\/[^/]+\.md$/.test(file) && file !== 'changes/README.md') {
+      if (!/^changes\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(file)) throw new Error(`${file}: use a lowercase branch slug`);
+      parseFragment(readFragment(file), file);
+    }
+    if (status === 'A' && /^changes\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(changed[0])) fragmentAdded = true;
   }
   return {
-    lane: paths.every(path => docs.test(path)) ? 'docs' : 'full'
+    lane: paths.every(path => docs.test(path)) ? 'docs' : 'full',
+    needsFragment:
+      paths.some(
+        path =>
+          /^(?:src|mock|install|public)\//.test(path) && !/\.test\.(?:tsx?|mjs)$/.test(path) && (!path.endsWith('.md') || /(?:^|\/)CHANGELOG\.md$/.test(path))
+      ) && !fragmentAdded
   };
 }
 
 export function detectChanges(base, head, git = args => execFileSync('git', args, {encoding: 'utf8', maxBuffer: 10 * 1024 * 1024})) {
   if (![base, head].every(sha => /^[a-f0-9]{40,64}$/.test(sha ?? ''))) return full;
+  let diff;
   try {
     let ancestor;
     try {
@@ -38,20 +53,29 @@ export function detectChanges(base, head, git = args => execFileSync('git', args
       }
     }
     if (!/^[a-f0-9]{40,64}$/.test(ancestor)) return full;
-    return classifyChanges(git(['diff', '--name-status', '-z', '-M', ancestor, head]));
+    diff = git(['diff', '--name-status', '-z', '-M', ancestor, head]);
   } catch {
     return full;
   }
+  return classifyChanges(diff, file => git(['show', `${head}:${file}`]));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let result = full;
   if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
+    let pr;
     try {
-      const {pull_request: pr} = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+      ({pull_request: pr} = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')));
       result = detectChanges(pr.base.sha, pr.head.sha);
-    } catch {
-      result = full;
+    } catch (error) {
+      console.error(`Unable to inspect PR changes: ${error.message}`);
+      process.exitCode = 1;
+    }
+    if (result.needsFragment && !pr?.labels?.some(label => label.name === 'no-changelog')) {
+      console.error(
+        '::error::PRs touching src/, mock/, install/ or public/ must add a new changes/<branch-slug>.md fragment (or have the no-changelog label).'
+      );
+      process.exitCode = 1;
     }
   }
   appendFileSync(process.env.GITHUB_OUTPUT, `lane=${result.lane}\n`);
