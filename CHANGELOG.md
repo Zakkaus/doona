@@ -479,6 +479,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.12...HEAD
+[0.1.0-beta.12]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.11...v0.1.0-beta.12
+[0.1.0-beta.11]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.10...v0.1.0-beta.11
+[0.1.0-beta.10]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.9...v0.1.0-beta.10
 [0.1.0-beta.9]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.8...v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.7...v0.1.0-beta.8
 [0.1.0-beta.7]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.6...v0.1.0-beta.7
