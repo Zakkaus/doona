@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {translate, type Translator} from '../i18n';
-import {chosen, type ChoiceSection} from './Select';
+import {chosen, type ChoiceSection} from './Menu';
 
 it('uses a whole message for a choice shared by several sections', () => {
   const sections: ChoiceSection[] = [

@@ -22,11 +22,14 @@ export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
 export {Checkbox} from './Checkbox';
 export {InlineSelect, LabeledSelect} from './Picker';
-export {MenuButton, MenuChoice, ChoiceMenu, ItemLabel, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Select';
-export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel, Disclosure} from './Dialog';
+export {ItemLabel} from './Select';
+export {MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Menu';
+export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';
+export {Disclosure} from './Disclosure';
 export {Tabs} from './Tabs';
 export {useTabShown} from './useTabShown';
-export {DataTable, cachedRows, fitColumns, type TableSort, type TableColumn} from './Table';
+export {DataTable, type TableSort, type TableColumn} from './Table';
+export {cachedRows, fitColumns} from './tableHooks';
 export {TimeCell} from './TimeCell';
 export {
   Empty,

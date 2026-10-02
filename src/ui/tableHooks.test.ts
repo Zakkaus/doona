@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {cachedRows, fitColumns, revealScrollTop} from './Table';
+import {cachedRows, fitColumns, revealScrollTop} from './tableHooks';
 
 it('builds a row once per source object and keeps it across lists', () => {
   const built: string[] = [];

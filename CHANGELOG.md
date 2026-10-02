@@ -19,6 +19,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - Internal: floating widget contents are split by widget family; no visible change. (#344)
+- Internal: the kit's Disclosure, Menu and table helpers are split into their own files, and tooltips share one style; no visible change. (#342)
 - Internal: page-only components and helpers load with their pages, shrinking the shell bundle by about 20 KB gzip; no visible change. (#347)
 - Node actions put group choices in an Add to group submenu without policy descriptions, with New group after a separator. Native policy labels follow honk's normalised behaviour in all three languages. (#336)
 - Count labels name subscriptions, rules, notifications, connections, nodes and DNS lookups instead of appending counts in parentheses, with English singular and plural forms. (#339)
