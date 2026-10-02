@@ -1,4 +1,4 @@
-import {expect, mockBackend, setAppearance, settle, test} from './fixtures';
+import {expect, expectVirtualOptions, mockBackend, setAppearance, settle, test} from './fixtures';
 import {createMockApi} from '../mock';
 
 const rows = (page: import('@playwright/test').Page) =>
@@ -103,7 +103,7 @@ test('a rule is added before the fallback and removed again through validate, sa
   // The outbound picker is a group's final outbound picker without None and the nodes, which a rule cannot name.
   const outbounds = page.getByRole('listbox');
   await expect(outbounds.getByRole('group', {name: 'Built-in'}).getByRole('option')).toHaveText(['direct', 'block']);
-  await expect(outbounds.getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText([
+  await expectVirtualOptions(outbounds, outbounds.getByRole('group', {name: 'Groups'}).getByRole('option'), [
     'proxy',
     'auto',
     'hk',
@@ -115,7 +115,12 @@ test('a rule is added before the fallback and removed again through validate, sa
     'telegram',
     'ai',
     'youtube',
-    'netflix'
+    'netflix',
+    'bahamut',
+    'media',
+    'gaming',
+    'office',
+    'backup'
   ]);
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gam');
   await expect(outbounds.getByRole('option')).toHaveText(['gaming']);

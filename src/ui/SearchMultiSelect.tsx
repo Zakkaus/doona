@@ -64,7 +64,7 @@ export function SearchMultiSelect({
           >
             <SearchList label={searchLabel}>
               <ListBox
-                className="rp-menu-scroll"
+                className="rp-menu-scroll rp-overlay-scroll"
                 aria-label={label}
                 selectionMode="multiple"
                 selectionBehavior="toggle"

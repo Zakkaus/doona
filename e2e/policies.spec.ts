@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {expect, expectLoadFailures, mockBackend, test, moreAction, moreItem, scrollIntoList, editorText} from './fixtures';
+import {expect, expectVirtualOptions, expectLoadFailures, mockBackend, test, moreAction, moreItem, scrollIntoList, editorText} from './fixtures';
 import {readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../src/dae/groups';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
@@ -345,16 +345,8 @@ test('a final outbound does not offer the group or a group that nests it', async
   await page.getByRole('region', {name: 'auto', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group auto'});
   await dialog.getByRole('button', {name: /Final outbound$/}).click();
-  await expect(page.getByRole('listbox').getByRole('group', {name: 'Groups'}).getByRole('option')).toHaveText([
-    'hk',
-    'jp',
-    'us',
-    'tw',
-    'sg',
-    'kr',
-    'office',
-    'backup'
-  ]);
+  const list = page.getByRole('listbox');
+  await expectVirtualOptions(list, list.getByRole('group', {name: 'Groups'}).getByRole('option'), ['hk', 'jp', 'us', 'tw', 'sg', 'kr', 'office', 'backup']);
 });
 
 test('the default member is offered only while the dialog selects manual selection, and a hidden one stays in the file', async ({page}) => {

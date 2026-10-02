@@ -236,9 +236,21 @@
 /* A searchable picker's popover spans its trigger, as a picker's list does; the virtual rows cannot size it. */
 .rp-popover.rp-search-popover {
   width: max(var(--trigger-width), 260px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rp-search-popover > [role='dialog'] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.rp-search-popover .rp-menu-scroll {
+  min-height: 0;
 }
 .rp-search-popover .rp-menu-search {
   width: auto;
+  flex: none;
 }
 
 .rp-switch {

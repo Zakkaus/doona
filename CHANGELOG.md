@@ -41,6 +41,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- Searchable pickers keep the search field fixed and scroll only the option list within the available popover height, without nested scrollbars or native scroll arrows.
 - Import and restore retain an accepted operation whose outcome is unknown after closing the dialog or leaving Configuration. Reopening offers recovery without sending another write; failures retain their backend details in Copy error and Settings' recent errors. (#337)
 - Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0.
 - Release notices credit Adobe for the bundled Noto fonts and name the locale runtime helper; RPMs include all staged licence files, and installer metadata includes Twemoji's CC-BY-4.0. (#359)
