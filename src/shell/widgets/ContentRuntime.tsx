@@ -2,12 +2,11 @@ import {useContext, useMemo} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatRate, formatCpu, localTime} from '../../i18n/format';
 import {useCapabilities, useRuntime, useRuntimeMemory} from '../../store';
-import {ResourcePreview, ResourceSamples} from '../../store/preview';
+import {ResourceSamples} from '../../store/preview';
 import type {Runtime, RuntimeMemory} from '../../api/model';
 import {window as ringWindow} from '../../api/rings';
-import {useRings} from '../../store/rings';
 import {useMemorySeries, useTrafficSeries} from '../../features/shared/useSeries';
-import {cpuSample, foldCpu} from '../../features/shared/widgetSeries';
+import {foldCpu, useCpuRing} from '../../features/shared/widgetSeries';
 import {usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
 import {ErrorMessage, Kv} from '../../ui/ui';
@@ -142,8 +141,7 @@ function CpuChart({runtime, ...props}: ChartProps & {runtime: Runtime | undefine
   const t = useT();
   const p = usePalette();
   const preview = useContext(ResourceSamples);
-  const passive = useContext(ResourcePreview);
-  const ring = useRings('cpu', passive ? undefined : runtime, cpuSample, foldCpu, true, passive);
+  const ring = useCpuRing(runtime);
   const fallback = !!preview && !ring.fine.length && !ring.coarse.length;
   const series = useMemo(
     () => ringWindow(ring, fallback ? sampleCpu : [], 60, foldCpu, preview ? (fallback ? sampleCpu.at(-1)?.time : ring.fine.at(-1)?.time) : undefined),

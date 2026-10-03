@@ -8,10 +8,8 @@ import {isTrafficRange, trafficRanges, trafficWindow, type TrafficRange} from '.
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
-import {useRings} from '../../store/rings';
-import {ResourcePreview} from '../../store/preview';
 import {SettingsContext} from '../../shell/preferences';
-import {cpuSample, foldCpu, sparkPoints, sparkWindow} from '../shared/widgetSeries';
+import {foldCpu, sparkPoints, sparkWindow, useCpuRing} from '../shared/widgetSeries';
 
 export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' | 'history' | 'memory' | 'status' = 'history') {
   const t = useT();
@@ -36,11 +34,9 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     () => trafficWindow(polledTraffic, historySamples, trafficRanges.live.seconds, undefined, sparkPoints),
     [polledTraffic, historySamples]
   );
-  // The backend keeps no CPU history, so the tile draws the session's own polls, the ring the CPU widget also reads;
-  // with the lines switched off the tile stops recording.
-  const preview = useContext(ResourcePreview);
+  // With the lines switched off the tile stops recording.
   const sparklines = useContext(SettingsContext)?.ap.sparklines ?? true;
-  const cpuRing = useRings('cpu', preview ? undefined : runtime.data, cpuSample, foldCpu, kind === 'cpu' && sparklines, preview);
+  const cpuRing = useCpuRing(runtime.data, kind === 'cpu' && sparklines);
   const cpuSpark = useMemo(() => sparkWindow(cpuRing, trafficRanges.live.seconds, foldCpu), [cpuRing]);
   const traffic = useMemo(
     () => [

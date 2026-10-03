@@ -1,5 +1,8 @@
+import {useContext} from 'react';
 import type {Node, Runtime} from '../../api/model';
 import {mean, window, type Fold, type Rings} from '../../api/rings';
+import {useRings} from '../../store/rings';
+import {ResourcePreview} from '../../store/preview';
 import {healthMillis, preferredHealth} from '../../api/selectors';
 export type CpuSample = {time: number; value: number | null};
 export const cpuSample = (runtime: Runtime): CpuSample | undefined => {
@@ -7,6 +10,12 @@ export const cpuSample = (runtime: Runtime): CpuSample | undefined => {
   return Number.isFinite(time) ? {time, value: runtime.process.cpu_percent} : undefined;
 };
 export const foldCpu: Fold<CpuSample> = (samples, time) => ({time, value: mean(samples.map(sample => sample.value))});
+// The backend keeps no CPU history, so CPU charts draw the session's own polls, one ring the Activity tile and the CPU
+// widget share. A preview reads the ring without recording into it.
+export function useCpuRing(runtime: Runtime | undefined, enabled = true) {
+  const preview = useContext(ResourcePreview);
+  return useRings('cpu', preview ? undefined : runtime, cpuSample, foldCpu, enabled, preview);
+}
 
 // A node's latency at a read of the node list; a failed probe, a missing observation or a node gone from the list is a gap.
 export const latencySample = (node: Node | undefined, time: number): CpuSample => ({time, value: (node && healthMillis(preferredHealth(node))) ?? null});
