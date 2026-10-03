@@ -33,7 +33,7 @@ test('the DNS rules tab lists request and response rules, each ending with its f
   await expect(response.nth(1)).toContainText('!qname(geosite: cn)');
   await expect(response.last()).toContainText('fallback: accept');
   await expect(section(page, 'Response rules')).toContainText('3 rules, generation 40');
-  await expect(request.first().getByRole('button', {name: 'Open config file', exact: true})).toHaveCount(0);
+  await expect(request.first().getByRole('button', {name: 'Open config file', exact: true})).toBeVisible();
   await request.first().getByRole('button', {name: 'Edit rule', exact: true}).click();
   await expect(page.getByRole('dialog').getByRole('textbox', {name: 'Values'})).toHaveValue('category-ads-all');
 });

@@ -125,7 +125,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         render: row => (
           <span className="rp-chain">
             <span className="rp-action-slot">
-              {row.sourceQuery && (!row.visual || !editable || row.editReason !== null) && (
+              {row.sourceQuery && (
                 <Button small quiet icon label={t('rule.openSource')} onPress={() => latest.current.openSource(row.sourceQuery!)}>
                   <FileText />
                 </Button>
