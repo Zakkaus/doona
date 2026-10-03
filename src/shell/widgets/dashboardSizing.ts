@@ -15,8 +15,8 @@ export function heightKind(item: Widget, main: boolean): 'chart' | 'rows' | unde
   if ((main && registry[item.id].tile) || item.form === 'area' || item.form === 'sparkline') return 'chart';
   return registry[item.id].rows && item.form !== 'donut' && item.form !== 'waffle' ? 'rows' : undefined;
 }
-// The rows a list shows until its height is set: the limit it had before lists had a height. Main's notices and the
-// source list had none and show every row.
+// The rows a list shows until its height is set: the limit it had before lists had a height. The source list had none
+// and shows every row.
 export function legacyRows(item: Widget, main: boolean): number | undefined {
   if (main) return item.id === 'ranking' ? 5 : undefined;
   if (item.id === 'sourceHealth') return undefined;

@@ -1,7 +1,7 @@
 import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
 import {href} from '../../shell/route';
-import {Card, Empty, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
+import {Card, columns, Empty, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
 import type {NoticeRow} from './view';
 
 type NoticesModel = {
@@ -11,10 +11,9 @@ type NoticesModel = {
   retry: () => void;
   loading: boolean;
   empty: string;
-  limit?: number;
 };
 
-export function Notices({rows, total, error, retry, loading, empty, limit}: NoticesModel) {
+export function Notices({rows, total, error, retry, loading, empty}: NoticesModel) {
   const t = useT();
   return (
     <Card aria-label={t('act.issues')}>
@@ -40,22 +39,15 @@ export function Notices({rows, total, error, retry, loading, empty, limit}: Noti
           <Empty>{empty}</Empty>
         </div>
       ) : (
-        <NoticeList rows={limit === undefined ? rows : rows.slice(0, limit)} label={t('act.issues')} bounded={limit === undefined} />
+        <NoticeList rows={rows} label={t('act.issues')} />
       )}
     </Card>
   );
 }
-// The notice rows, each a list item with its kind's light and its summary, ended by its action. A `bounded` list
-// scrolls within its card, so it takes keyboard focus.
-export function NoticeList({rows, label, bounded = false}: {rows: NoticeRow[]; label: string; bounded?: boolean}) {
+// The notice rows, each a list item with its kind's light and its summary, ended by its action.
+export function NoticeList({rows, label}: {rows: NoticeRow[]; label: string}) {
   return (
-    <div
-      className={`rp-list rp-list-labeled${bounded ? ' rp-feed' : ''}`}
-      role="list"
-      aria-label={label}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The bounded list needs keyboard focus to scroll.
-      tabIndex={bounded ? 0 : undefined}
-    >
+    <div className="rp-list rp-list-labeled rp-columns" role="list" aria-label={label} style={columns(rows.length)}>
       {rows.map(row => (
         <div key={row.id} role="listitem" className="rp-row">
           <Light small tone={row.tone}>
