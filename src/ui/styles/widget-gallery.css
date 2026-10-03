@@ -12,6 +12,11 @@
   border: 1px solid var(--rp-line);
   border-radius: var(--rp-r-lg);
 }
+/* The add action sits on the tile's bottom edge, so the tiles of a row, which share their height, put it on one line
+   whatever their previews' heights. */
+.rp-widget-gallery-tile > .rp-cluster {
+  margin-block-start: auto;
+}
 .rp-widget-gallery-tile[data-added] {
   background: var(--rp-fill);
   --rp-subtle: var(--rp-subtle-text);

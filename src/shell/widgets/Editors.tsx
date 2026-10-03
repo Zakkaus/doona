@@ -215,10 +215,12 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
   const [items, setItems] = useState(original);
   // Restoring the defaults also returns the panel to its corner and default size once saved.
   const [restored, setRestored] = useState(false);
-  // The preview is the floating panel at its own width, which its edge changes; a docked panel takes the sidebar's.
+  // The preview is the floating panel at its own width, which its edge changes. A docked panel's width is the sidebar's,
+  // so its preview opens at that width and its edge sets the width the panel floats at, which the preview then shows.
   const [dockWidth] = useState(() => (layout.docked ? document.querySelector<HTMLElement>('.rp-side-dock')?.offsetWidth : undefined));
   const savedWidth = layout.size?.width ?? minPanelSize.width;
   const [width, setWidth] = useState(savedWidth);
+  const [resized, setResized] = useState(false);
   const widthChanged = width !== (restored ? minPanelSize.width : savedWidth);
   // Nothing is selected until the reader picks a widget, so the preview opens without a selection frame.
   const [selected, select] = useState<string | null>(null);
@@ -287,8 +289,11 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
         )}
       >
         <WidgetEditorLayout
-          panelWidth={(restored ? undefined : dockWidth) ?? width}
-          onPanelWidth={restored || !dockWidth ? setWidth : undefined}
+          panelWidth={(restored || resized ? undefined : dockWidth) ?? width}
+          onPanelWidth={next => {
+            setResized(true);
+            setWidth(next);
+          }}
           resizeLabel={t('widgets.resizePreview')}
           header={<PanelHeader backend={backend} preview />}
           galleryLabel={t('widgets.gallery')}

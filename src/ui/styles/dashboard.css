@@ -486,24 +486,30 @@
 .rp-dashboard-body {
   display: contents;
 }
-/* The tools are a chip on the card's top edge at its inline end, as a phone's widget edit badge is: it ends at the
-   card's padding and stands out over the border into the gap, so it never covers the card's own header, caption or
-   value at any width. */
+/* A sortable item's tools at its inline end; the widget editor's rows place them on their caption (sortable.css). */
 .rp-dashboard-tools {
   position: absolute;
-  z-index: 2;
-  inset-block-end: calc(100% - var(--rp-space-4));
+  z-index: 1;
+  inset-block-start: var(--rp-space-3);
   inset-inline-end: var(--rp-space-3);
   display: flex;
+  gap: var(--rp-space-2);
+  border-radius: var(--rp-r-md);
+  background: var(--rp-base);
+}
+/* A dashboard card's tools are a chip on the card's top edge at its inline end, as a phone's widget edit badge is: it
+   ends at the card's padding and stands out over the border into the gap, so it never covers the card's own header,
+   caption or value at any width. Each card is a layer and the card in use stands above the others, so its tools and
+   edge handles, which stand out into the gaps, are never under a neighbour's hidden chip. */
+.rp-dash-section > .rp-dashboard-cell .rp-dashboard-tools {
+  z-index: 2;
+  inset-block: auto calc(100% - var(--rp-space-4));
+  gap: 0;
   padding: var(--rp-space-half);
   border: 1px solid var(--rp-popover-border);
   border-radius: var(--rp-r-pill);
   background: var(--rp-surface);
   box-shadow: var(--rp-elevated);
-}
-/* Each card is a layer and the card in use stands above the others, so its tools and edge handles, which stand out
-   into the gaps, are never under a neighbour's hidden chip. */
-.rp-dash-section > .rp-dashboard-cell .rp-dashboard-tools {
   opacity: 0;
 }
 .rp-dashboard[data-editing] .rp-dash-section > .rp-dashboard-cell {
