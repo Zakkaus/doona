@@ -190,18 +190,21 @@ const signInPages = [
       });
     }
   },
-  {
-    // The first visit to a password-protected honk: no profile until discovery saves one. At phone width, since from
-    // 1024 px the sidebar's widget panel shares the Activity chunk.
-    name: 'a hosted backend on first visit',
+  // The first visit to a password-protected honk: no profile until discovery saves one. From 1024 px the sidebar hosts
+  // the widget panel, whose code shares the Activity chunk.
+  ...[
+    {width: 1280, height: 800},
+    {width: 390, height: 844}
+  ].map(viewport => ({
+    name: `a hosted backend on first visit at ${viewport.width}`,
     pages: ['activity', ...pageChunks],
-    viewport: {width: 390, height: 844},
+    viewport,
     ready: (page: Page) => page.getByRole('heading', {name: 'Token required'}),
     async setup(page: Page) {
       await page.route('**/api', route => route.fulfill(challenge));
       await page.route('**/api/v1/**', route => route.fulfill(challenge));
     }
-  }
+  }))
 ];
 
 for (const {name, pages, viewport, ready, setup} of signInPages) {
