@@ -84,7 +84,7 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
   switch (kind) {
     case 'status':
       content = (
-        <Card className="rp-control-card" size="L">
+        <Card className="rp-control-card">
           <div className="rp-row" data-pack="line">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
             <div className="rp-control-tail">

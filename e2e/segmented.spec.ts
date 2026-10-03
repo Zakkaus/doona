@@ -162,7 +162,7 @@ for (const width of [1440, 768, 390]) {
       const tabs = el.querySelector('.rp-tabbar')!;
       return {
         tabs: tabs.getBoundingClientRect().height,
-        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control-lg'))
+        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control'))
       };
     });
     expect(geometry.tabs).toBe(geometry.control);

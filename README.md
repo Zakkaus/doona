@@ -68,7 +68,7 @@ Changes since beta.12; see the [full changelog](CHANGELOG.md#010-beta13---2026-1
 - Size dashboard cards by width and height presets or by dragging their edges, with a hint for the space left in each row while editing.
 - Arrange widgets in a floating, pinned or phone-drawer panel, preview the panel at its real width in the widget editor, and hide an unpinned, undocked panel at the screen edge.
 - Follow a group's active-node latency on Activity and view CPU and latency trends alongside first-run setup guidance.
-- Page toolbars, tab rows and segmented controls share one 40px height, and keyboard focus rings keep clear of their content and are no longer clipped.
+- Page toolbars, tab rows and segmented controls use S2's default 32px height, and keyboard focus rings keep clear of their content and are no longer clipped.
 
 Debian and Ubuntu users: the deb is now `doona-web` and installs into `/usr/share/doona-web`, because both distributions ship an unrelated `doona` package; set honk's `ui` to the new path.
 

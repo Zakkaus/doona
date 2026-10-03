@@ -6,23 +6,10 @@
   gap: var(--rp-space-1);
   max-width: 100%;
   background: var(--rp-overlay);
-  border-radius: var(--rp-r-lg);
-  padding: var(--rp-control-block-inset) var(--rp-control-inset);
+  /* S2's default: the items sit flush in the track, which takes their height and radius. */
+  min-block-size: var(--rp-control);
+  border-radius: var(--rp-r-md);
   position: relative;
-}
-/* Always S2 size L (40px): every segmented control matches, in a page toolbar, a card or a panel alike. */
-.rp-seg[data-size='L'] {
-  min-block-size: var(--rp-control-lg);
-}
-/* Flush with the track at L, so the items and the slider take the track's radius, as a tab does. */
-.rp-seg[data-size='L'] > .rp-slider,
-.rp-seg[data-size='L'] .rp-btn {
-  border-radius: var(--rp-r-lg);
-}
-.rp-seg[data-size='L'] .rp-btn {
-  height: var(--rp-control-lg);
-  padding-inline: var(--rp-lg-inset-compact);
-  font-size: var(--rp-lg-text);
 }
 /* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. The
    track hugs its items in a column or a grid too, where a flex or grid item would otherwise stretch. */
@@ -87,7 +74,7 @@
 }
 .rp-seg .rp-btn {
   flex: none;
-  padding: 0 var(--rp-space-2);
+  padding: 0 var(--rp-inset-compact);
   min-height: 0;
   background: transparent;
   color: var(--rp-text);

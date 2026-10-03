@@ -87,7 +87,6 @@
   --rp-focus-width: 2px;
   --rp-focus-color: var(--rp-accent);
   --rp-focus-offset: var(--rp-space-half);
-  --rp-control-inset: var(--rp-space-half);
   /* Segment items fill the track's height at every size, so a selected segment is as tall as the button beside it. */
   --rp-control-block-inset: 0px;
   /* Global stacking, low to high: the floating panel, then modals and tooltips (tooltips are portaled after the modal
@@ -102,11 +101,14 @@
   --rp-scrollbar: 6px;
   --rp-control: 32px;
   --rp-control-lg: 40px;
-  /* L's inline padding; phones take M's (below), so a row of L controls fits as a row of M controls does. L's text is M's text size at every width. */
+  /* L's inline padding; phones take M's (below), so a row of L controls fits as a row of M controls does. */
   --rp-lg-inset-btn: calc(var(--rp-control-lg) / 2);
   --rp-lg-inset-field: calc(var(--rp-control-lg) * 3 / 8);
-  --rp-lg-inset-compact: calc(var(--rp-control-lg) * 3 / 8);
-  --rp-lg-text: var(--rp-text-md);
+  /* A segmented item's inline padding: S2's M inset, M's tighter 8px on a phone so the rows fit as before. */
+  --rp-inset-compact: var(--rp-space-3);
+  --rp-lg-text: var(--rp-text-lg);
+  /* S2's L corner: 9px on an action button, picker or field; a Button is a pill. */
+  --rp-lg-radius: 9px;
   --rp-lg-text-compact: var(--rp-text-lg);
   --rp-control-xs: 24px;
   --rp-duration: 150ms;
@@ -148,7 +150,7 @@
     --rp-control: 36px;
     --rp-lg-inset-btn: var(--rp-space-3);
     --rp-lg-inset-field: var(--rp-space-3);
-    --rp-lg-inset-compact: var(--rp-space-2);
+    --rp-inset-compact: var(--rp-space-2);
     --rp-lg-text-compact: var(--rp-text-xs);
   }
 }

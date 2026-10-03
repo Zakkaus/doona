@@ -24,10 +24,10 @@ for (const width of [320, 360, 390])
         expect(await size(refresh)).toEqual(await size(more));
         expect(await size(paste)).toEqual(await size(refresh));
         for (const button of [refresh, more, paste]) {
-          await expect(button).toHaveAttribute('data-size', 'L');
-          expect((await size(button)).height).toBe(40);
+          await expect(button).toHaveAttribute('data-size', 'M');
+          expect((await size(button)).height).toBe(36);
         }
-        // L keeps M's text size on a phone.
+        // M's text size on a phone.
         const controlFont = await refresh.evaluate(el => getComputedStyle(el).getPropertyValue('--rp-text-md').trim());
         expect((await size(refresh)).fontSize).toBe(controlFont);
         const boxes = await Promise.all([refresh.boundingBox(), more.boundingBox()]);
@@ -143,7 +143,7 @@ test('desktop subscription and node actions use the kit control text role', asyn
   for (const name of [/^Update \d+ subscriptions?$/, 'Add subscription', 'Paste node link']) {
     const button = page.getByRole('button', {name, exact: true});
     await expect(button).toBeVisible();
-    await expect(button).toHaveAttribute('data-size', 'L');
+    await expect(button).toHaveAttribute('data-size', 'M');
     const type = await button.evaluate(el => {
       const style = getComputedStyle(el);
       return {
@@ -155,7 +155,7 @@ test('desktop subscription and node actions use the kit control text role', asyn
     });
     expect(type.size).toBe(type.control);
     expect(type.weight).toBe('500');
-    expect(type.height).toBe(40);
+    expect(type.height).toBe(32);
   }
 });
 
