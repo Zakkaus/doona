@@ -386,12 +386,13 @@ test('the latency card explains automatic selection from its info button', async
   await expect(dialog).toHaveCount(0);
 });
 
-test('notices hide housekeeping events while the Events page retains them', async ({page}) => {
+test('notices hide housekeeping and stream lifecycle events while the Events page retains them', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications', exact: true});
   await notices.scrollIntoViewIfNeeded();
-  await expect(notices.getByRole('listitem').filter({hasText: 'Stream ready'})).toHaveCount(1);
+  await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
+  await expect(notices.getByRole('listitem').filter({hasText: 'Stream ready'})).toHaveCount(0);
   await page.clock.fastForward(10100);
   await expect(notices.getByRole('listitem').filter({hasText: /runtime\.updated|flow\.updated/})).toHaveCount(0);
   await page.goto('/#/events');
@@ -414,7 +415,7 @@ test.describe(() => {
         await page.reload();
         const notices = page.locator('.rp-feed');
         await notices.scrollIntoViewIfNeeded();
-        await expect(notices.getByRole('listitem')).toHaveCount(5);
+        await expect(notices.getByRole('listitem')).toHaveCount(4);
         await expect(notices.locator('.rp-light.warn')).toHaveCount(1);
         if (lang === 'en') {
           await expect(notices.getByRole('listitem').filter({hasText: 'Configuration activated'})).toHaveCount(1);
@@ -460,19 +461,19 @@ test('housekeeping cannot evict notices while the page is hidden', async ({page}
   await page.goto('/#/activity');
   const notices = page.getByRole('region', {name: 'Notifications', exact: true});
   await notices.scrollIntoViewIfNeeded();
-  const ready = notices.getByRole('listitem').filter({hasText: 'Stream ready'});
-  await expect(ready).toHaveCount(1);
+  const activated = notices.getByRole('listitem').filter({hasText: 'Configuration activated'});
+  await expect(activated).toHaveCount(1);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable: true, value: true});
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.clock.runFor(1000100);
-  await expect(ready).toHaveCount(1);
+  await expect(activated).toHaveCount(1);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable: true, value: false});
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  await expect(ready).toHaveCount(1);
+  await expect(activated).toHaveCount(1);
 });
 
 // The live window is two minutes of ten-second history, so a traffic curve drawn from it has a dozen points across the plot.

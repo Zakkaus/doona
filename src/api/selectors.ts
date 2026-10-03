@@ -319,4 +319,6 @@ export const logLevelLabels: Record<LogLevel, Key> = {
 };
 export const operationLabels = {reload: 'ov.reload', suspend: 'ov.suspend', resume: 'ov.resume'} as const;
 
-export const interestingNotice = (event: ApiEvent) => event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);
+// Snapshot refreshes, flow updates and a stream (re)opening are routine lifecycle, not notices; the events page keeps them.
+export const interestingNotice = (event: ApiEvent) =>
+  event.event !== 'stream.ready' && event.event !== 'runtime.updated' && event.event !== 'flow.updated' && !routineGap(event);

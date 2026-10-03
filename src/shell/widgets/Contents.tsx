@@ -101,7 +101,7 @@ function NoticesWidget({item}: {item: Widget}) {
   const t = useT();
   const feed = useNoticeFeed(interestingNotice);
   const records = feed.records;
-  const rows = noticeRows(records, t).slice(0, item.rows ?? contentLimit(item.size));
+  const rows = noticeRows(records, t).rows.slice(0, item.rows ?? contentLimit(item.size));
   return (
     <>
       <ErrorMessage error={feed.error} onRetry={() => reopenEvents(api)} />

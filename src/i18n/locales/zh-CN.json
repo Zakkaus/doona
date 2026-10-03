@@ -48,6 +48,7 @@
   "act.noOutbounds": "此后端不提供出站统计",
   "act.noRoutingMode": "尚未配置分流规则",
   "act.noSubscriptions": "尚无订阅",
+  "act.noticeGap": "{reason}，本次记录期间累计丢弃：{n}",
   "act.noticeRepeat": "重复 {n} 次",
   "act.outUsage": "出站下载量",
   "act.rankingEmpty": "当前没有可排行的连接",

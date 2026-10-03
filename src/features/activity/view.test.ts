@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../../mock/fixtures';
-import type {Connection, ConnectionList, GroupSummary} from '../../api/model';
+import type {ApiEvent, Connection, ConnectionList, GroupSummary} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {pickMenuKey} from '../../ui/ui';
 import {
@@ -158,25 +158,86 @@ it('stages global targets without changing the current mode and detects an uncha
   expect(staged.incomplete).toBe(false);
 });
 
+const at = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z'};
+const operation = (id: string, status: 'failed' | 'succeeded', resource_id = 'op-1'): ApiEvent => ({
+  id,
+  event: 'operation.updated',
+  data: {...at, resource_id, status, href: `/api/v1/operations/${resource_id}`}
+});
+const gap = (id: string, dropped_records: string | null = '0', resource_id: string | null = null): ApiEvent => ({
+  id,
+  event: 'flow.gap',
+  data: {...at, resource_id, reason: 'recording_changed', dropped_records}
+});
+const ready = (id: string): ApiEvent => ({id, event: 'stream.ready', data: at});
+
 it('localizes notice kinds and shortens UUIDs without changing event identity', () => {
-  const event = {id: 'ready', event: 'stream.ready' as const, data: {instance_id: '8936fe2c-bbbd-4c16-8336-7a5eb3119589', observed_at: '2026-01-01T00:00:00Z'}};
-  const [row] = noticeRows([event], t);
+  const event = operation('op', 'succeeded', '8936fe2c-bbbd-4c16-8336-7a5eb3119589');
+  const [row] = noticeRows([event], t).rows;
   expect(row.id).toBe(event.id);
-  expect(row.summaryText).toContain(t('event.k.streamReady'));
+  expect(row.summaryText).toContain(t('event.k.operationUpdated'));
   expect(row.summaryText).toContain('8936fe2c');
-  expect(row.summaryText).not.toContain(event.data.instance_id);
-  expect(interestingNotice(event)).toBe(true);
-  expect(interestingNotice({id: 'runtime', event: 'runtime.updated', data: {...event.data, href: '/api/v1/runtime'}})).toBe(false);
+  expect(row.summaryText).not.toContain('8936fe2c-bbbd');
+});
+
+it.each([
+  {event: ready('ready'), shown: false},
+  {event: {id: 'runtime', event: 'runtime.updated', data: {...at, href: '/api/v1/runtime'}} as ApiEvent, shown: false},
+  {event: gap('gap'), shown: true},
+  {event: operation('op', 'succeeded'), shown: true}
+])('keeps $event.event on the notices card: $shown', ({event, shown}) => {
+  expect(interestingNotice(event)).toBe(shown);
 });
 
 it.each([
   ['failed', 'err', 'Error'],
   ['succeeded', 'info', 'Notice']
 ] as const)('projects an operation that %s as a %s notice', (status, tone, kind) => {
-  const data = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z', resource_id: 'op-1', status, href: '/api/v1/operations/op-1'};
-  const [row] = noticeRows([{id: status, event: 'operation.updated', data}], t);
+  const [row] = noticeRows([operation(status, status)], t).rows;
   expect(row.tone).toBe(tone);
   expect(row.kindText).toBe(kind);
+});
+
+it.each([
+  {
+    name: 'interleaved repeats',
+    events: [gap('g3'), operation('o2', 'succeeded'), gap('g2'), operation('o1', 'succeeded'), gap('g1')],
+    ids: ['g3', 'o2'],
+    counts: [3, 2]
+  },
+  {
+    name: 'a failure beside a success',
+    events: [operation('f', 'failed'), operation('s', 'succeeded'), operation('f0', 'failed')],
+    ids: ['f', 's'],
+    counts: [2, 1]
+  },
+  {name: 'gaps on different records', events: [gap('a', '0', 'flow-a'), gap('b', '0', 'flow-b'), gap('a0', '0', 'flow-a')], ids: ['a', 'b'], counts: [2, 1]}
+])('folds identical notices into one row at the latest position: $name', ({events, ids, counts}) => {
+  const {rows, total} = noticeRows(events, t);
+  expect(rows.map(row => row.id)).toEqual(ids);
+  expect(total).toBe(ids.length);
+  rows.forEach((row, i) => expect(row.summaryText.endsWith(t('ui.aside', {text: '', note: t('act.noticeRepeat', {n: counts[i]})}))).toBe(counts[i] > 1));
+});
+
+it('caps the rows but counts every distinct notice', () => {
+  const {rows, total} = noticeRows(
+    Array.from({length: 10}, (_, i) => operation(`o${i}`, 'succeeded', `op-${i}`)),
+    t
+  );
+  expect(rows).toHaveLength(8);
+  expect(total).toBe(10);
+});
+
+it.each([
+  {lang: 'en', dropped: '0', text: 'Flow records lost: recording changed'},
+  {lang: 'zh-CN', dropped: '0', text: '流程记录丢失：记录设置变更'},
+  {lang: 'zh-TW', dropped: '0', text: '流程記錄遺失：記錄設定變更'},
+  {lang: 'en', dropped: '5', text: 'Flow records lost: recording changed, records dropped since recording started: 5'},
+  {lang: 'zh-CN', dropped: '5', text: '流程记录丢失：记录设置变更，本次记录期间累计丢弃：5'},
+  {lang: 'zh-TW', dropped: '5', text: '流程記錄遺失：記錄設定變更，本次記錄期間累計捨棄：5'}
+] as const)('opens a $lang stream-wide gap ($dropped dropped) at its reason', ({lang, dropped, text}) => {
+  const tl: Translator = (key, params, pluralParam, precision) => translate(lang, key, params, pluralParam, precision);
+  expect(noticeRows([gap('g', dropped)], tl).rows[0].summaryText).toBe(text);
 });
 
 it('selects duplicate node labels by ID and preserves independent health', () => {
