@@ -85,6 +85,9 @@ test.describe('844x390 landscape', () => {
   for (const route of ['policies', 'nodes', 'rules'] as const)
     test(`${route} lets the top bar scroll away instead of pinning above the tabs`, async ({page}) => {
       await page.goto(`/#/${route}`);
+      // Policies lays its cards out hidden behind a loading state, which already overflows the viewport by a few pixels.
+      // Scrolling then moves the page while the cards mount and the list is first shown, so wait for the shown list.
+      await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
       // The page's own content, not just its heading, decides whether there is anything to scroll to.
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(390);
       await expect(page.locator('.rp-top')).toHaveCSS('position', 'static');
