@@ -46,6 +46,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- In Chrome at 125% or 150% display scaling, the side navigation and the top bar no longer shift by a pixel while the page scrolls. Their icons stepped up and down whenever the scroll offset fell between device pixels; on wide screens both are now fixed to the window instead of sticky.
 - The sign-in page stays one window tall on wide screens. The mini game panel beside the form could hold the page at an earlier window height, or make it taller after each resize or zoom, so the page scrolled and the form moved down.
 - The Activity latency card keeps its line with the same storage and retention as the CPU history, per selected group and node, so returning to the page or leaving the dashboard editor shows the line at once. A card that opens with fewer than two readings reads the node list once more five seconds after the first read, instead of waiting for the 30-second inventory poll. Changing the selection or switching sparklines off still starts the line over. The demo reads everything once more a second after it opens, so the CPU and latency lines draw within two seconds of a first visit.
 - The Activity status card uses its feature summary as the View details link when features need attention, and shows only View details otherwise. Both lead to System status, without a separate summary control.
