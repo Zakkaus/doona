@@ -228,9 +228,10 @@
 }
 .rp-donut .box {
   position: relative;
-  width: 112px;
-  height: 112px;
+  width: var(--rp-ring, 112px);
+  height: var(--rp-ring, 112px);
   flex-shrink: 0;
+  container-type: inline-size;
 }
 .rp-donut .center {
   position: absolute;
@@ -238,7 +239,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--rp-text-2xl);
+  /* A ring shrunk below its size shrinks the total with it, so the total stays inside the hole. */
+  font-size: min(var(--rp-text-2xl), 20cqi);
   line-height: 28px;
   font-weight: 700;
   pointer-events: none;
@@ -250,7 +252,8 @@
 .rp-donut .lst {
   flex: 1 1 calc(160px + 2 * var(--rp-space-1h));
   min-width: 0;
-  max-width: calc(100% + 2 * var(--rp-space-1h));
+  /* Past a readable width a legend's values drift away from their names. */
+  max-width: min(calc(100% + 2 * var(--rp-space-1h)), 360px);
   display: flex;
   flex-direction: column;
   gap: 4px;

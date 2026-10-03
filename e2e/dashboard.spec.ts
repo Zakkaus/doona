@@ -1294,6 +1294,48 @@ test.describe('narrow cards at 1280', () => {
       expect(split, id).toBe(0);
     }
   });
+  test('a donut at 2/3 grows past one at 1/3 and caps its legend', async ({page}) => {
+    await seed(page, {
+      version: 3,
+      sections: [
+        {
+          id: 'extensions',
+          items: [
+            {id: 'connectionOutbounds', form: 'donut', size: 'medium', width: '1/3'},
+            {id: 'connectionOutbounds', instance: 'wide', form: 'donut', size: 'medium', width: '2/3'}
+          ]
+        }
+      ]
+    });
+    await page.goto('/#/activity');
+    await expect(tile(page, 'wide').locator('.rp-donut svg')).toBeVisible();
+    const measure = (id: string) =>
+      tile(page, id).evaluate(cell => ({
+        card: cell.getBoundingClientRect().width,
+        ring: cell.querySelector('.rp-donut .box')!.getBoundingClientRect().width,
+        legend: cell.querySelector('.rp-donut .lst')!.getBoundingClientRect().width
+      }));
+    const [third, wide] = [await measure('connectionOutbounds'), await measure('wide')];
+    expect(wide.ring).toBeGreaterThan(third.ring);
+    for (const card of [third, wide]) {
+      expect(card.legend).toBeLessThanOrEqual(card.card);
+      expect(card.legend).toBeLessThanOrEqual(360);
+    }
+  });
+  test('node latency at 1/2 puts the lowest and highest on one line above three rows', async ({page}) => {
+    await seed(page, {version: 3, sections: [{id: 'extensions', items: [{id: 'nodeLatency', form: 'dots', size: 'medium', width: '1/2', rows: 3}]}]});
+    await page.goto('/#/activity');
+    const plot = tile(page, 'nodeLatency').locator('.rp-markerplot');
+    await expect(plot.locator('[data-row]')).toHaveCount(3);
+    const layout = await plot.evaluate(element => ({
+      tops: [...element.querySelectorAll('.head .rp-kv > div')].map(pair => Math.round(pair.getBoundingClientRect().top)),
+      summary: element.querySelector('.head')!.getBoundingClientRect().height,
+      rows: [...element.querySelectorAll('[data-row]')].reduce((sum, row) => sum + row.getBoundingClientRect().height, 0)
+    }));
+    expect(layout.tops).toHaveLength(2);
+    expect(layout.tops[0]).toBe(layout.tops[1]);
+    expect(layout.summary).toBeLessThan(layout.rows);
+  });
   test('an area card at 1/5 keeps its time labels apart', async ({page}) => {
     await seed(page, {version: 3, sections: [{id: 'extensions', items: [{id: 'download', form: 'area', size: 'medium', width: '1/5', height: 'standard'}]}]});
     await page.goto('/#/activity');

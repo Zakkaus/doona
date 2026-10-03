@@ -477,7 +477,6 @@
   "dashboard.height.short": "Short",
   "dashboard.height.standard": "Standard",
   "dashboard.height.tall": "Tall",
-  "dashboard.latencyOrder": "Fastest to slowest",
   "dashboard.noConnections": "No connections",
   "dashboard.noGroups": "No policy groups",
   "dashboard.noNodes": "No nodes",
