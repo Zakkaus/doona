@@ -193,10 +193,18 @@ export const isMac =
 // detail panel, the expanded toasts) leaves the key alone while one of these is open or holds focus.
 export const escapeLayers = '[role="dialog"], [role="alertdialog"]';
 
+// The widths a layout changes at, each the first width of the wider layout. Stylesheets write one as `(min-width: Npx)`
+// or `(max-width: N-0.02px)`; breakpoints.test.ts holds every media query in src to this list.
+export const breakpoints = {narrow: 400, phone: 600, sm: 640, md: 768, lg: 1024, wide: 1100, panel: 1200, xl: 1280, overview: 1400};
+const below = (width: number) => `(max-width: ${width - 0.02}px)`;
 // Below this breakpoint, detail drawers must not follow keyboard focus.
-export const panelQuery = '(min-width: 1200px)';
-// The phone breakpoint the stylesheets use, for a component whose markup, not only its layout, changes below it.
-export const phoneQuery = '(max-width: 599.98px)';
+export const panelQuery = `(min-width: ${breakpoints.panel}px)`;
+// The phone breakpoint, for a component whose markup, not only its layout, changes below it.
+export const phoneQuery = below(breakpoints.phone);
+// Below this width a submenu replaces its menu.
+export const smallQuery = below(breakpoints.sm);
+// The sidebar shows from this width, and with it the docking.
+export const sidebarQuery = `(min-width: ${breakpoints.lg}px)`;
 
 // Reset linked drafts during render so navigation cannot paint the previous value.
 export function useLinked<T>(linked: T, apply: (value: T) => void) {

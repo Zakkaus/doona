@@ -1,6 +1,6 @@
 import {lazy, Suspense, useState, useSyncExternalStore, type ReactNode} from 'react';
 import {useT} from '../../i18n';
-import {Button, VisuallyHidden, phoneQuery, useMediaQuery} from '../../ui/ui';
+import {Button, VisuallyHidden, phoneQuery, sidebarQuery, useMediaQuery} from '../../ui/ui';
 import {LoadBoundary} from '../../ui/LoadBoundary';
 import WidgetsIcon from '../../ui/icons/Widgets';
 import {useModeDraft} from '../../features/shared/useModeDraft';
@@ -14,8 +14,6 @@ import {editorState} from './editorState';
 const PanelHost = lazy(() => import('./Widgets').then(module => ({default: module.PanelHost})));
 const PhoneDrawer = lazy(() => import('./Widgets').then(module => ({default: module.PhoneDrawer})));
 const WidgetEditor = lazy(() => import('./Editors').then(module => ({default: module.WidgetEditor})));
-// The sidebar shows from this width, and with it the docking.
-const sidebarQuery = '(min-width: 1024px)';
 const later = (node: ReactNode) => (
   <LoadBoundary>
     <Suspense fallback={null}>{node}</Suspense>

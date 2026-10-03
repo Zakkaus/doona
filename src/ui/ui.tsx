@@ -12,6 +12,7 @@ export {
   withCrossfade,
   panelQuery,
   phoneQuery,
+  sidebarQuery,
   isMac
 } from './hooks';
 export {exportName, downloadFile, csvLine} from './files';
