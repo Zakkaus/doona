@@ -164,32 +164,66 @@ test.describe('the demo', () => {
       await expect(page.locator('canvas')).toHaveCount(0);
     });
 
-    // The game sizes its canvas from its panel, so the panel takes the viewport's height and never the canvas's: the page
-    // stays one viewport tall while the scene plays and after the window is resized.
-    test('keeps the page one viewport tall while the game plays and the window resizes', async ({page}) => {
-      await page.clock.install();
-      await page.setViewportSize({width: 1440, height: 900});
-      await page.goto('/#/activity');
-      const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
-      await expect(game.locator('canvas')).toBeVisible();
-      const height = () => page.evaluate(() => document.documentElement.scrollHeight);
-      await game.click();
-      for (let second = 0; second < 10; second++) {
-        await page.clock.runFor(1000);
-        expect(await height()).toBe(900);
-      }
-      for (const viewport of [
-        {width: 1440, height: 720},
-        {width: 1920, height: 720},
-        {width: 1920, height: 1000},
-        {width: 1280, height: 1000}
-      ]) {
+    // The game sizes its canvas from its panel, so the panel takes the viewport's height and never the canvas's. At a
+    // fractional pixel ratio, through the game, focus, wheel gestures and resizes, the page stays one viewport tall and
+    // nothing on it scrolls, with the game loaded on a wide window and left out on a narrow one.
+    test.describe('at a fractional pixel ratio', () => {
+      test.use({deviceScaleFactor: 1.25});
+
+      test('keeps the page one viewport tall and unscrolled', async ({page}) => {
+        await page.clock.install();
+        await page.addInitScript(() => {
+          (window as {scrolls?: string[]}).scrolls = [];
+          document.addEventListener('scroll', event => (window as {scrolls?: string[]}).scrolls!.push(String((event.target as Element).nodeName)), true);
+        });
+        let viewport = {width: 1572, height: 790};
         await page.setViewportSize(viewport);
-        await page.clock.runFor(1000);
-        await expect.poll(height).toBe(viewport.height);
-        await page.clock.runFor(1000);
-        expect(await height()).toBe(viewport.height);
-      }
+        await page.goto('/#/activity');
+        const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
+        await expect(game.locator('canvas')).toBeVisible();
+        const still = async (step: string) => {
+          await page.clock.runFor(1000);
+          const state = await page.evaluate(() => {
+            const root = document.scrollingElement!;
+            return {
+              y: window.scrollY,
+              top: root.scrollTop,
+              height: root.scrollHeight,
+              scrolled: [...document.querySelectorAll('*')].filter(element => element.scrollTop > 0).map(element => element.className),
+              scrolls: (window as {scrolls?: string[]}).scrolls!
+            };
+          });
+          expect(state, step).toEqual({y: 0, top: 0, height: viewport.height, scrolled: [], scrolls: []});
+        };
+        const wheel = async (x: number) => {
+          await page.mouse.move(x, viewport.height / 2);
+          for (let turn = 0; turn < 5; turn++) await page.mouse.wheel(0, 400);
+        };
+        await still('idle');
+        await game.click();
+        for (let second = 0; second < 5; second++) await still('playing');
+        for (const key of ['Space', 'ArrowDown', 'PageDown', 'End']) await game.press(key);
+        await still('keys on the game');
+        await wheel(viewport.width * 0.75);
+        await still('wheel over the game');
+        await page.getByLabel('Username', {exact: true}).focus();
+        await still('username focused');
+        await wheel(viewport.width * 0.2);
+        await still('wheel over the form');
+        for (const size of [
+          {width: 1572, height: 600},
+          {width: 1965, height: 600},
+          {width: 1965, height: 987},
+          {width: 1280, height: 987},
+          {width: 900, height: 987}
+        ]) {
+          viewport = size;
+          await page.setViewportSize(viewport);
+          await expect(page.locator('.rp-login-game canvas')).toHaveCount(viewport.width >= 1024 ? 1 : 0);
+          await wheel(viewport.width / 2);
+          await still(`resized to ${viewport.width}x${viewport.height}`);
+        }
+      });
     });
   });
 });
