@@ -1,5 +1,6 @@
 # The optional Noto Sans TC/SC subset staged from the prebuilt fonts archive.
-name: doona-fonts
+# PACKAGE_SUFFIX follows doona.yaml: -web for the deb, unset for the other formats.
+name: doona${PACKAGE_SUFFIX}-fonts
 arch: all
 platform: linux
 version: ${VERSION}
@@ -16,7 +17,22 @@ description: |
   Noto Sans TC and SC for doona
   Without this package the browser falls back to its own fonts.
 depends:
-  - doona
+  - doona${PACKAGE_SUFFIX}
+deb:
+  breaks:
+    - doona-fonts (<< 1.0)
+overrides:
+  deb:
+    replaces:
+      - doona-fonts (<< 1.0)
+    conflicts:
+      - doona-fonts (<< 1.0)
+    contents:
+      - src: build/stage/doona-fonts/usr/share/doona/fonts
+        dst: /usr/share/doona-web/fonts
+        type: tree
+      - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+        dst: /usr/share/doc/doona-web/OFL.txt
 contents:
   - src: build/stage/doona-fonts/usr/share/doona/fonts
     dst: /usr/share/doona/fonts
@@ -25,9 +41,6 @@ contents:
     dst: /usr/share/doc/doona/OFL.txt
     type: license
     packager: rpm
-  - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
-    dst: /usr/share/doc/doona/OFL.txt
-    packager: deb
   - src: build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
     dst: /usr/share/doc/doona/OFL.txt
     packager: ipk

@@ -82,7 +82,9 @@ jobs:
               { echo "install/nfpm/doona.yaml does not list ${file#./} for rpm" >&2; exit 1; }
           done
           cp "$fonts"/fonts/OFL.txt build/stage/doona-fonts/usr/share/doc/doona/OFL.txt
+          # Debian's archive has an unrelated doona, so only the deb carries the -web suffix (see doona.yaml).
           for packager in deb rpm ipk archlinux; do
+            if [ "$packager" = deb ]; then export PACKAGE_SUFFIX=-web; else export PACKAGE_SUFFIX=; fi
             for config in install/nfpm/doona.yaml install/nfpm/doona-fonts.yaml; do
               if [ "$packager" = archlinux ]; then
                 # nfpm 2.47 needs an explicit default epoch to retain Arch's prerelease in .PKGINFO.
@@ -100,14 +102,15 @@ jobs:
           cd release
           if [ -n "$PRERELEASE" ]; then
             for name in doona doona-fonts; do
-              mv "${name}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.deb" "${name}_${NPM}-${PACKAGE_RELEASE}_all.deb"
+              deb="doona-web${name#doona}"
+              mv "${deb}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.deb" "${deb}_${NPM}-${PACKAGE_RELEASE}_all.deb"
               mv "${name}-${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}.noarch.rpm" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm"
               mv "${name}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.ipk" "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk"
             done
           fi
           set -- "doona-${NPM}.tar.gz" "doona-fonts-${NPM}.tar.gz"
           for name in doona doona-fonts; do
-            set -- "$@" "${name}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
+            set -- "$@" "doona-web${name#doona}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
               "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
           done
           sha256sum "$@" > SHA256SUMS

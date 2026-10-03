@@ -20,13 +20,13 @@ Before submission, replace the marked OpenWrt and Nix hashes using `SHA256SUMS`,
 ## Version spellings
 
 The recipes use tag `v0.1.0-beta.12`. Release assets keep the upstream version without the tag's `v`;
-package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts`.
+package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts`, which the deb names `doona-web-fonts`.
 
 | Format           | `doona` asset                                 | Version in package or recipe                        |
 | ---------------- | --------------------------------------------- | --------------------------------------------------- |
 | Program archive  | `doona-0.1.0-beta.12.tar.gz`                  | n/a                                                 |
 | Fonts archive    | `doona-fonts-0.1.0-beta.12.tar.gz`            | n/a                                                 |
-| Debian           | `doona_0.1.0-beta.12-1_all.deb`               | `0.1.0~beta.12-1`                                   |
+| Debian           | `doona-web_0.1.0-beta.12-1_all.deb`           | `0.1.0~beta.12-1`                                   |
 | RPM              | `doona-0.1.0-beta.12-1.noarch.rpm`            | Version `0.1.0~beta.12`, Release `1`                |
 | OpenWrt ipk      | `doona_0.1.0-beta.12-1_all.ipk`               | `0.1.0~beta.12-1`                                   |
 | Arch             | `doona-0.1.0beta12-1-any.pkg.tar.zst`         | pkgver `0.1.0beta12`, pkgrel `1`, default epoch `0` |
@@ -75,3 +75,18 @@ and notice files.
 
 For staged installs from a local build, `make install` installs the program and notices, and `make install-fonts`
 installs the optional Noto subsets and their licence. Both targets accept `DESTDIR` and `PREFIX`.
+
+## Debian package name
+
+Debian and Ubuntu ship an unrelated `doona` package, a network fuzzer at version 1.0 that installs into
+`/usr/share/doona` and `/usr/share/doc/doona`. The deb is therefore named `doona-web`, with `doona-web-fonts` for the
+fonts, and installs into `/usr/share/doona-web` and `/usr/share/doc/doona-web`; set honk's `ui` to
+`/usr/share/doona-web` for it. The other formats keep the name `doona` and `/usr/share/doona`.
+`install/nfpm/doona.yaml` and `doona-fonts.yaml` build both names: the release workflow sets `PACKAGE_SUFFIX=-web`
+for the deb only.
+
+Earlier releases shipped the deb as `doona` 0.1.x, and `apt upgrade` replaced it with the fuzzer, deleting the web
+files. `doona-web` and `doona-web-fonts` replace and conflict with `doona` and `doona-fonts` below 1.0, so
+installing them from a release removes the old fonts package. apt may upgrade a remaining 0.1.x `doona` to the fuzzer
+instead of removing it; once `doona-web` is installed, `sudo apt remove doona` removes the fuzzer and leaves
+`doona-web` in place.
