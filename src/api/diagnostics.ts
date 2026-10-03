@@ -5,6 +5,8 @@ import {ApiError, LocalError, type OperationRef} from './error';
 export type Diagnostic = {
   time: string;
   request: {method: string; path: string} | null;
+  headers: Record<string, string> | null;
+  attempts: number;
   status: number | null;
   code: string | null;
   message: string;
@@ -61,11 +63,13 @@ export function redact(value: unknown, depth = 0): unknown {
 export function diagnosticOf(error: unknown, now = new Date()): Diagnostic {
   const cause = error instanceof Error && error.cause instanceof Error ? error.cause : null;
   const source = error instanceof ApiError || error instanceof LocalError ? error : cause instanceof ApiError || cause instanceof LocalError ? cause : error;
-  const base = {time: now.toISOString(), request: null, status: null, code: null, details: null, requestId: null, operation: null};
+  const base = {time: now.toISOString(), request: null, headers: null, attempts: 1, status: null, code: null, details: null, requestId: null, operation: null};
   if (source instanceof ApiError)
     return {
       ...base,
       request: source.request,
+      headers: source.headers,
+      attempts: source.attempts,
       status: source.status,
       code: source.code || null,
       message: scrubText(source.message),
@@ -90,12 +94,18 @@ export type DiagnosticsHeader = {doona: string; engine?: string; route: string};
 // Plain text for a bug report: the versions and the page first, then one block per entry.
 export function formatDiagnostics(entries: Diagnostic[], {doona, engine, route}: DiagnosticsHeader): string {
   const head = [`doona ${doona}`, engine && `engine ${engine}`, `page ${route}`].filter(Boolean).join('\n');
-  const blocks = entries.map(({time, request, status, code, message, details, requestId, operation}) =>
+  const blocks = entries.map(({time, request, headers, attempts, status, code, message, details, requestId, operation}) =>
     [
       `[${time}]${request ? ` ${request.method} ${request.path}` : ''}`,
       status !== null && `status: ${status}`,
       code && `code: ${code}`,
       `message: ${message}`,
+      attempts > 1 && `attempts: ${attempts}`,
+      headers &&
+        Object.keys(headers).length > 0 &&
+        `headers: ${Object.entries(headers)
+          .map(([name, value]) => `${name}: ${value}`)
+          .join(', ')}`,
       requestId && `request_id: ${requestId}`,
       operation && `operation: ${operation.id} ${operation.kind} ${operation.status}`,
       details !== null && `details: ${JSON.stringify(details)}`

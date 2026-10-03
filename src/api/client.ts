@@ -15,10 +15,10 @@ import {
   type OperationState,
   type RoutingTraceResponse
 } from './model';
-import {ApiError, clientError, parseRetryAfter, responseError, send} from './error';
+import {ApiError, clientError, describe, NO_CONTENT, parseRetryAfter, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
-import {wait} from './wait';
+import {pause, wait} from './wait';
 import {waitOutRefusal} from './refusal';
 import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
@@ -35,6 +35,24 @@ function data<T>(result: {data?: T; response: Response}): T {
 function accepted(result: {data?: Omit<OperationAccepted, 'retryAfter'>; response: Response}): OperationAccepted {
   return {...data(result), retryAfter: retryAfter(result.response)};
 }
+
+// A JSON read that succeeds with no body fails at the transport, where the request is known. Only the first non-empty
+// chunk is read, from a copy, so the caller still reads the whole body.
+const expectsJson = (request: Request) => request.headers.get('Accept')?.includes('application/json') ?? false;
+async function filled(request: Request, response: Response): Promise<Response> {
+  if (!response.ok || NO_CONTENT.has(response.status)) return response;
+  const reader = response.clone().body?.getReader();
+  try {
+    for (let chunk = await reader?.read(); chunk && !chunk.done; chunk = await reader!.read()) if (chunk.value.byteLength) return response;
+  } finally {
+    reader?.cancel().catch(() => {});
+  }
+  throw describe(clientError(response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson'), request.method, request.url, response);
+}
+// A JSON read that comes back empty or gets no response is sent once more after this pause, since a tunnel or proxy
+// can drop a single body. Timeouts, caller aborts and error statuses are not retried here, and streams never come here.
+// An error status on the retry becomes an ApiError in the middleware, which counts the attempt through `retried`.
+const READ_RETRY_MS = 300;
 
 // Keyed mutations and requests that write nothing retry explicit transient refusals this many times.
 const MAX_REFUSALS = 3;
@@ -81,35 +99,55 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
   };
   const headers: Record<string, string> = {Accept: 'application/json'};
   if (token) headers.Authorization = 'Bearer ' + token;
+  const retried = new WeakSet<Response>();
   const options = {
     baseUrl,
     headers,
     cache: 'no-store' as const,
     fetch: async (request: Request) => {
-      // A mutation is replayed only under an Idempotency-Key, which only operation starts carry, so a refusal that
-      // already wrote something cannot repeat the write.
-      const {pathname} = new URL(request.url);
-      const readOnly = readOnlyPaths.some(path => pathname.endsWith(path));
-      // A read-only POST gets the read deadline and text: it cannot have changed anything.
-      const write = request.method !== 'GET' && !readOnly;
-      const retryable = request.headers.has('Idempotency-Key') || readOnly;
-      if (!retryable) return send(request, undefined, write);
-      // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
-      for (let refused = 0; ; refused++) {
-        const response = await send(request.clone(), undefined, write);
-        if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
-        const error = await responseError(response.clone());
-        if (!error.transient) return response;
-        await response.body?.cancel();
-        await waitOutRefusal(response.status, error.retryAfter!, request.signal);
+      if (request.method !== 'GET' || !expectsJson(request)) return exchange(request);
+      try {
+        return await filled(request, await exchange(request.clone()));
+      } catch (error) {
+        if (!(error instanceof ApiError) || (error.code !== 'empty_response' && error.code !== 'network_error')) throw error;
+        await pause(READ_RETRY_MS, request.signal);
+        return exchange(request)
+          .then(response => {
+            retried.add(response);
+            return filled(request, response);
+          })
+          .catch((again: unknown) => {
+            if (again instanceof ApiError) again.attempts = 2;
+            throw again;
+          });
       }
     }
   };
+  async function exchange(request: Request): Promise<Response> {
+    // A mutation is replayed only under an Idempotency-Key, which only operation starts carry, so a refusal that
+    // already wrote something cannot repeat the write.
+    const {pathname} = new URL(request.url);
+    const readOnly = readOnlyPaths.some(path => pathname.endsWith(path));
+    // A read-only POST gets the read deadline and text: it cannot have changed anything.
+    const write = request.method !== 'GET' && !readOnly;
+    const retryable = request.headers.has('Idempotency-Key') || readOnly;
+    if (!retryable) return send(request, undefined, write);
+    // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
+    for (let refused = 0; ; refused++) {
+      const response = await send(request.clone(), undefined, write);
+      if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
+      const error = await responseError(response.clone());
+      if (!error.transient) return response;
+      await response.body?.cancel();
+      await waitOutRefusal(response.status, error.retryAfter!, request.signal);
+    }
+  }
   const failures: Middleware = {
     onResponse: async ({request, response, schemaPath}) => {
       if (!response.ok) {
         const error = await responseError(response, request.method);
         error.configurationWrite = configurationWrites.has(`${request.method} ${schemaPath}`);
+        if (retried.has(response)) error.attempts = 2;
         throw error;
       }
       return response;

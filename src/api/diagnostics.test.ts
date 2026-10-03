@@ -38,12 +38,14 @@ it.each([
   expect(redact(value)).toEqual(expected);
 });
 
-it('records what an API failure carries, with the path and no query', () => {
+it('records what an API failure carries, with its request and response headers', () => {
   const error = new ApiError(409, 'state_conflict', 'Changed meanwhile', 'req-1', {written: false, token: 'x'});
   error.request = {method: 'PUT', path: '/api/v1/config/main'};
   expect(diagnosticOf(error, new Date('2026-10-02T01:02:03Z'))).toEqual({
     time: '2026-10-02T01:02:03.000Z',
     request: {method: 'PUT', path: '/api/v1/config/main'},
+    headers: null,
+    attempts: 1,
     status: 409,
     code: 'state_conflict',
     message: 'Changed meanwhile',

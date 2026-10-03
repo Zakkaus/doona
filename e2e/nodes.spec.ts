@@ -34,6 +34,23 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await expect(list).toHaveCount(1);
 });
 
+test('a node list that comes back empty once is asked for again and shown', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  let dropped = 0;
+  await page.route(
+    '**/api/v1/nodes{,?*}',
+    route => {
+      dropped++;
+      return route.fulfill({status: 200, contentType: 'application/json', body: ''});
+    },
+    {times: 1}
+  );
+  await page.goto('/#/nodes?provider=inline');
+  await expect(rows(page.locator('.rp-table').nth(1))).toHaveCount(5);
+  expect(dropped).toBe(1);
+  expect(requests.some(request => new URL(request.url()).pathname === '/api/v1/nodes')).toBe(true);
+});
+
 test('node cell content starts at its header text, including latency and action icons', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/nodes?provider=inline');
