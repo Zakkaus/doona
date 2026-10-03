@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../../mock';
-import {cpuSample, foldCpu, latencySample, sparkWindow, thin} from './widgetSeries';
+import {cpuSample, foldCpu, latencySample, seriesFacts, sparkWindow, thin} from './widgetSeries';
+import {translate, type Translator} from '../../i18n';
 
 it('preserves unknown CPU readings and multicore percentages', async () => {
   const runtime = await createMockApi().runtime();
@@ -60,4 +61,22 @@ it('windows a ring into a sparkline with gaps kept', () => {
   const spark = sparkWindow({fine, coarse: []}, 120, foldCpu);
   expect(spark.values).toEqual([1, null, 3]);
   expect(spark.timestamps).toEqual(fine.slice(1).map(sample => sample.time));
+});
+
+it("lists each series' peak and average over its known samples", () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  const facts = seriesFacts(
+    [
+      {label: 'Download', values: [1, null, 5, 3]},
+      {label: 'Upload', values: [null]}
+    ],
+    value => String(value),
+    t
+  );
+  expect(facts).toEqual([
+    {label: 'Download peak', value: '5'},
+    {label: 'Download average', value: '3'},
+    {label: 'Upload peak', value: '—'},
+    {label: 'Upload average', value: '—'}
+  ]);
 });

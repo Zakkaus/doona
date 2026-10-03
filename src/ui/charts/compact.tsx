@@ -19,11 +19,12 @@ export function WidgetAreaChart({
   size,
   scale = 1,
   combine = false,
+  widest,
   ...props
-}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'; scale?: number; combine?: boolean}) {
+}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'; scale?: number; combine?: boolean; widest?: string}) {
   const t = useT();
   const inset = useContext(WidgetChartInset);
-  const legend = <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} />;
+  const legend = <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} widest={widest} />;
   if (size === 'normal')
     return (
       <>

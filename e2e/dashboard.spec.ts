@@ -546,6 +546,84 @@ test('a full-width list of four rows or more takes two columns, the first filled
   expect(Math.abs(memory - notices)).toBeLessThanOrEqual(1);
 });
 
+test('a chart two thirds of a row or wider lists its peak and average beside it', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  await seed(page, {
+    version: 3,
+    sections: [
+      {
+        id: 'extensions',
+        items: [
+          {id: 'history', form: 'area', size: 'medium', width: 'full'},
+          {id: 'speed', form: 'area', size: 'medium', width: '2/3'},
+          {id: 'cpu', form: 'sparkline', size: 'medium', width: 'full'},
+          {id: 'memory', form: 'area', size: 'medium', width: '1/2'}
+        ]
+      }
+    ]
+  });
+  await page.goto('/#/activity');
+  for (const [id, facts] of [
+    ['history', 4],
+    ['speed', 4],
+    ['cpu', 2]
+  ] as const) {
+    const strip = tile(page, id).locator('.rp-facts');
+    await expect(strip.locator('dt')).toHaveCount(facts);
+    await expect(strip).toBeVisible();
+  }
+  await expect(tile(page, 'memory').locator('.rp-facts')).toBeHidden();
+  const card = await box(tile(page, 'history').locator('section').first());
+  const chart = await box(tile(page, 'history').locator('.rp-chart-stats > :nth-child(2)'));
+  const strip = await box(tile(page, 'history').locator('.rp-facts'));
+  expect(chart.width).toBeLessThanOrEqual(card.width * 0.7);
+  expect(Math.abs(strip.y - chart.y)).toBeLessThanOrEqual(1);
+  expect(strip.x).toBeGreaterThanOrEqual(chart.x + chart.width);
+  await expect(tile(page, 'history').locator('.rp-facts dt').first()).toHaveText('Download peak');
+  // The narrowest widths and a phone draw no statistics and nothing overflows its card.
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({width, height: 1000});
+    // Charts measure their box after a resize, so the check waits for them to settle.
+    await expect
+      .poll(
+        () =>
+          page
+            .locator('.rp-dashboard-cell section')
+            .evaluateAll(cards =>
+              cards.filter(card => card.scrollWidth > card.clientWidth + 1).map(card => card.closest<HTMLElement>('[data-instance]')?.dataset.instance)
+            ),
+        {message: String(width)}
+      )
+      .toEqual([]);
+  }
+  await expect(tile(page, 'history').locator('.rp-facts')).toBeHidden();
+});
+
+test('a tall CPU tile keeps its height while its first samples arrive', async ({page}) => {
+  // Runtime polls every five seconds; the line needs two known samples after two unknown ones.
+  test.slow();
+  await page.setViewportSize({width: 1280, height: 1000});
+  const backend = await mockBackend(page);
+  let polls = 0;
+  backend.handlers['GET runtime'] = async () => {
+    const runtime = await backend.api.runtime();
+    polls++;
+    return {...runtime, process: {...runtime.process, cpu_percent: polls < 3 ? null : polls * 5}};
+  };
+  await seed(page, {version: 3, sections: [{id: 'metrics', items: [{id: 'cpu', form: 'sparkline', size: 'medium', height: 'tall'}]}]});
+  await page.goto('/#/activity');
+  const card = tile(page, 'cpu').locator('section').first();
+  const spark = tile(page, 'cpu').locator('.rp-spark');
+  // Under two samples the sparkline's box draws its baseline; from the second it draws the line.
+  await expect(spark.locator('svg line')).toHaveCount(1);
+  const heights = [await height(card)];
+  await expect.poll(() => polls, {timeout: 15000}).toBeGreaterThanOrEqual(3);
+  heights.push(await height(card));
+  await expect(spark.locator('svg.rp-activity-surface')).toBeVisible({timeout: 15000});
+  heights.push(await height(card));
+  expect(new Set(heights).size, heights.join()).toBe(1);
+});
+
 test('a value tile beside a card of another height keeps its own height and its sparkline fills it', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   const item = (id: string, extra: object = {}) => ({id, form: 'sparkline', size: 'medium', ...extra});

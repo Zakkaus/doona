@@ -6,8 +6,8 @@ import {ResourceSamples} from '../../store/preview';
 import type {Runtime, RuntimeMemory} from '../../api/model';
 import {window as ringWindow} from '../../api/rings';
 import {useMemorySeries, useTrafficSeries} from '../../features/shared/useSeries';
-import {foldCpu, useCpuRing} from '../../features/shared/widgetSeries';
-import {usePalette} from '../../ui/charts';
+import {foldCpu, seriesFacts, useCpuRing} from '../../features/shared/widgetSeries';
+import {FactStrip, usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
 import {ErrorMessage, Kv} from '../../ui/ui';
 import {sampleCpu} from './samples';
@@ -18,6 +18,8 @@ import {useWidgetLayout} from './settings';
 
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
 export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
+// A card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css).
+const wide = (item: Widget) => item.width === '2/3' || item.width === 'full';
 export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -66,10 +68,11 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
         form !== 'kv' &&
         item.size !== 'small' &&
         (item.id === 'cpu' ? (
-          <CpuChart scale={scaleOf(item)} large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} />
+          <CpuChart scale={scaleOf(item)} wide={wide(item)} large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} />
         ) : (
           <TrafficChart
             scale={scaleOf(item)}
+            wide={wide(item)}
             large={item.size === 'large' || item.size === 'wide'}
             form={form}
             runtime={r}
@@ -85,34 +88,40 @@ function HistoryChart({
   form,
   large,
   scale,
+  wide,
   history,
   ...chart
 }: {
   form: ModuleForm;
   large: boolean;
   scale?: number;
+  wide?: boolean;
   history?: {error?: Error | null; refetch: () => unknown};
   timestamps: number[];
   fmt: (n: number | null) => string;
   series: {label: string; color: string; values: (number | null)[]}[];
   combine?: boolean;
+  widest?: string;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
   return (
     <>
       {history && <ErrorMessage error={history.error} onRetry={history.refetch} />}
-      <WidgetAreaChart
-        size={form === 'sparkline' ? (large ? 'widget' : 'compact') : 'normal'}
-        scale={scale}
-        label={t('widgets.lastMinute')}
-        locale={locale}
-        {...chart}
-      />
+      <div className="rp-chart-stats">
+        <WidgetAreaChart
+          size={form === 'sparkline' ? (large ? 'widget' : 'compact') : 'normal'}
+          scale={scale}
+          label={t('widgets.lastMinute')}
+          locale={locale}
+          {...chart}
+        />
+        {wide && <FactStrip facts={seriesFacts(chart.series, chart.fmt, t)} />}
+      </div>
     </>
   );
 }
-type ChartProps = {large: boolean; form: ModuleForm; scale?: number};
+type ChartProps = {large: boolean; form: ModuleForm; scale?: number; wide?: boolean};
 function TrafficChart({runtime, connections, direction, ...props}: ChartProps & {runtime: Runtime | undefined; connections: boolean; direction: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -123,6 +132,7 @@ function TrafficChart({runtime, connections, direction, ...props}: ChartProps & 
     <HistoryChart
       {...props}
       combine={direction === 'speed' && !split}
+      widest={connections ? undefined : formatRate(888e6, locale)}
       history={history}
       timestamps={series.timestamps}
       fmt={n => (connections ? (n == null ? '—' : formatNumber(n, locale)) : formatRate(n == null ? null : n * 1000, locale))}
@@ -177,7 +187,15 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
       />
       {!rss && !cgroup && <span className="rp-label">{t('widgets.unavailable')}</span>}
       {form !== 'kv' && item.size !== 'small' && (
-        <MemoryChart scale={scaleOf(item)} large={item.size === 'large' || item.size === 'wide'} form={form} memory={memory.data} rss={rss} cgroup={cgroup} />
+        <MemoryChart
+          scale={scaleOf(item)}
+          wide={wide(item)}
+          large={item.size === 'large' || item.size === 'wide'}
+          form={form}
+          memory={memory.data}
+          rss={rss}
+          cgroup={cgroup}
+        />
       )}
     </Reading>
   );

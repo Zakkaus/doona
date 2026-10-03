@@ -37,7 +37,7 @@ export function SparkPlot({
   const [ref, size] = useContentSize<HTMLDivElement>(Math.round, 120);
   const {tip, showAt, hide} = useChartTip();
   const known = useMemo(() => values.filter((value): value is number => value !== null), [values]);
-  // A single sample is no trend: the box keeps its height and the line waits for a second one.
+  // A single sample is no trend: the box keeps its height and draws its baseline until a second one arrives.
   const drawn = known.length > 1;
   const domain = useMemo<[number, number]>(() => [floor > 0 ? 0 : Math.min(...known) * 0.85, Math.max(Math.max(...known) * 1.05 || 1, floor)], [known, floor]);
   const width = size?.width ?? 0;
@@ -71,6 +71,11 @@ export function SparkPlot({
       aria-hidden={drawn ? true : undefined}
       onPointerLeave={() => setSelected(null)}
     >
+      {size && !drawn && (
+        <svg aria-hidden width={size.width} height={size.height} style={{display: 'block', position: 'absolute', inset: 0}}>
+          <line x1={inset} x2={size.width - inset} y1={bottom} y2={bottom} stroke={p['hl-med']} strokeDasharray="2 4" />
+        </svg>
+      )}
       {drawn && size && (
         <>
           <ChartTip tip={tip} />
