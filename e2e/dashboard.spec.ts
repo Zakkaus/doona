@@ -988,3 +988,35 @@ test('the editor page row is L and the card tools, settings and gallery are M', 
   await expect(gallery.locator('.rp-btn').first()).toBeVisible();
   expect(new Set((await sizes(gallery)).map(String))).toEqual(new Set(['M,32']));
 });
+
+for (const width of [1280, 390])
+  test(`the gallery's add buttons share one line in each row of items at ${width} px`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/activity');
+    await open(page);
+    await page.getByRole('button', {name: 'Widget gallery', exact: true}).click();
+    const gallery = page.getByRole('dialog', {name: 'Widget gallery'});
+    const tiles = gallery.locator('.rp-widget-gallery-tile');
+    await expect(tiles.first()).toBeVisible();
+    // Every item draws its thumbnails once it nears the viewport, so each is brought near before measuring.
+    for (const item of await tiles.all()) await item.scrollIntoViewIfNeeded();
+    await expect(gallery.locator('.rp-widget-gallery-preset').first()).toBeVisible();
+    const rows = await tiles.evaluateAll(items => {
+      const byRow = new Map<number, Array<{top: number; height: number}>>();
+      for (const item of items) {
+        const tile = item.getBoundingClientRect();
+        const add = item.querySelector(':scope > .rp-cluster button')!.getBoundingClientRect();
+        const row = byRow.get(Math.round(tile.top)) ?? [];
+        row.push({top: add.top - tile.top, height: add.height});
+        byRow.set(Math.round(tile.top), row);
+      }
+      return [...byRow.values()];
+    });
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) {
+      for (const add of row) {
+        expect(Math.abs(add.top - row[0].top), JSON.stringify(row)).toBeLessThanOrEqual(0.5);
+        expect(add.height).toBe(row[0].height);
+      }
+    }
+  });

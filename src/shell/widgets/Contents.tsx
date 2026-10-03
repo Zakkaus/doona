@@ -18,7 +18,7 @@ import {ModeWidget, GroupWidget} from './ContentPolicies';
 import {CurrentLatency, Latency, Sources, Groups} from './ContentNodes';
 import {Reading} from './Reading';
 
-// The rates widget's reading for a collapsed header: download before upload, in the chart's colours.
+// The rates widget's reading for a collapsed header: upload above download, each in its chart colour.
 export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -30,8 +30,8 @@ export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
     <WidgetSpeed
       reserve={reserveWidth ? formatUnit(999.9, locale, 'unit.megabytePerSecond', 1) : undefined}
       rates={[
-        {icon: <Download />, label: t('ui.download'), value: formatRate(rates?.download_bytes_per_second ?? null, locale), color: p.cat[0]},
-        {icon: <Upload />, label: t('ui.upload'), value: formatRate(rates?.upload_bytes_per_second ?? null, locale), color: p.cat[3]}
+        {icon: <Upload />, label: t('ui.upload'), value: formatRate(rates?.upload_bytes_per_second ?? null, locale), color: p.cat[3]},
+        {icon: <Download />, label: t('ui.download'), value: formatRate(rates?.download_bytes_per_second ?? null, locale), color: p.cat[0]}
       ]}
     />
   );

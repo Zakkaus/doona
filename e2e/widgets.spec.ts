@@ -1,7 +1,7 @@
 import {test, expect, mockBackend, moreAction, settle, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import {defaults, type Layout} from '../src/shell/widgets/layout';
-import type {Page} from '@playwright/test';
+import type {Locator, Page} from '@playwright/test';
 import {pickWidget} from './widget-helpers';
 
 test.use({widgets: true});
@@ -43,6 +43,12 @@ const expectSelectionClearance = async (page: Page) => {
   for (const gap of geometry.gaps) expect(gap).toBeGreaterThanOrEqual(8);
   expect(geometry.overlap).toBe(false);
   expect(geometry.clipped).toEqual([]);
+};
+// A collapsed header's rates: upload on the first line, download on the line under it.
+const expectUploadFirst = async (speed: Locator) => {
+  const lines = await speed.locator(':scope > span').evaluateAll(spans => spans.map(span => [span.textContent, span.getBoundingClientRect().top] as const));
+  expect(lines.map(([text]) => text?.split(' ')[0])).toEqual(['Upload', 'Download']);
+  expect(lines[0][1]).toBeLessThan(lines[1][1]);
 };
 const expectPanelPreview = async (page: Page) => {
   const preview = page.locator('.rp-widget-preview');
@@ -295,6 +301,100 @@ test('the editor opens with nothing selected and its preview edge sets the panel
   await expectPanelPreview(page);
 });
 
+// The preview's width grip: a visible pill centred on its inline end edge, whose drag changes the preview's width.
+const expectWidthGrip = async (page: Page) => {
+  const preview = editor(page).locator('.rp-widget-preview');
+  const handle = editor(page).getByRole('button', {name: 'Resize panel width', exact: true});
+  await expect(handle).toBeVisible();
+  const grip = await handle.evaluate(el => {
+    const pill = getComputedStyle(el, '::before');
+    const scale = Number(getComputedStyle(el.closest('.rp-widget-preview')!).zoom);
+    return {width: Number.parseFloat(pill.width) * scale, height: Number.parseFloat(pill.height) * scale, color: pill.backgroundColor};
+  });
+  expect(grip.width).toBeGreaterThanOrEqual(3);
+  expect(grip.height).toBeGreaterThanOrEqual(20);
+  expect(grip.color).not.toBe('rgba(0, 0, 0, 0)');
+  const [edge, frame] = await Promise.all([box(handle), box(preview)]);
+  expect(Math.abs(edge.x + edge.width / 2 - (frame.x + frame.width))).toBeLessThanOrEqual(1);
+  return handle;
+};
+const dragBy = async (page: Page, handle: Locator, dx: number) => {
+  const start = await box(handle);
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + dx, start.y + start.height / 2, {steps: 4});
+  await page.mouse.up();
+};
+const storedWidth = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('doona-widgets') ?? '{}') as Layout).size?.width);
+
+for (const mode of ['floating', 'docked'] as const) {
+  test(`the ${mode} panel's editor shows a width grip that resizes the preview, kept on save and dropped on cancel`, async ({page}) => {
+    await save(page, {...defaults(), size: {width: 320, height: 640}, ...(mode === 'docked' && {docked: true})});
+    await page.goto('/#/settings');
+    if (mode === 'docked') await expect(page.locator('.rp-side-dock')).toBeVisible();
+    await openEditor(page);
+    const preview = editor(page).locator('.rp-widget-preview');
+    const width = () => preview.evaluate(el => (el as HTMLElement).offsetWidth);
+    const opened = await width();
+    // A docked panel previews at the sidebar's width until its edge sets the width the panel floats at.
+    if (mode === 'floating') expect(opened).toBe(320);
+    let handle = await expectWidthGrip(page);
+    const scale = await preview.evaluate(el => Number(getComputedStyle(el).zoom));
+    await dragBy(page, handle, 40 * scale);
+    // From a sidebar narrower than a floating panel, the edge starts at the floating panel's least width.
+    if (mode === 'floating') await expect.poll(width).toBe(360);
+    else await expect.poll(width).toBeGreaterThan(Math.max(280, opened));
+    const target = await width();
+    await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
+    await expect(editor(page)).toHaveCount(0);
+    expect(await storedWidth(page)).toBe(320);
+    await openEditor(page);
+    expect(await width()).toBe(opened);
+    handle = await expectWidthGrip(page);
+    await dragBy(page, handle, 40 * scale);
+    await expect.poll(width).toBe(target);
+    await editor(page).getByRole('button', {name: 'Save', exact: true}).click();
+    await expect(editor(page)).toHaveCount(0);
+    expect(await storedWidth(page)).toBe(target);
+    if (mode === 'floating') await expect.poll(async () => (await box(floating(page))).width).toBe(target);
+  });
+}
+
+test("the editor's drag handles stay inside their own rows", async ({page}) => {
+  await page.goto('/#/settings');
+  await openEditor(page);
+  const rows = await editor(page)
+    .locator('.rp-widget-preview .rp-sortable-row')
+    .evaluateAll(elements =>
+      elements.map(el => {
+        const row = el.getBoundingClientRect();
+        const button = el.querySelector('.rp-dashboard-tools [slot="drag"]')!.getBoundingClientRect();
+        const glyph = el.querySelector('.rp-dashboard-tools [slot="drag"] svg')!.getBoundingClientRect();
+        const tools = getComputedStyle(el.querySelector('.rp-dashboard-tools')!);
+        return {
+          top: row.top,
+          bottom: row.bottom,
+          button: [button.top, button.bottom],
+          glyph: [glyph.top, glyph.bottom],
+          chip: [tools.borderTopWidth, tools.boxShadow]
+        };
+      })
+    );
+  expect(rows.length).toBeGreaterThan(1);
+  // The dashboard's tool chip is the page's own: an editor row's handle draws no border or shadow over the rows.
+  for (const row of rows) expect(row.chip).toEqual(['0px', 'none']);
+  // The drawn handle sits in its row's box, which reaches half way into the gap to each neighbour, and its hit area
+  // reaches into neither neighbour.
+  const gap = rows[1].top - rows[0].bottom;
+  for (const [i, row] of rows.entries()) {
+    expect(row.glyph[0], `row ${i}`).toBeGreaterThanOrEqual(row.top - gap / 2 - 0.5);
+    expect(row.glyph[1], `row ${i}`).toBeLessThanOrEqual(row.bottom + gap / 2 + 0.5);
+    if (i) expect(row.button[0], `row ${i}`).toBeGreaterThanOrEqual(rows[i - 1].bottom - 0.5);
+    if (i < rows.length - 1) expect(row.button[1], `row ${i}`).toBeLessThanOrEqual(rows[i + 1].top + 0.5);
+  }
+});
+
 test('segmented outbound mode applies once and persists across reload', async ({page}) => {
   await save(page, {...defaults(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
   const backend = await mockBackend(page);
@@ -394,6 +494,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   const expanded = await items();
   await floating(page).getByRole('button', {name: 'Collapse widgets', exact: true}).click();
   await expect(floating(page).locator('.rp-widget-speed')).toBeVisible();
+  await expectUploadFirst(floating(page).locator('.rp-widget-speed'));
   expect(await items()).toEqual(expanded);
   const header = await box(floating(page).locator('.rp-widget-header'));
   const panel = await box(floating(page));
@@ -467,14 +568,14 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
   await page.reload();
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
-  // Collapsed, the live rates take the title's place on the header's centre line, download first.
+  // Collapsed, the live rates take the title's place on the header's centre line, upload above download.
   await dock.getByRole('button', {name: 'Collapse widgets', exact: true}).click();
   await expect(dock.getByRole('heading', {name: 'Activity widgets', exact: true})).toHaveCount(0);
   const dockSpeed = dock.locator('.rp-widget-speed');
   await expect(dockSpeed).toContainText('Download');
   await expect(dockSpeed.locator('.rp-widget-speed-value')).toHaveCount(2);
   await expect(dockSpeed.locator('svg')).toHaveCount(2);
-  expect(await dockSpeed.evaluate(el => el.textContent!.indexOf('Download') < el.textContent!.indexOf('Upload'))).toBe(true);
+  await expectUploadFirst(dockSpeed);
   const collapsedHeader = await box(dockHeader);
   const speedBox = await box(dockSpeed);
   expect(Math.abs(speedBox.y + speedBox.height / 2 - (collapsedHeader.y + collapsedHeader.height / 2))).toBeLessThanOrEqual(1);
@@ -544,7 +645,7 @@ test.describe('header and edge at 1440', () => {
     await expect(editor(page)).toHaveCount(0);
     await header.getByRole('button', {name: 'Collapse widgets', exact: true}).click();
     const speeds = header.locator('.rp-widget-speed-value');
-    await expect(speeds).toHaveText(['3.5 MB/s', '999 MB/s']);
+    await expect(speeds).toHaveText(['999 MB/s', '3.5 MB/s']);
     await expect(header.locator('.rp-widget-speed')).toContainText('Download');
     for (const speed of await speeds.all()) expect(await speed.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     await options(page).click();
