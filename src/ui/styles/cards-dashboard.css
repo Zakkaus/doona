@@ -300,7 +300,8 @@
     grid-column: auto;
   }
 }
-.rp-g21 {
+.rp-g21,
+.rp-g3 {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--rp-space-3);
@@ -320,12 +321,6 @@
   .rp-chart-page > .rp-g21 {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-.rp-g3 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--rp-space-3);
-  align-items: stretch;
 }
 @media (min-width: 1024px) {
   .rp-g3 {

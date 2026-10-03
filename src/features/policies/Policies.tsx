@@ -204,7 +204,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
               <Button quiet icon small label={t('policy.edit')} isDisabled={!m.edit.editable || m.edit.disabled} onPress={() => m.edit.show()}>
                 <Edit />
               </Button>
-              <GroupDialog id={g.id} model={m.edit} details={m.details} />
+              <GroupDialog model={m.edit} details={m.details} />
               <CheckEdit model={m.check} />
               {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
               <MoreMenu
@@ -317,7 +317,7 @@ function DeclaredPolicy({
           </Button>
         </div>
       </ActionHelp>
-      <GroupDialog id={'declared-' + name} model={edit} details={null} />
+      <GroupDialog model={edit} details={null} />
     </Card>
   );
 }
@@ -376,7 +376,7 @@ export function Policies(props: PageProps) {
           </Button>
         </Toolbar>
       </ActionHelp>
-      <GroupDialog id="policies-create" model={m.create} details={null} />
+      <GroupDialog model={m.create} details={null} />
       {groups}
     </div>
   );

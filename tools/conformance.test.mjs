@@ -4,6 +4,7 @@ import {createServer} from 'node:http';
 import {setImmediate} from 'node:timers/promises';
 import {afterEach, describe, expect, it} from 'vitest';
 import {parse} from 'yaml';
+import {closeServers} from './close-servers.mjs';
 import {validateResponse, walk} from './conformance.mjs';
 
 const contract = parse(readFileSync(new URL('../contract/api-standardize/openapi.yaml', import.meta.url), 'utf8'));
@@ -107,17 +108,7 @@ async function serve({broken = false, mutate = () => {}, events = 'ready', resum
   return {baseUrl: `http://127.0.0.1:${server.address().port}`, requests};
 }
 
-afterEach(async () => {
-  await Promise.all(
-    servers.splice(0).map(
-      server =>
-        new Promise((resolve, reject) => {
-          server.close(error => (error ? reject(error) : resolve()));
-          server.closeAllConnections();
-        })
-    )
-  );
-});
+afterEach(() => closeServers(servers));
 
 describe('native API conformance', () => {
   it('walks contract examples, observed ids, one cursor page, and a resumable stream without mutations', async () => {
