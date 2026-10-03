@@ -146,7 +146,8 @@ it.each([
   ['cpu', 'kv', false, undefined],
   ['speed', 'sparkline', false, 'chart'],
   ['dnsAnswers', 'donut', false, undefined],
-  ['dnsAnswers', 'ranked', false, 'rows'],
+  ['dnsAnswers', 'ranked', false, undefined],
+  ['outbounds', 'ranked', false, 'rows'],
   ['nodeLatency', 'dots', false, 'rows']
 ] as const)('%s as %s (main %s) adjusts its %s', (id, form, main, kind) => {
   expect(heightKind({...defaultWidget(id), form}, main)).toBe(kind);
@@ -162,6 +163,56 @@ it.each([
   ['sourceHealth', 'medium', false, undefined]
 ] as const)('%s at %s (main %s) keeps its earlier %s rows', (id, size, main, rows) => {
   expect(legacyRows({...defaultWidget(id), size}, main)).toBe(rows);
+});
+const every = ['1/5', '1/4', '1/3', '1/2', '2/3', 'full'];
+const third = every.slice(2);
+const chart = ['short', 'standard', 'tall'];
+const steps = ['3', '5', '8'];
+// Each card's widths, and its heights in its first dashboard form: only those its content fills.
+it.each([
+  ['speed', third, chart],
+  ['traffic', ['1/3', '1/2'], []],
+  ['connections', every, chart],
+  ['memory', third, chart],
+  ['cpu', every, chart],
+  ['ranking', third, steps],
+  ['outbounds', third, []],
+  ['mode', third, []],
+  ['global', third, []],
+  ['group', ['1/3', '1/2', '2/3'], []],
+  ['status', third, []],
+  ['notices', third, steps],
+  ['download', every, chart],
+  ['upload', every, chart],
+  ['latency', every, chart],
+  ['history', third, chart],
+  ['nodeLatency', ['1/2', '2/3', 'full'], ['3', '5', 'auto', '8']],
+  ['sourceHealth', third, [...steps, 'auto']],
+  ['connectionOutbounds', third, []],
+  ['connectionNetworks', ['1/3', '1/2'], []],
+  ['dnsAnswers', ['1/3', '1/2'], []],
+  ['policyGroups', third, steps]
+] as const)('offers %s the widths %j and the heights %j', (id, widths, heights) => {
+  const axes = sizeAxes({id, form: formsFor(id, 'dashboard')[0], size: 'medium'}, registry[id].tile === true, (key: string) => key);
+  expect(axes.width.options.map(option => option.value)).toEqual(['auto', ...widths]);
+  expect(axes.height?.options.map(option => option.value) ?? []).toEqual(heights);
+});
+it('reads a stored width or row count a card no longer offers as the nearest one, and keeps the card', () => {
+  const parsed = parseItems(
+    [
+      {id: 'traffic', form: 'kv', size: 'medium', width: 'full'},
+      {id: 'group', form: 'kv', size: 'medium', width: 'full'},
+      {id: 'dnsAnswers', form: 'ranked', size: 'medium', width: '2/3', rows: 8},
+      {id: 'nodeLatency', form: 'ranked', size: 'medium', width: '1/4', rows: 8}
+    ],
+    'dashboard'
+  );
+  expect(parsed.map(({id, width, rows}) => [id, width, rows])).toEqual([
+    ['traffic', '1/2', undefined],
+    ['group', '2/3', undefined],
+    ['dnsAnswers', '1/2', undefined],
+    ['nodeLatency', '1/2', 8]
+  ]);
 });
 it("offers widths from the card's narrowest, Auto first, and its earlier row count beside the three steps", () => {
   const t = (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key);

@@ -465,6 +465,31 @@ test('a list height is its row count and survives a reload', async ({page}) => {
   await expect(tile(page, 'sourceHealth').getByRole('slider', {name: 'Resize height', exact: true})).toHaveAttribute('aria-valuetext', 'All rows');
 });
 
+test('a stored width or row count a card no longer offers reads as the nearest one and the card stays', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  await seed(page, {
+    version: 3,
+    sections: [
+      {
+        id: 'extensions',
+        items: [
+          {id: 'dnsAnswers', form: 'ranked', size: 'medium', width: 'full', rows: 8},
+          {id: 'traffic', form: 'kv', size: 'medium', width: '2/3'}
+        ]
+      }
+    ]
+  });
+  await page.goto('/#/activity');
+  for (const id of ['dnsAnswers', 'traffic']) await expect(tile(page, id)).toHaveAttribute('data-width', '1/2');
+  await open(page);
+  // A split of fixed categories has no row count to choose, and no width past a half.
+  await expect(tile(page, 'dnsAnswers').getByRole('slider', {name: 'Resize height', exact: true})).toHaveCount(0);
+  const dialog = await settings(page, 'dnsAnswers');
+  await expect(dialog.getByRole('radio', {name: '1/2', exact: true})).toBeVisible();
+  await expect(dialog.getByRole('radio', {name: '2/3', exact: true})).toHaveCount(0);
+  await close(page);
+});
+
 test('a value tile beside a card of another height keeps its own height and its sparkline fills it', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   const item = (id: string, extra: object = {}) => ({id, form: 'sparkline', size: 'medium', ...extra});
