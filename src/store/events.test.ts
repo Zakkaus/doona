@@ -165,6 +165,36 @@ it('leaves history and connection polling on their own cadence under runtime hea
   for (const fetch of fetches) expect(fetch).toHaveBeenCalledTimes(4);
 });
 
+// The KVM lab saw one Activity tab read the capabilities every 2.5 s, once per runtime heartbeat. Over 100 s of
+// heartbeats the first read is the only one; a generation change and a reconnect each add exactly one.
+it('reads the capabilities once under runtime heartbeats and again only on generation change or reconnect', async () => {
+  const api = createMockApi();
+  let options!: EventOptions;
+  api.subscribeEvents = async value => {
+    options = value;
+  };
+  api.capabilities = vi.fn(async () => structuredClone(capabilities));
+  const consumer = watchResource(api, {key: ['capabilities'], every: 0, retryErrors: true, fetch: signal => api.capabilities(signal)}, () => {});
+  disposers.push(
+    consumer.dispose,
+    subscribeEvents(api, () => {})
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  options.onEvent(ready('r0'));
+  const data = {instance_id: 'first', observed_at: ''};
+  for (let tick = 0; tick < 40; tick++) {
+    options.onEvent({id: `t${tick}`, event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}});
+    await vi.advanceTimersByTimeAsync(2500);
+  }
+  expect(api.capabilities).toHaveBeenCalledTimes(1);
+  options.onEvent({id: 'g', event: 'generation.changed', data: {...data, generation_id: 'new', previous_generation_id: 'old'}});
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(api.capabilities).toHaveBeenCalledTimes(2);
+  options.onEvent(ready('r1'));
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(api.capabilities).toHaveBeenCalledTimes(3);
+});
+
 it('clears a capabilities error once a refetch succeeds while the stream stays up', async () => {
   const api = createMockApi();
   api.capabilities = vi
