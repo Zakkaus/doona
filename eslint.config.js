@@ -108,6 +108,11 @@ export default [
               from: './src/features',
               except: ['./shared', ...features.flatMap(f => [`./${f}/nav.ts`, `./${f}/widgets.ts`])],
               message: 'The shell reaches pages through registry.ts, navigation through nav.ts and dashboard modules through widgets.ts.'
+            },
+            {
+              target: './src/shell',
+              from: './src/shell/widgets/Dashboard.tsx',
+              message: 'Dashboard.tsx is the Activity page entry; only registry.ts loads it. Share its parts as their own modules.'
             }
           ]
         }

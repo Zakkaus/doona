@@ -7,13 +7,12 @@ import {DashboardSection, DashboardTile, sectionGrid} from '../../ui/DashboardTi
 import {useCapabilities} from '../../store';
 import {ResourcePreview} from '../../store/preview';
 import {useDashboardLayout, saveDashboard} from './dashboardSettings';
-import {dashboardItems, mainCard, tileOf, type DashboardLayout} from './dashboardLayout';
+import {dashboardItems, tileOf, type DashboardLayout} from './dashboardLayout';
 import {instanceId, registry, type Widget} from './layout';
-import {scaleOf} from './dashboardSizing';
-import {ActivityCard, GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/activity/widgets';
+import {GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/activity/widgets';
 import {ModeJump} from './ModeJump';
+import {WidgetCard} from './WidgetCard';
 import '../../ui/styles/dashboard.css';
-const WidgetContent = lazy(() => import('./WidgetContent').then(module => ({default: module.WidgetContent})));
 const DashboardEditor = lazy(() => import('./Editors').then(module => ({default: module.DashboardEditor})));
 const DashboardActions = lazy(() => import('./Editors').then(module => ({default: module.DashboardActions})));
 export function Activity({query}: PageProps) {
@@ -83,25 +82,5 @@ function DashboardModule({item, onChange}: {item: Widget; onChange: (item: Widge
         <WidgetCard item={item} onChange={onChange} />
       </ResourcePreview>
     </DashboardTile>
-  );
-}
-// The renderer follows the card's kind and display, never its size, so resizing keeps the same content mounted.
-export function WidgetCard({item, preview = false, onChange = () => {}}: {item: Widget; preview?: boolean; onChange?: (item: Widget) => void}) {
-  const t = useT();
-  if (mainCard(item))
-    return (
-      <ActivityCard
-        item={item}
-        scale={scaleOf(item)}
-        ranking={{by: item.by === 'domain' ? 'host' : 'dev', setBy: by => onChange({...item, by: by === 'host' ? 'domain' : 'dev'})}}
-        selection={{chosen: item.group ?? '', setChosen: group => onChange({...item, group})}}
-      />
-    );
-  return (
-    <Card title={t(registry[item.id].label)}>
-      <Suspense>
-        <WidgetContent item={item} dashboard preview={preview} onChange={onChange} />
-      </Suspense>
-    </Card>
   );
 }

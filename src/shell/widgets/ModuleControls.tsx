@@ -8,7 +8,7 @@ import {EditorOption} from '../../ui/EditorOption';
 import {ResourcePreview} from '../../store/preview';
 import {SamplePreview} from './SamplePreview';
 import {dashboardDefaults, dashboardItems, mainCard, tileOf} from './dashboardLayout';
-import {WidgetCard} from './Dashboard';
+import {WidgetCard} from './WidgetCard';
 import {WidgetContent} from './WidgetContent';
 import {fraction, presetLabel, presetsFor, sizeAxes, withPreset, type Preset, type SizeAxis} from './dashboardSizing';
 import {
