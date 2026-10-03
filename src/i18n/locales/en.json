@@ -2207,6 +2207,7 @@
   "widgets.addedName": "Added {name}",
   "widgets.canvas": "Preview",
   "widgets.collapse": "Collapse widgets",
+  "widgets.combineRates": "Combine upload and download charts",
   "widgets.devices": "Devices",
   "widgets.discardHelp": "Widget changes have not been saved.",
   "widgets.divider": "Divider",

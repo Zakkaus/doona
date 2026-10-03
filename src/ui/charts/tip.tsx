@@ -52,6 +52,17 @@ type TipStore = ReturnType<typeof tipStore>;
 // A hover tip for the charts drawn without a chart library, in the same look as the activity charts' tooltips: it
 // follows the pointer inside its chart and shows the hovered item in words. The chart's own accessible names carry
 // the same facts, so the tip is for the eye only.
+// The box the tip must stay inside, relative to the sparkline: the padding box of the nearest ancestor that clips,
+// which in a tile is its card, or else the viewport.
+export function tipBounds(own: HTMLElement) {
+  let clip = own.parentElement;
+  while (clip && getComputedStyle(clip).overflow === 'visible') clip = clip.parentElement;
+  const at = own.getBoundingClientRect();
+  if (!clip) return {x: -at.left, y: -at.top, width: document.documentElement.clientWidth, height: document.documentElement.clientHeight};
+  const box = clip.getBoundingClientRect();
+  return {x: box.left + clip.clientLeft - at.left, y: box.top + clip.clientTop - at.top, width: clip.clientWidth, height: clip.clientHeight};
+}
+
 export function useChartTip<E extends HTMLElement = HTMLDivElement>() {
   const ref = useRef<E>(null);
   const [tip] = useState(tipStore);

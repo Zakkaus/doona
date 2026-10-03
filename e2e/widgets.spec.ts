@@ -619,6 +619,23 @@ test('the panel starts pinned and open; unpinned, it collapses on another page a
   await expect(floating(page).getByRole('button', {name: 'Expand widgets', exact: true})).toBeVisible();
 });
 
+test('the default panel draws both rates in one chart without scrolling, or two once the menu splits them', async ({page}) => {
+  await page.goto('/#/settings');
+  const chart = floating(page).locator('.rp-compact-chart');
+  await expect(chart.locator('svg .rp-area-curve')).toHaveCount(2);
+  await expect(chart.locator('svg')).toHaveCount(1);
+  const scrolls = await floating(page).evaluate(el =>
+    [el, ...el.querySelectorAll('*')].some(node => /auto|scroll/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 1)
+  );
+  expect(scrolls).toBe(false);
+  await floating(page).getByRole('button', {name: 'Panel options', exact: true}).click();
+  const combine = page.getByRole('menuitemcheckbox', {name: 'Combine upload and download charts', exact: true});
+  await expect(combine).toHaveAttribute('aria-checked', 'true');
+  await combine.click();
+  await expect(combine).toHaveAttribute('aria-checked', 'false');
+  await expect(chart.locator('svg')).toHaveCount(2);
+});
+
 test.describe('header and edge at 1440', () => {
   test.use({viewport: {width: 1440, height: 900}});
   const handle = (page: Page) => page.locator('.rp-edge-handle');
@@ -899,7 +916,8 @@ for (const width of [1280, 390]) {
       const left = title.x;
       const right = chevron.x + chevron.width;
       expect(Math.abs((await box(dock.locator('.rp-dock-title'))).x - left)).toBeLessThanOrEqual(1);
-      await expect(dock.locator('.rp-compact-chart svg.rp-activity-surface')).toHaveCount(2);
+      // The rates widget draws both directions in one chart.
+      await expect(dock.locator('.rp-compact-chart svg.rp-activity-surface')).toHaveCount(1);
       for (const item of await dock
         .locator(
           '.rp-widget-header, .rp-widget-label, .rp-legend .it, .rp-compact-chart, .rp-compact-chart > div:not(.rp-legend), .rp-compact-chart svg.rp-activity-surface, .rp-kv > div, .rp-hrule, .rp-segfit, .rp-seg'

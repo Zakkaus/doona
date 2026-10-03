@@ -13,7 +13,7 @@ import type {BackendView} from '../view';
 import {patchLayout, saveLayout, useWidgetLayout} from './settings';
 import {WidgetContent} from './WidgetContent';
 import {SpeedSummary} from './Contents';
-import {instanceId} from './layout';
+import {instanceId, type Layout} from './layout';
 import {editorState} from './editorState';
 import {arriveFromDock, rememberDock} from './dockMotion';
 
@@ -117,9 +117,17 @@ export function PanelHost({
     document.body
   );
 }
+// The rates widget's one chart or two, set from the panel's menu on every host.
+const combineAction = (layout: Layout, t: ReturnType<typeof useT>) => ({
+  id: 'combine',
+  label: t('widgets.combineRates'),
+  checked: !layout.splitRates,
+  onAction: () => patchLayout({splitRates: layout.splitRates ? undefined : true})
+});
 // The phone drawer, loaded on its first opening.
 export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: () => void; backend: BackendView}) {
   const t = useT();
+  const layout = useWidgetLayout();
   return (
     <DetailPanel
       open={open}
@@ -127,7 +135,13 @@ export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: (
       icon={<Light tone={backend.tone} small />}
       fit
       onClose={onClose}
-      actions={<MoreMenu quiet label={t('widgets.panelOptions')} actions={[{id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)}]} />}
+      actions={
+        <MoreMenu
+          quiet
+          label={t('widgets.panelOptions')}
+          actions={[{id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)}, combineAction(layout, t)]}
+        />
+      }
     >
       {open && <SavedGrid />}
     </DetailPanel>
@@ -195,6 +209,7 @@ export function PanelHeader({
               ...(docked
                 ? []
                 : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
+              combineAction(layout, t),
               {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
             ]}
           />

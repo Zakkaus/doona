@@ -15,6 +15,7 @@ import {sampleCpu} from './samples';
 import type {ModuleForm, Widget} from './layout';
 import {Reading} from './Reading';
 import {scaleOf} from './dashboardSizing';
+import {useWidgetLayout} from './settings';
 
 const rateIds = ['speed', 'history', 'download', 'upload'];
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
@@ -96,6 +97,7 @@ function HistoryChart({
   timestamps: number[];
   fmt: (n: number | null) => string;
   series: {label: string; color: string; values: (number | null)[]}[];
+  combine?: boolean;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -118,9 +120,11 @@ function TrafficChart({runtime, connections, direction, ...props}: ChartProps & 
   const locale = LOCALE[useLang()];
   const p = usePalette();
   const {history, series} = useTrafficSeries(useCapabilities().data, runtime, 60, {anchored: !!useContext(ResourceSamples)});
+  const split = useWidgetLayout().splitRates;
   return (
     <HistoryChart
       {...props}
+      combine={direction === 'speed' && !split}
       history={history}
       timestamps={series.timestamps}
       fmt={n => (connections ? (n == null ? '—' : formatNumber(n, locale)) : formatRate(n == null ? null : n * 1000, locale))}
