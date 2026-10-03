@@ -47,41 +47,40 @@ export function Latency({item}: {item: Widget}) {
       {!view.length ? (
         <Empty>{t('dashboard.noNodes')}</Empty>
       ) : item.form === 'dots' && item.size !== 'small' ? (
-        <>
-          <span className="rp-label">{t('dashboard.latencyOrder')}</span>
-          <Kv
-            compact
-            row
-            items={[
-              [t('nodes.latency.lowest'), formatLatency(measured[0]?.latest ?? null, t)],
-              [t('nodes.latency.highest'), formatLatency(measured.at(-1)?.latest ?? null, t)]
-            ]}
-          />
-          <MarkerPlot
-            label={t('ui.nodeLatency')}
-            max={latencyMax(view)}
-            fmt={value => formatLatency(value, t)}
-            limit={limit}
-            showAll={n => t('nodes.latency.showAll', {n})}
-            legend={
-              averages.moving || averages.avg10
-                ? [
-                    {kind: 'dot', label: t('nodes.latency.latest')},
-                    {kind: 'ring', label: t('nodes.latency.average')},
-                    {kind: 'line', label: t('nodes.latency.range')}
-                  ]
-                : []
+        <MarkerPlot
+          label={t('ui.nodeLatency')}
+          summary={
+            <Kv
+              compact
+              row
+              items={[
+                [t('nodes.latency.lowest'), formatLatency(measured[0]?.latest ?? null, t)],
+                [t('nodes.latency.highest'), formatLatency(measured.at(-1)?.latest ?? null, t)]
+              ]}
+            />
+          }
+          max={latencyMax(view)}
+          fmt={value => formatLatency(value, t)}
+          limit={limit}
+          showAll={n => t('nodes.latency.showAll', {n})}
+          legend={
+            averages.moving || averages.avg10
+              ? [
+                  {kind: 'dot', label: t('nodes.latency.latest')},
+                  {kind: 'ring', label: t('nodes.latency.average')},
+                  {kind: 'line', label: t('nodes.latency.range')}
+                ]
+              : []
+          }
+          groups={[
+            {
+              id: 'nodes',
+              label: item.group ? (view[0]?.label ?? t('nodes.latency.noGroup')) : t('dashboard.allGroups'),
+              rows: measured.map(row => latencyPlotRow(row, t)),
+              notes: missing.map(row => t('ui.valuePair', {label: row.name, value: t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')}))
             }
-            groups={[
-              {
-                id: 'nodes',
-                label: item.group ? (view[0]?.label ?? t('nodes.latency.noGroup')) : t('dashboard.allGroups'),
-                rows: measured.map(row => latencyPlotRow(row, t)),
-                notes: missing.map(row => t('ui.valuePair', {label: row.name, value: t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')}))
-              }
-            ]}
-          />
-        </>
+          ]}
+        />
       ) : (
         <div className="rp-list">
           {measured.slice(0, limit).map(row => (

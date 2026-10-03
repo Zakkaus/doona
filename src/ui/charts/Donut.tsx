@@ -19,7 +19,8 @@ export function DonutPlot({label, rows}: {label: string; rows: Array<{name: stri
   const sectors = pie<(typeof data)[number]>()
     .sort(null)
     .value((_, index) => angles[index])(data);
-  const radius = Math.min(56, width / 2, height / 2);
+  // The box sets the ring's size (see `.rp-donut .box`).
+  const radius = Math.min(width, height) / 2;
   const ring = arc<(typeof sectors)[number]>()
     .innerRadius(radius * (44 / 56))
     .outerRadius(radius)
