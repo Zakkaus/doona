@@ -54,13 +54,13 @@ export function Latency({item, dashboard = false}: {item: Widget; dashboard?: bo
     <Reading state={{...nodes, error: nodes.error ?? groups.error, refetch: () => (nodes.refetch(), groups.refetch())}}>
       {!view.length ? (
         <Empty>{t('dashboard.noNodes')}</Empty>
-      ) : item.form === 'dots' ? (
+      ) : item.form === 'dots' && item.size !== 'small' ? (
         <>
           <span className="rp-label">{t('dashboard.latencyOrder')}</span>
           <Kv
             truncate
             compact
-            row={item.size !== 'small'}
+            row
             items={[
               [t('nodes.latency.lowest'), formatLatency(measured[0]?.latest ?? null, t)],
               [t('nodes.latency.highest'), formatLatency(measured.at(-1)?.latest ?? null, t)]

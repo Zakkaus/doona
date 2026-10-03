@@ -9,12 +9,12 @@ it('renders widget size metadata', () => {
   expect(
     renderToStaticMarkup(
       <WidgetGrid>
-        <WidgetCell id="cpu" size="small">
+        <WidgetCell id="cpu" module="cpu" size="small">
           12%
         </WidgetCell>
       </WidgetGrid>
     )
-  ).toContain('data-size="small"');
+  ).toContain('data-size="small" data-widget-id="cpu" data-module="cpu"');
 });
 it('names a gallery item above its preview and disables a placed one before the preview loads', () => {
   const html = renderToStaticMarkup(

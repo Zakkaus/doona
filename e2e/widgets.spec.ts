@@ -1219,3 +1219,46 @@ test.describe('sidebar scrollbars at 1280x640', () => {
     expect(gap.panel.gap).toBeGreaterThanOrEqual(gap.inline);
   });
 });
+
+test.describe('small and narrow panel widgets', () => {
+  const only = (id: WidgetId, form: string, size: 'small' | 'medium' | 'large') => ({...defaults(), items: [{...defaultWidget(id), form, size}]}) as Layout;
+  // Every name element shows its whole text: no ellipsis, no clipping.
+  const truncated = (scope: Locator) =>
+    scope
+      .locator('.rp-markerplot .row .name, .rp-markerplot .row .name *, .rp-kv .k, .rp-kv .k *')
+      .evaluateAll(list => list.filter(el => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1).map(el => el.textContent));
+  for (const size of ['small', 'medium', 'large'] as const)
+    test(`node latency names stay whole in a ${size} dots widget`, async ({page}) => {
+      await save(page, only('nodeLatency', 'dots', size));
+      await page.goto('/#/settings');
+      const widget = floating(page).locator('[data-widget-id="nodeLatency"]');
+      await expect(widget.locator('.rp-markerplot .row, .rp-kv').first()).toBeVisible();
+      expect(await truncated(widget)).toEqual([]);
+    });
+  test('a small notices widget takes the whole row of the panel', async ({page}) => {
+    await save(page, only('notices', 'kv', 'small'));
+    await page.goto('/#/settings');
+    const cell = floating(page).locator('[data-widget-id="notices"]');
+    await expect(cell.getByRole('listitem').first()).toBeVisible();
+    expect(Math.abs((await box(cell)).width - (await box(floating(page).locator('.rp-widget-grid'))).width)).toBeLessThanOrEqual(1);
+  });
+  for (const [id, size] of [
+    ['connectionOutbounds', 'medium'],
+    ['outbounds', 'large']
+  ] as const)
+    test(`a ${size} ${id} donut keeps each legend entry on one line and shows them all`, async ({page}) => {
+      await save(page, only(id, 'donut', size));
+      await page.goto('/#/settings');
+      const legend = floating(page).locator(`[data-widget-id="${id}"] .rp-donut .lst`);
+      await expect(legend.locator('.r').first()).toBeVisible();
+      const layout = await legend.evaluate(list => ({
+        split: [...list.querySelectorAll('.r')].filter(row => {
+          const parts = [...row.children].filter(child => child.tagName === 'SPAN').map(child => child.getBoundingClientRect());
+          const lines = new Set([...row.querySelector('.n')!.getClientRects()].map(rect => Math.round(rect.top))).size;
+          return lines > 1 || parts.some(part => part.top >= parts[0].bottom || part.bottom <= parts[0].top);
+        }).length,
+        scrolls: list.scrollHeight > list.clientHeight + 1
+      }));
+      expect(layout).toEqual({split: 0, scrolls: false});
+    });
+});

@@ -33,6 +33,22 @@ function clockTicks(since: number, until: number): {ticks: number[]; step: numbe
   return {ticks, step};
 }
 
+// Ticks at fixed samples keep the last one, and each earlier one only when its label clears the next kept label by
+// `gap`; a narrow plot shows the first and last labels, or only the last.
+function sampleTicks(positions: number[], widths: number[], gap: number) {
+  const box = (index: number) => [positions[index] - (widths[index] ?? 0) / 2, positions[index] + (widths[index] ?? 0) / 2];
+  const last = positions.length - 1;
+  const shown: Array<{index: number; position: number}> = [];
+  let end = Infinity;
+  for (let index = last; index >= 0; index--) {
+    const [start, stop] = box(index);
+    if (stop + gap > end || (index > 0 && index < last && start < box(0)[1] + gap)) continue;
+    shown.unshift({index, position: positions[index]});
+    end = start;
+  }
+  return shown;
+}
+
 // Measures the labels in the axis font. Labels that read the same in the same locale keep the sizes already measured,
 // without touching the DOM or the state.
 function useTickSizes(labels: string[], locale: string) {
@@ -190,7 +206,11 @@ export function AreaPlot({
         16,
         true
       )
-    : ticks.map((value, index) => ({index, position: x(value)}));
+    : sampleTicks(
+        ticks.map(x),
+        xSizes.map(size => size.width),
+        8
+      );
   const yTicksVisible = visibleTicks(
     yTicks.map(y),
     ySizes.map(size => size.height),

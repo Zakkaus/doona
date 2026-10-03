@@ -13,6 +13,10 @@
 .rp-widget-cell[data-size='small'] {
   grid-column: span 1;
 }
+/* A notice is a sentence: the small notices widget takes the whole row, as every small widget does in the side dock. */
+.rp-widget-cell[data-size='small'][data-module='notices'] {
+  grid-column: span 2;
+}
 .rp-widget-cell[data-size='large'] {
   grid-row: span 2;
 }

@@ -159,7 +159,7 @@ function SavedGrid() {
       <TitlesShown value={!!layout.titles}>
         <WidgetGrid>
           {layout.items.map(item => (
-            <WidgetCell key={instanceId(item)} id={instanceId(item)} size={cellSize(item.size)}>
+            <WidgetCell key={instanceId(item)} id={instanceId(item)} module={item.id} size={cellSize(item.size)}>
               <WidgetContent
                 item={item}
                 onChange={next =>

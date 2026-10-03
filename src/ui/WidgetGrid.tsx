@@ -7,9 +7,9 @@ export const cellSize = <S extends string>(size: S) => (size === 'wide' ? 'large
 export function WidgetGrid({children}: {children: ReactNode}) {
   return <div className="rp-widget-grid">{children}</div>;
 }
-export function WidgetCell({size, id, children}: {size: WidgetSize; id: string; children: ReactNode}) {
+export function WidgetCell({size, id, module, children}: {size: WidgetSize; id: string; module: string; children: ReactNode}) {
   return (
-    <div className="rp-widget-cell" data-size={size} data-widget-id={id}>
+    <div className="rp-widget-cell" data-size={size} data-widget-id={id} data-module={module}>
       {children}
     </div>
   );
