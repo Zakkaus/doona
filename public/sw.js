@@ -81,7 +81,9 @@ self.addEventListener('fetch', event => {
       const response = (await cache.match(request, {ignoreVary: true})) ?? (await caches.match(request, {ignoreVary: true}));
       if (response) return hit(response);
       const fresh = await fetch(request);
-      if (fresh.ok && fresh.type === 'basic' && !fresh.redirected) await cache.put(request, fresh.clone());
+      // A host may answer a missing file with the page; caching that would keep the file missing once it is installed.
+      if (fresh.ok && fresh.type === 'basic' && !fresh.redirected && !fresh.headers.get('content-type')?.includes('html'))
+        await cache.put(request, fresh.clone());
       return fresh;
     })()
   );

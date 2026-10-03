@@ -144,6 +144,27 @@ test('an English visit caches only English and starts offline in it', async ({co
   await expect(page.locator('.rp-nav[href="#/settings"]')).toContainText('Settings');
 });
 
+test('a page served for a missing fonts/README is neither cached nor taken for the font archive', async ({context, browserName}) => {
+  test.skip(browserName === 'webkit', 'Playwright does not route worker requests in WebKit');
+  await context.route('**/ui/fonts/README', route => route.fulfill({status: 200, contentType: 'text/html', body: '<!doctype html><title>doona</title>'}));
+  const page = await context.newPage();
+  await page.addInitScript(() => localStorage.getItem('doona-lang') ?? localStorage.setItem('doona-lang', 'en'));
+  await page.goto('http://127.0.0.1:4186/ui/');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  // The second load goes through the worker, which must not keep the page under the README's name.
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toBeVisible();
+  await settle(page);
+  const cached = await page.evaluate(async () => {
+    const paths: string[] = [];
+    for (const key of await caches.keys()) for (const request of await (await caches.open(key)).keys()) paths.push(new URL(request.url).pathname);
+    return paths;
+  });
+  expect(cached.filter(path => path.endsWith('/fonts/README'))).toEqual([]);
+  expect(await page.evaluate(() => [...document.fonts].filter(face => face.family.includes('Noto Sans')).length)).toBe(0);
+});
+
 test('after an update the new build caches only the language in use and starts offline in it', async ({context, browserName}) => {
   test.skip(browserName === 'webkit', 'offline navigation cannot be emulated in WebKit');
   const page = await context.newPage();

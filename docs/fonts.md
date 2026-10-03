@@ -13,7 +13,9 @@ fetches only the slices needed for the page's text. No CDN or external font requ
 
 Vite emits the referenced files with content hashes under `dist/fonts/`. These files remain outside the service
 worker's shell precache and are cached on first use. The release's optional font archive contains this directory,
-including `OFL.txt` and this document as `README`. The application's font fallbacks still apply without that archive.
+including `OFL.txt` and this document as `README`. The UI requests `fonts/README` once per page load and attaches the
+`@font-face` stylesheets only when it answers, so without the archive nothing under `fonts/` is requested and the
+application's font fallbacks apply.
 
 When updating the packages, compare their `index.css` unicode ranges with the local declarations and retain the
 Latin faces at the end of `fonts-tc.css`: they take precedence over overlapping ideograph slices.
