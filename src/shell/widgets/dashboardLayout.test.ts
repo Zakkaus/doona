@@ -141,7 +141,7 @@ it.each([
   ['latency', 'kv', true, 'chart'],
   ['memory', 'area', true, 'chart'],
   ['ranking', 'ranked', true, 'rows'],
-  ['notices', 'kv', true, 'rows'],
+  ['notices', 'kv', true, undefined],
   ['mode', 'kv', true, undefined],
   ['cpu', 'kv', false, undefined],
   ['speed', 'sparkline', false, 'chart'],
@@ -181,7 +181,7 @@ it.each([
   ['global', third, []],
   ['group', ['1/3', '1/2', '2/3'], []],
   ['status', third, []],
-  ['notices', third, steps],
+  ['notices', third, []],
   ['download', every, chart],
   ['upload', every, chart],
   ['latency', every, chart],
@@ -203,7 +203,8 @@ it('reads a stored width or row count a card no longer offers as the nearest one
       {id: 'traffic', form: 'kv', size: 'medium', width: 'full'},
       {id: 'group', form: 'kv', size: 'medium', width: 'full'},
       {id: 'dnsAnswers', form: 'ranked', size: 'medium', width: '2/3', rows: 8},
-      {id: 'nodeLatency', form: 'ranked', size: 'medium', width: '1/4', rows: 8}
+      {id: 'nodeLatency', form: 'ranked', size: 'medium', width: '1/4', rows: 8},
+      {id: 'notices', form: 'kv', size: 'medium', rows: 5}
     ],
     'dashboard'
   );
@@ -211,7 +212,8 @@ it('reads a stored width or row count a card no longer offers as the nearest one
     ['traffic', '1/2', undefined],
     ['group', '2/3', undefined],
     ['dnsAnswers', '1/2', undefined],
-    ['nodeLatency', '1/2', 8]
+    ['nodeLatency', '1/2', 8],
+    ['notices', undefined, undefined]
   ]);
 });
 it("offers widths from the card's narrowest, Auto first, and its earlier row count beside the three steps", () => {
@@ -235,8 +237,8 @@ it("offers widths from the card's narrowest, Auto first, and its earlier row cou
   expect([again.value, again.options.map(option => option.value)]).toEqual(['8', ['3', '5', '8', 'auto']]);
   expect(again.set('auto').rows).toBeUndefined();
   // A list that had no limit offers every row as Auto, and reports it.
-  const notices = sizeAxes(defaultWidget('notices'), true, t as never).height!;
-  expect([notices.value, notices.options.at(-1)]).toEqual(['auto', {value: 'auto', label: 'dashboard.allRows'}]);
+  const sources = sizeAxes(defaultWidget('sourceHealth'), false, t as never).height!;
+  expect([sources.value, sources.options.at(-1)]).toEqual(['auto', {value: 'auto', label: 'dashboard.allRows'}]);
   // A list whose earlier count is a step has no separate Auto.
   expect(sizeAxes({...defaultWidget('ranking'), size: 'medium'}, true, t as never).height).toMatchObject({
     value: '5',

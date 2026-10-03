@@ -490,6 +490,62 @@ test('a stored width or row count a card no longer offers reads as the nearest o
   await close(page);
 });
 
+test('a full-width list of four rows or more takes two columns, the first filled first, and no name is cut', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  await seed(page, {
+    version: 3,
+    sections: [
+      {
+        id: 'details',
+        items: [
+          {id: 'ranking', form: 'ranked', size: 'medium', width: 'full', rows: 8},
+          {id: 'memory', form: 'area', size: 'medium', width: '1/2'},
+          {id: 'notices', form: 'kv', size: 'medium', width: '1/2'}
+        ]
+      },
+      {
+        id: 'extensions',
+        items: [
+          {id: 'policyGroups', form: 'kv', size: 'medium', width: 'full', rows: 8},
+          {id: 'policyGroups', instance: 'policyGroups-3', form: 'kv', size: 'medium', width: 'full', rows: 3},
+          {id: 'sourceHealth', form: 'kv', size: 'medium', width: 'full'}
+        ]
+      }
+    ]
+  });
+  await page.goto('/#/activity');
+  await expect(tile(page, 'policyGroups').locator('.rp-columns > *')).toHaveCount(8);
+  await expect(tile(page, 'policyGroups-3').locator('.rp-columns > *')).toHaveCount(3);
+  for (const [id, columns] of [
+    ['ranking', 2],
+    ['policyGroups', 2],
+    ['policyGroups-3', 1],
+    ['sourceHealth', 1]
+  ] as const) {
+    const list = tile(page, id).locator('.rp-columns > *');
+    await expect(list.nth(columns === 2 ? 3 : 0)).toBeVisible();
+    const rows = await list.count();
+    const lefts = await list.evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().left)));
+    expect(new Set(lefts).size, id).toBe(columns);
+    // Column by column: the first half of the rows sits in the first column.
+    expect(
+      lefts.slice(0, Math.ceil(rows / 2)).every(left => left === Math.min(...lefts)),
+      id
+    ).toBe(true);
+    const names = await tile(page, id)
+      .locator('.rp-kv .k, .rp-bar .l > *')
+      .evaluateAll(list => list.map(el => ({fits: el.scrollWidth <= el.clientWidth, overflow: getComputedStyle(el).textOverflow})));
+    expect(names.length, id).toBeGreaterThan(0);
+    expect(
+      names.filter(name => !name.fits || name.overflow === 'ellipsis'),
+      id
+    ).toEqual([]);
+  }
+  // Notices take their content's height; the row takes its tallest card's and both cards fill it.
+  const [memory, notices] = await Promise.all(['memory', 'notices'].map(id => height(tile(page, id).locator('section').first())));
+  expect(Math.abs(memory - notices)).toBeLessThanOrEqual(1);
+});
+
 test('a value tile beside a card of another height keeps its own height and its sparkline fills it', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   const item = (id: string, extra: object = {}) => ({id, form: 'sparkline', size: 'medium', ...extra});

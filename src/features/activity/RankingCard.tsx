@@ -1,6 +1,6 @@
 import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
-import {Badge, Bar, Card, Empty, ErrorMessage, Link, Segmented, TextTooltip} from '../../ui/ui';
+import {Badge, Bar, Card, columns, Empty, ErrorMessage, Link, Segmented, TextTooltip} from '../../ui/ui';
 import type {useRankingCard} from './useRankingCard';
 
 export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>}) {
@@ -41,13 +41,13 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
           <Empty>{t('act.rankingEmpty')}</Empty>
         </div>
       ) : (
-        <div className="rp-list">
+        <div className="rp-list rp-columns" style={columns(rows.length)}>
           {rows.map(row => (
             <Bar
               key={row.name}
               label={
                 <Link appearance="link" href={row.href}>
-                  <TextTooltip>{row.name}</TextTooltip>
+                  {row.name}
                 </Link>
               }
               value={row.value}

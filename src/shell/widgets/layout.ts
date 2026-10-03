@@ -73,7 +73,7 @@ const definitions = {
   global: {...list('act.global', 'config'), sizes: ['medium'], untitled: true},
   group: {...list('widgets.group', 'groups'), sizes: ['medium'], widest: '2/3'},
   status: {...list('widgets.status', 'runtime'), sizes: ['medium'], forms: ['facts', 'kv'], compact: ['kv']},
-  notices: {...list('widgets.notices', 'events'), rows: true},
+  notices: list('widgets.notices', 'events'),
   download: {...metric('ui.download', 'runtime'), tile: true, rate: true},
   upload: {...metric('ui.upload', 'runtime'), tile: true, rate: true},
   latency: {...list('act.latency', 'nodes'), sizes: ['medium'], tile: true, groupChoice: 'act.groupFollow'},

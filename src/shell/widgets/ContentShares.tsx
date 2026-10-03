@@ -8,7 +8,7 @@ import {outboundColor} from '../../features/activity/widgets';
 import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
 import {Donut, Waffle, usePalette} from '../../ui/charts';
-import {Bar, Empty, Kv} from '../../ui/ui';
+import {Bar, columns, Empty, Kv} from '../../ui/ui';
 import {contentLimit, registry, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
@@ -33,17 +33,16 @@ function Shares({item, rows, bytes = false, empty}: {item: Widget; rows: Share[]
   if (!total) return <Empty>{empty}</Empty>;
   if (item.form === 'donut') return <Donut {...chart} total={format(total)} rows={shares.map(row => ({...row, value: Math.round(row.pct)}))} />;
   if (item.form === 'waffle') return <Waffle {...chart} shares={shares.map(row => ({...row, id: row.name, label: row.name}))} />;
+  const listed = shares.slice(0, natural ? undefined : (item.rows ?? contentLimit(item.size)));
   return (
-    <div className="rp-list">
-      {shares
-        .slice(0, natural ? undefined : (item.rows ?? contentLimit(item.size)))
-        .map(row =>
-          item.form === 'ranked' ? (
-            <Bar key={row.name} label={row.name} value={row.text} pct={row.pct} color={row.color} />
-          ) : (
-            <Kv truncate key={row.name} compact row={item.size !== 'small'} items={[[row.name, row.text]]} />
-          )
-        )}
+    <div className="rp-list rp-columns" style={columns(listed.length)}>
+      {listed.map(row =>
+        item.form === 'ranked' ? (
+          <Bar key={row.name} label={row.name} value={row.text} pct={row.pct} color={row.color} />
+        ) : (
+          <Kv key={row.name} compact row={item.size !== 'small'} items={[[row.name, row.text]]} />
+        )
+      )}
     </div>
   );
 }

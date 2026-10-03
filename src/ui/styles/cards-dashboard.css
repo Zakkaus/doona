@@ -335,13 +335,9 @@
     grid-column: 1 / -1;
   }
 }
-/* A feed takes no height from its rows: it fills what the row's other cards give its card and scrolls inside,
-   with the chart-wait floor for a card that stands alone. */
-.rp-feed {
-  flex: 1 1 auto;
+/* The notices card keeps its waiting height, the chart-wait floor, when its rows arrive, and grows with them. */
+.rp-dash-section .rp-list-labeled {
   min-height: 182px;
-  contain: size;
-  overflow-y: auto;
 }
 .rp-qlabel {
   display: flex;

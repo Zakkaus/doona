@@ -9,6 +9,48 @@
   white-space: normal;
   overflow-wrap: normal;
 }
+/* A name is never cut: one that does not fit beside its value takes its own line, value under it at the end, and
+   wraps there whole. */
+.rp-module-content .rp-kv .k,
+.rp-columns .rp-bar .top .l {
+  overflow-wrap: anywhere;
+}
+.rp-module-content .rp-kv.row > div,
+.rp-columns .rp-bar .top {
+  flex-wrap: wrap;
+}
+.rp-module-content .rp-kv.row .v,
+.rp-columns .rp-bar .top .v {
+  margin-inline-start: auto;
+}
+.rp-columns .rp-bar .top .l > :is(.rp-link, .rp-truncate) {
+  white-space: normal;
+  text-overflow: clip;
+}
+/* A wide card's list of four rows or more takes two columns, the first filled before the second; fewer rows keep one
+   column as wide as one of those. */
+@container (width >= 640px) {
+  .rp-columns {
+    max-inline-size: calc(50% - var(--rp-space-3));
+  }
+  .rp-columns:has(> :nth-child(4)) {
+    max-inline-size: none;
+    display: grid;
+    grid-template-rows: repeat(var(--rp-rows), auto);
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    column-gap: var(--rp-space-6);
+  }
+  /* Each column keeps the label column of its own rows; the end padding widens the gap to the next column. */
+  .rp-list-labeled.rp-columns:has(> :nth-child(4)) {
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: var(--rp-space-3);
+  }
+  .rp-list-labeled.rp-columns:has(> :nth-child(4)) > .rp-row {
+    grid-column: span 2;
+    padding-inline-end: var(--rp-space-3);
+  }
+}
 .rp-module-content .rp-donut .r .n {
   min-inline-size: 0;
   overflow: visible;
