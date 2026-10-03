@@ -51,6 +51,7 @@
   "act.noOutbounds": "This backend does not provide outbound counters",
   "act.noRoutingMode": "No routing rules configured",
   "act.noSubscriptions": "No subscriptions yet",
+  "act.noticeGap": "{reason}, records dropped since recording started: {n}",
   "act.noticeRepeat": {
     "one": "{n} time",
     "other": "{n} times"

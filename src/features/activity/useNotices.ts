@@ -24,10 +24,10 @@ export function useNotices() {
     },
     t
   );
-  const events = useMemo(() => noticeRows(feed.records, t), [feed.records, t]);
+  const notices = useMemo(() => noticeRows(feed.records, t), [feed.records, t]);
   return {
-    rows: [...setup, ...events],
-    total: setup.length + feed.records.length,
+    rows: [...setup, ...notices.rows],
+    total: setup.length + notices.total,
     error: feed.error,
     // A failed stream reopens once the capabilities are read again.
     retry: () => void refetchAll().then(() => reopenEvents(api)),

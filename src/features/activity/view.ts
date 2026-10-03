@@ -46,35 +46,35 @@ const NOTICE_ROWS = 8;
 // A failed operation is an error and a recorder gap a warning; every other event is a notice.
 const noticeTone = (event: ApiEvent): NoticeRow['tone'] =>
   event.event === 'operation.updated' && event.data.status === 'failed' ? 'err' : event.event === 'flow.gap' ? 'warn' : 'info';
-// A run of identical notices (same kind, same resource, same reason) folds into one row with a count, so a
-// backend dropping records at pace does not push everything else off the card. Two notices that differ in
-// any of those never fold: a failure must not disappear behind a neighbouring success.
-export function noticeRows(events: ApiEvent[], t: LabelFn) {
-  const rows: Array<{id: string; tone: NoticeRow['tone']; kindText: string; summaryText: string; key: string; count: number}> = [];
+// The row already opens with the kind, so a gap that names no record starts at the reason itself, not at "reason:".
+function noticeDetail(event: ApiEvent, t: LabelFn) {
+  const summary = eventSummary(event, t);
+  const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
+  if (summary.key === 'event.gapUnscopedNoCount') return String(params.reason);
+  return t(summary.key === 'event.gapUnscoped' ? 'act.noticeGap' : summary.key, params);
+}
+// Identical notices (same level, kind and text) fold into one row with a count wherever they fall in the feed, so a
+// backend repeating itself does not push everything else off the card; the row sits where the latest one does. Two
+// notices that differ in any of those never fold: a failure must not disappear behind a neighbouring success.
+// `total` counts the folded notices, as the card's badge does.
+export function noticeRows(events: ApiEvent[], t: LabelFn): {rows: NoticeRow[]; total: number} {
+  const groups = new Map<string, {row: NoticeRow; count: number}>();
   for (const event of events) {
-    const summary = eventSummary(event, t);
-    const key = [event.event, summary.key, ...Object.entries(summary.params ?? {}).map(([name, value]) => `${name}=${String(value)}`)].join('|');
-    const last = rows[rows.length - 1];
-    if (last && last.key === key) {
-      last.count += 1;
-      continue;
-    }
-    if (rows.length === NOTICE_ROWS) break;
-    const params = Object.fromEntries(Object.entries(summary.params ?? {}).map(([key, value]) => [key, typeof value === 'string' ? shortId(value) : value]));
     const tone = noticeTone(event);
-    rows.push({
-      id: event.id,
-      tone,
-      kindText: t(tone === 'err' ? 'ui.error' : tone === 'warn' ? 'ui.warning' : 'ui.notice'),
-      summaryText: t('ui.valuePair', {label: enumLabel(eventKindLabels, event.event, t), value: t(summary.key, params)}),
-      key,
-      count: 1
-    });
+    const summaryText = t('ui.valuePair', {label: enumLabel(eventKindLabels, event.event, t), value: noticeDetail(event, t)});
+    const key = `${tone}|${event.event}|${summaryText}`;
+    const group = groups.get(key);
+    if (group) group.count += 1;
+    else
+      groups.set(key, {
+        row: {id: event.id, tone, kindText: t(tone === 'err' ? 'ui.error' : tone === 'warn' ? 'ui.warning' : 'ui.notice'), summaryText},
+        count: 1
+      });
   }
-  return rows.map(({key: _key, count, summaryText, ...row}) => ({
-    ...row,
-    summaryText: count > 1 ? t('ui.aside', {text: summaryText, note: t('act.noticeRepeat', {n: count})}) : summaryText
-  }));
+  const rows = [...groups.values()]
+    .slice(0, NOTICE_ROWS)
+    .map(({row, count}) => (count > 1 ? {...row, summaryText: t('ui.aside', {text: row.summaryText, note: t('act.noticeRepeat', {n: count})})} : row));
+  return {rows, total: groups.size};
 }
 export function trafficState(series: {down: Array<number | null>; up: Array<number | null>}, available: boolean | undefined, loaded: boolean, live = false) {
   if (series.down.some(value => value !== null) || series.up.some(value => value !== null)) return 'ready';
