@@ -4,6 +4,8 @@
 // the details column below it; main's 2fr/1fr split put it 4px off (history 728 to 732 wide, outbounds 4px narrower).
 // Another in zh-TW at 1440, 1024 and 768px and in en at 1024 and 768px: the control cards' row gives each card its one
 // line first and shares the rest by the footprints (see fitSpans), so those boxes are this branch's.
+// And one more in en at 1024 and 768px and zh-TW at 1440 to 768px: the mode and global lines are narrower at the default M
+// size, so those cards' share of the row moves (card 1 and 2, and card 0 in zh-TW at 1280px, which now fits one line).
 export const cardBounds: Record<string, readonly (readonly [x: number, y: number, width: number, height: number])[]> = {
   'en-1440': [
     [280, 156, 462.84375, 110],
@@ -22,8 +24,8 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
   ],
   'en-1024': [
     [280, 156, 688, 66],
-    [280, 234, 409.65625, 110],
-    [701.65625, 234, 266.328125, 110],
+    [280, 234, 401.328125, 110],
+    [693.328125, 234, 274.65625, 110],
     [280, 368, 338, 110],
     [630, 368, 338, 110],
     [280, 490, 338, 110],
@@ -52,8 +54,8 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
   ],
   'zh-TW-1440': [
     [280, 160, 450.328125, 74],
-    [742.328125, 160, 360, 74],
-    [1114.328125, 160, 269.671875, 74],
+    [742.328125, 160, 352.03125, 74],
+    [1106.359375, 160, 277.640625, 74],
     [280, 290, 211.1875, 110],
     [503.1875, 290, 211.203125, 110],
     [726.390625, 290, 211.203125, 110],
@@ -67,8 +69,8 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
   ],
   'zh-TW-1024': [
     [280, 160, 688, 74],
-    [280, 246, 383, 74],
-    [675, 246, 293, 74],
+    [280, 246, 374.65625, 74],
+    [666.65625, 246, 301.328125, 74],
     [280, 324, 338, 110],
     [630, 324, 338, 110],
     [280, 446, 338, 110],
@@ -111,9 +113,9 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
     [917.33, 826, 306.66, 288]
   ],
   'zh-TW-1280': [
-    [280, 156, 394.28, 94],
-    [686.28, 156, 262.86, 94],
-    [961.14, 156, 262.86, 94],
+    [280, 156, 379.5, 94],
+    [671.5, 156, 306.65625, 94],
+    [990.15625, 156, 233.84375, 94],
     [280, 274, 179.19, 146],
     [471.19, 274, 179.2, 146],
     [662.39, 274, 179.2, 146],
@@ -127,8 +129,8 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
   ],
   'en-768': [
     [40, 204, 688, 94],
-    [40, 310, 409.65625, 94],
-    [461.65625, 310, 266.328125, 94],
+    [40, 310, 401.328125, 94],
+    [453.328125, 310, 274.65625, 94],
     [40, 428, 338, 110],
     [390, 428, 338, 110],
     [40, 550, 338, 110],
@@ -142,8 +144,8 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
   ],
   'zh-TW-768': [
     [40, 216, 688, 74],
-    [40, 302, 383, 74],
-    [435, 302, 293, 74],
+    [40, 302, 374.65625, 74],
+    [426.65625, 302, 301.328125, 74],
     [40, 372, 338, 110],
     [390, 372, 338, 110],
     [40, 494, 338, 110],

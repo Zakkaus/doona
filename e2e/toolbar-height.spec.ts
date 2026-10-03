@@ -4,7 +4,7 @@ import type {Page} from '@playwright/test';
 for (const width of [1280, 390]) {
   test.describe(`uniform page controls ${width}`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
-    test('every route and tab keeps fixed L page rows and uniform geometry', async ({page}) => {
+    test('every route and tab keeps M page rows and uniform geometry', async ({page}) => {
       test.setTimeout(120000);
       for (const route of routes) {
         await page.goto(`/#/${route}`);
@@ -21,8 +21,8 @@ for (const width of [1280, 390]) {
               const failures: string[] = [];
               for (const row of await toolbarGeometry(page)) {
                 const {controls} = row;
-                if (row.pageRow && controls.some(control => Math.abs(control.height - row.large) > 0.5))
-                  failures.push(`${route}/${index}: ${row.row}: not L ${JSON.stringify(controls)}`);
+                if (row.pageRow && controls.some(control => Math.abs(control.height - row.control) > 0.5))
+                  failures.push(`${route}/${index}: ${row.row}: not M ${JSON.stringify(controls)}`);
                 if (row.pageRow && Math.max(...controls.map(control => control.height)) - Math.min(...controls.map(control => control.height)) > 0.5)
                   failures.push(`${route}/${index}: unequal heights`);
                 if (row.pageRow && Math.max(...controls.map(control => control.centre)) - Math.min(...controls.map(control => control.centre)) > 1)
@@ -46,7 +46,7 @@ test.describe('tab and segment hover and press', () => {
     const radius = (locator: ReturnType<Page['locator']>) => locator.evaluate(el => getComputedStyle(el).borderTopLeftRadius);
     for (const [route, bar, item] of [
       ['config', '.rp-content .rp-tabbar', '[role=tab]'],
-      ['rules', '.rp-content .rp-seg[data-size=L]', '.rp-btn']
+      ['rules', '.rp-content .rp-seg[data-size=M]', '.rp-btn']
     ]) {
       await page.goto(`/#/${route}`);
       const group = page.locator(bar).first();
@@ -67,7 +67,7 @@ test.describe('tab and segment hover and press', () => {
   });
 });
 
-// A phone keeps L's 40px height but M's inline padding and text, so the rows lay out as they did at M.
+// On a phone the page rows take the touch height and still lay out on as few lines as before.
 test.describe('page rows on a phone', () => {
   test.use({viewport: {width: 390, height: 900}, storage: {'doona-lang': 'zh-TW'}});
   test('page links and tab rows stay on one line, and the connections toolbar is no taller than before', async ({page}) => {
@@ -91,7 +91,7 @@ test.describe('page rows on a phone', () => {
   });
 });
 
-// The lines the Connections toolbar took at 390px before the controls moved to L, on main.
+// The lines the Connections toolbar took at 390px with its controls at M.
 const connectionsToolbarLinesBefore = 3;
 
 // How many lines the visible items inside the matching containers fill; items on one line share a top.
@@ -129,7 +129,7 @@ async function toolbarGeometry(page: Page) {
   return page.locator('body').evaluate(root => {
     const rows = '.rp-toolbar, .rp-tabhead, .rp-tabbar, .rp-page-actions, .rp-page-links';
     const localRows = '.rp-row, .rp-cluster, .rp-field-row';
-    const large = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control-lg'));
+    const control = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control'));
     const controls = '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-seg, .rp-switch, .rp-tab, .rp-tabbar';
     return [...root.querySelectorAll<HTMLElement>(`${rows}, ${localRows}`)]
       .filter(row => row.checkVisibility({visibilityProperty: true}))
@@ -168,7 +168,7 @@ async function toolbarGeometry(page: Page) {
           row.matches('[data-page-toolbar], [data-page-tabrow], .rp-page-actions, .rp-page-links') ||
           !!row.closest('[data-page-toolbar], .rp-page-actions, .rp-page-links') ||
           (!localSurface && !!row.closest(rows));
-        return lines.map(line => ({row: row.className, pageRow, large, controls: line}));
+        return lines.map(line => ({row: row.className, pageRow, control, controls: line}));
       });
   });
 }

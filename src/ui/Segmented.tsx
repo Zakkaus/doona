@@ -5,8 +5,7 @@ import {LabeledSelect} from './Picker';
 
 // S2 does not scroll a segmented control: one too wide for its space collapses into a picker, as S2 Tabs do. The hidden
 // track keeps its box, so the switch moves nothing, and is measured to tell when the items fit again.
-// Every segmented control is S2 size L (40px) wherever it sits, so all of them match; a row that holds one provides L to
-// the controls beside it.
+// S2's SegmentedControl has no size: it is always M (32px), as are the default controls beside it.
 export function Segmented({
   items,
   value,
@@ -24,7 +23,6 @@ export function Segmented({
   fill?: boolean;
 }) {
   const [ref, pos] = useSlider(value);
-  const controlSize = 'L';
   const collapsed = useOverflow(ref, items.flat().join('\n'));
   // Focus inside the control follows it across the switch, so it is neither hidden nor dropped to the page; focus
   // elsewhere stays. The picker's ref detaches before the picker leaves the page, while it can still hold focus.
@@ -47,7 +45,7 @@ export function Segmented({
       <ToggleButtonGroup
         ref={ref}
         className="rp-seg"
-        data-size={controlSize}
+        data-size="M"
         aria-label={label}
         isDisabled={isDisabled}
         selectionMode="single"
@@ -60,22 +58,14 @@ export function Segmented({
       >
         {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         {items.map(([k, l]) => (
-          <ToggleButton key={k} id={k} className="rp-btn" data-size={controlSize}>
+          <ToggleButton key={k} id={k} className="rp-btn" data-size="M">
             {l}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
       {collapsed && (
         <div ref={pickRef} className="rp-segpick">
-          <LabeledSelect
-            bare
-            size={controlSize}
-            label={label}
-            value={value}
-            onChange={onChange}
-            isDisabled={isDisabled}
-            items={items.map(([id, l]) => ({id, label: l}))}
-          />
+          <LabeledSelect bare label={label} value={value} onChange={onChange} isDisabled={isDisabled} items={items.map(([id, l]) => ({id, label: l}))} />
         </div>
       )}
     </div>

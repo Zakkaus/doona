@@ -505,7 +505,7 @@
   justify-content: space-between;
   gap: var(--rp-space-3);
   min-inline-size: 0;
-  min-block-size: var(--rp-control-lg);
+  min-block-size: var(--rp-control);
 }
 .rp-page-actions {
   margin-inline-start: auto;
