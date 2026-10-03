@@ -499,6 +499,7 @@
   "dns.flushUnsupported": "此后端不支持清除缓存",
   "dns.flushed": "缓存已清除，匹配：{matched}，已删除：{deleted}",
   "dns.hit": "缓存命中",
+  "dns.includeExpired": "显示已到期",
   "dns.invalidName": "不是有效的域名",
   "dns.invalidRegex": "不是有效的正则表达式",
   "dns.loadOlder": "加载较早记录",

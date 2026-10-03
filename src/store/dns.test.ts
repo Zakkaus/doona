@@ -111,6 +111,29 @@ it('walks the cache at one page size and starts over without a cursor once a sna
   await twice;
 });
 
+it.each([
+  {includeExpired: false, sent: undefined},
+  {includeExpired: true, sent: true}
+])('sends include_expired $sent on every page of a walk with includeExpired $includeExpired', async ({includeExpired, sent}) => {
+  const page = (id: string, next_cursor: string | null) =>
+    ({
+      observed_at: '2026-09-25T10:00:00Z',
+      coverage: {positive: true, negative: true, persistent: false},
+      total: 3,
+      next_cursor,
+      entries: [{entry_id: id, domain: id + '.', type: 'A', class: 'IN', status: 'NOERROR', expires_at: '2026-09-25T10:05:00Z', stale_until: null}]
+    }) as DnsCacheList;
+  const pages: Record<string, DnsCacheList> = {start: page('a', 'p2'), p2: page('b', 'p3'), p3: page('c', null)};
+  const dnsCache = vi.fn(async (query?: DnsCacheQuery) => pages[query?.cursor ?? 'start']);
+  const list = await dnsCacheListing({dnsCache} as unknown as Api, undefined, includeExpired);
+  expect(list.entries.map(item => item.entry_id)).toEqual(['a', 'b', 'c']);
+  expect(dnsCache.mock.calls.map(([query]) => [query?.cursor, query?.include_expired])).toEqual([
+    [undefined, sent],
+    ['p2', sent],
+    ['p3', sent]
+  ]);
+});
+
 it('reads cache usage from a listing walked within the last minute instead of asking again', async () => {
   vi.useFakeTimers();
   const api = createMockApi();
@@ -127,6 +150,15 @@ it('reads cache usage from a listing walked within the last minute instead of as
   vi.advanceTimersByTime(60000);
   await readCacheUsage(api, signal);
   expect(listing).toHaveBeenCalledTimes(calls + 1);
+  expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
+});
+
+it('does not answer the usage read from a walk that listed expired entries', async () => {
+  const api = createMockApi();
+  const listing = vi.spyOn(api, 'dnsCache');
+  const signal = new AbortController().signal;
+  await walkCache(api, signal, true);
+  await readCacheUsage(api, signal);
   expect(listing).toHaveBeenLastCalledWith({limit: 1, detail: 'summary'}, signal);
 });
 

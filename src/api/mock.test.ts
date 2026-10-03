@@ -5,6 +5,7 @@ import {addU64} from './u64';
 import type {ApiEvent, ProbeRequest} from './model';
 import {connectionFixtures, trafficHistory} from '../../mock/fixtures';
 import {faultMemoryLimit, runtimeMemory} from '../../mock/fixtures/runtime';
+import {now} from '../../mock/fixtures/clock';
 import {geodataPresets} from '../dae/geodata';
 
 afterEach(() => {
@@ -149,7 +150,7 @@ it('keeps the fuller demo history, cache and rankings internally consistent', as
   const api = faultsApi();
   const [dns, cache, nodes, flows, rules, memory] = await Promise.all([
     wholeDnsLog(api),
-    api.dnsCache({detail: 'full'}),
+    api.dnsCache({detail: 'full', include_expired: true}),
     api.nodes({limit: 1000}),
     api.flows({limit: 1000}),
     api.rules(),
@@ -530,9 +531,19 @@ it('changes lifecycle only after suspend and resume complete, then invalidates r
   await stream;
 });
 
+it('lists expired cache entries only when asked to', async () => {
+  const api = createMockApi();
+  const listed = await api.dnsCache({limit: 1000});
+  const all = await api.dnsCache({limit: 1000, include_expired: true});
+  const expired = all.entries.filter(entry => Date.parse(entry.expires_at) <= now);
+  expect(expired.length).toBeGreaterThan(0);
+  expect(listed.total).toBe(all.total - expired.length);
+  expect(listed.entries.filter(entry => expired.some(item => item.entry_id === entry.entry_id))).toEqual([]);
+});
+
 it('deletes entries idempotently and flushes exactly the remaining cache', async () => {
   const api = createMockApi();
-  const before = await api.dnsCache();
+  const before = await api.dnsCache({include_expired: true});
   const entry = before.entries[0];
   expect((await api.dnsQuery(entry.domain, [entry.type])).results[0]).toMatchObject({cached: true, cache_entry_id: entry.entry_id});
   await expect(api.deleteDnsEntry(entry.entry_id)).resolves.toEqual({deleted: 1});
@@ -541,7 +552,7 @@ it('deletes entries idempotently and flushes exactly the remaining cache', async
   await expect(api.flushDnsCache()).resolves.toEqual({matched: before.total - 1, deleted: before.total - 1});
   expect((await api.dnsCache()).entries).toEqual([]);
   await expect(api.flushDnsCache()).resolves.toEqual({matched: 0, deleted: 0});
-  expect((await createMockApi().dnsCache()).total).toBe(before.total);
+  expect((await createMockApi().dnsCache({include_expired: true})).total).toBe(before.total);
 });
 
 it('traces a geosite domain and resolves each cached address in live mode', async () => {

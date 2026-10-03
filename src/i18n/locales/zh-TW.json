@@ -499,6 +499,7 @@
   "dns.flushUnsupported": "此後端不支援清除快取",
   "dns.flushed": "快取已清除，符合：{matched}，已刪除：{deleted}",
   "dns.hit": "快取命中",
+  "dns.includeExpired": "顯示已到期",
   "dns.invalidName": "不是有效的網域名稱",
   "dns.invalidRegex": "不是有效的正規表示式",
   "dns.loadOlder": "載入較舊記錄",
