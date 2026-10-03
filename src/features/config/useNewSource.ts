@@ -1,9 +1,9 @@
 import {useMemo, useState} from 'react';
 import {useT} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
-import {errorText} from '../../api/error';
+import {failureNotice, noticeText} from '../../api/error';
 import {useConfigCreate} from '../../store';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {useDialogSession} from '../../shell/draft';
 import {includeCheck, includeDirectory, includePatterns, namePatterns, newSourceNameProblem, newSourcePathProblem} from '../../dae/newSource';
 
@@ -22,8 +22,9 @@ export function useNewSource({sources, refetch, open}: NewSourceProps) {
   const loads = useMemo(() => includeCheck(sources), [sources]);
   // null while the dialog is closed.
   const [draft, setDraft] = useState<{text: string; pattern: string} | null>(null);
-  // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
-  const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
+  // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again. A neutral `kind`
+  // is an outcome that could not be confirmed, which is no refusal.
+  const [problem, setProblem] = useState<Problem | null>(null);
   const {busy, create} = useConfigCreate(refetch);
   const session = useDialogSession();
   const text = draft?.text ?? '';
@@ -42,8 +43,11 @@ export function useNewSource({sources, refetch, open}: NewSourceProps) {
       close();
       if (created.id) open(created.id);
     } catch (error) {
-      if (current()) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text: errorText(error, t)}));
-      else toastFailure(error, t, t('config.newSourceFailed', {path: value}));
+      const summary = t('config.newSourceFailed', {path: value});
+      if (current()) {
+        const notice = failureNotice(error, t, summary);
+        setProblem(prev => ({id: (prev?.id ?? 0) + 1, text: noticeText(notice, t), kind: notice.kind}));
+      } else toastFailure(error, t, summary);
     }
   };
   return {
