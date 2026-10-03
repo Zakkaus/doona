@@ -10,6 +10,14 @@ it('shows the value and its sparkline, or the status in the sparkline’s place'
   expect(renderToStaticMarkup(<ValueTile value="4%" spark={<i />} status={<b />} />)).toBe(body('<span class="rp-tile-val">4%</span><b></b>'));
 });
 
+it('places the sparkline’s facts after it, and only with it', () => {
+  expect(renderToStaticMarkup(<ValueTile value="4%" spark={<i />} facts={<dl />} />)).toBe(
+    body('<span class="rp-tile-val">4%</span><span class="rp-spark"><i></i></span><dl></dl>')
+  );
+  expect(renderToStaticMarkup(<ValueTile value="4%" spark={false} facts={<dl />} />)).toBe(body('<span class="rp-tile-val">4%</span>'));
+  expect(renderToStaticMarkup(<ValueTile value="4%" spark={<i />} facts={<dl />} status={<b />} />)).toBe(body('<span class="rp-tile-val">4%</span><b></b>'));
+});
+
 it('shows its children alone until the value is known', () => {
   expect(renderToStaticMarkup(<ValueTile value="4%">Loading</ValueTile>)).toBe(body('Loading'));
   expect(renderToStaticMarkup(<ValueTile value="4%">{false}</ValueTile>)).toBe(body('<span class="rp-tile-val">4%</span>'));

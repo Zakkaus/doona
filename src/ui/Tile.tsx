@@ -18,14 +18,33 @@ export function CardLink({href, label, tile, children}: {href: string; label: st
   );
 }
 // A metric tile's body: its value, then its sparkline or the `status` that takes its place, side by side or stacked as
-// its dashboard row lays out its tiles (see packSection). `children` stand in for both until the value is known.
-export function ValueTile({value, spark, status, children}: {value?: ReactNode; spark?: ReactNode; status?: ReactNode; children?: ReactNode}) {
+// its dashboard row lays out its tiles (see packSection). `facts`, the sparkline's statistics, follow it and show only
+// on a wide dashboard card (see dashboard.css). `children` stand in for all of them until the value is known.
+export function ValueTile({
+  value,
+  spark,
+  facts,
+  status,
+  children
+}: {
+  value?: ReactNode;
+  spark?: ReactNode;
+  facts?: ReactNode;
+  status?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className="rp-tile-body" data-pack="tile">
       {children || (
         <>
           <span className="rp-tile-val">{value}</span>
-          {status || (spark && <span className="rp-spark">{spark}</span>)}
+          {status ||
+            (spark && (
+              <>
+                <span className="rp-spark">{spark}</span>
+                {facts}
+              </>
+            ))}
         </>
       )}
     </div>
