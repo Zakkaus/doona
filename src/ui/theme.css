@@ -11,6 +11,7 @@
 @import './styles/fields.css';
 @import './styles/tables-forms.css';
 @import './styles/motion.css';
+@import './styles/segmented.css';
 @import './styles/toasts.css';
 @import './styles/tags-bars.css';
 @import './styles/feature-details.css';
