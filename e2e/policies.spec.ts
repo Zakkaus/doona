@@ -462,7 +462,7 @@ async function refusedEdit(
   edit: (dialog: Locator) => Promise<void> = toScore,
   opened: GroupEntryUpdate = {filters: ['name(hk-01)'], policy: 'select'}
 ) {
-  const {api, requests} = await mockBackend(page);
+  const {api, handlers, requests} = await mockBackend(page);
   const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!;
   const initial = await main();
   await api.pollOperation(await api.replaceConfigSource(initial.id, writeGroupEntry(initial.content!, 'office', opened), `"${initial.content_sha256}"`));
@@ -472,6 +472,10 @@ async function refusedEdit(
   await edit(dialog);
   const origin = await main();
   const changed = concurrent(origin.content!);
+  // A poll of the runtime groups drops a card, and the dialog open in it, once its group is gone. Serving the list as it stood keeps
+  // the card until the retry, so a slow run cannot close the dialog first.
+  const listed = await api.groups();
+  handlers['GET groups'] = async () => listed;
   await api.pollOperation(await api.replaceConfigSource(origin.id, changed, `"${origin.content_sha256}"`));
   const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
   const rejected = page.waitForResponse(response => response.request().method() === 'PUT' && response.status() === 412);
