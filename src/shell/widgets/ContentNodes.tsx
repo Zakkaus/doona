@@ -21,7 +21,7 @@ export function CurrentLatency({item, onChange}: {item: Widget; onChange?: (item
         <ContextualHelp title={t('act.latency')} text={t('act.groupPickHelp')} />
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
-      <Kv truncate compact row={item.size !== 'small'} items={[[vm.name || '—', vm.status ?? vm.latency]]} />
+      <Kv compact row={item.size !== 'small'} items={[[vm.name || '—', vm.status ?? vm.latency]]} />
     </>
   );
 }
@@ -50,7 +50,6 @@ export function Latency({item}: {item: Widget}) {
         <>
           <span className="rp-label">{t('dashboard.latencyOrder')}</span>
           <Kv
-            truncate
             compact
             row
             items={[
@@ -86,16 +85,10 @@ export function Latency({item}: {item: Widget}) {
       ) : (
         <div className="rp-list">
           {measured.slice(0, limit).map(row => (
-            <Kv truncate key={row.id} compact row={item.size !== 'small'} items={[[row.name, formatLatency(row.latest, t)]]} />
+            <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, formatLatency(row.latest, t)]]} />
           ))}
           {missing.slice(0, Math.max(0, limit - measured.length)).map(row => (
-            <Kv
-              truncate
-              key={row.id}
-              compact
-              row={item.size !== 'small'}
-              items={[[row.name, t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')]]}
-            />
+            <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')]]} />
           ))}
         </div>
       )}
@@ -115,7 +108,7 @@ export function Sources({item}: {item: Widget}) {
         <div className="rp-list rp-columns" style={columns(providers.length)}>
           {providers.map(provider => {
             const row = providerRowView(provider, undefined, locale, t);
-            return <Kv truncate key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
+            return <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
           })}
         </div>
       )}
@@ -140,7 +133,6 @@ export function Groups({item}: {item: Widget}) {
             const health = nodeView(group.node ? [group.node] : [], '', t);
             return (
               <Kv
-                truncate
                 key={group.id}
                 compact
                 row={item.size !== 'small'}
