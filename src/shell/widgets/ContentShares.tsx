@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useContext, useMemo} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, localTime} from '../../i18n/format';
 import {useCapabilities, useConnections, useRuntimeOutbounds, useDnsLog, poll} from '../../store';
@@ -9,7 +9,7 @@ import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
 import {Donut, Waffle, usePalette} from '../../ui/charts';
 import {Bar, Empty, Kv} from '../../ui/ui';
-import {contentLimit, registry, type Widget} from './layout';
+import {contentLimit, registry, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
 // One share chart for every module that splits a total: donut, waffle, ranked bars or key-value rows, by form.
@@ -28,13 +28,15 @@ function Shares({item, rows, bytes = false, empty}: {item: Widget; rows: Share[]
   const {total, rows: shown} = shareRows(rows, p.cat);
   const shares = shown.map(row => ({...row, text: format(row.count)}));
   const chart = {legendLimit: item.rows ?? contentLimit(item.size), label: t(registry[item.id].label)};
+  // A split of fixed categories has no row count on the dashboard and lists every one.
+  const natural = useContext(WidgetSurface) === 'dashboard' && !registry[item.id].rows;
   if (!total) return <Empty>{empty}</Empty>;
   if (item.form === 'donut') return <Donut {...chart} total={format(total)} rows={shares.map(row => ({...row, value: Math.round(row.pct)}))} />;
   if (item.form === 'waffle') return <Waffle {...chart} shares={shares.map(row => ({...row, id: row.name, label: row.name}))} />;
   return (
     <div className="rp-list">
       {shares
-        .slice(0, item.rows ?? contentLimit(item.size))
+        .slice(0, natural ? undefined : (item.rows ?? contentLimit(item.size)))
         .map(row =>
           item.form === 'ranked' ? (
             <Bar key={row.name} label={row.name} value={row.text} pct={row.pct} color={row.color} />

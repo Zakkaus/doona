@@ -25,6 +25,8 @@ type Definition = {
   tile?: true;
   // The narrowest dashboard width other than a value tile's, when a third is too narrow, as for a table of nodes.
   narrowest?: DashboardWidth;
+  // The widest dashboard width its content fills, when full width would leave it blank on the right.
+  widest?: DashboardWidth;
   // A list, whose dashboard height is its row count unless drawn as a donut or a waffle.
   rows?: true;
   // Charts a traffic rate, whose live value the chart's legend carries.
@@ -51,16 +53,17 @@ const list = (label: Key, resource: Definition['resource']): Definition => ({
   compact: ['kv'],
   sizes: ['small', 'medium', 'large']
 });
-const share = (label: Key, resource: Definition['resource']): Definition => ({
+// A split of a total; one of a fixed few categories, as answers by outcome, has no row count and needs at most half a row.
+const split = (label: Key, resource: Definition['resource']): Definition => ({
   ...list(label, resource),
   forms: ['donut', 'waffle', 'ranked', 'kv'],
-  compact: ['donut', 'ranked', 'kv'],
-  rows: true
+  compact: ['donut', 'ranked', 'kv']
 });
+const share = (label: Key, resource: Definition['resource']): Definition => ({...split(label, resource), rows: true});
 export const maxInstances = 3;
 const definitions = {
   speed: {...metric('widgets.speed', 'runtime'), rate: true},
-  traffic: {...list('widgets.traffic', 'runtime'), sizes: ['medium']},
+  traffic: {...list('widgets.traffic', 'runtime'), sizes: ['medium'], widest: '1/2'},
   connections: {...metric('act.active', 'runtime'), tile: true, untitled: true},
   memory: metric('act.memory', 'runtime_memory'),
   cpu: {...metric('act.cpu', 'runtime'), tile: true, untitled: true},
@@ -68,7 +71,7 @@ const definitions = {
   outbounds: share('widgets.outbounds', 'runtime_outbounds'),
   mode: {...list('act.mode', 'config'), sizes: ['medium']},
   global: {...list('act.global', 'config'), sizes: ['medium'], untitled: true},
-  group: {...list('widgets.group', 'groups'), sizes: ['medium'], untitled: true},
+  group: {...list('widgets.group', 'groups'), sizes: ['medium'], widest: '2/3', untitled: true},
   status: {...list('widgets.status', 'runtime'), sizes: ['medium'], forms: ['facts', 'kv'], compact: ['kv']},
   notices: {...list('widgets.notices', 'events'), rows: true},
   download: {...metric('ui.download', 'runtime'), tile: true, rate: true},
@@ -85,8 +88,8 @@ const definitions = {
   },
   sourceHealth: {...list('dashboard.sourceHealth', 'providers'), sizes: ['medium'], rows: true},
   connectionOutbounds: share('dashboard.connectionOutbounds', 'connections'),
-  connectionNetworks: {...share('dashboard.connectionNetworks', 'connections'), sizes: ['medium']},
-  dnsAnswers: share('dashboard.dnsAnswers', 'dns_log'),
+  connectionNetworks: {...split('dashboard.connectionNetworks', 'connections'), sizes: ['medium'], widest: '1/2'},
+  dnsAnswers: {...split('dashboard.dnsAnswers', 'dns_log'), widest: '1/2'},
   policyGroups: {...list('dashboard.policyGroups', 'groups'), rows: true, groupChoice: 'dashboard.allGroups'},
   divider: {...list('widgets.divider', null), sizes: ['medium'], panelOnly: true}
 } satisfies Record<string, Definition>;
@@ -111,10 +114,18 @@ export type DashboardWidth = (typeof widths)[number];
 export const heights = ['short', 'standard', 'tall'] as const;
 export type DashboardHeight = (typeof heights)[number];
 export const rowChoices = [3, 5, 8] as const;
-// The narrowest width a card's content still reads at: a value tile a fifth, a card with its own narrowest that one, any
-// other a third.
-export const widthsFor = (id: WidgetId): readonly DashboardWidth[] =>
-  widths.slice(widths.indexOf(registry[id].tile ? '1/5' : (registry[id].narrowest ?? '1/3')));
+// From the narrowest width a card's content still reads at, a value tile a fifth, a card with its own narrowest that one,
+// any other a third, to its widest, full width unless it has its own.
+const span = ({tile, narrowest, widest}: Definition) => [widths.indexOf(tile ? '1/5' : (narrowest ?? '1/3')), widths.indexOf(widest ?? 'full')];
+export const widthsFor = (id: WidgetId): readonly DashboardWidth[] => {
+  const [from, to] = span(registry[id]);
+  return widths.slice(from, to + 1);
+};
+// The offered width nearest a stored one, as a width the card no longer offers or one from a newer or edited layout.
+export const nearestWidth = (id: WidgetId, width: DashboardWidth) => {
+  const [from, to] = span(registry[id]);
+  return widths[Math.min(Math.max(widths.indexOf(width), from), to)];
+};
 
 export const instanceId = (item: Widget) => item.instance ?? item.id;
 // Replaces the item with the same instance as `item`, for `items.map` and `mapWidgets` alike.
@@ -199,11 +210,10 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
     if (value.group !== undefined) item.group = value.group as string;
     if (id === 'ranking') item.by = value.by === 'domain' ? 'domain' : 'dev';
     if (surface === 'dashboard') {
-      // A width under the card's narrowest one, as from a newer or edited layout, reads as the narrowest.
-      if (widths.includes(value.width as DashboardWidth))
-        item.width = widthsFor(id).includes(value.width as DashboardWidth) ? (value.width as DashboardWidth) : widthsFor(id)[0];
+      if (widths.includes(value.width as DashboardWidth)) item.width = nearestWidth(id, value.width as DashboardWidth);
       if (heights.includes(value.height as DashboardHeight)) item.height = value.height as DashboardHeight;
-      if ((rowChoices as readonly unknown[]).includes(value.rows)) item.rows = value.rows as number;
+      // A row count on a card that has none, as a split of fixed categories, reads as its natural height.
+      if (registry[id].rows && (rowChoices as readonly unknown[]).includes(value.rows)) item.rows = value.rows as number;
     }
     seen.add(key);
     counts.set(id, (counts.get(id) ?? 0) + 1);
