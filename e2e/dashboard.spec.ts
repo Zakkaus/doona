@@ -16,8 +16,13 @@ const pick = async (page: Page, label: string, option: string) => {
   await dialog.getByRole('button', {name: new RegExp(`${label}$`)}).click();
   await page.getByRole('option', {name: option, exact: true}).click();
 };
+// Escape goes to what holds focus, once a picker's popover has closed and handed focus back to the settings. Pressing
+// it on the dialog element would move focus there first, and react-aria's useDialog blurs and refocuses a dialog that
+// holds focus itself 500 ms after it opens; a key landing in that gap reached the body and left the settings open.
 const close = async (page: Page) => {
-  await page.getByRole('dialog').first().press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.locator('[role="dialog"]:focus-within')).toHaveCount(1);
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 };
 const seed = (page: Page, layout: unknown) =>
