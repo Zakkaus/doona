@@ -1201,6 +1201,7 @@
   "policy.filter": "篩選節點",
   "policy.filterN": "篩選 {n}",
   "policy.finalOutboundHelp": "無可用成員時使用；無表示不設定。",
+  "policy.groupRemoved": "此群組已被移除，修改未儲存。",
   "policy.healthy": "{n} 個可用",
   "policy.idleTimeoutHelp": "群組連續無活動達此秒數後視為閒置。留空使用預設值。",
   "policy.idleTimeoutInvalid": "請輸入 0 或正整數（秒）。",

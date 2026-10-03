@@ -38,6 +38,10 @@ export type PolicyGroupInput = {
   paused: boolean;
   // The group a link opened, which shows its members at once.
   focused: boolean;
+  // The group has left the list while its editor is open, and the card stays only for the editor.
+  gone?: boolean;
+  // Reports the editor opening and closing, so the list keeps this card while it is open.
+  onEditing?: (id: string, editing: boolean) => void;
 };
 export function usePolicyGroup(input: PolicyGroupInput) {
   const {id, health, outbounds, refreshGroups, refreshNodes, source, declaration, selection, paused, focused} = input;
@@ -78,7 +82,13 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     setOpened(true);
     setExpanded(true);
   }
-  const declared = useGroupDialog({mode: 'edit', name: g?.name ?? input.name, source, declaration, context: {g, members, outbounds}});
+  const declared = useGroupDialog({mode: 'edit', name: g?.name ?? input.name, source, declaration, context: {g, members, outbounds}, gone: input.gone});
+  const {onEditing} = input;
+  useEffect(() => {
+    if (!declared.editing || !onEditing) return;
+    onEditing(id, true);
+    return () => onEditing(id, false);
+  }, [declared.editing, id, onEditing]);
   // The dialog shows the group's configuration, so opening it reads the group again rather than waiting for its poll.
   const edit = {
     ...declared,

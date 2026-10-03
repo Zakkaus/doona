@@ -1363,6 +1363,7 @@
   "policy.filter": "Filter nodes",
   "policy.filterN": "Filter {n}",
   "policy.finalOutboundHelp": "Fallback when no member is available. None leaves it unset.",
+  "policy.groupRemoved": "This group was removed. The changes were not saved.",
   "policy.healthy": "{n} available",
   "policy.idleTimeoutHelp": "Seconds of inactivity before the group becomes idle. Leave empty to use the default.",
   "policy.idleTimeoutInvalid": "Enter a whole number of seconds, 0 or more.",

@@ -3,7 +3,7 @@ import {poll, useCapabilities, useGroups, useNodes, useProviders} from '../../st
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
-import {groupKind, kindFilter, kindQuery, kindView} from './view';
+import {editedCard, groupKind, kindFilter, kindQuery, kindView} from './view';
 import {groupOwners, outboundLinks, type OutboundCatalogue} from '../shared/groupText';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth} from './health';
@@ -93,6 +93,12 @@ export function usePolicies({go, query}: PageProps) {
     }),
     [groupKey, named, health.map, owners]
   );
+  // The card whose editor is open outlives its group, so the editor keeps the unsaved edits until it is closed.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [kept, setKept] = useState<(typeof cards)[number] | null>(null);
+  const edited = editedCard(cards, editing, kept);
+  if (edited.kept !== kept) setKept(edited.kept);
+  const onEditing = useCallback((id: string, open: boolean) => setEditing(prev => (open ? id : prev === id ? null : prev)), []);
   const kinds = kindView(cards, kindFilter(params.get('kind')), focus, t);
   const requested = kindFilter(params.get('kind'));
   useEffect(() => {
@@ -156,7 +162,8 @@ export function usePolicies({go, query}: PageProps) {
   }, [newRequested, source.main, source.writable]);
   return {
     declarations,
-    cards: kinds.shown,
+    cards: edited.gone ? [...kinds.shown, {...edited.gone, gone: true}] : kinds.shown,
+    onEditing,
     nodes: nodes.data ?? [],
     providers: providers.data?.providers ?? [],
     create,

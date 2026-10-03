@@ -519,6 +519,31 @@ test('a group edit retried after a refusal writes nothing when the group was ren
   expect((await main()).content).toBe(changed);
 });
 
+test('a group removed on disk while its editor is open keeps the editor and its edits, and writes nothing', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!;
+  await page.goto('/#/policies?group=office');
+  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
+  await toScore(dialog);
+  const origin = await main();
+  const removed = origin.content!.replace(/^ *office \{[^}]*\}\n/m, '');
+  expect(readGroupEntries(removed).some(entry => entry.name === 'office')).toBe(false);
+  await api.pollOperation(await api.replaceConfigSource(origin.id, removed, `"${origin.content_sha256}"`));
+  // The next poll of the groups list drops the group; the editor stays open and says so.
+  await expect(dialog.getByRole('status').filter({hasText: 'This group was removed. The changes were not saved.'})).toBeVisible({timeout: 15_000});
+  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
+  const apply = dialog.getByRole('button', {name: 'Apply', exact: true});
+  await expect(apply).toBeDisabled();
+  await expect(apply).toHaveAccessibleDescription('This group was removed. The changes were not saved.');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  // The card stayed only for its editor.
+  await expect(page.getByRole('region', {name: 'office', exact: true})).toHaveCount(0);
+  expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);
+  expect((await main()).content).toBe(removed);
+});
+
 test('a group edit retried after a refusal agrees with interruption written on disk in another spelling', async ({page}) => {
   const {dialog, apply, main} = await refusedEdit(
     page,

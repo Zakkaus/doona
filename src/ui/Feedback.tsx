@@ -55,7 +55,7 @@ export function InlineAlert({
   action,
   takeFocus
 }: {
-  tone?: 'negative' | 'informative';
+  tone?: 'negative' | 'notice' | 'informative';
   title?: string;
   children: ReactNode;
   action?: ReactNode;

@@ -57,7 +57,7 @@ export function GroupDialog({model: m, details}: {model: GroupDialogView; detail
             <Button secondary onPress={close}>
               {t('ui.cancel')}
             </Button>
-            <Button accent type="submit" form={form} isDisabled={!m.open || m.invalid} isPending={m.busy}>
+            <Button accent type="submit" form={form} isDisabled={!m.open || m.invalid || !!m.removed} tip={m.removed ?? undefined} isPending={m.busy}>
               {m.submitLabel}
             </Button>
           </>
@@ -90,6 +90,7 @@ export function GroupDialog({model: m, details}: {model: GroupDialogView; detail
                 isDisabled={m.busy}
               />
             )}
+            {m.removed && <InlineAlert tone="notice">{m.removed}</InlineAlert>}
             {m.problem && <ProblemAlert key={m.problem.id} problem={m.problem} />}
             <LabeledSelect label={t('group.policy')} value={policy.selected} onChange={m.setPolicy} items={policy.items} isDisabled={m.busy} />
             <IncludesEditor model={m} />
