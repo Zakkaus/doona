@@ -11,14 +11,12 @@ export function WidgetContent({
   item,
   preview = false,
   dashboard = false,
-  docked = false,
   sample = false,
   onChange
 }: {
   item: Widget;
   preview?: boolean;
   dashboard?: boolean;
-  docked?: boolean;
   sample?: boolean;
   onChange?: (item: Widget) => void;
 }) {
@@ -29,28 +27,16 @@ export function WidgetContent({
       <ResourcePreview value={preview || inherited || !visible}>
         {sample ? (
           <SamplePreview id={item.id}>
-            <Content item={item} dashboard={dashboard} docked={docked} sample />
+            <Content item={item} dashboard={dashboard} sample />
           </SamplePreview>
         ) : (
-          <Content item={item} dashboard={dashboard} docked={docked} onChange={onChange} />
+          <Content item={item} dashboard={dashboard} onChange={onChange} />
         )}
       </ResourcePreview>
     </div>
   );
 }
-function Content({
-  item,
-  dashboard,
-  docked,
-  sample = false,
-  onChange
-}: {
-  item: Widget;
-  dashboard: boolean;
-  docked: boolean;
-  sample?: boolean;
-  onChange?: (item: Widget) => void;
-}) {
+function Content({item, dashboard, sample = false, onChange}: {item: Widget; dashboard: boolean; sample?: boolean; onChange?: (item: Widget) => void}) {
   const t = useT();
   const capabilities = useCapabilities().data;
   const memoryMetrics = capabilities?.resources.runtime_memory?.metrics ?? [];
@@ -63,7 +49,7 @@ function Content({
       }
     >
       {sample || available(item.id, capabilities) ? (
-        <Contents item={item} dashboard={dashboard} docked={docked} onChange={onChange} />
+        <Contents item={item} dashboard={dashboard} onChange={onChange} />
       ) : (
         <span className="rp-label">{t(capabilities ? 'widgets.unavailable' : 'ui.loading')}</span>
       )}

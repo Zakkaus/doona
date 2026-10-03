@@ -83,7 +83,7 @@ export function PanelHost({
         {header}
         {!collapsed && (
           <WidgetChartInset.Provider value={0}>
-            <SavedGrid docked />
+            <SavedGrid />
           </WidgetChartInset.Provider>
         )}
         <BackendIndicator backend={backend} honk={honk} />
@@ -151,7 +151,7 @@ export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: (
     </DetailPanel>
   );
 }
-function SavedGrid({docked = false}: {docked?: boolean}) {
+function SavedGrid() {
   const layout = useWidgetLayout();
   const t = useT();
   return (
@@ -162,7 +162,6 @@ function SavedGrid({docked = false}: {docked?: boolean}) {
             <WidgetCell key={instanceId(item)} id={instanceId(item)} size={item.size === 'wide' ? 'large' : item.size}>
               <WidgetContent
                 item={item}
-                docked={docked}
                 onChange={next =>
                   saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(next) ? next : old))}))
                 }

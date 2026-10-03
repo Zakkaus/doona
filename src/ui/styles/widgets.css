@@ -295,10 +295,14 @@
 .rp-side-dock .rp-legend b {
   margin-inline-start: auto;
 }
-/* The mode action has no room beside the full-width choice: it takes its own row at the same width, label centred. */
-.rp-side-dock .rp-segfit + .rp-btn,
-.rp-side-dock .rp-segfit + .rp-tipwrap > .rp-btn {
-  flex: 1 1 100%;
+/* A filling choice spans the widget. The mode action stays beside it while both fit; wrapped below it, it fills its own
+   row, label centred. */
+.rp-widget > .rp-cluster:has(> .rp-segfit[data-fill]) {
+  align-self: stretch;
+}
+.rp-segfit[data-fill] + .rp-btn,
+.rp-segfit[data-fill] + .rp-tipwrap > .rp-btn {
+  flex: 1 0 auto;
   justify-content: center;
 }
 /* The panel's list scrolls into the inset of its panel, sheet or sidebar, as the sidebar's links do, so its

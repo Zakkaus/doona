@@ -36,17 +36,7 @@ export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
     />
   );
 }
-export function Contents({
-  item,
-  dashboard = false,
-  docked = false,
-  onChange
-}: {
-  item: Widget;
-  dashboard?: boolean;
-  docked?: boolean;
-  onChange?: (item: Widget) => void;
-}) {
+export function Contents({item, dashboard = false, onChange}: {item: Widget; dashboard?: boolean; onChange?: (item: Widget) => void}) {
   const form = canonicalForm(item, dashboard ? 'dashboard' : 'panel');
   item = {...item, form};
   switch (item.id) {
@@ -66,7 +56,7 @@ export function Contents({
       return <OutboundWidget item={item} />;
     case 'global':
     case 'mode':
-      return <ModeWidget targetOnly={item.id === 'global'} docked={docked} />;
+      return <ModeWidget targetOnly={item.id === 'global'} fill={!dashboard} />;
     case 'latency':
       return <CurrentLatency item={item} dashboard={dashboard} onChange={onChange} />;
     case 'nodeLatency':

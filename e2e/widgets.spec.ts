@@ -252,6 +252,39 @@ for (const height of [960, 320])
     expect(Math.abs(edges.top - edges.bottom), `${edges.top} ${edges.bottom}`).toBeLessThanOrEqual(0.5);
   });
 
+for (const [name, size, wrapped] of [
+  ['default', undefined, true],
+  ['widened', {width: 600, height: 640}, false]
+] as const)
+  test(`at its ${name} width the floating mode widget puts Apply ${wrapped ? 'on its own full-width row' : 'beside the choice'}`, async ({page}) => {
+    await save(page, {...defaults(), ...(size && {size})});
+    await page.goto('/#/settings');
+    const widget = floating(page).locator('[data-widget-id="mode"]');
+    const content = await box(widget.locator('.rp-widget'));
+    const seg = await box(widget.locator('.rp-segfit'));
+    const button = widget.getByRole('button', {name: 'Apply', exact: true});
+    const apply = await box(button);
+    // Apply is L, as tall as the choice's track.
+    expect(Math.abs(apply.height - (await box(widget.locator('.rp-seg'))).height)).toBeLessThanOrEqual(0.5);
+    if (wrapped) {
+      // As in the docked panel: the choice fills the width and Apply takes the row below at the same width.
+      expect(apply.y).toBeGreaterThanOrEqual(seg.y + seg.height);
+      expect(Math.abs(seg.width - content.width)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(apply.width - content.width)).toBeLessThanOrEqual(0.5);
+    } else {
+      expect(Math.abs(apply.y + apply.height / 2 - (seg.y + seg.height / 2))).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(apply.x + apply.width - (content.x + content.width))).toBeLessThanOrEqual(0.5);
+      const natural = await button.evaluate(el => {
+        const target = el.closest('.rp-tipwrap') ?? el;
+        (target as HTMLElement).style.flex = 'none';
+        const width = el.getBoundingClientRect().width;
+        (target as HTMLElement).style.flex = '';
+        return width;
+      });
+      expect(Math.abs(apply.width - natural)).toBeLessThanOrEqual(1);
+    }
+  });
+
 test('panel widget titles stay hidden until the menu shows them and still name each widget', async ({page}) => {
   await page.goto('/#/settings');
   await expect(floating(page).getByRole('region', {name: 'Outbound mode', exact: true})).toBeVisible();
