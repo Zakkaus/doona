@@ -1,6 +1,6 @@
 import {test, expect, mockBackend, moreAction, settle, box} from './fixtures';
 import {ApiError} from '../src/api/error';
-import {defaults, type Layout} from '../src/shell/widgets/layout';
+import {defaults, defaultWidget, type Layout, type WidgetId} from '../src/shell/widgets/layout';
 import type {Locator, Page} from '@playwright/test';
 import {pickWidget} from './widget-helpers';
 
@@ -690,6 +690,43 @@ test('the default panel draws both rates in one chart without scrolling, or two 
   await combine.click();
   await expect(combine).toHaveAttribute('aria-checked', 'false');
   await expect(chart.locator('svg')).toHaveCount(2);
+});
+
+test.describe('three-column editor at 1440', () => {
+  test.use({viewport: {width: 1440, height: 900}});
+  test('the preview, the library and the inspector scroll on their own, and the width grip stays whole', async ({page}) => {
+    const ids: WidgetId[] = ['speed', 'memory', 'mode', 'notices', 'cpu', 'connections', 'global', 'group'];
+    await save(page, {
+      ...defaults(),
+      items: [...ids, ...ids]
+        .map(id => ({...defaultWidget(id), size: 'large' as const}))
+        .map((item, index) => (index < ids.length ? item : {...item, instance: `${item.id}-2`}))
+    });
+    await page.goto('/#/settings');
+    await openEditor(page);
+    const dialog = editor(page);
+    await expect(dialog.locator('.rp-widget-editor-grid[data-three-columns]')).toBeVisible();
+    const body = dialog.locator('.rp-dialog-body');
+    expect(await body.evaluate(el => el.scrollHeight <= el.clientHeight)).toBe(true);
+    const canvas = dialog.locator('.rp-widget-canvas');
+    const gallery = dialog.locator('.rp-widget-gallery');
+    const scroll = (column: Locator) => column.evaluate(el => ({top: el.scrollTop, room: el.scrollHeight - el.clientHeight}));
+    expect((await scroll(canvas)).room, 'The preview is taller than the dialog').toBeGreaterThan(0);
+    expect((await scroll(gallery)).room, 'The library is taller than the dialog').toBeGreaterThan(0);
+    await dialog.locator('.rp-widget-preview .rp-sortable-row').last().scrollIntoViewIfNeeded();
+    const last = await box(dialog.locator('.rp-widget-preview .rp-sortable-row').last());
+    const frame = await box(canvas);
+    expect(last.y + last.height, 'The last widget scrolls into view').toBeLessThanOrEqual(frame.y + frame.height);
+    expect(last.y).toBeGreaterThanOrEqual(frame.y);
+    expect((await scroll(canvas)).top).toBeGreaterThan(0);
+    expect((await scroll(gallery)).top, 'The library stays where it was').toBe(0);
+    expect(await body.evaluate(el => el.scrollTop)).toBe(0);
+    await canvas.evaluate(el => el.scrollTo(0, el.scrollHeight / 2));
+    const grip = await box(dialog.getByRole('button', {name: 'Resize panel width', exact: true}));
+    const clip = await box(canvas);
+    expect(grip.x).toBeGreaterThanOrEqual(clip.x);
+    expect(grip.x + grip.width).toBeLessThanOrEqual(clip.x + clip.width);
+  });
 });
 
 test.describe('header and edge at 1440', () => {
