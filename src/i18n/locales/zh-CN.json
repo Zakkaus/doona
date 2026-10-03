@@ -1997,6 +1997,7 @@
   "widgets.addedName": "已添加{name}",
   "widgets.canvas": "预览",
   "widgets.collapse": "收起小工具",
+  "widgets.combineRates": "合并上传与下载图表",
   "widgets.devices": "设备",
   "widgets.discardHelp": "小工具的修改尚未保存。",
   "widgets.divider": "分隔线",

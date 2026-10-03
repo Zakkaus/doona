@@ -14,8 +14,13 @@ export function compactSamples(timestamps: number[], minimumInterval = 1000): nu
 // A widget's area chart: the full chart at `normal`, otherwise the legend over one sparkline per series. It lives
 // apart from the Activity page's charts so the startup bundle carries only the full chart.
 // Each sparkline's tip lists every series at the hovered time, as the full chart's does. `scale` multiplies the plot's
-// height, never the legend's type.
-export function WidgetAreaChart({size, scale = 1, ...props}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'; scale?: number}) {
+// height, never the legend's type. `combine` draws the series in one plot a sparkline high, as the full chart does.
+export function WidgetAreaChart({
+  size,
+  scale = 1,
+  combine = false,
+  ...props
+}: ComponentProps<typeof AreaChart> & {size: 'normal' | 'compact' | 'widget'; scale?: number; combine?: boolean}) {
   const t = useT();
   const inset = useContext(WidgetChartInset);
   const legend = <Legend series={props.series} fmt={value => (value == null ? '—' : props.fmt(value))} />;
@@ -25,6 +30,14 @@ export function WidgetAreaChart({size, scale = 1, ...props}: ComponentProps<type
         {legend}
         <AreaChart {...props} height={(props.height ?? 150) * scale} />
       </>
+    );
+  const height = (size === 'widget' ? 64 : 32) * scale;
+  if (combine)
+    return (
+      <figure className="rp-compact-chart" aria-label={props.label}>
+        {legend}
+        <AreaChart {...props} height={height} bare inset={inset} />
+      </figure>
     );
   const indices = compactSamples(props.timestamps);
   const lines = (at: number) =>
@@ -42,7 +55,7 @@ export function WidgetAreaChart({size, scale = 1, ...props}: ComponentProps<type
           timestamps={indices.map(index => props.timestamps[index])}
           color={series.color}
           inset={inset}
-          height={(size === 'widget' ? 64 : 32) * scale}
+          height={height}
           fmt={props.fmt}
           locale={props.locale}
           lines={lines}

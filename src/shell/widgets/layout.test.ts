@@ -97,6 +97,11 @@ it('defaults to a floating, pinned, open panel and pins a panel saved before ver
   expect(parseLayout({...defaults(), pinned: false}).pinned).toBe(false);
 });
 it.each([
+  ['combines the rates charts by default', {}, undefined],
+  ['keeps them split once chosen', {splitRates: true}, true],
+  ['drops a value that is not true', {splitRates: 'yes'}, undefined]
+])('%s', (_name, value, split) => expect(parseLayout({...defaults(), ...value}).splitRates).toBe(split));
+it.each([
   ['keeps a docked panel docked', {docked: true}, true],
   ['floats a panel saved before docking existed', {}, undefined],
   ['drops the old floating flag', {floating: false}, undefined]

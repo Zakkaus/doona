@@ -108,6 +108,8 @@ export type Layout = {
   collapsed: boolean;
   // A pinned panel stays as the reader left it on every page; otherwise it collapses when the page changes.
   pinned: boolean;
+  // The rates widget draws download and upload as two sparklines instead of one chart; absent while combined.
+  splitRates?: true;
   // Docked as the sidebar's last section instead of floating over the content; absent while floating.
   docked?: boolean;
   // The docked section's height, set by its top edge; absent until the reader drags it.
@@ -194,6 +196,7 @@ export function parseLayout(value: unknown): Layout {
     // Before version 4 a panel was unpinned by default, which a stored false cannot tell from a choice: it reads as
     // pinned, the default since.
     pinned: value.version !== 4 || value.pinned === true,
+    ...(value.splitRates === true ? {splitRates: true} : {}),
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),
     ...(value.edge === true ? {edge: true} : {}),

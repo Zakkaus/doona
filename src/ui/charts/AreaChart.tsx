@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import {localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
 import {usePalette} from './palette';
-import {ChartTip, useChartTip} from './tip';
+import {ChartTip, tipBounds, useChartTip} from './tip';
 import {linearPosition, visibleTicks, nearestIndex} from './layout';
 import {pointerPosition, useSelection} from './interaction';
 import {Curve, Gradient} from './AreaCurve';
@@ -67,7 +67,9 @@ export function AreaPlot({
   height = 150,
   baseline = 'zero',
   window,
-  fill
+  fill,
+  bare = false,
+  inset = 2
 }: {
   label: string;
   series: Series[];
@@ -78,6 +80,10 @@ export function AreaPlot({
   fill?: boolean;
   window?: {since: number; until: number};
   baseline?: 'zero' | 'auto';
+  // Without axis labels, the plot filling its box as a sparkline does: the panel's chart a sparkline high.
+  bare?: boolean;
+  // A bare plot's inline margin, as a sparkline's `inset`.
+  inset?: number;
 }) {
   const t = useT();
   const p = usePalette();
@@ -130,17 +136,19 @@ export function AreaPlot({
   );
   const width = size?.width ?? 0;
   const h = size?.height ?? height;
-  const bottom = h - 30;
-  const right = width - 64;
+  const left = bare ? inset : 20;
+  const top = bare ? 2 : 8;
+  const bottom = h - (bare ? 2 : 30);
+  const right = width - (bare ? inset : 64);
   const xDomain = useMemo<[number, number]>(() => [Math.min(domain[0], ...timestamps), Math.max(domain[1], ...timestamps)], [domain, timestamps]);
-  const x = useCallback((value: number) => linearPosition(value, xDomain, [20, right]), [xDomain, right]);
-  const y = useCallback((value: number) => linearPosition(value, yDomain as [number, number], [bottom, 8]), [yDomain, bottom]);
+  const x = useCallback((value: number) => linearPosition(value, xDomain, [left, right]), [xDomain, left, right]);
+  const y = useCallback((value: number) => linearPosition(value, yDomain as [number, number], [bottom, top]), [yDomain, bottom, top]);
   const xs = useMemo(() => timestamps.map(x), [timestamps, x]);
   const curves = useMemo(
     () => series.map(s => timestamps.map((_, i) => (s.values[i] == null ? null : {x: xs[i], y: y(s.values[i]!)}))),
     [series, timestamps, xs, y]
   );
-  const bounds = {x: 20, y: 8, width: right - 20, height: bottom - 8};
+  const bounds = {x: left, y: top, width: right - left, height: bottom - top};
   const select = (index: number, pointerY?: number) => setSelectionPoint({index, y: pointerY});
   const clear = () => {
     setSelectionPoint(null);
@@ -157,9 +165,10 @@ export function AreaPlot({
     }
     showAt({
       x: xs[selected],
-      y: selectionPoint?.y ?? (8 + bottom) / 2,
+      y: selectionPoint?.y ?? (top + bottom) / 2,
       width,
-      bounds,
+      // A bare plot is too short for its tip, which stays inside the card instead, as a sparkline's does.
+      bounds: bare && ref.current ? tipBounds(ref.current) : bounds,
       label: localTimeFormat(locale).format(timestamps[selected]),
       lines: series
         .filter(s => s.values[selected] != null)
@@ -190,7 +199,7 @@ export function AreaPlot({
     5,
     false
   );
-  const grid = [...new Set([...yTicksVisible.map(tick => y(yTicks[tick.index])), 8, bottom])];
+  const grid = [...new Set([...(bare ? yTicks : yTicksVisible.map(tick => yTicks[tick.index])).map(y), top, bottom])];
   return (
     <div ref={ref} style={{height, width: '100%', flex: fill ? '1 0 auto' : undefined, position: 'relative'}} onPointerLeave={selection.onPointerLeave}>
       {timestamps.length > 0 && size && (
@@ -210,7 +219,7 @@ export function AreaPlot({
             onKeyDown={selection.onKeyDown}
             onPointerMove={event => {
               const {x: px, y: py} = pointerPosition(event, event.currentTarget, {width, height: h});
-              if (px < 20 || px > right || py < 8 || py > bottom) {
+              if (px < left || px > right || py < top || py > bottom) {
                 clear();
                 return;
               }
@@ -220,7 +229,7 @@ export function AreaPlot({
           >
             <g className="rp-area-grid">
               {grid.map(value => (
-                <line key={value} x1={20} x2={right} y1={value} y2={value} stroke={p['hl-med']} strokeDasharray="2 4" fill="none" />
+                <line key={value} x1={left} x2={right} y1={value} y2={value} stroke={p['hl-med']} strokeDasharray="2 4" fill="none" />
               ))}
             </g>
             <defs>
@@ -232,26 +241,30 @@ export function AreaPlot({
               <Curve key={s.label} points={curves[k]} baseline={y(Math.max(0, yDomain[0]))} color={s.color} id={uid + k} strokeWidth={2} />
             ))}
             {selected !== null && (
-              <path d={`M${xs[selected]},8L${xs[selected]},${bottom}`} stroke={p.subtle} strokeDasharray="3 3" fill="none" pointerEvents="none" />
+              <path d={`M${xs[selected]},${top}L${xs[selected]},${bottom}`} stroke={p.subtle} strokeDasharray="3 3" fill="none" pointerEvents="none" />
             )}
-            <g>
-              {xTicks.map(({index, position}) => (
-                <text key={index} x={position} y={bottom + 8} className="rp-area-tick" fill={p.subtle} textAnchor="middle">
-                  <tspan x={position} dy="0.71em">
-                    {tickLabels[index]}
-                  </tspan>
-                </text>
-              ))}
-            </g>
-            <g className="rp-area-y-ticks">
-              {yTicksVisible.map(({index, position}) => (
-                <text key={index} x={right + 8} y={position} className="rp-area-tick" fill={p.subtle} textAnchor="start">
-                  <tspan x={right + 8} dy="0.355em">
-                    {fmt(yTicks[index])}
-                  </tspan>
-                </text>
-              ))}
-            </g>
+            {!bare && (
+              <>
+                <g>
+                  {xTicks.map(({index, position}) => (
+                    <text key={index} x={position} y={bottom + 8} className="rp-area-tick" fill={p.subtle} textAnchor="middle">
+                      <tspan x={position} dy="0.71em">
+                        {tickLabels[index]}
+                      </tspan>
+                    </text>
+                  ))}
+                </g>
+                <g className="rp-area-y-ticks">
+                  {yTicksVisible.map(({index, position}) => (
+                    <text key={index} x={right + 8} y={position} className="rp-area-tick" fill={p.subtle} textAnchor="start">
+                      <tspan x={right + 8} dy="0.355em">
+                        {fmt(yTicks[index])}
+                      </tspan>
+                    </text>
+                  ))}
+                </g>
+              </>
+            )}
             {selected !== null &&
               series.map(s =>
                 s.values[selected] == null ? null : (

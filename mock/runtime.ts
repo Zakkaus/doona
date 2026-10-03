@@ -86,14 +86,16 @@ export function createRuntime(capabilities: Capabilities, big: boolean, flowReco
       if (runtime.lifecycle.started_at)
         runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((now - Date.parse(runtime.lifecycle.started_at)) / 1000)));
       const snapshot = structuredClone(runtime);
-      // Each poll is a fresh sample with a little swell, so the live curve keeps moving.
+      // Each poll is a fresh sample with a little swell, so the live curve keeps moving; upload swells on its own
+      // period and phase, so its curve differs from download's.
       const swell = 1 + 0.15 * Math.sin(now / 20000);
+      const upSwell = 1 + 0.15 * Math.sin(now / 7000 + 2);
       snapshot.observed_at = new Date(now).toISOString();
       snapshot.traffic.sampled_at = snapshot.observed_at;
       if (snapshot.process.cpu_percent !== null)
         snapshot.process.cpu_percent = Math.round(snapshot.process.cpu_percent * (1 + 0.6 * Math.sin(now / 15000)) * 10) / 10;
       if (snapshot.traffic.rates) {
-        snapshot.traffic.rates.upload_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.upload_bytes_per_second) * swell));
+        snapshot.traffic.rates.upload_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.upload_bytes_per_second) * upSwell));
         snapshot.traffic.rates.download_bytes_per_second = String(Math.round(Number(runtime.traffic.rates!.download_bytes_per_second) * swell));
       }
       return snapshot;
