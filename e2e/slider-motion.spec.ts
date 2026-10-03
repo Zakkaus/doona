@@ -36,11 +36,15 @@ for (const c of cases) {
     const item = c.pick(page);
     await expect(marker).toBeVisible();
     await expect(item).toBeVisible();
+    // Animations run at a quarter speed, so a loaded machine still draws frames mid-slide.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Animation.enable');
+    await cdp.send('Animation.setPlaybackRate', {playbackRate: 0.25});
     // Sample where the marker is drawn on every frame from before the press until well after it settles.
     await marker.evaluate((el, axis) => {
       const samples: number[] = [];
       (window as unknown as {samples: number[]}).samples = samples;
-      const end = performance.now() + 1500;
+      const end = performance.now() + 3000;
       const tick = () => {
         const r = el.getBoundingClientRect();
         samples.push(axis === 'x' ? r.left : r.top);
@@ -54,7 +58,7 @@ for (const c of cases) {
     // Held long enough to sink, so the release eases the item back while the marker moves.
     await page.waitForTimeout(80);
     await page.mouse.up();
-    await page.waitForTimeout(1600);
+    await page.waitForTimeout(3100);
     const samples = await page.evaluate(() => (window as unknown as {samples: number[]}).samples);
     const from = samples[0];
     const to = samples.at(-1)!;
