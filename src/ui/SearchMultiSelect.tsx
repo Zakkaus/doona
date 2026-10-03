@@ -2,7 +2,7 @@ import {Button, Dialog, DialogTrigger, ListBox, ListBoxItem, Popover} from 'reac
 import {useId, useState, type ReactNode} from 'react';
 import {SearchList} from './SearchList';
 import {Check} from './Check';
-import {ItemText} from './Select';
+import {ItemText} from './ItemText';
 import ChevronDown from './icons/ChevronDown';
 import type {CheckboxChoice} from './CheckboxSet';
 import {useControlSize, type ControlSize} from './controlSize';

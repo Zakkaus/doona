@@ -1,7 +1,9 @@
 import {useLayoutEffect, useRef, useState, type FocusEvent, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {NodeName} from '../NodeName';
-import {Button, Link, TextTooltip} from '../Button';
+import {Button} from '../Button';
+import {Link} from '../Link';
+import {TextTooltip} from '../Tooltip';
 import {useT} from '../../i18n';
 import {useChartDescription} from './description';
 import {ChartTip, useChartTip} from './tip';

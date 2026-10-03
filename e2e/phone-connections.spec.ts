@@ -40,7 +40,7 @@ test.describe('1280px', () => {
   });
 });
 
-// TextTooltip only reveals on an ancestor's :focus-visible, which a tap never produces (src/ui/Button.tsx). On a
+// TextTooltip only reveals on an ancestor's :focus-visible, which a tap never produces (src/ui/Tooltip.tsx). On a
 // phone the detail drawer has vertical room to spare, so a value that would otherwise truncate wraps instead, and the
 // full text is on screen without needing the tooltip at all.
 test('the detail rule wraps on phones and truncates on desktop', async ({page}) => {

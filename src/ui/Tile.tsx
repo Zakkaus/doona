@@ -3,7 +3,7 @@ import {Link as RLink} from 'react-aria-components';
 import ListBulleted from './icons/ListBulleted';
 import {useT} from '../i18n';
 import {cx} from './cx';
-import {TextTooltip} from './Button';
+import {TextTooltip} from './Tooltip';
 import {NodeName} from './NodeName';
 import {Badge} from './Feedback';
 import {TileHead, type TileHeader} from './Card';

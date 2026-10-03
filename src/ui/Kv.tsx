@@ -1,7 +1,7 @@
 import {NodeName} from './NodeName';
 import type {ReactNode} from 'react';
 import {cx} from './cx';
-import {TextTooltip} from './Button';
+import {TextTooltip} from './Tooltip';
 import {HelpRow, type Help} from './ContextualHelp';
 
 // A label and its value, as a pair or, with more, an object: `full` is the full value, shown as a tooltip, and `help`

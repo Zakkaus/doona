@@ -1,4 +1,4 @@
-import {Link} from './Button';
+import {Link} from './Link';
 import {ControlSizeContext} from './controlSize';
 
 export function PageLinks({label, items}: {label: string; items: {id: string; href: string; label: string; current?: boolean}[]}) {

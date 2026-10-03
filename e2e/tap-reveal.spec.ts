@@ -2,7 +2,7 @@ import type {Page} from '@playwright/test';
 import {detail, expect, mockBackend, test, box} from './fixtures';
 
 // A finger cannot hover and a tap is not :focus-visible, so a truncated cell in a table whose rows open nothing shows
-// its full text on a tap (TextTooltip in src/ui/Button.tsx). Where a row press opens a detail, the press wins.
+// its full text on a tap (TextTooltip in src/ui/Tooltip.tsx). Where a row press opens a detail, the press wins.
 const firstCut = (page: Page) => page.locator('.rp-table [role="row"]:not([data-disabled]) .rp-truncate[data-tip]').first();
 
 async function openLongRuleSource(page: Page) {
