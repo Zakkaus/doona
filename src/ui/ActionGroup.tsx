@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import type {ReactNode} from 'react';
 import {Menu, MenuItem, MenuSection, Text} from 'react-aria-components';
 import {Check} from './Check';
@@ -66,9 +67,12 @@ export function ActionGroup({actions, overflowMode = 'collapse'}: {actions: Acti
 
 // Disabled items keep their reasons as descriptions. A menu with a setting keeps the checkmark column on every item.
 export function MoreActionsList({actions, label}: {actions: Action[]; label: string}) {
+  // Late reads must not insert an action under the pointer; state and callbacks still follow the latest props.
+  const [opened] = useState(actions);
+  const visible = opened.map(action => actions.find(current => current.id === action.id) ?? {...action, isDisabled: true});
   // The settings among the actions share one section, where the first of them stands.
-  const checks = actions.filter(action => action.checked !== undefined);
-  const first = actions.findIndex(action => action.checked !== undefined);
+  const checks = visible.filter(action => action.checked !== undefined);
+  const first = visible.findIndex(action => action.checked !== undefined);
   const checkable = checks.length > 0;
   const item = (action: Action) => (
     <MenuItem key={action.id} id={action.id} className={cx('rp-item', !checkable && 'plain', action.negative && 'negative')} textValue={action.label}>
@@ -86,10 +90,10 @@ export function MoreActionsList({actions, label}: {actions: Action[]; label: str
   return (
     <Menu
       aria-label={label}
-      disabledKeys={actions.filter(action => action.isDisabled || action.isPending).map(action => action.id)}
+      disabledKeys={visible.filter(action => action.isDisabled || action.isPending).map(action => action.id)}
       onAction={key => actions.find(action => action.id === key)?.onAction()}
     >
-      {actions.map((action, index) =>
+      {visible.map((action, index) =>
         action.checked === undefined
           ? item(action)
           : index === first && (

@@ -120,6 +120,7 @@ test('include declarations block removal even when the main source also declares
 test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
   const sources = rows(page.locator('.rp-table').first());
+  await sources.first().waitFor({state: 'visible'});
   await expect(sources).toHaveCount(2);
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const dialog = page.getByRole('dialog');
@@ -144,6 +145,36 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d removed'})).toBeVisible();
   await expect(sources).toHaveCount(2);
   await expect(sources.filter({hasText: 'sub-d'})).toHaveCount(0);
+});
+
+test('an open source menu keeps Remove in place when its edit action becomes available', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = main.content.replace(
+    "harbor: 'https://sub.example.net/api/v1/client/subscribe?token=demo'",
+    "harbor: {\n    url: 'https://sub.example.net/api/v1/client/subscribe?token=demo'\n    interval: '21600s'\n  }"
+  );
+  await api.pollOperation(await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`));
+  let release = () => {};
+  const pending = new Promise<void>(resolve => (release = resolve));
+  handlers['GET config'] = async () => {
+    await pending;
+    return api.config();
+  };
+  await page.goto('/#/nodes?tab=list');
+  const remove = await moreItem(page.locator('body'), 'Remove harbor', 'More actions for harbor');
+  const before = await box(remove);
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  const response = page.waitForResponse(response => response.url().endsWith('/api/v1/config'));
+  release();
+  await response;
+  await expect(rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'})).toContainText('Every 6 hours');
+  await page.mouse.click(before.x + before.width / 2, before.y + before.height / 2);
+  const confirmation = page.getByRole('alertdialog', {name: 'Remove node source harbor', exact: true});
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole('button', {name: 'Close', exact: true}).click();
+  const edit = await moreItem(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  await expect(edit).toBeVisible();
 });
 
 test('a subscription a group filters on cannot be removed until the group changes', async ({page}) => {
