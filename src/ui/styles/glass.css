@@ -149,7 +149,8 @@
 
 /* Floating material: thicker, blurred, with the specular rim (a 1px ring cut out with a mask). */
 :root[data-family='glass'] .rp-popover,
-:root[data-family='glass'] .rp-modal {
+:root[data-family='glass'] .rp-modal,
+:root[data-family='glass'] .rp-floating-panel {
   position: relative;
   isolation: isolate;
   background: var(--rp-glass-strong);
@@ -157,8 +158,15 @@
   backdrop-filter: blur(40px) saturate(1.8);
   box-shadow: var(--rp-shadow-lg);
 }
+/* The floating panel stays in view all day, so it is lighter than a menu or dialog: the regular glass fill and the blur
+   the sticky headers use. */
+:root[data-family='glass'] .rp-floating-panel {
+  background: var(--rp-glass);
+  backdrop-filter: blur(24px) saturate(1.6);
+}
 :root[data-family='glass'] .rp-popover::after,
-:root[data-family='glass'] .rp-modal::after {
+:root[data-family='glass'] .rp-modal::after,
+:root[data-family='glass'] .rp-floating-panel::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -184,6 +192,7 @@
   :root[data-family='glass'] .rp-table-empty,
   :root[data-family='glass'] .rp-popover,
   :root[data-family='glass'] .rp-modal,
+  :root[data-family='glass'] .rp-floating-panel,
   :root[data-family='glass'] .rp-top,
   :root[data-family='glass'] .rp-side,
   :root[data-family='glass'] .rp-hubbar {

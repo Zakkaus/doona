@@ -1,3 +1,4 @@
+import type {Locator} from '@playwright/test';
 import {expect, test} from './fixtures';
 
 for (const scheme of ['light', 'dark']) {
@@ -43,3 +44,28 @@ for (const scheme of ['light', 'dark']) {
     expect(await dialog.evaluate(element => getComputedStyle(element).backdropFilter)).not.toBe('none');
   });
 }
+
+test.describe('floating widget panel', () => {
+  test.use({widgets: true, storage: {'doona-palette': 'glass/glass', 'doona-scheme': 'dark'}});
+  test('glass frosts it lighter than a popover, with the same rim', async ({page}) => {
+    await page.goto('/#/nodes?provider=harbor');
+    const panel = page.locator('.rp-floating-frame .rp-floating-panel');
+    await expect(panel).toBeVisible();
+    await page.getByRole('button', {name: /Group$/}).click();
+    const popover = page.locator('.rp-popover').first();
+    await expect(popover).toBeVisible();
+    const material = (locator: Locator) =>
+      locator.evaluate(element => {
+        const style = getComputedStyle(element);
+        return {
+          filter: style.backdropFilter,
+          alpha: Number(style.backgroundColor.match(/,\s*([\d.]+)\)$/)?.[1] ?? 1),
+          rim: getComputedStyle(element, '::after').content
+        };
+      });
+    const [frosted, floating] = [await material(panel), await material(popover)];
+    expect(frosted.filter).not.toBe('none');
+    expect(frosted.alpha).toBeLessThan(floating.alpha);
+    expect(frosted.rim).toBe(floating.rim);
+  });
+});
