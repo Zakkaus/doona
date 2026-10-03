@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {changesPanel, defaults, parseItems, parseLayout, restoredPanel} from './layout';
+import {changesPanel, defaults, parseItems, parseLayout, registry, restoredPanel, sizesFor, type WidgetId} from './layout';
 import {moveWidget} from './instances';
 it('defaults corrupt roots to a visible panel and preserves empty layouts', () => {
   for (const value of [null, {}, {version: 9, items: []}, {version: 1, items: 'bad'}]) expect(parseLayout(value)).toEqual(defaults());
@@ -53,6 +53,35 @@ it('normalizes widget sizes and drops the old placement', () => {
   ]);
   expect(layout).not.toHaveProperty('placement');
   expect(layout.visible).toBe(false);
+});
+const metrics: WidgetId[] = ['speed', 'download', 'upload', 'connections', 'cpu', 'history', 'memory'];
+it.each(metrics)('offers the panel %s only small and medium as a list of values', id => {
+  expect(sizesFor(id, 'kv', 'panel')).toEqual(['small', 'medium']);
+  expect(sizesFor(id, 'sparkline', 'panel')).toEqual(['small', 'medium', 'large']);
+  expect(sizesFor(id, 'kv', 'dashboard')).toEqual(['small', 'medium', 'large']);
+});
+it.each([
+  ['notices', 'kv'],
+  ['ranking', 'kv'],
+  ['outbounds', 'kv'],
+  ['nodeLatency', 'dots'],
+  ['mode', 'kv']
+] as const)('keeps the sizes of the panel %s as a %s', (id, form) => {
+  expect(sizesFor(id, form, 'panel')).toEqual(registry[id].sizes);
+});
+it.each([
+  ['speed', 'kv', 'medium'],
+  ['memory', 'kv', 'medium'],
+  ['cpu', 'text', 'medium'],
+  ['speed', 'sparkline', 'large'],
+  ['memory', 'sparkline', 'large'],
+  ['notices', 'kv', 'large'],
+  ['ranking', 'kv', 'large']
+] as const)('reads a stored large %s as a %s as %s', (id, form, size) => {
+  expect(parseLayout({version: 4, items: [{id, form, size: 'large'}]}).items[0]).toMatchObject({size});
+});
+it('keeps a stored large list of values on the dashboard', () => {
+  expect(parseItems([{id: 'speed', form: 'kv', size: 'large'}], 'dashboard')[0]).toMatchObject({form: 'kv', size: 'large'});
 });
 it('moves only within bounds and preserves widget settings', () => {
   const items = defaults().items;

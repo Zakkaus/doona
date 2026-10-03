@@ -19,6 +19,7 @@ import {
   maxInstances,
   onlyPanel,
   registry,
+  sizesFor,
   type ModuleForm,
   type ModuleSize,
   type Surface,
@@ -161,7 +162,13 @@ export function ModuleInspector({
           <Segmented
             label={t('widgets.form')}
             value={canonicalForm(active, surface)}
-            onChange={form => update({...active, form: form as ModuleForm})}
+            onChange={form =>
+              update({
+                ...active,
+                form: form as ModuleForm,
+                size: active.size === 'large' && !sizesFor(active.id, form as ModuleForm, surface).includes('large') ? 'medium' : active.size
+              })
+            }
             items={formsFor(active.id, surface).map(form => [form, t(formLabels[form])])}
           />
         </EditorOption>

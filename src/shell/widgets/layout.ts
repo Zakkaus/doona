@@ -14,6 +14,9 @@ type Definition = {
   forms: ModuleForm[];
   compact: ModuleForm[];
   sizes: WidgetSize[];
+  // The panel's sizes for the key-value form when they are fewer than `sizes`, as a metric's large one draws no more
+  // than its medium one.
+  kvSizes?: WidgetSize[];
   // Offered by the panel only, such as the divider between its groups of widgets.
   panelOnly?: true;
 };
@@ -22,7 +25,8 @@ const metric = (label: Key, resource: Definition['resource']): Definition => ({
   resource,
   forms: ['area', 'sparkline', 'kv'],
   compact: ['sparkline', 'kv'],
-  sizes: ['small', 'medium', 'large']
+  sizes: ['small', 'medium', 'large'],
+  kvSizes: ['small', 'medium']
 });
 const list = (label: Key, resource: Definition['resource']): Definition => ({
   label,
@@ -90,6 +94,10 @@ export const widthsFor = (id: WidgetId): readonly DashboardWidth[] => widths.sli
 export const instanceId = (item: Widget) => item.instance ?? item.id;
 export const formsFor = (id: WidgetId, surface: Surface): ModuleForm[] => registry[id][surface === 'panel' ? 'compact' : 'forms'] as ModuleForm[];
 export const onlyPanel = (id: WidgetId) => 'panelOnly' in registry[id];
+export const sizesFor = (id: WidgetId, form: ModuleForm, surface: Surface): readonly WidgetSize[] => {
+  const definition: Definition = registry[id];
+  return surface === 'panel' && form === 'kv' && definition.kvSizes ? definition.kvSizes : definition.sizes;
+};
 const allowsSmall = (id: WidgetId) => (registry[id].sizes as string[]).includes('small');
 export function canonicalForm(item: Widget, surface: Surface): ModuleForm {
   const forms = formsFor(item.id, surface);
@@ -161,6 +169,8 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
     const item: Widget = {id, ...(key !== id ? {instance: key} : {}), size, form: (value.form as Widget['form']) ?? formsFor(id, surface)[0]};
     if (legacy && surface === 'panel') item.form = size === 'small' ? 'text' : size === 'large' ? 'chart' : item.form;
     item.form = canonicalForm(item, surface);
+    // A size the form no longer offers, as a stored large key-value metric, reads as medium.
+    if (surface === 'panel' && item.size === 'large' && !sizesFor(id, item.form as ModuleForm, surface).includes('large')) item.size = 'medium';
     if (value.group !== undefined) item.group = value.group as string;
     if (id === 'ranking') item.by = value.by === 'domain' ? 'domain' : 'dev';
     if (surface === 'dashboard') {

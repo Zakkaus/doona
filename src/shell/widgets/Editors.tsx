@@ -14,7 +14,7 @@ import {dashboardDefaults, dashboardItems, mainCard, mapWidgets, tileOf, type Da
 import {placeWidget, removeWidget, stepWidget} from './dashboardEdit';
 import {sizeAxes, withPreset, type Preset, type SizeAxis} from './dashboardSizing';
 import {DashboardResize, type ResizeAxis} from '../../ui/DashboardResize';
-import {instanceId, defaults, registry, restoredPanel, changesPanel, type Widget, type WidgetId} from './layout';
+import {instanceId, defaults, registry, restoredPanel, changesPanel, canonicalForm, sizesFor, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
 import {defaultPanelHeight, defaultPanelWidth} from '../../ui/panelSize';
 import type {BackendView} from '../view';
@@ -327,7 +327,7 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
             <ModuleInspector
               active={active}
               items={items}
-              sizes={active ? registry[active.id].sizes : []}
+              sizes={active ? sizesFor(active.id, canonicalForm(active, 'panel'), 'panel') : []}
               surface="panel"
               update={update}
               move={delta => {
