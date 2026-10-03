@@ -1,4 +1,4 @@
-import {panel, editPanel} from './widget-helpers';
+import {panel, editPanel, pickWidget} from './widget-helpers';
 import {test, expect, mockBackend, expectLoadFailures} from './fixtures';
 import {defaults, defaultWidget} from '../src/shell/widgets/layout';
 import {readMode} from '../src/dae/outboundMode';
@@ -29,6 +29,7 @@ test('metric forms change the renderer without acquiring history for key-value c
   expect(backend.requests.filter(request => /traffic\/history/.test(request.url()))).toHaveLength(0);
   await editPanel(page);
   const dialog = page.getByRole('dialog', {name: 'Edit widgets'});
+  await pickWidget(page);
   await dialog.getByRole('radio', {name: 'Sparkline', exact: true}).click();
   const preview = dialog.locator('.rp-widget-canvas');
   await expect(preview.locator('.rp-compact-chart')).toBeVisible();

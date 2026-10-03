@@ -24,6 +24,8 @@ export function anchorPanelOffset({x, y, top}: PanelOffset, room: number, height
   return above + height / 2 < room / 2 ? {x, y: Math.max(0, Math.round(above)), top: true} : {x, y: Math.max(0, Math.round(room - height - above))};
 }
 export const minPanelSize: PanelSize = {width: limits.width[0], height: limits.height[0]};
+// The height limit of a panel the reader has not sized, the stylesheet's fallback for --rp-panel-height.
+export const defaultPanelHeight = 480;
 // A resize handle's edge: the side or corner it moves, in logical directions. The opposite side stays where it is.
 export type PanelEdge = {inline?: 'start' | 'end'; block?: 'start' | 'end'};
 // One resize step from a handle: `toEnd` is the pointer's movement towards the inline end, `down` its movement down.

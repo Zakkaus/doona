@@ -13,7 +13,7 @@ import {dashboardDefaults, dashboardItems, footprint, mapWidgets, type Dashboard
 import {placeWidget, sizesFor, stepWidget} from './dashboardEdit';
 import {instanceId, defaults, registry, restoredPanel, changesPanel, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
-import {minPanelSize} from '../../ui/panelSize';
+import {defaultPanelHeight, minPanelSize} from '../../ui/panelSize';
 import type {BackendView} from '../view';
 import {PanelHeader} from './Widgets';
 
@@ -140,13 +140,19 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
   const [items, setItems] = useState(original);
   // Restoring the defaults also returns the panel to its corner and default size once saved.
   const [restored, setRestored] = useState(false);
-  const [selected, select] = useState<string | null>(items[0] ? instanceId(items[0]) : null);
+  // The preview is the floating panel at its own width, which its edge changes; a docked panel takes the sidebar's.
+  const [dockWidth] = useState(() => (layout.docked ? document.querySelector<HTMLElement>('.rp-side-dock')?.offsetWidth : undefined));
+  const savedWidth = layout.size?.width ?? minPanelSize.width;
+  const [width, setWidth] = useState(savedWidth);
+  const widthChanged = width !== (restored ? minPanelSize.width : savedWidth);
+  // Nothing is selected until the reader picks a widget, so the preview opens without a selection frame.
+  const [selected, select] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [announcement, setAnnouncement] = useState({text: '', serial: 0});
   const announce = (text: string) => setAnnouncement(previous => ({text, serial: previous.serial + 1}));
   // Saving a reset also moves the panel, so a reset counts as a change whenever the panel is not already at its default.
   const panelMoves = restored && changesPanel(readLayout());
-  const dirty = useMemo(() => JSON.stringify(original) !== JSON.stringify(items), [original, items]) || panelMoves;
+  const dirty = useMemo(() => JSON.stringify(original) !== JSON.stringify(items), [original, items]) || panelMoves || widthChanged;
   useDraftGuard(dirty, onClose);
   const cancel = () => (dirty ? setConfirm(true) : onClose());
   const update = (item: Widget) => setItems(previous => previous.map(old => (instanceId(old) === instanceId(item) ? item : old)));
@@ -180,6 +186,7 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
               onPress={() => {
                 setItems(defaults().items);
                 setRestored(true);
+                setWidth(minPanelSize.width);
                 select(null);
               }}
             >
@@ -189,7 +196,13 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
             <Button
               accent
               onPress={() => {
-                saveLayout(previous => ({...previous, version: 3, items, ...(restored && restoredPanel)}));
+                saveLayout(previous => ({
+                  ...previous,
+                  version: 3,
+                  items,
+                  ...(restored && restoredPanel),
+                  ...(widthChanged && {size: {width, height: (restored ? undefined : previous.size?.height) ?? defaultPanelHeight}})
+                }));
                 onClose();
               }}
             >
@@ -199,7 +212,9 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
         )}
       >
         <WidgetEditorLayout
-          panelWidth={(restored ? undefined : layout.size)?.width ?? minPanelSize.width}
+          panelWidth={(restored ? undefined : dockWidth) ?? width}
+          onPanelWidth={restored || !dockWidth ? setWidth : undefined}
+          resizeLabel={t('widgets.resizePreview')}
           header={<PanelHeader backend={backend} preview />}
           galleryLabel={t('widgets.gallery')}
           canvasLabel={t('widgets.canvas')}

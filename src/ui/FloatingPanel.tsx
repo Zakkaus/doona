@@ -31,11 +31,12 @@ import {
 import {escapeLayers} from './hooks';
 import './styles/floating-panel.css';
 
-const step = 16;
+// One arrow-key step of a panel handle, in CSS pixels.
+export const resizeStep = 16;
 // The panel's width before the reader sizes it is the narrowest the resize allows.
 const defaultWidth = minPanelSize.width;
 type Delta = [dx: number, dy: number];
-const arrows: Record<string, Delta> = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step]};
+const arrows: Record<string, Delta> = {ArrowLeft: [-resizeStep, 0], ArrowRight: [resizeStep, 0], ArrowUp: [0, -resizeStep], ArrowDown: [0, resizeStep]};
 // Four corners and four edges; the first, the corner away from home, is the one keyboard stop.
 const edges: PanelEdge[] = [
   {inline: 'start', block: 'start'},
