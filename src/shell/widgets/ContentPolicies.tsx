@@ -9,13 +9,14 @@ import {href} from '../route';
 import type {Widget} from './layout';
 import {Reading} from './Reading';
 
-export function ModeWidget({targetOnly, docked = false}: {targetOnly: boolean; docked?: boolean}) {
+// In the panel the choice fills the width and Apply takes its own row below it, on every host.
+export function ModeWidget({targetOnly, fill = false}: {targetOnly: boolean; fill?: boolean}) {
   const t = useT();
   const m = useMode();
   return (
     <>
       <ErrorMessage error={m.error} onRetry={m.retry} />
-      {!targetOnly && <ModeSwitch model={m} fill={docked} />}
+      {!targetOnly && <ModeSwitch model={m} fill={fill} />}
       {(targetOnly || m.mode === 'global') && (
         <WidgetRow label={t('act.global')}>
           <span className={targetOnly ? 'rp-cluster rp-global-controls' : 'rp-cluster'}>

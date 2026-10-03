@@ -339,9 +339,10 @@
   flex: 1 1 auto;
   min-width: 0;
 }
-/* Filling its container, the segments share the width equally and each label sits at the centre of its own segment. */
+/* Filling its line, the segments share the width equally and each label sits at the centre of its own segment. In a
+   flex row it grows far ahead of what sits beside it, which so keeps about its own width; alone on a line it fills it. */
 .rp-segfit[data-fill] {
-  inline-size: 100%;
+  flex: 1000 1 auto;
 }
 .rp-segfit[data-fill] > .rp-seg .rp-btn {
   flex: 1 1 0;
