@@ -99,7 +99,7 @@ export function canonicalForm(item: Widget, surface: Surface): ModuleForm {
 }
 export const defaultWidget = (id: WidgetId): Widget => ({id, form: formsFor(id, 'panel')[0], size: 'medium'});
 export type Layout = {
-  version: 3;
+  version: 4;
   items: Widget[];
   // The panel's own size, set by its resize handle; absent until the reader resizes it.
   size?: PanelSize;
@@ -117,10 +117,10 @@ export type Layout = {
   visible: boolean;
 };
 export const defaults = (): Layout => ({
-  version: 3,
+  version: 4,
   items: [defaultWidget('speed'), {id: 'memory', form: 'text', size: 'medium'}, defaultWidget('divider'), defaultWidget('mode')],
   collapsed: false,
-  pinned: false,
+  pinned: true,
   visible: true
 });
 // Restore defaults puts the panel where a fresh profile has it: floating at its corner, at its own size.
@@ -174,15 +174,15 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
 }
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 export function parseLayout(value: unknown): Layout {
-  if (!object(value) || ![1, 2, 3].includes(value.version as number) || !Array.isArray(value.items)) return defaults();
+  if (!object(value) || ![1, 2, 3, 4].includes(value.version as number) || !Array.isArray(value.items)) return defaults();
   const items = parseItems(
     value.version === 1 ? value.items.map(item => (object(item) ? {...item, size: 'medium'} : item)) : value.items,
     'panel',
-    value.version !== 3
+    (value.version as number) < 3
   );
   // Earlier versions' placement and dock fields are dropped: the panel floats until docked again.
   return {
-    version: 3,
+    version: 4,
     items,
     ...(object(value.size) && finite(value.size.width) && finite(value.size.height)
       ? {size: clampPanelSize({width: value.size.width, height: value.size.height})}
@@ -191,7 +191,9 @@ export function parseLayout(value: unknown): Layout {
       ? {offset: clampPanelOffset({x: value.offset.x, y: value.offset.y, ...(value.offset.top === true && {top: true as const})})}
       : {}),
     collapsed: value.collapsed === true,
-    pinned: value.pinned === true,
+    // Before version 4 a panel was unpinned by default, which a stored false cannot tell from a choice: it reads as
+    // pinned, the default since.
+    pinned: value.version !== 4 || value.pinned === true,
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),
     ...(value.edge === true ? {edge: true} : {}),
