@@ -7,6 +7,19 @@ export function withCrossfade(fn: () => void) {
   d.startViewTransition(() => flushSync(fn));
 }
 
+// Where an item sits in the container it is placed against, from layout offsets. A pressed item sinks by a transform
+// that eases back after release, so its bounding box moves for a few frames; offsets ignore transforms and stay put.
+// The container is the marker's containing block, so it is positioned and ends the item's offsetParent chain.
+function layoutOffset(item: HTMLElement, container: HTMLElement) {
+  let x = 0;
+  let y = 0;
+  for (let node: Element | null = item; node instanceof HTMLElement && node !== container; node = node.offsetParent) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+  }
+  return {x, y};
+}
+
 export function useSlider(value: string, selector = '[data-selected]', keepVisible = false) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{x: number; y: number; w: number; h: number; still: boolean} | null>(null);
@@ -19,14 +32,13 @@ export function useSlider(value: string, selector = '[data-selected]', keepVisib
       if (!el.offsetWidth) return;
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      const box = el.getBoundingClientRect();
       if (keepVisible) {
+        const box = el.getBoundingClientRect();
         const item = sel.getBoundingClientRect();
         if (item.top < box.top) el.scrollTop -= box.top - item.top;
         else if (item.bottom > box.bottom) el.scrollTop += item.bottom - box.bottom;
       }
-      const selected = sel.getBoundingClientRect();
-      const next = {x: selected.left - box.left + el.scrollLeft, y: selected.top - box.top + el.scrollTop, w: sel.offsetWidth, h: sel.offsetHeight, still};
+      const next = {...layoutOffset(sel, el), w: sel.offsetWidth, h: sel.offsetHeight, still};
       setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
     measure(false);
