@@ -183,7 +183,7 @@ export function PanelHeader({
           </Button>
         )
       }
-      summary={docked ? <h3 className="rp-dock-title">{t('widgets.title')}</h3> : collapsed ? <SpeedSummary /> : undefined}
+      summary={collapsed ? <SpeedSummary /> : docked ? <h3 className="rp-dock-title">{t('widgets.title')}</h3> : undefined}
       actions={
         <>
           <MoreMenu

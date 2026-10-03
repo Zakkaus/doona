@@ -1988,7 +1988,6 @@
   "widgets.docked": "小工具已嵌入侧边栏",
   "widgets.domains": "域名",
   "widgets.down": "下移",
-  "widgets.downloadSummary": "↓ {down}",
   "widgets.drag": "重新排列{name}",
   "widgets.dropToDock": "拖放至此处以嵌入",
   "widgets.edgeHide": "收至边缘",
@@ -2024,6 +2023,7 @@
   "widgets.reordered": "已更新小工具顺序",
   "widgets.reset": "恢复默认",
   "widgets.resizePanel": "调整小工具面板大小",
+  "widgets.resizePreview": "调整面板宽度",
   "widgets.sampled": "仅涵盖返回的连接样本。",
   "widgets.select": "选择小工具以修改设置",
   "widgets.show": "显示小工具",
@@ -2039,7 +2039,6 @@
   "widgets.undocked": "小工具已改为悬浮",
   "widgets.unpin": "取消固定面板",
   "widgets.up": "上移",
-  "widgets.uploadSummary": "↑ {up}",
   "widgets.uptime": "运行时间",
   "wordmark.gradient": "渐变",
   "wordmark.plain": "纯色"

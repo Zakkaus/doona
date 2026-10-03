@@ -75,6 +75,21 @@
   font-variant-numeric: tabular-nums;
 }
 .rp-widget-speed > span {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-1);
+  min-inline-size: 0;
+}
+.rp-widget-speed-icon {
+  display: flex;
+  flex: none;
+}
+.rp-widget-speed-icon > svg {
+  inline-size: var(--rp-line-caption);
+  block-size: var(--rp-line-caption);
+}
+.rp-widget-speed-value {
+  min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -263,6 +278,14 @@
    scrollbar sits there and the content keeps the header's inset. */
 :is(.rp-floating-panel, .rp-drawer) .rp-widget-body {
   margin-inline: calc(0px - var(--rp-sidebar-padding));
+}
+/* The sheet's list runs into the sheet's bottom padding and ends one padding from the edge, as its header starts one
+   padding from the top; a home bar's inset comes on top. */
+.rp-drawer > .rp-dialog > .rp-widget-panel {
+  margin-block-end: calc(0px - var(--rp-space-6));
+}
+.rp-drawer > .rp-dialog > .rp-widget-panel > .rp-widget-body > .rp-widget-body-content {
+  padding-block-end: calc(var(--rp-space-6) + env(safe-area-inset-bottom, 0px));
 }
 .rp-side-dock .rp-widget-body {
   margin-inline-end: calc(0px - var(--rp-space-2) - var(--rp-sidebar-inset-end));

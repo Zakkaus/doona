@@ -7,6 +7,9 @@ import {engineStatus} from '../../features/shared/engineStatus';
 import {NoticeList, noticeRows} from '../../features/activity/widgets';
 import {Divider, ErrorMessage, Kv, Light, Link} from '../../ui/ui';
 import {WidgetSpeed} from '../../ui/WidgetPanel';
+import {usePalette} from '../../ui/charts';
+import Download from '../../ui/icons/Download';
+import Upload from '../../ui/icons/Upload';
 import {href} from '../route';
 import {contentLimit, canonicalForm, type Widget} from './layout';
 import {RuntimeWidget, MemoryWidget} from './ContentRuntime';
@@ -15,17 +18,21 @@ import {ModeWidget, GroupWidget} from './ContentPolicies';
 import {CurrentLatency, Latency, Sources, Groups} from './ContentNodes';
 import {Reading} from './Reading';
 
+// The rates widget's reading for a collapsed header: download before upload, in the chart's colours.
 export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const p = usePalette();
   const capabilities = useCapabilities();
   const runtime = useRuntime(capabilities.data?.resources.runtime.available === true);
   const rates = runtime.data?.traffic.rates;
   return (
     <WidgetSpeed
-      reserve={reserveWidth ? t('widgets.uploadSummary', {up: formatUnit(999.9, locale, 'unit.megabytePerSecond', 1)}) : undefined}
-      up={t('widgets.uploadSummary', {up: formatRate(rates?.upload_bytes_per_second ?? null, locale)})}
-      down={t('widgets.downloadSummary', {down: formatRate(rates?.download_bytes_per_second ?? null, locale)})}
+      reserve={reserveWidth ? formatUnit(999.9, locale, 'unit.megabytePerSecond', 1) : undefined}
+      rates={[
+        {icon: <Download />, label: t('ui.download'), value: formatRate(rates?.download_bytes_per_second ?? null, locale), color: p.cat[0]},
+        {icon: <Upload />, label: t('ui.upload'), value: formatRate(rates?.upload_bytes_per_second ?? null, locale), color: p.cat[3]}
+      ]}
     />
   );
 }

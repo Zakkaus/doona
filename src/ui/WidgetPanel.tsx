@@ -1,5 +1,8 @@
-import {useContext, useRef, useState, useLayoutEffect, type CSSProperties, type ReactNode} from 'react';
+import {useContext, useRef, useState, useLayoutEffect, type CSSProperties, type KeyboardEvent, type ReactNode} from 'react';
+import {VisuallyHidden, useLocale} from 'react-aria';
 import {TitlesShown} from './Card';
+import {ResizeHandle, resizeStep, useGesture} from './FloatingPanel';
+import {clampPanelSize, minPanelSize} from './panelSize';
 import './styles/widgets.css';
 import './styles/floating-panel.css';
 
@@ -90,17 +93,30 @@ export function WidgetHeader({backend, actions, summary}: {backend?: ReactNode; 
     </div>
   );
 }
-export function WidgetSpeed({up, down, reserve}: {up: string; down: string; reserve?: string}) {
+// The live rates in a collapsed header, one per line: each direction's icon in its chart colour, then the rate; the
+// direction's name is read out with it.
+export type WidgetRate = {icon: ReactNode; label: string; value: string; color: string};
+export function WidgetSpeed({rates, reserve}: {rates: WidgetRate[]; reserve?: string}) {
   return (
     <div className="rp-widget-speed" data-reserve={reserve}>
-      <span>{up}</span>
-      <span>{down}</span>
+      {rates.map(rate => (
+        <span key={rate.label}>
+          <span className="rp-widget-speed-icon" style={{color: rate.color}}>
+            {rate.icon}
+          </span>
+          <VisuallyHidden>{rate.label} </VisuallyHidden>
+          <span className="rp-widget-speed-value">{rate.value}</span>
+        </span>
+      ))}
     </div>
   );
 }
-// The preview keeps the live panel's width; only its display scale changes with the available space.
+// The preview keeps the live panel's width; only its display scale changes with the available space. With
+// `onPanelWidth`, the preview's inline end edge sets that width, within the panel's own limits.
 export function WidgetEditorLayout({
   panelWidth,
+  onPanelWidth,
+  resizeLabel,
   header,
   gallery,
   canvas,
@@ -110,6 +126,8 @@ export function WidgetEditorLayout({
   inspectorLabel
 }: {
   panelWidth: number;
+  onPanelWidth?: (width: number) => void;
+  resizeLabel?: string;
   header: ReactNode;
   gallery: ReactNode;
   canvas: ReactNode;
@@ -122,25 +140,41 @@ export function WidgetEditorLayout({
   const space = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [threeColumns, setThreeColumns] = useState(false);
+  const rtl = useLocale().direction === 'rtl';
+  const clampWidth = (next: number) => clampPanelSize({width: next, height: minPanelSize.height}).width;
+  // The pointer moves in screen pixels and the preview is drawn at `scale`, so the edge follows the pointer; an arrow
+  // key steps the panel's own width as the live panel's edge does.
+  const resize = useGesture(
+    () => ({width: panelWidth, scale}),
+    (base, dx) => ({...base, width: clampWidth(base.width + (rtl ? -dx : dx) / base.scale)}),
+    next => onPanelWidth?.(next.width)
+  );
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    const step = {ArrowLeft: -resizeStep, ArrowRight: resizeStep}[event.key];
+    if (!step) return;
+    event.preventDefault();
+    onPanelWidth?.(clampWidth(panelWidth + (rtl ? -step : step)));
+  };
+  const width = resize.live?.width ?? panelWidth;
   useLayoutEffect(() => {
     const root = editor.current;
     const column = space.current;
     if (!root || !column) return;
     const measure = () => {
       const gap = Number.parseFloat(getComputedStyle(root.firstElementChild!).columnGap);
-      setThreeColumns(root.clientWidth >= panelWidth + 320 + 240 + gap * 2);
+      setThreeColumns(root.clientWidth >= width + 320 + 240 + gap * 2);
       const style = getComputedStyle(column);
       const room = column.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
-      setScale(Math.min(1, room / panelWidth));
+      setScale(Math.min(1, room / width));
     };
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     observer.observe(column);
     measure();
     return () => observer.disconnect();
-  }, [panelWidth]);
+  }, [width]);
   return (
-    <div ref={editor} className="rp-widget-editor" style={{'--rp-panel-width': `${panelWidth}px`} as CSSProperties}>
+    <div ref={editor} className="rp-widget-editor" style={{'--rp-panel-width': `${width}px`} as CSSProperties}>
       <div className="rp-widget-editor-grid" data-three-columns={threeColumns || undefined}>
         <section className="rp-widget-gallery">
           <h3 className="rp-h3">{galleryLabel}</h3>
@@ -158,6 +192,7 @@ export function WidgetEditorLayout({
               <WidgetPanel label={canvasLabel} kind="canvas">
                 {canvas}
               </WidgetPanel>
+              {onPanelWidth && <ResizeHandle edge={{inline: 'end'}} label={resizeLabel} {...resize.props} onKeyDown={onKeyDown} />}
             </div>
           </div>
         </section>

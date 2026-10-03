@@ -2201,7 +2201,6 @@
   "widgets.docked": "Widgets docked in the sidebar",
   "widgets.domains": "Domains",
   "widgets.down": "Move down",
-  "widgets.downloadSummary": "↓ {down}",
   "widgets.drag": "Reorder {name}",
   "widgets.dropToDock": "Drop here to dock",
   "widgets.edgeHide": "Hide at edge",
@@ -2240,6 +2239,7 @@
   "widgets.reordered": "Widget order updated",
   "widgets.reset": "Restore defaults",
   "widgets.resizePanel": "Resize widgets panel",
+  "widgets.resizePreview": "Resize panel width",
   "widgets.sampled": "Covers only the returned connection sample.",
   "widgets.select": "Select a widget to edit its settings",
   "widgets.show": "Show widgets",
@@ -2255,7 +2255,6 @@
   "widgets.undocked": "Widgets floating",
   "widgets.unpin": "Unpin panel",
   "widgets.up": "Move up",
-  "widgets.uploadSummary": "↑ {up}",
   "widgets.uptime": "Uptime",
   "wordmark.gradient": "Gradient",
   "wordmark.plain": "Plain"

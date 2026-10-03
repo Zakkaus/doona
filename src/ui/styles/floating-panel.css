@@ -53,6 +53,15 @@
 .rp-floating-panel .rp-widget-body {
   flex: 1 1 auto;
 }
+/* The list runs into the panel's bottom inset, so its last row ends one inset from the border, as the header starts one
+   inset from the top; the scroller's corners follow the panel's. */
+.rp-floating-panel > .rp-widget-panel {
+  margin-block-end: calc(0px - var(--rp-space-4));
+}
+.rp-floating-panel > .rp-widget-panel > .rp-widget-body {
+  border-end-start-radius: var(--rp-r-lg);
+  border-end-end-radius: var(--rp-r-lg);
+}
 /* The header is the move handle: a bare button under its content takes the presses that miss the header's own
    controls, and the arrow keys once focused. */
 .rp-panel-head {
@@ -184,9 +193,11 @@
   box-shadow: var(--rp-elevated);
   pointer-events: auto;
 }
+/* The widest rate after its icon, so the handle keeps one width as the rates change. */
 .rp-edge-handle .rp-widget-speed::before {
   content: attr(data-reserve);
   block-size: 0;
+  padding-inline-start: calc(var(--rp-line-caption) + var(--rp-space-1));
   visibility: hidden;
 }
 .rp-edge-handle:is(:not([data-edge]), [data-out]) {
