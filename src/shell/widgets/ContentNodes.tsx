@@ -6,7 +6,7 @@ import {ResourceSamples} from '../../store/preview';
 import {activityGroupView, nodeView, useActivityNode, GroupMenu} from '../../features/activity/widgets';
 import {latencyAverages, latencyGroups, latencyMax, latencyPlotRow, latencySummary, providerRowView} from '../../features/nodes/widgets';
 import {MarkerPlot} from '../../ui/charts';
-import {ContextualHelp, Empty, ErrorMessage, Kv} from '../../ui/ui';
+import {columns, ContextualHelp, Empty, ErrorMessage, Kv} from '../../ui/ui';
 import {contentLimit, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
@@ -106,15 +106,18 @@ export function Sources({item}: {item: Widget}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resource = useProviders();
+  const providers = resource.data?.providers.slice(0, item.rows) ?? [];
   return (
     <Reading state={resource}>
-      {!resource.data?.providers.length ? (
+      {!providers.length ? (
         <Empty>{t('dashboard.noSources')}</Empty>
       ) : (
-        (item.rows === undefined ? resource.data.providers : resource.data.providers.slice(0, item.rows)).map(provider => {
-          const row = providerRowView(provider, undefined, locale, t);
-          return <Kv truncate key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
-        })
+        <div className="rp-list rp-columns" style={columns(providers.length)}>
+          {providers.map(provider => {
+            const row = providerRowView(provider, undefined, locale, t);
+            return <Kv truncate key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
+          })}
+        </div>
       )}
     </Reading>
   );
@@ -124,24 +127,28 @@ export function Groups({item}: {item: Widget}) {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(resources?.groups.available === true);
   const nodes = useNodes(resources?.nodes.available === true);
-  const rows = activityGroupView(groups.data ?? [], nodes.data ?? [], '', t).options.filter(group => !item.group || group.id === item.group);
+  const rows = activityGroupView(groups.data ?? [], nodes.data ?? [], '', t)
+    .options.filter(group => !item.group || group.id === item.group)
+    .slice(0, item.rows ?? contentLimit(item.size));
   return (
     <Reading state={{...groups, error: groups.error ?? nodes.error, refetch: () => (groups.refetch(), nodes.refetch())}}>
       {!rows.length ? (
         <Empty>{t('dashboard.noGroups')}</Empty>
       ) : (
-        rows.slice(0, item.rows ?? contentLimit(item.size)).map(group => {
-          const health = nodeView(group.node ? [group.node] : [], '', t);
-          return (
-            <Kv
-              truncate
-              key={group.id}
-              compact
-              row={item.size !== 'small'}
-              items={[[group.label, t('ui.valuePair', {label: group.node?.name ?? '—', value: health.status ?? health.latency})]]}
-            />
-          );
-        })
+        <div className="rp-list rp-columns" style={columns(rows.length)}>
+          {rows.map(group => {
+            const health = nodeView(group.node ? [group.node] : [], '', t);
+            return (
+              <Kv
+                truncate
+                key={group.id}
+                compact
+                row={item.size !== 'small'}
+                items={[[group.label, t('ui.valuePair', {label: group.node?.name ?? '—', value: health.status ?? health.latency})]]}
+              />
+            );
+          })}
+        </div>
       )}
     </Reading>
   );

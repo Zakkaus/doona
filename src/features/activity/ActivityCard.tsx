@@ -39,7 +39,7 @@ export function ActivityCard({
     case 'ranking':
       return <RankingModule selection={ranking} limit={item.rows} />;
     case 'notices':
-      return <NoticesModule limit={item.rows} />;
+      return <NoticesModule />;
     case 'outbounds':
       return <OutboundsCard />;
     case 'download':
@@ -64,8 +64,8 @@ function LatencyModule({selection}: {selection?: {chosen: string; setChosen: (id
 function RankingModule({selection, limit}: {selection?: {by: string; setBy: (by: string) => void}; limit?: number}) {
   return <RankingCard model={useRankingCard(true, selection, limit)} />;
 }
-function NoticesModule({limit}: {limit?: number}) {
-  return <Notices {...useNotices()} limit={limit} />;
+function NoticesModule() {
+  return <Notices {...useNotices()} />;
 }
 // The status card carries the runtime read's error; without it, the dashboard shows the same error and retry above
 // the cards that read runtime.
