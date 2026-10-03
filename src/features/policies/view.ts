@@ -177,6 +177,13 @@ export function kindView<T extends {id: string; kind: GroupKind}>(cards: T[], re
     empty: cards.length && !shown.length ? t(kind === 'manual' ? 'policy.kind.noManual' : 'policy.kind.noAuto') : null
   };
 }
+// The card whose editor is open, kept while its group is listed and returned as gone once the list drops it, removed or
+// renamed elsewhere; a group back under the same id is listed again.
+export function editedCard<T extends {id: string}>(cards: T[], editing: string | null, kept: T | null): {kept: T | null; gone: T | null} {
+  const live = editing === null ? undefined : cards.find(card => card.id === editing);
+  if (live) return {kept: live, gone: null};
+  return editing !== null && kept?.id === editing ? {kept, gone: kept} : {kept: null, gone: null};
+}
 // A collapsed automatic group's one line: the member in place, each network's when they differ, and how many members
 // are available.
 export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator, renderName?: (id: string) => string): string {

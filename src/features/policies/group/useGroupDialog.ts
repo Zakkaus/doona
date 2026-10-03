@@ -81,6 +81,8 @@ export type GroupDialogView = {
   busy: boolean;
   // Why the last save did not land; `id` changes with each refusal so the alert takes focus again.
   problem: Problem | null;
+  // Set once the group being edited is gone from the list, removed or renamed elsewhere: the edits stay to copy, unsaved.
+  removed: string | null;
   policy: string | null;
   membershipFilters: string[] | null;
   invalid: boolean;
@@ -173,7 +175,7 @@ type Draft = {
   interrupt: string | null;
 };
 type Input =
-  | {mode: 'edit'; name: string; source: MainSourceEdit; declaration: PolicyDeclaration; context: RouteContext}
+  | {mode: 'edit'; name: string; source: MainSourceEdit; declaration: PolicyDeclaration; context: RouteContext; gone?: boolean}
   | {
       mode: 'create';
       source: Pick<MainSourceEdit, 'main' | 'writable' | 'busy' | 'apply'>;
@@ -195,6 +197,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const entry = declared?.entry;
   const blocked = declaration ? editBlocked(owner, declaration, t) : null;
   const [draft, setDraft] = useState<Draft | null>(null);
+  const removed = draft && input.mode === 'edit' && input.gone ? t('policy.groupRemoved') : null;
   const [history, setHistory] = useState<Draft[]>([]);
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
@@ -249,7 +252,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     }
   );
   const save = (close: () => void) => {
-    if (!draft || source.busy || saving.current) return;
+    if (!draft || removed || source.busy || saving.current) return;
     setTried(true);
     if (nameProblem || invalid) return;
     const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
@@ -332,6 +335,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     tip: blocked ?? (source.writable ? undefined : t('group.readOnly')),
     busy,
     problem,
+    removed,
     policy: draft?.policy ?? null,
     membershipFilters: draft ? filters : (entry?.filters ?? null),
     invalid,

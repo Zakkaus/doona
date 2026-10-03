@@ -347,6 +347,7 @@ export function Policies(props: PageProps) {
               source={m.source}
               refreshGroups={m.refreshGroups}
               refreshNodes={m.refreshNodes}
+              onEditing={m.onEditing}
             />
           ))}
           {m.declarations.map(group => (

@@ -18,6 +18,7 @@ import {
   kindFilter,
   kindQuery,
   kindView,
+  editedCard,
   memberViews,
   nodeGridView,
   policyCardView,
@@ -491,4 +492,19 @@ it('preserves a masked check URL for display without patching its unchanged valu
   const draft = checkDraft(masked);
   expect(draft.check_url).toBe(url);
   expect(checkPatch(masked, draft, draft)).toEqual([]);
+});
+
+it('keeps the card being edited after the list drops its group, until the editor closes or the group returns', () => {
+  const office = {id: 'office'},
+    other = {id: 'other'};
+  expect(editedCard([office, other], null, null)).toEqual({kept: null, gone: null});
+  const open = editedCard([office, other], 'office', null);
+  expect(open).toEqual({kept: office, gone: null});
+  // Removed or renamed elsewhere: the next list no longer has it.
+  expect(editedCard([other, {id: 'office2'}], 'office', open.kept)).toEqual({kept: office, gone: office});
+  const back = {id: 'office'};
+  expect(editedCard([other, back], 'office', office)).toEqual({kept: back, gone: null});
+  // Closing the editor lets the card go.
+  expect(editedCard([other], null, office)).toEqual({kept: null, gone: null});
+  expect(editedCard([other], 'other', office)).toEqual({kept: other, gone: null});
 });

@@ -142,6 +142,9 @@ h3.rp-label {
 .rp-alert.informative {
   border-color: var(--rp-positive);
 }
+.rp-alert.notice {
+  border-color: var(--rp-notice);
+}
 .rp-alert:focus-visible {
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
