@@ -6,7 +6,8 @@ import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './store/rings';
-import {initializeApi, startedOnMock} from './api';
+import {expectsAccess, initializeApi, startedOnMock} from './api';
+import {preloadActivity} from './shell/registry';
 import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
@@ -27,6 +28,7 @@ let startup: Promise<unknown> | undefined;
 const start = () =>
   (startup ??= detectHostedBackend().then(() => {
     pruneRings();
+    if (expectsAccess()) preloadActivity();
     return initializeApi();
   }));
 let language: Promise<Lang> | undefined;

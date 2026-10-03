@@ -898,49 +898,54 @@ const tick = (page: Page, check: () => Promise<void>) =>
     await page.clock.runFor(250);
     await check();
   }).toPass();
-test('every chart a card draws on the page it draws in the editor, from the history it holds', async ({page}) => {
-  await holdReads(page);
-  await open(page);
-  const tools = page.locator('.rp-dashboard-tools');
-  await tick(page, async () => {
-    await expect(tools.first()).toBeVisible({timeout: 100});
-    await expect(page.locator('.rp-chart-wait')).toHaveCount(0, {timeout: 100});
-  });
-  expect(await charts(page)).toEqual(drawn);
-  await page.getByRole('button', {name: 'Done', exact: true}).click();
-  await tick(page, () => expect(tools).toHaveCount(0, {timeout: 100}));
-  expect(await charts(page)).toEqual(drawn);
-});
-// A first visit has no history: the CPU and latency lines draw from the first two reads, within two seconds of the
-// page opening, on the page and in the editor.
-test('a first visit draws the CPU and latency lines within two seconds, on the page and in the editor', async ({page}) => {
-  const first = (state: Record<string, string>) => ({cpu: state.cpu, latency: state.latency});
-  await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
-  await page.clock.pauseAt(new Date('2026-09-16T00:00:00.100Z'));
-  await page.setViewportSize({width: 1280, height: 1000});
-  await page.goto('/#/activity');
-  await expect(tile(page, 'latency').locator('.rp-big')).toHaveText(/ms/);
-  await page.clock.runFor(1900);
-  await expect.poll(async () => first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
-  await open(page);
-  await tick(page, () => expect(page.locator('.rp-dashboard-tools').first()).toBeVisible({timeout: 100}));
-  expect(first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
-});
-test('the latency card draws its line at every height, in the editor and on the page', async ({page}) => {
-  await holdReads(page);
-  await page.clock.resume();
-  const line = tile(page, 'latency').locator('.rp-spark');
-  for (const step of ['Short', 'Tall', 'Standard']) {
+// A restored session loads the Activity chunk with the shell; a tab without a profile first asks whether it is hosted,
+// and the page would suspend on the chunk behind a paused clock.
+test.describe(() => {
+  test.use({storage: {'doona-api': 'mock'}, signedIn: 'legacy'});
+  test('every chart a card draws on the page it draws in the editor, from the history it holds', async ({page}) => {
+    await holdReads(page);
     await open(page);
-    await choose(page, [['latency', 'Height', step]]);
-    await expect(tile(page, 'latency')).toHaveAttribute('data-height', step.toLowerCase());
-    for (const mode of ['editor', 'page']) {
-      if (mode === 'page') await page.getByRole('button', {name: 'Done', exact: true}).click();
-      const plot = await box(line);
-      expect(plot.width * plot.height, `${step} ${mode}`).toBeGreaterThan(0);
-      expect((await charts(page)).latency, `${step} ${mode}`).toBe('drawn');
+    const tools = page.locator('.rp-dashboard-tools');
+    await tick(page, async () => {
+      await expect(tools.first()).toBeVisible({timeout: 100});
+      await expect(page.locator('.rp-chart-wait')).toHaveCount(0, {timeout: 100});
+    });
+    expect(await charts(page)).toEqual(drawn);
+    await page.getByRole('button', {name: 'Done', exact: true}).click();
+    await tick(page, () => expect(tools).toHaveCount(0, {timeout: 100}));
+    expect(await charts(page)).toEqual(drawn);
+  });
+  // A first visit has no history: the CPU and latency lines draw from the first two reads, within two seconds of the
+  // page opening, on the page and in the editor.
+  test('a first visit draws the CPU and latency lines within two seconds, on the page and in the editor', async ({page}) => {
+    const first = (state: Record<string, string>) => ({cpu: state.cpu, latency: state.latency});
+    await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-09-16T00:00:00.100Z'));
+    await page.setViewportSize({width: 1280, height: 1000});
+    await page.goto('/#/activity');
+    await expect(tile(page, 'latency').locator('.rp-big')).toHaveText(/ms/);
+    await page.clock.runFor(1900);
+    await expect.poll(async () => first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
+    await open(page);
+    await tick(page, () => expect(page.locator('.rp-dashboard-tools').first()).toBeVisible({timeout: 100}));
+    expect(first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
+  });
+  test('the latency card draws its line at every height, in the editor and on the page', async ({page}) => {
+    await holdReads(page);
+    await page.clock.resume();
+    const line = tile(page, 'latency').locator('.rp-spark');
+    for (const step of ['Short', 'Tall', 'Standard']) {
+      await open(page);
+      await choose(page, [['latency', 'Height', step]]);
+      await expect(tile(page, 'latency')).toHaveAttribute('data-height', step.toLowerCase());
+      for (const mode of ['editor', 'page']) {
+        if (mode === 'page') await page.getByRole('button', {name: 'Done', exact: true}).click();
+        const plot = await box(line);
+        expect(plot.width * plot.height, `${step} ${mode}`).toBeGreaterThan(0);
+        expect((await charts(page)).latency, `${step} ${mode}`).toBe('drawn');
+      }
     }
-  }
+  });
 });
 
 // One card's height is its own: its neighbours keep theirs, and the card that follows takes the space beside it.

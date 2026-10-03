@@ -49,7 +49,12 @@ test('refresh remains pending until completion, refetches non-polling resources,
   let brokenRuntime = false;
   await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
   await page.clock.pauseAt(new Date('2026-09-16T00:00:01Z'));
-  await page.addInitScript(() => localStorage.setItem('doona-api', location.origin));
+  // A saved bearer lets the Activity chunk load with the shell; without one it would wait for capabilities, and a
+  // paused clock holds a suspended page.
+  await page.addInitScript(() => {
+    localStorage.setItem('doona-api', location.origin);
+    localStorage.setItem('doona-api-token', 'e2e');
+  });
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
     counts[path] = (counts[path] ?? 0) + 1;

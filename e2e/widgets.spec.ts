@@ -791,6 +791,8 @@ test.describe('header and edge at 1440', () => {
     await page.goto('/#/settings');
     const header = floating(page).locator('.rp-widget-header');
     await expect(header.getByRole('button', {name: 'Edit widgets', exact: true})).toHaveCount(0);
+    // The panel's code loads once the backend has let this tab in.
+    await expect.poll(() => header.getByRole('button').count()).toBeGreaterThanOrEqual(4);
     const sizes = await header.getByRole('button').evaluateAll(buttons => buttons.map(button => `${button.clientWidth}x${button.clientHeight}`));
     expect(sizes.length).toBeGreaterThanOrEqual(4);
     expect(new Set(sizes).size).toBe(1);

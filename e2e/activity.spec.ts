@@ -582,29 +582,34 @@ for (const width of [390, 1440]) {
   });
 }
 
-test('the latency sparkline restarts when the tile picks another group', async ({page}) => {
-  // Hold time between reads: a menu can pause and resume the tile, and events can bring a read forward.
-  await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
-  await page.clock.pauseAt(new Date('2026-09-16T00:00:01Z'));
-  await page.goto('/#/activity');
-  await expect(page.locator('.rp-latency .rp-big')).toHaveText(/ms/);
-  const curve = page.locator('.rp-latency .rp-spark .rp-area-curve');
-  await page.clock.runFor(61000);
-  await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(3);
-  await page.locator('.rp-latency .rp-select').click();
-  const group = page.getByRole('menuitemradio', {name: 'proxy', exact: true});
-  // The virtual menu restores pointer events on a timer after scrolling; let it run while picking.
-  await page.clock.resume();
-  await scrollIntoList(group);
-  await group.click();
-  await expect(page.getByRole('menu')).toBeHidden();
-  await expect(async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 50))).toPass();
-  // One sample is no line; the box stays.
-  await expect(curve).toHaveCount(0);
-  await expectNoLoneSample(page);
-  await expect(page.locator('.rp-latency .rp-spark')).toBeVisible();
-  await page.clock.runFor(31000);
-  await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(2);
+// A restored session loads the Activity chunk with the shell; a tab without a profile first asks whether it is hosted,
+// and the page would suspend on the chunk behind a paused clock.
+test.describe(() => {
+  test.use({storage: {'doona-api': 'mock'}, signedIn: 'legacy'});
+  test('the latency sparkline restarts when the tile picks another group', async ({page}) => {
+    // Hold time between reads: a menu can pause and resume the tile, and events can bring a read forward.
+    await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-09-16T00:00:01Z'));
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-latency .rp-big')).toHaveText(/ms/);
+    const curve = page.locator('.rp-latency .rp-spark .rp-area-curve');
+    await page.clock.runFor(61000);
+    await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(3);
+    await page.locator('.rp-latency .rp-select').click();
+    const group = page.getByRole('menuitemradio', {name: 'proxy', exact: true});
+    // The virtual menu restores pointer events on a timer after scrolling; let it run while picking.
+    await page.clock.resume();
+    await scrollIntoList(group);
+    await group.click();
+    await expect(page.getByRole('menu')).toBeHidden();
+    await expect(async () => page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 50))).toPass();
+    // One sample is no line; the box stays.
+    await expect(curve).toHaveCount(0);
+    await expectNoLoneSample(page);
+    await expect(page.locator('.rp-latency .rp-spark')).toBeVisible();
+    await page.clock.runFor(31000);
+    await expect.poll(() => curve.evaluate(pointCount)).toBeGreaterThanOrEqual(2);
+  });
 });
 
 // The picker stays inside the tile; phones keep two tiles per row and truncate long node names.

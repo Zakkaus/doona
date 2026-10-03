@@ -1,3 +1,4 @@
+import type {Page} from '@playwright/test';
 import {demoSession, expect, expectLoadFailures, routes, test} from './fixtures';
 
 // Keep install-time precaching out of the navigation request log.
@@ -167,6 +168,66 @@ test('a rejected showcase import leaves its panel empty and the sign-in form wor
     await context.close();
   }
 });
+
+// The page chunks the shell warms once signed in. On the demo the Activity chunk also carries code the mock backend
+// imports, so only a hosted backend leaves it out too.
+const pageChunks = ['SearchDialog', ...routes.filter(route => route !== 'activity').map(route => route[0].toUpperCase() + route.slice(1))];
+const challenge = {
+  status: 401,
+  headers: {'www-authenticate': 'Bearer'},
+  json: {error: {code: 'authentication_required', message: 'Valid bearer credentials are required.', details: null}}
+};
+const signInPages = [
+  {
+    name: 'a saved demo profile',
+    pages: pageChunks,
+    viewport: {width: 1280, height: 800},
+    ready: (page: Page) => page.locator('.rp-login-page').getByRole('button', {name: 'Sign in', exact: true}),
+    async setup(page: Page) {
+      await page.addInitScript(() => {
+        localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
+        localStorage.setItem('doona-profile', 'demo');
+      });
+    }
+  },
+  {
+    // The first visit to a password-protected honk: no profile until discovery saves one. At phone width, since from
+    // 1024 px the sidebar's widget panel shares the Activity chunk.
+    name: 'a hosted backend on first visit',
+    pages: ['activity', ...pageChunks],
+    viewport: {width: 390, height: 844},
+    ready: (page: Page) => page.getByRole('heading', {name: 'Token required'}),
+    async setup(page: Page) {
+      await page.route('**/api', route => route.fulfill(challenge));
+      await page.route('**/api/v1/**', route => route.fulfill(challenge));
+    }
+  }
+];
+
+for (const {name, pages, viewport, ready, setup} of signInPages) {
+  test(`the sign-in page for ${name} requests no page chunks before sign-in`, async ({browser}) => {
+    const context = await browser.newContext({serviceWorkers: 'block', viewport});
+    const page = await context.newPage();
+    await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
+    await setup(page);
+    const requested: string[] = [];
+    page.on('request', request => {
+      // Rollup names a chunk [name]-[hash].js with an eight-character base64url hash, which may itself contain '-'.
+      const chunk = /\/assets\/([^/]+)-[\w-]{8}\.js$/.exec(new URL(request.url()).pathname)?.[1];
+      if (chunk && pages.includes(chunk)) requested.push(chunk);
+    });
+    try {
+      await page.goto('/#/activity');
+      await expect(ready(page)).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      // Past the idle warm-up's first two deadlines, which a signed-in shell would have used for search and Overview.
+      await page.waitForTimeout(6500);
+      expect(requested).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+}
 
 test('a stale chunk whose reload is cancelled says doona was updated, and so does the next one', async ({browser}) => {
   const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1440, height: 1100}});

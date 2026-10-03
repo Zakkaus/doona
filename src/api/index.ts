@@ -1,7 +1,7 @@
 import type {Api} from './api';
 import {createApi} from './client';
 import {createServerClock, selectServerClock} from './serverClock';
-import {isDemoApi, pinnedProfile, storageRevision, touchStorage} from './profiles';
+import {isDemoApi, pinnedProfile, storageRevision, touchStorage, type Profile} from './profiles';
 import {sessionToken} from './session';
 
 let selected: Api | undefined;
@@ -20,13 +20,20 @@ export async function initializeApi(): Promise<Api> {
 // Whether this page loaded the mock backend at startup, so the service worker keeps it for offline use.
 export const startedOnMock = () => mockFactory !== undefined;
 
+// A password session opened in this tab takes the place of the profile's configured bearer.
+const credential = (profile: Profile | undefined) => (profile?.api ? sessionToken(profile.id, profile.api) : null) ?? profile?.token;
+// Whether this tab holds a bearer: a password session in this tab or the profile's configured one.
+export const holdsCredential = () => !!credential(pinnedProfile());
+// Whether this tab expects to be let in before the backend has answered: it holds a bearer, or it has no profile and
+// runs the built-in demo, which asks for none. Read it after detectHostedBackend, which gives a hosted backend a profile.
+export const expectsAccess = () => !pinnedProfile() || holdsCredential();
+
 export function getApi(): Api {
   if (selected && checked === storageRevision()) return selected;
   // Another tab editing or deleting this tab's profile does not move this tab: it keeps that backend until it is reloaded.
   const profile = pinnedProfile();
   const base = profile?.api;
-  // A password session opened in this tab takes the place of the profile's configured bearer.
-  const token = (profile && base ? sessionToken(profile.id, base) : null) ?? profile?.token;
+  const token = credential(profile);
   const key = JSON.stringify([profile?.id, base, token]);
   if (!selected || configuration !== key) {
     if (!isDemoApi(base)) {

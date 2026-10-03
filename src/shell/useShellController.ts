@@ -8,7 +8,7 @@ import type {SettingsContext} from './preferences';
 import {FONT, LANGS, languages, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
 import {isMac, useSlider} from '../ui/hooks';
-import {features, warmAllPages} from './registry';
+import {features} from './registry';
 import {searchDialog} from './search/load';
 import {parseHash, useRoute} from './route';
 import {useAppearance} from './useAppearance';
@@ -103,7 +103,6 @@ export function useShellController(initial: Lang) {
     const [face] = languages.find(language => language.id === lang)!.faces;
     if (face) document.fonts?.load(`14px '${face}'`, sample).catch(() => {});
   }, [lang]);
-  useEffect(warmAllPages, []);
   // react-aria tracks elements with a running CSS transition until transitionend or transitioncancel, which a removed
   // element never receives, so a page left mid-transition would keep its detached tree. runAfterTransition drops
   // disconnected entries first. It is a private export: react-aria is pinned, so recheck this path on upgrade.
