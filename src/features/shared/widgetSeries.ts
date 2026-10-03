@@ -4,6 +4,8 @@ import {mean, window, type Fold, type Rings} from '../../api/rings';
 import {useRings} from '../../store/rings';
 import {ResourcePreview} from '../../store/preview';
 import {healthMillis, preferredHealth} from '../../api/selectors';
+import type {Translator} from '../../i18n';
+import type {ChartFact} from '../../ui/charts';
 export type CpuSample = {time: number; value: number | null};
 export const cpuSample = (runtime: Runtime): CpuSample | undefined => {
   const time = Date.parse(runtime.observed_at);
@@ -45,4 +47,16 @@ export function thin<T extends CpuSample>(samples: T[], fold: Fold<T>): T[] {
 export function sparkWindow<T extends CpuSample>(rings: Rings<T>, windowSeconds: number, fold: Fold<T>) {
   const samples = thin(window(rings, [], windowSeconds, fold, undefined, Infinity).samples, fold);
   return {timestamps: samples.map(sample => sample.time), values: samples.map(sample => sample.value)};
+}
+
+// A wide chart's statistics column: each series' peak and average over the samples the chart draws.
+export function seriesFacts(series: {label: string; values: (number | null)[]}[], fmt: (value: number) => string, t: Translator): ChartFact[] {
+  return series.flatMap(({label, values}) => {
+    const known = values.filter((value): value is number => value !== null);
+    const [peak, average] = known.length ? [Math.max(...known), known.reduce((sum, value) => sum + value, 0) / known.length].map(fmt) : ['—', '—'];
+    return [
+      {label: t('widgets.peak', {series: label}), value: peak},
+      {label: t('widgets.average', {series: label}), value: average}
+    ];
+  });
 }
