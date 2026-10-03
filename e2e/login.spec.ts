@@ -163,6 +163,34 @@ test.describe('the demo', () => {
       await expect(page.locator('.rp-login-showcase')).toHaveCount(0);
       await expect(page.locator('canvas')).toHaveCount(0);
     });
+
+    // The game sizes its canvas from its panel, so the panel takes the viewport's height and never the canvas's: the page
+    // stays one viewport tall while the scene plays and after the window is resized.
+    test('keeps the page one viewport tall while the game plays and the window resizes', async ({page}) => {
+      await page.clock.install();
+      await page.setViewportSize({width: 1440, height: 900});
+      await page.goto('/#/activity');
+      const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
+      await expect(game.locator('canvas')).toBeVisible();
+      const height = () => page.evaluate(() => document.documentElement.scrollHeight);
+      await game.click();
+      for (let second = 0; second < 10; second++) {
+        await page.clock.runFor(1000);
+        expect(await height()).toBe(900);
+      }
+      for (const viewport of [
+        {width: 1440, height: 720},
+        {width: 1920, height: 720},
+        {width: 1920, height: 1000},
+        {width: 1280, height: 1000}
+      ]) {
+        await page.setViewportSize(viewport);
+        await page.clock.runFor(1000);
+        await expect.poll(height).toBe(viewport.height);
+        await page.clock.runFor(1000);
+        expect(await height()).toBe(viewport.height);
+      }
+    });
   });
 });
 

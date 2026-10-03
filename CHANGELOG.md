@@ -45,6 +45,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
+- The sign-in page stays one window tall on wide screens. The mini game panel beside the form could hold the page at an earlier window height, or make it taller after each resize or zoom, so the page scrolled and the form moved down.
 - The sign-in page has the language menu, palette menu and light and dark toggle again in its top corner, in place of the link to Appearance settings, so the page can be switched before signing in. The three use the top bar's quiet icon buttons at the same size.
 - Open action menus keep their items in place when late configuration reads make another action available, so a Remove click cannot open Edit instead. Reopening shows the newly available actions.
 - Keyboard focus rings clear chart legends and list labels and stay inside clipped navigation, menus and table boundaries. Backend feature labels retain wrapping inside the padded focus targets. Text fields and their reveal controls no longer draw doubled rings. Checkbox lists scroll focused controls into view. (#375)

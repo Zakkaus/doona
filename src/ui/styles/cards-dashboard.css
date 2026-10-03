@@ -160,6 +160,10 @@
   --rp-mark-paper: #fff;
   --rp-mark-yellow: #fd0;
   min-width: 0;
+  /* One viewport tall, whatever it draws. The game sizes its canvas from the box it is given (see loginGame.ts), so a
+     canvas allowed to size the page row would keep the page at its last height, and a step taller on every resize. */
+  height: 100dvh;
+  contain: size;
   background: var(--rp-base);
 }
 /* The showcase is a game surface, not a link: the default cursor, and presses must not select text or zoom on double
