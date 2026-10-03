@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {controlLayout, fills, tileLayouts, type Box} from './packing';
+import {controlLayout, fills, fitSpans, tileLayouts, type Box} from './packing';
 
 const box = (left: number, right: number, top: number, bottom: number, band?: string): Box => ({left, right, top, bottom, band});
 
@@ -95,5 +95,25 @@ describe('tileLayouts', () => {
     ]
   ])('%s', (_, tiles, expected) => {
     expect(tileLayouts(tiles)).toEqual(expected);
+  });
+});
+
+describe('fitSpans', () => {
+  const card = (natural: number, width: number) => ({natural, width});
+  it.each([
+    // Mode, global and status on a 3:2:2 row: each gets its line, then the spare 49px by three, two and two sevenths.
+    ['lines first, then the rest by footprint', [card(426, 450), card(318, 300), card(257, 300)], [178, 133, 109]],
+    ['no lines share the row by footprint alone', [card(0, 450), card(0, 300), card(0, 300)], [179, 121, 120]],
+    ['an equal pair shares its spare width equally', [card(300, 300), card(100, 300)], [277, 143]],
+    ['a line just wider than its footprint takes from its neighbour', [card(301, 300), card(290, 300)], [214, 206]],
+    ['lines wider than the row fit none', [card(426, 319), card(318, 213), card(257, 213)], undefined]
+  ])('%s', (_, cards, expected) => {
+    const spans = fitSpans(cards, 12);
+    expect(spans).toEqual(expected);
+    if (!spans) return;
+    // Every card holds its line and the spans fill the row.
+    const unit = (cards.reduce((sum, item) => sum + item.width, 0) + cards.length * 12) / 420;
+    expect(spans.reduce((sum, span) => sum + span, 0)).toBe(420);
+    spans.forEach((span, i) => expect(span * unit - 12).toBeGreaterThanOrEqual(cards[i].natural));
   });
 });
