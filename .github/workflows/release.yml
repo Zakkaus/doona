@@ -12,7 +12,30 @@ env:
   NFPM_SHA256: 0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
 
 jobs:
+  # A tag points at a commit that main's Check already ran the browser suite on, so the release waits for that run
+  # instead of repeating the suite serially.
+  verified:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Require a successful Check run for this commit
+        run: |
+          runs="repos/${GITHUB_REPOSITORY}/actions/workflows/check.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1"
+          id=$(gh api "$runs" --jq '.workflow_runs[0].id // empty')
+          [ -n "$id" ] || { echo "::error::Check has no push run for ${GITHUB_SHA}; tag a commit that is on main." >&2; exit 1; }
+          if [ "$(gh run view "$id" --json status --jq .status)" != completed ]; then
+            gh run watch "$id" --interval 30 > /dev/null
+          fi
+          conclusion=$(gh run view "$id" --json conclusion --jq .conclusion)
+          [ "$conclusion" = success ] || { echo "::error::Check run $id for ${GITHUB_SHA} ended as '$conclusion'." >&2; exit 1; }
+
   build:
+    needs: [verified]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,10 +72,6 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - run: pnpm check:size
-      - run: pnpm e2e:install --with-deps
-      - run: pnpm exec playwright test
-        env:
-          DOONA_E2E_WEBKIT: '1'
       - run: tools/package.sh --git-version
       - name: Install nfpm
         run: |

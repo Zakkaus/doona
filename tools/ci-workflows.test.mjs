@@ -18,11 +18,13 @@ it('keeps the release write token away from dependency and build steps', () => {
   expect(uses(publish, 'actions/download-artifact').with.name).toBe(uses(build, 'actions/upload-artifact').with.name);
 });
 
-it('builds the release once and runs the browser tests against that build', () => {
+it('builds the release once, after the Check run on the tagged commit passed', () => {
   const commands = release.jobs.build.steps.map(step => step.run);
   expect(commands.filter(command => command === 'pnpm build')).toHaveLength(1);
-  expect(commands).not.toContain('pnpm e2e');
-  expect(commands.indexOf('pnpm build')).toBeLessThan(commands.indexOf('pnpm exec playwright test'));
+  expect(commands.some(command => /playwright|pnpm e2e/.test(command ?? ''))).toBe(false);
+  expect(release.jobs.build.needs).toContain('verified');
+  expect(release.jobs.verified.permissions).toEqual({actions: 'read'});
+  expect(release.jobs.verified.steps.map(step => step.run ?? '').join('\n')).toMatch(/check\.yml/);
 });
 
 it.each(['VERSION', 'PRERELEASE', 'ARCH_PRERELEASE', 'NPM', 'PACKAGE_RELEASE'])('hands %s from the build job to the release job', key => {
