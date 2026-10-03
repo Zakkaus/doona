@@ -1,8 +1,9 @@
 // Usage: node tools/screenshots.mjs [URL] [DIR]; captures README pages in each language plus light/dark activity views.
-// Also builds a palette sheet, the English theme gallery, and per language the phone strip, the page tour stills and
-// the routing animation (cwebp and img2webp), all from mock-backed screenshots.
+// Also builds a palette sheet, the English theme gallery, and per language the phone strip, the page tour stills, the
+// routing animation and the docs stills of the dashboard, widgets and config views (cwebp and img2webp), all from
+// mock-backed screenshots.
 import {execFileSync} from 'node:child_process';
-import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
@@ -97,7 +98,8 @@ async function screenshot(page, path, options = {}, lossy = false) {
   const png = await page.screenshot(options);
   execFileSync('cwebp', ['-quiet', ...(lossy ? ['-q', '78'] : ['-lossless', '-z', '9']), '-o', path + '.webp', '--', '-'], {input: png});
 }
-async function openPage(browser, lang, route, ready, options = {}) {
+// `live` keeps the real clock, which the activity charts need to gather samples; `widgets` keeps the default panel.
+async function openPage(browser, lang, route, ready, options = {}, {live = false, widgets = false} = {}) {
   const context = await browser.newContext({
     viewport: {width: 1280, height: 900},
     colorScheme: 'light',
@@ -106,20 +108,31 @@ async function openPage(browser, lang, route, ready, options = {}) {
     timezoneId: 'UTC',
     ...options
   });
-  await context.clock.setFixedTime(fixedTime);
+  if (!live) await context.clock.setFixedTime(fixedTime);
   await context.addInitScript(signInDemo);
-  await context.addInitScript(lang => {
-    localStorage.setItem('doona-lang', lang);
-    localStorage.setItem('doona-scheme', 'light');
-    localStorage.setItem('doona-palette', 'rose-pine/moon');
-    localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
-  }, lang);
+  await context.addInitScript(
+    ([lang, widgets]) => {
+      localStorage.setItem('doona-lang', lang);
+      localStorage.setItem('doona-scheme', 'light');
+      localStorage.setItem('doona-palette', 'rose-pine/moon');
+      if (!widgets) localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
+    },
+    [lang, widgets]
+  );
   const page = await context.newPage();
   await page.goto(`${baseURL}/${route}`);
   await page.locator(ready).first().waitFor();
   await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
   await page.evaluate(() => document.fonts.ready);
   return page;
+}
+// The CPU and latency tiles draw their trend only once the mock has given them a few samples.
+async function samples(page) {
+  await page.waitForFunction(() =>
+    ['cpu', 'latency'].every(id =>
+      /\d[LC]/.test(document.querySelector(`.rp-dashboard-cell[data-instance="${id}"] .rp-activity-surface path`)?.getAttribute('d') ?? '')
+    )
+  );
 }
 // The content panel from its top edge to 12px below the element `until`.
 async function panelClip(page, until) {
@@ -249,6 +262,242 @@ async function recordPhones(browser, lang, path) {
   execFileSync('cwebp', ['-quiet', '-q', '84', '-alpha_q', '100', '-o', path + '.webp', '--', '-'], {input: png});
   await sheet.close();
 }
+// Desktop stills side by side with an arrow between them, each with its caption when given, laid out like the phones.
+async function strip(browser, shots, captions, path) {
+  const arrow =
+    '<svg width="28" height="28" viewBox="0 0 28 28"><path d="M4 14h18m-7-7 7 7-7 7" fill="none" stroke="#575279" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const sheet = await browser.newPage({viewport: {width: 600, height: 400}, deviceScaleFactor: 1.5});
+  await sheet.setContent(`<!doctype html><style>
+    body { margin: 0; padding: 12px; background: transparent; font: 500 16px/1.3 system-ui, sans-serif; color: #575279; }
+    main { display: flex; align-items: center; gap: 12px; width: max-content; }
+    figure { margin: 0; } figcaption { margin-top: 10px; text-align: center; }
+    img { display: block; width: 720px; height: 460px; border-radius: 10px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.16); }
+    svg { flex: none; margin-bottom: ${captions ? 30 : 0}px; }
+  </style><main>${shots
+    .map((png, i) => `<figure><img src="data:image/png;base64,${png.toString('base64')}">${captions ? `<figcaption>${captions[i]}</figcaption>` : ''}</figure>`)
+    .join(arrow)}</main>`);
+  await sheet.waitForTimeout(500);
+  const png = await sheet.locator('main').screenshot({omitBackground: true});
+  execFileSync('cwebp', ['-quiet', '-q', '84', '-alpha_q', '100', '-o', path + '.webp', '--', '-'], {input: png});
+  await sheet.close();
+}
+const desktop = {viewport: {width: 1440, height: 920}};
+const messages = lang => JSON.parse(readFileSync(new URL(`../src/i18n/locales/${lang}.json`, import.meta.url), 'utf8'));
+const captions = {
+  'widgets-states': {
+    en: ['Unpinned: open', 'Another page: collapsed', 'Pinned: unchanged on another page', 'Docked in the sidebar'],
+    'zh-CN': ['未固定：展开', '切换页面后收起', '已固定：切换页面后保持原状', '嵌入侧边栏'],
+    'zh-TW': ['未固定：展開', '切換頁面後收合', '已固定：切換頁面後保持原狀', '嵌入側邊欄']
+  }
+};
+// The sign-in pane, after `fill`, for a backend that answers discovery with `auth` and refuses every other read without
+// a session. The showcase beside it stays out: it is a placeholder.
+async function signIn(browser, lang, auth, fill = async () => {}) {
+  const context = await browser.newContext({...desktop, colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block', timezoneId: 'UTC'});
+  await context.addInitScript(lang => {
+    localStorage.setItem('doona-lang', lang);
+    localStorage.setItem('doona-scheme', 'light');
+    localStorage.setItem('doona-palette', 'rose-pine/moon');
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: ''}]));
+    localStorage.setItem('doona-profile', 'home');
+  }, lang);
+  const password = auth.mode === 'password';
+  const links = {auth_setup: password ? '/api/v1/auth/setup' : null, auth_login: password ? '/api/v1/auth/login' : null};
+  await context.route(/\/api$/, route => route.fulfill({json: {name: 'daeuniverse/native', api_major: 1, links, auth}}));
+  await context.route(/\/api\/v1\//, route =>
+    route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Authentication required', details: null}, request_id: 'r'}})
+  );
+  const page = await context.newPage();
+  await page.goto(`${baseURL}/#/activity`);
+  await page.locator('.rp-login-page form input').first().waitFor();
+  await page.evaluate(() => document.fonts.ready);
+  await fill(page);
+  const png = await page.locator('.rp-login-pane').screenshot();
+  await context.close();
+  return png;
+}
+// A choice in a dashboard card's settings: a segmented option when it fits the popover, otherwise its picker.
+async function pick(page, label, option) {
+  const dialog = page.getByRole('dialog').first();
+  const radio = dialog.getByRole('radio', {name: option, exact: true});
+  if (await radio.isVisible()) return radio.click();
+  await dialog.getByRole('button', {name: new RegExp(`${label}$`)}).click();
+  await page.getByRole('option', {name: option, exact: true}).click();
+}
+async function editDashboard(browser, lang, t) {
+  const page = await openPage(browser, lang, '#/activity', '.rp-donut path', desktop, {live: true});
+  await samples(page);
+  await page.getByRole('button', {name: t['dashboard.edit'], exact: true}).click();
+  return page;
+}
+async function openGallery(page, t) {
+  await page.getByRole('button', {name: t['widgets.gallery'], exact: true}).click();
+  await page.locator('.rp-widget-gallery-tile').first().waitFor();
+}
+async function widgetEditor(browser, lang, t) {
+  const page = await openPage(browser, lang, '#/activity', '.rp-donut path', desktop, {live: true, widgets: true});
+  await samples(page);
+  await page.locator('.rp-floating-panel').getByRole('button', {name: t['widgets.panelOptions'], exact: true}).click();
+  await page.getByRole('menuitem', {name: t['widgets.edit'], exact: true}).click();
+  await page.locator('.rp-widget-preview .rp-sortable-row').first().waitFor();
+  return page;
+}
+// Each capture returns its stills; one is saved as it is, more become a strip.
+const captures = [
+  ['login-setup', async (browser, lang) => [await signIn(browser, lang, {mode: 'password', setup_required: true})]],
+  [
+    'login-token',
+    async (browser, lang, t) => [
+      await signIn(browser, lang, {mode: 'token'}, page => page.getByLabel(t['login.token'], {exact: true}).fill('demo-token-0000-0000'))
+    ]
+  ],
+  [
+    'search-settings',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/activity', '.rp-donut path', desktop, {live: true});
+      await samples(page);
+      await page.keyboard.press('Control+K');
+      const dialog = page.locator('.rp-dialog');
+      await dialog.locator('input').fill(t['ui.palette']);
+      const hit = dialog.getByRole('option', {name: new RegExp(`^${t['ui.palette']}`)}).first();
+      await hit.waitFor();
+      const first = await page.screenshot();
+      await hit.click();
+      await page.locator('[data-setting="palette"] button:focus').waitFor();
+      return [first, page];
+    }
+  ],
+  [
+    'dashboard-settings',
+    async (browser, lang, t) => {
+      const page = await editDashboard(browser, lang, t);
+      await page.locator('.rp-dashboard-cell[data-instance="download"]').getByRole('button', {name: t['widgets.inspector'], exact: true}).click();
+      await pick(page, t['dashboard.width'], '1/3');
+      await pick(page, t['dashboard.height'], t['dashboard.height.tall']);
+      await page.waitForTimeout(300);
+      return [page];
+    }
+  ],
+  [
+    'dashboard-gallery',
+    async (browser, lang, t) => {
+      const page = await editDashboard(browser, lang, t);
+      await openGallery(page, t);
+      return [page];
+    }
+  ],
+  [
+    'dashboard-speed-area',
+    async (browser, lang, t) => {
+      const page = await editDashboard(browser, lang, t);
+      await openGallery(page, t);
+      await page.locator(".rp-widget-gallery-tile[data-module='speed'] button").first().click();
+      await page.getByRole('dialog', {name: t['widgets.gallery']}).getByRole('button', {name: t['ui.close'], exact: true}).click();
+      const card = page.locator(".rp-dashboard-cell[data-module='speed']").first();
+      // The card ends the page; at the bottom of the view its settings open above it and leave its chart in sight.
+      await card.evaluate(node => node.scrollIntoView({block: 'end'}));
+      await card.getByRole('button', {name: t['widgets.inspector'], exact: true}).click();
+      await pick(page, t['widgets.form'], t['dashboard.form.area']);
+      await card.evaluate(node => node.scrollIntoView({block: 'end'}));
+      await page.waitForTimeout(300);
+      return [page];
+    }
+  ],
+  ['widgets-editor', async (browser, lang, t) => [await widgetEditor(browser, lang, t)]],
+  [
+    'widgets-speed-settings',
+    async (browser, lang, t) => {
+      const page = await widgetEditor(browser, lang, t);
+      await page.locator('.rp-widget-preview .rp-sortable-row').first().click();
+      await page.locator('.rp-widget-inspector button').first().waitFor();
+      return [page];
+    }
+  ],
+  [
+    'widgets-states',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/activity', '.rp-donut path', desktop, {live: true, widgets: true});
+      await samples(page);
+      const panel = page.locator('.rp-floating-panel');
+      const button = name => panel.getByRole('button', {name: t[name], exact: true});
+      const visit = async (route, ready) => {
+        await page.evaluate(route => (location.hash = route), route);
+        await page.locator(ready).first().waitFor();
+        await page.waitForTimeout(400);
+      };
+      if (await button('widgets.unpin').isVisible()) await button('widgets.unpin').click();
+      await page.mouse.move(720, 460);
+      const shots = [await page.screenshot()];
+      await visit('#/dns', '.rp-waffle');
+      await button('widgets.expand').waitFor();
+      shots.push(await page.screenshot());
+      await button('widgets.expand').click();
+      await button('widgets.pin').click();
+      await visit('#/activity', '.rp-donut path');
+      await visit('#/dns', '.rp-waffle');
+      await button('widgets.collapse').waitFor();
+      await page.mouse.move(720, 460);
+      shots.push(await page.screenshot());
+      await button('widgets.panelOptions').click();
+      await page.getByRole('menuitem', {name: t['widgets.dock'], exact: true}).click();
+      await page.locator('.rp-side-dock .rp-widget').first().waitFor();
+      await page.waitForTimeout(400);
+      shots.push(await page.screenshot());
+      await page.context().close();
+      return shots;
+    }
+  ],
+  [
+    'config-diagnostics',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/config?tab=source&source=src-rules', '.cm-content[contenteditable=true]', desktop);
+      await page.locator('.cm-content[contenteditable=true]').click();
+      await page.keyboard.press('ControlOrMeta+End');
+      for (const line of ['domain(example.com) -> missing_group', 'example.org -> direct', 'not a rule']) {
+        await page.keyboard.press('Enter');
+        await page.keyboard.insertText(line);
+      }
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', {name: t['config.validate'], exact: true}).click();
+      await page.getByRole('list', {name: t['config.diagnostics']}).getByRole('listitem').first().waitFor();
+      // The toast that repeats the count would cover the marked lines.
+      await page.locator('.rp-toast button').first().click();
+      await page.locator('.rp-toast').waitFor({state: 'detached'});
+      return [page];
+    }
+  ],
+  [
+    'settings-geodata',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/settings?card=geodata', '.rp-main', desktop);
+      const region = page.getByRole('region', {name: t['settings.geodata'], exact: true});
+      await region.getByRole('button', {name: t['settings.geodataDetails']}).click();
+      await region.locator('.rp-table').last().waitFor();
+      await region.scrollIntoViewIfNeeded();
+      return [page];
+    }
+  ],
+  ['rules-advanced', async (browser, lang) => [await openPage(browser, lang, '#/rules?tab=list&view=advanced', '.rp-table [role=row] >> nth=2', desktop)]],
+  ['rules-dns', async (browser, lang) => [await openPage(browser, lang, '#/rules?tab=dns', '.rp-table [role=row] >> nth=2', desktop)]],
+  [
+    'node-actions',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/nodes?provider=inline', '.rp-table [role=row] >> nth=2', desktop);
+      const row = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})});
+      await page.getByRole('rowheader', {name: 'hk-01', exact: true}).click();
+      // The selected node's probe results sit under the table; the view grows just enough to show them.
+      const details = page.getByRole('region', {name: t['nodes.details'], exact: true});
+      await details.getByText(t['nodes.probeKinds'], {exact: true}).waitFor();
+      const box = await details.boundingBox();
+      await page.setViewportSize({width: 1440, height: Math.max(920, Math.ceil(box.y + box.height + 24))});
+      await row.getByRole('button', {name: t['nodes.actions'], exact: true}).click();
+      await page.getByRole('menuitem', {name: t['nodes.addToGroup'], exact: true}).click();
+      await page.getByRole('menu', {name: t['nodes.addToGroup'], exact: true}).waitFor();
+      await page.waitForTimeout(300);
+      return [page];
+    }
+  ]
+];
 const browser = await chromium.launch();
 try {
   const tiles = [];
@@ -276,6 +525,7 @@ try {
     await page.locator('.rp-donut path').first().waitFor();
     await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
     await page.evaluate(() => document.fonts.ready);
+    await samples(page);
     tiles.push(await page.screenshot());
     if (gallery.has(label)) await screenshot(page, join(dir, 'en', `theme-${gallery.get(label)}`), {}, true);
     await context.close();
@@ -311,6 +561,7 @@ try {
       await page.locator(ready).first().waitFor();
       await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
       await page.evaluate(() => document.fonts.ready);
+      if (name === 'activity') await samples(page);
       await screenshot(page, join(dir, lang, `${name}-${scheme}`));
       await context.close();
     }
@@ -321,6 +572,16 @@ try {
     }
     await recordPhones(browser, lang, join(dir, lang, 'phone'));
     await recordRouting(browser, lang, join(dir, lang, 'routing'));
+    const t = messages(lang);
+    for (const [name, capture] of captures) {
+      const stills = await capture(browser, lang, t);
+      const pngs = [];
+      for (const still of stills) pngs.push(Buffer.isBuffer(still) ? still : await still.screenshot());
+      for (const still of new Set(stills.filter(still => !Buffer.isBuffer(still)))) await still.context().close();
+      const path = join(dir, lang, name);
+      if (pngs.length > 1) await strip(browser, pngs, captions[name]?.[lang], path);
+      else execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', '-o', path + '.webp', '--', '-'], {input: pngs[0]});
+    }
   }
 } finally {
   await browser.close();
