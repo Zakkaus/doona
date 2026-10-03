@@ -25,13 +25,12 @@ export function Tabs({
   // Controls at the end of the tab row, such as a filter for the panel shown; they wrap under the tabs on a phone.
   // Passing the prop, even as null, keeps the row, so the tab bar is not remounted when the controls come and go.
   actions?: ReactNode;
-  // A page's own tab row: its tabs and controls are L, as page toolbars are.
+  // A page's own tab row, measured as one of the page's toolbars. Its tabs are M, S2's compact Tabs height (32px).
   page?: boolean;
 }) {
   // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
-  const inherited = useControlSize();
-  const controlSize = page ? 'L' : inherited;
+  const controlSize = useControlSize();
   // On a phone the bar scrolls: the selected tab stays in view and a faded end shows there are more tabs.
   useScrollStrip(ref, value);
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a

@@ -3,8 +3,9 @@ import {expect, loadCatalogues, mockBackend, routes, settle, settleFrames, test}
 import {translate} from '../src/i18n';
 import {defaultWidget, defaults, type Layout} from '../src/shell/widgets/layout';
 
-// Every segmented control is S2 size L (40px, on a phone too), its selected item fills it, and every control on its row
-// is as tall and centred on the same line, on every page, in the widget panel and while editing the dashboard.
+// Every segmented control is S2's default M (32px, the touch height on a phone), its selected item fills it, and every
+// control on its row is as tall and centred on the same line, on every page, in the widget panel and while editing the
+// dashboard.
 test.beforeAll(loadCatalogues);
 const t = (key: Parameters<typeof translate>[1]) => translate('zh-TW', key);
 // The default panel with a group switch, whose network choice is a segmented control too.
@@ -17,7 +18,7 @@ const save = (page: Page, layout: Layout) =>
 // Failures for every segmented control under the scope; how many were measured comes back so a scope cannot pass empty.
 async function segmentedGeometry(scope: Locator) {
   return scope.evaluate(root => {
-    const large = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control-lg'));
+    const control = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control'));
     const rows = '.rp-toolbar, .rp-tabhead, .rp-page-actions, .rp-row, .rp-cluster, .rp-field-row';
     const controls = '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-switch, .rp-tab, .rp-segfit';
     const failures: string[] = [];
@@ -32,11 +33,11 @@ async function segmentedGeometry(scope: Locator) {
       const shown = collapsed ? fit.querySelector<HTMLElement>('.rp-segpick .rp-selectbtn')! : seg;
       const box = shown.getBoundingClientRect();
       measured++;
-      if (off(seg.getBoundingClientRect().height, large)) failures.push(`${name}: track ${seg.getBoundingClientRect().height}`);
-      if (off(box.height, large)) failures.push(`${name}: shown ${box.height}`);
+      if (off(seg.getBoundingClientRect().height, control)) failures.push(`${name}: track ${seg.getBoundingClientRect().height}`);
+      if (off(box.height, control)) failures.push(`${name}: shown ${box.height}`);
       if (!collapsed) {
         const selected = seg.querySelector<HTMLElement>('.rp-btn[data-selected]')!.getBoundingClientRect();
-        if (off(selected.height, large) || off(selected.top, box.top)) failures.push(`${name}: selected ${selected.top} ${selected.height}`);
+        if (off(selected.height, control) || off(selected.top, box.top)) failures.push(`${name}: selected ${selected.top} ${selected.height}`);
       }
       const centre = box.top + box.height / 2;
       for (let row = fit.parentElement?.closest<HTMLElement>(rows); row; row = row.parentElement?.closest<HTMLElement>(rows)) {
@@ -92,13 +93,13 @@ for (const [width, phone] of [
       await page.goto('/#/activity');
       await settle(page);
       await expectSegmented(page.locator('.rp-content'), 'activity', 2);
-      // The control cards share one row with the outbound mode switch, so each of their controls is L.
-      const large = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control-lg')));
+      // The control cards share one row with the outbound mode switch, so each of their controls is M.
+      const control = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control')));
       const heights = await page
         .locator('.rp-control-card :is(.rp-btn, .rp-selectbtn, .rp-seg):not(.rp-seg .rp-btn)')
         .evaluateAll(nodes => nodes.filter(node => node.checkVisibility()).map(node => node.getBoundingClientRect().height));
       expect(heights.length).toBeGreaterThanOrEqual(3);
-      expect(heights.filter(height => Math.abs(height - large) > 0.5)).toEqual([]);
+      expect(heights.filter(height => Math.abs(height - control) > 0.5)).toEqual([]);
       await page.getByRole('button', {name: t('dashboard.edit'), exact: true}).click();
       await expect(page.locator('.rp-dashboard-tools').first()).toBeVisible();
       await settleFrames(page);
