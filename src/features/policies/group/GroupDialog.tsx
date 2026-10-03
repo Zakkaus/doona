@@ -1,11 +1,11 @@
 import {IncludesEditor} from './IncludesEditor';
 import {useId} from 'react';
-import {useT} from '../../i18n';
-import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ProblemAlert, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
-import {LabeledSelect} from '../../ui/Picker';
-import {SearchSelect} from '../../ui/SearchSelect';
+import {useT} from '../../../i18n';
+import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ProblemAlert, ModalDialog, Switch, TextField, type KvItem} from '../../../ui/ui';
+import {LabeledSelect} from '../../../ui/Picker';
+import {SearchSelect} from '../../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
-import {policyChoices} from './policyText';
+import {policyChoices} from '../../shared/policyText';
 import {FilterSummary} from './FilterSummary';
 export type PolicyDetails = {
   fields: KvItem[];

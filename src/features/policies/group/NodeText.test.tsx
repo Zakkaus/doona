@@ -2,7 +2,7 @@ import {expect, it, vi} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {NodeText} from './NodeText';
 
-vi.mock('../../ui/NodeName', () => ({NodeName: ({name}: {name: string}) => name}));
+vi.mock('../../../ui/NodeName', () => ({NodeName: ({name}: {name: string}) => name}));
 
 it('keeps placeholder-like group and node names intact', () => {
   expect(

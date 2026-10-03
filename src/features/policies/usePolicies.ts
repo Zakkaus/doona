@@ -10,9 +10,9 @@ import {sameHealth} from './health';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
-import {openGroup} from '../shared/openGroup';
+import {openGroup} from './group/openGroup';
 import {useNearViewport} from '../../ui/ui';
-import {useGroupDialog} from '../shared/useGroupDialog';
+import {useGroupDialog} from './group/useGroupDialog';
 import {quoteName, isWritableName} from '../../dae/groups';
 import {useT} from '../../i18n';
 

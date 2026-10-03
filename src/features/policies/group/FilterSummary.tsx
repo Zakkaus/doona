@@ -1,8 +1,8 @@
-import {describeFilters} from '../../dae/groups';
-import {useT} from '../../i18n';
-import {Tag, Tags, LinkTag} from '../../ui/ui';
-import {href} from '../../shell/route';
-import {DaeCode} from '../../ui/DaeCode';
+import {describeFilters} from '../../../dae/groups';
+import {useT} from '../../../i18n';
+import {Tag, Tags, LinkTag} from '../../../ui/ui';
+import {href} from '../../../shell/route';
+import {DaeCode} from '../../../ui/DaeCode';
 
 export function FilterSummary({filters, showRules = true}: {filters: string[]; showRules?: boolean}) {
   const t = useT();

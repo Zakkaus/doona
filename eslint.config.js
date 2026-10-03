@@ -156,7 +156,7 @@ export default [
   },
   {
     // Single-consumer collection compositions; one moves into src/ui when a second consumer appears.
-    files: ['src/features/flows/Tree.tsx', 'src/shell/search/SearchDialog.tsx'],
+    files: ['src/features/flows/Tree.tsx', 'src/features/policies/NodeGrid.tsx', 'src/shell/search/SearchDialog.tsx'],
     rules: {'@typescript-eslint/no-restricted-imports': 'off'}
   },
   {

@@ -1,7 +1,7 @@
 import {probeFallbackNotice} from '../shared/probe';
 import type {ProbeOptions} from '../../store/probeOptions';
 import {href} from '../../shell/route';
-import {selectedIncludeLabels, selectedIncludes, recogniseInclude} from '../shared/groupIncludes';
+import {selectedIncludeLabels, selectedIncludes, recogniseInclude} from './group/groupIncludes';
 import {quoteName, isWritableName} from '../../dae/groups';
 import {useEffect, useEffectEvent, useMemo, useState} from 'react';
 import {useT, useLang} from '../../i18n';
@@ -10,7 +10,7 @@ import type {GroupSummary, HealthObservation, Node, Provider} from '../../api/mo
 import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, selectionSummary, probeSummary, untestedHelp} from './view';
-import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
+import {useGroupDialog, type PolicyDeclaration} from './group/useGroupDialog';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';

@@ -1,7 +1,7 @@
 import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
 import Edit from '../../ui/icons/Edit';
 import AddCircle from '../../ui/icons/AddCircle';
-import {FilterSummary} from '../shared/FilterSummary';
+import {FilterSummary} from './group/FilterSummary';
 import {
   createContext,
   Fragment,
@@ -41,14 +41,14 @@ import {
 } from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
 import {NodeName} from '../../ui/NodeName';
-import {NodeText} from '../shared/NodeText';
+import {NodeText} from './group/NodeText';
 import {NodeGrid} from './Nodes';
-import {GroupDialog} from '../shared/GroupDialog';
+import {GroupDialog} from './group/GroupDialog';
 import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
-import {useGroupDialog, type PolicyDeclaration} from '../shared/useGroupDialog';
+import {useGroupDialog, type PolicyDeclaration} from './group/useGroupDialog';
 import type {MainSourceEdit} from '../../store/mainSource';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {isWritableName, quoteName} from '../../dae/groups';

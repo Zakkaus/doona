@@ -1,5 +1,5 @@
 import {Fragment} from 'react';
-import {NodeName} from '../../ui/NodeName';
+import {NodeName} from '../../../ui/NodeName';
 
 export function NodeText({text, names}: {text: string; names: Array<{name: string; nodeName: boolean}>}) {
   return text.split(/(\{\d+\})/u).map((part, index) => {

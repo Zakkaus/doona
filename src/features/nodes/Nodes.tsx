@@ -5,7 +5,7 @@ import type {PageProps} from '../../shell/routes';
 import {ProviderTable} from './ProviderTable';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
-import {SubscriptionFields} from '../shared/SubscriptionFields';
+import {SubscriptionFields} from './SubscriptionFields';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {

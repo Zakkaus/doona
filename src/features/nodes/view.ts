@@ -16,7 +16,7 @@ import {isBareName, isQuotable} from '../../dae/text';
 import {nodeReferenced, readNodeEntries, type NodeEntry} from '../../dae/nodes';
 import {citingGroups, groupsNamingTag, namedInExpression, type GroupEntry} from '../../dae/groups';
 import {groupOwners} from '../shared/groupText';
-import {draftInterval, intervalText} from '../shared/subscription';
+import {draftInterval, intervalText} from './subscription';
 
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const latency = healthView(preferredHealth(node), t);

@@ -32,7 +32,7 @@ import {
   type ProviderRow
 } from './view';
 import {useProviderTable} from './useProviderTable';
-import {draftInterval, intervalProblem} from '../shared/subscription';
+import {draftInterval, intervalProblem} from './subscription';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useSubscriptionEditor, type SubscriptionEdit} from './useSubscriptionEditor';
@@ -42,7 +42,7 @@ import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
 import {offered} from '../../api/capabilities';
 import {nodesTabs} from './nav';
-import type {SubscriptionDraft, SubscriptionFieldSet} from '../shared/SubscriptionFields';
+import type {SubscriptionDraft, SubscriptionFieldSet} from './SubscriptionFields';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null, route: ''};
 
