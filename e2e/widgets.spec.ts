@@ -1374,4 +1374,44 @@ test.describe('small and narrow panel widgets', () => {
       }));
       expect(layout).toEqual({split: 0, scrolls: false});
     });
+  for (const width of [200, 280])
+    test(`charts at panel width ${width} fit the panel at every size`, async ({page}) => {
+      const ids = ['speed', 'history', 'memory', 'cpu', 'download', 'connections'] as const;
+      const sizes = ['small', 'medium', 'large'] as const;
+      const items = ids.flatMap(id => sizes.map(size => ({...defaultWidget(id), form: 'sparkline', size, instance: `${id}-${size}`})));
+      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await page.goto('/#/settings');
+      const body = floating(page).locator('.rp-widget-body');
+      await expect(body.locator('.rp-legend').first()).toBeVisible();
+      expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      const overflow = await body.locator('.rp-legend, .rp-compact-chart').evaluateAll(list => list.filter(el => el.scrollWidth > el.clientWidth + 1).length);
+      expect(overflow).toBe(0);
+    });
+  test('the speed legend keeps one height whatever the live rates read', async ({page}) => {
+    // Each rate waits for a runtime poll, one every five seconds.
+    test.slow();
+    const backend = await mockBackend(page);
+    let rates = ['0', '0'];
+    backend.handlers['GET runtime'] = async () => {
+      const runtime = await backend.api.runtime();
+      return {...runtime, traffic: {...runtime.traffic, rates: {download_bytes_per_second: rates[0], upload_bytes_per_second: rates[1]}}};
+    };
+    await save(page, {...defaults(), items: [defaultWidget('speed')], size: {width: 296, height: 600}} as Layout);
+    await page.goto('/#/settings');
+    const widget = floating(page).locator('[data-widget-id="speed"]');
+    const values = widget.locator('.rp-legend b');
+    const heights = new Set<number>();
+    for (const [down, up, shown] of [
+      ['0', '0', ['0 B/s', '0 B/s']],
+      ['4000000', '312000', ['4 MB/s', '312 KB/s']],
+      ['4100000', '339000', ['4.1 MB/s', '339 KB/s']],
+      ['999000000', '9900000', ['999 MB/s', '9.9 MB/s']],
+      ['999900000', '999', ['1 GB/s', '999 B/s']]
+    ] as const) {
+      rates = [down, up];
+      await expect(values).toHaveText(shown, {timeout: 12000});
+      heights.add(Math.round((await box(widget)).height));
+    }
+    expect([...heights]).toHaveLength(1);
+  });
 });

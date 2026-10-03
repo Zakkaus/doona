@@ -8,11 +8,11 @@ export type Series = {label: string; color: string; values: Array<number | null>
 const LazyAreaChart = lazy(() => import('./AreaChart').then(module => ({default: module.AreaPlot})));
 const LazySpark = lazy(() => import('./Sparkline').then(module => ({default: module.SparkPlot})));
 const LazyDonut = lazy(() => import('./Donut').then(module => ({default: module.DonutPlot})));
-export function Legend({series, fmt}: {series: Series[]; fmt: (v: number | null | undefined) => string}) {
+export function Legend({series, fmt, widest}: {series: Series[]; fmt: (v: number | null | undefined) => string; widest?: string}) {
   return (
     <div className="rp-legend">
       {series.map(s => (
-        <LegendItem key={s.label} swatch={s.color} label={s.label} value={fmt(s.values[s.values.length - 1])} />
+        <LegendItem key={s.label} swatch={s.color} label={s.label} value={fmt(s.values[s.values.length - 1])} widest={widest} />
       ))}
     </div>
   );
