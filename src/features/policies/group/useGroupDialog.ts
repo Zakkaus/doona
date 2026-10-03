@@ -55,6 +55,7 @@ import {
   type RouteField
 } from '../../shared/groupText';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
+import {mergeGroupRetry} from './groupMerge';
 
 const conditionLabels = {
   nameKeyword: 'group.filterKind.nameKeyword',
@@ -251,12 +252,15 @@ export function useGroupDialog(input: Input): GroupDialogView {
     if (!draft || source.busy || saving.current) return;
     setTried(true);
     if (nameProblem || invalid) return;
-    // A retry merges into the group as read again; when it is gone or declared twice, there is nothing to merge into.
-    if (draft.refused && draft.opened && !entry) {
+    const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
+    // A retry merges into the group as read again.
+    const mine = {filters, policy: draft.policy, interrupt: draft.interrupt, default: draft.default, final: draft.final};
+    const keys = routes.map(id => routeKeys[id]);
+    const retry = draft.refused && draft.opened ? mergeGroupRetry(mine, draft.opened, entry, keys) : null;
+    if (retry?.kind === 'gone') {
       refuse(t('policy.editReopen'));
       return;
     }
-    const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
     const written = {default: entry?.default ?? null, final: entry?.final ?? null};
     if (
       !groupEditSafe(filters, draft.policy, entry) ||
@@ -269,25 +273,11 @@ export function useGroupDialog(input: Input): GroupDialogView {
     const group = creating ? draft.name.trim() : draft.name;
     const update: GroupEntryUpdate = {filters, policy: draft.policy, ...(!creating ? {interrupt: draft.interrupt} : {})};
     for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
-    if (draft.refused && draft.opened && entry) {
-      // A retry writes only the fields changed since the dialog opened and keeps the rest as read again, so another client's edits stay;
-      // a field changed both here and on disk, to different values, is not written.
-      const {opened} = draft;
-      const keys = ['filters', 'policy', 'interrupt', ...routes.map(id => routeKeys[id])] as const;
-      type Key = (typeof keys)[number];
-      // Interruption compares as a flag, so `'true'` and `true` agree.
-      const flag = (value: string | null) => (value === null ? null : unquote(value) === 'true');
-      const read = (from: GroupEntry, key: Key) =>
-        JSON.stringify(key === 'default' || key === 'final' ? routeValue(from[key]) : key === 'interrupt' ? flag(from[key]) : from[key]);
-      const mine = (key: Key) => JSON.stringify(key === 'filters' ? filters : key === 'interrupt' ? flag(draft[key]) : draft[key]);
-      // A field already holding the value read again is not written, so it keeps the spelling there.
-      const changed = keys.filter(key => mine(key) !== read(opened, key) && mine(key) !== read(entry, key));
-      if (changed.some(key => read(entry, key) !== read(opened, key))) {
-        refuse(t('policy.editReopen'));
-        return;
-      }
-      for (const key of keys) if (!changed.includes(key)) Object.assign(update, {[key]: key === 'filters' || key === 'policy' ? entry[key] : undefined});
+    if (retry?.kind === 'conflict') {
+      refuse(t('policy.editReopen'));
+      return;
     }
+    if (retry?.kind === 'merge') Object.assign(update, retry.keep);
     saving.current = true;
     const current = session.start();
     const origin = draft.refused ? (creating ? source.main : declared?.origin) : draft.origin;
