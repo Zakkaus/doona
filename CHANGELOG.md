@@ -23,6 +23,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
+- A dashboard row of Auto control cards first gives each card the width of its title and controls on one line, then shares the rest of the row by the cards' usual proportions, so Activity's outbound mode, global outbound and status cards keep one line wherever all three fit. Where they do not, all three still stack together. Cards with a chosen width and other rows are unchanged.
 - The deb packages are now `doona-web` and `doona-web-fonts` and install into `/usr/share/doona-web`, because Debian and Ubuntu ship an unrelated `doona` 1.0 (a network fuzzer) that `apt upgrade` installed over the 0.1 `doona` deb, deleting the web files. The new debs replace and conflict with `doona` and `doona-fonts` below 1.0; set honk's `ui` to `/usr/share/doona-web`. If apt keeps or installs the fuzzer, `sudo apt remove doona` removes it without touching `doona-web`. The rpm, ipk and Arch packages and the release archives keep their names and paths.
 - Release archives bundle the honk debug build `debug.2026.10.3.native-api.2` (commit 464c9b3), fetched from that tag's own release because honk no longer updates a rolling `debug` release.
 - Settings removes the Backend actions navigation card and moves its geodata files table into the Geodata card; backend operations remain on their owning pages. (#365)

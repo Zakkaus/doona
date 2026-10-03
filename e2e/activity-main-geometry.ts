@@ -2,6 +2,8 @@
 // 3a5a8ccf. One deliberate change at
 // 1280px and wider: the traffic pair sits on the twelve tracks the details row uses, so its narrow card lines up with
 // the details column below it; main's 2fr/1fr split put it 4px off (history 728 to 732 wide, outbounds 4px narrower).
+// Another in zh-TW at 1440, 1024 and 768px: the control cards' row gives each card its one line first and shares the
+// rest by the footprints (see fitSpans), so those three boxes are this branch's.
 export const cardBounds: Record<string, readonly (readonly [x: number, y: number, width: number, height: number])[]> = {
   'en-1440': [
     [280, 156, 462.84375, 110],
@@ -49,9 +51,9 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
     [16, 2042, 358, 264]
   ],
   'zh-TW-1440': [
-    [280, 156, 462.84375, 110],
-    [754.84375, 156, 308.578125, 110],
-    [1075.421875, 156, 308.578125, 110],
+    [280, 160, 447.671875, 74],
+    [739.671875, 160, 360, 74],
+    [1111.671875, 160, 272.328125, 74],
     [280, 290, 211.1875, 110],
     [503.1875, 290, 211.203125, 110],
     [726.390625, 290, 211.203125, 110],
@@ -64,9 +66,9 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
     [1024, 674, 360, 260]
   ],
   'zh-TW-1024': [
-    [280, 156, 688, 66],
-    [280, 234, 338, 66],
-    [630, 234, 338, 66],
+    [280, 160, 688, 74],
+    [280, 246, 381.328125, 74],
+    [673.328125, 246, 294.65625, 74],
     [280, 324, 338, 110],
     [630, 324, 338, 110],
     [280, 446, 338, 110],
@@ -139,9 +141,9 @@ export const cardBounds: Record<string, readonly (readonly [x: number, y: number
     [40, 1944, 688, 260]
   ],
   'zh-TW-768': [
-    [40, 204, 688, 66],
-    [40, 282, 338, 66],
-    [390, 282, 338, 66],
+    [40, 216, 688, 74],
+    [40, 302, 381.328125, 74],
+    [433.328125, 302, 294.65625, 74],
     [40, 372, 338, 110],
     [390, 372, 338, 110],
     [40, 494, 338, 110],

@@ -246,8 +246,10 @@
    chosen width (--rp-chosen) snaps to sixths below 1280px. An Auto card (--rp-span) keeps the box its profile gives it
    at every width, so choosing one card's width never moves or resizes another. A profile of unequal tracks (quick's
    3:2:2, traffic's 2:1) shares its gaps among its tracks in proportion, so there an Auto card gives back a share of its
-   start gap (--rp-shift) and leaves a share of its end (--rp-trim), each a ratio of the gap. The resize handles read
-   --rp-span, --rp-shift and --rp-trim as Auto's width. */
+   start gap (--rp-shift) and leaves a share of its end (--rp-trim), each a ratio of the gap. A section with a full row
+   of Auto one-line cards uses the fraction grid too (data-fit): packSection gives each card of that row the span that
+   holds its line whole, with the spare width shared by the footprints. The resize handles read --rp-span, --rp-shift
+   and --rp-trim as Auto's width. */
 .rp-dash-section {
   --rp-dash-snap: none;
 }
@@ -255,16 +257,16 @@
   .rp-dash-section {
     --rp-dash-snap: 6;
   }
-  .rp-dash-section[data-grid] {
+  .rp-dash-section:is([data-grid], [data-fit]) {
     grid-template-columns: repeat(420, minmax(0, 1fr));
     column-gap: 0;
     margin-inline-start: calc(0px - var(--rp-dash-gap));
   }
-  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell {
+  .rp-dash-section:is([data-grid], [data-fit])[data-profile] > .rp-dashboard-cell {
     grid-column: span var(--rp-chosen, var(--rp-span));
     margin-inline-start: var(--rp-dash-gap);
   }
-  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell:not([data-width], [data-size='wide']) {
+  .rp-dash-section:is([data-grid], [data-fit])[data-profile] > .rp-dashboard-cell:not([data-width], [data-size='wide']) {
     margin-inline-start: calc(var(--rp-dash-gap) * (1 - var(--rp-shift, 0)));
     margin-inline-end: calc(var(--rp-dash-gap) * var(--rp-trim, 0));
   }
@@ -460,6 +462,10 @@
 .rp-dash-section[data-controls='probe'] .rp-control-card :is(.rp-row, .rp-row *) {
   flex-shrink: 0;
   flex-wrap: nowrap;
+}
+/* Measuring a line's own width (see packSection's fitRows), the line is as wide as its content. */
+.rp-dash-section[data-lines='probe'] .rp-control-card > .rp-row {
+  inline-size: max-content;
 }
 .rp-dash-section[data-controls='stacked'] .rp-control-card > .rp-row {
   flex-direction: column;

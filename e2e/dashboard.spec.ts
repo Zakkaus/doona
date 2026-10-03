@@ -1125,3 +1125,64 @@ for (const width of [1280, 390])
       }
     }
   });
+
+// A full row of Auto control cards first gives each card its line whole, then shares the rest by the footprints (3:2:2
+// here), so the row is one line wherever every line fits; where they do not, every card in the row stacks together.
+test.describe('control row zh-TW', () => {
+  test.use({storage: {'doona-lang': 'zh-TW'}});
+  const quick = (page: Page) => page.locator("[data-profile='quick']");
+  const lines = (page: Page) =>
+    quick(page)
+      .locator('.rp-control-card > .rp-row')
+      .evaluateAll(rows =>
+        rows.map(row => {
+          const box = row.getBoundingClientRect();
+          const title = row.firstElementChild!.getBoundingClientRect();
+          const controls = row.lastElementChild!.getBoundingClientRect();
+          const label = row.querySelector('.rp-truncate');
+          return {
+            top: box.top,
+            centres: Math.abs(title.top + title.height / 2 - controls.top - controls.height / 2),
+            end: Math.abs(box.right - controls.right),
+            cut: label !== null && label.scrollWidth > label.clientWidth,
+            stacked: controls.top >= title.bottom - 1
+          };
+        })
+      );
+  const cells = (page: Page) =>
+    quick(page)
+      .locator(':scope > .rp-dashboard-cell')
+      .evaluateAll(nodes => nodes.map(node => ({id: (node as HTMLElement).dataset.instance, left: node.getBoundingClientRect().left})));
+  for (const width of [1440, 1475])
+    test(`keeps the first row on one line at ${width} px`, async ({page}) => {
+      await page.setViewportSize({width, height: 900});
+      await page.goto('/#/activity');
+      await expect(quick(page)).toHaveAttribute('data-controls', 'inline');
+      await expect(quick(page)).toHaveAttribute('data-fit', '');
+      const order = await cells(page);
+      expect(order.map(cell => cell.id)).toEqual(['mode', 'global', 'status']);
+      expect(order[0].left).toBeLessThan(order[1].left);
+      expect(order[1].left).toBeLessThan(order[2].left);
+      const all = await lines(page);
+      expect(all).toHaveLength(3);
+      for (const line of all) {
+        expect(Math.abs(line.top - all[0].top)).toBeLessThanOrEqual(1);
+        expect(line.centres).toBeLessThanOrEqual(1);
+        expect(line.end).toBeLessThanOrEqual(1);
+        expect(line.cut).toBe(false);
+      }
+    });
+  test('stacks every card of the first row together when the lines do not fit, at 1280 px', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    await page.goto('/#/activity');
+    await expect(quick(page)).toHaveAttribute('data-controls', 'stacked');
+    await expect(quick(page)).not.toHaveAttribute('data-fit');
+    expect((await cells(page)).map(cell => cell.id)).toEqual(['mode', 'global', 'status']);
+    const all = await lines(page);
+    expect(all).toHaveLength(3);
+    for (const line of all) {
+      expect(line.stacked).toBe(true);
+      expect(line.cut).toBe(false);
+    }
+  });
+});
