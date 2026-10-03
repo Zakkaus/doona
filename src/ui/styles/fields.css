@@ -230,6 +230,7 @@
   height: var(--rp-control-lg);
   padding-inline: var(--rp-lg-inset-field);
   font-size: var(--rp-lg-text);
+  border-radius: var(--rp-lg-radius);
 }
 .rp-switch[data-size='L'] {
   min-height: var(--rp-control-lg);

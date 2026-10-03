@@ -312,7 +312,7 @@ test('the level filter narrows the diagnostics list, each level counted', async 
   await expect(level('Errors 3')).toBeVisible();
   await expect(level('Warnings 1')).toBeVisible();
   await expect(level('Info 1')).toBeVisible();
-  expect(await filter.evaluate(element => element.getBoundingClientRect().height)).toBe(40);
+  expect(await filter.evaluate(element => element.getBoundingClientRect().height)).toBe(32);
   await level('Errors 3').click();
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('Repeated error');

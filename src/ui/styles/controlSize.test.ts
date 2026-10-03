@@ -2,7 +2,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transform, type Selector} from 'lightningcss';
 import {expect, it} from 'vitest';
-import {ControlSizeContext} from '../controlSize';
+import {ControlSizeContext, useControlSize} from '../controlSize';
 import {Segmented} from '../Segmented';
 import segmentedCss from './segmented.css?raw';
 
@@ -95,7 +95,8 @@ it('rejects page, one-off and literal control sizing, including logical sizes an
   expect(violations('.rp-btn > svg {height: 16px}', 'buttons-menus.css')).toEqual([]);
 });
 
-// Every segmented control is S2 size L (40px), so a time range in a card matches a page filter.
+// Every segmented control is S2's default M (32px), as S2's SegmentedControl has no size, so a time range in a card
+// matches a page filter.
 function segmentedHeights(css: string): string[] {
   const values: string[] = [];
   transform({
@@ -117,16 +118,28 @@ function segmentedHeights(css: string): string[] {
   return values;
 }
 
-it('sizes every segmented control at L only', () => {
+it('sizes every segmented control at M only', () => {
   const heights = segmentedHeights(segmentedCss);
   expect(heights.length).toBeGreaterThan(0);
-  expect(heights.filter(value => !value.includes('"--rp-control-lg"'))).toEqual([]);
+  expect(heights.filter(value => !value.includes('"--rp-control"'))).toEqual([]);
   const items: Array<[string, string]> = [
     ['a', 'A'],
     ['b', 'B']
   ];
   const segmented = createElement(Segmented, {items, value: 'a', onChange: () => {}, label: 'Range'});
-  for (const markup of [renderToStaticMarkup(segmented), renderToStaticMarkup(createElement(ControlSizeContext, {value: null}, segmented))]) {
-    expect(markup.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="L"'));
+  for (const value of [null, 'M', 'L'] as const) {
+    const markup = renderToStaticMarkup(createElement(ControlSizeContext, {value}, segmented));
+    expect(markup.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="M"'));
   }
+});
+
+// A control is M unless it asks for L; its own size wins over the size a card provides.
+it('lets a control size win over the provided size', () => {
+  const Probe = ({size}: {size?: 'M' | 'L'}) => useControlSize(size);
+  const render = (value: 'M' | 'L' | null, size?: 'M' | 'L') => renderToStaticMarkup(createElement(ControlSizeContext, {value}, createElement(Probe, {size})));
+  expect(render(null)).toBe('M');
+  expect(render('L')).toBe('L');
+  expect(render('L', 'M')).toBe('M');
+  expect(render('M', 'L')).toBe('L');
+  expect(render(null, 'L')).toBe('L');
 });

@@ -1143,7 +1143,7 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
 });
 
 // The editor's controls take the library's sizes: the page row is L, a card's tools and every overlay are M.
-test('the editor page row is L and the card tools, settings and gallery are M, except segmented controls', async ({page}) => {
+test('the editor page row, card tools, settings and gallery are all M, segmented controls included', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await page.goto('/#/activity');
   await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
@@ -1160,19 +1160,20 @@ test('the editor page row is L and the card tools, settings and gallery are M, e
       );
   const row = page.locator('.rp-page-actions');
   await expect(row.getByRole('button', {name: 'Done', exact: true})).toBeVisible();
-  expect(new Set((await sizes(row)).map(String))).toEqual(new Set(['L,40']));
+  expect(new Set((await sizes(row)).map(String))).toEqual(new Set(['M,32']));
   await tile(page, 'cpu').hover();
   const tools = tile(page, 'cpu').locator('.rp-dashboard-tools');
   await expect(tools).toHaveCSS('opacity', '1');
   expect(new Set((await sizes(tools)).map(([, size]) => size))).toEqual(new Set([32]));
   expect((await sizes(tools)).every(([size]) => size === null || size === 'M')).toBe(true);
-  // In the settings every segmented control is L, as everywhere, and the other controls stay M.
+  // In the settings every segmented control is M, as everywhere, and so are the other controls.
   const dialog = await settings(page, 'cpu');
   const all = await sizes(dialog);
   const segmented = await sizes(dialog.locator('.rp-segfit'));
-  expect(new Set(segmented.map(String))).toEqual(new Set(['L,40']));
-  expect(all.filter(([size]) => size === 'L')).toHaveLength(segmented.length);
-  expect(new Set(all.filter(([size]) => size !== 'L').map(String))).toEqual(new Set(['M,32']));
+  expect(segmented.length).toBeGreaterThan(0);
+  expect(new Set(segmented.map(String))).toEqual(new Set(['M,32']));
+  expect(all.filter(([size]) => size === 'L')).toHaveLength(0);
+  expect(new Set(all.map(String))).toEqual(new Set(['M,32']));
   await close(page);
   await row.getByRole('button', {name: 'Widget gallery', exact: true}).click();
   const gallery = page.getByRole('dialog');
@@ -1258,8 +1259,9 @@ test.describe('control row zh-TW', () => {
         expect(line.cut).toBe(false);
       }
     });
-  test('stacks every card of the first row together when the lines do not fit, at 1280 px', async ({page}) => {
-    await page.setViewportSize({width: 1280, height: 900});
+  // At M the row still fits at 1280 px; at 1200 px, with the sidebar shown, it does not.
+  test('stacks every card of the first row together when the lines do not fit, at 1200 px', async ({page}) => {
+    await page.setViewportSize({width: 1200, height: 900});
     await page.goto('/#/activity');
     await expect(quick(page)).toHaveAttribute('data-controls', 'stacked');
     await expect(quick(page)).not.toHaveAttribute('data-fit');
