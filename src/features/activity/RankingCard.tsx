@@ -47,7 +47,7 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
               key={row.name}
               label={
                 <Link appearance="link" href={row.href}>
-                  <TextTooltip>{row.name}</TextTooltip>
+                  {row.name}
                 </Link>
               }
               value={row.value}

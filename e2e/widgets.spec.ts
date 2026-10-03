@@ -1264,6 +1264,40 @@ test.describe('small and narrow panel widgets', () => {
       await expect(widget.locator('.rp-markerplot .row, .rp-kv').first()).toBeVisible();
       expect(await truncated(widget)).toEqual([]);
     });
+  for (const width of [200, 280])
+    test(`lists at panel width ${width} keep every name whole in one column, at every size`, async ({page}) => {
+      const items = (
+        [
+          ['ranking', 'ranked', 'small'],
+          ['ranking', 'kv', 'medium'],
+          ['ranking', 'ranked', 'large'],
+          ['sourceHealth', 'kv', 'medium'],
+          ['policyGroups', 'kv', 'small'],
+          ['policyGroups', 'kv', 'large'],
+          ['notices', 'kv', 'medium'],
+          ['latency', 'kv', 'medium'],
+          ['nodeLatency', 'ranked', 'large']
+        ] as const
+      ).map(([id, form, size], i) => ({...defaultWidget(id), form, size, instance: `${id}-${i}`}));
+      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await page.goto('/#/settings');
+      const body = floating(page).locator('.rp-widget-body');
+      await expect(body.locator('[data-module="sourceHealth"] .rp-kv').first()).toBeVisible();
+      await expect(body.locator('[data-module="ranking"] .rp-bar').first()).toBeVisible();
+      expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      const names = await body
+        .locator('.rp-kv .k, .rp-kv .k *, .rp-bar .l > *')
+        .evaluateAll(list =>
+          list
+            .filter(el => el.clientWidth > 0 && (el.scrollWidth > el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis'))
+            .map(el => el.textContent)
+        );
+      expect(names).toEqual([]);
+      const lefts = await body
+        .locator('.rp-columns')
+        .evaluateAll(lists => lists.map(list => new Set([...list.children].map(row => Math.round(row.getBoundingClientRect().left))).size));
+      expect(lefts.every(count => count === 1)).toBe(true);
+    });
   test('a small notices widget takes the whole row of the panel', async ({page}) => {
     await save(page, only('notices', 'kv', 'small'));
     await page.goto('/#/settings');

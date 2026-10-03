@@ -490,7 +490,7 @@ test('a stored width or row count a card no longer offers reads as the nearest o
   await close(page);
 });
 
-test('a full-width list of four rows or more takes two columns, the first filled first', async ({page}) => {
+test('a full-width list of four rows or more takes two columns, the first filled first, and no name is cut', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await seed(page, {
     version: 3,
@@ -532,6 +532,14 @@ test('a full-width list of four rows or more takes two columns, the first filled
       lefts.slice(0, Math.ceil(rows / 2)).every(left => left === Math.min(...lefts)),
       id
     ).toBe(true);
+    const names = await tile(page, id)
+      .locator('.rp-kv .k, .rp-bar .l > *')
+      .evaluateAll(list => list.map(el => ({fits: el.scrollWidth <= el.clientWidth, overflow: getComputedStyle(el).textOverflow})));
+    expect(names.length, id).toBeGreaterThan(0);
+    expect(
+      names.filter(name => !name.fits || name.overflow === 'ellipsis'),
+      id
+    ).toEqual([]);
   }
   // Notices take their content's height; the row takes its tallest card's and both cards fill it.
   const [memory, notices] = await Promise.all(['memory', 'notices'].map(id => height(tile(page, id).locator('section').first())));
