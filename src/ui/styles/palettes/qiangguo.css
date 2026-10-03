@@ -220,7 +220,7 @@
   padding-top: calc(var(--qg-hero) - var(--rp-topbar) - var(--qg-title));
   background: linear-gradient(transparent calc(var(--qg-hero) - var(--rp-topbar)), var(--rp-surface) 0);
 }
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   :root[data-family='qiangguo'] .rp-main {
     border-radius: 0;
   }

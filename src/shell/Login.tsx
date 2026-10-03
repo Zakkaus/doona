@@ -2,7 +2,7 @@ import {lazy, Suspense} from 'react';
 import {useT, type Lang} from '../i18n';
 import {useLogin} from './useLogin';
 import {Button, ErrorMessage, InlineAlert, Link, Loading, TextField} from '../ui/ui';
-import {useMediaQuery} from '../ui/hooks';
+import {sidebarQuery, useMediaQuery} from '../ui/hooks';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import LinkOut from '../ui/icons/LinkOut';
 import logo from '../logo.svg';
@@ -51,7 +51,7 @@ export function Login({
 }: LoginProps) {
   const t = useT();
   const view = useLogin(profileId, api, backend, rejected, missingApi);
-  const wide = useMediaQuery('(min-width: 1024px)');
+  const wide = useMediaQuery(sidebarQuery);
   const reveal = {shown: view.secretType === 'text', label: view.toggleText, onToggle: view.toggle};
   const links = (
     <div className="rp-login-links">

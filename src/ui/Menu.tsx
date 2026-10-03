@@ -18,7 +18,7 @@ import {
 import ChevronDown from './icons/ChevronDown';
 import {Tip, buttonClass, TextTooltip, useActionReason} from './Button';
 import {Check} from './Check';
-import {useMediaQuery} from './hooks';
+import {smallQuery, useMediaQuery} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
 import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
@@ -235,11 +235,10 @@ const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string})
 // On a phone a submenu beside its row would leave the screen, so the submenu replaces the menu in the same popover,
 // with a back row on top, as S2's menus do on mobile. The arrow toward the line's end (right, or left in right-to-left
 // text) or Enter opens a submenu; the other arrow or Escape goes back, as React Aria's own submenus do.
-const phone = '(max-width: 639px)';
 function SubmenuMenu({label, submenus: source, actions = []}: {label: string; submenus: SubmenuEntries | (() => SubmenuEntries); actions?: ChoiceAction[]}) {
   const submenus = typeof source === 'function' ? source() : source;
   const t = useT();
-  const inline = useMediaQuery(phone);
+  const inline = useMediaQuery(smallQuery);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
   // The open submenu, and the row just left, which takes focus back.
   const [{open, left}, setView] = useState<{open: number | null; left: number | null}>({open: null, left: null});

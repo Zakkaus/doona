@@ -305,7 +305,7 @@
   flex: none;
   gap: var(--rp-space-1);
 }
-@media (max-width: 599px) {
+@media (max-width: 599.98px) {
   .rp-shortcuts {
     grid-template-columns: minmax(0, 1fr);
   }
