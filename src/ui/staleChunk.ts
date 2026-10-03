@@ -9,7 +9,7 @@ export function isChunkLoadError(error: unknown) {
 }
 
 const GUARD_KEY = 'doona-stale-reload';
-export const RELOAD_GUARD_MS = 30_000;
+const RELOAD_GUARD_MS = 30_000;
 // Reloads the page once for a stale chunk and reports whether it asked for one. A reload within the last
 // RELOAD_GUARD_MS is not repeated, and neither is one whose time cannot be kept: a chunk that is truly missing
 // would otherwise reload forever.

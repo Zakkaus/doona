@@ -156,10 +156,6 @@ function listedRows<R extends Listed>(
 ): Pick<DictionaryView, 'rows' | 'positions' | 'positionSections'> {
   const locale = LOCALE[lang];
   const byId = new Map(config.map(source => [source.id, source]));
-  const resolve = (source: RuleSource | null | undefined) => {
-    if (!source) return undefined;
-    return byId.get(source.source_id);
-  };
   const scans = new Map<string, ReturnType<typeof scanConfig>>();
   const scanned = (source: ConfigSource) => {
     let scan = scans.get(source.id);
@@ -175,7 +171,7 @@ function listedRows<R extends Listed>(
     return t('rule.notLocated');
   };
   const rows = rules.map(rule => {
-    const linked = resolve(rule.source);
+    const linked = rule.source ? byId.get(rule.source.source_id) : undefined;
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
     const editReason = unanchored(rule);
     const at = linked ? anchor(linked, rule, scanned(linked)) : null;

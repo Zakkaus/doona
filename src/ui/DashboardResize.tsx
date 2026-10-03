@@ -2,7 +2,7 @@ import {useEffect, useLayoutEffect, useRef, type PointerEvent} from 'react';
 import {useFocusRing, useMove} from 'react-aria';
 
 // One of a card's sizes: a width carries its fraction of the section.
-export type ResizeOption = {value: string; label: string; fraction?: number};
+type ResizeOption = {value: string; label: string; fraction?: number};
 export type ResizeAxis = {label: string; value: string; options: ResizeOption[]; onChange: (option: ResizeOption) => void};
 
 // A dashboard card's edge handles in edit mode: the inline-end edge sets the width, the bottom edge the height step.

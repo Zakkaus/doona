@@ -1,9 +1,9 @@
 import type {TileProps} from '../../ui/DashboardTile';
 import {defaultWidget, instanceId, object, parseItems, type Widget, type WidgetId} from './layout';
 // Each section keeps one layout profile for good: adding, moving or resizing a card never switches another card's rules.
-export const profiles = ['quick', 'metrics', 'traffic', 'details', 'extensions'] as const;
+const profiles = ['quick', 'metrics', 'traffic', 'details', 'extensions'] as const;
 export type Profile = (typeof profiles)[number];
-export type Section = {id: Profile; items: Widget[]};
+type Section = {id: Profile; items: Widget[]};
 export type DashboardLayout = {version: 3; sections: Section[]};
 // origin/main's Activity page, card for card; the extensions section only adds cards after it.
 const mainSections: Record<Exclude<Profile, 'extensions'>, WidgetId[]> = {

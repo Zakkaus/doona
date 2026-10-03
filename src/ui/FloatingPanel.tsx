@@ -377,11 +377,7 @@ export function FloatingPanel({
   );
   // Where the pointer is while the header drags, to tell a drop on the dock target from a move.
   const pointer = useRef<{x: number; y: number} | null>(null);
-  const over = (target = dockTarget?.()) => {
-    const at = pointer.current;
-    const rect = target?.getBoundingClientRect();
-    return !!(at && rect && at.x >= rect.left && at.x <= rect.right && at.y >= rect.top && at.y <= rect.bottom);
-  };
+  const over = (target = dockTarget?.()) => !!pointer.current && within(target ?? null, pointer.current);
   const move = useGesture(
     drawn,
     (base, dx, dy) => {

@@ -24,7 +24,7 @@ export type ModuleSection = {
   href: string | null;
 };
 
-export function sectionRange(source: ConfigSource, block: TextBlock): string {
+function sectionRange(source: ConfigSource, block: TextBlock): string {
   return `${fileName(source)}:${block.line + 1}-${block.endLine + 1}`;
 }
 

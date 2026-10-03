@@ -4,8 +4,8 @@ import {useContentWidth} from '../hooks';
 import {ChartTip, useChartTip} from './tip';
 import {symlogAxis, symlogPosition} from './layout';
 
-export type ScatterPoint = {id: string; x: number; y: number; name: string; detail: string};
-export type ScatterSeries = {id: string; label: string; color: string; points: ScatterPoint[]};
+type ScatterPoint = {id: string; x: number; y: number; name: string; detail: string};
+type ScatterSeries = {id: string; label: string; color: string; points: ScatterPoint[]};
 
 const left = 64;
 const bottom = 22;

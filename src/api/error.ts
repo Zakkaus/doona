@@ -73,8 +73,8 @@ const networkError = (error: TypeError) => clientError(0, 'network_error', error
 // A backend that accepts the connection and never answers would leave the request, and every consumer sharing it,
 // waiting forever. A write gets longer, since the backend may be applying it. The limit runs until the headers arrive
 // and then between chunks of the body, so a large body arriving steadily is not cut off, only one that stalls.
-export const READ_DEADLINE_MS = 15000;
-export const WRITE_DEADLINE_MS = 30000;
+const READ_DEADLINE_MS = 15000;
+const WRITE_DEADLINE_MS = 30000;
 
 // The caller's signal and the deadline as one. AbortSignal.any lets the browser drop the pair once both are gone; the
 // fallback forwards through listeners, which release removes once the request is over.

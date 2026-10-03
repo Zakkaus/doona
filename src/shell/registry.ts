@@ -19,7 +19,6 @@ import SpeedFast from '../ui/icons/SpeedFast';
 import SettingsIcon from '../ui/icons/Settings';
 import Shuffle from '../ui/icons/Shuffle';
 
-// A lazy page renders and preloads through the same loader.
 function lazyPage(load: () => Promise<{default: ComponentType<PageProps>}>) {
   const page = preloadable<PageProps>(load);
   return {Page: page.Component, preload: page.preload};
@@ -38,8 +37,7 @@ type Feature = {
   // hintKey: the question under a page title that tells similar pages apart.
   nav: {titleKey: Key; hintKey?: Key; Icon: typeof Home} | null;
   Page: ComponentType<PageProps>;
-  // Absent for an eager page.
-  preload?: () => Promise<unknown>;
+  preload: () => Promise<unknown>;
   // `intent` pages load on hover, focus or click only, not in the idle warm-up.
   warm?: 'intent';
   // The page works without a backend, so it renders before capabilities arrive and in place of the sign-in form.
@@ -132,7 +130,7 @@ export const features: ReadonlyArray<Feature> = Object.entries(definitions).map(
 export function warmPage(id: string) {
   void features
     .find(feature => feature.id === id)
-    ?.preload?.()
+    ?.preload()
     .catch(() => undefined);
 }
 // Once the backend accepts the tab: the default page at once, then the search dialog and the other pages, one per idle
@@ -142,7 +140,7 @@ export function warmAllPages() {
   if (warming) return;
   warming = true;
   void activity.preload().catch(() => undefined);
-  const queue = [preloadSearch, ...features.filter(feature => feature.preload && feature.warm !== 'intent').map(feature => () => warmPage(feature.id))];
+  const queue = [preloadSearch, ...features.filter(feature => feature.warm !== 'intent').map(feature => () => warmPage(feature.id))];
   const next = () => {
     const warm = queue.shift();
     if (!warm) return;

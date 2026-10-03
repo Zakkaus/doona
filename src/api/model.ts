@@ -54,7 +54,7 @@ export type RoutingTraceInput = Extract<Schema['RoutingTraceInput'], {network: u
 export type RoutingTraceRequest = Omit<Schema['RoutingTraceRequest'], 'input'> & {input: RoutingTraceInput};
 export type RoutingTraceResponse = Schema['RoutingTraceResponse'];
 export type DeleteMatchingCount = Schema['DeleteMatchingCount'];
-export type ErrorDetails = Record<string, unknown> & {reason?: string};
+type ErrorDetails = Record<string, unknown> & {reason?: string};
 export type ErrorResponse = Omit<Schema['ErrorResponse'], 'error'> & {
   error: Omit<Schema['ErrorResponse']['error'], 'details'> & {details?: ErrorDetails | null};
 };

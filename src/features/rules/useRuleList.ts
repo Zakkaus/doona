@@ -24,7 +24,7 @@ const noDistribution: DistributionView = {
   sourceHelp: {title: '', text: ''}
 };
 // The words and columns that differ between the routing list and the DNS lists.
-export type DictionaryCopy = {
+type DictionaryCopy = {
   label: string;
   empty: string;
   target: string;

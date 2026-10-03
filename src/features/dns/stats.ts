@@ -10,7 +10,7 @@ const outcomeOf = (record: DnsLogRecord): DnsOutcome =>
   record.cached ? 'cached' : record.status === 'NOERROR' ? 'answered' : record.status === 'NXDOMAIN' ? 'nxdomain' : 'failed';
 
 export type LatencySample = {id: string; value: number; outcome: DnsOutcome; name: string; upstream: string};
-export type UpstreamLatency = {upstream: string; median: number; samples: LatencySample[]};
+type UpstreamLatency = {upstream: string; median: number; samples: LatencySample[]};
 
 // What the loaded records say about speed and outcomes. Latency only counts uncached lookups that reached an
 // upstream, since a cache hit or a failure before sending measures nothing about the upstream.

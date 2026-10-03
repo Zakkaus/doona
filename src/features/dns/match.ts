@@ -18,7 +18,7 @@ export function dnsPattern(kind: MatchKind, text: string): {kind: MatchKind; tex
 }
 // JavaScript regular expression syntax, ignoring case, matched against the name without its trailing dot. The one place
 // a regex is compiled, so a translator from another syntax can replace it here.
-export function compileDomainRegex(text: string): RegExp | null {
+function compileDomainRegex(text: string): RegExp | null {
   try {
     return new RegExp(text, 'iu');
   } catch {

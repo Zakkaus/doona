@@ -33,7 +33,7 @@ type NavItem = {
   description: string | undefined;
 };
 export type NavGroup = {id: string; label: string; items: NavItem[]};
-export type BackendTone = 'ok' | 'warn' | 'err' | 'neutral';
+type BackendTone = 'ok' | 'warn' | 'err' | 'neutral';
 export type BackendView = {
   // The engine's name and version, as the indicator shows them.
   text: string;
@@ -193,7 +193,7 @@ const fact = (label: string, value: string | undefined): Array<[string, string]>
 // The connection as the shell already knows it from discovery and the version read; no read of its own. A refused
 // credential needs a sign-in, a failed discovery means the backend cannot be reached, and a backend that answers
 // discovery but not the version read works with less than the shell expects.
-export function backendState(
+function backendState(
   needsLogin: boolean,
   connecting: boolean,
   capabilityError: Error | null,

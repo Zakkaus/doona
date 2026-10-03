@@ -6,8 +6,8 @@ import {isBareName, isQuotable, quote, scanConfig, unquote, type TextBlock, type
 // `tag: url` (bare), `tag: 'url'` (short), `tag: 'url'(UA)` (agent), the old block `tag: { url: … }` (block), and
 // `tag: 'url' { … }` (options), whose options sit one key per line. The tag may be quoted or hold spaces; without
 // one, a whole-quoted `'tag:url'` carries it (embedded) or the entry is named after the URL's host (host).
-export type SubscriptionForm = 'bare' | 'short' | 'agent' | 'block' | 'options';
-export type SubscriptionNaming = 'tag' | 'embedded' | 'host';
+type SubscriptionForm = 'bare' | 'short' | 'agent' | 'block' | 'options';
+type SubscriptionNaming = 'tag' | 'embedded' | 'host';
 export type SubscriptionOption = {name: string; value: string};
 export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
 type Range = {from: number; to: number};
