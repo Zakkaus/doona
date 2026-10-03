@@ -109,7 +109,8 @@ export function MarkerPlot({
   max,
   fmt,
   limit = 10,
-  showAll
+  showAll,
+  summary
 }: {
   label: string;
   groups: MarkerGroup[];
@@ -119,6 +120,8 @@ export function MarkerPlot({
   // Rows shown per group before a "show all" button, so a hundred-node subscription does not fill the page.
   limit?: number;
   showAll: (n: number) => string;
+  // Shown before the legend, sharing its line where the width allows (say, the lowest and highest values).
+  summary?: ReactNode;
 }): ReactNode {
   const t = useT();
   const describedBy = useChartDescription();
@@ -195,15 +198,20 @@ export function MarkerPlot({
       aria-label={label}
       aria-describedby={describedBy}
     >
-      {legend.length > 0 && (
-        <ul className="legend">
-          {legend.map(item => (
-            <li key={item.label}>
-              <Marker kind={item.kind} tone={item.tone} />
-              {item.label}
-            </li>
-          ))}
-        </ul>
+      {(summary || legend.length > 0) && (
+        <div className="head">
+          {summary}
+          {legend.length > 0 && (
+            <ul className="legend">
+              {legend.map(item => (
+                <li key={item.label}>
+                  <Marker kind={item.kind} tone={item.tone} />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
       <div className="axis" aria-hidden="true">
         <span />

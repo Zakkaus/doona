@@ -1298,6 +1298,48 @@ test.describe('small and narrow panel widgets', () => {
         .evaluateAll(lists => lists.map(list => new Set([...list.children].map(row => Math.round(row.getBoundingClientRect().left))).size));
       expect(lefts.every(count => count === 1)).toBe(true);
     });
+  for (const width of [200, 280])
+    test(`donuts and node latency at panel width ${width} stay inside it with every name whole, at every size`, async ({page}) => {
+      const items = (['small', 'medium', 'large'] as const).flatMap(size => [
+        {...defaultWidget('outbounds'), form: 'donut', size, instance: `outbounds-${size}`},
+        {...defaultWidget('nodeLatency'), form: 'dots', size, instance: `nodeLatency-${size}`}
+      ]);
+      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await page.goto('/#/settings');
+      const body = floating(page).locator('.rp-widget-body');
+      await expect(body.locator('.rp-donut .r').first()).toBeVisible();
+      await expect(body.locator('.rp-markerplot [data-row]').first()).toBeVisible();
+      expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await truncated(body)).toEqual([]);
+      const cut = await body
+        .locator('.rp-donut .r .n')
+        .evaluateAll(list =>
+          list
+            .filter(
+              el =>
+                el.scrollWidth > el.clientWidth + 1 || el.getBoundingClientRect().right > el.closest('.rp-module-content')!.getBoundingClientRect().right + 1
+            )
+            .map(el => el.textContent)
+        );
+      expect(cut).toEqual([]);
+      // Each total sits inside its ring's hole on one line, and each legend value and share on one line.
+      const split = await body.locator('.rp-donut').evaluateAll(donuts => {
+        const text = (el: Element) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return {width: range.getBoundingClientRect().width, lines: new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size};
+        };
+        return donuts.flatMap(donut => {
+          const hole = donut.querySelector('.box')!.getBoundingClientRect().width * (44 / 56);
+          const center = donut.querySelector('.center')!;
+          const total = text(center);
+          const values = [...donut.querySelectorAll('.r > span:not(.n)')].filter(el => text(el).lines > 1);
+          return [...(total.width > hole || total.lines > 1 ? [center] : []), ...values].map(el => el.textContent);
+        });
+      });
+      expect(split).toEqual([]);
+      expect(await body.locator('.rp-donut .lst').evaluateAll(lists => lists.filter(list => list.scrollHeight > list.clientHeight + 1).length)).toBe(0);
+    });
   test('a small notices widget takes the whole row of the panel', async ({page}) => {
     await save(page, only('notices', 'kv', 'small'));
     await page.goto('/#/settings');
