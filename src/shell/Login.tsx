@@ -113,9 +113,15 @@ export function Login({
                     <LinkOut />
                   </Link>
                 ) : view.kind === 'token' ? (
-                  <Link appearance="button" accent className="rp-login-submit" href={view.tokenSettingsHref}>
-                    {t('login.editToken')}
-                  </Link>
+                  <TextField
+                    label={t('login.token')}
+                    name="token"
+                    type={view.secretType}
+                    value={view.token}
+                    autoComplete="off"
+                    onChange={view.setToken}
+                    reveal={reveal}
+                  />
                 ) : (
                   <>
                     <TextField
@@ -151,7 +157,7 @@ export function Login({
                     )}
                   </>
                 )}
-                {(view.kind === 'setup' || view.kind === 'login') && (
+                {view.kind !== 'no-api' && (
                   <Button accent className="rp-login-submit" type="submit" isDisabled={!view.canSubmit} isPending={view.busy}>
                     {view.submitText}
                   </Button>

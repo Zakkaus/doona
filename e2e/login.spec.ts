@@ -228,7 +228,7 @@ test.describe('the demo', () => {
   });
 });
 
-test('a rejected saved token opens its Backend editor and returns after save', async ({page}) => {
+test('a rejected saved token takes a new one on the sign-in page', async ({page}) => {
   expectLoadFailures(page, /\/api(\/|$)/);
   await page.addInitScript(() => {
     if (localStorage.getItem('doona-profiles')) return;
@@ -247,21 +247,43 @@ test('a rejected saved token opens its Backend editor and returns after save', a
   await page.goto('/#/activity');
   const login = page.locator('.rp-login-page');
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Token required');
-  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the saved token. Update it in Backend settings.');
+  await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the token; enter a valid one.');
   await expect(login.getByRole('button', {name: 'Language', exact: true})).toBeVisible();
   await expect(login.getByRole('link', {name: 'Change backend URL'})).toHaveAttribute('href', '#/settings');
-  await expect(login.locator('[name=token]')).toHaveCount(0);
-  const editToken = login.getByRole('link', {name: 'Edit saved token'});
-  expect(await editToken.evaluate(element => getComputedStyle(element).justifyContent)).toBe('center');
-  await editToken.click();
-  await expect(page).toHaveURL(/card=backend&profile=home&endpoint=.*&reason=rejected&return=/);
-  const card = page.getByRole('region', {name: 'Backend', exact: true});
-  await expect(card).toBeFocused();
-  await card.locator('[name=token]').fill('  fresh-token  ');
-  await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Save', exact: true}).click()]);
+  await expect(login.getByRole('link', {name: 'Edit saved token'})).toHaveCount(0);
+  const token = login.getByLabel('Token', {exact: true});
+  const connect = login.getByRole('button', {name: 'Connect', exact: true});
+  await expect(connect).toBeDisabled();
+  await token.fill('  fresh-token  ');
+  await expect(token).toHaveAttribute('type', 'password');
+  await login.getByRole('button', {name: 'Show token'}).click();
+  await expect(token).toHaveAttribute('type', 'text');
+  await Promise.all([page.waitForEvent('load'), connect.click()]);
   await expect(page).toHaveURL(/#\/activity$/);
   await expect.poll(() => authorization).toBe('Bearer fresh-token');
   expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)[0].token).toBe('fresh-token');
+});
+
+test('a token typed on the sign-in page signs in to a token backend', async ({page}) => {
+  const backend = await mockBackend(page);
+  expectLoadFailures(page, /\/api(\/|$)/);
+  await page.addInitScript(() => {
+    if (localStorage.getItem('doona-profiles')) return;
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: ''}]));
+    localStorage.setItem('doona-profile', 'home');
+  });
+  backend.handlers['GET capabilities'] = async request => {
+    if (request.headers()['authorization'] !== 'Bearer typed-token') throw new ApiError(401, 'authentication_required', 'Token required');
+    return backend.capabilities;
+  };
+  await page.goto('/#/activity');
+  const login = page.locator('.rp-login-page');
+  await expect(login.getByRole('heading', {level: 1})).toHaveText('Token required');
+  await login.getByLabel('Token', {exact: true}).fill('typed-token');
+  await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Connect', exact: true}).click()]);
+  await expect(page.locator('.rp-nav[href="#/activity"]')).toBeVisible();
+  await expect(login).toHaveCount(0);
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)[0].token).toBe('typed-token');
 });
 
 // A saved token is the backend's configured secret: signing out forgets it in this browser and revokes nothing.
@@ -282,10 +304,10 @@ test('signing out with a saved token forgets it and returns to the sign-in page'
   await expect(card.getByText('Clears the token saved in this browser. The token stays valid on the backend.')).toBeVisible();
   await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: 'Sign out', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/activity$/);
-  await expect(page.locator('.rp-login-page').getByRole('link', {name: 'Edit saved token'})).toBeVisible();
+  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
   expect(backend.requests.some(request => request.method() !== 'GET')).toBe(false);
   await page.reload();
-  await expect(page.locator('.rp-login-page').getByRole('link', {name: 'Edit saved token'})).toBeVisible();
+  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
   expect(JSON.parse((await page.evaluate(() => localStorage.getItem('doona-profiles')))!)).toEqual([
     {id: 'home', name: 'Home', api: 'http://127.0.0.1:4177', token: ''}
   ]);
@@ -385,8 +407,7 @@ for (const when of ['before opening Settings', 'before saving'] as const) {
       route.fulfill({status: 404, json: {error: {code: 'resource_not_found', message: 'nope', details: null}, request_id: 'd'}})
     );
     await page.goto('/#/activity');
-    const link = page.getByRole('link', {name: 'Edit saved token'});
-    await expect(link).toBeVisible();
+    await expect(page.getByLabel('Token', {exact: true})).toBeVisible();
     const change = () =>
       page.evaluate(() => {
         const profiles = JSON.parse(localStorage.getItem('doona-profiles')!);
@@ -394,7 +415,11 @@ for (const when of ['before opening Settings', 'before saving'] as const) {
         localStorage.setItem('doona-profiles', JSON.stringify(profiles));
       });
     if (when === 'before opening Settings') await change();
-    await link.click();
+    // The Backend editor's sign-in link, which names the profile and endpoint the token is meant for.
+    await page.evaluate(() => {
+      const query = new URLSearchParams({card: 'backend', profile: 'home', endpoint: location.origin, reason: 'rejected', return: '#/activity'});
+      location.hash = `#/settings?${query}`;
+    });
     const card = page.getByRole('region', {name: 'Backend', exact: true});
     if (when === 'before saving') {
       await card.locator('[name=token]').fill('a-secret');

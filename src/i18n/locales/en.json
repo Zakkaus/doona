@@ -932,7 +932,6 @@
   "login.connectedTo": "Connecting to {backend}",
   "login.create": "Create and sign in",
   "login.demoNote": "Demo account: {username}  Password: {password}",
-  "login.editToken": "Edit saved token",
   "login.engineOutdated": "The engine's API is older than this doona; update the engine.",
   "login.failed": "Could not sign in: {error}",
   "login.gameBest": "Best {amount}",
@@ -961,7 +960,7 @@
     "one": "Too many attempts. Try again in {n} second.",
     "other": "Too many attempts. Try again in {n} seconds."
   },
-  "login.rejected": "The backend rejected the saved token. Update it in Backend settings.",
+  "login.rejected": "The backend rejected the token; enter a valid one.",
   "login.requirements": "Native API requirements",
   "login.retryIn": {
     "one": "Try again in {n} second",
@@ -975,7 +974,9 @@
   "login.showPassword": "Show password",
   "login.signIn": "Sign in",
   "login.stale": "The profile changed; the token was not saved. Reload the page and check the backend URL before connecting.",
+  "login.submit": "Connect",
   "login.title": "Token required",
+  "login.token": "Token",
   "login.tokenRequired": "Enter the backend token in this profile. Saving returns to sign-in.",
   "login.username": "Username",
   "login.usernameRequired": "Enter a username.",
