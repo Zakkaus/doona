@@ -23,6 +23,7 @@ export {Check} from './Check';
 export {Checkbox} from './Checkbox';
 export {LabeledSelect} from './Picker';
 export {ItemLabel} from './Select';
+export {WidestLabel} from './WidestLabel';
 export {MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Menu';
 export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';
 export {Disclosure} from './Disclosure';
