@@ -285,7 +285,15 @@ export function diagnosticRows(
 export function diagnosticSummary(rows: DiagnosticRow[]) {
   const total = (level: ConfigDiagnostic['level']) => rows.filter(row => row.level === level).reduce((sum, row) => sum + row.count, 0);
   const errorKeys = [...new Set(rows.filter(row => row.level === 'error').map(row => row.identity))];
-  return {errors: total('error'), warnings: total('warning'), errorKeys};
+  return {errors: total('error'), warnings: total('warning'), infos: total('info'), errorKeys};
+}
+
+export type DiagnosticLevel = 'all' | ConfigDiagnostic['level'];
+// The rows the level filter keeps. A level with nothing left to show falls back to all, so a fix never leaves the
+// list empty under its own counts.
+export function filterDiagnostics(rows: DiagnosticRow[], level: DiagnosticLevel): {level: DiagnosticLevel; rows: DiagnosticRow[]} {
+  const kept = level === 'all' ? rows : rows.filter(row => row.level === level);
+  return kept.length ? {level, rows: kept} : {level: 'all', rows};
 }
 
 // The person's last open or collapse of the diagnostics bar, with the errors it listed then.

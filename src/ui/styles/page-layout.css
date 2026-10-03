@@ -392,6 +392,12 @@
 .rp-config-diagnostics > .rp-disclosure > .rp-disclosure-panel > .rp-disclosure-content {
   padding: 0;
 }
+/* The level filter opens the panel, above the rows it narrows. */
+.rp-config-diagnostic-filter {
+  display: flex;
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border-top: 1px solid var(--rp-hl-low);
+}
 /* The rows under the bar, after the kit's labelled list: the message column fits its longest message so each row's
    action sits just after it, in one column. Past about six rows the list scrolls; like the dialog body, it keeps its
    scrollbar's gutter and clear of it. */

@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, Disclosure, Light, Link, Toolbar, VisuallyHidden, type Action} from '../../ui/ui';
+import {Badge, Button, Card, Disclosure, Light, Link, Segmented, Toolbar, VisuallyHidden, type Action} from '../../ui/ui';
 import {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {RestartNotice} from './RestartNotice';
@@ -71,6 +71,9 @@ export function SourceCard(props: SourceCardProps) {
             </span>
           }
         >
+          <div className="rp-config-diagnostic-filter">
+            <Segmented size="L" label={t('config.level')} value={d.level} onChange={d.setLevel} items={d.levels} />
+          </div>
           <div className="rp-config-diagnostic-list" role="list" aria-label={t('config.diagnostics')}>
             {d.rows.map(item => (
               <div className="rp-config-diagnostic" role="listitem" key={item.id}>

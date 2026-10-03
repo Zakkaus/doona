@@ -30,7 +30,7 @@ const row = (id: string, backend: string | null): Partial<DiagnosticRow> => ({
 });
 const render = (diagnostics: Record<string, unknown>) => {
   state.restart = [];
-  state.diagnostics = {errors: 0, warnings: 0, scope: 'Draft diagnostics', quiet: null, open: true, rows: [], ...diagnostics};
+  state.diagnostics = {errors: 0, warnings: 0, scope: 'Draft diagnostics', quiet: null, open: true, rows: [], level: 'all', levels: [], ...diagnostics};
   return renderToStaticMarkup(<SourceCard {...({canValidate: false, source: {id: 'main'}} as SourceCardProps)} />);
 };
 
