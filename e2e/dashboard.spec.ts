@@ -1057,7 +1057,7 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
 });
 
 // The editor's controls take the library's sizes: the page row is L, a card's tools and every overlay are M.
-test('the editor page row is L and the card tools, settings and gallery are M', async ({page}) => {
+test('the editor page row is L and the card tools, settings and gallery are M, except segmented controls', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await page.goto('/#/activity');
   await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
@@ -1080,7 +1080,13 @@ test('the editor page row is L and the card tools, settings and gallery are M', 
   await expect(tools).toHaveCSS('opacity', '1');
   expect(new Set((await sizes(tools)).map(([, size]) => size))).toEqual(new Set([32]));
   expect((await sizes(tools)).every(([size]) => size === null || size === 'M')).toBe(true);
-  expect(new Set((await sizes(await settings(page, 'cpu'))).map(String))).toEqual(new Set(['M,32']));
+  // In the settings every segmented control is L, as everywhere, and the other controls stay M.
+  const dialog = await settings(page, 'cpu');
+  const all = await sizes(dialog);
+  const segmented = await sizes(dialog.locator('.rp-segfit'));
+  expect(new Set(segmented.map(String))).toEqual(new Set(['L,40']));
+  expect(all.filter(([size]) => size === 'L')).toHaveLength(segmented.length);
+  expect(new Set(all.filter(([size]) => size !== 'L').map(String))).toEqual(new Set(['M,32']));
   await close(page);
   await row.getByRole('button', {name: 'Widget gallery', exact: true}).click();
   const gallery = page.getByRole('dialog');

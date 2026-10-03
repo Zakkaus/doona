@@ -31,9 +31,11 @@
 .rp-widget-label {
   margin: 0;
 }
-/* Controls keep their own width, as on the main pages: a button does not stretch. */
+/* Controls keep their own width, as on the main pages: a button does not stretch. They stay inside the widget, so a
+   segmented control too wide for it collapses into its picker instead of overflowing. */
 .rp-widget > :is(.rp-cluster, .rp-btn) {
   align-self: flex-start;
+  max-inline-size: 100%;
 }
 .rp-widget-row {
   display: flex;

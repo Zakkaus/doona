@@ -81,9 +81,10 @@ for (const host of ['panel', 'dashboard'] as const) {
       await expect(apply).toBeDisabled();
       await page.evaluate(() => document.fonts.ready);
       const before = (await widget.boundingBox())!;
-      // The picker is as wide as its widest outbound, so whether the title shares the line is settled before a draft: at
-      // 390 px the dashboard card stacks the title above the picker and Apply, which stay on one line.
-      const inline = !(host === 'dashboard' && width === 390);
+      // The picker is as wide as its widest outbound, so whether the title shares the line is settled before a draft: the
+      // dashboard card, alone in quick's first track, stacks the title above the large picker and Apply, which stay on
+      // one line.
+      const inline = host === 'panel';
       const section = page.locator('.rp-dash-section').filter({has: widget});
       if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
       const line = async () => {

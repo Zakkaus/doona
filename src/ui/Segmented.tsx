@@ -2,17 +2,17 @@ import {useCallback, useLayoutEffect, useRef} from 'react';
 import {ToggleButton, ToggleButtonGroup} from 'react-aria-components';
 import {useOverflow, useSlider} from './hooks';
 import {LabeledSelect} from './Picker';
-import {useControlSize, type ControlSize} from './controlSize';
 
 // S2 does not scroll a segmented control: one too wide for its space collapses into a picker, as S2 Tabs do. The hidden
 // track keeps its box, so the switch moves nothing, and is measured to tell when the items fit again.
+// Every segmented control is S2 size L (40px) wherever it sits, so all of them match; a row that holds one provides L to
+// the controls beside it.
 export function Segmented({
   items,
   value,
   onChange,
   label,
   isDisabled,
-  size,
   fill
 }: {
   items: Array<[string, string]>;
@@ -20,12 +20,11 @@ export function Segmented({
   onChange: (k: string) => void;
   label: string;
   isDisabled?: boolean;
-  size?: ControlSize;
   // Takes the width of its container, every segment the same share of it.
   fill?: boolean;
 }) {
   const [ref, pos] = useSlider(value);
-  const controlSize = useControlSize(size);
+  const controlSize = 'L';
   const collapsed = useOverflow(ref, items.flat().join('\n'));
   // Focus inside the control follows it across the switch, so it is neither hidden nor dropped to the page; focus
   // elsewhere stays. The picker's ref detaches before the picker leaves the page, while it can still hold focus.
