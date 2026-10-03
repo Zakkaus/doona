@@ -4,7 +4,7 @@ import {transform, type Selector} from 'lightningcss';
 import {expect, it} from 'vitest';
 import {ControlSizeContext} from '../controlSize';
 import {Segmented} from '../Segmented';
-import motion from './motion.css?raw';
+import segmentedCss from './segmented.css?raw';
 
 const owners: Record<string, string> = {
   'rp-btn': 'buttons-menus.css',
@@ -12,8 +12,8 @@ const owners: Record<string, string> = {
   'rp-input': 'dialogs-search.css',
   'rp-selectbtn': 'fields.css',
   'rp-switch': 'fields.css',
-  'rp-seg': 'motion.css',
-  'rp-segpick': 'motion.css',
+  'rp-seg': 'segmented.css',
+  'rp-segpick': 'segmented.css',
   'rp-tab': 'tabs-panels.css',
   'rp-tabbar': 'tabs-panels.css',
   'rp-tablist': 'tabs-panels.css'
@@ -48,7 +48,7 @@ function violations(css: string, filename: string): string[] {
               if (!(property in dimensions) || !controls.length) continue;
               const prefix = selector.slice(0, lastCombinator);
               const segmentedButton =
-                filename === 'motion.css' &&
+                filename === 'segmented.css' &&
                 prefix[0]?.type === 'class' &&
                 prefix[0].name === 'rp-seg' &&
                 prefix.every(part => (part.type === 'class' && part.name === 'rp-seg') || part.type === 'attribute');
@@ -99,7 +99,7 @@ it('rejects page, one-off and literal control sizing, including logical sizes an
 function segmentedHeights(css: string): string[] {
   const values: string[] = [];
   transform({
-    filename: 'motion.css',
+    filename: 'segmented.css',
     code: new TextEncoder().encode(css),
     visitor: {
       Rule: {
@@ -118,7 +118,7 @@ function segmentedHeights(css: string): string[] {
 }
 
 it('sizes every segmented control at L only', () => {
-  const heights = segmentedHeights(motion);
+  const heights = segmentedHeights(segmentedCss);
   expect(heights.length).toBeGreaterThan(0);
   expect(heights.filter(value => !value.includes('"--rp-control-lg"'))).toEqual([]);
   const items: Array<[string, string]> = [

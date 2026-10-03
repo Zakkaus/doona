@@ -1,3 +1,165 @@
+:root {
+  /* Touch browsers draw a square tap box over the pressed element; every control has its own rounded pressed state. */
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --rp-underlay: rgba(0, 0, 0, 0.32);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.12);
+  --rp-popover-border: transparent;
+  --rp-on-accent: var(--rp-surface);
+  /* Text on a success or error fill, such as a toast, or on a notice fill, such as a warning badge. Where the on-accent
+     colour is under 4.5:1 on that tone, the palette points these at another of its own colours. */
+  --rp-on-positive: var(--rp-on-accent);
+  --rp-on-negative: var(--rp-on-accent);
+  --rp-on-notice: var(--rp-on-accent);
+  --rp-on-text: var(--rp-surface);
+  --rp-accent: var(--rp-pine);
+  /* The accent as text. Where a palette's accent is under 4.5:1 on its base or surface, the palette sets body text. */
+  --rp-accent-text: var(--rp-accent);
+  --rp-negative: var(--rp-love);
+  --rp-positive: var(--rp-foam);
+  --rp-notice: var(--rp-gold);
+  --rp-info: var(--rp-pine);
+  /* The status tones as text, set by a palette to body text where the tone is under 4.5:1 in the same way. */
+  --rp-negative-text: var(--rp-negative);
+  --rp-notice-text: var(--rp-notice);
+  --rp-positive-text: var(--rp-positive);
+  --rp-info-text: var(--rp-info);
+  /* The same roles on a tile, plain or selected, where a palette sets body text for a tone under 4.5:1 there. Page text
+     is judged on the base and the surface only, so a tone that passes there keeps its colour outside tiles. */
+  --rp-accent-tile-text: var(--rp-accent-text);
+  --rp-negative-tile-text: var(--rp-negative-text);
+  --rp-notice-tile-text: var(--rp-notice-text);
+  --rp-positive-tile-text: var(--rp-positive-text);
+  --rp-info-tile-text: var(--rp-info-text);
+  /* Secondary text on a tile, plain or selected. Where a palette's subtle is under 4.5:1 there, the palette sets body
+     text; page-level secondary text keeps reading --rp-subtle. */
+  --rp-subtle-text: var(--rp-subtle);
+  /* Dividers and quiet fills (hover, empty cells, tracks) drawn on a card. A palette whose highlight low is its
+     surface points both at a step that shows; the contrast spec holds them to 1.1:1 on the surface. */
+  --rp-line: var(--rp-hl-low);
+  --rp-fill: var(--rp-hl-low);
+  --rp-ease: cubic-bezier(0.45, 0, 0.4, 1);
+  --rp-ease-in: cubic-bezier(0.5, 0, 1, 1);
+  --rp-ease-out: cubic-bezier(0, 0, 0.4, 1);
+  --rp-space-1: 4px;
+  --rp-space-2: calc(var(--rp-space-1) * 2);
+  --rp-space-6: calc(var(--rp-space-1) * 6);
+  --rp-r-xs: 3px;
+  --rp-r-sm: 6px;
+  --rp-r-md: 8px;
+  --rp-r-lg: 10px;
+  --rp-r-xl: 16px;
+  --rp-r-2xl: 20px;
+  --rp-r-pill: 999px;
+  /* The type scale stays in px, like the icons set beside it. */
+  --rp-text-2xs: 11px;
+  --rp-text-xs: 12px;
+  --rp-text-sm: 13px;
+  --rp-text-md: 14px;
+  --rp-text-lg: 16px;
+  --rp-text-xl: 18px;
+  --rp-text-2xl: 20px;
+  --rp-text-3xl: 22px;
+  --rp-text-4xl: 24px;
+  --rp-text-5xl: 28px;
+  /* A tile value's line: its 3xl type, and the row a stacked tile keeps for it. */
+  --rp-value-line: 28px;
+  --rp-space-half: 2px;
+  --rp-space-1: 4px;
+  --rp-space-1h: 6px;
+  --rp-space-2: 8px;
+  --rp-space-2h: 10px;
+  --rp-space-3: 12px;
+  --rp-space-3h: 14px;
+  --rp-space-4: 16px;
+  --rp-space-5: 20px;
+  --rp-space-6: 24px;
+  --rp-space-8: 32px;
+  --rp-space-10: 40px;
+  --rp-space-12: 48px;
+  --rp-space-16: 64px;
+  --rp-font-mono:
+    'Twemoji Country Flags', ui-monospace, 'SF Mono', Menlo, Consolas, 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Sans Mono',
+    monospace;
+  --rp-line-body: 20px;
+  --rp-line-caption: 16px;
+  --rp-focus-width: 2px;
+  --rp-focus-color: var(--rp-accent);
+  --rp-focus-offset: var(--rp-space-half);
+  --rp-control-inset: var(--rp-space-half);
+  /* Segment items fill the track's height at every size, so a selected segment is as tall as the button beside it. */
+  --rp-control-block-inset: 0px;
+  /* Global stacking, low to high: the floating panel, then modals and tooltips (tooltips are portaled after the modal
+     they sit on), then toasts. */
+  --rp-z-panel: 9;
+  --rp-z-modal: 10;
+  --rp-z-tooltip: 10;
+  --rp-z-toast: 20;
+  --rp-sidebar-width: 240px;
+  --rp-sidebar-padding: 16px;
+  /* The overlay scroll classes draw a scrollbar this thick. */
+  --rp-scrollbar: 6px;
+  --rp-control: 32px;
+  --rp-control-lg: 40px;
+  /* L's inline padding; phones take M's (below), so a row of L controls fits as a row of M controls does. L's text is M's text size at every width. */
+  --rp-lg-inset-btn: calc(var(--rp-control-lg) / 2);
+  --rp-lg-inset-field: calc(var(--rp-control-lg) * 3 / 8);
+  --rp-lg-inset-compact: calc(var(--rp-control-lg) * 3 / 8);
+  --rp-lg-text: var(--rp-text-md);
+  --rp-lg-text-compact: var(--rp-text-lg);
+  --rp-control-xs: 24px;
+  --rp-duration: 150ms;
+  --rp-duration-panel: 200ms;
+  --rp-duration-modal-in: 250ms;
+  --rp-duration-modal-out: 130ms;
+  --rp-duration-toast: 400ms;
+  --rp-duration-slow: 400ms;
+  --rp-duration-tab: 120ms;
+  --rp-delay-tab: 100ms;
+  --rp-delay-dialog: 160ms;
+  --rp-duration-hop: 360ms;
+  --rp-duration-pop: 240ms;
+  --rp-duration-view: 300ms;
+  --rp-duration-spin: 800ms;
+  /* One turn of the refresh and reload arrows, as long as one turn of S2's indeterminate ProgressCircle. */
+  --rp-duration-refresh: 1000ms;
+  --rp-duration-hue: 3s;
+  --rp-selected: color-mix(in srgb, var(--rp-accent) 10%, var(--rp-overlay));
+  --rp-ink-mix: #000;
+  /* The sign of the inline direction: a shift or turn along the line multiplies by it, so right to left mirrors it. */
+  --rp-dir: 1;
+}
+/* An element that sets its own direction, as React Aria's popovers and toasts do, sets the sign for what it holds. */
+[dir='rtl'] {
+  --rp-dir: -1;
+}
+[dir='ltr'] {
+  --rp-dir: 1;
+}
+/* A finger needs more than a pointer does; table rows are already 40px. */
+@media (pointer: coarse) {
+  :root {
+    --rp-control: 36px;
+  }
+}
+@media (max-width: 599px) {
+  :root {
+    --rp-control: 36px;
+    --rp-lg-inset-btn: var(--rp-space-3);
+    --rp-lg-inset-field: var(--rp-space-3);
+    --rp-lg-inset-compact: var(--rp-space-2);
+    --rp-lg-text-compact: var(--rp-text-xs);
+  }
+}
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --rp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --rp-underlay: rgba(0, 0, 0, 0.55);
+  --rp-elevated: 0 4px 12px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12), 0 0 2px rgba(0, 0, 0, 0.36);
+  --rp-popover-border: var(--rp-hl-med);
+  --rp-ink-mix: #fff;
+}
 /* Pixel-sized icons stay aligned with the fixed 14px type regardless of the browser's default font size. */
 :root {
   --rp-icon-size: 20px;
