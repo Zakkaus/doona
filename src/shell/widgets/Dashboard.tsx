@@ -7,8 +7,8 @@ import {DashboardSection, DashboardTile, sectionGrid} from '../../ui/DashboardTi
 import {useCapabilities} from '../../store';
 import {ResourcePreview} from '../../store/preview';
 import {useDashboardLayout, saveDashboard} from './dashboardSettings';
-import {dashboardItems, tileOf, type DashboardLayout} from './dashboardLayout';
-import {instanceId, registry, type Widget} from './layout';
+import {dashboardItems, mapWidgets, tileOf, type DashboardLayout} from './dashboardLayout';
+import {instanceId, registry, replaceWidget, type Widget} from './layout';
 import {GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/activity/widgets';
 import {ModeJump} from './ModeJump';
 import {WidgetCard} from './WidgetCard';
@@ -26,11 +26,7 @@ export function Activity({query}: PageProps) {
   if (!capabilities.data) return capabilities.error ? null : <Loading />;
   if (setup.pending) return <Loading />;
   // A card's own choices, such as its group, save at once outside the editor.
-  const update = (item: Widget) =>
-    saveDashboard(previous => ({
-      ...previous,
-      sections: previous.sections.map(section => ({...section, items: section.items.map(old => (instanceId(old) === instanceId(item) ? item : old))}))
-    }));
+  const update = (item: Widget) => saveDashboard(previous => mapWidgets(previous, replaceWidget(item)));
   return (
     <>
       <PageActions>

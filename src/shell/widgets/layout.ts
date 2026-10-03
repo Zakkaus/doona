@@ -1,3 +1,4 @@
+import {createContext} from 'react';
 import type {Key} from '../../i18n';
 import type {WidgetSize} from '../../ui/WidgetGrid';
 import {clampPanelOffset, clampPanelSize, type PanelOffset, type PanelSize} from '../../ui/panelSize';
@@ -8,6 +9,8 @@ export type ModuleSize = WidgetSize | 'wide';
 export const contentLimit = (size: ModuleSize, limits: readonly [number, number, number] = [1, 3, 8]) =>
   limits[size === 'small' ? 0 : size === 'medium' ? 1 : 2];
 export type Surface = 'panel' | 'dashboard';
+// Where a widget renders: the dashboard's cards provide it, anything else is the panel.
+export const WidgetSurface = createContext<Surface>('panel');
 type Definition = {
   label: Key;
   resource: keyof Capabilities['resources'] | null;
@@ -17,6 +20,19 @@ type Definition = {
   // The panel's sizes for the key-value form when they are fewer than `sizes`, as a metric's large one draws no more
   // than its medium one.
   kvSizes?: WidgetSize[];
+  // A value tile: a fifth of a row wide at the narrowest, as five share main's metrics row, and a sparkline in every
+  // form of main's card.
+  tile?: true;
+  // The narrowest dashboard width other than a value tile's, when a third is too narrow, as for a table of nodes.
+  narrowest?: DashboardWidth;
+  // A list, whose dashboard height is its row count unless drawn as a donut or a waffle.
+  rows?: true;
+  // Charts a traffic rate, whose live value the chart's legend carries.
+  rate?: true;
+  // The panel hides its title, as its content names what it shows.
+  untitled?: true;
+  // Follows one policy group chosen in its settings; the key names the Automatic choice.
+  groupChoice?: Key;
   // Offered by the panel only, such as the divider between its groups of widgets.
   panelOnly?: true;
 };
@@ -38,35 +54,44 @@ const list = (label: Key, resource: Definition['resource']): Definition => ({
 const share = (label: Key, resource: Definition['resource']): Definition => ({
   ...list(label, resource),
   forms: ['donut', 'waffle', 'ranked', 'kv'],
-  compact: ['donut', 'ranked', 'kv']
+  compact: ['donut', 'ranked', 'kv'],
+  rows: true
 });
 export const maxInstances = 3;
-export const registry = {
-  speed: metric('widgets.speed', 'runtime'),
+const definitions = {
+  speed: {...metric('widgets.speed', 'runtime'), rate: true},
   traffic: {...list('widgets.traffic', 'runtime'), sizes: ['medium']},
-  connections: metric('act.active', 'runtime'),
+  connections: {...metric('act.active', 'runtime'), tile: true, untitled: true},
   memory: metric('act.memory', 'runtime_memory'),
-  cpu: metric('act.cpu', 'runtime'),
+  cpu: {...metric('act.cpu', 'runtime'), tile: true, untitled: true},
   ranking: {...share('widgets.ranking', 'connections'), forms: ['ranked', 'kv'], compact: ['ranked', 'kv']},
   outbounds: share('widgets.outbounds', 'runtime_outbounds'),
   mode: {...list('act.mode', 'config'), sizes: ['medium']},
-  global: {...list('act.global', 'config'), sizes: ['medium']},
-  group: {...list('widgets.group', 'groups'), sizes: ['medium']},
+  global: {...list('act.global', 'config'), sizes: ['medium'], untitled: true},
+  group: {...list('widgets.group', 'groups'), sizes: ['medium'], untitled: true},
   status: {...list('widgets.status', 'runtime'), sizes: ['medium'], forms: ['facts', 'kv'], compact: ['kv']},
-  notices: list('widgets.notices', 'events'),
-  download: metric('ui.download', 'runtime'),
-  upload: metric('ui.upload', 'runtime'),
-  latency: {...list('act.latency', 'nodes'), sizes: ['medium']},
-  history: metric('act.traffic', 'runtime'),
-  nodeLatency: {...list('ui.nodeLatency', 'nodes'), forms: ['dots', 'ranked'], compact: ['dots', 'ranked']},
-  sourceHealth: {...list('dashboard.sourceHealth', 'providers'), sizes: ['medium']},
+  notices: {...list('widgets.notices', 'events'), rows: true},
+  download: {...metric('ui.download', 'runtime'), tile: true, rate: true},
+  upload: {...metric('ui.upload', 'runtime'), tile: true, rate: true},
+  latency: {...list('act.latency', 'nodes'), sizes: ['medium'], tile: true, groupChoice: 'act.groupFollow'},
+  history: {...metric('act.traffic', 'runtime'), rate: true},
+  nodeLatency: {
+    ...list('ui.nodeLatency', 'nodes'),
+    forms: ['dots', 'ranked'],
+    compact: ['dots', 'ranked'],
+    rows: true,
+    narrowest: '1/2',
+    groupChoice: 'dashboard.allGroups'
+  },
+  sourceHealth: {...list('dashboard.sourceHealth', 'providers'), sizes: ['medium'], rows: true},
   connectionOutbounds: share('dashboard.connectionOutbounds', 'connections'),
   connectionNetworks: {...share('dashboard.connectionNetworks', 'connections'), sizes: ['medium']},
   dnsAnswers: share('dashboard.dnsAnswers', 'dns_log'),
-  policyGroups: list('dashboard.policyGroups', 'groups'),
+  policyGroups: {...list('dashboard.policyGroups', 'groups'), rows: true, groupChoice: 'dashboard.allGroups'},
   divider: {...list('widgets.divider', null), sizes: ['medium'], panelOnly: true}
 } satisfies Record<string, Definition>;
-export type WidgetId = keyof typeof registry;
+export type WidgetId = keyof typeof definitions;
+export const registry: Record<WidgetId, Definition> = definitions;
 export type Widget = {
   id: WidgetId;
   instance?: string;
@@ -86,19 +111,19 @@ export type DashboardWidth = (typeof widths)[number];
 export const heights = ['short', 'standard', 'tall'] as const;
 export type DashboardHeight = (typeof heights)[number];
 export const rowChoices = [3, 5, 8] as const;
-export const tiles: WidgetId[] = ['download', 'upload', 'connections', 'cpu', 'latency'];
-// The narrowest width a card's content still reads at: a value tile a fifth, as five share a metrics row, a table of
-// nodes half, any other a third.
-export const widthsFor = (id: WidgetId): readonly DashboardWidth[] => widths.slice(tiles.includes(id) ? 0 : id === 'nodeLatency' ? 3 : 2);
+// The narrowest width a card's content still reads at: a value tile a fifth, a card with its own narrowest that one, any
+// other a third.
+export const widthsFor = (id: WidgetId): readonly DashboardWidth[] =>
+  widths.slice(widths.indexOf(registry[id].tile ? '1/5' : (registry[id].narrowest ?? '1/3')));
 
 export const instanceId = (item: Widget) => item.instance ?? item.id;
-export const formsFor = (id: WidgetId, surface: Surface): ModuleForm[] => registry[id][surface === 'panel' ? 'compact' : 'forms'] as ModuleForm[];
-export const onlyPanel = (id: WidgetId) => 'panelOnly' in registry[id];
-export const sizesFor = (id: WidgetId, form: ModuleForm, surface: Surface): readonly WidgetSize[] => {
-  const definition: Definition = registry[id];
-  return surface === 'panel' && form === 'kv' && definition.kvSizes ? definition.kvSizes : definition.sizes;
-};
-const allowsSmall = (id: WidgetId) => (registry[id].sizes as string[]).includes('small');
+// Replaces the item with the same instance as `item`, for `items.map` and `mapWidgets` alike.
+export const replaceWidget = (item: Widget) => (old: Widget) => (instanceId(old) === instanceId(item) ? item : old);
+export const formsFor = (id: WidgetId, surface: Surface): ModuleForm[] => registry[id][surface === 'panel' ? 'compact' : 'forms'];
+export const onlyPanel = (id: WidgetId) => registry[id].panelOnly === true;
+export const sizesFor = (id: WidgetId, form: ModuleForm, surface: Surface): readonly WidgetSize[] =>
+  (surface === 'panel' && form === 'kv' && registry[id].kvSizes) || registry[id].sizes;
+const allowsSmall = (id: WidgetId) => registry[id].sizes.includes('small');
 export function canonicalForm(item: Widget, surface: Surface): ModuleForm {
   const forms = formsFor(item.id, surface);
   if (item.form === 'text') return forms.includes('kv') ? 'kv' : forms.at(-1)!;

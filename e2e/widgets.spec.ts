@@ -1014,6 +1014,33 @@ test('editor previews never rewrite a saved latency group, even without cached g
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-widgets') ?? '{}').items[0].group)).toBe('custom-only');
 });
 
+test('a latency group chosen in the panel or on the dashboard survives a reload', async ({page}) => {
+  await save(page, {...defaults(), items: [{id: 'latency', form: 'kv', size: 'medium'}]});
+  await page.goto('/#/activity');
+  const menu = page.getByRole('menu', {name: 'Groups', exact: true});
+  const triggers = [floating(page), page.locator('.rp-dashboard')].map(scope => scope.getByRole('button', {name: /^Groups: /}));
+  const chosen: string[] = [];
+  for (const [index, trigger] of triggers.entries()) {
+    await trigger.click();
+    const option = menu.getByRole('menuitemradio').nth(index + 1);
+    chosen.push((await option.getAttribute('data-key'))!);
+    await option.click();
+    await expect(menu).toHaveCount(0);
+  }
+  await page.reload();
+  for (const [index, trigger] of triggers.entries()) {
+    await trigger.click();
+    await expect(menu.locator(`[data-key="${chosen[index]}"]`)).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+  }
+  const stored = await page.evaluate(() => [
+    JSON.parse(localStorage.getItem('doona-widgets')!).items[0].group,
+    JSON.parse(localStorage.getItem('doona-dashboard')!).sections[1].items.find((item: {id: string}) => item.id === 'latency').group
+  ]);
+  expect(stored).toEqual(chosen);
+});
+
 const darkTraditional = {
   'doona-lang': 'zh-TW',
   'doona-scheme': 'dark',

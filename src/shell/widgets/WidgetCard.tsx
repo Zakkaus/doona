@@ -2,7 +2,7 @@ import {lazy, Suspense} from 'react';
 import {useT} from '../../i18n';
 import {Card} from '../../ui/ui';
 import {mainCard} from './dashboardLayout';
-import {registry, type Widget} from './layout';
+import {registry, WidgetSurface, type Widget} from './layout';
 import {scaleOf} from './dashboardSizing';
 import {ActivityCard} from '../../features/activity/widgets';
 const WidgetContent = lazy(() => import('./WidgetContent').then(module => ({default: module.WidgetContent})));
@@ -21,7 +21,9 @@ export function WidgetCard({item, preview = false, onChange = () => {}}: {item: 
   return (
     <Card title={t(registry[item.id].label)}>
       <Suspense>
-        <WidgetContent item={item} dashboard preview={preview} onChange={onChange} />
+        <WidgetSurface value="dashboard">
+          <WidgetContent item={item} preview={preview} onChange={onChange} />
+        </WidgetSurface>
       </Suspense>
     </Card>
   );

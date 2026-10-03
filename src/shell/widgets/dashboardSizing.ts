@@ -1,5 +1,5 @@
 import type {Translator} from '../../i18n';
-import {contentLimit, heights, rowChoices, tiles, widthsFor, type DashboardHeight, type DashboardWidth, type Widget} from './layout';
+import {contentLimit, heights, registry, rowChoices, widthsFor, type DashboardHeight, type DashboardWidth, type Widget} from './layout';
 
 // A dashboard card's size, apart from its section's default footprint. Width is a fraction of the section, the same
 // width in every section; no width (Auto) keeps the footprint the section's profile gives the card's legacy size.
@@ -9,19 +9,11 @@ export const heightLabels = {short: 'dashboard.height.short', standard: 'dashboa
 export const heightScale = {short: 0.75, standard: 1, tall: 2} as const satisfies Record<DashboardHeight, number>;
 
 export const fraction = (width: DashboardWidth) => (width === 'full' ? 1 : Number(width[0]) / Number(width[2]));
-const charted = ['speed', 'history', 'download', 'upload', 'connections', 'cpu', 'memory'];
-const listed = ['nodeLatency', 'ranking', 'notices', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds', 'connectionNetworks', 'dnsAnswers'];
-// What a card's height adjusts. `main` is whether the card renders main's Activity content (see `mainCard`): those value
-// tiles carry a sparkline in every form, main's memory and traffic cards an area chart, its notices and ranking a list.
+// What a card's height adjusts: a chart's height, or a list's row count. `main` is whether the card renders main's
+// Activity content (see `mainCard`), whose value tiles carry a sparkline in every form.
 export function heightKind(item: Widget, main: boolean): 'chart' | 'rows' | undefined {
-  if (main)
-    return tiles.includes(item.id) || item.id === 'history' || item.id === 'memory'
-      ? 'chart'
-      : item.id === 'ranking' || item.id === 'notices'
-        ? 'rows'
-        : undefined;
-  if (item.form === 'area' || item.form === 'sparkline') return charted.includes(item.id) ? 'chart' : undefined;
-  return listed.includes(item.id) && item.form !== 'donut' && item.form !== 'waffle' ? 'rows' : undefined;
+  if ((main && registry[item.id].tile) || item.form === 'area' || item.form === 'sparkline') return 'chart';
+  return registry[item.id].rows && item.form !== 'donut' && item.form !== 'waffle' ? 'rows' : undefined;
 }
 // The rows a list shows until its height is set: the limit it had before lists had a height. Main's notices and the
 // source list had none and show every row.

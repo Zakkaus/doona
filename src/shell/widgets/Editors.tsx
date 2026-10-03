@@ -14,14 +14,13 @@ import {dashboardDefaults, dashboardItems, mainCard, mapWidgets, tileOf, type Da
 import {placeWidget, removeWidget, stepWidget} from './dashboardEdit';
 import {sizeAxes, withPreset, type Preset, type SizeAxis} from './dashboardSizing';
 import {DashboardResize, type ResizeAxis} from '../../ui/DashboardResize';
-import {instanceId, defaults, registry, restoredPanel, changesPanel, canonicalForm, sizesFor, type Widget, type WidgetId} from './layout';
+import {instanceId, defaults, registry, replaceWidget, restoredPanel, changesPanel, canonicalForm, sizesFor, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
 import {defaultPanelHeight, defaultPanelWidth} from '../../ui/panelSize';
 import type {BackendView} from '../view';
 import {PanelHeader} from './Widgets';
 
 type Draft = {draft: DashboardLayout; setDraft: Dispatch<SetStateAction<DashboardLayout | null>>};
-const replace = (draft: DashboardLayout, item: Widget) => mapWidgets(draft, old => (instanceId(old) === instanceId(item) ? item : old));
 
 // The page in edit mode: the same sections and cells, as sortable canvases. Every tool sits in a card's corner or in
 // a dialog, so nothing enters the page's flow.
@@ -104,7 +103,7 @@ export function DashboardEditor({draft, setDraft, render}: Draft & {render: (ite
                 value: axis.value,
                 options: axis.options,
                 onChange: option => {
-                  setDraft(replace(draft, axis.set(option.value)));
+                  setDraft(mapWidgets(draft, replaceWidget(axis.set(option.value))));
                   announce(`${axis.label}: ${option.label}`);
                 }
               };
@@ -131,7 +130,7 @@ export function DashboardEditor({draft, setDraft, render}: Draft & {render: (ite
                       active={item}
                       items={items}
                       surface="dashboard"
-                      update={next => setDraft(replace(draft, next))}
+                      update={next => setDraft(mapWidgets(draft, replaceWidget(next)))}
                       move={delta => {
                         setDraft(stepWidget(draft, instanceId(item), delta));
                         announce(t('widgets.reordered'));
@@ -232,7 +231,7 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
   const dirty = useMemo(() => JSON.stringify(original) !== JSON.stringify(items), [original, items]) || panelMoves || widthChanged;
   useDraftGuard(dirty, onClose);
   const cancel = () => (dirty ? setConfirm(true) : onClose());
-  const update = (item: Widget) => setItems(previous => previous.map(old => (instanceId(old) === instanceId(item) ? item : old)));
+  const update = (item: Widget) => setItems(previous => previous.map(replaceWidget(item)));
   const add = (id: WidgetId) => {
     const item = addInstance(items, id);
     if (!item) return;
