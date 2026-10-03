@@ -165,21 +165,13 @@
   margin: 0;
   --rp-sortable-gap: calc((var(--rp-space-2) + var(--rp-space-half)) / var(--rp-preview-scale));
 }
-/* The preview's width edge shows the dashboard card's width grip at all times, a short pill centred on the inline end
+/* The preview's width edge shows the dashboard card's width grip (sortable.css) at all times, centred on the inline end
    edge in a hit area one control across it, drawn at screen size whatever the preview's scale. */
 .rp-floating-panel.rp-widget-preview > .rp-panel-resize[data-inline='end'] {
   display: grid;
   place-items: center;
   inline-size: calc(var(--rp-control) / var(--rp-preview-scale));
   margin-inline-end: calc(var(--rp-control) / -2 / var(--rp-preview-scale));
-}
-.rp-widget-preview > .rp-panel-resize::before {
-  content: '';
-  inline-size: calc(var(--rp-space-1) / var(--rp-preview-scale));
-  block-size: calc(var(--rp-space-6) / var(--rp-preview-scale));
-  border-radius: var(--rp-r-pill);
-  background: var(--rp-subtle);
-  box-shadow: 0 0 0 calc(var(--rp-space-half) / var(--rp-preview-scale)) var(--rp-base);
 }
 .rp-widget-preview > .rp-panel-resize:is(:focus-visible, :active)::before {
   background: var(--rp-accent);

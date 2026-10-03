@@ -136,7 +136,7 @@ function Handle({axis, edge}: {axis: ResizeAxis; edge: 'width' | 'height'}) {
         event.stopPropagation();
         moveProps.onPointerDown?.(event);
       }}
-      className="rp-dashboard-resize"
+      className="rp-dashboard-resize rp-grip"
       data-edge={edge}
       data-focus-visible={isFocusVisible || undefined}
       aria-label={axis.label}

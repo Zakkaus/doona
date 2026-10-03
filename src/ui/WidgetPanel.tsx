@@ -192,7 +192,7 @@ export function WidgetEditorLayout({
               <WidgetPanel label={canvasLabel} kind="canvas">
                 {canvas}
               </WidgetPanel>
-              {onPanelWidth && <ResizeHandle edge={{inline: 'end'}} label={resizeLabel} {...resize.props} onKeyDown={onKeyDown} />}
+              {onPanelWidth && <ResizeHandle edge={{inline: 'end'}} label={resizeLabel} grip {...resize.props} onKeyDown={onKeyDown} />}
             </div>
           </div>
         </section>
