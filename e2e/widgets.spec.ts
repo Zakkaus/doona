@@ -203,7 +203,7 @@ test('validates group identity on the active backend without losing its stored I
 });
 
 for (const height of [960, 320])
-  test(`the floating mode row at panel height ${height} lines up Apply and keeps the panel's insets even`, async ({page}) => {
+  test(`the floating mode row at panel height ${height} keeps Apply at the switch's height and the panel's insets even`, async ({page}) => {
     await save(page, {...defaults(), size: {width: 360, height}});
     await mockBackend(page);
     await page.goto('/#/settings');
@@ -213,7 +213,9 @@ for (const height of [960, 320])
     const seg = await box(widget.locator('.rp-seg'));
     const apply = await box(widget.getByRole('button', {name: 'Apply', exact: true}));
     expect(Math.abs(apply.height - seg.height)).toBeLessThanOrEqual(0.5);
-    expect(Math.abs(apply.y + apply.height / 2 - (seg.y + seg.height / 2))).toBeLessThanOrEqual(0.5);
+    // On the switch's line Apply shares its centre; too wide for the panel, it wraps below the switch.
+    if (apply.y < seg.y + seg.height) expect(Math.abs(apply.y + apply.height / 2 - (seg.y + seg.height / 2))).toBeLessThanOrEqual(0.5);
+    else expect(apply.y).toBeGreaterThanOrEqual(seg.y + seg.height);
     // The selected last segment keeps the control's own inset on its top, bottom and end.
     const insets = await widget.locator('.rp-seg').evaluate(el => {
       const track = el.getBoundingClientRect();

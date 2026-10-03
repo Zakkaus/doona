@@ -3,7 +3,7 @@ import {ChartDescription} from './charts/description';
 import {cx} from './cx';
 import {HelpRow, type Help} from './ContextualHelp';
 import {ActionHelp} from './Button';
-import {ControlSizeContext} from './controlSize';
+import {ControlSizeContext, type ControlSize} from './controlSize';
 
 // The card surface's class, for a react-aria element that has to be the card itself (a drop zone) and a form that is
 // one. Extra classes lay out what the card holds.
@@ -53,7 +53,8 @@ export function Card({
   tabIndex,
   'aria-label': label,
   children,
-  ref
+  ref,
+  size
 }: CardHeader & {
   titleVariant?: 'heading' | 'caption';
   level?: 2 | 3;
@@ -74,6 +75,8 @@ export function Card({
   children?: ReactNode;
   // A card that pauses its reads off screen observes itself.
   ref?: Ref<HTMLElement>;
+  // L for a card in a row with a segmented control, such as the control cards, so the row's controls match it.
+  size?: ControlSize;
 }) {
   const ownTitleId = useId();
   const noteId = useId();
@@ -129,6 +132,6 @@ export function Card({
       </ActionHelp>
     </section>
   );
-  // A card's controls are M wherever the card sits.
-  return <ControlSizeContext value={null}>{card}</ControlSizeContext>;
+  // A card's controls are M wherever the card sits, unless the card sets L.
+  return <ControlSizeContext value={size ?? null}>{card}</ControlSizeContext>;
 }

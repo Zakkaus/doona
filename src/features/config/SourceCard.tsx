@@ -72,7 +72,7 @@ export function SourceCard(props: SourceCardProps) {
           }
         >
           <div className="rp-config-diagnostic-filter">
-            <Segmented size="L" label={t('config.level')} value={d.level} onChange={d.setLevel} items={d.levels} />
+            <Segmented label={t('config.level')} value={d.level} onChange={d.setLevel} items={d.levels} />
           </div>
           <div className="rp-config-diagnostic-list" role="list" aria-label={t('config.diagnostics')}>
             {d.rows.map(item => (

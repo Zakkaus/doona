@@ -1,6 +1,7 @@
 import {useLang, useT} from '../../i18n';
 import {docsHref} from '../shared/docs';
 import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
+import {ControlSizeContext} from '../../ui/controlSize';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -36,37 +37,40 @@ export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'writable' |
 export function ModeSwitch({model: vm, fill}: {model: ModeCardsModel; fill?: boolean}) {
   const t = useT();
   const lang = useLang();
+  // The segmented control is L, so the apply action or the read-only reason beside it is L too.
   return (
-    <span className="rp-cluster">
-      <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} fill={fill} />
-      {vm.writable ? (
-        <ModeApply model={vm} />
-      ) : vm.readOnly ? (
-        <PopoverDialog
-          label={t('act.modeWhyReadOnly')}
-          placement="bottom end"
-          trigger={
-            <Button quiet label={t('act.modeWhyReadOnly')}>
-              {vm.status}
-            </Button>
-          }
-        >
-          {() => (
-            <>
-              <p>{t('act.modeReadOnlyReason')}</p>
-              <p>{t('act.modeReadOnlyAction')}</p>
-              <Link external appearance="link" href={docsHref(lang, 'read-only')}>
-                {t('act.readOnlyDocs')}
-              </Link>
-            </>
-          )}
-        </PopoverDialog>
-      ) : (
-        <Light small tone="muted">
-          {vm.status}
-        </Light>
-      )}
-    </span>
+    <ControlSizeContext value="L">
+      <span className="rp-cluster">
+        <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} fill={fill} />
+        {vm.writable ? (
+          <ModeApply model={vm} />
+        ) : vm.readOnly ? (
+          <PopoverDialog
+            label={t('act.modeWhyReadOnly')}
+            placement="bottom end"
+            trigger={
+              <Button quiet label={t('act.modeWhyReadOnly')}>
+                {vm.status}
+              </Button>
+            }
+          >
+            {() => (
+              <>
+                <p>{t('act.modeReadOnlyReason')}</p>
+                <p>{t('act.modeReadOnlyAction')}</p>
+                <Link external appearance="link" href={docsHref(lang, 'read-only')}>
+                  {t('act.readOnlyDocs')}
+                </Link>
+              </>
+            )}
+          </PopoverDialog>
+        ) : (
+          <Light small tone="muted">
+            {vm.status}
+          </Light>
+        )}
+      </span>
+    </ControlSizeContext>
   );
 }
 
@@ -80,6 +84,7 @@ export function ModeCards({model: vm, part}: {model: ModeCardsModel; part?: 'mod
           title={t('act.mode')}
           aria-label={t('act.mode')}
           tile={{icon: <Shuffle />, tint: 3, kind: 'control'}}
+          size="L"
           reason={vm.reasons.mode}
           aside={<ModeSwitch model={vm} />}
         />
@@ -88,6 +93,7 @@ export function ModeCards({model: vm, part}: {model: ModeCardsModel; part?: 'mod
         <Card
           title={t('act.global')}
           tile={{icon: <Filter />, tint: 2, kind: 'control'}}
+          size="L"
           reason={vm.reasons.global}
           aside={
             <span className="rp-cluster rp-global-controls">

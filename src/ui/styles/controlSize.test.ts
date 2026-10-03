@@ -1,5 +1,10 @@
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
 import {transform, type Selector} from 'lightningcss';
 import {expect, it} from 'vitest';
+import {ControlSizeContext} from '../controlSize';
+import {Segmented} from '../Segmented';
+import motion from './motion.css?raw';
 
 const owners: Record<string, string> = {
   'rp-btn': 'buttons-menus.css',
@@ -88,4 +93,40 @@ it('rejects page, one-off and literal control sizing, including logical sizes an
   expect(violations('.rp-btn.icon.rp-help[data-size] {width: var(--rp-control-xs); height: var(--rp-control-xs)}', 'buttons-menus.css')).toEqual([]);
   expect(violations('.rp-btn.icon.rp-help {height: 24px}', 'buttons-menus.css')).toHaveLength(2);
   expect(violations('.rp-btn > svg {height: 16px}', 'buttons-menus.css')).toEqual([]);
+});
+
+// Every segmented control is S2 size L (40px), so a time range in a card matches a page filter.
+function segmentedHeights(css: string): string[] {
+  const values: string[] = [];
+  transform({
+    filename: 'motion.css',
+    code: new TextEncoder().encode(css),
+    visitor: {
+      Rule: {
+        style(rule) {
+          const segmented = rule.value.selectors.some(selector => selector.some(part => part.type === 'class' && part.name === 'rp-seg'));
+          if (!segmented) return;
+          for (const declaration of [...rule.value.declarations.declarations, ...rule.value.declarations.importantDeclarations]) {
+            const property = declaration.property === 'unparsed' ? declaration.value.propertyId.property : declaration.property;
+            if (property in dimensions && property !== 'min-height') values.push(JSON.stringify(declaration.value));
+          }
+        }
+      }
+    }
+  });
+  return values;
+}
+
+it('sizes every segmented control at L only', () => {
+  const heights = segmentedHeights(motion);
+  expect(heights.length).toBeGreaterThan(0);
+  expect(heights.filter(value => !value.includes('"--rp-control-lg"'))).toEqual([]);
+  const items: Array<[string, string]> = [
+    ['a', 'A'],
+    ['b', 'B']
+  ];
+  const segmented = createElement(Segmented, {items, value: 'a', onChange: () => {}, label: 'Range'});
+  for (const markup of [renderToStaticMarkup(segmented), renderToStaticMarkup(createElement(ControlSizeContext, {value: null}, segmented))]) {
+    expect(markup.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="L"'));
+  }
 });
