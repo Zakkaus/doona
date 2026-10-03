@@ -498,3 +498,24 @@
 .rp-kv.compact.row > div {
   justify-content: space-between;
 }
+.rp-page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+  min-inline-size: 0;
+  min-block-size: var(--rp-control-lg);
+}
+.rp-page-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-inline-size: 0;
+}
+.rp-page-actions > * {
+  flex: none;
+}

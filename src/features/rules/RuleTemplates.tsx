@@ -4,6 +4,7 @@ import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Li
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
+import '../../ui/styles/impact.css';
 
 // The simple view of the routing list: the routing modes as one choice, the detected one selected, and Apply to write
 // another.

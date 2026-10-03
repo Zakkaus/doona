@@ -34,6 +34,7 @@ import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
 import {DnsStats} from './Analysis';
 import type {MatchKind} from './match';
 import {RuleDialog} from '../shared/RuleDialog';
+import '../../ui/styles/impact.css';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
