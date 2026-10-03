@@ -18,6 +18,8 @@ import {
   sourceView,
   diagnosticRows,
   diagnosticSummary,
+  filterDiagnostics,
+  type DiagnosticLevel,
   diagnosticsOpen,
   sourceMarks,
   readOnlyBadge,
@@ -301,6 +303,8 @@ export function useSourceCard({
   const checkedDraft = found !== null || saveErrors !== null;
   const rows = useMemo(() => diagnosticRows(shown, sources, locale, t, source.id), [shown, sources, locale, t, source.id]);
   const summary = diagnosticSummary(rows);
+  const [level, setLevel] = useState<DiagnosticLevel>('all');
+  const filtered = filterDiagnostics(rows, level);
   const pending = dirty && !checkedDraft;
   useEffect(() => reportErrors(pending ? null : summary.errors), [reportErrors, pending, summary.errors]);
   useEffect(() => () => reportErrors(null), [reportErrors]);
@@ -327,9 +331,17 @@ export function useSourceCard({
     note: readOnly?.note ?? t(canValidate ? 'config.editNoteValidate' : 'config.editNote'),
     refused,
     diagnostics: {
-      rows,
+      rows: filtered.rows,
       errors: summary.errors,
       warnings: summary.warnings,
+      level: filtered.level,
+      setLevel: (value: string) => setLevel(value as DiagnosticLevel),
+      levels: [
+        ['all', t('config.levelAll', {n: summary.errors + summary.warnings + summary.infos})],
+        ['error', t('config.levelErrors', {n: summary.errors})],
+        ['warning', t('config.levelWarnings', {n: summary.warnings})],
+        ['info', t('config.levelInfo', {n: summary.infos})]
+      ] satisfies Array<[DiagnosticLevel, string]>,
       scope: dirty ? t('config.draftDiagnostics') : checkedDraft ? t('config.fileDiagnostics') : t('config.acceptedDiagnostics', {generation}),
       // One quiet line instead of the bar: a draft not checked yet, or nothing to report.
       quiet: pending ? t('config.draftPending') : rows.length ? null : t('config.clean'),

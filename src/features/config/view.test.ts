@@ -12,6 +12,7 @@ import {
   readOnlyBadge,
   diagnosticRows,
   diagnosticSummary,
+  filterDiagnostics,
   diagnosticsOpen,
   sectionSummaries,
   sourceMarks
@@ -120,6 +121,13 @@ it('shows the backend words of a reused code once, in the detail', async () => {
   expect(row.backend).toBe(configNotes[0].message);
   expect(row.text).not.toContain(configNotes[0].message);
 });
+it('filters the rows by level, and falls back to all when a level has none', () => {
+  const error = {...configNotes[0], level: 'error' as const, code: 'other', message: 'Bad'};
+  const rows = diagnosticRows([error, configNotes[0]], [], 'en-US', t);
+  expect(filterDiagnostics(rows, 'error')).toEqual({level: 'error', rows: [rows[0]]});
+  expect(filterDiagnostics(rows, 'all')).toEqual({level: 'all', rows});
+  expect(filterDiagnostics(rows, 'info')).toEqual({level: 'all', rows});
+});
 it.each([
   ['a line in the source on show', 'main', 5, 'Line 5: No group named "alpha"', 'jump'],
   ['the source on show as a whole', 'main', null, 'No group named "alpha"', null],
@@ -133,7 +141,7 @@ it('counts repeated diagnostics and keys errors by what they say, not where', ()
   const error = {...configNotes[0], level: 'error' as const, code: 'other', message: 'Bad'};
   const rows = diagnosticRows([error, error, {...error, line: 9}, configNotes[0]], [], 'en-US', t);
   const summary = diagnosticSummary(rows);
-  expect(summary).toMatchObject({errors: 3, warnings: 1});
+  expect(summary).toMatchObject({errors: 3, warnings: 1, infos: 0});
   expect(summary.errorKeys).toHaveLength(1);
   expect(diagnosticSummary(diagnosticRows([{...error, message: 'Other'}], [], 'en-US', t)).errorKeys).not.toEqual(summary.errorKeys);
 });

@@ -293,6 +293,39 @@ test('identical diagnostics share one row with their count, and a known code kee
   await expect(page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem')).toHaveCount(1);
 });
 
+test('the level filter narrows the diagnostics list, each level counted', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const config = await api.config();
+  const note = (level: 'error' | 'warning' | 'info', line: number, message: string) =>
+    ({level, source_id: 'src-main', line, column: 1, span: null, code: 'other', message}) as const;
+  const repeated = note('error', 2, 'Repeated error');
+  config.diagnostics = [repeated, repeated, note('error', 3, 'Single error'), note('warning', 4, 'A warning'), note('info', 5, 'A note')];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=source&source=src-main');
+  const panel = page.getByRole('region', {name: 'Diagnostics', exact: true});
+  const rows = page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem');
+  // Errors open the list, under the filter at All.
+  await expect(rows).toHaveCount(4);
+  const filter = panel.getByRole('radiogroup', {name: 'Level'});
+  const level = (name: string) => filter.getByRole('radio', {name, exact: true});
+  await expect(level('All 5')).toHaveAttribute('aria-checked', 'true');
+  await expect(level('Errors 3')).toBeVisible();
+  await expect(level('Warnings 1')).toBeVisible();
+  await expect(level('Info 1')).toBeVisible();
+  expect(await filter.evaluate(element => element.getBoundingClientRect().height)).toBe(40);
+  await level('Errors 3').click();
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('Repeated error');
+  await expect(rows.last()).toContainText('Single error');
+  await level('Warnings 1').click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('A warning');
+  await level('Info 1').click();
+  await expect(rows).toHaveText([/A note/]);
+  await level('All 5').click();
+  await expect(rows).toHaveCount(4);
+});
+
 test.describe('without configuration readback', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 
