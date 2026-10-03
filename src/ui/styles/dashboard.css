@@ -1,24 +1,3 @@
-.rp-page-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--rp-space-3);
-  min-inline-size: 0;
-  min-block-size: var(--rp-control-lg);
-}
-.rp-page-actions {
-  margin-inline-start: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--rp-space-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  min-inline-size: 0;
-}
-.rp-page-actions > * {
-  flex: none;
-}
 .rp-dashboard {
   display: flex;
   flex-direction: column;
@@ -32,10 +11,6 @@
 .rp-dashboard-cell > .rp-card,
 .rp-dashboard-body > .rp-card {
   flex: 1;
-}
-.rp-module-content {
-  min-inline-size: 0;
-  container-type: inline-size;
 }
 .rp-module-actions {
   display: flex;
@@ -57,73 +32,6 @@
   flex: 0 1 auto;
   max-inline-size: 100%;
 }
-.rp-module-content .rp-kv .k,
-.rp-module-content .rp-kv .v {
-  min-inline-size: 0;
-  white-space: normal;
-  overflow-wrap: normal;
-}
-.rp-module-content .rp-donut .r .n {
-  min-inline-size: 0;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: normal;
-}
-/* Rows keep the Latency tab's single line of name, dots and value; a narrow card shares the line between name and
-   dots and keeps only the axis's end labels. */
-@container (max-width: 480px) {
-  .rp-module-content .rp-markerplot .axis,
-  .rp-module-content .rp-markerplot .row {
-    grid-template-columns: minmax(var(--rp-space-16), 1fr) minmax(var(--rp-space-16), 1fr) auto;
-    gap: var(--rp-space-2);
-  }
-  /* The phone layout's second row for the track does not apply to a card. */
-  .rp-module-content .rp-markerplot .row .track,
-  .rp-module-content .rp-markerplot .axis .scale {
-    grid-column: auto;
-    grid-row: auto;
-  }
-  .rp-module-content .rp-markerplot .axis > span:empty {
-    display: block;
-  }
-  .rp-module-content .rp-markerplot .scale > span:not(:first-child, :last-child) {
-    display: none;
-  }
-}
-@container (max-width: 380px) {
-  .rp-module-content .rp-donut .lst {
-    flex-basis: 100%;
-  }
-  .rp-module-content .rp-donut .r {
-    display: grid;
-    grid-template-columns: var(--rp-space-2) minmax(0, 1fr) calc(var(--rp-space-8) + var(--rp-space-1));
-    gap: var(--rp-space-1);
-  }
-  .rp-module-content .rp-donut .r .n {
-    grid-column: 2 / -1;
-  }
-  .rp-module-content .rp-donut .r > span:not([class]) {
-    grid-column: 2;
-  }
-}
-
-.rp-module-content .rp-donut .r {
-  flex-shrink: 0;
-}
-.rp-module-content .rp-markerplot .note {
-  overflow-wrap: normal;
-}
-.rp-module-content[data-size='small'] .rp-bar .top {
-  flex-direction: column;
-  align-items: start;
-}
-.rp-module-content[data-size='small'] .rp-donut .box {
-  max-inline-size: 100%;
-  block-size: auto;
-  aspect-ratio: 1;
-}
-
 .rp-module-option {
   flex-direction: column;
   align-items: start;

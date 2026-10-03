@@ -7,6 +7,7 @@ import {WidgetSection} from '../../ui/WidgetPanel';
 import {SamplePreview} from './SamplePreview';
 import {Contents} from './Contents';
 import {available, registry, type Widget} from './layout';
+import '../../ui/styles/widget-content.css';
 export function WidgetContent({
   item,
   preview = false,
