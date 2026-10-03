@@ -148,7 +148,7 @@ test('desktop subscription and node actions use the kit control text role', asyn
       const style = getComputedStyle(el);
       return {
         size: style.fontSize,
-        control: style.getPropertyValue('--rp-text-lg').trim(),
+        control: style.getPropertyValue('--rp-text-md').trim(),
         weight: style.fontWeight,
         height: el.getBoundingClientRect().height
       };

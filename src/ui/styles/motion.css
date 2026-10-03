@@ -237,11 +237,11 @@
   --rp-scrollbar: 6px;
   --rp-control: 32px;
   --rp-control-lg: 40px;
-  /* L's inline padding and text size. Phones take M's (below), so a row of L controls fits as a row of M controls does. */
+  /* L's inline padding; phones take M's (below), so a row of L controls fits as a row of M controls does. L's text is M's text size at every width. */
   --rp-lg-inset-btn: calc(var(--rp-control-lg) / 2);
   --rp-lg-inset-field: calc(var(--rp-control-lg) * 3 / 8);
   --rp-lg-inset-compact: calc(var(--rp-control-lg) * 3 / 8);
-  --rp-lg-text: var(--rp-text-lg);
+  --rp-lg-text: var(--rp-text-md);
   --rp-lg-text-compact: var(--rp-text-lg);
   --rp-control-xs: 24px;
   --rp-duration: 150ms;
@@ -284,7 +284,6 @@
     --rp-lg-inset-btn: var(--rp-space-3);
     --rp-lg-inset-field: var(--rp-space-3);
     --rp-lg-inset-compact: var(--rp-space-2);
-    --rp-lg-text: var(--rp-text-md);
     --rp-lg-text-compact: var(--rp-text-xs);
   }
 }
