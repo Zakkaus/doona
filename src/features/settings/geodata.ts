@@ -167,3 +167,17 @@ export function assetDetails(data: GeoData | undefined, groups: GroupSummary[] |
     return {label: asset.kind, value: parts.filter(Boolean).join(t('ui.separator')), full: url};
   });
 }
+
+// When the last update attempt finished and when the next automatic one is due. A field the backend does not report
+// has no row; no next check means automatic updates are off, which their switch already shows.
+export function checkTimes(data: GeoData | undefined, now: number, locale: string, t: Translator): KvItem[] {
+  if (!data) return [];
+  const rows: KvItem[] = [];
+  if (data.last_checked_at !== undefined)
+    rows.push({
+      label: t('settings.geodataLastChecked'),
+      value: data.last_checked_at ? relativeStart(data.last_checked_at, locale, now) : t('settings.geodataNever')
+    });
+  if (data.next_check_at) rows.push({label: t('settings.geodataNextCheck'), value: relativeStart(data.next_check_at, locale, now)});
+  return rows;
+}

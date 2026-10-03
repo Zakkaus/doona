@@ -183,7 +183,8 @@ export const geodata: GeoData = {
       download_route: {route: 'routing', group_id: null}
     }
   ],
-  last_checked_at: ago(3 * 86400),
+  // This morning's automatic check found the files unchanged.
+  last_checked_at: ago(5 * 3600),
   last_updated_at: ago(3 * 86400),
   next_check_at: null,
   last_error: null,

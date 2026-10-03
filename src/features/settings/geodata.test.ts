@@ -4,6 +4,7 @@ import {geodataPreset, geodataPresets, liteCategories} from '../../dae/geodata';
 import {translate, type Translator} from '../../i18n';
 import {
   assetDetails,
+  checkTimes,
   cleanUrls,
   customFields,
   customInvalid,
@@ -174,5 +175,23 @@ describe('rows', () => {
     const details = assetDetails(status(), [], 'en-US', t);
     expect(details[0]).toEqual({label: 'geosite', value: expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full: full.urls.geosite[0]});
     expect(assetDetails(undefined, [], 'en-US', t)).toEqual([]);
+  });
+
+  it.each([
+    {
+      name: 'both reported',
+      over: {last_checked_at: at, next_check_at: '2026-09-25T18:00:00Z'},
+      rows: [
+        ['Last checked', '3 days ago'],
+        ['Next check', 'in 6 hours']
+      ]
+    },
+    {name: 'never checked, automatic updates off', over: {last_checked_at: null, next_check_at: null}, rows: [['Last checked', 'Never']]},
+    {name: 'not reported', over: {}, rows: []}
+  ])('lists the check times: $name', ({over, rows}) => {
+    expect(checkTimes(status(over), now, 'en-US', t).map(row => (Array.isArray(row) ? row : [row.label, row.value]))).toEqual(rows);
+  });
+  it('has no check times before the status is read', () => {
+    expect(checkTimes(undefined, now, 'en-US', t)).toEqual([]);
   });
 });
