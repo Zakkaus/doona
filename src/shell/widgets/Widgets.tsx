@@ -4,6 +4,7 @@ import {useT} from '../../i18n';
 import {Button, DetailPanel, Light, MoreMenu} from '../../ui/ui';
 import {FloatingPanel, ResizeHandle, useGesture} from '../../ui/FloatingPanel';
 import {WidgetHeader, WidgetPanel} from '../../ui/WidgetPanel';
+import {TitlesShown} from '../../ui/Card';
 import {WidgetGrid, WidgetCell} from '../../ui/WidgetGrid';
 import {WidgetChartInset} from '../../ui/charts/compact';
 import ChevronDown from '../../ui/icons/ChevronDown';
@@ -117,13 +118,16 @@ export function PanelHost({
     document.body
   );
 }
-// The rates widget's one chart or two, set from the panel's menu on every host.
-const combineAction = (layout: Layout, t: ReturnType<typeof useT>) => ({
-  id: 'combine',
-  label: t('widgets.combineRates'),
-  checked: !layout.splitRates,
-  onAction: () => patchLayout({splitRates: layout.splitRates ? undefined : true})
-});
+// The panel's switches in its menu on every host: the rates widget's one chart or two, and the widgets' titles.
+const panelSwitches = (layout: Layout, t: ReturnType<typeof useT>) => [
+  {
+    id: 'combine',
+    label: t('widgets.combineRates'),
+    checked: !layout.splitRates,
+    onAction: () => patchLayout({splitRates: layout.splitRates ? undefined : true})
+  },
+  {id: 'titles', label: t('widgets.showTitles'), checked: !!layout.titles, onAction: () => patchLayout({titles: layout.titles ? undefined : true})}
+];
 // The phone drawer, loaded on its first opening.
 export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: () => void; backend: BackendView}) {
   const t = useT();
@@ -139,7 +143,7 @@ export function PhoneDrawer({open, onClose, backend}: {open: boolean; onClose: (
         <MoreMenu
           quiet
           label={t('widgets.panelOptions')}
-          actions={[{id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)}, combineAction(layout, t)]}
+          actions={[{id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)}, ...panelSwitches(layout, t)]}
         />
       }
     >
@@ -152,17 +156,21 @@ function SavedGrid({docked = false}: {docked?: boolean}) {
   const t = useT();
   return (
     <WidgetPanel label={t('widgets.title')}>
-      <WidgetGrid>
-        {layout.items.map(item => (
-          <WidgetCell key={instanceId(item)} id={instanceId(item)} size={item.size === 'wide' ? 'large' : item.size}>
-            <WidgetContent
-              item={item}
-              docked={docked}
-              onChange={next => saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(next) ? next : old))}))}
-            />
-          </WidgetCell>
-        ))}
-      </WidgetGrid>
+      <TitlesShown value={!!layout.titles}>
+        <WidgetGrid>
+          {layout.items.map(item => (
+            <WidgetCell key={instanceId(item)} id={instanceId(item)} size={item.size === 'wide' ? 'large' : item.size}>
+              <WidgetContent
+                item={item}
+                docked={docked}
+                onChange={next =>
+                  saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(next) ? next : old))}))
+                }
+              />
+            </WidgetCell>
+          ))}
+        </WidgetGrid>
+      </TitlesShown>
       {!layout.items.length && <span className="rp-label">{t('widgets.empty')}</span>}
     </WidgetPanel>
   );
@@ -209,7 +217,7 @@ export function PanelHeader({
               ...(docked
                 ? []
                 : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
-              combineAction(layout, t),
+              ...panelSwitches(layout, t),
               {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
             ]}
           />

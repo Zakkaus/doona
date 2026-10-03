@@ -107,6 +107,11 @@ it('starts with the rates, memory and mode, and keeps a stored divider', () => {
   expect(parseLayout(stored).items).toEqual(stored.items);
 });
 it.each([
+  ['hides the widget titles by default', {}, undefined],
+  ['keeps them shown once chosen', {titles: true}, true],
+  ['drops a value that is not true', {titles: 1}, undefined]
+])('%s', (_name, value, titles) => expect(parseLayout({...defaults(), ...value}).titles).toBe(titles));
+it.each([
   ['combines the rates charts by default', {}, undefined],
   ['keeps them split once chosen', {splitRates: true}, true],
   ['drops a value that is not true', {splitRates: 'yes'}, undefined]
