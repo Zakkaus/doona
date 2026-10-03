@@ -68,7 +68,6 @@ export function sectionSourceHref(sources: readonly ConfigSource[], name: string
   return href('config', {tab: 'source', source: authored.find(source => source.kind === 'main')?.id ?? null});
 }
 
-export const appearanceSettingsHref = href('settings', {card: 'appearance'});
 export const outboundModeHref = href('activity', {card: 'mode'});
 export const recordingLimitsHref = href('overview', {card: 'limits'});
 export const nodeSetHref = (ids: string[]) => href('nodes', {nodes: JSON.stringify(ids)});

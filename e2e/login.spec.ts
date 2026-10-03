@@ -35,21 +35,34 @@ test.describe('the demo', () => {
     await expect(page.locator('.rp-nav')).toHaveCount(0);
   });
 
-  test('opens Appearance before sign-in and returns with the selected language and scheme', async ({page}) => {
+  test('switches language and scheme from the sign-in page', async ({page}) => {
     await page.goto('/#/activity');
-    await page.locator('.rp-login-controls').getByRole('link', {name: 'Appearance'}).click();
-    const card = page.getByRole('region', {name: 'Appearance'});
-    await expect(card).toBeFocused();
-    await card.getByRole('button', {name: /Language$/}).click();
-    await page.getByRole('option', {name: '繁體中文'}).click();
-    await page
-      .getByRole('region', {name: '外觀', exact: true})
-      .getByRole('button', {name: /明暗模式$/})
-      .click();
-    await page.getByRole('option', {name: '暗色', exact: true}).click();
-    await page.goto('/#/activity');
-    await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('登入');
+    const controls = page.locator('.rp-login-controls');
+    await controls.getByRole('button', {name: 'Language', exact: true}).click();
+    await page.getByRole('menuitemradio', {name: '繁體中文'}).click();
+    const login = page.locator('.rp-login-page');
+    await expect(login.getByRole('heading', {level: 1})).toHaveText('登入');
+    await expect(login.locator('.rp-login-account')).toHaveText('示範帳號：demo　密碼：demo');
+    await expect(page.locator('html')).toHaveAttribute('data-scheme', 'light');
+    // The same toggle as the top bar: a saved scheme goes back to the system's, which then flips to its opposite.
+    await controls.getByRole('button', {name: '主題：亮色', exact: true}).click();
+    await controls.getByRole('button', {name: '主題：跟隨系統', exact: true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-scheme', 'dark');
+    await expect(controls.getByRole('button', {name: '主題：暗色', exact: true})).toBeVisible();
+  });
+
+  // The three controls are the top bar's quiet icon buttons at the library's size, side by side on one row.
+  test('lines up the sign-in controls at one size', async ({page}) => {
+    await page.goto('/#/activity');
+    const buttons = page.locator('.rp-login-controls').getByRole('button');
+    await expect(buttons).toHaveCount(3);
+    const boxes = await Promise.all((await buttons.all()).map(button => box(button)));
+    for (const {y, height, width} of boxes) {
+      expect(height).toBe(boxes[0]!.height);
+      expect(y).toBe(boxes[0]!.y);
+      expect(width).toBe(height);
+    }
+    for (const button of await buttons.all()) await expect(button).toHaveAttribute('data-size', 'M');
   });
 
   test.describe('in Chinese', () => {
@@ -76,18 +89,16 @@ test.describe('the demo', () => {
 
   test('picks a palette from the sign-in page, and the page keeps it after a reload', async ({page}) => {
     await page.goto('/#/activity');
-    await page.locator('.rp-login-controls').getByRole('link', {name: 'Appearance'}).click();
-    const controls = page.getByRole('region', {name: 'Appearance'});
+    const controls = page.locator('.rp-login-controls');
     await expect(page.locator('html')).not.toHaveAttribute('data-family', 'nord');
-    await controls.getByRole('button', {name: /Palette$/}).click();
-    await page.getByRole('option', {name: /Nord/}).click();
+    await controls.getByRole('button', {name: 'Palette', exact: true}).click();
+    await page.getByRole('menuitemradio', {name: /Nord/}).click();
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-    await page.goto('/#/activity');
     await settle(page);
     await page.reload();
     await expect(page.locator('.rp-login-page').getByRole('heading', {level: 1})).toHaveText('Sign in');
     await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
-    // Backend settings remain reachable before sign-in.
+    // The backend settings reached before sign-in draw the top bar, which offers the same menu.
     await page.locator('.rp-login-page').getByRole('link', {name: 'Change backend URL'}).click();
     await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
   });
@@ -175,7 +186,7 @@ test('a rejected saved token opens its Backend editor and returns after save', a
   const login = page.locator('.rp-login-page');
   await expect(login.getByRole('heading', {level: 1})).toHaveText('Token required');
   await expect(login.locator('.rp-alert')).toHaveText('The backend rejected the saved token. Update it in Backend settings.');
-  await expect(login.getByRole('link', {name: 'Appearance', exact: true})).toBeVisible();
+  await expect(login.getByRole('button', {name: 'Language', exact: true})).toBeVisible();
   await expect(login.getByRole('link', {name: 'Change backend URL'})).toHaveAttribute('href', '#/settings');
   await expect(login.locator('[name=token]')).toHaveCount(0);
   const editToken = login.getByRole('link', {name: 'Edit saved token'});
