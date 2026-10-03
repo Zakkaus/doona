@@ -40,7 +40,7 @@ function Shares({item, rows, bytes = false, empty}: {item: Widget; rows: Share[]
         item.form === 'ranked' ? (
           <Bar key={row.name} label={row.name} value={row.text} pct={row.pct} color={row.color} />
         ) : (
-          <Kv truncate key={row.name} compact row={item.size !== 'small'} items={[[row.name, row.text]]} />
+          <Kv key={row.name} compact row={item.size !== 'small'} items={[[row.name, row.text]]} />
         )
       )}
     </div>

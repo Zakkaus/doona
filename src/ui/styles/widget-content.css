@@ -9,6 +9,24 @@
   white-space: normal;
   overflow-wrap: normal;
 }
+/* A name is never cut: one that does not fit beside its value takes its own line, value under it at the end, and
+   wraps there whole. */
+.rp-module-content .rp-kv .k,
+.rp-columns .rp-bar .top .l {
+  overflow-wrap: anywhere;
+}
+.rp-module-content .rp-kv.row > div,
+.rp-columns .rp-bar .top {
+  flex-wrap: wrap;
+}
+.rp-module-content .rp-kv.row .v,
+.rp-columns .rp-bar .top .v {
+  margin-inline-start: auto;
+}
+.rp-columns .rp-bar .top .l > :is(.rp-link, .rp-truncate) {
+  white-space: normal;
+  text-overflow: clip;
+}
 /* A wide card's list of four rows or more takes two columns, the first filled before the second; fewer rows keep one
    column as wide as one of those. */
 @container (width >= 640px) {
