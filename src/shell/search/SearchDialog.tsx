@@ -1,7 +1,7 @@
 import {Autocomplete, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
 import {useT} from '../../i18n';
 import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty} from '../../ui/ui';
-import {ItemText} from '../../ui/Select';
+import {ItemText} from '../../ui/ItemText';
 import Close from '../../ui/icons/Close';
 import type {PageProps} from '../routes';
 import {useSearch} from './useSearch';

@@ -20,7 +20,8 @@ import {useT, type Translator} from '../i18n';
 import {errorLines, errorText, failureNotice, requestIdOf} from '../api/error';
 import {recordDiagnostic, type Diagnostic} from '../api/diagnostics';
 import {cx} from './cx';
-import {Button, TextTooltip} from './Button';
+import {Button} from './Button';
+import {TextTooltip} from './Tooltip';
 import {escapeLayers} from './hooks';
 
 export function Empty({role, children}: {role?: 'alert'; children: ReactNode}) {

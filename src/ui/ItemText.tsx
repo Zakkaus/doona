@@ -1,6 +1,6 @@
 import {type ReactNode} from 'react';
 import {Text} from 'react-aria-components';
-import {TextTooltip} from './Button';
+import {TextTooltip} from './Tooltip';
 import {NodeName} from './NodeName';
 
 export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean; flag?: string | null};

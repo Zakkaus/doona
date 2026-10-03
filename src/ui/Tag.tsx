@@ -2,7 +2,8 @@ import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
 import {flushSync} from 'react-dom';
 import {Button as RButton, TooltipTrigger} from 'react-aria-components';
 import {formatList, useLang} from '../i18n';
-import {Link, Tip} from './Button';
+import {Link} from './Link';
+import {Tip} from './Tooltip';
 import {cx} from './cx';
 
 // One item of a set, as S2's Tag: a label with an optional trailing action (remove, undo). Built on plain markup

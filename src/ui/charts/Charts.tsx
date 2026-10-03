@@ -3,7 +3,7 @@ import type {ComponentProps} from 'react';
 import {useT} from '../../i18n';
 import {LoadBoundary} from '../LoadBoundary';
 import {LegendItem} from './LegendItem';
-import {Link} from '../Button';
+import {Link} from '../Link';
 export type Series = {label: string; color: string; values: Array<number | null>};
 const LazyAreaChart = lazy(() => import('./AreaChart').then(module => ({default: module.AreaPlot})));
 const LazySpark = lazy(() => import('./Sparkline').then(module => ({default: module.SparkPlot})));

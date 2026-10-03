@@ -19,7 +19,8 @@ import {
 import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
 import {phoneQuery, useContentWidth, useMediaQuery} from './hooks';
-import {TextTooltip, buttonClass} from './Button';
+import {TextTooltip} from './Tooltip';
+import {buttonClass} from './Button';
 import {Empty, Loading} from './Feedback';
 import {revealFlowRow, useTableFlow} from './tableFlow';
 import {fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from './tableHooks';

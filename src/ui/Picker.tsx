@@ -1,7 +1,7 @@
 import {Button as RButton, Select, SelectValue, Popover, ListBox, ListBoxItem, Label, Text, type Key} from 'react-aria-components';
 import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
-import {ItemLabel, ItemText, type Item} from './Select';
+import {ItemLabel, ItemText, type Item} from './ItemText';
 import {cx} from './cx';
 import {useControlSize, type ControlSize} from './controlSize';
 

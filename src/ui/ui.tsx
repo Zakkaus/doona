@@ -16,14 +16,16 @@ export {
   isMac
 } from './hooks';
 export {exportName, downloadFile, csvLine} from './files';
-export {ActionHelp, Button, TextTooltip, Link, buttonClass, type ButtonStyle} from './Button';
+export {ActionHelp, Button, buttonClass, type ButtonStyle} from './Button';
+export {TextTooltip} from './Tooltip';
+export {Link} from './Link';
 export {TextField, StaticField, Switch} from './Fields';
 export {Segmented} from './Segmented';
 export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
 export {Checkbox} from './Checkbox';
 export {LabeledSelect} from './Picker';
-export {ItemLabel} from './Select';
+export {ItemLabel} from './ItemText';
 export {WidestLabel} from './WidestLabel';
 export {MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Menu';
 export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';

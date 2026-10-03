@@ -1,6 +1,6 @@
 import type {ReactNode} from 'react';
 import {NodeName} from '../NodeName';
-import {TextTooltip} from '../Button';
+import {TextTooltip} from '../Tooltip';
 
 // `icon` and `tint` as on the activity page's tiles: the icon takes a palette role colour, or the tone's.
 export type ChartFact = {

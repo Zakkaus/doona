@@ -3,7 +3,7 @@ import {Button as RButton, Header, Label, ListBox, ListBoxItem, ListBoxSection, 
 import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
 import {cx} from './cx';
-import {ItemLabel, ItemText, type Item} from './Select';
+import {ItemLabel, ItemText, type Item} from './ItemText';
 import {SearchList} from './SearchList';
 import {useControlSize, type ControlSize} from './controlSize';
 

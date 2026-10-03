@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react';
-import {TextTooltip} from './Button';
+import {TextTooltip} from './Tooltip';
 import {cx} from './cx';
 
 export const FlagEditingContext = createContext<((name: string) => void) | null>(null);

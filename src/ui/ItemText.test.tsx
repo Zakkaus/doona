@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ListBox, ListBoxItem} from 'react-aria-components';
-import {ItemText} from './Select';
+import {ItemText} from './ItemText';
 
 // The option is named by its label alone; the description is announced as the description, not twice.
 it('names an option with a description by its label slot', () => {
