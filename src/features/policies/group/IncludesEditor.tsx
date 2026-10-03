@@ -1,13 +1,13 @@
 import {Fragment} from 'react';
-import {NodeName} from '../../ui/NodeName';
-import {ConditionActions, ConditionRow} from '../../ui/ConditionRow';
-import type {GroupConditionKind} from '../../dae/groupConditions';
-import {useT} from '../../i18n';
-import {Button, DialogSection, Disclosure, InlineAlert, LabeledSelect, Link, Switch, Tag, Tags, TextField} from '../../ui/ui';
-import Close from '../../ui/icons/Close';
-import AddCircle from '../../ui/icons/AddCircle';
-import {CheckboxSet} from '../../ui/CheckboxSet';
-import {SearchMultiSelect} from '../../ui/SearchMultiSelect';
+import {NodeName} from '../../../ui/NodeName';
+import {ConditionActions, ConditionRow} from '../../../ui/ConditionRow';
+import type {GroupConditionKind} from '../../../dae/groupConditions';
+import {useT} from '../../../i18n';
+import {Button, DialogSection, Disclosure, InlineAlert, LabeledSelect, Link, Switch, Tag, Tags, TextField} from '../../../ui/ui';
+import Close from '../../../ui/icons/Close';
+import AddCircle from '../../../ui/icons/AddCircle';
+import {CheckboxSet} from '../../../ui/CheckboxSet';
+import {SearchMultiSelect} from '../../../ui/SearchMultiSelect';
 import type {GroupDialogView} from './useGroupDialog';
 
 export function IncludesEditor({model: m}: {model: GroupDialogView}) {

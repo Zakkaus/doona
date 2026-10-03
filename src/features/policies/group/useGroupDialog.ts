@@ -1,9 +1,9 @@
 import {useMemo, useRef, useState} from 'react';
-import {useLang, useT} from '../../i18n';
-import {offered} from '../../api/capabilities';
-import {useCapabilities, useNodes, useProviders} from '../../store';
-import {useConfig} from '../../store/config';
-import {readSubscriptionEntries} from '../../dae/subscriptions';
+import {useLang, useT} from '../../../i18n';
+import {offered} from '../../../api/capabilities';
+import {useCapabilities, useNodes, useProviders} from '../../../store';
+import {useConfig} from '../../../store/config';
+import {readSubscriptionEntries} from '../../../dae/subscriptions';
 import {
   groupFilterDraft,
   groupFilterText,
@@ -13,8 +13,8 @@ import {
   type GroupFilterDraft,
   type GroupConditionRow,
   type GroupConditionKind
-} from '../../dae/groupConditions';
-import {describeFilters, isWritableName} from '../../dae/groups';
+} from '../../../dae/groupConditions';
+import {describeFilters, isWritableName} from '../../../dae/groups';
 import {
   includeChoices,
   includesEveryNode,
@@ -26,18 +26,18 @@ import {
   setIncludes,
   type IncludeKind
 } from './groupIncludes';
-import {nameText, readGroupEntries, writeGroupEntry, type GroupEntry, type GroupEntryUpdate} from '../../dae/groups';
-import {href} from '../../shell/route';
-import {unquote} from '../../dae/text';
-import {editProblem, type MainSourceEdit} from '../../store/mainSource';
-import type {ConfigSource, Group, Node} from '../../api/model';
-import {toast, type Problem} from '../../ui/ui';
-import {useDialogSession, useDraftGuard} from '../../shell/draft';
-import {LocalError, noticeText} from '../../api/error';
-import {groupEditSafe, groupNameError, manualPolicy} from './policyText';
-import {newGroupPolicies} from '../../dae/vocab';
-import type {SearchSection} from '../../ui/SearchSelect';
-import type {CheckboxChoice} from '../../ui/CheckboxSet';
+import {nameText, readGroupEntries, writeGroupEntry, type GroupEntry, type GroupEntryUpdate} from '../../../dae/groups';
+import {href} from '../../../shell/route';
+import {unquote} from '../../../dae/text';
+import {editProblem, type MainSourceEdit} from '../../../store/mainSource';
+import type {ConfigSource, Group, Node} from '../../../api/model';
+import {toast, type Problem} from '../../../ui/ui';
+import {useDialogSession, useDraftGuard} from '../../../shell/draft';
+import {LocalError, noticeText} from '../../../api/error';
+import {groupEditSafe, groupNameError, manualPolicy} from '../../shared/policyText';
+import {newGroupPolicies} from '../../../dae/vocab';
+import type {SearchSection} from '../../../ui/SearchSelect';
+import type {CheckboxChoice} from '../../../ui/CheckboxSet';
 import {
   editBlocked,
   finalSections,
@@ -53,7 +53,7 @@ import {
   type GroupOwner,
   type OutboundCatalogue,
   type RouteField
-} from './groupText';
+} from '../../shared/groupText';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
 
 const conditionLabels = {

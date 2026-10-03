@@ -2,7 +2,7 @@ import {LabeledSelect, ChoiceMenu, Switch, TextField, Empty, Toolbar} from '../.
 import type {MemberView} from './view';
 import {useT} from '../../i18n';
 import {useNodeGrid} from './useNodeGrid';
-import {NodeGrid as TileGrid} from '../../ui/NodeGrid';
+import {NodeGrid as TileGrid} from './NodeGrid';
 
 export function NodeGrid({
   nodes,

@@ -1,4 +1,4 @@
-import {conditionFamily, groupConditionKinds, newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../dae/groupConditions';
+import {conditionFamily, groupConditionKinds, newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../../dae/groupConditions';
 
 export function conditionTerms(row: GroupConditionRow): Array<{id: number; kind: GroupConditionKind; value: string}> {
   return [row, ...(row.alternatives ?? [])].map(({id, kind, value}) => ({id, kind, value}));

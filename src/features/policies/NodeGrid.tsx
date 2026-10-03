@@ -1,9 +1,9 @@
 import {GridLayout, GridList, GridListItem, Size, ToggleButton, Virtualizer} from 'react-aria-components';
 import {useCallback, useState, type ReactNode} from 'react';
-import {NodeTile, type NodeStatus} from './Tile';
-import {Empty} from './Feedback';
-import {cx} from './cx';
-import {useContentWidth} from './hooks';
+import {NodeTile, type NodeStatus} from '../../ui/Tile';
+import {Empty} from '../../ui/Feedback';
+import {cx} from '../../ui/cx';
+import {useContentWidth} from '../../ui/hooks';
 
 // The tallest the scroll panel grows, as `.rp-nodegrid` sets it in nodes.css.
 const panelHeight = 376;

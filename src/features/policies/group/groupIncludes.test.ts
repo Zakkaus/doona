@@ -1,13 +1,13 @@
 import {describe, expect, it} from 'vitest';
-import type {Provider} from '../../api/model';
-import {nodeFixtures} from '../../../mock/fixtures';
-import {groupFilterDraft, groupFilterTexts, newGroupFilter} from '../../dae/groupConditions';
-import {readGroupEntries, writeGroupEntry} from '../../dae/groups';
-import {compileFilters} from '../../dae/groupFilters';
-import {flagChoices, regionFlag} from '../../dae/flags';
-import {regions} from '../../dae/regions';
-import {flagForName} from './countryFlags';
-import {regionGroups} from '../../dae/templates';
+import type {Provider} from '../../../api/model';
+import {nodeFixtures} from '../../../../mock/fixtures';
+import {groupFilterDraft, groupFilterTexts, newGroupFilter} from '../../../dae/groupConditions';
+import {readGroupEntries, writeGroupEntry} from '../../../dae/groups';
+import {compileFilters} from '../../../dae/groupFilters';
+import {flagChoices, regionFlag} from '../../../dae/flags';
+import {regions} from '../../../dae/regions';
+import {flagForName} from '../../shared/countryFlags';
+import {regionGroups} from '../../../dae/templates';
 import {
   advancedFilter,
   editMembership,

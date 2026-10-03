@@ -4,8 +4,8 @@ import type {Capabilities, ConfigSource} from '../../api/model';
 import {addSubtagsToGroup, citingGroups, removeSubtagsFromGroup} from '../../dae/groups';
 import {isBareName, isQuotable} from '../../dae/text';
 import {agentProblem, isSubscriptionUrl, writeSubscriptionEntry, type SubscriptionChange, type SubscriptionText} from '../../dae/subscriptions';
-import {draftInterval} from '../shared/subscription';
-import type {SubscriptionFieldSet} from '../shared/SubscriptionFields';
+import {draftInterval} from './subscription';
+import type {SubscriptionFieldSet} from './SubscriptionFields';
 import {keptOptions, providerChanges, renameReferences, type ProviderForm, type ProviderRow} from './view';
 
 export type SubscriptionEdit = {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};

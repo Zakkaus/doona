@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../dae/groupConditions';
+import {newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../../dae/groupConditions';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
 
 const row: GroupConditionRow = {

@@ -1,7 +1,7 @@
 import {compileFilters} from '../src/dae/groupFilters';
 import {expect, mockBackend, test, box} from './fixtures';
 import {nestedIn, readGroupEntries, writeGroupEntry} from '../src/dae/groups';
-import {regionFilters} from '../src/features/shared/groupIncludes';
+import {regionFilters} from '../src/features/policies/group/groupIncludes';
 
 test.use({storage: {'doona-lang': 'en'}});
 const hk = regionFilters.find(region => region.id === 'HK')!.filter;
