@@ -1,6 +1,10 @@
 # nfpm packages the staged prebuilt release archive for deb, rpm, ipk and Arch.
 # VERSION and PRERELEASE come from the tag (tools/version.sh); the package is architecture-independent.
-name: doona
+# Debian and Ubuntu ship an unrelated `doona` 1.0 (a network fuzzer) that owns /usr/share/doona and
+# /usr/share/doc/doona, so the deb is built with PACKAGE_SUFFIX=-web: it is named doona-web, installs under
+# doona-web paths and takes over the 0.1 `doona` debs released before the rename. The other formats leave
+# PACKAGE_SUFFIX unset and keep the name doona.
+name: doona${PACKAGE_SUFFIX}
 arch: all
 platform: linux
 version: ${VERSION}
@@ -16,15 +20,34 @@ homepage: https://github.com/Zakkaus/doona
 license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
 description: |
   Web UI for the daeuniverse engines
-  Static files for /usr/share/doona; configure the engine or a web server to serve that directory.
+  Static files for the doona web interface; point the engine's ui setting or a web server at their directory.
 suggests:
-  - doona-fonts
+  - doona${PACKAGE_SUFFIX}-fonts
+deb:
+  breaks:
+    - doona (<< 1.0)
+    - doona-fonts (<< 1.0)
+overrides:
+  # A packager's contents replace the top-level list, so the deb names its two trees here.
+  deb:
+    replaces:
+      - doona (<< 1.0)
+    conflicts:
+      - doona (<< 1.0)
+      - doona-fonts (<< 1.0)
+    contents:
+      - src: build/stage/doona/usr/share/doona
+        dst: /usr/share/doona-web
+        type: tree
+      - src: build/stage/doona/usr/share/doc/doona
+        dst: /usr/share/doc/doona-web
+        type: tree
 contents:
   - src: build/stage/doona/usr/share/doona
     dst: /usr/share/doona
     type: tree
-  # rpm records documentation and licence files by type; nfpm drops typed entries from the other formats, which
-  # take the directory instead.
+  # rpm records documentation and licence files by type; nfpm drops typed entries from ipk and Arch, which take the
+  # directory instead.
   - src: build/stage/doona/usr/share/doc/doona/LICENSE
     dst: /usr/share/doc/doona/LICENSE
     type: license
@@ -73,10 +96,6 @@ contents:
     dst: /usr/share/doc/doona/CHANGELOG.md
     type: doc
     packager: rpm
-  - src: build/stage/doona/usr/share/doc/doona
-    dst: /usr/share/doc/doona
-    type: tree
-    packager: deb
   - src: build/stage/doona/usr/share/doc/doona
     dst: /usr/share/doc/doona
     type: tree
