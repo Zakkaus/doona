@@ -70,10 +70,8 @@ export function createFeed<T extends {id: string}, S extends object>(
     },
     append(record: T) {
       const id = key(record);
-      if (records.has(id)) {
-        if (replay === 'ignore' || records.get(id) === record) return;
-        records.delete(id);
-      }
+      // A repeat of a listed id replaces its record where it stands, so a repeated event never reorders the list.
+      if (records.has(id) && (replay === 'ignore' || records.get(id) === record)) return;
       records.set(id, record);
       if (records.size > limit) {
         const [oldest, evicted] = records.entries().next().value!;

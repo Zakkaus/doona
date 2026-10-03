@@ -93,8 +93,8 @@ it('buffers events and status while hidden, then publishes one current snapshot'
   expect(feed.getSnapshot()).toEqual({
     connected: true,
     records: [
-      {id: 'first', value: 3},
-      {id: 'second', value: 2}
+      {id: 'second', value: 2},
+      {id: 'first', value: 3}
     ],
     gaps: new Set(),
     pending: 0
@@ -240,5 +240,19 @@ it('does not republish one shared event delivered by multiple notice consumers',
   vi.advanceTimersByTime(100);
   expect(feed.getSnapshot()).toBe(first);
   expect(notify).toHaveBeenCalledOnce();
+  stop();
+});
+
+it('replaces a repeated id where it stands, so a repeat never reorders the list', () => {
+  const feed = createFeed<{id: string; value: number}, Record<string, never>>(200, {}, 'replace');
+  const stop = feed.subscribe(() => {});
+  feed.append({id: 'ready', value: 1});
+  feed.append({id: 'other', value: 2});
+  feed.append({id: 'ready', value: 3});
+  vi.advanceTimersByTime(100);
+  expect(feed.getSnapshot().records).toEqual([
+    {id: 'other', value: 2},
+    {id: 'ready', value: 3}
+  ]);
   stop();
 });
