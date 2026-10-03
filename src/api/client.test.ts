@@ -6,6 +6,7 @@ import {ApiError, errorText, send} from './error';
 import {createServerClock, selectServerClock} from './serverClock';
 import type {ApiEvent, OperationAccepted} from './model';
 import {currentRefusal} from './refusal';
+import {diagnosticOf, formatDiagnostics} from './diagnostics';
 import {eventSummary} from './selectors';
 
 const acceptedBody = {operation_id: 'op-1', kind: 'reload', status: 'queued', href: '/api/v1/operations/op-1'};
@@ -283,6 +284,142 @@ describe('native transport', () => {
     await vi.advanceTimersByTimeAsync(60000);
     await read;
   });
+  // What a tunnel that drops a body hands the browser: a chunked 200 with no Content-Length and nothing in it.
+  const emptyChunked = async () =>
+    new Response(new ReadableStream({start: controller => controller.close()}), {
+      headers: {'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked', Server: 'honk'}
+    });
+  const unreachable = async () => {
+    throw new TypeError('Failed to fetch');
+  };
+  // The peer resets the connection once the 200 headers are out, so the body read fails.
+  const resetAfterHeaders = async () =>
+    new Response(new ReadableStream({start: controller => controller.error(new TypeError('network error'))}), {
+      headers: {'Content-Type': 'application/json'}
+    });
+  const badGateway = async () => json({error: {code: 'bad_gateway', message: 'Down'}}, 502);
+  it.each([
+    {name: 'an empty chunked body', first: emptyChunked},
+    {name: 'no response', first: unreachable},
+    {name: 'a reset after the headers', first: resetAfterHeaders}
+  ])('sends a read again once after $name and returns the second answer', async ({first}) => {
+    vi.useFakeTimers();
+    const request = vi.fn(async () => json({items: [], next_cursor: null})).mockImplementationOnce(first);
+    vi.stubGlobal('fetch', request);
+    const result = createApi('https://honk.test').nodes({limit: 1000});
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(result).resolves.toEqual({items: [], next_cursor: null});
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  // The request is named by its path alone: a query can carry a token from a redirect, or a filter.
+  const nodes = (api: Api) => api.nodes({limit: 1000});
+  const nodesRequest = {method: 'GET', path: '/api/v1/nodes'};
+  it.each([
+    {
+      answer: emptyChunked,
+      call: nodes,
+      expected: {
+        status: 200,
+        code: 'empty_response',
+        request: nodesRequest,
+        headers: {'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked', Server: 'honk'}
+      }
+    },
+    {answer: unreachable, call: nodes, expected: {status: 0, code: 'network_error', request: nodesRequest, headers: null}},
+    {
+      answer: resetAfterHeaders,
+      call: nodes,
+      expected: {status: 0, code: 'network_error', request: nodesRequest, headers: {'Content-Type': 'application/json'}}
+    },
+    {
+      answer: emptyChunked,
+      call: (api: Api) => api.dnsLog({name: 'example.org', src: '10.0.0.2'}),
+      expected: {code: 'empty_response', request: {method: 'GET', path: '/api/v1/dns/log'}}
+    },
+    {answer: emptyChunked, again: badGateway, call: nodes, expected: {status: 502, code: 'bad_gateway'}}
+  ])('reports a read that fails again on its retry as failed twice ($expected.code)', async ({answer, again, call, expected}) => {
+    vi.useFakeTimers();
+    const request = vi.fn(again ?? answer).mockImplementationOnce(answer);
+    vi.stubGlobal('fetch', request);
+    const result = call(createApi('https://honk.test', 'secret-token'));
+    const failure = expect(result).rejects.toMatchObject({...expected, attempts: 2});
+    await vi.advanceTimersByTimeAsync(300);
+    await failure;
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it.each([
+    {name: 'timed-out read', request: () => hanging(), call: (api: Api) => api.runtime(), expected: {code: 'timeout'}},
+    {
+      name: 'read the caller aborts',
+      request: () => hanging(),
+      call: (api: Api) => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 5000);
+        return api.runtime(controller.signal);
+      },
+      expected: {name: 'AbortError'}
+    },
+    {
+      name: 'read answered 404',
+      request: () => vi.fn(async () => json({error: {code: 'not_found', message: 'Gone'}}, 404)),
+      call: (api: Api) => api.runtime(),
+      expected: {status: 404}
+    },
+    {
+      name: 'read answered 502',
+      request: () => vi.fn(async () => json({error: {code: 'bad_gateway', message: 'Down'}}, 502)),
+      call: (api: Api) => api.runtime(),
+      expected: {status: 502}
+    },
+    {
+      name: 'read-only POST with no response',
+      request: () => vi.fn(unreachable),
+      call: (api: Api) => api.dnsQuery('example.org', ['A']),
+      expected: {code: 'network_error', attempts: 1}
+    },
+    {
+      name: 'operation start answered empty',
+      request: () => vi.fn(emptyChunked),
+      call: (api: Api) => api.startReload(),
+      expected: {code: 'empty_response', attempts: 1}
+    },
+    {
+      name: 'read whose body stalls',
+      request: () => stalling(),
+      call: (api: Api) => api.runtime(),
+      expected: {code: 'timeout', request: {method: 'GET', path: '/api/v1/runtime'}, headers: {'Content-Type': 'application/json'}}
+    }
+  ])('does not send a $name again', async ({request, call, expected}) => {
+    vi.useFakeTimers();
+    const fetch = request();
+    vi.stubGlobal('fetch', fetch);
+    const failure = expect(call(createApi('https://honk.test'))).rejects.toMatchObject(expected);
+    await vi.advanceTimersByTimeAsync(16000);
+    await failure;
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it('names the request and the response headers in the copied diagnostics, never the token', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn(emptyChunked));
+    const result = createApi('https://honk.test', 'secret-token').connections({type: 'all', detail: 'full', limit: 1000});
+    const failure = result.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(300);
+    const text = formatDiagnostics([diagnosticOf(await failure, new Date('2026-10-04T00:00:00Z'))], {doona: '0.1.0', route: '/logs'});
+    expect(text).toBe(
+      [
+        'doona 0.1.0',
+        'page /logs',
+        '',
+        '[2026-10-04T00:00:00.000Z] GET /api/v1/connections',
+        'status: 200',
+        'code: empty_response',
+        'message: Response has no JSON body',
+        'attempts: 2',
+        'headers: Content-Type: application/json, Transfer-Encoding: chunked, Server: honk'
+      ].join('\n')
+    );
+    expect(text).not.toContain('secret-token');
+  });
   it('keeps the url of the response it rebuilds around the body', async () => {
     const response = json({observed_at: new Date().toISOString()});
     Object.defineProperty(response, 'url', {value: 'https://honk.test/api/v1/runtime'});
@@ -387,7 +524,9 @@ describe('native transport', () => {
         throw new TypeError('Failed to fetch');
       })
     );
-    await expect(api.runtime()).rejects.toMatchObject({code: 'network_error'});
+    const failure = expect(api.runtime()).rejects.toMatchObject({code: 'network_error'});
+    await vi.advanceTimersByTimeAsync(300);
+    await failure;
     expect(vi.getTimerCount()).toBe(0);
   });
   it('drops the forwarding listeners of an engine without AbortSignal.any once the request is over', async () => {

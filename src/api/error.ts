@@ -6,8 +6,12 @@ import {backendMessage, oneLine, refusalMessage, type BackendMessage} from '../i
 
 export class ApiError extends Error {
   configurationWrite = false;
-  // The request that failed, for a bug report: the path only, never the query.
+  // The request that failed and the response headers that explain it, for a bug report: the path only, never the query,
+  // which can carry a token from a redirect or a filter that says what someone looked up.
   request: {method: string; path: string} | null = null;
+  headers: Record<string, string> | null = null;
+  // A read that failed again on its one retry says so.
+  attempts = 1;
   constructor(
     public status: number,
     public code: string,
@@ -50,13 +54,21 @@ export async function responseError(response: Response, method = 'GET'): Promise
     body?.error?.details ?? null,
     parseRetryAfter(response)
   );
-  if (response.url) error.request = {method: method.toUpperCase(), path: new URL(response.url).pathname};
+  return response.url ? describe(error, method, response.url, response) : error;
+}
+
+const REPORTED_HEADERS = ['Content-Type', 'Content-Length', 'Transfer-Encoding', 'Content-Encoding', 'Server'];
+// Names the failed request on an error, and the response headers that say what came back when there was a response.
+export function describe(error: ApiError, method: string, url: string, response?: Response): ApiError {
+  error.request = {method: method.toUpperCase(), path: new URL(url, globalThis.location?.href).pathname};
+  if (response) error.headers = Object.fromEntries(REPORTED_HEADERS.flatMap(name => (response.headers.has(name) ? [[name, response.headers.get(name)!]] : [])));
   return error;
 }
 
 // A contract failure detected by doona: it keeps the status and code callers branch on, and a translated text.
 export const clientError = (status: number, code: string, message: string, key: Key, params?: Params) =>
   new ApiError(status, code, message, null, null, null, {key, params});
+const networkError = (error: TypeError) => clientError(0, 'network_error', error.message, 'ui.errNetwork');
 
 // A backend that accepts the connection and never answers would leave the request, and every consumer sharing it,
 // waiting forever. A write gets longer, since the backend may be applying it. The limit runs until the headers arrive
@@ -110,11 +122,12 @@ function deadlineFor(caller: AbortSignal | null, limit: number, timeout: ApiErro
 
 // The body is read after send has returned, and some engines error the stream with a plain AbortError rather than the
 // abort reason. A read that fails once the deadline has passed fails with the timeout error; a caller abort keeps its
-// own error. A body-less response has nothing to stall and passes as it is, and so does a no-content status, which
-// Chromium gives an empty stream but a Response cannot be built with. A body nobody reads keeps the deadline, which
+// own error, and a connection dropped mid-body fails as a network failure; the timeout and the network failure name the
+// request and the headers that came. A body-less response has nothing to stall and passes as it is, and so does a
+// no-content status, which Chromium gives an empty stream but a Response cannot be built with. A body nobody reads keeps the deadline, which
 // then frees the connection. The rebuilt response keeps the original's url, type and redirect flag.
-const NO_CONTENT = new Set([204, 205, 304]);
-function bodyWithin(response: Response, caller: AbortSignal | null, deadline: Deadline, timeout: ApiError): Response {
+export const NO_CONTENT = new Set([204, 205, 304]);
+function bodyWithin(response: Response, caller: AbortSignal | null, deadline: Deadline, timeout: ApiError, method: string, url: string): Response {
   if (!response.body || NO_CONTENT.has(response.status)) {
     deadline.over();
     return response;
@@ -133,7 +146,8 @@ function bodyWithin(response: Response, caller: AbortSignal | null, deadline: De
         }
       } catch (error) {
         deadline.over();
-        controller.error(deadline.signal.aborted && !caller?.aborted ? timeout : error);
+        if (caller?.aborted || !(deadline.signal.aborted || error instanceof TypeError)) controller.error(error);
+        else controller.error(describe(deadline.signal.aborted ? timeout : networkError(error as TypeError), method, url, response));
       }
     },
     cancel: reason => {
@@ -159,16 +173,17 @@ export async function send(input: RequestInfo | URL, init?: RequestInit, write?:
     seconds: limit / 1000
   });
   const deadline = deadlineFor(signal, limit, timeout);
+  const url = input instanceof Request ? input.url : String(input);
   try {
     const response = await fetch(input, {...init, signal: deadline.signal});
     // The headers are in; from here the limit runs between chunks of the body.
     deadline.arm();
-    return bodyWithin(response, signal, deadline, timeout);
+    return bodyWithin(response, signal, deadline, timeout, method, url);
   } catch (error) {
     deadline.over();
     if (signal?.aborted) throw error;
-    if (deadline.signal.aborted) throw timeout;
-    if (error instanceof TypeError) throw clientError(0, 'network_error', error.message, 'ui.errNetwork');
+    if (deadline.signal.aborted) throw describe(timeout, method, url);
+    if (error instanceof TypeError) throw describe(networkError(error), method, url);
     throw error;
   }
 }
