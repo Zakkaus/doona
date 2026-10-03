@@ -3,7 +3,7 @@ import {useGroups, useGroupControl} from '../../store';
 import {useMode} from '../../features/shared/useMode';
 import {ModeSwitch, ModeApply} from '../../features/activity/widgets';
 import {selectMember} from '../../features/shared/selectMember';
-import {Button, ChoiceMenu, Empty, ErrorMessage, Kv, Link, Segmented} from '../../ui/ui';
+import {Button, ChoiceMenu, Empty, ErrorMessage, Kv, Link, Segmented, WidestLabel} from '../../ui/ui';
 import {WidgetRow} from '../../ui/WidgetPanel';
 import {href} from '../route';
 import type {Widget} from './layout';
@@ -28,7 +28,7 @@ export function ModeWidget({targetOnly, docked = false}: {targetOnly: boolean; d
               items={m.targets}
               searchLabel={t('ui.filterOutbounds')}
             >
-              {m.targetText}
+              <WidestLabel labels={m.targets.map(target => target.label)}>{m.targetText}</WidestLabel>
             </ChoiceMenu>
             {targetOnly && <ModeApply model={m} />}
           </span>

@@ -88,13 +88,8 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
           <div className="rp-row">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
             <div className="rp-control-tail">
-              {vm.limited && (
-                <Link appearance="link" href={href('overview', {card: 'limits'})}>
-                  {vm.limited}
-                </Link>
-              )}
               <Link appearance="button" quiet href={href('overview')}>
-                {t('act.viewDetails')}
+                {vm.limited ?? t('act.viewDetails')}
               </Link>
             </div>
           </div>

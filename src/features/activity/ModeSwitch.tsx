@@ -1,6 +1,6 @@
 import {useLang, useT} from '../../i18n';
 import {docsHref} from '../shared/docs';
-import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented} from '../../ui/ui';
+import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -100,7 +100,7 @@ export function ModeCards({model: vm, part}: {model: ModeCardsModel; part?: 'mod
                 items={vm.targets}
                 searchLabel={t('ui.filterOutbounds')}
               >
-                {vm.targetText}
+                <WidestLabel labels={vm.targets.map(target => target.label)}>{vm.targetText}</WidestLabel>
               </ChoiceMenu>
               <ModeApply model={vm} />
             </span>

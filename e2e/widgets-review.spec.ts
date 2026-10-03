@@ -81,22 +81,31 @@ for (const host of ['panel', 'dashboard'] as const) {
       await expect(apply).toBeDisabled();
       await page.evaluate(() => document.fonts.ready);
       const before = (await widget.boundingBox())!;
-      const idleBoxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
-      const idleCenters = idleBoxes.map(box => box!.y + box!.height / 2);
-      expect(Math.max(...idleCenters) - Math.min(...idleCenters)).toBeLessThanOrEqual(2);
-      expect(idleBoxes[2]!.height).toBe(idleBoxes[1]!.height);
+      // The picker is as wide as its widest outbound, so whether the title shares the line is settled before a draft: at
+      // 390 px the dashboard card stacks the title above the picker and Apply, which stay on one line.
+      const inline = !(host === 'dashboard' && width === 390);
+      const section = page.locator('.rp-dash-section').filter({has: widget});
+      if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
+      const line = async () => {
+        const boxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
+        const centers = boxes.map(box => box!.y + box!.height / 2).slice(inline ? 0 : 1);
+        expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
+        if (!inline) expect(boxes[0]!.y + boxes[0]!.height).toBeLessThanOrEqual(boxes[1]!.y);
+        expect(boxes[2]!.height).toBe(boxes[1]!.height);
+        expect(boxes[2]!.x).toBeGreaterThanOrEqual(boxes[1]!.x + boxes[1]!.width);
+        return boxes;
+      };
+      const idleBoxes = await line();
       await target.click();
       await page.getByRole('searchbox', {name: 'Filter outbounds', exact: true}).fill('gaming');
       await page.getByRole('menuitemradio', {name: 'gaming', exact: true}).click();
       await expect(target).toContainText('gaming');
       expect(backend.requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
       await expect(apply).toBeEnabled();
-      const boxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
-      const centers = boxes.map(box => box!.y + box!.height / 2);
-      expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
-      expect(boxes[2]!.height).toBe(boxes[1]!.height);
-      expect(boxes[2]!.x).toBeGreaterThanOrEqual(boxes[1]!.x + boxes[1]!.width);
+      // Another outbound moves nothing: the picker keeps its width and Apply its place.
+      expect(await line()).toEqual(idleBoxes);
       expect((await widget.boundingBox())!.height).toBe(before.height);
+      if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
       await apply.click();
       await expect
         .poll(async () => readMode((await backend.api.config()).sources.find(source => source.kind === 'main')!.content!))
@@ -106,6 +115,7 @@ for (const host of ['panel', 'dashboard'] as const) {
         });
       await expect(apply).toBeVisible();
       await expect(apply).toBeDisabled();
+      expect(await line()).toEqual(idleBoxes);
       expect((await widget.boundingBox())!.height).toBe(before.height);
       expect(backend.requests.filter(request => request.method() === 'PUT' && request.url().includes('/config/sources/'))).toHaveLength(1);
       if (host === 'panel' && width === 390) {

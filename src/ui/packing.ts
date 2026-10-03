@@ -42,7 +42,8 @@ function content(cell: Element): Element | null {
 }
 
 // A section's control cards share one layout: inline (label and control on one line) when every one of them fits on
-// one line at its width, otherwise stacked, so cards in a row never mix the two.
+// one line at its width, otherwise stacked, so cards in a row never mix the two. A label cut to an ellipsis does not
+// fit, so the rows are measured with every label whole, and each label again on the inline line.
 export const controlLayout = (rows: ReadonlyArray<{natural: number; width: number}>) =>
   rows.every(row => row.natural <= row.width + 0.5) ? 'inline' : 'stacked';
 
@@ -75,8 +76,14 @@ export function packSection(section: HTMLElement): () => void {
     const list = cells();
     const controls = [...section.querySelectorAll<HTMLElement>('.rp-control-card > .rp-row')];
     if (controls.length) {
+      const fit = (nodes: HTMLElement[]) => controlLayout(nodes.map(node => ({natural: node.scrollWidth, width: node.clientWidth})));
       section.dataset.controls = 'probe';
-      section.dataset.controls = controlLayout(controls.map(row => ({natural: row.scrollWidth, width: row.clientWidth})));
+      let layout = fit(controls);
+      if (layout === 'inline') {
+        section.dataset.controls = layout;
+        layout = fit([...section.querySelectorAll<HTMLElement>('.rp-control-card > .rp-row > .rp-qlabel > .rp-truncate')]);
+      }
+      section.dataset.controls = layout;
     } else delete section.dataset.controls;
     const gap = gapOf();
     // Columns depend on width alone, so whether a tile stacks is known before packing; its row is known after.

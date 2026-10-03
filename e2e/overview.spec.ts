@@ -265,7 +265,7 @@ test('a read the backend never answers fails at the deadline and recovers on ret
 test.describe('with the base profile', () => {
   test.use({storage: {'doona-mock-profile': 'base'}});
 
-  test('the features that are off are grouped by cause below the other cards, and Activity links to them', async ({page}) => {
+  test('the features that are off are grouped by cause below the other cards, and Activity links to System status', async ({page}) => {
     await page.goto('/#/overview');
     const card = page.locator('section').filter({has: page.getByRole('heading', {name: 'Features that are off', exact: true})});
     const rows = card.locator('.rp-limit');
@@ -300,10 +300,11 @@ test.describe('with the base profile', () => {
     await expect(features.locator('.rp-capability').filter({hasText: 'Logs'})).toHaveCount(0);
     await expect(features.locator('.rp-capability').filter({hasText: 'Connections'})).toHaveCount(1);
     await page.goto('/#/activity');
-    const count = page.locator("[data-profile='quick']").getByRole('link', {name: '15 features are off', exact: true});
-    await count.click();
-    await expect(page).toHaveURL(/#\/overview\?card=limits$/);
-    await expect(page.getByRole('heading', {name: 'Features that are off', exact: true})).toBeInViewport();
+    const details = page.locator('[data-instance="status"]').getByRole('link');
+    await expect(details).toHaveCount(1);
+    await details.click();
+    await expect(page).toHaveURL(/#\/overview$/);
+    await expect(page.getByRole('heading', {name: 'System status', exact: true})).toBeVisible();
   });
 });
 

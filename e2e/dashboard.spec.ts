@@ -1,5 +1,6 @@
-import {test, expect, box} from './fixtures';
+import {test, expect, box, fulfillStream, loadCatalogues, mockBackend} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
+import {translate} from '../src/i18n';
 const open = (page: Page) => page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
 const tile = (page: Page, id: string) => page.locator(`.rp-dashboard-cell[data-instance="${id}"]`);
 const order = (page: Page) =>
@@ -199,6 +200,84 @@ test('packs short cards beside a tall one, ends columns level and lines columns 
   expect(tools.x + tools.width).toBeLessThanOrEqual(card.x + card.width);
   expect(title.y).toBeGreaterThanOrEqual(tools.y + tools.height);
 });
+
+test.describe('status details link', () => {
+  test.use({storage: {'doona-lang': 'zh-TW'}, viewport: {width: 1440, height: 900}});
+  test.beforeAll(loadCatalogues);
+
+  test('one feature off is the only link and the first row stays inline', async ({page}) => {
+    await page.goto('/#/activity');
+    const summary = translate('zh-TW', 'act.limited', {n: 1});
+    const links = tile(page, 'status').getByRole('link');
+    await expect(links).toHaveCount(1);
+    await expect(links).toHaveText(summary);
+    await expect(links).toHaveAccessibleName(summary);
+    const quick = page.locator('[data-profile="quick"]');
+    await expect(quick).toHaveAttribute('data-controls', 'inline');
+    const lines = await quick.locator('.rp-control-card > .rp-row').evaluateAll(rows =>
+      rows.map(row => {
+        const title = row.firstElementChild!.getBoundingClientRect();
+        const controls = row.lastElementChild!.getBoundingClientRect();
+        return {
+          top: row.getBoundingClientRect().top,
+          centres: Math.abs(title.top + title.height / 2 - controls.top - controls.height / 2),
+          end: Math.abs(row.getBoundingClientRect().right - controls.right)
+        };
+      })
+    );
+    expect(lines).toHaveLength(3);
+    for (const line of lines) {
+      expect(Math.abs(line.top - lines[0].top)).toBeLessThanOrEqual(1);
+      expect(line.centres).toBeLessThanOrEqual(1);
+      expect(line.end).toBeLessThanOrEqual(1);
+    }
+    await links.click();
+    await expect(page).toHaveURL(/#\/overview$/);
+  });
+
+  test('no features off shows only View details', async ({page}) => {
+    const backend = await mockBackend(page);
+    backend.capabilities.resources.events.available = true;
+    backend.capabilities.resources.flows.recording = 'on';
+    const runtime = await backend.api.runtime();
+    await page.route('**/api/v1/events', route =>
+      fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
+    );
+    await page.goto('/#/activity');
+    const details = translate('zh-TW', 'act.viewDetails');
+    const links = tile(page, 'status').getByRole('link');
+    await expect(links).toHaveCount(1);
+    await expect(links).toHaveText(details);
+    await expect(links).toHaveAccessibleName(details);
+    await links.click();
+    await expect(page).toHaveURL(/#\/overview$/);
+  });
+});
+
+// A control card's title is never cut to an ellipsis: a row whose titles do not all fit whole stacks instead.
+for (const lang of ['zh-TW', 'en'] as const)
+  test.describe(`control card titles ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    test.beforeAll(loadCatalogues);
+    for (const editing of [false, true])
+      test(`stay whole from 1100 to 1920px${editing ? ' while editing' : ''}`, async ({page}) => {
+        await page.setViewportSize({width: 1100, height: 900});
+        await page.goto('/#/activity');
+        const titles = page.locator('[data-profile="quick"] .rp-control-card > .rp-row > .rp-qlabel > .rp-truncate');
+        await expect(titles).toHaveCount(2);
+        if (editing) {
+          await page.getByRole('button', {name: translate(lang, 'dashboard.edit'), exact: true}).click();
+          await expect(page.locator('.rp-dashboard-body .rp-control-card')).toHaveCount(3);
+        }
+        for (let width = 1100; width <= 1920; width += 40) {
+          await page.setViewportSize({width, height: 900});
+          // A new width lays the cards out again in the next frame.
+          await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))));
+          const cut = await titles.evaluateAll(nodes => nodes.filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent));
+          expect(cut, `${width}px`).toEqual([]);
+        }
+      });
+  });
 
 // Control cards in a row share one of two layouts and one height, and end at their content, at every width.
 for (const lang of ['en', 'zh-TW'])
