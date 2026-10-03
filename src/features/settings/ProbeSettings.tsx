@@ -4,7 +4,7 @@ import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import {href} from '../../shell/route';
 import {latencyProbeChoice, probeChoices, saveProbeOptions, useProbeOptions, type ProbeFamily} from '../../store/probeOptions';
-import {Card, ErrorMessage, LabeledSelect, Link, Loading, Toolbar} from '../../ui/ui';
+import {Card, ErrorMessage, LabeledSelect, Link, Loading, Toolbar, ChartWait} from '../../ui/ui';
 import {settingsCard} from './nav';
 
 const card = settingsCard('probes');
@@ -26,9 +26,9 @@ export function ProbeSettingsCard() {
         caps.error ? (
           <ErrorMessage error={caps.error} onRetry={caps.refetch} />
         ) : (
-          <div className="rp-chart-wait form">
+          <ChartWait holds="form">
             <Loading />
-          </div>
+          </ChartWait>
         )
       ) : !choices.length ? (
         <span className="rp-label">{t('settings.probesUnavailable')}</span>

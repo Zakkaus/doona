@@ -17,6 +17,20 @@ export function CardLink({href, label, tile, children}: {href: string; label: st
     </RLink>
   );
 }
+// A metric tile's body: its value, then its sparkline or the `status` that takes its place, side by side or stacked as
+// its dashboard row lays out its tiles (see packSection). `children` stand in for both until the value is known.
+export function ValueTile({value, spark, status, children}: {value?: ReactNode; spark?: ReactNode; status?: ReactNode; children?: ReactNode}) {
+  return (
+    <div className="rp-tile-body" data-pack="tile">
+      {children || (
+        <>
+          <span className="rp-tile-val">{value}</span>
+          {status || (spark && <span className="rp-spark">{spark}</span>)}
+        </>
+      )}
+    </div>
+  );
+}
 // `href` is the rule's place in the rule list, built by the feature; without it the expression stands alone. `tooltip`
 // replaces the expression in the tooltip, and `className` styles the expression.
 export function RuleRef({expression, href, tooltip, className}: {expression: string | null; href?: string; tooltip?: string; className?: string}) {

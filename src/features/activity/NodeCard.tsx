@@ -4,7 +4,7 @@ import {useT, useLang, LOCALE} from '../../i18n';
 import {formatLatency} from '../../i18n/format';
 import {Spark, usePalette} from '../../ui/charts';
 import {SettingsContext} from '../../shell/preferences';
-import {Card, HelpRow, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
+import {Card, HelpRow, ErrorMessage, Light, Link, TextTooltip, ValueTile} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode, useLatencySpark} from './useActivityNode';
 import {GroupMenu} from './GroupMenu';
@@ -30,38 +30,31 @@ export function NodeCard({connections, selection}: {connections: ConnectionList 
       }
     >
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
-      <div className="rp-tile-body">
-        {vm.loading ? (
-          <DeferredLoading />
-        ) : (
-          <>
-            <span className="rp-tile-val">
-              {/* The value opens the node on the nodes page, as the connections tile opens the list it counts. */}
-              {vm.href ? (
-                <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>
-                  <span className={vm.latencyClass}>{vm.latency}</span>
-                </Link>
-              ) : (
-                <span className={vm.latencyClass}>{vm.latency}</span>
-              )}
-            </span>
-            {/* An unavailable or unknown node's light takes the sparkline's place. */}
-            {vm.status ? (
-              <TextTooltip text={vm.healthError}>
-                <Light small tone={vm.tone}>
-                  {vm.status}
-                </Light>
-              </TextTooltip>
-            ) : (
-              sparklines && (
-                <span className="rp-spark">
-                  <Spark values={spark.values} timestamps={spark.timestamps} color={p.cat[4]} fmt={latencyText} locale={locale} />
-                </span>
-              )
-            )}
-          </>
-        )}
-      </div>
+      <ValueTile
+        // The value opens the node on the nodes page, as the connections tile opens the list it counts.
+        value={
+          vm.href ? (
+            <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>
+              <span className={vm.latencyClass}>{vm.latency}</span>
+            </Link>
+          ) : (
+            <span className={vm.latencyClass}>{vm.latency}</span>
+          )
+        }
+        // An unavailable or unknown node's light takes the sparkline's place.
+        status={
+          vm.status && (
+            <TextTooltip text={vm.healthError}>
+              <Light small tone={vm.tone}>
+                {vm.status}
+              </Light>
+            </TextTooltip>
+          )
+        }
+        spark={sparklines && <Spark values={spark.values} timestamps={spark.timestamps} color={p.cat[4]} fmt={latencyText} locale={locale} />}
+      >
+        {vm.loading && <DeferredLoading />}
+      </ValueTile>
     </Card>
   );
 }

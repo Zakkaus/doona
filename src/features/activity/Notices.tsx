@@ -1,7 +1,7 @@
 import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
 import {href} from '../../shell/route';
-import {Card, Empty, ErrorMessage, Light, Link, TextTooltip} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, Light, Link, TextTooltip, ChartWait} from '../../ui/ui';
 import type {NoticeRow} from './view';
 
 type NoticesModel = {
@@ -32,13 +32,13 @@ export function Notices({rows, total, error, retry, loading, empty, limit}: Noti
       </div>
       {error && <ErrorMessage error={error} onRetry={retry} />}
       {loading ? (
-        <div className="rp-chart-wait">
+        <ChartWait>
           <DeferredLoading />
-        </div>
+        </ChartWait>
       ) : rows.length === 0 ? (
-        <div className="rp-chart-wait">
+        <ChartWait>
           <Empty>{empty}</Empty>
-        </div>
+        </ChartWait>
       ) : (
         <NoticeList rows={limit === undefined ? rows : rows.slice(0, limit)} label={t('act.issues')} bounded={limit === undefined} />
       )}

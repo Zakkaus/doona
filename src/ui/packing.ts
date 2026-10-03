@@ -29,9 +29,11 @@ const band = (cell: HTMLElement) => cell.dataset.height ?? 'standard';
 // A tile stacks when it is too narrow for its value and sparkline on one line, which its tile container query tells
 // (see cards-dashboard.css), or when its height is tall, which gives the sparkline the card's full width. A short tile,
 // one cell high, keeps them on one line with a narrower sparkline (see dashboard.css).
+// The parts packing reads are marked by the cards with `data-pack`: a value tile's body, and a control card's line
+// and the label in it.
+const valueTile = '[data-pack="tile"]';
 const stacks = (cell: HTMLElement) =>
-  band(cell) !== 'short' &&
-  (band(cell) === 'tall' || getComputedStyle(cell.querySelector('.rp-tile-body')!).getPropertyValue('--rp-tile-stack').trim() === '1');
+  band(cell) !== 'short' && (band(cell) === 'tall' || getComputedStyle(cell.querySelector(valueTile)!).getPropertyValue('--rp-tile-stack').trim() === '1');
 
 // The element whose size is the card's content: an editor cell's body, whose edge handles follow it, else the cell's
 // last child, through wrappers that draw no box.
@@ -42,7 +44,7 @@ function content(cell: Element): Element | null {
 }
 
 // A control card's line: its label and its control.
-const line = '.rp-control-card > .rp-row';
+const line = '[data-pack="line"]';
 // A section's control cards share one layout: inline (label and control on one line) when every one of them fits on
 // one line at its width, otherwise stacked, so cards in a row never mix the two. A label cut to an ellipsis does not
 // fit, so the rows are measured with every label whole, and each label again on the inline line.
@@ -154,12 +156,12 @@ export function packSection(section: HTMLElement): () => void {
       let layout = fit(controls);
       if (layout === 'inline') {
         section.dataset.controls = layout;
-        layout = fit([...section.querySelectorAll<HTMLElement>('.rp-control-card > .rp-row > .rp-qlabel > .rp-truncate')]);
+        layout = fit([...section.querySelectorAll<HTMLElement>(`${line} [data-pack="label"]`)]);
       }
       section.dataset.controls = layout;
     } else delete section.dataset.controls;
     // Columns depend on width alone, so whether a tile stacks is known before packing; its row is known after.
-    const tiles = list.filter(cell => cell.querySelector('.rp-tile-body'));
+    const tiles = list.filter(cell => cell.querySelector(valueTile));
     const own = tiles.map(stacks);
     tiles.forEach((cell, i) => (cell.dataset.tile = own[i] ? 'stacked' : 'inline'));
     let {heights, boxes} = place(list, gap);

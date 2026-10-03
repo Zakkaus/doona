@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField, Toolbar} from '../../ui/ui';
+import {ActionHelp, Button, Card, ErrorMessage, InlineAlert, LabeledSelect, Light, Link, Loading, TextField, Toolbar, ChartWait} from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {recordingLimitsHref} from '../shared/link';
 import {runtimeFieldLabels, settingsCard} from './nav';
@@ -31,18 +31,18 @@ export function RuntimeSettingsCard() {
         </div>
       )}
       {m.waiting && !m.capsError && (
-        <div className="rp-chart-wait form">
+        <ChartWait holds="form">
           <Loading />
-        </div>
+        </ChartWait>
       )}
       {!m.waiting && m.available && (
         <>
           <ErrorMessage error={m.error} onRetry={m.retry} />
           {m.conflict && <InlineAlert>{m.conflict}</InlineAlert>}
           {m.loading && (
-            <div className="rp-chart-wait form">
+            <ChartWait holds="form">
               <Loading />
-            </div>
+            </ChartWait>
           )}
           {m.hasBaseline && (
             <>
