@@ -474,6 +474,20 @@
 .rp-tile-responsive {
   container: rp-tile / inline-size;
 }
+/* A legend value given its widest text (`data-widest`) holds that width in tabular figures, so a live value never moves
+   the legend between one line and two. */
+.rp-legend b[data-widest] {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+.rp-legend b[data-widest]::before {
+  content: attr(data-widest);
+  display: block;
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
 /* The widest value, 888 MB/s, is 98px at the value type in every locale; beside it go the 12px gap and the
    sparkline's 64px basis: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
    narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. This is

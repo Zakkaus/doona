@@ -101,6 +101,7 @@ function HistoryChart({
   fmt: (n: number | null) => string;
   series: {label: string; color: string; values: (number | null)[]}[];
   combine?: boolean;
+  widest?: string;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -131,6 +132,7 @@ function TrafficChart({runtime, connections, direction, ...props}: ChartProps & 
     <HistoryChart
       {...props}
       combine={direction === 'speed' && !split}
+      widest={connections ? undefined : formatRate(888e6, locale)}
       history={history}
       timestamps={series.timestamps}
       fmt={n => (connections ? (n == null ? '—' : formatNumber(n, locale)) : formatRate(n == null ? null : n * 1000, locale))}
