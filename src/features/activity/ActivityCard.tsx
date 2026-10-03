@@ -4,7 +4,7 @@ import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Cpu from '../../ui/icons/Cpu';
 import {useT} from '../../i18n';
-import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link} from '../../ui/ui';
+import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, ValueTile} from '../../ui/ui';
 import {href} from '../../shell/route';
 import {AreaChart, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
@@ -85,7 +85,7 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
     case 'status':
       content = (
         <Card className="rp-control-card" size="L">
-          <div className="rp-row">
+          <div className="rp-row" data-pack="line">
             <Light tone={vm.status.tone}>{vm.status.text}</Light>
             <div className="rp-control-tail">
               <Link appearance="button" quiet href={href('overview')}>
@@ -99,68 +99,46 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
     case 'download':
       content = (
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
-          <div className="rp-tile-body">
-            <span className="rp-tile-val">
-              <span className={big}>{vm.download}</span>
-            </span>
-            {sparklines && (
-              <span className="rp-spark">
-                <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />
-              </span>
-            )}
-          </div>
+          <ValueTile
+            value={<span className={big}>{vm.download}</span>}
+            spark={sparklines && <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />}
+          />
         </CardLink>
       );
       break;
     case 'upload':
       content = (
         <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
-          <div className="rp-tile-body">
-            <span className="rp-tile-val">
-              <span className={big}>{vm.upload}</span>
-            </span>
-            {sparklines && (
-              <span className="rp-spark">
-                <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />
-              </span>
-            )}
-          </div>
+          <ValueTile
+            value={<span className={big}>{vm.upload}</span>}
+            spark={sparklines && <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />}
+          />
         </CardLink>
       );
       break;
     case 'connections':
       content = (
         <CardLink href={href('connections', {tab: 'list'})} label={t('act.active')} tile={{icon: <LinkIcon />, tint: 3}}>
-          <div className="rp-tile-body">
-            <span className="rp-tile-val">
-              <span className={big}>{vm.connections}</span>
-            </span>
-            {sparklines && (
-              <span className="rp-spark">
-                <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />
-              </span>
-            )}
-          </div>
+          <ValueTile
+            value={<span className={big}>{vm.connections}</span>}
+            spark={sparklines && <Spark values={spark.connections} timestamps={spark.timestamps} color={p.cat[2]} fmt={count} locale={locale} />}
+          />
         </CardLink>
       );
       break;
     case 'cpu':
       content = (
         <Card title={t('act.cpu')} tile={{icon: <Cpu />, tint: 2, kind: 'metric'}} aside={<ContextualHelp {...vm.cpuHelp} />}>
-          <div className="rp-tile-body">
-            <span className="rp-tile-val">
-              {/* The value opens the overview, where the engine's process figures sit. */}
+          <ValueTile
+            // The value opens the overview, where the engine's process figures sit.
+            value={
               <Link appearance="link" href={href('overview')} label={t('ui.valuePair', {label: t('act.cpu'), value: vm.cpu})}>
                 <span className={big}>{vm.cpu}</span>
               </Link>
-            </span>
-            {sparklines && (
-              <span className="rp-spark">
-                {/* Percent of one core: the line keeps a 0 to 100 scale and grows only past one busy core. */}
-                <Spark values={cpuSpark.values} timestamps={cpuSpark.timestamps} color={p.cat[1]} floor={100} fmt={cpuText} locale={locale} />
-              </span>
-            )}
-          </div>
+            }
+            // Percent of one core: the line keeps a 0 to 100 scale and grows only past one busy core.
+            spark={sparklines && <Spark values={cpuSpark.values} timestamps={cpuSpark.timestamps} color={p.cat[1]} floor={100} fmt={cpuText} locale={locale} />}
+          />
         </Card>
       );
       break;
@@ -170,17 +148,17 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
           {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
           ) : vm.history.state === 'unavailable' ? (
-            <div className="rp-chart-wait tall">
+            <ChartWait holds="tall">
               <Empty>{t('act.noHistory')}</Empty>
-            </div>
+            </ChartWait>
           ) : vm.history.state === 'loading' ? (
-            <div className="rp-chart-wait tall">
+            <ChartWait holds="tall">
               <DeferredLoading>{t('ui.loading')}</DeferredLoading>
-            </div>
+            </ChartWait>
           ) : vm.history.state === 'empty' ? (
-            <div className="rp-chart-wait tall">
+            <ChartWait holds="tall">
               <Empty>{t('act.emptyHistory')}</Empty>
-            </div>
+            </ChartWait>
           ) : (
             <>
               <Legend series={traffic} fmt={chartRate} />
@@ -229,9 +207,9 @@ function MetricModule({kind, scale}: {kind: Parameters<typeof useActivity>[0]; s
           ) : vm.memoryState.state === 'unavailable' ? (
             <Empty>{t('act.noHistory')}</Empty>
           ) : (
-            <div className="rp-chart-wait">
+            <ChartWait>
               <DeferredLoading>{t('act.sampling')}</DeferredLoading>
-            </div>
+            </ChartWait>
           )}
         </Card>
       );

@@ -1,6 +1,6 @@
 import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
-import {Badge, Bar, Card, Empty, ErrorMessage, Link, Segmented, TextTooltip} from '../../ui/ui';
+import {Badge, Bar, Card, Empty, ErrorMessage, Link, Segmented, TextTooltip, ChartWait} from '../../ui/ui';
 import type {useRankingCard} from './useRankingCard';
 
 export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>}) {
@@ -29,17 +29,17 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
         </TextTooltip>
       )}
       {state === 'error' ? null : state === 'loading' ? (
-        <div className="rp-chart-wait bars">
+        <ChartWait holds="bars">
           <DeferredLoading>{t('ui.loading')}</DeferredLoading>
-        </div>
+        </ChartWait>
       ) : state === 'unavailable' ? (
-        <div className="rp-chart-wait bars">
+        <ChartWait holds="bars">
           <Empty>{t('act.noConnections')}</Empty>
-        </div>
+        </ChartWait>
       ) : state === 'empty' ? (
-        <div className="rp-chart-wait bars">
+        <ChartWait holds="bars">
           <Empty>{t('act.rankingEmpty')}</Empty>
-        </div>
+        </ChartWait>
       ) : (
         <div className="rp-list">
           {rows.map(row => (

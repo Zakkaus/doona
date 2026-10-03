@@ -37,6 +37,7 @@ export {TimeCell} from './TimeCell';
 export {
   Empty,
   Loading,
+  ChartWait,
   ErrorMessage,
   InlineAlert,
   ProblemAlert,
@@ -53,7 +54,7 @@ export {
 } from './Feedback';
 export {Kv, type KvItem} from './Kv';
 export {ContextualHelp, IconTip, HelpRow, type Help} from './ContextualHelp';
-export {NodeTile, type NodeStatus, latencyTone, CardLink, RuleRef} from './Tile';
+export {NodeTile, type NodeStatus, latencyTone, CardLink, ValueTile, RuleRef} from './Tile';
 export {Tag, Tags, LinkTag, FitTags} from './Tag';
 export {ActionGroup, MoreMenu, type Action} from './ActionGroup';
 export {Card, cardClass} from './Card';

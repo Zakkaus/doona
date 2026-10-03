@@ -21,7 +21,9 @@ export function TileHead({icon, tint, kind, layout, label, children}: TileHeader
   return (
     <span className={`${kind === 'metric' ? 'rp-tile-head' : 'rp-qlabel'} rp-tint-c${tint}`} data-layout={layout}>
       {icon}
-      <span className={kind === 'metric' ? 'rp-tile-caption' : 'rp-truncate'}>{label}</span>
+      <span className={kind === 'metric' ? 'rp-tile-caption' : 'rp-truncate'} data-pack={kind === 'control' ? 'label' : undefined}>
+        {label}
+      </span>
       {kind === 'metric' && children ? <span className="rp-tile-controls">{children}</span> : children}
     </span>
   );
@@ -116,7 +118,7 @@ export function Card({
     >
       <ActionHelp reason={reason}>
         {aside && tile?.kind !== 'metric' ? (
-          <div className="rp-row">
+          <div className="rp-row" data-pack={tile?.kind === 'control' ? 'line' : undefined}>
             {heading}
             {aside}
           </div>

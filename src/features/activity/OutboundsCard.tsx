@@ -1,7 +1,7 @@
 import {DeferredLoading} from './DeferredLoading';
 import {useT} from '../../i18n';
 import {Donut} from '../../ui/charts';
-import {Card, Empty, ErrorMessage} from '../../ui/ui';
+import {Card, Empty, ErrorMessage, ChartWait} from '../../ui/ui';
 import {useOutboundsCard} from './useOutboundsCard';
 
 // Outbound usage polls on its own, so its tick does not re-render the charts beside it.
@@ -18,17 +18,17 @@ export function OutboundsCard() {
       </div>
       {error && <ErrorMessage error={error} onRetry={retry} />}
       {error && state !== 'ready' ? null : state === 'unavailable' ? (
-        <div className="rp-chart-wait tall">
+        <ChartWait holds="tall">
           <Empty>{t('act.noOutbounds')}</Empty>
-        </div>
+        </ChartWait>
       ) : state === 'loading' ? (
-        <div className="rp-chart-wait tall">
+        <ChartWait holds="tall">
           <DeferredLoading>{t('ui.loading')}</DeferredLoading>
-        </div>
+        </ChartWait>
       ) : state === 'empty' ? (
-        <div className="rp-chart-wait tall">
+        <ChartWait holds="tall">
           <Empty>{t('ui.empty')}</Empty>
-        </div>
+        </ChartWait>
       ) : (
         <Donut label={t('act.outUsage')} rows={view.rows} total={view.total} />
       )}

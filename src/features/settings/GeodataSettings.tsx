@@ -15,7 +15,8 @@ import {
   Switch,
   TextField,
   TextTooltip,
-  TimeCell
+  TimeCell,
+  ChartWait
 } from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
@@ -33,9 +34,9 @@ export function GeodataSettingsCard() {
       {m.note && <span className="rp-label">{m.note}</span>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
-        <div className="rp-chart-wait ops">
+        <ChartWait holds="ops">
           <Loading />
-        </div>
+        </ChartWait>
       )}
       {m.ready && (
         <div className="rp-ops">

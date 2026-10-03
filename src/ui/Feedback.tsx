@@ -31,6 +31,12 @@ export function Empty({role, children}: {role?: 'alert'; children: ReactNode}) {
   );
 }
 
+// Holds a chart's or a card body's height while its data arrives or when there is none, so the card does not jump;
+// `holds` names the body it stands in for, which sets the height (see cards-dashboard.css).
+export function ChartWait({holds, children}: {holds?: 'tall' | 'bars' | 'form' | 'ops'; children: ReactNode}) {
+  return <div className={cx('rp-chart-wait', holds)}>{children}</div>;
+}
+
 export function Loading({children}: {children?: ReactNode}) {
   const t = useT();
   const [visible, setVisible] = useState(false);
