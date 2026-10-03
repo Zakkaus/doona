@@ -13,12 +13,15 @@ const ROOT = new URL(self.registration.scope);
 // A new build takes over on the next online load, including open dashboard tabs.
 // Each build records when it was installed, so activation can tell the build it replaces from older ones.
 const STAMP = new URL('__installed__', ROOT);
-// Fetched past the HTTP cache, so a caching proxy cannot hand the new build an old shell.
+// index.html keeps its name across builds, so it is fetched past the HTTP cache: a caching proxy cannot hand the new
+// build an old shell. A file under assets/ is named after its content hash, so the copy the page already loaded through
+// the HTTP cache is the same file and is not downloaded again.
+const precacheRequest = url => (url.startsWith('assets/') ? url : new Request(url, {cache: 'reload'}));
 self.addEventListener('install', event => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then(cache => Promise.all([cache.addAll(PRECACHE.map(url => new Request(url, {cache: 'reload'}))), cache.put(STAMP, new Response(String(Date.now())))]))
+      .then(cache => Promise.all([cache.addAll(PRECACHE.map(precacheRequest)), cache.put(STAMP, new Response(String(Date.now())))]))
       .then(() => self.skipWaiting())
   );
 });
