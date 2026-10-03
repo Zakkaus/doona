@@ -413,7 +413,7 @@ test.describe(() => {
         await setAppearance(page, lang, scheme);
         await settle(page);
         await page.reload();
-        const notices = page.locator('.rp-feed');
+        const notices = page.locator('.rp-list-labeled');
         await notices.scrollIntoViewIfNeeded();
         await expect(notices.getByRole('listitem')).toHaveCount(4);
         await expect(notices.locator('.rp-light.warn')).toHaveCount(1);

@@ -1,4 +1,4 @@
-export {cx} from './cx';
+export {cx, columns} from './cx';
 export {
   useSlider,
   useScrollStrip,
