@@ -178,7 +178,7 @@ it.each([
   ],
   ['lists', idsWith(definition => definition.rows), ['nodeLatency', 'ranking', 'notices', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds']],
   ['rates', idsWith(definition => definition.rate), ['speed', 'history', 'download', 'upload']],
-  ['untitled in the panel', idsWith(definition => definition.untitled), ['connections', 'cpu', 'global', 'group']],
+  ['untitled in the panel', idsWith(definition => definition.untitled), ['connections', 'cpu', 'global']],
   ['group choices', idsWith(definition => definition.groupChoice), ['nodeLatency', 'policyGroups', 'latency']]
 ])('derives the %s from the registry', (_name, derived, expected) => expect(derived).toEqual([...expected].sort()));
 it('names the Automatic group as each widget did', () => {

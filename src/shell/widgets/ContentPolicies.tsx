@@ -50,18 +50,16 @@ export function GroupWidget({item, onChange}: {item: Widget; onChange?: (item: W
     <Reading state={groups}>
       {selected ? (
         <>
-          <WidgetRow label={t('widgets.group')}>
-            <ChoiceMenu
-              quiet
-              label={t('ui.group')}
-              value={selected.id}
-              items={(groups.data ?? []).map(group => ({id: group.id, label: group.name}))}
-              onChange={group => onChange?.({...item, group})}
-              searchLabel={t('ui.filterGroups')}
-            >
-              {selected.name}
-            </ChoiceMenu>
-          </WidgetRow>
+          <ChoiceMenu
+            quiet
+            label={t('ui.group')}
+            value={selected.id}
+            items={(groups.data ?? []).map(group => ({id: group.id, label: group.name}))}
+            onChange={group => onChange?.({...item, group})}
+            searchLabel={t('ui.filterGroups')}
+          >
+            {selected.name}
+          </ChoiceMenu>
           <GroupControl id={selected.id} refresh={groups.refetch} />
         </>
       ) : (
