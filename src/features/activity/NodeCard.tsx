@@ -2,15 +2,24 @@ import {DeferredLoading} from './DeferredLoading';
 import {useCallback, useContext} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {formatLatency} from '../../i18n/format';
-import {Spark, usePalette} from '../../ui/charts';
+import {FactStrip, Spark, usePalette} from '../../ui/charts';
 import {SettingsContext} from '../../shell/preferences';
 import {Card, HelpRow, ErrorMessage, Light, Link, TextTooltip, ValueTile} from '../../ui/ui';
 import Clock from '../../ui/icons/Clock';
 import {useActivityNode, useLatencySpark} from './useActivityNode';
 import {GroupMenu} from './GroupMenu';
+import {seriesFacts} from '../shared/widgetSeries';
 import type {ConnectionList} from '../../api/model';
 
-export function NodeCard({connections, selection}: {connections: ConnectionList | undefined; selection?: {chosen: string; setChosen: (id: string) => void}}) {
+export function NodeCard({
+  connections,
+  selection,
+  stats
+}: {
+  connections: ConnectionList | undefined;
+  selection?: {chosen: string; setChosen: (id: string) => void};
+  stats?: boolean;
+}) {
   const t = useT();
   const vm = useActivityNode(connections, selection);
   const p = usePalette();
@@ -52,6 +61,7 @@ export function NodeCard({connections, selection}: {connections: ConnectionList 
           )
         }
         spark={sparklines && <Spark values={spark.values} timestamps={spark.timestamps} color={p.cat[4]} fmt={latencyText} locale={locale} />}
+        facts={stats && <FactStrip facts={seriesFacts([{label: t('act.latency'), values: spark.values}], latencyText, t)} />}
       >
         {vm.loading && <DeferredLoading />}
       </ValueTile>
