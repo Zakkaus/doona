@@ -12,8 +12,7 @@ PKG_TAG:=v$(PKG_REAL_VERSION)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
-# Placeholder: replace with the program archive's SHA256SUMS entry after publication.
-PKG_HASH:=0000000000000000000000000000000000000000000000000000000000000000
+PKG_HASH:=b0ceb42853d202b702a8921860e69a75a4a94d87d0f41f9f2d8d0cded84b7674
 
 PKG_LICENSE:=GPL-3.0-only 0BSD Apache-2.0 BSD-3-Clause ISC MIT CC-BY-3.0 CC-BY-4.0 CC-BY-SA-4.0 CC0-1.0 LicenseRef-GitHub-Logos
 PKG_LICENSE_FILES:=web/LICENSE
@@ -26,8 +25,7 @@ define Download/doona-fonts
 	URL:=https://github.com/Zakkaus/doona/releases/download/$(PKG_TAG)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
-	# Placeholder: replace with the font archive's SHA256SUMS entry after publication.
-	HASH:=0000000000000000000000000000000000000000000000000000000000000000
+	HASH:=6b3ee310ca4f80666b3436f3c866521edd3efe8720987abb9b763496788fa78c
 endef
 
 define Package/doona/template
