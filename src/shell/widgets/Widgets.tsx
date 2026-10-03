@@ -5,7 +5,7 @@ import {Button, DetailPanel, Light, MoreMenu} from '../../ui/ui';
 import {FloatingPanel, ResizeHandle, useGesture} from '../../ui/FloatingPanel';
 import {WidgetHeader, WidgetPanel} from '../../ui/WidgetPanel';
 import {TitlesShown} from '../../ui/Card';
-import {WidgetGrid, WidgetCell} from '../../ui/WidgetGrid';
+import {WidgetGrid, WidgetCell, cellSize} from '../../ui/WidgetGrid';
 import {WidgetChartInset} from '../../ui/charts/compact';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import Pin from '../../ui/icons/Pin';
@@ -159,7 +159,7 @@ function SavedGrid() {
       <TitlesShown value={!!layout.titles}>
         <WidgetGrid>
           {layout.items.map(item => (
-            <WidgetCell key={instanceId(item)} id={instanceId(item)} size={item.size === 'wide' ? 'large' : item.size}>
+            <WidgetCell key={instanceId(item)} id={instanceId(item)} size={cellSize(item.size)}>
               <WidgetContent
                 item={item}
                 onChange={next =>

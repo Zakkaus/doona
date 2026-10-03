@@ -2,7 +2,7 @@ import {useEffect, useRef, type ReactNode} from 'react';
 import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
 import {useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
-import './styles/widget-grid.css';
+import {cellSize} from './WidgetGrid';
 import {sectionGrid, tileAttributes, usePacking, type TileProps} from './DashboardTile';
 import DragHandle from './icons/DragHandle';
 import {DashboardGaps, dragStarted} from './DashboardGaps';
@@ -130,7 +130,7 @@ export function SortableCanvas<T extends TileProps>({
           id={item.id}
           textValue={textValue(item)}
           className={profile ? 'rp-dashboard-cell' : 'rp-widget-cell rp-sortable-row'}
-          {...(profile ? tileAttributes(item) : {'data-size': item.size === 'wide' ? 'large' : item.size, 'data-module': item.module})}
+          {...(profile ? tileAttributes(item) : {'data-size': cellSize(item.size), 'data-module': item.module})}
         >
           <div className="rp-dashboard-tools">
             <RButton slot="drag" className={buttonClass({quiet: true, icon: true, small: !profile})} aria-label={dragLabel(item)}>

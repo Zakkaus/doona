@@ -82,12 +82,12 @@ export function useGesture<T>(start: () => T, apply: (base: T, dx: number, dy: n
 
 // A bare resize hit area on a side or corner of `edge`: it draws only its cursor and, from the keyboard, a focus ring.
 // Unnamed, it is a pointer-only duplicate of a named one.
-export function ResizeHandle({edge, label, ...props}: {edge: PanelEdge; label?: string} & ReturnType<typeof useGesture>['props']) {
+export function ResizeHandle({edge, label, grip, ...props}: {edge: PanelEdge; label?: string; grip?: boolean} & ReturnType<typeof useGesture>['props']) {
   return (
     <button
       type="button"
       {...props}
-      className="rp-panel-resize"
+      className={grip ? 'rp-panel-resize rp-grip' : 'rp-panel-resize'}
       data-inline={edge.inline}
       data-block={edge.block}
       {...(label ? {'aria-label': label} : {tabIndex: -1, 'aria-hidden': true})}
