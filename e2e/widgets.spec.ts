@@ -58,6 +58,10 @@ const titleBlock = (section: Locator) =>
     const zoom = Number(getComputedStyle(el.closest('.rp-widget-preview')!).zoom);
     return label ? label.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(el).rowGap) * zoom : 0;
   });
+// The mock's live rates swell with the clock, and a Legend wraps its two rates to a second line by how wide their text is,
+// so a panel can be a line shorter or taller than its preview, which draws the same rates from one fixed moment. A fixed
+// clock gives both the same text; timers keep running.
+const freezeRates = (page: Page) => page.clock.setFixedTime(new Date('2026-01-01T12:00:00Z'));
 const expectPanelPreview = async (page: Page) => {
   const preview = page.locator('.rp-widget-preview');
   const live = await box(floating(page));
@@ -84,6 +88,7 @@ const expectPanelPreview = async (page: Page) => {
   await expect.poll(mismatch).toBeLessThanOrEqual(2);
 };
 test('edits a draft, cancels changes, saves sizes and order, and restores defaults', async ({page}) => {
+  await freezeRates(page);
   await page.goto('/#/settings');
   await openEditor(page);
   await expectPanelPreview(page);
@@ -121,6 +126,7 @@ test.describe('medium-width widget editor', () => {
         {id: 'divider', size: 'medium', form: 'kv'}
       ]
     });
+    await freezeRates(page);
     await page.goto('/#/settings');
     await moreAction(page.locator('.rp-widget-header'), '編輯小工具', '面板選項');
     const dialog = page.getByRole('dialog', {name: '編輯小工具', exact: true});
@@ -323,6 +329,7 @@ test.describe('phone sheet insets', () => {
 });
 
 test('the editor opens with nothing selected and its preview edge sets the panel width on save', async ({page}) => {
+  await freezeRates(page);
   await save(page, {...defaults(), size: {width: 320, height: 640}});
   await page.goto('/#/settings');
   await openEditor(page);
@@ -558,6 +565,7 @@ for (const [lang, resize] of [
   });
 }
 test('the anchored panel resizes by keyboard within its limits and keeps the size after a reload', async ({page}) => {
+  await freezeRates(page);
   await page.goto('/#/settings');
   const before = await box(floating(page));
   await floating(page).getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
