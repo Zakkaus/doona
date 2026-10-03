@@ -1,4 +1,4 @@
-import {expect, mockBackend, test, box} from './fixtures';
+import {expect, fulfillStream, mockBackend, test, box} from './fixtures';
 import type {Page} from '@playwright/test';
 
 async function feed(page: Page, kind: 'events' | 'logs', count: number) {
@@ -162,7 +162,12 @@ for (const viewport of [
 
 test('navigation releases hover and press when the pointer leaves after a route change', async ({page}) => {
   await page.setViewportSize({width: 1700, height: 1150});
-  await mockBackend(page);
+  const {api} = await mockBackend(page);
+  // The Logs page opens its stream when it mounts; serve it, since a busy run can reach the request before leaving.
+  const runtime = await api.runtime();
+  await page.route('**/api/v1/logs?*', route =>
+    fulfillStream(route, [{id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}}])
+  );
   await page.goto('/#/events');
   const logs = page.locator('.rp-nav[href="#/logs"]');
   const events = page.locator('.rp-nav[href="#/events"]');
