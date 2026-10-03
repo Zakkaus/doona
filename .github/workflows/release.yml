@@ -114,10 +114,10 @@ jobs:
               "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
           done
           sha256sum "$@" > SHA256SUMS
-      # Temporary: honk has no release with the native API yet, so every doona release carries honk's rolling debug builds,
-      # the source archive of their commit and a note naming it. fetch-honk.mjs fails unless that release still holds the
-      # commit pinned in tools/honk-commit.txt. Remove this step, that file and the three honk lines in release's `files` once
-      # honk ships one.
+      # Temporary: honk has no release with the native API yet, so every doona release carries the honk debug builds of the
+      # tag pinned in tools/honk-pin.txt, the source archive of their commit and a note naming it. fetch-honk.mjs reads that
+      # tag's own release and fails unless its body, target and source tag name the pinned tag and commit. Remove this step,
+      # that file and the three honk lines in release's `files` once honk ships one.
       - name: Bundle the honk-core debug builds
         env:
           GH_TOKEN: ${{ github.token }}

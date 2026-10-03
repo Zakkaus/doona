@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {existsSync, mkdtempSync, readdirSync, readFileSync, rmSync} from 'node:fs';
+import {existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -8,15 +8,16 @@ import {closeServers} from './close-servers.mjs';
 import {expectedAssets, fetchHonk, parseBody, PIN_FILE, readPin, SOURCE_NOTE, sourceArchive} from './fetch-honk.mjs';
 
 const commit = '5d8f32c10fc01363cea33dcdb9b1c155e2449fa2';
+const tag = 'debug.2026.9.26.native-api.4';
 const body = [
-  'Rolling debug build; replaced by subsequent successful debug-tag runs.',
+  `Debug build of \`${tag}\`.`,
   '',
-  'Source tag: `debug.2026.9.26.native-api.4`',
+  `Source tag: \`${tag}\``,
   `Commit: \`${commit}\``,
   'Build: https://github.com/Glassyiris/honk/actions/runs/36241239721',
   ''
 ].join('\n');
-const ref = '/repos/Glassyiris/honk/git/ref/tags/debug.2026.9.26.native-api.4';
+const ref = `/repos/Glassyiris/honk/git/ref/tags/${tag}`;
 const other = 'f'.repeat(40);
 const servers = [];
 const dirs = [];
@@ -29,13 +30,13 @@ async function serve({edit = release => release, served = {}, source = `source o
   const contents = Object.fromEntries(expectedAssets().map(name => [name, `tarball ${name}`]));
   const server = createServer((request, response) => {
     const {port} = server.address();
-    if (request.url === '/repos/Glassyiris/honk/releases/tags/debug') {
+    if (request.url === `/repos/Glassyiris/honk/releases/tags/${tag}`) {
       const assets = expectedAssets().map(name => ({
         name,
         digest: `sha256:${sha256(contents[name])}`,
         browser_download_url: `http://127.0.0.1:${port}/download/${name}`
       }));
-      const release = edit({tag_name: 'debug', html_url: 'https://github.com/Glassyiris/honk/releases/tag/debug', target_commitish: commit, body, assets});
+      const release = edit({tag_name: tag, html_url: `https://github.com/Glassyiris/honk/releases/tag/${tag}`, target_commitish: commit, body, assets});
       response.writeHead(200, {'content-type': 'application/json'});
       response.end(JSON.stringify(release));
       return;
@@ -75,7 +76,7 @@ afterEach(async () => {
 describe('parseBody', () => {
   it('reads the source tag, commit and run', () => {
     expect(parseBody(body)).toEqual({
-      tag: 'debug.2026.9.26.native-api.4',
+      tag,
       commit,
       build: 'https://github.com/Glassyiris/honk/actions/runs/36241239721'
     });
@@ -94,13 +95,13 @@ describe('fetchHonk', () => {
 
   it('downloads every build and the source archive, and writes the source note', async () => {
     const {api, archive, out, contents, source} = await serve();
-    const {files} = await fetchHonk({commit, api, archive, out});
+    const {files} = await fetchHonk({tag, commit, api, archive, out});
     expect(files.map(file => file.name)).toEqual([...expectedAssets(), sourceArchive(commit)]);
     expect(readdirSync(out).sort()).toEqual([...expectedAssets(), sourceArchive(commit), SOURCE_NOTE].sort());
     for (const name of expectedAssets()) expect(readFileSync(join(out, name), 'utf8')).toBe(contents[name]);
     expect(readFileSync(join(out, sourceArchive(commit)), 'utf8')).toBe(source);
     const note = readFileSync(join(out, SOURCE_NOTE), 'utf8');
-    expect(note).toContain('Source tag: debug.2026.9.26.native-api.4');
+    expect(note).toContain(`Source tag: ${tag}`);
     expect(note).toContain(`Corresponding source: https://github.com/Glassyiris/honk/tree/${commit}`);
     expect(note).toContain('Licence: GPL-3.0-only');
     expect(note).toContain(`${sha256(contents[expectedAssets()[0]])}  ${expectedAssets()[0]}`);
@@ -110,7 +111,7 @@ describe('fetchHonk', () => {
 
   it('fails when the source archive is not found and writes no note', async () => {
     const {api, archive, out} = await serve({source: null});
-    await expect(fetchHonk({commit, api, archive, out})).rejects.toThrow('HTTP 404');
+    await expect(fetchHonk({tag, commit, api, archive, out})).rejects.toThrow('HTTP 404');
     expect(existsSync(join(out, sourceArchive(commit)))).toBe(false);
     expect(existsSync(join(out, `${sourceArchive(commit)}.part`))).toBe(false);
     expect(existsSync(join(out, SOURCE_NOTE))).toBe(false);
@@ -119,7 +120,7 @@ describe('fetchHonk', () => {
   it('fails on a digest mismatch and keeps no partial file', async () => {
     const name = expectedAssets()[3];
     const {api, out} = await serve({served: {[name]: 'tampered'}});
-    await expect(fetchHonk({commit, api, out})).rejects.toThrow(`${name}: sha256 ${sha256('tampered')}`);
+    await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`${name}: sha256 ${sha256('tampered')}`);
     expect(existsSync(join(out, name))).toBe(false);
     expect(existsSync(join(out, `${name}.part`))).toBe(false);
     expect(existsSync(join(out, SOURCE_NOTE))).toBe(false);
@@ -128,58 +129,87 @@ describe('fetchHonk', () => {
   it('fails when a build is missing', async () => {
     const name = expectedAssets()[5];
     const {api, out} = await serve({edit: release => ({...release, assets: release.assets.filter(asset => asset.name !== name)})});
-    await expect(fetchHonk({commit, api, out})).rejects.toThrow(`release lacks ${name}`);
+    await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`release lacks ${name}`);
   });
 
   it('fails on a build it does not recognise', async () => {
     const extra = {name: 'honk-core-debug-riscv64gc-unknown-linux-gnu.tar.gz', digest: `sha256:${'0'.repeat(64)}`, browser_download_url: 'http://127.0.0.1:1/'};
     const {api, out} = await serve({edit: release => ({...release, assets: [...release.assets, extra]})});
-    await expect(fetchHonk({commit, api, out})).rejects.toThrow('unrecognised builds honk-core-debug-riscv64gc-unknown-linux-gnu.tar.gz');
+    await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow('unrecognised builds honk-core-debug-riscv64gc-unknown-linux-gnu.tar.gz');
   });
 
   it('fails when an asset carries no digest', async () => {
     const {api, out} = await serve({edit: release => ({...release, assets: release.assets.map(({digest: _digest, ...asset}) => asset)})});
-    await expect(fetchHonk({commit, api, out})).rejects.toThrow('the API reports no sha256 digest');
+    await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow('the API reports no sha256 digest');
   });
 
   describe('against the pinned commit', () => {
     it('passes when the body, the release target and the source tag all name it', async () => {
       const {api, archive, out} = await serve();
-      const {source} = await fetchHonk({commit, api, archive, out});
+      const {source} = await fetchHonk({tag, commit, api, archive, out});
       expect(source.commit).toBe(commit);
       expect(readFileSync(join(out, SOURCE_NOTE), 'utf8')).toContain(`Commit: ${commit}\n`);
     });
 
-    it('fails when the debug release has moved to another commit', async () => {
+    it('fails when the release names another commit', async () => {
       const {api, out} = await serve();
-      await expect(fetchHonk({commit: other, api, out})).rejects.toThrow(
-        `release body names commit ${commit}, doona pins ${other}; update tools/honk-commit.txt`
-      );
+      await expect(fetchHonk({tag, commit: other, api, out})).rejects.toThrow(`release body names commit ${commit}, doona pins ${other}`);
+      expect(readdirSync(out)).toEqual([]);
+    });
+
+    it('fails when the release body names another source tag', async () => {
+      const {api, out} = await serve({
+        edit: release => ({...release, body: body.replace(`Source tag: \`${tag}\``, 'Source tag: `debug.2026.9.26.native-api.3`')})
+      });
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`release body names source tag debug.2026.9.26.native-api.3, doona pins ${tag}`);
       expect(readdirSync(out)).toEqual([]);
     });
 
     it('fails when the release body has no Commit line', async () => {
       const {api, out} = await serve({edit: release => ({...release, body: body.replace(/^Commit: .*$/m, '')})});
-      await expect(fetchHonk({commit, api, out})).rejects.toThrow('release body lacks commit');
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow('release body lacks commit');
     });
 
     it('fails when the release targets another commit', async () => {
       const {api, out} = await serve({edit: release => ({...release, target_commitish: other})});
-      await expect(fetchHonk({commit, api, out})).rejects.toThrow(`the release targets ${other}, doona pins ${commit}`);
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`the release targets ${other}, doona pins ${commit}`);
     });
 
     it('checks the source tag even when the release targets the commit', async () => {
       const {api, out} = await serve({refs: {[ref]: {type: 'commit', sha: other}}});
-      await expect(fetchHonk({commit, api, out})).rejects.toThrow(`source tag debug.2026.9.26.native-api.4 points to ${other}, doona pins ${commit}`);
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`source tag ${tag} points to ${other}, doona pins ${commit}`);
     });
 
     it('refuses a pin that is not a full SHA', async () => {
-      await expect(fetchHonk({commit: commit.slice(0, 8), out: 'unused'})).rejects.toThrow('is not a full commit SHA');
+      await expect(fetchHonk({tag, commit: commit.slice(0, 8), out: 'unused'})).rejects.toThrow('is not a full commit SHA');
+    });
+
+    it('refuses a pin that is not a debug tag', async () => {
+      await expect(fetchHonk({tag: 'debug', commit, out: 'unused'})).rejects.toThrow('the pinned tag debug is not a debug.* tag');
+      await expect(fetchHonk({commit, out: 'unused'})).rejects.toThrow('is not a debug.* tag');
     });
 
     it('reads the committed pin', async () => {
-      await expect(readPin()).resolves.toMatch(/^[0-9a-f]{40}$/);
-      expect(PIN_FILE).toMatch(/tools\/honk-commit\.txt$/);
+      const pin = await readPin();
+      expect(pin.tag).toMatch(/^debug\.\S+$/);
+      expect(pin.commit).toMatch(/^[0-9a-f]{40}$/);
+      expect(PIN_FILE).toMatch(/tools\/honk-pin\.txt$/);
+    });
+
+    it('reads the tag and the commit from the pin file and rejects malformed ones', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'fetch-honk-pin-'));
+      dirs.push(dir);
+      const path = join(dir, 'honk-pin.txt');
+      const read = contents => {
+        writeFileSync(path, contents);
+        return readPin(path);
+      };
+      await expect(read(`${tag}\n${commit}\n`)).resolves.toEqual({tag, commit});
+      await expect(read(`${commit}\n`)).rejects.toThrow('must hold a debug.* tag and a commit SHA, one per line');
+      await expect(read(`debug\n${commit}\n`)).rejects.toThrow('must hold a debug.* tag');
+      await expect(read(`${tag}\n`)).rejects.toThrow('must hold a debug.* tag');
+      await expect(read(`${tag}\n${commit}\nextra\n`)).rejects.toThrow('must hold a debug.* tag');
+      await expect(read(`${tag}\n${commit.slice(0, 8)}\n`)).rejects.toThrow('holds no full commit SHA');
     });
   });
 
@@ -188,26 +218,26 @@ describe('fetchHonk', () => {
 
     it('checks the pinned commit through the source tag', async () => {
       const {api, archive, out} = await serve({...branch, refs: {[ref]: {type: 'commit', sha: commit}}});
-      const {source} = await fetchHonk({commit, api, archive, out});
+      const {source} = await fetchHonk({tag, commit, api, archive, out});
       expect(source.commit).toBe(commit);
     });
 
     it('follows an annotated source tag to its commit', async () => {
-      const tag = 'a'.repeat(40);
-      const refs = {[ref]: {type: 'tag', sha: tag}, [`/repos/Glassyiris/honk/git/tags/${tag}`]: {type: 'commit', sha: commit}};
+      const annotated = 'a'.repeat(40);
+      const refs = {[ref]: {type: 'tag', sha: annotated}, [`/repos/Glassyiris/honk/git/tags/${annotated}`]: {type: 'commit', sha: commit}};
       const {api, archive, out} = await serve({...branch, refs});
-      await expect(fetchHonk({commit, api, archive, out})).resolves.toMatchObject({source: {commit}});
+      await expect(fetchHonk({tag, commit, api, archive, out})).resolves.toMatchObject({source: {commit}});
     });
 
     it('fails when the source tag points elsewhere', async () => {
       const {api, out} = await serve({...branch, refs: {[ref]: {type: 'commit', sha: other}}});
-      await expect(fetchHonk({commit, api, out})).rejects.toThrow(`source tag debug.2026.9.26.native-api.4 points to ${other}, doona pins ${commit}`);
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`source tag ${tag} points to ${other}, doona pins ${commit}`);
       expect(existsSync(join(out, SOURCE_NOTE))).toBe(false);
     });
 
     it('fails when the source tag cannot be read', async () => {
       const {api, out} = await serve({...branch, refs: {}});
-      await expect(fetchHonk({commit, api, out})).rejects.toThrow('GET source tag Glassyiris/honk@debug.2026.9.26.native-api.4: HTTP 404');
+      await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow(`GET source tag Glassyiris/honk@${tag}: HTTP 404`);
       expect(readdirSync(out)).toEqual([]);
     });
   });
@@ -219,6 +249,6 @@ describe('fetchHonk', () => {
         assets: release.assets.map(asset => ({...asset, browser_download_url: asset.browser_download_url.replace('/download/', '/gone/')}))
       })
     });
-    await expect(fetchHonk({commit, api, out})).rejects.toThrow('HTTP 404');
+    await expect(fetchHonk({tag, commit, api, out})).rejects.toThrow('HTTP 404');
   });
 });

@@ -24,7 +24,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - The deb packages are now `doona-web` and `doona-web-fonts` and install into `/usr/share/doona-web`, because Debian and Ubuntu ship an unrelated `doona` 1.0 (a network fuzzer) that `apt upgrade` installed over the 0.1 `doona` deb, deleting the web files. The new debs replace and conflict with `doona` and `doona-fonts` below 1.0; set honk's `ui` to `/usr/share/doona-web`. If apt keeps or installs the fuzzer, `sudo apt remove doona` removes it without touching `doona-web`. The rpm, ipk and Arch packages and the release archives keep their names and paths.
-- Release archives bundle the honk debug build of commit 5ad13ac (native API rebased onto honk main 71166f6).
+- Release archives bundle the honk debug build `debug.2026.10.3.native-api.2` (commit 464c9b3), fetched from that tag's own release because honk no longer updates a rolling `debug` release.
 - Settings removes the Backend actions navigation card and moves its geodata files table into the Geodata card; backend operations remain on their owning pages. (#365)
 - Docked widgets use the sidebar's group header, spacing and text alignment. The group boundary resizes the section by pointer or keyboard, with a resize affordance on hover and focus.
 - Internal: 39 icons share one SVG shell; no visible change. (#357)
