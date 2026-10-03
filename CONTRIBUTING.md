@@ -287,7 +287,7 @@ Use [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Start with
 and number pre-releases as `-alpha.N`, `-beta.N` or `-rc.N`. Tag each tested
 release `vX.Y.Z[-pre.N]`. Mark GitHub releases for pre-release versions as
 pre-releases. Update the declared version and changelog before tagging.
-Set `tools/honk-commit.txt` to the full SHA of the honk debug build the release bundles; the release workflow fails if honk's `debug` release has moved to another commit.
+Set `tools/honk-pin.txt` to the honk debug tag the release bundles and its full commit SHA, one per line; the release workflow fetches that tag's own release and fails if its body, target or source tag names anything else.
 
 For tag `v0.1.0-beta.12`, release assets keep the upstream version without `v`. See the
 [package version table](install/README.md#version-spellings) for every archive, binary package and source recipe.
