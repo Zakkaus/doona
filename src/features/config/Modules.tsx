@@ -1,12 +1,17 @@
+import {useMemo} from 'react';
+import type {EffectiveConfig} from '../../api/model';
+import {engineOf} from '../../api/engines';
 import {useT} from '../../i18n';
+import {useVersion} from '../../store';
 import {Card, Link} from '../../ui/ui';
-import {useModules, type ModulesProps} from './useModules';
-export function Modules(props: ModulesProps) {
+import {sectionSummaries} from './view';
+export function Modules({config}: {config: EffectiveConfig}) {
   const t = useT();
-  const vm = useModules(props);
+  const version = useVersion().data;
+  const engine = useMemo(() => engineOf(version), [version]);
   return (
     <div className="rp-page">
-      {vm.cards.map(card => (
+      {sectionSummaries(config.sources, engine, t).map(card => (
         <Card key={card.id} aria-label={card.kind}>
           <div className="rp-row">
             <span className="rp-cluster">

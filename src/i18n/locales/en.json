@@ -827,10 +827,6 @@
   "group.filterOr": "OR",
   "group.filterValuesHelp": "Separate values with commas; quote values containing commas.",
   "group.filterValuesInvalid": "Enter valid values; quote commas and escape backslashes inside quotes.",
-  "group.groupCount": {
-    "one": "{n} group",
-    "other": "{n} groups"
-  },
   "group.groupName": "Group name",
   "group.groupNameHint": "Letters, digits, underscores, periods and hyphens only.",
   "group.matchingNodes": "Matching nodes",
@@ -838,7 +834,6 @@
     "one": "{n} node",
     "other": "{n} nodes"
   },
-  "group.mixedCount": "{nodes}, {groups}",
   "group.nestedGroups": "Groups",
   "group.newGroup": "New group",
   "group.nodes": "Nodes",

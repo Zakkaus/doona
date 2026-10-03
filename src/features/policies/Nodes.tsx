@@ -21,7 +21,7 @@ export function NodeGrid({
   isDisabled?: boolean;
 }) {
   const t = useT();
-  const m = useNodeGrid(nodes, isDisabled);
+  const m = useNodeGrid(nodes);
   if (!nodes.length) return <Empty>{t('policy.none')}</Empty>;
   const grid = (
     <TileGrid

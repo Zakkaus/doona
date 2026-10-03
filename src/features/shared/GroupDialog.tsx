@@ -2,9 +2,10 @@ import {IncludesEditor} from './IncludesEditor';
 import {useId} from 'react';
 import {useT} from '../../i18n';
 import {Button, ContextualHelp, DialogForm, DialogSection, InlineAlert, Kv, ProblemAlert, ModalDialog, Switch, TextField, type KvItem} from '../../ui/ui';
+import {LabeledSelect} from '../../ui/Picker';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
-import {PolicyPicker} from './PolicyPicker';
+import {policyChoices} from './policyText';
 import {FilterSummary} from './FilterSummary';
 export type PolicyDetails = {
   fields: KvItem[];
@@ -32,9 +33,10 @@ function Details({details: d}: {details: PolicyDetails}) {
     </DialogSection>
   );
 }
-export function GroupDialog({model: m, details}: {id: string; model: GroupDialogView; details: PolicyDetails | null}) {
+export function GroupDialog({model: m, details}: {model: GroupDialogView; details: PolicyDetails | null}) {
   const t = useT();
   const form = useId();
+  const policy = policyChoices(m.policy, t);
   return (
     <ModalDialog
       title={m.title}
@@ -89,7 +91,7 @@ export function GroupDialog({model: m, details}: {id: string; model: GroupDialog
               />
             )}
             {m.problem && <ProblemAlert key={m.problem.id} problem={m.problem} />}
-            <PolicyPicker value={m.policy} onChange={m.setPolicy} isDisabled={m.busy} />
+            <LabeledSelect label={t('group.policy')} value={policy.selected} onChange={m.setPolicy} items={policy.items} isDisabled={m.busy} />
             <IncludesEditor model={m} />
             {m.routes.map(field => (
               <SearchSelect

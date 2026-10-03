@@ -4,6 +4,7 @@ import {createServer} from 'node:http';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {afterEach, describe, expect, it} from 'vitest';
+import {closeServers} from './close-servers.mjs';
 import {expectedAssets, fetchHonk, parseBody, PIN_FILE, readPin, SOURCE_NOTE, sourceArchive} from './fetch-honk.mjs';
 
 const commit = '5d8f32c10fc01363cea33dcdb9b1c155e2449fa2';
@@ -68,15 +69,7 @@ async function serve({edit = release => release, served = {}, source = `source o
 
 afterEach(async () => {
   for (const dir of dirs.splice(0)) rmSync(dir, {recursive: true, force: true});
-  await Promise.all(
-    servers.splice(0).map(
-      server =>
-        new Promise((resolve, reject) => {
-          server.close(error => (error ? reject(error) : resolve()));
-          server.closeAllConnections();
-        })
-    )
-  );
+  await closeServers(servers);
 });
 
 describe('parseBody', () => {

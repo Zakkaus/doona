@@ -103,11 +103,7 @@
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
-.rp-swarm .more {
-  fill: var(--rp-text);
-  font-size: var(--rp-text-2xs);
-  font-weight: 600;
-}
+.rp-swarm .more,
 .rp-swarm .mark text {
   fill: var(--rp-text);
   font-size: var(--rp-text-2xs);
