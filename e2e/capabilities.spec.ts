@@ -62,11 +62,9 @@ test('a login draft cannot be saved after another tab changes the challenged end
     throw new ApiError(401, 'authentication_required', 'Token required');
   };
   await page.goto('/#/activity');
+  const token = page.getByRole('textbox', {name: 'Token', exact: true});
   await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
-  await page.getByRole('link', {name: 'Edit saved token'}).click();
-  const card = page.getByRole('region', {name: 'Backend', exact: true});
-  const token = card.locator('[name=token]');
-  await token.fill('challenge-secret');
+  await page.getByLabel('Token', {exact: true}).fill('challenge-secret');
   const other = await context.newPage();
   await other.route('**/*', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><title>Profile storage</title>'}));
   await other.goto('/');
@@ -79,9 +77,9 @@ test('a login draft cannot be saved after another tab changes the challenged end
     return raw;
   });
   await other.close();
-  await card.getByRole('button', {name: 'Save', exact: true}).click();
-  await expect(card.getByRole('alert').filter({hasText: 'The profile changed'})).toBeVisible();
-  await card.getByRole('button', {name: 'Show token'}).click();
+  await page.getByRole('button', {name: 'Connect', exact: true}).click();
+  await expect(page.getByRole('alert')).toContainText('The profile changed');
+  await page.getByRole('button', {name: 'Show token'}).click();
   await expect(token).toHaveValue('challenge-secret');
   expect(await page.evaluate(() => localStorage.getItem('doona-profiles'))).toBe(saved);
   expect(backend.requests.some(request => request.headers().authorization === 'Bearer challenge-secret')).toBe(false);

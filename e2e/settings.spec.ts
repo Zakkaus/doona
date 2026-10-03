@@ -196,7 +196,7 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
 });
 
 // A raw browser test: 401 and 404 responses log console errors by design here.
-browserTest('a backend that answers 401 opens the Backend token editor', async ({page}) => {
+browserTest('a backend that answers 401 takes its token on the sign-in page', async ({page}) => {
   let authorization: string | null = null;
   await page.route('**/api/v1/**', async route => {
     // The sign-in page probes without a token, so only a request that carries one is kept.
@@ -213,10 +213,8 @@ browserTest('a backend that answers 401 opens the Backend token editor', async (
   });
   await page.goto('/#/activity');
   await expect(page.getByRole('heading', {name: 'Token required'})).toBeVisible();
-  await page.getByRole('link', {name: 'Edit saved token'}).click();
-  const backend = page.getByRole('region', {name: 'Backend', exact: true});
-  await backend.getByLabel('Token', {exact: true}).fill('secret-1');
-  await Promise.all([page.waitForEvent('load'), backend.getByRole('button', {name: 'Save', exact: true}).click()]);
+  await page.getByLabel('Token', {exact: true}).fill('secret-1');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Connect', exact: true}).click()]);
   await expect.poll(() => authorization).toBe('Bearer secret-1');
   await expect(page.getByRole('heading', {name: 'Token required'})).toHaveCount(0);
 });

@@ -5,8 +5,12 @@ import {docsHref} from '../features/shared/docs';
 import {ApiError, errorText} from '../api/error';
 import {DEMO_ACCOUNT, discoverAuth, openSession, servesNativeApi, signInKind, type AuthCredentials, type SignIn} from '../api/auth';
 import {endSession, saveSession} from '../api/session';
-import {isDemoApi} from '../api/profiles';
-import {href} from './route';
+import {isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../api/profiles';
+
+export function loginProfiles(profiles: Profile[], profileId: string, api: string, token: string): Profile[] | null {
+  if (!profiles.some(profile => profile.id === profileId && normalizeApi(profile.api) === normalizeApi(api))) return null;
+  return profiles.map(profile => (profile.id === profileId ? {...profile, token: token.trim()} : profile));
+}
 
 const USERNAME = /^[A-Za-z0-9_.-]{1,64}$/;
 // The backend's own limits, checked first so a typo costs no attempt against its rate limit. The minimum length
@@ -56,6 +60,20 @@ export async function resolveSignInKind(api: string, signal?: AbortSignal): Prom
     if (!(error instanceof ApiError) || error.status !== 404) return 'token';
     return (await servesNativeApi(api, signal)) ? 'token' : 'no-api';
   }
+}
+
+// Writes the pasted token into the profile being signed in to. Null once it is stored, else what the form reports;
+// a profile removed or repointed meanwhile is not rewritten.
+export function storeToken(profileId: string, api: string, token: string): Key | null {
+  try {
+    const {profiles, activeId} = readProfiles();
+    const updated = loginProfiles(profiles, profileId, api, token);
+    if (!updated) return 'login.stale';
+    writeProfiles({profiles: updated, activeId});
+  } catch {
+    return 'settings.saveError';
+  }
+  return null;
 }
 
 // Opens a session and keeps it in this tab. Null once it is kept, else a refusal the form names or the error it
@@ -126,6 +144,7 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     );
     return () => controller.abort();
   }, [api, discovery.attempt, missingApi]);
+  const [token, setToken] = useState('');
   // The demo backend publishes its account, so its form arrives filled in and says so.
   const demo = isDemoApi(api);
   const [username, setUsername] = useState(demo ? DEMO_ACCOUNT.username : '');
@@ -150,6 +169,12 @@ export function useLogin(profileId: string, api: string, backend: string, reject
   const edit = (field: Field, set: (value: string) => void) => (value: string) => {
     set(value);
     if (problems[field]) setProblems(({[field]: _, ...rest}) => rest);
+  };
+  const submitToken = () => {
+    if (!token.trim()) return;
+    const problem = storeToken(profileId, api, token);
+    if (problem) setFailure({key: problem});
+    else location.reload();
   };
   const submitPassword = async (mode: 'setup' | 'login') => {
     const found = credentialProblems(mode, username, password, confirm);
@@ -196,13 +221,8 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     // The rate-limit note names the wait the backend gave; it goes once that wait is over.
     alert: loginAlert({kind, failure: failure && !wait && isRateLimit(failure) ? null : failure, attempt, ended, rejected}, t),
     busy,
-    tokenSettingsHref: href('settings', {
-      card: 'backend',
-      profile: profileId,
-      endpoint: api,
-      reason: rejected ? 'rejected' : 'required',
-      return: location.hash
-    }),
+    token,
+    setToken,
     username,
     setUsername: edit('username', setUsername),
     usernameError: fieldError('username'),
@@ -213,18 +233,19 @@ export function useLogin(profileId: string, api: string, backend: string, reject
     setConfirm: edit('confirm', setConfirm),
     confirmError: fieldError('confirm'),
     submit: () => {
-      if (busy || wait || !usesPassword) return;
+      if (busy || wait || kind === null || kind === 'no-api') return;
       setFailure(null);
       setAttempt(value => value + 1);
       if (usesPassword) void submitPassword(kind);
+      else submitToken();
     },
     // Credentials are checked on submit and each problem shows on its field, so the button stays enabled for them.
-    canSubmit: usesPassword && !wait,
+    canSubmit: kind !== null && kind !== 'no-api' && !wait && (usesPassword || !!token.trim()),
     // While the backend refuses attempts, the button counts down to the next one.
-    submitText: wait ? t('login.retryIn', {n: wait}) : t(kind === 'setup' ? 'login.create' : 'login.signIn'),
+    submitText: wait ? t('login.retryIn', {n: wait}) : t(kind === 'setup' ? 'login.create' : kind === 'login' ? 'login.signIn' : 'login.submit'),
     secretType: shown ? 'text' : 'password',
     toggle: () => setShown(value => !value),
-    toggleText: t(shown ? 'login.hidePassword' : 'login.showPassword'),
+    toggleText: t(usesPassword ? (shown ? 'login.hidePassword' : 'login.showPassword') : shown ? 'settings.hideToken' : 'settings.showToken'),
     guideHref: docsHref(lang),
     requirementsHref: docsHref(lang, 'no-native-api')
   };
