@@ -110,6 +110,8 @@ export type Layout = {
   pinned: boolean;
   // The rates widget draws download and upload as two sparklines instead of one chart; absent while combined.
   splitRates?: true;
+  // The panel shows each widget's title above it; absent while hidden, when the title stays the widget's accessible name.
+  titles?: true;
   // Docked as the sidebar's last section instead of floating over the content; absent while floating.
   docked?: boolean;
   // The docked section's height, set by its top edge; absent until the reader drags it.
@@ -197,6 +199,7 @@ export function parseLayout(value: unknown): Layout {
     // pinned, the default since.
     pinned: value.version !== 4 || value.pinned === true,
     ...(value.splitRates === true ? {splitRates: true} : {}),
+    ...(value.titles === true ? {titles: true} : {}),
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),
     ...(value.edge === true ? {edge: true} : {}),

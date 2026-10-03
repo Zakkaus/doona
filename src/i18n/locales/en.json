@@ -2258,6 +2258,7 @@
   "widgets.sampled": "Covers only the returned connection sample.",
   "widgets.select": "Select a widget to edit its settings",
   "widgets.show": "Show widgets",
+  "widgets.showTitles": "Show widget titles",
   "widgets.size": "Size",
   "widgets.small": "Small",
   "widgets.speed": "Speed",

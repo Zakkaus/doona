@@ -2045,6 +2045,7 @@
   "widgets.sampled": "仅涵盖返回的连接样本。",
   "widgets.select": "选择小工具以修改设置",
   "widgets.show": "显示小工具",
+  "widgets.showTitles": "显示小工具标题",
   "widgets.size": "大小",
   "widgets.small": "小",
   "widgets.speed": "实时速率",

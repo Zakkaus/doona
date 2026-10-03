@@ -2045,6 +2045,7 @@
   "widgets.sampled": "僅涵蓋傳回的連線樣本。",
   "widgets.select": "選取小工具以修改設定",
   "widgets.show": "顯示小工具",
+  "widgets.showTitles": "顯示小工具標題",
   "widgets.size": "大小",
   "widgets.small": "小",
   "widgets.speed": "即時速率",

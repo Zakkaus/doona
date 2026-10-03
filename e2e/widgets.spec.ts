@@ -50,6 +50,14 @@ const expectUploadFirst = async (speed: Locator) => {
   expect(lines.map(([text]) => text?.split(' ')[0])).toEqual(['Upload', 'Download']);
   expect(lines[0][1]).toBeLessThan(lines[1][1]);
 };
+// The preview keeps each widget's title, which names its row and leaves its tools a line, where the panel hides it by
+// default: the height the title and its gap take in a preview row, as drawn.
+const titleBlock = (section: Locator) =>
+  section.evaluate(el => {
+    const label = el.querySelector(':scope > .rp-widget-label');
+    const zoom = Number(getComputedStyle(el.closest('.rp-widget-preview')!).zoom);
+    return label ? label.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(el).rowGap) * zoom : 0;
+  });
 const expectPanelPreview = async (page: Page) => {
   const preview = page.locator('.rp-widget-preview');
   const live = await box(floating(page));
@@ -63,8 +71,10 @@ const expectPanelPreview = async (page: Page) => {
   const sections = floating(page).locator('.rp-widget[aria-label]');
   for (let i = 0; i < (await sections.count()); i++) {
     const actual = await box(sections.nth(i));
-    const copy = await box(preview.locator('.rp-widget[aria-label]').nth(i));
-    expect(Math.abs(copy.height / scale - actual.height)).toBeLessThanOrEqual(2);
+    const section = preview.locator('.rp-widget[aria-label]').nth(i);
+    const copy = await box(section);
+    const title = (await sections.nth(i).locator('.rp-widget-label').count()) ? 0 : await titleBlock(section);
+    expect(Math.abs((copy.height - title) / scale - actual.height)).toBeLessThanOrEqual(2);
   }
 };
 test('edits a draft, cancels changes, saves sizes and order, and restores defaults', async ({page}) => {
@@ -167,7 +177,8 @@ test.describe('medium-width widget editor', () => {
     const scale = await preview.evaluate(el => Number(getComputedStyle(el).zoom));
     expect(scale).toBeLessThan(1);
     expect(await preview.evaluate(el => (el as HTMLElement).offsetWidth)).toBeCloseTo(liveWidth, 0);
-    expect(Math.abs((await box(preview.locator('.rp-widget').first())).height / scale - sectionHeight)).toBeLessThanOrEqual(2);
+    const first = preview.locator('.rp-widget').first();
+    expect(Math.abs(((await box(first)).height - (await titleBlock(first))) / scale - sectionHeight)).toBeLessThanOrEqual(2);
     expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     await expectSelectionClearance(page);
   });
@@ -240,6 +251,18 @@ for (const height of [960, 320])
     });
     expect(Math.abs(edges.top - edges.bottom), `${edges.top} ${edges.bottom}`).toBeLessThanOrEqual(0.5);
   });
+
+test('panel widget titles stay hidden until the menu shows them and still name each widget', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(floating(page).getByRole('region', {name: 'Outbound mode', exact: true})).toBeVisible();
+  await expect(floating(page).locator('.rp-widget-label')).toHaveCount(0);
+  await floating(page).getByRole('button', {name: 'Panel options', exact: true}).click();
+  const titles = page.getByRole('menuitemcheckbox', {name: 'Show widget titles', exact: true});
+  await expect(titles).toHaveAttribute('aria-checked', 'false');
+  await titles.click();
+  await expect(titles).toHaveAttribute('aria-checked', 'true');
+  await expect(floating(page).locator('.rp-widget-label')).toHaveText(['Speed', 'Memory', 'Outbound mode']);
+});
 
 test.describe('phone sheet insets', () => {
   test.use({viewport: {width: 390, height: 844}, hasTouch: true});
@@ -546,7 +569,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   expect(Math.abs((await box(dockHeader)).height - groupBox.height)).toBeLessThanOrEqual(1);
   const groupStart = await groupHeader.evaluate(el => el.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(el).paddingInlineStart));
   expect(Math.abs((await box(dock.getByRole('heading', {name: 'Activity widgets', exact: true}))).x - groupStart)).toBeLessThanOrEqual(1);
-  expect(Math.abs((await box(dock.locator('.rp-widget-label').first())).x - groupStart)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await box(dock.locator('.rp-widget').first())).x - groupStart)).toBeLessThanOrEqual(1);
   await expect.poll(() => dock.locator('.rp-widget-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   const chevron = await box(groupHeader.locator('svg'));
   for (const icon of await dockHeader.locator('svg').all()) {
@@ -884,6 +907,7 @@ for (const width of [1280, 390]) {
       await save(page, {
         ...defaults(),
         docked: true,
+        titles: true,
         items: [...defaults().items, {id: 'download', size: 'small', form: 'kv'}, {id: 'upload', size: 'small', form: 'kv'}]
       });
       await page.goto('/#/activity');
@@ -967,7 +991,7 @@ test.describe('sidebar read-only mode', () => {
     const config = await api.config();
     for (const source of config.sources) source.writable = false;
     handlers['GET config'] = async () => config;
-    await save(page, {...defaults(), docked: true});
+    await save(page, {...defaults(), docked: true, titles: true});
     await page.goto('/#/activity');
     const dock = page.locator('.rp-side-dock');
     const trigger = dock.getByRole('button', {name: '檢視唯讀原因', exact: true});
@@ -1031,7 +1055,7 @@ for (const viewport of [
 test.describe('sidebar scrollbars at 1280x640', () => {
   test.use({viewport: {width: 1280, height: 640}, storage: darkTraditional});
   test("the scrollbars keep the top bar's inline gap from the links and the panel, and the mode control splits evenly", async ({page}) => {
-    await save(page, {...defaults(), docked: true});
+    await save(page, {...defaults(), docked: true, titles: true});
     await page.goto('/#/activity');
     await page.getByRole('button', {name: '登入', exact: true}).click();
     const side = page.locator('nav.rp-side');
