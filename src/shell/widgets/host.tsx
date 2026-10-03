@@ -1,5 +1,6 @@
 import {lazy, Suspense, useState, useSyncExternalStore, type ReactNode} from 'react';
 import {useT} from '../../i18n';
+import {useCapabilities} from '../../store';
 import {Button, VisuallyHidden, phoneQuery, sidebarQuery, useMediaQuery} from '../../ui/ui';
 import {LoadBoundary} from '../../ui/LoadBoundary';
 import WidgetsIcon from '../../ui/icons/Widgets';
@@ -34,7 +35,10 @@ export function SidebarWidgets({route, backend, honk}: {route: string; backend: 
   const phone = useMediaQuery(phoneQuery);
   const layout = useWidgetLayout();
   const [announcement, setAnnouncement] = useState({text: '', serial: 0});
-  const shown = !phone && layout.visible;
+  // The panel shows backend data, so it mounts once the backend accepts the tab, as the pages warm; before that the
+  // frame painted during sign-in would download its code.
+  const accepted = !!useCapabilities().data;
+  const shown = accepted && !phone && layout.visible;
   const docked = sidebar && !!layout.docked;
   const indicator = <BackendIndicator backend={backend} honk={honk} />;
   const panel = (
