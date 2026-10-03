@@ -11,32 +11,6 @@ export const foldCpu: Fold<CpuSample> = (samples, time) => ({time, value: mean(s
 // A node's latency at a read of the node list; a failed probe, a missing observation or a node gone from the list is a gap.
 export const latencySample = (node: Node | undefined, time: number): CpuSample => ({time, value: (node && healthMillis(preferredHealth(node))) ?? null});
 
-// A latency card's own history: a sample at each read of the node list, the window's worth kept. Another selection,
-// or null while the line is off, starts over.
-export type LatencyHistory = {source: Node[] | undefined; key: string | null; samples: CpuSample[]};
-export function nextLatency(
-  history: LatencyHistory,
-  source: Node[] | undefined,
-  id: string,
-  key: string | null,
-  now: number,
-  windowSeconds: number
-): LatencyHistory {
-  const kept = history.key === key ? history.samples.filter(sample => sample.time >= now - windowSeconds * 1000) : [];
-  if (!source) return {source, key, samples: kept};
-  return {
-    source,
-    key,
-    samples: [
-      ...kept,
-      latencySample(
-        source.find(node => node.id === id),
-        now
-      )
-    ]
-  };
-}
-
 // A tile's trend line: the window's samples, thinned to the points a sparkline can show. Each run of known readings is
 // thinned on its own and one null stays between runs, so a failed poll still breaks the line.
 export const sparkPoints = 24;

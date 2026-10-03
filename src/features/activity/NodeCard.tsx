@@ -17,7 +17,7 @@ export function NodeCard({connections, selection}: {connections: ConnectionList 
   const locale = LOCALE[useLang()];
   const sparklines = useContext(SettingsContext)?.ap.sparklines ?? true;
   const latencyText = useCallback((value: number) => formatLatency(value, t), [t]);
-  const spark = useLatencySpark(vm.nodes, vm.id, `${vm.chosen}/${vm.id}`, sparklines);
+  const spark = useLatencySpark(vm.nodes, vm.id, JSON.stringify([vm.chosen, vm.id]), sparklines, vm.refetchNodes);
   return (
     <Card
       className="rp-latency"

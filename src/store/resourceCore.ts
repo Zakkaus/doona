@@ -42,7 +42,8 @@ export const initialState: ResourceState<never> = {data: undefined, loading: tru
 // A page left and soon revisited shows what it had at once; after this long nobody is coming back, and a large list
 // is not worth holding.
 const keepInactive = 60000;
-const eventGap = 5000;
+// The least time between two reads of a resource that events bring forward.
+export const eventGap = 5000;
 
 export const refetchResource = (api: Api, name: string) => stores.get(api)?.active.get(name)?.watcher.refetch();
 

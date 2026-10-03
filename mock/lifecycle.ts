@@ -93,6 +93,11 @@ export function createLifecycle(
     return cursor.position;
   };
   let timer: ReturnType<typeof setInterval> | undefined;
+  // A first visit has no chart history yet. The first stream repeats its opening ready a second later, as a resume from
+  // the same cursor would, so the client reads everything again and the CPU and latency lines get their second sample
+  // without waiting out the five-second runtime poll and the event gap. The repeat keeps the opening id, so the notices
+  // and the Events page replace that row rather than list a second one.
+  let warmed = false;
   const eventData = () => ({instance_id: instanceId, observed_at: new Date().toISOString()});
   function publish(event: ApiEvent) {
     event.id = `${instanceId}:${++sequence}`;
@@ -270,7 +275,8 @@ export function createLifecycle(
     const release = recording.attach(kinds?.some(kind => kind === 'flow.updated' || kind === 'flow.gap') ? 'flows' : undefined);
     try {
       onConnectionChange?.(true);
-      emit({id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()});
+      const opening: ApiEvent = {id: `${instanceId}:${Number.isFinite(cursor) ? cursor : sequence}`, event: 'stream.ready', data: eventData()};
+      emit(opening);
       for (const event of history) if (Number(event.id.split(':')[1]) > cursor) emit(event);
       if (signal?.aborted) {
         onConnectionChange?.(false);
@@ -278,11 +284,17 @@ export function createLifecycle(
       }
       listeners.add(emit);
       if (!timer) timer = setInterval(runtimeUpdated, 5000);
+      let warmup: ReturnType<typeof setTimeout> | undefined;
+      if (!warmed) {
+        warmed = true;
+        warmup = setTimeout(() => emit({...opening, data: eventData()}), 1000);
+      }
       await new Promise<void>(resolve => {
         signal?.addEventListener(
           'abort',
           () => {
             listeners.delete(emit);
+            clearTimeout(warmup);
             if (!listeners.size) {
               clearInterval(timer);
               timer = undefined;

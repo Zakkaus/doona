@@ -399,11 +399,12 @@ it('advances reload operations and emits invalidations until aborted', async () 
   expect((await api.runtime()).last_reload).toMatchObject({operation_id: accepted.operation_id, status: 'succeeded'});
   expect((await api.runtime()).generation.active_id).toBe('41');
   await vi.advanceTimersByTimeAsync(4000);
-  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  // The warm-up ready a second after the stream opens sits between the reload's events.
+  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'stream.ready', 'runtime.updated']);
   controller.abort();
   await stream;
   await vi.advanceTimersByTimeAsync(5000);
-  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'runtime.updated']);
+  expect(events.slice(baseline).map(e => e.event)).toEqual(['generation.changed', 'operation.updated', 'runtime.updated', 'stream.ready', 'runtime.updated']);
 });
 
 it('selects both networks with an independent revision and preserves configuration', async () => {

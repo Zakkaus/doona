@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../../mock';
-import {cpuSample, foldCpu, latencySample, nextLatency, sparkWindow, thin, type LatencyHistory} from './widgetSeries';
+import {cpuSample, foldCpu, latencySample, sparkWindow, thin} from './widgetSeries';
 
 it('preserves unknown CPU readings and multicore percentages', async () => {
   const runtime = await createMockApi().runtime();
@@ -34,33 +34,6 @@ it.each([
   } = await createMockApi().nodes();
   node.health = state ? node.health.map(row => ({...row, state, latency_ms: latency})) : [];
   expect(latencySample(state === undefined ? undefined : node, 5)).toEqual({time: 5, value});
-});
-
-it("keeps a latency card's own window and breaks the line while its node is gone", async () => {
-  const {nodes} = await createMockApi().nodes();
-  const node = {...nodes[0], health: nodes[0].health.map(row => ({...row, state: 'healthy' as const, latency_ms: 40}))};
-  const values = (history: LatencyHistory) => history.samples.map(sample => [sample.time, sample.value]);
-  let history: LatencyHistory = {source: undefined, key: 'g/n', samples: []};
-  history = nextLatency(history, [node], node.id, 'g/n', 1000, 60);
-  history = nextLatency(history, [], node.id, 'g/n', 31000, 60);
-  history = nextLatency(history, [node], node.id, 'g/n', 61000, 60);
-  expect(values(history)).toEqual([
-    [1000, 40],
-    [31000, null],
-    [61000, 40]
-  ]);
-  // Older than the window: dropped at the next read.
-  expect(values(nextLatency(history, [node], node.id, 'g/n', 91000, 60))).toEqual([
-    [31000, null],
-    [61000, 40],
-    [91000, 40]
-  ]);
-  // No read (switched off, or a preview) records nothing.
-  expect(values(nextLatency(history, undefined, node.id, 'g/n', 61000, 60))).toEqual(values(history));
-  // Another selection, or the line switched off and on again, starts over.
-  expect(values(nextLatency(history, [node], node.id, 'h/n', 91000, 60))).toEqual([[91000, 40]]);
-  expect(values(nextLatency(history, [node], node.id, 'g/m', 91000, 60))).toEqual([[91000, 40]]);
-  expect(values(nextLatency(nextLatency(history, undefined, node.id, null, 91000, 60), [node], node.id, 'g/n', 92000, 60))).toEqual([[92000, 40]]);
 });
 
 // Values by position: a number is a reading, null a failed poll; one sample a second.

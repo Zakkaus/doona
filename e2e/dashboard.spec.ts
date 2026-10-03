@@ -832,6 +832,21 @@ test('every chart a card draws on the page it draws in the editor, from the hist
   await tick(page, () => expect(tools).toHaveCount(0, {timeout: 100}));
   expect(await charts(page)).toEqual(drawn);
 });
+// A first visit has no history: the CPU and latency lines draw from the first two reads, within two seconds of the
+// page opening, on the page and in the editor.
+test('a first visit draws the CPU and latency lines within two seconds, on the page and in the editor', async ({page}) => {
+  const first = (state: Record<string, string>) => ({cpu: state.cpu, latency: state.latency});
+  await page.clock.install({time: new Date('2026-09-16T00:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-09-16T00:00:00.100Z'));
+  await page.setViewportSize({width: 1280, height: 1000});
+  await page.goto('/#/activity');
+  await expect(tile(page, 'latency').locator('.rp-big')).toHaveText(/ms/);
+  await page.clock.runFor(1900);
+  await expect.poll(async () => first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
+  await open(page);
+  await tick(page, () => expect(page.locator('.rp-dashboard-tools').first()).toBeVisible({timeout: 100}));
+  expect(first(await charts(page))).toEqual({cpu: 'drawn', latency: 'drawn'});
+});
 test('the latency card draws its line at every height, in the editor and on the page', async ({page}) => {
   await holdReads(page);
   await page.clock.resume();
