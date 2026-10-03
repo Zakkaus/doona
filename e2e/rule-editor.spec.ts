@@ -54,12 +54,23 @@ test('the rule list shows the dictionary in evaluation order with its source lin
   await expect(list.nth(7)).toContainText('domain(geosite:telegram)');
   await expect(list.last()).toContainText('fallback: proxy');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('21 rules, generation 40');
-  await expect(list.first().getByRole('button', {name: 'Open config file', exact: true})).toHaveCount(0);
+  await expect(list.first().getByRole('button', {name: 'Open config file', exact: true})).toBeVisible();
   await list.first().getByRole('button', {name: 'Edit rule', exact: true}).click();
   await expect(page.getByRole('dialog').getByRole('textbox', {name: 'Values'})).toHaveCount(1);
 });
 
-test('bare include rules edit and remove in place, while unsupported calls keep Expression and the source link', async ({page}) => {
+test('a visually editable rule keeps Edit and Remove beside the link to its config file line', async ({page}) => {
+  await page.goto('/#/rules?tab=list&view=advanced');
+  const row = rows(page).first();
+  await expect(row).toContainText('config.dae:149');
+  await expect(row.getByRole('button', {name: 'Edit rule', exact: true})).toBeEnabled();
+  await expect(row.getByRole('button', {name: 'Remove rule', exact: true})).toBeVisible();
+  await row.getByRole('button', {name: 'Open config file', exact: true}).click();
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=149$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('bare include rules edit and remove in place, while unsupported calls keep Expression', async ({page}) => {
   const {api} = await mockBackend(page, {includedRule: true});
   const include = (await api.config()).sources.find(source => source.id === 'src-rules')!;
   const before = include.content.replace('\n\n', '\nmac(aa:bb:cc:dd:ee:ff) && ipversion(4) -> direct\n');
@@ -67,7 +78,7 @@ test('bare include rules edit and remove in place, while unsupported calls keep 
   await page.goto('/#/rules?tab=list&view=advanced');
   const row = rows(page).filter({hasText: /domain\(geosite:\s*(openai|github)\)/});
   await expect(row).toContainText('rules.dae:6');
-  await expect(row.getByRole('button', {name: 'Open config file', exact: true})).toHaveCount(0);
+  await expect(row.getByRole('button', {name: 'Open config file', exact: true})).toBeVisible();
   await row.getByRole('button', {name: 'Edit rule', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit rule'});
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue('openai');
