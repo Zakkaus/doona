@@ -157,7 +157,6 @@ it('refreshes the runtime row of the contract on runtime updates', () => {
     'memoryHistory',
     'runtimeMemory',
     'runtimeSettings',
-    'capabilities',
     'groups',
     'group',
     'nodes',
@@ -165,7 +164,8 @@ it('refreshes the runtime row of the contract on runtime updates', () => {
   ] as const) {
     expect(shouldRefetch(resource, event('runtime.updated'))).toBe(true);
   }
-  for (const resource of ['config', 'flows', 'datapath', 'dnsCache'] as const) expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
+  for (const resource of ['capabilities', 'config', 'flows', 'datapath', 'dnsCache'] as const)
+    expect(shouldRefetch(resource, event('runtime.updated'))).toBe(false);
 });
 
 it('refreshes nothing on operation updates, since what an operation changes sends its own event', () => {

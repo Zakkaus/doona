@@ -29,6 +29,8 @@ export type ResourceName =
 
 // The contract's Invalidates column (events.md). An operation's own changes arrive as the `runtime.updated` or
 // `generation.changed` they produce, and its waiter refetches the operation, so `operation.updated` refreshes nothing here.
+// The capabilities change with a published generation, not with the runtime counters `runtime.updated` coalesces, so
+// a heartbeat does not read them again; a reconnect's `stream.ready` still does.
 export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
   'stream.ready': {now: 'all'},
   'runtime.updated': {
@@ -39,7 +41,6 @@ export const invalidations: Record<EventKind, {now: ResourceName[] | 'all'}> = {
       'memoryHistory',
       'runtimeMemory',
       'runtimeSettings',
-      'capabilities',
       'groups',
       'group',
       'groupProbeMembers',
