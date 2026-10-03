@@ -41,9 +41,14 @@
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
-    "js": 720000,
-    "shell": 275000,
-    "css": 240000
+    "startupLogin": 265000,
+    "startupActivity": 340000,
+    "startupCss": 34000,
+    "locale": 38000,
+    "fontCss": 36000,
+    "route": 75000,
+    "routeConfig": 195000,
+    "mock": 38000
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
