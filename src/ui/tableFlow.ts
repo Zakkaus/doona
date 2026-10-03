@@ -26,14 +26,28 @@ export function useTableFlow(
   useEffect(() => {
     const box = ref.current;
     if (!enabled || !box) return;
+    // Reads come before writes, and a value is written only when it changes: a custom property set on the grid restyles
+    // every row, so a write between reads would force a style and layout pass of the whole grid.
+    const write = (name: string, value: string) => {
+      if (box.style.getPropertyValue(name) !== value) box.style.setProperty(name, value);
+    };
     const place = () => {
       const inset = flowInset(box) - heading;
       const offset = Math.max(0, Math.min(inset - box.getBoundingClientRect().top, box.clientHeight - heading));
-      box.style.setProperty('--rp-flow-heading', `${offset}px`);
       const detail = detailRef.current;
       const bottom = Number.parseFloat(getComputedStyle(box).scrollPaddingBottom) || 0;
       const covered = detail?.childElementCount ? window.innerHeight - detail.getBoundingClientRect().top : 0;
-      box.style.setProperty('--rp-flow-bottom', `${Math.max(bottom, covered)}px`);
+      write('--rp-flow-heading', `${offset}px`);
+      write('--rp-flow-bottom', `${Math.max(bottom, covered)}px`);
+    };
+    // Scrolling places the heading once per frame, just before the frame lays out.
+    let placing = 0;
+    const placeInFrame = () => {
+      if (!placing)
+        placing = requestAnimationFrame(() => {
+          placing = 0;
+          place();
+        });
     };
     let frame = 0;
     const revealFocus = () => {
@@ -51,8 +65,8 @@ export function useTableFlow(
     };
     place();
     box.addEventListener('focusin', revealFocus);
-    window.addEventListener('scroll', place, {passive: true});
-    window.addEventListener('resize', place);
+    window.addEventListener('scroll', placeInFrame, {passive: true});
+    window.addEventListener('resize', placeInFrame);
     const observer = new ResizeObserver(() => {
       place();
       revealFocus();
@@ -61,9 +75,10 @@ export function useTableFlow(
     if (detailRef.current) observer.observe(detailRef.current);
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(placing);
       box.removeEventListener('focusin', revealFocus);
-      window.removeEventListener('scroll', place);
-      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', placeInFrame);
+      window.removeEventListener('resize', placeInFrame);
       observer.disconnect();
       box.style.removeProperty('--rp-flow-heading');
       box.style.removeProperty('--rp-flow-bottom');
