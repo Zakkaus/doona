@@ -1221,8 +1221,14 @@ test('a committed restore failure retains inline diagnostics and copies its orig
   handlers['POST x-honk/config/revisions/1/activate'] = async () => {
     const accepted = await api.activateConfigRevision(1);
     operationId = accepted.operation_id;
+    // Answer the poll with the failure at once: the mock's own operation runs on a one second timer, and polling it from
+    // here added up to two more seconds of real time to the client's first poll, close to the five second expectation.
     handlers[`GET operations/${operationId}`] = async () => ({
-      ...(await api.pollOperation(accepted)),
+      operation_id: accepted.operation_id,
+      kind: accepted.kind,
+      created_at: new Date().toISOString(),
+      started_at: new Date().toISOString(),
+      finished_at: new Date().toISOString(),
       status: 'failed',
       result: null,
       error: {
