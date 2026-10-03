@@ -36,7 +36,7 @@ import {draftInterval, intervalProblem} from './subscription';
 import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useSubscriptionEditor, type SubscriptionEdit} from './useSubscriptionEditor';
-import {useDraftGuard} from '../../shell/draft';
+import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
@@ -64,7 +64,7 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
-  const session = useRef(0);
+  const session = useDialogSession();
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
@@ -79,18 +79,21 @@ export function useNodesPage({go, query}: PageProps) {
       ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
       : !!(form.name || form.value);
   const guard = useDraftGuard(!!dialog && edited, () => {
-    session.current++;
+    session.next();
     setDialog(null);
   });
-  const open = useCallback((next: NodeDialog) => {
-    session.current++;
-    setForm(blank);
-    setProblem(null);
-    if (next.kind === 'editProvider')
-      setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
-    if (next.kind === 'editNode') setForm({...blank, name: next.entry.name, value: next.entry.link});
-    setDialog(next);
-  }, []);
+  const open = useCallback(
+    (next: NodeDialog) => {
+      session.next();
+      setForm(blank);
+      setProblem(null);
+      if (next.kind === 'editProvider')
+        setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
+      if (next.kind === 'editNode') setForm({...blank, name: next.entry.name, value: next.entry.link});
+      setDialog(next);
+    },
+    [session]
+  );
   const lang = useLang();
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
@@ -233,11 +236,11 @@ export function useNodesPage({go, query}: PageProps) {
     if (!dialog || submitting.current) return;
     submitting.current = dialog;
     setPendingDialog(dialog);
-    const submitted = session.current;
+    const isCurrent = session.start();
     const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
     const refuse = (text: string, toastText = text, error?: unknown, kind: Notice['kind'] = 'negative') => {
-      if (session.current === submitted) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
+      if (isCurrent()) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
       else toast(kind, toastText, {requestId: error === undefined ? undefined : requestIdOf(error), error});
     };
     const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error, problem.kind);
@@ -247,7 +250,7 @@ export function useNodesPage({go, query}: PageProps) {
         const created = await manage.addProvider(providerCreate(form, createOptions));
         if (!created) return;
         const name = form.name.trim();
-        if (session.current === submitted) {
+        if (isCurrent()) {
           guard.clear();
           close();
         }
@@ -287,12 +290,7 @@ export function useNodesPage({go, query}: PageProps) {
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         reload();
-        if (
-          session.current === submitted &&
-          at !== null &&
-          shown.current === at &&
-          (params.has('node') || params.has('nodes') || params.get('q') === dialog.entry.name)
-        ) {
+        if (isCurrent() && at !== null && shown.current === at && (params.has('node') || params.has('nodes') || params.get('q') === dialog.entry.name)) {
           guard.clear();
           go('nodes', within(at, {q: form.name.trim(), node: null, nodes: null}), {replace: true});
         }
@@ -317,7 +315,7 @@ export function useNodesPage({go, query}: PageProps) {
         if (!(await manage.removeNode(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
       }
-      if (session.current === submitted) {
+      if (isCurrent()) {
         guard.clear();
         close();
       }
@@ -456,7 +454,7 @@ export function useNodesPage({go, query}: PageProps) {
     reload,
     dialog,
     setDialog: (next: NodeDialog | null) => {
-      session.current++;
+      session.next();
       setProblem(null);
       setDialog(next);
     },
