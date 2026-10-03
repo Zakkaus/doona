@@ -1,6 +1,7 @@
 import {createContext, useContext, useMemo} from 'react';
 import type en from './locales/en.json';
 import {storageKeys} from '../api/storage';
+import {loadFaces} from '../fonts';
 import {browserLang, DEFAULT_LANG, isLang, languages, REFERENCE_LANG, type Lang} from './languages';
 // English is the reference: every catalogue's keys are among its keys.
 export type Key = keyof typeof en;
@@ -37,12 +38,12 @@ export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly str
 }
 export type Catalogue = Record<Key, Message>;
 // Each language is its own chunk, loaded on first use; `translate` reads only what has loaded. Vite expands the
-// template import into one chunk per catalogue. A language with ideograph faces brings their stylesheet, so they are
-// declared before the page renders in it; a face stylesheet that fails to load leaves the text to the system font.
+// template import into one chunk per catalogue. A catalogue resolves with its language's faces declared, so the page
+// never renders in it before they are.
 function readCatalogue(lang: Lang): Promise<Partial<Catalogue>> {
   const {fonts} = languages.find(language => language.id === lang)!;
   const catalogue = (import(`./locales/${lang}.json`) as Promise<{default: Partial<Catalogue>}>).then(module => module.default);
-  return fonts ? Promise.all([catalogue, import(`../fonts-${fonts}.css`).catch(() => undefined)]).then(([messages]) => messages) : catalogue;
+  return Promise.all([catalogue, loadFaces(fonts)]).then(([messages]) => messages);
 }
 const catalogues = new Map<Lang, Partial<Catalogue>>();
 const loading = new Map<Lang, Promise<void>>();

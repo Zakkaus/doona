@@ -1,6 +1,6 @@
-import {test, expect, mockBackend, query} from './fixtures';
+import {test, expect, expectLoadFailures, mockBackend, query} from './fixtures';
 
-for (const lang of ['zh-TW', 'zh-CN']) {
+for (const lang of ['zh-TW', 'zh-CN', 'en']) {
   test(`Noto slices are self-hosted and retain the ${lang} font stack`, async ({page}) => {
     await mockBackend(page);
     await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
@@ -11,7 +11,7 @@ for (const lang of ['zh-TW', 'zh-CN']) {
     await page.goto('/#/settings');
     await expect(page.locator('#settings-backend')).toBeVisible();
     await page.evaluate(() => document.fonts.ready.then(() => true));
-    const family = lang === 'zh-TW' ? '"Noto Sans TC"' : '"Noto Sans SC", "Noto Sans TC"';
+    const family = lang === 'zh-CN' ? '"Noto Sans SC", "Noto Sans TC"' : '"Noto Sans TC"';
     const stacks = await page.locator('body, h1, h2, h3').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).fontFamily));
     expect(stacks.every(stack => stack === `"Twemoji Country Flags", ${family}, system-ui, sans-serif`)).toBe(true);
     const faces = await page.evaluate(() =>
@@ -30,6 +30,29 @@ for (const lang of ['zh-TW', 'zh-CN']) {
     }
     const worker = await (await page.request.get('/sw.js')).text();
     expect(worker).not.toMatch(/fonts\/noto-sans-/);
+  });
+}
+
+for (const lang of ['zh-TW', 'en']) {
+  test(`without the font archive the ${lang} page requests nothing under fonts/ and keeps its font stack`, async ({page}) => {
+    await mockBackend(page);
+    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
+    // A host without the archive: the README probe is the one request under fonts/, and its 404 the one failed load.
+    await page.route('**/fonts/**', route => route.fulfill({status: 404, body: ''}));
+    expectLoadFailures(page, /\/fonts\/README$/);
+    const requested: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname.includes('/fonts/')) requested.push(new URL(request.url()).pathname);
+    });
+    await page.goto('/#/settings');
+    await expect(page.locator('#settings-backend')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => true));
+    await page.waitForLoadState('networkidle');
+    expect(requested).toEqual([expect.stringMatching(/\/fonts\/README$/)]);
+    const faces = await page.evaluate(() => [...document.fonts].filter(face => face.family.includes('Noto Sans')).length);
+    expect(faces).toBe(0);
+    const stack = await page.locator('body').evaluate(node => getComputedStyle(node).fontFamily);
+    expect(stack).toBe('"Twemoji Country Flags", "Noto Sans TC", system-ui, sans-serif');
   });
 }
 

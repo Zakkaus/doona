@@ -1,6 +1,5 @@
 import {createRoot} from 'react-dom/client';
 import {StrictMode, useEffect, useLayoutEffect, useState} from 'react';
-import './fonts.css';
 import './ui/flags.css';
 import './ui/theme.css';
 import {Shell, stampAppearance} from './shell/Shell';
@@ -14,8 +13,11 @@ import {toast} from './ui/ui';
 import {activated, announceBuild} from './shell/newBuild';
 import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
 import startupText from 'virtual:startup-text';
+import {loadFaces} from './fonts';
 
 stampAppearance();
+// The font archive check starts now, so it overlaps the catalogue fetch the language load waits on.
+void loadFaces(null);
 // The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
 function startLanguage(): Promise<Lang> {
   const saved = readLang();
