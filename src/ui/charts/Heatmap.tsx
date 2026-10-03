@@ -3,7 +3,7 @@ import type {ReactNode} from 'react';
 import {heatTone} from './layout';
 import {ChartTip, useChartTip} from './tip';
 
-export type HeatRow = {id: string; label: ReactNode; color: string; counts: number[]; titles: string[]};
+type HeatRow = {id: string; label: ReactNode; color: string; counts: number[]; titles: string[]};
 
 // Rows by category, columns by time: a cell's tone says how busy that row was then, against the row's own busiest
 // moment, so three errors stand out beside a thousand info records; its title gives the count in words.

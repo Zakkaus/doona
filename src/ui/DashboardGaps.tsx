@@ -5,7 +5,7 @@ import type {CanvasPlace} from './SortableCanvas';
 const cardType = 'application/x-doona-card';
 // The card being dragged in edit mode, set by its canvas: a drag's data is unreadable until the drop. A drag over a
 // space asks often whether the card fits, so each drag measures the card once per space.
-export const dragged: {card?: string} = {};
+const dragged: {card?: string} = {};
 const measured = new Map<string, boolean>();
 const ended = new Set<() => void>();
 export const dragStarted = (card: string | undefined) => {
@@ -44,7 +44,7 @@ type Gap = {after: string; left: number; top: number; width: number; height: num
 type Rect = {id: string; left: number; right: number; top: number; bottom: number};
 
 // The simplest fraction, to twelfths, nearest to `share` of a row.
-export function shareLabel(share: number) {
+function shareLabel(share: number) {
   let best = [1, 1];
   for (let q = 1; q <= 12; q++) {
     const p = Math.round(share * q);
@@ -55,7 +55,7 @@ export function shareLabel(share: number) {
 
 // The free space at the inline end of each packed row: from the row's last card to the section's end, down to the row's
 // lowest card, short of any card that reaches into it from another row. A space under a sixth of the row is none.
-export function rowGaps(cells: readonly Rect[], width: number, gap: number, rtl: boolean): Array<Omit<Gap, 'share'>> {
+function rowGaps(cells: readonly Rect[], width: number, gap: number, rtl: boolean): Array<Omit<Gap, 'share'>> {
   // Mirrored for right-to-left, so the row's end is always on the right.
   const boxes = rtl ? cells.map(cell => ({...cell, left: width - cell.right, right: width - cell.left})) : cells;
   const rows = new Map<number, Rect[]>();

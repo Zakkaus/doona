@@ -27,7 +27,7 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
 }
 
 // The settings the check dialog edits, in the order it shows them.
-export const checkFieldOrder = ['check_url', 'check_interval', 'tolerance', 'idle_timeout'] as const;
+const checkFieldOrder = ['check_url', 'check_interval', 'tolerance', 'idle_timeout'] as const;
 export type CheckField = (typeof checkFieldOrder)[number];
 type CountField = Exclude<CheckField, 'check_url'>;
 const countFields = ['check_interval', 'tolerance', 'idle_timeout'] as const satisfies readonly CountField[];

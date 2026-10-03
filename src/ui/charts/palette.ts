@@ -24,7 +24,7 @@ const VARS = [
   'info',
   'line'
 ] as const;
-export type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
+type Palette = Record<(typeof VARS)[number], string> & {cat: string[]};
 function read(): Palette {
   const cs = getComputedStyle(document.documentElement);
   return {

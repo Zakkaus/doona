@@ -2,7 +2,7 @@ import {isFragment, isQuotable, quote, scanConfig, unquote} from './text';
 
 export const groupConditionKinds = ['nameKeyword', 'nameRegex', 'nameExact', 'subtag', 'subtagKeyword', 'subtagRegex', 'group'] as const;
 export type GroupConditionKind = (typeof groupConditionKinds)[number];
-export type GroupConditionTerm = {id: number; kind: GroupConditionKind; value: string};
+type GroupConditionTerm = {id: number; kind: GroupConditionKind; value: string};
 export type GroupConditionRow = GroupConditionTerm & {negate: boolean; alternatives?: GroupConditionTerm[]};
 export const conditionFamily = (kind: GroupConditionKind) => calls[kind][0];
 export type GroupFilterDraft = {id: number; source: string; initial: string; rows: GroupConditionRow[] | null; advanced: boolean};

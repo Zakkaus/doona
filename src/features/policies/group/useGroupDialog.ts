@@ -155,7 +155,7 @@ export type GroupDialogView = {
 export type PolicyDeclaration = {owner: GroupOwner | undefined; complete: boolean | undefined; loaded: boolean; error: Error | null};
 // What the default member and final outbound pickers offer: the live group, its members as their tiles show them,
 // and every outbound a final can name.
-export type RouteContext = {g: Group | undefined; members: Parameters<typeof memberSections>[0]; outbounds: OutboundCatalogue};
+type RouteContext = {g: Group | undefined; members: Parameters<typeof memberSections>[0]; outbounds: OutboundCatalogue};
 const noNodes: Node[] = [];
 const noFilters: string[] = [];
 const routeHelp = {default_member_id: 'policy.defaultMemberHelp', final_outbound: 'policy.finalOutboundHelp'} as const;

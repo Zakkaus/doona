@@ -171,8 +171,6 @@ export default defineConfig({
         // the shell's modules are not pulled into the Activity chunk.
         onlyExplicitManualChunks: true,
         manualChunks(id, {getModuleInfo}) {
-          // The Activity page is its own chunk, requested as the shell starts. Code it shares with later pages stays in
-          // it rather than in many small shared chunks, since it is always loaded by then.
           // Keep the React runtime and react-aria shared utilities in the startup vendor chunk.
           if (/\/node_modules\/(react|react-dom|scheduler|clsx|use-sync-external-store)\//.test(id)) return 'vendor-react';
           // react-aria is left to Rollup: forcing all of it into one startup chunk shipped the components that only lazy

@@ -46,7 +46,7 @@ export type TableGroup<T> = {id: string; group: string; label: string; totals: R
 
 // `resizable`: false leaves the resizers out. In a grid with no rows React Aria (1.21) keeps Tab on the first column's
 // resizer, so a table without rows has none.
-export function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols: Col[]; firstVisibleHeader?: boolean; resizable?: boolean}) {
+function TableColumns({cols, firstVisibleHeader, resizable = true}: {cols: Col[]; firstVisibleHeader?: boolean; resizable?: boolean}) {
   const t = useT();
   return (
     <TableHeader>

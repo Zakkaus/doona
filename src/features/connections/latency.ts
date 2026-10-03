@@ -3,7 +3,7 @@ import {healthMillis, preferredObservation} from '../../api/selectors';
 import {percentile} from '../../ui/charts/layout';
 import {compareNames} from '../../i18n/format';
 
-export type NodeSample = {node: string; name: string; value: number; connections: number};
+type NodeSample = {node: string; name: string; value: number; connections: number};
 
 // Every node with a TCP data-path latency, once, fastest first, taken from the observation the Nodes page shows.
 // Connections carry no latency, but when their chains name a leaf node, that node is in use and counts them; honk

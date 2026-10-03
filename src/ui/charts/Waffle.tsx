@@ -4,7 +4,7 @@ import {useMemo} from 'react';
 import {waffleCells} from './layout';
 import {ChartTip, useChartTip} from './tip';
 
-export type WaffleShare = {id: string; label: string; count: number; color: string; text: string};
+type WaffleShare = {id: string; label: string; count: number; color: string; text: string};
 
 // A hundred cells split by share: proportions read by eye, with the counts in the legend beside or under them.
 export function Waffle({label, shares, legendLimit}: {label: string; shares: WaffleShare[]; legendLimit?: number}) {

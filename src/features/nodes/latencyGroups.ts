@@ -73,7 +73,7 @@ export function latencyGroups(nodes: Node[], groups: GroupSummary[] | undefined,
 }
 
 // A node is slower than usual when its latest latency passes the higher average by this ratio and these milliseconds.
-export const slowerThanUsual = {ratio: 1.3, ms: 20};
+const slowerThanUsual = {ratio: 1.3, ms: 20};
 
 // The range a node's two averages span, a single value when only one is reported, null with none.
 export function usualRange(row: LatencyRow): [number, number] | null {

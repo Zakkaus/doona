@@ -1,5 +1,5 @@
 // How long a worker has to report its build. One from before builds were reported never answers.
-export const BUILD_REPLY_MS = 2500;
+const BUILD_REPLY_MS = 2500;
 
 // A worker claims the page while it activates; the page messages it once it has.
 export async function activated(worker: ServiceWorker, container: ServiceWorkerContainer) {

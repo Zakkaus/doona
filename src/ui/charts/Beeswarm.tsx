@@ -7,8 +7,8 @@ import {logDomain, logPosition, logTicks, swarm} from './layout';
 
 // `lines` is what the hover tip shows for the point, first line in bold.
 export type SwarmPoint = {id: string; value: number; color: string; lines: string[]; nodeName?: boolean};
-export type SwarmMark = {value: number; label: string};
-export type SwarmRow = {id: string; label: string; detail: string; points: SwarmPoint[]; mark?: number};
+type SwarmMark = {value: number; label: string};
+type SwarmRow = {id: string; label: string; detail: string; points: SwarmPoint[]; mark?: number};
 
 const inset = 12;
 

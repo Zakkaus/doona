@@ -9,8 +9,8 @@ import type {DiffRow} from '../../ui/ui';
 import {lineDiff} from './diff';
 
 // Templates that create groups are kept under More templates.
-export const primaryTemplates: RuleTemplate[] = ['bypass', 'gfw', 'global'];
-export const moreTemplates: RuleTemplate[] = ['single', 'services', 'regions', 'homebound'];
+const primaryTemplates: RuleTemplate[] = ['bypass', 'gfw', 'global'];
+const moreTemplates: RuleTemplate[] = ['single', 'services', 'regions', 'homebound'];
 const templateText: Record<RuleTemplate, [Key, Key]> = {
   bypass: ['rule.template.bypass', 'rule.template.bypassHelp'],
   gfw: ['rule.template.gfw', 'rule.template.gfwHelp'],

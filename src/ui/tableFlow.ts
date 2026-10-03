@@ -1,6 +1,6 @@
 import {useEffect, useLayoutEffect, useRef, type RefObject} from 'react';
 
-export function flowInset(box: HTMLElement) {
+function flowInset(box: HTMLElement) {
   return Number.parseFloat(getComputedStyle(box).scrollPaddingTop) || 0;
 }
 

@@ -2,7 +2,7 @@ import type {Version} from '../model';
 import {honk} from './honk';
 import type {Engine} from './types';
 
-export type {Engine, EngineReason, EngineSetting, EngineSubject} from './types';
+export type {Engine, EngineReason, EngineSubject} from './types';
 
 // An engine doona has no knowledge of: the contract's own facts are all the page can give.
 const unknown: Engine = {

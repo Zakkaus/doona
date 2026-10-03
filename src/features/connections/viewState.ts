@@ -17,7 +17,7 @@ export const columns: Array<{id: string; label: Key; minWidth: number; sortable?
   {id: 'age', label: 'ui.started', minWidth: 132, sortable: true, drop: 6}
 ];
 export type ConnectionView = {hidden: string[]; sort: SortDescriptor | null; group: 'none' | 'source' | 'outbound'};
-export type GroupRow = {id: string; group: string; children: Connection[]; active: number; download: bigint | null};
+type GroupRow = {id: string; group: string; children: Connection[]; active: number; download: bigint | null};
 export type TableRow = {id: string; connection: Connection} | GroupRow;
 export const viewKey = storageKeys.connectionsView;
 // Which groups are folded: all but the exceptions once everything is collapsed, otherwise only the exceptions. A group

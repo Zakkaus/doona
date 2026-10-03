@@ -12,7 +12,7 @@ type PaletteControls = Pick<NonNullable<React.ContextType<typeof SettingsContext
 export type PaletteMenuProps = {ap: PaletteControls; paletteSections: PaletteSection[]};
 
 // The language and palette menus and the light and dark toggle, shared by the top bar and the sign-in page.
-export function SchemeIcon({dark}: {dark: boolean}) {
+function SchemeIcon({dark}: {dark: boolean}) {
   return (
     <span className="rp-icon-stack" data-dark={dark || undefined}>
       <Contrast className="moon" />

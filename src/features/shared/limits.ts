@@ -40,7 +40,7 @@ const limitCauses = [
 ] as const;
 export type LimitCause = (typeof limitCauses)[number];
 // `manage`, `subscriptions` and `close` are the resource actions of the same names in EngineSubject.
-export type LimitId = Resource | 'manage' | 'subscriptions' | 'close';
+type LimitId = Resource | 'manage' | 'subscriptions' | 'close';
 
 type LimitLink = {href: string; text: string; external?: boolean};
 export type LimitGroup = {

@@ -104,7 +104,7 @@ export const readBackUnconfirmed =
 export const etag = (revision: string) => '"' + revision + '"';
 export type SucceededResult<K extends Operation['kind']> = Extract<Operation, {kind: K; status: 'succeeded'}>['result'];
 // A provider publication that honk commits to a degraded runtime fails with `committed: true`: the nodes are applied.
-export type Degraded = {degraded: true};
+type Degraded = {degraded: true};
 type Finished<K extends Operation['kind']> = K extends 'provider_refresh' ? SucceededResult<K> | Degraded : SucceededResult<K>;
 // `written`: the operation activates a file already written, which a failed activation does not roll back. The
 // backend's own `written` and `committed` details, when it sends them, override that default.

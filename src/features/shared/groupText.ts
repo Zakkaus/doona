@@ -22,7 +22,7 @@ export const groupConfigLabels = {
 // The default member and final outbound, which the edit dialog offers under the filters when the backend lists them as
 // writable. The file names both by tag: a member's name, and a node, group, direct or block. honk reads the default
 // member only under manual selection, so it follows `policy`, the one the dialog has selected.
-export const routeFieldOrder = ['default_member_id', 'final_outbound'] as const;
+const routeFieldOrder = ['default_member_id', 'final_outbound'] as const;
 export type RouteField = (typeof routeFieldOrder)[number];
 export const routeFields = (g: Group | undefined, policy: string | null): RouteField[] =>
   g ? routeFieldOrder.filter(field => g.capabilities.mutable_config.includes(field) && (field !== 'default_member_id' || manualPolicy(policy))) : [];

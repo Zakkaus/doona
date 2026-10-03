@@ -12,7 +12,7 @@ import {lineSpan, mountedRanges, visibleRows} from './layout';
 // `value` is the row's solid dot, in the `tone` colour when set; `average` its hollow ring and `range` the line joining them, both
 // left out when null. `details` are the hover tip's lines under the row's name, and joined, what the row says to a
 // screen reader; they are built only for the rows on screen. With `href` the name opens what it names.
-export type MarkerRow = {
+type MarkerRow = {
   id: string;
   label: string;
   nodeName?: boolean;
@@ -25,8 +25,8 @@ export type MarkerRow = {
   tone?: 'notice';
 };
 // `notes` are the rows that have no value to draw, summed up in a sentence each (say, which nodes are unavailable).
-export type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
-export type MarkerLegend = {kind: 'dot' | 'ring' | 'line'; label: string; tone?: 'notice'};
+type MarkerGroup = {id: string; label: string; rows: MarkerRow[]; notes: ReactNode[]};
+type MarkerLegend = {kind: 'dot' | 'ring' | 'line'; label: string; tone?: 'notice'};
 
 function Marker({kind, tone}: {kind: MarkerLegend['kind']; tone?: 'notice'}) {
   return <i className={'rp-marker ' + kind + (tone ? ' ' + tone : '')} aria-hidden="true" />;

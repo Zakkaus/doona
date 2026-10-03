@@ -26,7 +26,7 @@ export function settingsCard(id: SettingsCardId) {
 // `data-setting="{id}"`; a control the page does not show leaves the card focused. The runtime card's fields are
 // runtimeFieldLabels below, keyed by the runtime settings field. `sources` marks the geodata source controls, shown
 // only where geodataConfigurable allows.
-export type SettingsFieldId =
+type SettingsFieldId =
   | 'profile'
   | 'addProfile'
   | 'renameProfile'

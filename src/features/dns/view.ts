@@ -13,7 +13,7 @@ import {unquote} from '../../dae/text';
 type Answer = NonNullable<DnsQueryResponse['results'][number]['answers']>[number];
 // The add-rule seed for a queried name: the name for a routing or request rule, the answered A and AAAA addresses for
 // a response rule, the client that asked, and the upstream that answered.
-export function nameSeed(name: string, type: string, answers: readonly Answer[], upstream: string | null, src: string | null): QuickRuleSeed {
+function nameSeed(name: string, type: string, answers: readonly Answer[], upstream: string | null, src: string | null): QuickRuleSeed {
   return {
     domain: name,
     dip: null,
