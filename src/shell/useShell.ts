@@ -1,4 +1,4 @@
-import {createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useApplyHeld} from '../features/shared/usePendingApply';
 import {useLifecycle} from '../features/shared/useLifecycle';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
@@ -7,6 +7,7 @@ import {useLang, useT} from '../i18n';
 import {toast, toastErrorDetail} from '../ui/ui';
 import {accessError, duckView, shellView, topBarCommands, wordmark, type AboutView, type ShellView, type TopBarCommands} from './view';
 import {docsHref} from '../features/shared/docs';
+import {warmAllPages} from './registry';
 
 export const AboutContext = createContext<AboutView | null>(null);
 const rereadAll = () => void refetchAll();
@@ -28,6 +29,11 @@ export function useShell(settings: Settings, route: string): ShellModel {
   const [spinning, setSpinning] = useState(false);
   const [honked, setHonked] = useState(false);
   const refreshLock = useRef(false);
+  // Pages download once the backend accepts the tab, on a restored session or after signing in.
+  const accepted = !!capabilities.data;
+  useEffect(() => {
+    if (accepted) warmAllPages();
+  }, [accepted]);
   const view = useMemo(
     () => shellView(settings, route, capabilities.data, capabilityError, version.data, version.error, t),
     [settings, route, capabilities.data, capabilityError, version.data, version.error, t]

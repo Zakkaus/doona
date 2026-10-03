@@ -1,3 +1,4 @@
+import {holdsCredential} from '../api';
 import {configManagement} from '../api/engines';
 import type {Key} from '../i18n';
 import type {ComponentType} from 'react';
@@ -24,10 +25,12 @@ function lazyPage(load: () => Promise<{default: ComponentType<PageProps>}>) {
   return {Page: page.Component, preload: page.preload};
 }
 
-// The default page is its own chunk, requested as soon as the shell runs: it loads beside the capabilities read the
-// page waits for anyway, so first paint gains no round trip while the startup shell stays within its budget.
+// The default page is its own chunk. A tab that expects to be let in requests it beside the capabilities read the page
+// waits for anyway: at once when it holds a bearer, and from startup once a tab without a profile is known to run the
+// demo. Any other tab waits for the backend to accept it in warmAllPages, so the sign-in page fetches no page.
 const activity = lazyPage(() => import('./widgets/Dashboard').then(m => ({default: m.Activity})));
-void activity.preload().catch(() => undefined);
+export const preloadActivity = () => void activity.preload().catch(() => undefined);
+if (holdsCredential()) preloadActivity();
 
 type Feature = {
   id: string;
@@ -132,9 +135,13 @@ export function warmPage(id: string) {
     ?.preload?.()
     .catch(() => undefined);
 }
-// Preload the search dialog, then the other pages, one per idle slice (the callback may still run on its timeout while
-// the page is busy).
+// Once the backend accepts the tab: the default page at once, then the search dialog and the other pages, one per idle
+// slice (the callback may still run on its timeout while the page is busy). Later calls do nothing.
+let warming = false;
 export function warmAllPages() {
+  if (warming) return;
+  warming = true;
+  void activity.preload().catch(() => undefined);
   const queue = [preloadSearch, ...features.filter(feature => feature.preload && feature.warm !== 'intent').map(feature => () => warmPage(feature.id))];
   const next = () => {
     const warm = queue.shift();
