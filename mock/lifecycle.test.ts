@@ -112,3 +112,31 @@ it('expires completed operations after their advertised retention', async () => 
   await vi.advanceTimersByTimeAsync(300000);
   await expect(api.operation(accepted.operation_id)).rejects.toMatchObject({status: 404});
 });
+
+it("repeats the first stream's opening ready a second later, outside the replay history", async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const events: ApiEvent[] = [];
+  const controller = new AbortController();
+  const stream = api.subscribeEvents({kinds: ['runtime.updated'], signal: controller.signal, onEvent: event => events.push(event)});
+  const readies = () => events.filter(event => event.event === 'stream.ready');
+  const opened = events.length;
+  const cursor = events.at(-1)!.id;
+  await vi.advanceTimersByTimeAsync(999);
+  expect(events).toHaveLength(opened);
+  await vi.advanceTimersByTimeAsync(1);
+  // The repeat keeps the opening ready's id, so feeds replace that row.
+  expect(events[0].event).toBe('stream.ready');
+  expect(events.slice(opened)).toEqual([expect.objectContaining({event: 'stream.ready', id: events[0].id})]);
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(readies()).toHaveLength(2);
+  controller.abort();
+  await stream;
+  const resumed: ApiEvent[] = [];
+  const replay = new AbortController();
+  const resumedStream = api.subscribeEvents({kinds: ['runtime.updated'], lastEventId: cursor, signal: replay.signal, onEvent: event => resumed.push(event)});
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(resumed.map(event => event.event)).toEqual(['stream.ready', 'runtime.updated', 'runtime.updated']);
+  replay.abort();
+  await resumedStream;
+});

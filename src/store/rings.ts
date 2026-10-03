@@ -74,7 +74,7 @@ let resets = 0;
 function saveWhenIdle(store: Stored, coarse: boolean) {
   const at = resets;
   const run = () => {
-    if (at !== resets) return;
+    if (at !== resets || !store.rings.fine.length) return;
     save(store.key, JSON.stringify({fine: store.rings.fine}));
     if (coarse) save(`${store.key}-coarse`, JSON.stringify(store.rings.coarse));
   };
@@ -120,6 +120,20 @@ export function record<T extends Timed>(name: string, sample: T | undefined, fol
     }
   }
   return store.rings;
+}
+
+// Drops one ring from memory and storage, for history that a change of what it measures makes meaningless. A save
+// already waiting for an idle moment finds the ring empty and writes nothing.
+export function clearRing(name: string) {
+  const store = load(name);
+  store.rings = {fine: [], coarse: []};
+  try {
+    localStorage.removeItem(store.key);
+    localStorage.removeItem(`${store.key}-coarse`);
+  } catch {
+    /* Storage can be unavailable. */
+  }
+  for (const listener of listeners) listener();
 }
 // For tests.
 export function resetRings() {
