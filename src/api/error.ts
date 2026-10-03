@@ -29,16 +29,26 @@ export class ApiError extends Error {
   }
 }
 
+// The seconds a response's Retry-After asks for, or null when it is absent or not a positive number.
+export const parseRetryAfter = (response: Response): number | null => {
+  const seconds = Number(response.headers.get('Retry-After'));
+  return seconds > 0 ? seconds : null;
+};
+
+// A 503 snapshot_unavailable with a Retry-After: the backend cannot hold the listing snapshot now, and asks for a wait
+// before the listing is asked for again. The same refusal without a Retry-After is not retried.
+export const isSnapshotRefusal = (error: unknown): error is ApiError & {retryAfter: number} =>
+  error instanceof ApiError && error.status === 503 && error.code === 'snapshot_unavailable' && error.retryAfter !== null;
+
 export async function responseError(response: Response, method = 'GET'): Promise<ApiError> {
   const body: Partial<ErrorResponse> | null = await response.json().catch(() => null);
-  const retryAfter = Number(response.headers.get('Retry-After'));
   const error = new ApiError(
     response.status,
     body?.error?.code ?? '',
     body?.error?.message ?? (response.statusText || `HTTP ${response.status}`),
     body?.request_id ?? null,
     body?.error?.details ?? null,
-    retryAfter > 0 ? retryAfter : null
+    parseRetryAfter(response)
   );
   if (response.url) error.request = {method: method.toUpperCase(), path: new URL(response.url).pathname};
   return error;

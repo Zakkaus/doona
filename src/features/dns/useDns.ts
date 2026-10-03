@@ -11,7 +11,7 @@ import {downloadFile, exportName, panelQuery, toast, toastErrorDetail, useDeboun
 import type {PageProps} from '../../shell/routes';
 import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';
 import {href, pickTab, within, tabQuery} from '../../shell/route';
-import {ApiError, errorText} from '../../api/error';
+import {ApiError, errorText, isSnapshotRefusal} from '../../api/error';
 import {wait} from '../../api/wait';
 import {cacheCard, cacheCardState} from './cache';
 import {dnsPattern, matchKinds, matchListMax, type MatchKind} from './match';
@@ -325,10 +325,10 @@ export function useDnsLogTab(enabled: boolean | undefined, initialName: string, 
         // the cursor refused for filters that changed since; asking again would fail the same way, so the log starts
         // over from the newest page. A 503 snapshot_unavailable does the same once the wait it asks for has passed.
         if (!(error instanceof ApiError) || signal.aborted) throw error;
-        const unavailable = error.status === 503 && error.code === 'snapshot_unavailable' && error.retryAfter !== null;
+        const unavailable = isSnapshotRefusal(error);
         const expired = (error.status === 410 && error.code === 'snapshot_expired') || (error.status === 400 && error.code === 'invalid_request');
         if (!expired && !unavailable) throw error;
-        if (unavailable) await wait(error.retryAfter!, signal);
+        if (unavailable) await wait(error.retryAfter, signal);
         setHeld(null);
         void log.refetch();
         toast('info', t('dns.olderExpired'));

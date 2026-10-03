@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {LANGS, translate} from '../i18n';
-import {ApiError, LocalError, errorLines, errorText, failureNotice, noticeText, requestIdOf, responseError} from './error';
+import {ApiError, LocalError, errorLines, errorText, failureNotice, isSnapshotRefusal, noticeText, parseRetryAfter, requestIdOf, responseError} from './error';
 
 it('joins a local error and its detail with the colon of the active language', () => {
   const error = new LocalError('ui.operationFailed', 'member refused');
@@ -152,4 +152,25 @@ it('shows refusal recovery directly for a failed operation', () => {
   const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
   const error = new LocalError('ui.operationFailed', 'Refused', 'permission_denied', {reason: 'credential_sources_changed'});
   expect(errorText(error, t)).toBe('The sources declaring API secrets have changed. Reload honk and retry.');
+});
+
+it('reads Retry-After as a positive number of seconds and as null otherwise', () => {
+  const answer = (headers?: HeadersInit) => new Response(null, {status: 503, headers});
+  expect(parseRetryAfter(answer({'Retry-After': '3'}))).toBe(3);
+  expect(parseRetryAfter(answer({'Retry-After': '0.5'}))).toBe(0.5);
+  for (const header of [undefined, {'Retry-After': '0'}, {'Retry-After': '-2'}, {'Retry-After': 'soon'}]) expect(parseRetryAfter(answer(header))).toBeNull();
+});
+
+it('carries Retry-After onto the error, null when the backend gave none', async () => {
+  const refused = (headers?: HeadersInit) => responseError(new Response('{}', {status: 503, headers}));
+  expect((await refused({'Retry-After': '4'})).retryAfter).toBe(4);
+  expect((await refused()).retryAfter).toBeNull();
+});
+
+it('takes only a 503 snapshot_unavailable that carries a Retry-After as a refusal to wait out', () => {
+  expect(isSnapshotRefusal(new ApiError(503, 'snapshot_unavailable', 'busy', null, null, 2))).toBe(true);
+  expect(isSnapshotRefusal(new ApiError(503, 'snapshot_unavailable', 'busy'))).toBe(false);
+  expect(isSnapshotRefusal(new ApiError(503, 'temporarily_unavailable', 'busy', null, null, 2))).toBe(false);
+  expect(isSnapshotRefusal(new ApiError(429, 'snapshot_unavailable', 'busy', null, null, 2))).toBe(false);
+  expect(isSnapshotRefusal(new Error('snapshot_unavailable'))).toBe(false);
 });

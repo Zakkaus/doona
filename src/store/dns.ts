@@ -2,7 +2,7 @@ import {useCallback} from 'react';
 import {MAX_PAGE, poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
-import {ApiError} from '../api/error';
+import {ApiError, isSnapshotRefusal} from '../api/error';
 import type {Capabilities, DnsCacheList, DnsQueryResponse} from '../api/model';
 import {wait} from '../api/wait';
 import {pageSize, useResource, walk} from './resource';
@@ -28,9 +28,8 @@ export async function smallerOnRefusal<Q extends {limit?: number}, P>(
     return {page: await fetch(query), limit: query.limit};
   } catch (error) {
     const {limit} = query;
-    const refused = error instanceof ApiError && error.status === 503 && error.code === 'snapshot_unavailable' && error.retryAfter !== null;
-    if (!refused || limit === undefined || limit < 2) throw error;
-    await wait(error.retryAfter!, signal);
+    if (!isSnapshotRefusal(error) || limit === undefined || limit < 2) throw error;
+    await wait(error.retryAfter, signal);
     const smaller = Math.ceil(limit / 4);
     return {page: await fetch({...query, limit: smaller}), limit: smaller};
   }
@@ -51,8 +50,8 @@ export async function dnsCacheListing(api: Api, signal?: AbortSignal) {
   try {
     return await listing();
   } catch (error) {
-    if (!(error instanceof ApiError && error.status === 503 && error.code === 'snapshot_unavailable' && error.transient)) throw error;
-    await wait(error.retryAfter!, signal);
+    if (!isSnapshotRefusal(error)) throw error;
+    await wait(error.retryAfter, signal);
     return listing();
   }
 }

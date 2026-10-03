@@ -580,6 +580,18 @@ describe('native transport', () => {
     expect(String(request.mock.calls[1][0])).toBe('https://honk.test/doona' + acceptedBody.href);
     await expect(result).resolves.toMatchObject({status: 'succeeded'});
   });
+  it.each([
+    ['absent', undefined, 1],
+    ['not a number', 'soon', 1],
+    ['below one second', '0.5', 1],
+    ['given', '7', 7]
+  ])('polls an accepted operation after %s Retry-After by %s seconds', async (_label, header, seconds) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json(acceptedBody, 202, {Location: acceptedBody.href, ...(header ? {'Retry-After': header} : {})}))
+    );
+    await expect(createApi('https://honk.test').startReload()).resolves.toMatchObject({retryAfter: seconds});
+  });
   it('enforces the one-second floor and aborts without another GET', async () => {
     vi.useFakeTimers();
     const request = vi.fn();

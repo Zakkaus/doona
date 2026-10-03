@@ -15,7 +15,7 @@ import {
   type OperationState,
   type RoutingTraceResponse
 } from './model';
-import {ApiError, clientError, responseError, send} from './error';
+import {ApiError, clientError, parseRetryAfter, responseError, send} from './error';
 import {uuid} from './hash';
 import {readSse} from './sse';
 import {wait} from './wait';
@@ -24,7 +24,8 @@ import {eventKinds} from './selectors';
 import {normalizeCapabilities} from './capabilities';
 import {createServerClock, type ServerClock} from './serverClock';
 
-const retryAfter = (response: Response) => Math.max(1, Number(response.headers.get('Retry-After')) || 1);
+// An operation's poll delay: Retry-After, or one second when it is absent, and never less than one.
+const retryAfter = (response: Response) => Math.max(1, parseRetryAfter(response) ?? 1);
 
 function data<T>(result: {data?: T; response: Response}): T {
   if (result.data === undefined) throw clientError(result.response.status, 'empty_response', 'Response has no JSON body', 'ui.errNoJson');
