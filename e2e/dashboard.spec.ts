@@ -1186,3 +1186,37 @@ test.describe('control row zh-TW', () => {
     }
   });
 });
+
+test.describe('narrow cards at 1280', () => {
+  test.use({viewport: {width: 1280, height: 900}});
+  test('a donut legend at 1/3 keeps each name on the line of its value and share', async ({page}) => {
+    const donuts = ['connectionOutbounds', 'dnsAnswers', 'connectionNetworks'];
+    await seed(page, {version: 3, sections: [{id: 'extensions', items: donuts.map(id => ({id, form: 'donut', size: 'medium', width: '1/3'}))}]});
+    await page.goto('/#/activity');
+    for (const id of donuts) {
+      const rows = page.locator(`.rp-dashboard-cell[data-instance="${id}"] .rp-donut .r`);
+      await expect(rows.first()).toBeVisible();
+      const split = await rows.evaluateAll(
+        list =>
+          list.filter(row => {
+            const parts = [...row.children].filter(child => child.tagName === 'SPAN').map(child => child.getBoundingClientRect());
+            const name = row.querySelector('.n')!;
+            const lines = new Set([...name.getClientRects()].map(rect => Math.round(rect.top))).size;
+            return lines > 1 || parts.some(part => part.top >= parts[0].bottom || part.bottom <= parts[0].top);
+          }).length
+      );
+      expect(split, id).toBe(0);
+    }
+  });
+  test('an area card at 1/5 keeps its time labels apart', async ({page}) => {
+    await seed(page, {version: 3, sections: [{id: 'extensions', items: [{id: 'download', form: 'area', size: 'medium', width: '1/5', height: 'standard'}]}]});
+    await page.goto('/#/activity');
+    const ticks = page.locator('.rp-dashboard-cell[data-instance="download"] g:not(.rp-area-y-ticks) > text.rp-area-tick');
+    await expect(ticks.first()).toBeVisible();
+    const overlap = await ticks.evaluateAll(labels => {
+      const boxes = labels.map(label => label.getBoundingClientRect());
+      return boxes.some((a, i) => boxes.slice(i + 1).some(b => a.left < b.right && b.left < a.right));
+    });
+    expect(overlap).toBe(false);
+  });
+});
