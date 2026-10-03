@@ -34,13 +34,16 @@ export type PanelEdge = {inline?: 'start' | 'end'; block?: 'start' | 'end'};
 // The offset is measured from the inline end and from the anchored block edge, so a handle on those sides moves the
 // offset with it, and the offset never goes below zero. The panel stays inside `room`, the frame fitPanelOffset keeps a
 // moved panel in, so no handle pushes a side out of the viewport, and grows no taller than its content (`tallest`).
+// `moved` is how far the pointer has gone vertically since the gesture began, whatever its direction: a step that does
+// not move vertically changes nothing about the height once the gesture has.
 export function resizePanel(
   base: {size: PanelSize; offset: PanelOffset},
   edge: PanelEdge,
   toEnd: number,
   down: number,
   room?: PanelSize,
-  tallest: number = limits.height[1]
+  tallest: number = limits.height[1],
+  moved: number = Math.abs(down)
 ) {
   const axis = (
     side: 'start' | 'end' | undefined,
@@ -68,8 +71,12 @@ export function resizePanel(
     room?.height ?? Infinity
   );
   // A drag that moves no vertical edge only sets the width. It leaves the height to the content, up to what the frame
-  // allows, because a height frozen at the wider layout would cut off the taller content of a narrower one.
-  return {size: {width, height: edge.block && down ? height : limits.height[1]}, offset: {x, y, ...(base.offset.top && {top: base.offset.top})}};
+  // allows, because a height frozen at the wider layout would cut off the taller content of a narrower one. A handle on
+  // a vertical edge, or one that has moved vertically, keeps the height it sets.
+  return {
+    size: {width, height: edge.block && (!edge.inline || moved) ? height : limits.height[1]},
+    offset: {x, y, ...(base.offset.top && {top: base.offset.top})}
+  };
 }
 // A panel hidden at an edge goes past the screen edge nearest to it and leaves a handle there. Equal gaps go to the
 // first of right, left, bottom and top.

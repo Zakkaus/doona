@@ -366,9 +366,13 @@ export function FloatingPanel({
       const body = panel.current?.querySelector('.rp-widget-body');
       // The content's whole height: the panel's own plus what its list scrolls.
       const tallest = inner.height + (body ? body.scrollHeight - body.clientHeight : 0);
-      return {size: {width: inner.width, height: inner.height}, offset: drawn(), tallest};
+      return {size: {width: inner.width, height: inner.height}, offset: drawn(), tallest, moved: 0};
     },
-    (base, dx, dy) => ({...resizePanel(base, edge.current, -inward(dx), dy, room(), base.tallest), tallest: base.tallest}),
+    // `moved` is the gesture's vertical travel so far, which starts at zero with each gesture.
+    (base, dx, dy) => {
+      const moved = base.moved + Math.abs(dy);
+      return {...resizePanel(base, edge.current, -inward(dx), dy, room(), base.tallest, moved), tallest: base.tallest, moved};
+    },
     next => onResize(next.size, next.offset)
   );
   // Where the pointer is while the header drags, to tell a drop on the dock target from a move.

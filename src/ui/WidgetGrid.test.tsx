@@ -76,6 +76,13 @@ it.each([
 ] as const)('%s leaves the height to the content, so a narrower panel is not cut off', (_name, edge) => {
   expect(resizePanel({size: {width: 400, height: 300}, offset: {x: 0, y: 0}}, edge, 100, 0).size).toEqual({width: 300, height: 960});
 });
+it.each([
+  ['an edge handle', {block: 'start'}, 0],
+  ['an edge handle after vertical movement', {block: 'start'}, 40],
+  ['a corner handle after vertical movement', {inline: 'start', block: 'start'}, 40]
+] as const)('%s keeps the height through a step that does not move vertically', (_name, edge, moved) => {
+  expect(resizePanel({size: {width: 400, height: 300}, offset: {x: 0, y: 0}}, edge, 10, 0, undefined, undefined, moved).size.height).toBe(300);
+});
 it('a panel grows no taller than its content', () => {
   expect(resizePanel({size: {width: 400, height: 400}, offset: {x: 0, y: 0}}, {block: 'start'}, 0, -300, undefined, 520).size.height).toBe(520);
 });
