@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
+import {createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
 import {cx} from './cx';
 import {VisuallyHidden} from 'react-aria';
 import {
@@ -13,7 +13,8 @@ import {
   Virtualizer,
   TableLayout,
   Button as RButton,
-  type Selection
+  type Selection,
+  type TableBodyProps
 } from 'react-aria-components';
 import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
@@ -107,6 +108,14 @@ function useOpenerFocus(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 const virtualiseFrom = 40;
+// The body takes its rows from context, so new rows re-render the collection but not the table around it. React Aria
+// renders the visible rows again for every new collection; a re-rendered table would render them once more before it.
+// Marked pure, so importing the UI module from the startup chunk does not pull the table code into it.
+const RowsContext = /* @__PURE__ */ createContext<readonly object[]>([]);
+const noGroups: never[] = [];
+function TableRows<T extends object>(props: Omit<TableBodyProps<T>, 'items'>) {
+  return <TableBody<T> {...props} items={useContext(RowsContext) as T[]} />;
+}
 const isGroup = <T extends object>(row: T | TableGroup<T>): row is TableGroup<T> => 'children' in row;
 // Plain text truncates with a tooltip.
 const text = (cell: ReactNode) => (typeof cell === 'string' ? <TextTooltip>{cell}</TextTooltip> : cell);
@@ -188,7 +197,7 @@ export function DataTable<T extends {id: string}>({
     () => (tree ? rows.flatMap(row => (isGroup(row) ? (tree.collapsed(row.group) ? [row] : [row, ...row.children]) : [row])) : rows),
     [rows, tree]
   );
-  const groups = useMemo(() => (tree ? rows.filter(isGroup) : []), [rows, tree]);
+  const groups = useMemo(() => (tree ? rows.filter(isGroup) : noGroups), [rows, tree]);
   const groupKeys = useMemo(() => (tree ? groups.map(row => row.id) : undefined), [groups, tree]);
   const expandedKeys = useMemo(() => (tree ? groups.filter(row => !tree.collapsed(row.group)).map(row => row.id) : undefined), [groups, tree]);
   const multiline = shown.some(column => column.text === 'wrap');
@@ -277,87 +286,119 @@ export function DataTable<T extends {id: string}>({
     };
   }, [restoreKey, flat]);
   useOpenerFocus(ref);
-  // Tree cells wrap their content so it truncates inside the flex cell.
-  const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
-  const renderRow = (row: T) => {
-    return (
-      <Row key={row.id} id={row.id} textValue={getTextValue?.(row)} data-highlighted={row.id === highlighted || undefined}>
-        {shown.map(column => (
-          <Cell key={column.id} className={cx(column.actions && 'rp-cell-actions', column.text === 'wrap' && 'rp-cell-wrap')}>
-            {column.text === 'wrap' ? column.render(row) : content(column.render(row))}
-          </Cell>
-        ))}
-      </Row>
-    );
-  };
-  const renderGroup = (row: TableGroup<T>) => {
-    const firstTotal = shown.findIndex((column, index) => index > 0 && row.totals[column.id] != null);
-    const labelSpan = firstTotal < 0 ? shown.length : firstTotal;
-    return (
-      <Row key={row.id} id={row.id} textValue={row.label}>
-        {shown
-          .filter((_, index) => index === 0 || index >= labelSpan)
-          .map((column, index) => (
-            <Cell key={column.id} colSpan={index === 0 ? labelSpan : undefined}>
-              {index === 0 && (
-                <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
-                  <ChevronDown />
-                </RButton>
-              )}
-              <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
+  const hasRows = rows.length > 0;
+  // React Aria counts every row of the collection, folded children included; a tree counts what it shows.
+  const rowCount = tree && virtual ? flat.length + 1 : undefined;
+  const table = useMemo(() => {
+    // Tree cells wrap their content so it truncates inside the flex cell.
+    const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
+    const renderRow = (row: T) => {
+      return (
+        <Row key={row.id} id={row.id} textValue={getTextValue?.(row)} data-highlighted={row.id === highlighted || undefined}>
+          {shown.map(column => (
+            <Cell key={column.id} className={cx(column.actions && 'rp-cell-actions', column.text === 'wrap' && 'rp-cell-wrap')}>
+              {column.text === 'wrap' ? column.render(row) : content(column.render(row))}
             </Cell>
           ))}
-        {row.children.map(renderRow)}
-      </Row>
-    );
-  };
-  const table = (
-    <Table
-      // A native table overflows its container, which scrolls it. A virtualised grid scrolls itself and lays its columns
-      // out wider than itself; a minimum width would make the container scroll it instead, vertical scrollbar and all.
-      // A tree measures the grid, so a minimum width would also feed back into that measure.
-      style={tree || virtual ? undefined : {minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
-      ref={element => {
-        grid.current = element;
-        if (tree) treeGridRef.current = element;
-      }}
-      aria-label={label}
-      aria-rowcount={virtual ? flat.length + 1 : undefined}
-      expandedKeys={expandedKeys}
-      onExpandedChange={keys => {
-        if (tree) for (const row of groups) if (keys.has(row.id) === tree.collapsed(row.group)) tree.onToggle(row.group);
-      }}
-      disabledKeys={groupKeys}
-      // Group rows take focus, so the arrow keys can fold them, but never the selection.
-      disabledBehavior="selection"
-      treeColumn={tree?.grouped ? shown[0]?.id : undefined}
-      selectionMode={onSelect ? 'single' : 'none'}
-      selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
-      selectedKeys={keys}
-      // The selection is never emptied from inside: focusing a group row asks to replace it with nothing, which leaves
-      // the selected connection and its detail as they were. A disclosed detail closes on a second press.
-      onSelectionChange={keys => {
-        const id = selectedRow(keys);
-        if (id !== null || detail) onSelect?.(id);
-      }}
-      disallowEmptySelection={!!onSelect && !detail}
-      sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
-      onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
-    >
-      <TableColumns cols={shown} firstVisibleHeader={!!tree} resizable={rows.length > 0} />
-      <TableBody<T | TableGroup<T>>
-        items={rows}
-        dependencies={[shown, getTextValue, highlighted]}
-        renderEmptyState={() => (
-          <div className="rp-table-empty" style={{width: width ?? '100%'}}>
-            {loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
-          </div>
-        )}
+        </Row>
+      );
+    };
+    const renderGroup = (row: TableGroup<T>) => {
+      const firstTotal = shown.findIndex((column, index) => index > 0 && row.totals[column.id] != null);
+      const labelSpan = firstTotal < 0 ? shown.length : firstTotal;
+      return (
+        <Row key={row.id} id={row.id} textValue={row.label}>
+          {shown
+            .filter((_, index) => index === 0 || index >= labelSpan)
+            .map((column, index) => (
+              <Cell key={column.id} colSpan={index === 0 ? labelSpan : undefined}>
+                {index === 0 && (
+                  <RButton slot="chevron" className={cx(buttonClass({quiet: true, icon: true, small: true}), 'rp-expand')}>
+                    <ChevronDown />
+                  </RButton>
+                )}
+                <span className="cell">{index === 0 ? <strong>{row.label}</strong> : text(row.totals[column.id])}</span>
+              </Cell>
+            ))}
+          {row.children.map(renderRow)}
+        </Row>
+      );
+    };
+    return (
+      <Table
+        // A native table overflows its container, which scrolls it. A virtualised grid scrolls itself and lays its columns
+        // out wider than itself; a minimum width would make the container scroll it instead, vertical scrollbar and all.
+        // A tree measures the grid, so a minimum width would also feed back into that measure.
+        style={tree || virtual ? undefined : {minWidth: shown.reduce((sum, column) => sum + column.minWidth, 0)}}
+        ref={element => {
+          grid.current = element;
+          if (tree) treeGridRef.current = element;
+        }}
+        aria-label={label}
+        aria-rowcount={rowCount}
+        expandedKeys={expandedKeys}
+        onExpandedChange={keys => {
+          if (tree) for (const row of groups) if (keys.has(row.id) === tree.collapsed(row.group)) tree.onToggle(row.group);
+        }}
+        disabledKeys={groupKeys}
+        // Group rows take focus, so the arrow keys can fold them, but never the selection.
+        disabledBehavior="selection"
+        treeColumn={tree?.grouped ? shown[0]?.id : undefined}
+        selectionMode={onSelect ? 'single' : 'none'}
+        selectionBehavior={selectOnFocus ? 'replace' : 'toggle'}
+        selectedKeys={keys}
+        // The selection is never emptied from inside: focusing a group row asks to replace it with nothing, which leaves
+        // the selected connection and its detail as they were. A disclosed detail closes on a second press.
+        onSelectionChange={keys => {
+          const id = selectedRow(keys);
+          if (id !== null || detail) onSelect?.(id);
+        }}
+        disallowEmptySelection={!!onSelect && !detail}
+        sortDescriptor={sort ? {column: sort.column, direction: sort.direction} : undefined}
+        onSortChange={descriptor => onSort && descriptor.direction && onSort({column: String(descriptor.column), direction: descriptor.direction})}
       >
-        {row => (tree && isGroup(row) ? renderGroup(row) : renderRow(row as T))}
-      </TableBody>
-    </Table>
+        <TableColumns cols={shown} firstVisibleHeader={!!tree} resizable={hasRows} />
+        <TableRows<T | TableGroup<T>>
+          dependencies={[shown, getTextValue, highlighted]}
+          renderEmptyState={() => (
+            <div className="rp-table-empty" style={{width: width ?? '100%'}}>
+              {loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
+            </div>
+          )}
+        >
+          {row => (tree && isGroup(row) ? renderGroup(row) : renderRow(row as T))}
+        </TableRows>
+      </Table>
+    );
+  }, [
+    tree,
+    getTextValue,
+    highlighted,
+    shown,
+    virtual,
+    treeGridRef,
+    label,
+    rowCount,
+    expandedKeys,
+    groups,
+    groupKeys,
+    onSelect,
+    selectOnFocus,
+    keys,
+    detail,
+    sort,
+    onSort,
+    hasRows,
+    width,
+    loading,
+    empty,
+    t
+  ]);
+  const layoutOptions = useMemo(
+    () => (multiline ? {estimatedRowHeight: tableLayout.rowHeight, headingHeight: tableLayout.headingHeight} : tableLayout),
+    [multiline]
   );
+  const body = <RowsContext.Provider value={rows}>{table}</RowsContext.Provider>;
   const container = (
     <ResizableTableContainer
       ref={element => {
@@ -395,14 +436,11 @@ export function DataTable<T extends {id: string}>({
       }
     >
       {virtual ? (
-        <Virtualizer
-          layout={layout}
-          layoutOptions={multiline ? {estimatedRowHeight: tableLayout.rowHeight, headingHeight: tableLayout.headingHeight} : tableLayout}
-        >
-          {table}
+        <Virtualizer layout={layout} layoutOptions={layoutOptions}>
+          {body}
         </Virtualizer>
       ) : (
-        table
+        body
       )}
     </ResizableTableContainer>
   );

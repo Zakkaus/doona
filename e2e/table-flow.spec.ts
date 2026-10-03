@@ -184,3 +184,58 @@ for (const kind of ['events', 'logs'] as const) {
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
 }
+
+// Counts, per React commit, the components that rendered a mounted row element. A fiber still in the tree from the
+// previous commit was not rendered again; one swapped in for it was, when React marked it as having performed work.
+function countRowRenders() {
+  const target = window as unknown as {rowRenders: number};
+  target.rowRenders = 0;
+  let previous = new WeakSet<object>();
+  type Fiber = {tag: number; flags: number; stateNode: unknown; child: Fiber | null; sibling: Fiber | null; return: Fiber | null};
+  (window as unknown as {__REACT_DEVTOOLS_GLOBAL_HOOK__: object}).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+    supportsFiber: true,
+    renderers: new Map(),
+    inject: () => 1,
+    checkDCE() {},
+    onScheduleFiberRoot() {},
+    onCommitFiberUnmount() {},
+    onPostCommitFiberRoot() {},
+    onCommitFiberRoot(_: number, root: {current: Fiber}) {
+      const seen = new WeakSet<object>();
+      const rendered = (fiber: Fiber) => !previous.has(fiber) && (fiber.flags & 1) === 1;
+      const visit = (start: Fiber | null) => {
+        for (let fiber = start; fiber; fiber = fiber.sibling) {
+          seen.add(fiber);
+          const node = fiber.stateNode;
+          if (node instanceof Element && node.matches('[role=row][data-key]')) {
+            let owner = fiber.return;
+            // Function, forwardRef and memo components.
+            while (owner && ![0, 11, 14, 15].includes(owner.tag)) owner = owner.return;
+            if (owner && rendered(owner)) target.rowRenders++;
+          }
+          visit(fiber.child);
+        }
+      };
+      visit(root.current.child);
+      previous = seen;
+    }
+  };
+}
+
+for (const kind of ['events', 'logs'] as const) {
+  test(`${kind} render each mounted row once per published batch`, async ({page}) => {
+    await page.addInitScript(countRowRenders);
+    const {grid, frame} = await feed(page, kind, kind === 'logs' ? 1200 : 300);
+    const mounted = grid.locator('[role=row][data-key]');
+    await expect.poll(() => mounted.count()).toBeGreaterThan(5);
+    for (let i = 1; i <= 3; i++) {
+      // The list holds as many records as it keeps, so a record in replaces one out and the row count stays the same.
+      await page.waitForTimeout(500);
+      await page.evaluate(() => ((window as unknown as {rowRenders: number}).rowRenders = 0));
+      await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(5000 + i));
+      await expect(grid.getByRole('rowheader').first()).toHaveText(`Record ${5000 + i}`);
+      await page.waitForTimeout(500);
+      expect(await page.evaluate(() => (window as unknown as {rowRenders: number}).rowRenders)).toBeLessThanOrEqual(await mounted.count());
+    }
+  });
+}
