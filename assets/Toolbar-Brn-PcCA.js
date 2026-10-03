@@ -1,0 +1,1 @@
+import{j as a}from"./vendor-react-64fcanlc.js";import{bM as r,O as e}from"./index-BCV6oeUn.js";function o({page:o,className:s,children:t,...i}){const n=a.jsx("div",{...i,className:r("rp-toolbar",s),"data-page-toolbar":o||void 0,children:t});return o?a.jsx(e,{value:"L",children:n}):n}export{o as T};
