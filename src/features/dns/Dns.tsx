@@ -180,6 +180,9 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           </Badge>
         ))}
         {vm.filterText && <Button onPress={clearFilter}>{vm.filterText}</Button>}
+        <Switch isSelected={vm.includeExpired} onChange={vm.setIncludeExpired}>
+          {t('dns.includeExpired')}
+        </Switch>
         <span className="rp-grow" />
         <div className="rp-col">
           <ActionHelp reason={vm.flushReason}>

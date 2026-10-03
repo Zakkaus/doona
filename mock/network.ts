@@ -3,7 +3,7 @@ import type {Capabilities, DnsLogRecord, FlowDetail, RuleList, RuntimeOutbounds,
 import {ApiError} from '../src/api/error';
 import {ipLiteral, sourceIp} from '../src/api/selectors';
 import * as fixtures from './fixtures/network';
-import {instanceId, observedAt} from './fixtures/clock';
+import {instanceId, now, observedAt} from './fixtures/clock';
 import {found, createPager, pageLimit} from './common';
 import {routingTrace} from './routing';
 import type {MockRecording} from './recording';
@@ -222,7 +222,13 @@ export function createNetwork(
       signal?.throwIfAborted();
       if (!capabilities.resources.dns_cache.available) throw new ApiError(404, 'capability_not_supported', 'DNS cache unavailable');
       const name = query?.name ?? query?.domain;
-      const entries = dnsCache.entries.filter(e => (!name || e.domain === name || e.domain === name + '.') && (!query?.type || query.type.includes(e.type)));
+      // Expired against the fixture clock, so the demo's entries do not lapse while the page stays open.
+      const entries = dnsCache.entries.filter(
+        e =>
+          (!name || e.domain === name || e.domain === name + '.') &&
+          (!query?.type || query.type.includes(e.type)) &&
+          (query?.include_expired || Date.parse(e.expires_at) > now)
+      );
       const result = cachePage(entries, query);
       // Usage covers the whole cache, whatever the listing's filters.
       const usage = {entries: String(dnsCache.entries.length), entry_capacity: '256'};

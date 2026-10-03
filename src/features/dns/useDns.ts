@@ -135,8 +135,10 @@ export function useDns({go, query}: PageProps) {
 export function useDnsCacheTab(domain: string) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  // Off by default, as the backend lists them; switching walks the cache again with the other choice.
+  const [includeExpired, setIncludeExpired] = useState(false);
   // A kept tab stays mounted while hidden; the full listing is walked only while its tab is on screen.
-  const dns = useDnsControl(!useTabShown());
+  const dns = useDnsControl(!useTabShown(), includeExpired);
   const {contains} = useFilter({sensitivity: 'base'});
   const view = useMemo(
     () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, contains),
@@ -176,6 +178,8 @@ export function useDnsCacheTab(domain: string) {
   };
   return {
     ...view,
+    includeExpired,
+    setIncludeExpired,
     matchKind,
     matchText,
     matchType,

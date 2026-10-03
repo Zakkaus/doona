@@ -583,6 +583,7 @@
   "dns.flushUnsupported": "This backend does not support clearing the cache",
   "dns.flushed": "Cache cleared, matched: {matched}, deleted: {deleted}",
   "dns.hit": "Cache hit",
+  "dns.includeExpired": "Show expired",
   "dns.invalidName": "Not a valid domain name",
   "dns.invalidRegex": "Not a valid regular expression",
   "dns.loadOlder": "Load older records",
