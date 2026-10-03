@@ -3,7 +3,7 @@ import {expect, it} from 'vitest';
 import {WidgetGrid, WidgetCell} from './WidgetGrid';
 import {WidgetGalleryTile} from './WidgetGalleryTile';
 import {FloatingPanel} from './FloatingPanel';
-import {anchorPanelOffset, edgePlacement, fitPanelOffset, minPanelSize, nearestEdge, resizePanel} from './panelSize';
+import {anchorPanelOffset, clampPanelSize, defaultPanelWidth, edgePlacement, fitPanelOffset, minPanelSize, nearestEdge, resizePanel} from './panelSize';
 const panel = {label: 'honk', resizeLabel: 'Resize', moveLabel: 'Move', movedText: 'Moved', onResize: () => {}, onMove: () => {}, header: 'head'};
 it('renders widget size metadata', () => {
   expect(
@@ -27,8 +27,11 @@ it('names a gallery item above its preview and disables a placed one before the 
   expect(html).toContain('3/3 placed');
   expect(html).not.toContain('12%');
 });
-it('is as wide as the narrowest resize before the reader sizes it, and a saved width wins', () => {
-  expect(renderToStaticMarkup(<FloatingPanel {...panel} />)).toContain(`--rp-panel-width:${minPanelSize.width}px`);
+it('is the default width before the reader sizes it, narrower than the default can resize, and a saved width wins', () => {
+  expect([minPanelSize.width, defaultPanelWidth]).toEqual([200, 280]);
+  expect(clampPanelSize({width: 100, height: 300}).width).toBe(200);
+  expect(clampPanelSize({width: 1000, height: 300}).width).toBe(640);
+  expect(renderToStaticMarkup(<FloatingPanel {...panel} />)).toContain('--rp-panel-width:280px');
   expect(renderToStaticMarkup(<FloatingPanel {...panel} size={{width: 400, height: 300}} />)).toContain('--rp-panel-width:400px');
 });
 it.each([
@@ -60,12 +63,18 @@ it('a panel kept by its top edge grows downwards from its bottom handle and move
 });
 it.each([
   ['top', {block: 'start'}, 0, -2000, {width: 400, height: 700}, {x: 100, y: 100}],
-  ['start', {inline: 'start'}, -2000, 0, {width: 600, height: 400}, {x: 100, y: 100}],
+  ['start', {inline: 'start'}, -2000, 0, {width: 600, height: 960}, {x: 100, y: 100}],
   ['top start', {inline: 'start', block: 'start'}, -2000, -2000, {width: 600, height: 700}, {x: 100, y: 100}],
   ['top of a panel kept by its top edge', {block: 'start'}, 0, -2000, {width: 400, height: 500}, {x: 100, y: 0, top: true}]
 ] as const)('the %s handle dragged past the window keeps the panel inside its frame', (_name, edge, toEnd, down, size, offset) => {
   const at = _name.includes('kept') ? {x: 100, y: 100, top: true as const} : {x: 100, y: 100};
   expect(resizePanel({size: {width: 400, height: 400}, offset: at}, edge, toEnd, down, {width: 700, height: 800})).toEqual({size, offset});
+});
+it.each([
+  ['a side handle', {inline: 'start'}],
+  ['the corner handle moved sideways', {inline: 'start', block: 'start'}]
+] as const)('%s leaves the height to the content, so a narrower panel is not cut off', (_name, edge) => {
+  expect(resizePanel({size: {width: 400, height: 300}, offset: {x: 0, y: 0}}, edge, 100, 0).size).toEqual({width: 300, height: 960});
 });
 it('a panel grows no taller than its content', () => {
   expect(resizePanel({size: {width: 400, height: 400}, offset: {x: 0, y: 0}}, {block: 'start'}, 0, -300, undefined, 520).size.height).toBe(520);
@@ -86,11 +95,11 @@ it.each([
   ['bottom start', {inline: 'start', block: 'end'}, {width: 360, height: 440}, {x: 100, y: 60}],
   ['bottom end', {inline: 'end', block: 'end'}, {width: 440, height: 440}, {x: 60, y: 60}],
   ['top edge', {block: 'start'}, {width: 400, height: 360}, {x: 100, y: 100}],
-  ['end edge', {inline: 'end'}, {width: 440, height: 400}, {x: 60, y: 100}]
+  ['end edge', {inline: 'end'}, {width: 440, height: 960}, {x: 60, y: 100}]
 ] as const)('the %s handle keeps the opposite side fixed', (_name, edge, size, offset) => expect(resizePanel(base, edge, 40, 40)).toEqual({size, offset}));
 it('a handle at the home corner grows only as far as the offset allows, and within the size limits', () => {
   expect(resizePanel({...base, offset: {x: 10, y: 0}}, {inline: 'end', block: 'end'}, 40, 40)).toEqual({size: {width: 410, height: 400}, offset: {x: 0, y: 0}});
-  expect(resizePanel(base, {inline: 'start', block: 'start'}, 400, -900)).toEqual({size: {width: 280, height: 960}, offset: {x: 100, y: 100}});
+  expect(resizePanel(base, {inline: 'start', block: 'start'}, 400, -900)).toEqual({size: {width: 200, height: 960}, offset: {x: 100, y: 100}});
 });
 it('draws eight resize hit areas, one of them a keyboard stop', () => {
   const html = renderToStaticMarkup(<FloatingPanel {...panel} />);

@@ -69,13 +69,19 @@ const expectPanelPreview = async (page: Page) => {
   expect((await box(preview)).width).toBeCloseTo(Math.min(room, live.width), 0);
   expect((await box(preview)).width / scale).toBeCloseTo(live.width, 0);
   const sections = floating(page).locator('.rp-widget[aria-label]');
-  for (let i = 0; i < (await sections.count()); i++) {
-    const actual = await box(sections.nth(i));
-    const section = preview.locator('.rp-widget[aria-label]').nth(i);
-    const copy = await box(section);
-    const title = (await sections.nth(i).locator('.rp-widget-label').count()) ? 0 : await titleBlock(section);
-    expect(Math.abs((copy.height - title) / scale - actual.height)).toBeLessThanOrEqual(2);
-  }
+  // A chart measures its box a frame after the layout changes, so the heights settle by polling.
+  const mismatch = async () => {
+    let worst = 0;
+    for (let i = 0; i < (await sections.count()); i++) {
+      const actual = await box(sections.nth(i));
+      const section = preview.locator('.rp-widget[aria-label]').nth(i);
+      const copy = await box(section);
+      const title = (await sections.nth(i).locator('.rp-widget-label').count()) ? 0 : await titleBlock(section);
+      worst = Math.max(worst, Math.abs((copy.height - title) / scale - actual.height));
+    }
+    return worst;
+  };
+  await expect.poll(mismatch).toBeLessThanOrEqual(2);
 };
 test('edits a draft, cancels changes, saves sizes and order, and restores defaults', async ({page}) => {
   await page.goto('/#/settings');
@@ -346,16 +352,16 @@ test('the editor opens with nothing selected and its preview edge sets the panel
   expect(await width()).toBe(320);
   // The edge stops at the panel's own limits, and steps by keyboard.
   await drag(-200);
-  await expect.poll(width).toBe(280);
+  await expect.poll(width).toBe(200);
   await handle.focus();
-  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await expect.poll(width).toBe(360);
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await expect.poll(width).toBe(296);
   await editor(page).getByRole('button', {name: 'Save', exact: true}).click();
-  await expect.poll(async () => (await box(floating(page))).width).toBe(360);
+  await expect.poll(async () => (await box(floating(page))).width).toBe(296);
   await page.reload();
-  await expect.poll(async () => (await box(floating(page))).width).toBe(360);
+  await expect.poll(async () => (await box(floating(page))).width).toBe(296);
   await openEditor(page);
-  expect(await width()).toBe(360);
+  expect(await width()).toBe(296);
   await expectPanelPreview(page);
 });
 
@@ -401,7 +407,7 @@ for (const mode of ['floating', 'docked'] as const) {
     await dragBy(page, handle, 40 * scale);
     // From a sidebar narrower than a floating panel, the edge starts at the floating panel's least width.
     if (mode === 'floating') await expect.poll(width).toBe(360);
-    else await expect.poll(width).toBeGreaterThan(Math.max(280, opened));
+    else await expect.poll(width).toBeGreaterThan(Math.max(200, opened));
     const target = await width();
     await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
     await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
@@ -508,6 +514,49 @@ test('hidden widgets leave their editor unloaded', async ({page}) => {
   expect(chunks).toEqual([]);
 });
 
+for (const [lang, resize] of [
+  ['en', 'Resize widgets panel'],
+  ['zh-TW', '調整小工具面板大小']
+]) {
+  test.describe(`at the least width in ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    test('the panel resizes down to 200, its mode row fits and Apply stays inside it', async ({page}) => {
+      await page.goto('/#/settings');
+      expect((await box(floating(page))).width).toBe(280);
+      await floating(page).getByRole('button', {name: resize, exact: true}).focus();
+      // The chart measures its box after the resize, so the panel settles a frame later.
+      const fit = () =>
+        floating(page).evaluate(panel => {
+          const items = [...panel.querySelectorAll<HTMLElement>('[data-widget-id="mode"] .rp-seg .rp-btn')];
+          const tops = new Set(items.map(item => Math.round(item.getBoundingClientRect().top)));
+          // The resize hit areas reach past the panel's corners by design; nothing else may leave it.
+          const frame = panel.getBoundingClientRect();
+          const outside = [...panel.querySelectorAll<HTMLElement>('*')].filter(element => {
+            const rect = element.getBoundingClientRect();
+            return !element.closest('.rp-panel-resize') && rect.width > 0 && (rect.right > frame.right + 0.5 || rect.left < frame.left - 0.5);
+          });
+          // Narrower content is taller, so the panel grows with it: Apply ends inside the panel.
+          const apply = [...panel.querySelectorAll<HTMLElement>('[data-widget-id="mode"] .rp-btn')].find(button => !button.closest('.rp-seg'))!;
+          const reach = apply.getBoundingClientRect();
+          return {
+            items: items.length,
+            lines: tops.size,
+            applyInside: reach.top >= frame.top && reach.bottom <= frame.bottom + 0.5,
+            clipped: items.some(item => item.scrollWidth > item.clientWidth),
+            overflow: outside.length > 0
+          };
+        });
+      for (const [presses, width] of [
+        [2, 248],
+        [4, 200]
+      ]) {
+        for (let i = 0; i < presses; i++) await page.keyboard.press('ArrowRight');
+        await expect.poll(async () => (await box(floating(page))).width).toBe(width);
+        await expect.poll(fit).toEqual({items: 3, lines: 1, applyInside: true, clipped: false, overflow: false});
+      }
+    });
+  });
+}
 test('the anchored panel resizes by keyboard within its limits and keeps the size after a reload', async ({page}) => {
   await page.goto('/#/settings');
   const before = await box(floating(page));

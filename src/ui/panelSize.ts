@@ -3,7 +3,7 @@ export type PanelSize = {width: number; height: number};
 // frame's bottom, or from its top when `top` is set. A panel in the upper half keeps its top edge, so expanding or
 // resizing it grows downwards, where the room is; one in the lower half keeps its bottom edge and grows upwards.
 export type PanelOffset = {x: number; y: number; top?: true};
-const limits = {width: [280, 640], height: [200, 960], offset: [0, 8192]} as const;
+const limits = {width: [200, 640], height: [200, 960], offset: [0, 8192]} as const;
 const clamp = (value: number, [min, max]: readonly [number, number]) => Math.round(Math.min(max, Math.max(min, value)));
 // A stored panel size within its limits. The viewport bound is CSS's, so a smaller window shrinks the panel without
 // rewriting the reader's size, and a larger one restores it.
@@ -24,6 +24,8 @@ export function anchorPanelOffset({x, y, top}: PanelOffset, room: number, height
   return above + height / 2 < room / 2 ? {x, y: Math.max(0, Math.round(above)), top: true} : {x, y: Math.max(0, Math.round(room - height - above))};
 }
 export const minPanelSize: PanelSize = {width: limits.width[0], height: limits.height[0]};
+// The width of a panel the reader has not sized, wider than the least the resize allows.
+export const defaultPanelWidth = 280;
 // The height limit of a panel the reader has not sized, the stylesheet's fallback for --rp-panel-height.
 export const defaultPanelHeight = 480;
 // A resize handle's edge: the side or corner it moves, in logical directions. The opposite side stays where it is.
@@ -65,7 +67,9 @@ export function resizePanel(
     [limits.height[0], Math.max(limits.height[0], Math.min(limits.height[1], tallest))],
     room?.height ?? Infinity
   );
-  return {size: {width, height}, offset: {x, y, ...(base.offset.top && {top: base.offset.top})}};
+  // A drag that moves no vertical edge only sets the width. It leaves the height to the content, up to what the frame
+  // allows, because a height frozen at the wider layout would cut off the taller content of a narrower one.
+  return {size: {width, height: edge.block && down ? height : limits.height[1]}, offset: {x, y, ...(base.offset.top && {top: base.offset.top})}};
 }
 // A panel hidden at an edge goes past the screen edge nearest to it and leaves a handle there. Equal gaps go to the
 // first of right, left, bottom and top.
