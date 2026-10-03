@@ -80,7 +80,6 @@ it.each([
 ])('%s', (_name, offset, expected) => expect(parseLayout({...defaults(), offset}).offset).toEqual(expected));
 
 it('offers the divider in the panel, several times, and never on the dashboard', () => {
-  expect(defaults().items.map(item => item.id)).toEqual(['speed', 'memory', 'divider', 'mode']);
   const dividers = [{id: 'divider'}, {id: 'divider', instance: 'divider-2'}];
   expect(parseItems(dividers, 'panel')).toHaveLength(2);
   expect(parseItems(dividers, 'dashboard')).toEqual([]);
@@ -95,6 +94,17 @@ it('defaults to a floating, pinned, open panel and pins a panel saved before ver
   const migrated = parseLayout({...defaults(), ...placed, version: 3, pinned: false});
   expect(migrated).toMatchObject({version: 4, pinned: true, ...placed});
   expect(parseLayout({...defaults(), pinned: false}).pinned).toBe(false);
+});
+it('starts with the rates, memory and mode, and keeps a stored divider', () => {
+  expect(defaults().items.map(item => item.id)).toEqual(['speed', 'memory', 'mode']);
+  const stored = {
+    ...defaults(),
+    items: [
+      {id: 'speed', form: 'sparkline', size: 'medium'},
+      {id: 'divider', form: 'kv', size: 'medium'}
+    ]
+  };
+  expect(parseLayout(stored).items).toEqual(stored.items);
 });
 it.each([
   ['combines the rates charts by default', {}, undefined],

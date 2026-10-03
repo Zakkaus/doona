@@ -768,7 +768,7 @@ test.describe('header and edge at 1440', () => {
     await save(page, {...defaults(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await handle(page).hover();
-    const cell = floating(page).locator('.rp-widget-cell').last();
+    const cell = floating(page).locator('.rp-widget-cell').first();
     await cell.hover();
     await page.evaluate(() => (location.hash = '#/overview'));
     await expect(floating(page).locator('.rp-widget-cell')).toHaveCount(0);

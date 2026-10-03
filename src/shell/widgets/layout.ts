@@ -120,7 +120,7 @@ export type Layout = {
 };
 export const defaults = (): Layout => ({
   version: 4,
-  items: [defaultWidget('speed'), {id: 'memory', form: 'text', size: 'medium'}, defaultWidget('divider'), defaultWidget('mode')],
+  items: [defaultWidget('speed'), {id: 'memory', form: 'text', size: 'medium'}, defaultWidget('mode')],
   collapsed: false,
   pinned: true,
   visible: true
