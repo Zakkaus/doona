@@ -301,7 +301,17 @@ export const dnsCache: DnsCacheList = {
       expires_at: ahead(3600),
       stale_until: null
     },
-    {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null}
+    {entry_id: 'c5', domain: 'discord.com.', type: 'HTTPS', class: 'IN', status: 'NXDOMAIN', expires_at: ahead(540), stale_until: null},
+    {
+      entry_id: 'c6',
+      domain: 'github.com.',
+      type: 'A',
+      class: 'IN',
+      status: 'NOERROR',
+      answers: [{name: 'github.com.', type: 'A', class: 'IN', ttl: 60, data: '140.82.112.3'}],
+      expires_at: ago(300),
+      stale_until: null
+    }
   ]
 };
 for (const [index, domain] of demoDomains.entries()) {

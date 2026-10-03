@@ -36,11 +36,12 @@ export async function smallerOnRefusal<Q extends {limit?: number}, P>(
 }
 // The whole cache, summaries only, at one page size: a cursor sent with a different limit is refused. The backend
 // holds a bounded number of listing snapshots, and one that cannot fit answers 503 snapshot_unavailable at the head;
-// after the wait it asks for, the walk starts over once without a cursor.
-export async function dnsCacheListing(api: Api, signal?: AbortSignal) {
+// after the wait it asks for, the walk starts over once without a cursor. includeExpired stays the same on every page
+// of one walk, and is left out when off, the backend's default.
+export async function dnsCacheListing(api: Api, signal?: AbortSignal, includeExpired = false) {
   const listing = () =>
     walk(
-      cursor => api.dnsCache({cursor, limit: MAX_PAGE, detail: 'summary'}, signal),
+      cursor => api.dnsCache({cursor, limit: MAX_PAGE, detail: 'summary', ...(includeExpired && {include_expired: true})}, signal),
       (acc: DnsCacheList | undefined, page) => {
         if (!acc) return {...page, entries: [...page.entries]};
         acc.entries.push(...page.entries);
@@ -80,10 +81,11 @@ export function useDnsLog(query: {name?: string; type?: string; src?: string}, e
 const walks = new WeakMap<Api, {at: number; list: DnsCacheList}>();
 // Counts flushes and deletions, so a walk that was already listing when one landed does not store its older usage.
 const changes = new WeakMap<Api, number>();
-export async function walkCache(api: Api, signal: AbortSignal) {
+export async function walkCache(api: Api, signal: AbortSignal, includeExpired = false) {
   const change = changes.get(api) ?? 0;
-  const list = await dnsCacheListing(api, signal);
-  if ((changes.get(api) ?? 0) === change) walks.set(api, {at: Date.now(), list: {...list, entries: []}});
+  const list = await dnsCacheListing(api, signal, includeExpired);
+  // A walk with expired entries counts more than the usage read would, so only the default walk stands in for it.
+  if (!includeExpired && (changes.get(api) ?? 0) === change) walks.set(api, {at: Date.now(), list: {...list, entries: []}});
   return list;
 }
 // A flush or a deletion changes usage, so the next read asks again rather than reuse a walk from before it.
@@ -128,15 +130,15 @@ export function readCacheUsage(api: Api, signal: AbortSignal): Promise<DnsCacheL
   if (recent && Date.now() - recent.at < poll.background) return Promise.resolve(recent.list);
   return api.dnsCache({limit: 1, detail: 'summary'}, signal);
 }
-function useDnsCache(enabled = true, paused = false) {
+function useDnsCache(enabled = true, paused = false, includeExpired = false) {
   const api = getApi();
   return useResource(
     {
-      key: ['dnsCache'],
+      key: ['dnsCache', {includeExpired}],
       // The backend retains a snapshot per listing for its cursors and refuses a ninth within half a minute.
       every: poll.lists,
       // The cache table shows no answers, so the summary listing, which leaves them out, is enough.
-      fetch: signal => walkCache(api, signal)
+      fetch: signal => walkCache(api, signal, includeExpired)
     },
     {enabled, paused}
   );
@@ -146,11 +148,11 @@ export function useDnsCacheUsage(enabled = true, paused = false) {
   return useResource({key: ['dnsCache', {usage: true}], every: poll.background, fetch: signal => readCacheUsage(api, signal)}, {enabled, paused});
 }
 // Paused, the listing keeps what it last read and walks the cache again only once it is resumed.
-export function useDnsControl(paused = false) {
+export function useDnsControl(paused = false, includeExpired = false) {
   const api = getApi();
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
-  const cache = useDnsCache(offered(resources, 'dns_cache', {whileLoading: false}) && !!resources?.dns_cache.read, paused);
+  const cache = useDnsCache(offered(resources, 'dns_cache', {whileLoading: false}) && !!resources?.dns_cache.read, paused, includeExpired);
   const {refetch} = cache;
   const {busy, error, run, cancel} = useAction<string>({rethrow: true});
   return {

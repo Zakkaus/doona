@@ -10,6 +10,7 @@ import {geodataConfigurable} from './nav';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {
   assetDetails,
+  checkTimes,
   cleanUrls,
   customFields,
   customInvalid,
@@ -286,7 +287,7 @@ export function useGeodataSettings() {
         if (Number(hours) !== stored?.auto_update.interval_hours) void save({auto_update: {interval_hours: Number(hours)}});
       }
     },
-    status: {...status, details: assetDetails(geodata.data, groups.data, locale, t)},
+    status: {...status, details: [...checkTimes(geodata.data, now, locale, t), ...assetDetails(geodata.data, groups.data, locale, t)]},
     statusError: geodata.error,
     retryStatus: geodata.refetch,
     canUpdate,

@@ -5,6 +5,8 @@ import {expect, mockBackend, query, test, settleFrames, box} from './fixtures';
 test('cache deletion removes one entry and flushing requires confirmation', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   const entries = (await api.dnsCache()).entries;
+  // Flushing clears the expired entries the listing leaves out too.
+  const cached = (await api.dnsCache({include_expired: true})).total;
   expect(entries.length).toBeGreaterThan(1);
   await page.goto('/#/dns?tab=cache');
   const grid = page.getByRole('grid', {name: 'Cache', exact: true});
@@ -25,11 +27,46 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
-  await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched: ${entries.length - 1}, deleted: ${entries.length - 1}`);
+  await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched: ${cached - 1}, deleted: ${cached - 1}`);
   expect(requests.filter(request => request.method() !== 'GET').map(request => [request.method(), new URL(request.url()).pathname])).toEqual([
     ['DELETE', `/api/v1/dns/cache/${encodeURIComponent(entries[0].entry_id)}`],
     ['POST', '/api/v1/dns/cache/flush']
   ]);
+});
+
+test('the cache lists expired entries while its switch is on, and one can be deleted from its row', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  const listed = (await api.dnsCache()).entries;
+  const expired = (await api.dnsCache({include_expired: true})).entries.filter(entry => !listed.some(item => item.entry_id === entry.entry_id));
+  expect(expired.length).toBeGreaterThan(0);
+  await page.goto('/#/dns?tab=cache');
+  const grid = page.getByRole('grid', {name: 'Cache', exact: true});
+  await expect(grid).toHaveAttribute('aria-rowcount', String(listed.length + 1));
+  const toggle = page.getByRole('switch', {name: 'Show expired', exact: true});
+  const label = page.locator('.rp-switch').filter({hasText: 'Show expired'});
+  await expect(toggle).not.toBeChecked();
+  // The cache tab's walks, apart from the one-entry usage reads.
+  const walks = () =>
+    requests
+      .map(request => new URL(request.url()))
+      .filter(url => url.pathname === '/api/v1/dns/cache' && url.searchParams.get('limit') !== '1')
+      .map(url => url.searchParams.get('include_expired'));
+  const off = walks().length;
+  expect(off).toBeGreaterThan(0);
+  expect(walks()).toEqual(Array(off).fill(null));
+  await label.click();
+  await expect(grid).toHaveAttribute('aria-rowcount', String(listed.length + expired.length + 1));
+  expect(walks().slice(off)).toEqual(Array(walks().length - off).fill('true'));
+  expect(walks().length).toBeGreaterThan(off);
+  const remove = page.getByRole('button', {name: `Delete the ${expired[0].type} cache entry for ${expired[0].domain}`, exact: true});
+  await remove.click();
+  await expect(remove).toHaveCount(0);
+  await expect(page.locator('.rp-toast.positive')).toContainText('Deleted 1 cache entry');
+  await expect(grid).toHaveAttribute('aria-rowcount', String(listed.length + expired.length));
+  expect(walks().at(-1)).toBe('true');
+  await label.click();
+  await expect(grid).toHaveAttribute('aria-rowcount', String(listed.length + 1));
+  await expect.poll(() => walks().at(-1)).toBeNull();
 });
 
 test('a missing cache capability keeps the toolbar fixed and explains the disabled action', async ({page}) => {
