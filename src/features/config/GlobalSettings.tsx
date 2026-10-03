@@ -28,7 +28,7 @@ export function GlobalSettings(props: PageProps) {
       {m.failure && <InlineAlert>{m.failure}</InlineAlert>}
       {m.restart.length > 0 && <RestartNotice settings={m.restart} sources={m.sources} />}
       {m.conflict && <InlineAlert>{t('config.changedOnDisk')}</InlineAlert>}
-      {m.source && !m.writable && <InlineAlert>{t('config.readOnly')}</InlineAlert>}
+      {m.source && !m.writable && <InlineAlert tone="informative">{t('config.readOnly')}</InlineAlert>}
       {m.groups.map(group => (
         <Card key={group.id} title={group.title}>
           <Toolbar className="top rp-fieldgrid">

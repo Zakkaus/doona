@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, InlineAlert, LabeledSelect, ModalDialog, TextField} from '../../ui/ui';
+import {Button, InlineAlert, LabeledSelect, ModalDialog, ProblemAlert, TextField} from '../../ui/ui';
 import AddCircle from '../../ui/icons/AddCircle';
 import {useNewSource, type NewSourceProps} from './useNewSource';
 export function NewSource(props: NewSourceProps) {
@@ -27,11 +27,7 @@ export function NewSource(props: NewSourceProps) {
           </>
         )}
       >
-        {vm.problem && (
-          <InlineAlert key={vm.problem.id} takeFocus>
-            {vm.problem.text}
-          </InlineAlert>
-        )}
+        {vm.problem && <ProblemAlert key={vm.problem.id} problem={vm.problem} />}
         <div className="rp-list">
           <span className="rp-label">{t(vm.choice ? 'config.newSourceNameHelp' : 'config.newSourceHelp')}</span>
           {vm.choices.length > 1 && (

@@ -810,16 +810,31 @@ test('a new file in the include directory is created empty and opens in the sour
   await name.fill('work');
   await create.click();
   await expect(dialog.getByRole('alert')).toContainText('Operation conflicts with the current state');
+  await expect(dialog.locator('.rp-alert.negative')).toHaveCount(1);
 });
 
+// Accepts a create but fails the polling that would settle it, so its outcome is unknown.
+async function acceptUnconfirmed(backend: Pick<Awaited<ReturnType<typeof mockBackend>>, 'api' | 'handlers'>, body: {path: string; content: string}) {
+  const accepted = await backend.api.createConfigSource(body.path, body.content);
+  backend.handlers[`GET operations/${accepted.operation_id}`] = () => {
+    throw new ApiError(503, 'service_unavailable', 'Operation unavailable');
+  };
+  return accepted;
+}
+
+type Handlers = Awaited<ReturnType<typeof mockBackend>>['handlers'];
+
 // Holds every create request until `release` runs, then answers it with `answer`.
-async function heldCreate(page: Page, answer: (route: Route, body: {path: string; content: string}, api: ReturnType<typeof createMockApi>) => Promise<void>) {
-  const {api} = await mockBackend(page);
+async function heldCreate(
+  page: Page,
+  answer: (route: Route, body: {path: string; content: string}, backend: {api: ReturnType<typeof createMockApi>; handlers: Handlers}) => Promise<void>
+) {
+  const backend = await mockBackend(page);
   let release!: () => void;
   const held = new Promise<void>(resolve => (release = resolve));
   await page.route('**/api/v1/config/sources', async route => {
     await held;
-    await answer(route, route.request().postDataJSON(), api);
+    await answer(route, route.request().postDataJSON(), backend);
   });
   await page.goto('/#/config?tab=source');
   const dialog = page.getByRole('dialog', {name: 'New config file'});
@@ -847,12 +862,46 @@ test('a create refused after its dialog closed reports in a toast, not in the di
   await dialog.getByLabel('Name', {exact: true}).fill('other');
 });
 
+test('a create whose outcome is unknown stays neutral in the open dialog', async ({page}) => {
+  expectLoadFailures(page, /\/operations\//);
+  const backend = await mockBackend(page);
+  backend.handlers['POST config/sources'] = request => acceptUnconfirmed(backend, request.postDataJSON());
+  await page.goto('/#/config?tab=source');
+  await page.getByRole('button', {name: 'New file', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'New config file'});
+  await dialog.getByLabel('Name', {exact: true}).fill('work');
+  await dialog.getByRole('button', {name: 'Create', exact: true}).click();
+  const unknown = dialog.locator('.rp-alert', {hasText: 'Could not confirm the result of the operation'});
+  await expect(unknown).toHaveClass(/informative/);
+  await expect(unknown).toHaveAttribute('role', 'status');
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+});
+
+test('a create whose outcome is unknown after its dialog closed reports it neutrally too', async ({page}) => {
+  expectLoadFailures(page, /\/operations\//);
+  const dialog = await heldCreate(page, async (route, body, backend) => fulfillAccepted(route, await acceptUnconfirmed(backend, body)));
+  await expect(page.locator('.rp-toast.neutral')).toContainText('Could not confirm the result of the operation');
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  await expect(dialog.locator('.rp-alert')).toHaveCount(0);
+});
+
 test('a create that succeeds after its dialog closed leaves the dialog opened since', async ({page}) => {
-  const dialog = await heldCreate(page, async (route, body, api) => fulfillAccepted(route, await api.createConfigSource(body.path, body.content)));
+  const dialog = await heldCreate(page, async (route, body, {api}) => fulfillAccepted(route, await api.createConfigSource(body.path, body.content)));
   await expect(page.locator('.rp-toast.positive')).toContainText('config.d/work.dae created, configuration reloaded');
   await dialog.getByLabel('Name', {exact: true}).fill('other');
   await expect(dialog).toBeVisible();
   await expect(page).not.toHaveURL(/source=/);
+});
+
+test('a read-only configuration says so as information, not as an error', async ({page}) => {
+  const {capabilities} = await mockBackend(page);
+  capabilities.resources.config.writable = false;
+  await page.goto('/#/config?tab=global');
+  const panel = page.getByRole('tabpanel', {name: 'Global settings'});
+  const hint = panel.locator('.rp-alert', {hasText: 'Read-only'});
+  await expect(hint).toHaveClass(/informative/);
+  await expect(hint).toHaveAttribute('role', 'status');
+  await expect(panel.getByRole('alert')).toHaveCount(0);
 });
 
 test('a new file name is checked for what the path rules refuse', async ({page}) => {
@@ -1004,7 +1053,7 @@ test('a global write that cannot be read back keeps the draft and offers Retry',
   };
   offline = true;
   await panel.getByRole('button', {name: 'Write and reload'}).click();
-  await expect(panel.getByRole('status')).toContainText('The change was saved, but the configuration could not be read back');
+  await expect(panel.getByRole('status').filter({hasText: 'The change was saved'})).toContainText('the configuration could not be read back');
   await expect(panel.getByRole('button', {name: 'Retry'})).toBeVisible();
   await expect(field).toHaveValue('200ms');
   expect((await api.config()).sources[0].content).toContain('sniffing_timeout: 200ms');
