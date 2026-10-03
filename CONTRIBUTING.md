@@ -171,6 +171,8 @@ Some lists have one home, and everything else reads them:
 | Visible text comes from catalogues                                                    | `check:i18n`                                                                           |
 | Size budgets                                                                          | `check:size`                                                                           |
 
+`check:size` budgets what a reader downloads, in gzip bytes from the Vite manifest, not the total: the login and Activity startup paths (entry chunk and its static imports, the largest language catalogue, the charts Activity loads), startup CSS, one catalogue, one font stylesheet, each page beyond Activity, the config editor and the mock. The budgets live in `sizeBudget` in `package.json`; a failure names the budget, the measured size, the limit and the largest files. The total is printed for information and does not fail the build. A startup budget that rises needs its reason in the pull request.
+
 A reviewer checks the rest by hand: watched and cached reads go through the store, `view.ts` stays pure and tested, components only render, and no engine-specific setting or section name lands outside `src/api/engines`, even as data.
 
 ## User documentation
