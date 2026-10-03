@@ -8,8 +8,8 @@ import {NoticeList, noticeRows} from '../../features/activity/widgets';
 import {Divider, ErrorMessage, Kv, Light, Link} from '../../ui/ui';
 import {WidgetSpeed} from '../../ui/WidgetPanel';
 import {usePalette} from '../../ui/charts';
-import Download from '../../ui/icons/Download';
-import Upload from '../../ui/icons/Upload';
+import ArrowDown from '../../ui/icons/ArrowDown';
+import ArrowUp from '../../ui/icons/ArrowUp';
 import {href} from '../route';
 import {contentLimit, canonicalForm, type Widget} from './layout';
 import {RuntimeWidget, MemoryWidget} from './ContentRuntime';
@@ -30,8 +30,8 @@ export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
     <WidgetSpeed
       reserve={reserveWidth ? formatUnit(999.9, locale, 'unit.megabytePerSecond', 1) : undefined}
       rates={[
-        {icon: <Upload />, label: t('ui.upload'), value: formatRate(rates?.upload_bytes_per_second ?? null, locale), color: p.cat[3]},
-        {icon: <Download />, label: t('ui.download'), value: formatRate(rates?.download_bytes_per_second ?? null, locale), color: p.cat[0]}
+        {icon: <ArrowUp />, label: t('ui.upload'), value: formatRate(rates?.upload_bytes_per_second ?? null, locale), color: p.cat[3]},
+        {icon: <ArrowDown />, label: t('ui.download'), value: formatRate(rates?.download_bytes_per_second ?? null, locale), color: p.cat[0]}
       ]}
     />
   );
