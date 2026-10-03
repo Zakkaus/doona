@@ -275,7 +275,7 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
               onPress={() => {
                 saveLayout(previous => ({
                   ...previous,
-                  version: 3,
+                  version: 4,
                   items,
                   ...(restored && restoredPanel),
                   ...(widthChanged && {size: {width, height: (restored ? undefined : previous.size?.height) ?? defaultPanelHeight}})
