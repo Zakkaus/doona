@@ -7,22 +7,13 @@ import {activityGroupView, nodeView, useActivityNode, GroupMenu} from '../../fea
 import {latencyAverages, latencyGroups, latencyMax, latencyPlotRow, latencySummary, providerRowView} from '../../features/nodes/widgets';
 import {MarkerPlot} from '../../ui/charts';
 import {ContextualHelp, Empty, ErrorMessage, Kv} from '../../ui/ui';
-import {contentLimit, instanceId, type Widget} from './layout';
-import {saveLayout} from './settings';
-import {saveDashboard} from './dashboardSettings';
-import {mapWidgets} from './dashboardLayout';
+import {contentLimit, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
-export function CurrentLatency({item, dashboard, onChange}: {item: Widget; dashboard: boolean; onChange?: (item: Widget) => void}) {
+// Only the inert previews render it without `onChange`, so their choice goes nowhere.
+export function CurrentLatency({item, onChange}: {item: Widget; onChange?: (item: Widget) => void}) {
   const t = useT();
-  const vm = useActivityNode(undefined, {
-    chosen: item.group ?? '',
-    setChosen: group => {
-      if (onChange) onChange({...item, group});
-      else if (dashboard) saveDashboard(previous => mapWidgets(previous, old => (instanceId(old) === instanceId(item) ? {...old, group} : old)));
-      else saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(item) ? {...old, group} : old))}));
-    }
-  });
+  const vm = useActivityNode(undefined, {chosen: item.group ?? '', setChosen: group => onChange?.({...item, group})});
   return (
     <>
       <div className="rp-cluster">
@@ -35,8 +26,9 @@ export function CurrentLatency({item, dashboard, onChange}: {item: Widget; dashb
   );
 }
 
-export function Latency({item, dashboard = false}: {item: Widget; dashboard?: boolean}) {
+export function Latency({item}: {item: Widget}) {
   const t = useT();
+  const surface = useContext(WidgetSurface);
   const locale = LOCALE[useLang()];
   const resources = useCapabilities().data?.resources;
   const nodes = useNodes(resources?.nodes.available === true);
@@ -49,7 +41,7 @@ export function Latency({item, dashboard = false}: {item: Widget; dashboard?: bo
   const averages = latencyAverages(view);
   // The panel gallery's preview shows the summary and the first rows whole inside its frame; a dashboard thumbnail
   // shows the rows the card will.
-  const limit = useContext(ResourceSamples) && !dashboard ? 3 : (item.rows ?? contentLimit(item.size, [3, 6, 12]));
+  const limit = useContext(ResourceSamples) && surface === 'panel' ? 3 : (item.rows ?? contentLimit(item.size, [3, 6, 12]));
   return (
     <Reading state={{...nodes, error: nodes.error ?? groups.error, refetch: () => (nodes.refetch(), groups.refetch())}}>
       {!view.length ? (

@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {useT} from '../../i18n';
+import {useT, type Key} from '../../i18n';
 import {useCapabilities, useGroups} from '../../store';
 import {Button, ChoiceMenu, Segmented} from '../../ui/ui';
 import {WidgetGalleryTile, type GalleryRow} from '../../ui/WidgetGalleryTile';
@@ -125,6 +125,7 @@ export function ModuleInspector({
 }) {
   const t = useT();
   if (!active) return <p className="rp-label">{t('widgets.select')}</p>;
+  const groupChoice = registry[active.id].groupChoice;
   return (
     <>
       {surface === 'dashboard' &&
@@ -186,7 +187,7 @@ export function ModuleInspector({
           />
         </EditorOption>
       )}
-      {['nodeLatency', 'policyGroups', 'latency'].includes(active.id) && <GroupOption item={active} update={update} />}
+      {groupChoice && <GroupOption item={active} automatic={groupChoice} update={update} />}
       <div className="rp-cluster rp-module-actions">
         <Button isDisabled={instanceId(items[0]) === instanceId(active)} onPress={() => move(-1)}>
           {t('widgets.up')}
@@ -201,11 +202,11 @@ export function ModuleInspector({
     </>
   );
 }
-function GroupOption({item, update}: {item: Widget; update: (item: Widget) => void}) {
+function GroupOption({item, automatic: key, update}: {item: Widget; automatic: Key; update: (item: Widget) => void}) {
   const capabilities = useCapabilities();
   const groups = useGroups(capabilities.data?.resources.groups.available === true);
   const t = useT();
-  const automatic = t(item.id === 'latency' ? 'act.groupFollow' : 'dashboard.allGroups');
+  const automatic = t(key);
   return (
     <EditorOption label={t('ui.group')}>
       <ChoiceMenu

@@ -168,3 +168,24 @@ it.each([
   ['a resized panel', {size: {width: 400, height: 300}}, true],
   ['a docked panel', {docked: true, dockHeight: 300}, true]
 ])('%s: restoring it changes the layout: %s', (_name, value, changes) => expect(changesPanel({...defaults(), ...value})).toBe(changes));
+const idsWith = (has: (definition: (typeof registry)[WidgetId]) => unknown) => (Object.keys(registry) as WidgetId[]).filter(id => has(registry[id])).sort();
+it.each([
+  ['value tiles', idsWith(definition => definition.tile), ['download', 'upload', 'connections', 'cpu', 'latency']],
+  [
+    'charted',
+    idsWith(definition => definition.forms.some(form => form === 'area' || form === 'sparkline')),
+    ['speed', 'history', 'download', 'upload', 'connections', 'cpu', 'memory']
+  ],
+  [
+    'lists',
+    idsWith(definition => definition.rows),
+    ['nodeLatency', 'ranking', 'notices', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds', 'connectionNetworks', 'dnsAnswers']
+  ],
+  ['rates', idsWith(definition => definition.rate), ['speed', 'history', 'download', 'upload']],
+  ['untitled in the panel', idsWith(definition => definition.untitled), ['connections', 'cpu', 'global', 'group']],
+  ['group choices', idsWith(definition => definition.groupChoice), ['nodeLatency', 'policyGroups', 'latency']]
+])('derives the %s from the registry', (_name, derived, expected) => expect(derived).toEqual([...expected].sort()));
+it('names the Automatic group as each widget did', () => {
+  expect(registry.latency.groupChoice).toBe('act.groupFollow');
+  expect([registry.nodeLatency.groupChoice, registry.policyGroups.groupChoice]).toEqual(['dashboard.allGroups', 'dashboard.allGroups']);
+});

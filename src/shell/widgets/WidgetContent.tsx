@@ -6,18 +6,16 @@ import {useCapabilities} from '../../store';
 import {WidgetSection} from '../../ui/WidgetPanel';
 import {SamplePreview} from './SamplePreview';
 import {Contents} from './Contents';
-import {available, registry, type Widget} from './layout';
+import {available, registry, WidgetSurface, type Widget} from './layout';
 import '../../ui/styles/widget-content.css';
 export function WidgetContent({
   item,
   preview = false,
-  dashboard = false,
   sample = false,
   onChange
 }: {
   item: Widget;
   preview?: boolean;
-  dashboard?: boolean;
   sample?: boolean;
   onChange?: (item: Widget) => void;
 }) {
@@ -28,29 +26,28 @@ export function WidgetContent({
       <ResourcePreview value={preview || inherited || !visible}>
         {sample ? (
           <SamplePreview id={item.id}>
-            <Content item={item} dashboard={dashboard} sample />
+            <Content item={item} sample />
           </SamplePreview>
         ) : (
-          <Content item={item} dashboard={dashboard} onChange={onChange} />
+          <Content item={item} onChange={onChange} />
         )}
       </ResourcePreview>
     </div>
   );
 }
-function Content({item, dashboard, sample = false, onChange}: {item: Widget; dashboard: boolean; sample?: boolean; onChange?: (item: Widget) => void}) {
+function Content({item, sample = false, onChange}: {item: Widget; sample?: boolean; onChange?: (item: Widget) => void}) {
   const t = useT();
+  const surface = useContext(WidgetSurface);
   const capabilities = useCapabilities().data;
   const memoryMetrics = capabilities?.resources.runtime_memory?.metrics ?? [];
   const singleMemory = item.id === 'memory' && memoryMetrics.filter(metric => metric === 'process.rss_bytes' || metric === 'cgroup.current_bytes').length === 1;
   return (
     <WidgetSection
       label={t(registry[item.id].label)}
-      hideLabel={
-        dashboard || item.size === 'small' || singleMemory || ['connections', 'cpu', 'global', 'group'].includes(item.id) || (item.id === 'divider' && !sample)
-      }
+      hideLabel={surface === 'dashboard' || item.size === 'small' || singleMemory || registry[item.id].untitled || (item.id === 'divider' && !sample)}
     >
       {sample || available(item.id, capabilities) ? (
-        <Contents item={item} dashboard={dashboard} onChange={onChange} />
+        <Contents item={item} onChange={onChange} />
       ) : (
         <span className="rp-label">{t(capabilities ? 'widgets.unavailable' : 'ui.loading')}</span>
       )}

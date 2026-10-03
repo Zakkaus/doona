@@ -14,7 +14,7 @@ import type {BackendView} from '../view';
 import {patchLayout, saveLayout, useWidgetLayout} from './settings';
 import {WidgetContent} from './WidgetContent';
 import {SpeedSummary} from './Contents';
-import {instanceId, type Layout} from './layout';
+import {instanceId, replaceWidget, type Layout} from './layout';
 import {editorState} from './editorState';
 import {arriveFromDock, rememberDock} from './dockMotion';
 
@@ -160,12 +160,7 @@ function SavedGrid() {
         <WidgetGrid>
           {layout.items.map(item => (
             <WidgetCell key={instanceId(item)} id={instanceId(item)} module={item.id} size={cellSize(item.size)}>
-              <WidgetContent
-                item={item}
-                onChange={next =>
-                  saveLayout(previous => ({...previous, items: previous.items.map(old => (instanceId(old) === instanceId(next) ? next : old))}))
-                }
-              />
+              <WidgetContent item={item} onChange={next => saveLayout(previous => ({...previous, items: previous.items.map(replaceWidget(next))}))} />
             </WidgetCell>
           ))}
         </WidgetGrid>

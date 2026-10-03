@@ -1,3 +1,4 @@
+import {useContext} from 'react';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {formatRate, formatUnit, formatDuration} from '../../i18n/format';
 import {useCapabilities, useRuntime, useDatapath, useNoticeFeed, reopenEvents} from '../../store';
@@ -11,7 +12,7 @@ import {usePalette} from '../../ui/charts';
 import ArrowDown from '../../ui/icons/ArrowDown';
 import ArrowUp from '../../ui/icons/ArrowUp';
 import {href} from '../route';
-import {contentLimit, canonicalForm, type Widget} from './layout';
+import {contentLimit, canonicalForm, WidgetSurface, type Widget} from './layout';
 import {RuntimeWidget, MemoryWidget} from './ContentRuntime';
 import {RankingWidget, OutboundWidget, Connections, Dns} from './ContentShares';
 import {ModeWidget, GroupWidget} from './ContentPolicies';
@@ -36,8 +37,9 @@ export function SpeedSummary({reserveWidth = false}: {reserveWidth?: boolean}) {
     />
   );
 }
-export function Contents({item, dashboard = false, onChange}: {item: Widget; dashboard?: boolean; onChange?: (item: Widget) => void}) {
-  const form = canonicalForm(item, dashboard ? 'dashboard' : 'panel');
+export function Contents({item, onChange}: {item: Widget; onChange?: (item: Widget) => void}) {
+  const surface = useContext(WidgetSurface);
+  const form = canonicalForm(item, surface);
   item = {...item, form};
   switch (item.id) {
     case 'download':
@@ -56,11 +58,11 @@ export function Contents({item, dashboard = false, onChange}: {item: Widget; das
       return <OutboundWidget item={item} />;
     case 'global':
     case 'mode':
-      return <ModeWidget targetOnly={item.id === 'global'} fill={!dashboard} />;
+      return <ModeWidget targetOnly={item.id === 'global'} fill={surface === 'panel'} />;
     case 'latency':
-      return <CurrentLatency item={item} dashboard={dashboard} onChange={onChange} />;
+      return <CurrentLatency item={item} onChange={onChange} />;
     case 'nodeLatency':
-      return <Latency item={item} dashboard={dashboard} />;
+      return <Latency item={item} />;
     case 'sourceHealth':
       return <Sources item={item} />;
     case 'policyGroups':

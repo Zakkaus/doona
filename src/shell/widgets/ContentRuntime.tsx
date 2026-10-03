@@ -12,14 +12,13 @@ import {usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
 import {ErrorMessage, Kv} from '../../ui/ui';
 import {sampleCpu} from './samples';
-import type {ModuleForm, Widget} from './layout';
+import {registry, type ModuleForm, type Widget} from './layout';
 import {Reading} from './Reading';
 import {scaleOf} from './dashboardSizing';
 import {useWidgetLayout} from './settings';
 
-const rateIds = ['speed', 'history', 'download', 'upload'];
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
-export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => rateIds.includes(item.id) && form !== 'kv' && item.size !== 'small';
+export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
 export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -38,7 +37,7 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
                   [t('ui.download'), formatBytes(r?.traffic.bytes.download ?? null, locale)],
                   ...(item.size === 'small' ? [] : [[t('ui.upload'), formatBytes(r?.traffic.bytes.upload ?? null, locale)] as [string, string]])
                 ]
-              : rateIds.includes(item.id)
+              : registry[item.id].rate
                 ? [
                     [
                       t(item.id === 'upload' ? 'ui.upload' : 'ui.download'),
