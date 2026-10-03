@@ -60,7 +60,6 @@ it('keeps split network selection unset for both and omits mutable interrupt con
   const g = nodeFixtures(0).groups[0];
   const members = memberViews(memberHealth(g, new Map()), t);
   expect(policyCardView(g, members, 'both', t).selected).toBeUndefined();
-  // Both networks, two members: each is marked with the network it carries.
   expect(policyCardView(g, members, 'both', t).marks).toEqual({'hk-01': 'TCP', 'hk-02': 'UDP'});
   expect(policyCardView(g, members, 'tcp', t).marks).toBeUndefined();
   expect(policyCardView(g, members, 'tcp', t).selected).toBe('hk-01');

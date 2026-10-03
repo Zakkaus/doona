@@ -45,17 +45,7 @@ describe('native transport', () => {
       expect(errorText(ordinary, (key, params) => translate('zh-TW', key, params))).toBe(translate('zh-TW', 'ui.backend.permissionDenied'));
     }
   });
-  it('reads the host clock from the observed_at of a response', async () => {
-    const behind = Date.now() - 600_000;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => json({observed_at: new Date(behind).toISOString()}))
-    );
-    const clock = createServerClock();
-    await createApi('https://honk.test', undefined, clock).runtime();
-    expect(Math.abs(clock.now() - behind)).toBeLessThan(1000);
-  });
-  it('keeps a previous backend response off the new backend clock', async () => {
+  it('reads the host clock from the observed_at of a response, and keeps it off another backend clock', async () => {
     const behind = Date.now() - 600_000;
     vi.stubGlobal(
       'fetch',
@@ -65,6 +55,7 @@ describe('native transport', () => {
     const current = createServerClock();
     selectServerClock(current);
     await createApi('https://old.test', undefined, previous).runtime();
+    expect(Math.abs(previous.now() - behind)).toBeLessThan(1000);
     expect(Math.abs(current.now() - Date.now())).toBeLessThan(1000);
     selectServerClock(createServerClock());
   });

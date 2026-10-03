@@ -152,24 +152,22 @@ describe('readSubscriptionEntries', () => {
 describe('writeSubscriptionEntry', () => {
   const edit = (tag: string, next: SubscriptionChange) => writeSubscriptionEntry(text, tag, next);
 
-  it('changes the URL of each form and nothing else', () => {
-    expect(edit('short', {tag: 'short', url: 'https://example.com/v2'})).toBe(
-      text.replace("short: 'https://example.com/sub' # keep me", "short: 'https://example.com/v2' # keep me")
-    );
-    expect(edit('agent', {tag: 'agent', url: 'https://example.net/v2'})).toBe(text.replace("'https://example.net/sub'(", "'https://example.net/v2'("));
-    expect(edit('old', {tag: 'old', url: 'https://example.org/v2'})).toBe(text.replace("url: 'https://example.org/old'", "url: 'https://example.org/v2'"));
-    expect(edit('quoted tag', {tag: 'quoted tag', url: 'https://example.org/v2'})).toBe(
-      text.replace("'https://example.org/new' {", "'https://example.org/v2' {")
-    );
+  it.each([
+    ['short', 'short', 'https://example.com/v2', "short: 'https://example.com/sub' # keep me", "short: 'https://example.com/v2' # keep me"],
+    ['agent', 'agent', 'https://example.net/v2', "'https://example.net/sub'(", "'https://example.net/v2'("],
+    ['old', 'old', 'https://example.org/v2', "url: 'https://example.org/old'", "url: 'https://example.org/v2'"],
+    ['quoted tag', 'quoted tag', 'https://example.org/v2', "'https://example.org/new' {", "'https://example.org/v2' {"]
+  ])('changes the URL of the %s form and nothing else', (from, tag, url, before, after) => {
+    expect(edit(from, {tag, url})).toBe(text.replace(before, after));
   });
 
-  it('renames, keeping the form, the options and quotes where the tag had them', () => {
-    expect(edit('agent', {tag: 'agent2', url: 'https://example.net/sub'})).toBe(text.replace('  agent:', '  agent2:'));
-    expect(edit('old', {tag: 'fresh', url: 'https://example.org/x'})).toBe(
-      text.replace("  old: {\n    url: 'https://example.org/old'", "  fresh: {\n    url: 'https://example.org/x'")
-    );
-    expect(edit('quoted tag', {tag: 'plain', url: 'https://example.org/new'})).toBe(text.replace("'quoted tag':", "'plain':"));
-    expect(edit('short', {tag: 'two words', url: 'https://example.com/sub'})).toBe(text.replace('  short:', "  'two words':"));
+  it.each([
+    ['agent', 'agent2', 'https://example.net/sub', '  agent:', '  agent2:'],
+    ['old', 'fresh', 'https://example.org/x', "  old: {\n    url: 'https://example.org/old'", "  fresh: {\n    url: 'https://example.org/x'"],
+    ['quoted tag', 'plain', 'https://example.org/new', "'quoted tag':", "'plain':"],
+    ['short', 'two words', 'https://example.com/sub', '  short:', "  'two words':"]
+  ])('renames %s to %s, keeping the form, the options and quotes where the tag had them', (from, tag, url, before, after) => {
+    expect(edit(from, {tag, url})).toBe(text.replace(before, after));
   });
 
   it('writes nothing when neither changes', () => {
