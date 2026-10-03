@@ -17,6 +17,7 @@ import {flushSync} from 'react-dom';
 import {VisuallyHidden, useFocusVisible, useLocale, useMove} from 'react-aria';
 import {
   anchorPanelOffset,
+  defaultPanelWidth,
   edgePlacement,
   fitPanelOffset,
   minPanelSize,
@@ -33,8 +34,6 @@ import './styles/floating-panel.css';
 
 // One arrow-key step of a panel handle, in CSS pixels.
 export const resizeStep = 16;
-// The panel's width before the reader sizes it is the narrowest the resize allows.
-const defaultWidth = minPanelSize.width;
 type Delta = [dx: number, dy: number];
 const arrows: Record<string, Delta> = {ArrowLeft: [-resizeStep, 0], ArrowRight: [resizeStep, 0], ArrowUp: [0, -resizeStep], ArrowDown: [0, resizeStep]};
 // Four corners and four edges; the first, the corner away from home, is the one keyboard stop.
@@ -352,7 +351,7 @@ export function FloatingPanel({
     frame.current?.getBoundingClientRect() ?? {width: innerWidth - 32, height: innerHeight, left: 0, right: innerWidth, top: 0, bottom: innerHeight};
   // Measured from the layout, so a gesture that starts while the panel slides to or from an edge starts where it rests.
   const laidOutBox = useCallback(() => layoutBox(frame.current, panel.current), []);
-  const box = () => laidOutBox() ?? {width: size?.width ?? defaultWidth, height: minPanelSize.height, left: 0, right: 0, top: 0, bottom: 0};
+  const box = () => laidOutBox() ?? {width: size?.width ?? defaultPanelWidth, height: minPanelSize.height, left: 0, right: 0, top: 0, bottom: 0};
   // The offset as drawn, measured from the edge the panel keeps: a stored offset beyond a smaller window neither hides
   // the panel nor lags the pointer.
   const drawn = (): PanelOffset => {
@@ -424,7 +423,7 @@ export function FloatingPanel({
   const shownOffset =
     resize.live?.offset ??
     move.live ??
-    (offset && fitPanelOffset(offset, {width: innerWidth - 32, height: innerHeight}, {width: size?.width ?? defaultWidth, height: 0}));
+    (offset && fitPanelOffset(offset, {width: innerWidth - 32, height: innerHeight}, {width: size?.width ?? defaultPanelWidth, height: 0}));
   return (
     <div
       ref={frame}
@@ -442,7 +441,7 @@ export function FloatingPanel({
         style={
           {
             ...hiding.panelProps.style,
-            '--rp-panel-width': `${shownSize?.width ?? defaultWidth}px`,
+            '--rp-panel-width': `${shownSize?.width ?? defaultPanelWidth}px`,
             ...(shownSize && !collapsed && {'--rp-panel-height': `${shownSize.height}px`})
           } as CSSProperties
         }

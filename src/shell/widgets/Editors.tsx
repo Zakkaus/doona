@@ -16,7 +16,7 @@ import {sizeAxes, withPreset, type Preset, type SizeAxis} from './dashboardSizin
 import {DashboardResize, type ResizeAxis} from '../../ui/DashboardResize';
 import {instanceId, defaults, registry, restoredPanel, changesPanel, type Widget, type WidgetId} from './layout';
 import {addInstance, moveWidget} from './instances';
-import {defaultPanelHeight, minPanelSize} from '../../ui/panelSize';
+import {defaultPanelHeight, defaultPanelWidth} from '../../ui/panelSize';
 import type {BackendView} from '../view';
 import {PanelHeader} from './Widgets';
 
@@ -218,10 +218,10 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
   // The preview is the floating panel at its own width, which its edge changes. A docked panel's width is the sidebar's,
   // so its preview opens at that width and its edge sets the width the panel floats at, which the preview then shows.
   const [dockWidth] = useState(() => (layout.docked ? document.querySelector<HTMLElement>('.rp-side-dock')?.offsetWidth : undefined));
-  const savedWidth = layout.size?.width ?? minPanelSize.width;
+  const savedWidth = layout.size?.width ?? defaultPanelWidth;
   const [width, setWidth] = useState(savedWidth);
   const [resized, setResized] = useState(false);
-  const widthChanged = width !== (restored ? minPanelSize.width : savedWidth);
+  const widthChanged = width !== (restored ? defaultPanelWidth : savedWidth);
   // Nothing is selected until the reader picks a widget, so the preview opens without a selection frame.
   const [selected, select] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -263,7 +263,7 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
               onPress={() => {
                 setItems(defaults().items);
                 setRestored(true);
-                setWidth(minPanelSize.width);
+                setWidth(defaultPanelWidth);
                 select(null);
               }}
             >

@@ -23,7 +23,7 @@
 .rp-floating-frame[data-anchor='top']::after {
   order: -1;
 }
-/* Without a stored size the panel is the narrowest preset wide and its content's height, up to a limit; a stored
+/* Without a stored size the panel is the default width and its content's height, up to a limit; a stored
    height is a limit too, so the panel is never taller than its content. Its list scrolls to the panel's bottom edge.
    Nothing clips the panel, so the corner hit areas reach past its rounded corners. */
 .rp-floating-panel {
