@@ -71,7 +71,7 @@ const definitions = {
   outbounds: share('widgets.outbounds', 'runtime_outbounds'),
   mode: {...list('act.mode', 'config'), sizes: ['medium']},
   global: {...list('act.global', 'config'), sizes: ['medium'], untitled: true},
-  group: {...list('widgets.group', 'groups'), sizes: ['medium'], widest: '2/3', untitled: true},
+  group: {...list('widgets.group', 'groups'), sizes: ['medium'], widest: '2/3'},
   status: {...list('widgets.status', 'runtime'), sizes: ['medium'], forms: ['facts', 'kv'], compact: ['kv']},
   notices: {...list('widgets.notices', 'events'), rows: true},
   download: {...metric('ui.download', 'runtime'), tile: true, rate: true},
