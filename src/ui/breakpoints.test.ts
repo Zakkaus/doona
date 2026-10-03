@@ -4,13 +4,7 @@ import {breakpoints, panelQuery, phoneQuery, sidebarQuery, smallQuery} from './h
 const allowed = new Set(Object.values(breakpoints).flatMap(width => [`(min-width: ${width}px)`, `(max-width: ${width - 0.02}px)`]));
 // Inclusive bounds left as they are: the `.98` form would change the layout at that one width, so each waits for the
 // maintainer to see it.
-const inclusive = [
-  'charts.css (max-width: 640px)',
-  'fields.css (max-width: 480px)',
-  'interaction-states.css (max-width: 600px)',
-  'routing.css (max-width: 600px)',
-  'shell-search.css (max-width: 420px)'
-];
+const inclusive = ['charts.css (max-width: 640px)', 'fields.css (max-width: 480px)', 'shell-search.css (max-width: 420px)'];
 
 it('writes every width in a media query as a named breakpoint', () => {
   const files = import.meta.glob<string>('/src/**/*.css', {query: '?raw', import: 'default', eager: true});

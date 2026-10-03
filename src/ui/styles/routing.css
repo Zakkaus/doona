@@ -17,7 +17,7 @@
   font-size: var(--rp-text-xs);
   line-height: 16px;
 }
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .rp-tree-hint {
     display: block;
   }
