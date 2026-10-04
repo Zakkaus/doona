@@ -2,6 +2,8 @@
 export const loginKey = 'src/shell/Login.tsx';
 export const chartKeys = ['src/ui/charts/Donut.tsx', 'src/ui/charts/AreaChart.tsx', 'src/ui/charts/Sparkline.tsx'];
 export const configKey = 'src/features/config/Config.tsx';
+// Config loads its editor on the source tab, the usual first one, so the editor counts towards Config.
+export const editorKey = 'src/ui/code/CodeEditor.tsx';
 export const mockKey = 'mock/index.ts';
 export const budgetNames = ['startupLogin', 'startupActivity', 'startupCss', 'locale', 'fontCss', 'route', 'routeConfig', 'mock'];
 
@@ -59,7 +61,7 @@ export function measure(manifest, size) {
   for (const key of locales) result.push(entry('locale', key, [manifest[key].file], '.js', size));
   for (const [key, chunk] of entries) {
     if (!chunk.isDynamicEntry || !key.startsWith('src/features/')) continue;
-    const own = [...withClosure(manifest, [key])].filter(file => !activity.has(file));
+    const own = [...withClosure(manifest, key === configKey ? [key, editorKey] : [key])].filter(file => !activity.has(file));
     result.push(entry(key === configKey ? 'routeConfig' : 'route', key, own, '.js', size));
   }
   if (!result.some(({budget}) => budget === 'routeConfig')) throw new Error(`Manifest has no ${configKey}.`);

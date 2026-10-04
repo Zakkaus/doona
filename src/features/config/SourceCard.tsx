@@ -1,11 +1,17 @@
-import {useEffect, useRef} from 'react';
+import {Suspense, useEffect, useRef, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
-import {Badge, Button, Card, Disclosure, Light, Link, Segmented, Toolbar, VisuallyHidden, type Action} from '../../ui/ui';
-import {CodeEditor} from '../../ui/code/CodeEditor';
+import {Badge, Button, Card, Disclosure, Light, Link, PageSkeleton, Segmented, Toolbar, VisuallyHidden, type Action, type PageShape} from '../../ui/ui';
+import {preloadable} from '../../ui/preloadable';
+import type {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
 import {RestartNotice} from './RestartNotice';
 import {useSourceCard, type SourceCardProps} from './useConfigPage';
 import {locatedForms} from './sourceForms';
+// CodeMirror loads with the editor, not with the page; the source tab starts it while the file is still being read.
+const editor = preloadable<ComponentProps<typeof CodeEditor>>(() => import('../../ui/code/CodeEditor').then(module => ({default: module.CodeEditor})));
+export const preloadEditor = () => editor.preload().catch(() => undefined);
+// The editor's height follows the file, so its block is a typical file's.
+export const editorBlock: PageShape = [{block: 560}];
 export function SourceCard(props: SourceCardProps) {
   const {canValidate} = props;
   const t = useT();
@@ -36,12 +42,19 @@ export function SourceCard(props: SourceCardProps) {
     validateDisabled,
     reason
   } = useSourceCard(props);
+  // The diagnostics sit in the editor's banner, which mounts after the request while the editor is still loading;
+  // the focus then waits for the editor's own effects, as it does when the editor is already there.
   const panel = useRef<HTMLDivElement>(null);
+  const focusPending = useRef(false);
+  const focusPanel = () => {
+    if (!focusPending.current || !panel.current) return;
+    focusPending.current = false;
+    panel.current.focus();
+    panel.current.scrollIntoView({block: 'nearest'});
+  };
   useEffect(() => {
-    if (props.focusDiagnostics) {
-      panel.current?.focus();
-      panel.current?.scrollIntoView({block: 'nearest'});
-    }
+    focusPending.current = !!props.focusDiagnostics;
+    focusPanel();
   }, [props.focusDiagnostics, props.focusLine, props.source.id]);
   const located = locatedForms(links, focus, text);
   const jumps = located.length ? located : links;
@@ -154,20 +167,30 @@ export function SourceCard(props: SourceCardProps) {
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
       {restart.length > 0 && <RestartNotice settings={restart} sources={props.sources} />}
       {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
-      <CodeEditor
-        actions={actions}
-        label={view.label}
-        value={text}
-        readOnly={!writable || busy}
-        onChange={change}
-        onReadOnlyAttempt={refused}
-        marks={marks}
-        focusLine={focus}
-        focusKey={focusKey}
-        banner={banner}
-        outbounds={outbounds}
-        onSave={dirty && !busy ? () => void save() : undefined}
-      />
+      <Suspense fallback={<PageSkeleton panel shape={editorBlock} />}>
+        <editor.Component
+          actions={actions}
+          label={view.label}
+          value={text}
+          readOnly={!writable || busy}
+          onChange={change}
+          onReadOnlyAttempt={refused}
+          marks={marks}
+          focusLine={focus}
+          focusKey={focusKey}
+          banner={banner}
+          outbounds={outbounds}
+          onSave={dirty && !busy ? () => void save() : undefined}
+        />
+        <AfterMount run={focusPanel} />
+      </Suspense>
     </Card>
   );
+}
+
+// Runs after the effects of the siblings before it, once they have mounted.
+function AfterMount({run}: {run: () => void}) {
+  const first = useRef(run);
+  useEffect(() => first.current(), []);
+  return null;
 }

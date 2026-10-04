@@ -1,12 +1,14 @@
-import {expect, it, vi} from 'vitest';
+import {beforeAll, expect, it, vi} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {ReactNode} from 'react';
-import {SourceCard} from './SourceCard';
+import {preloadEditor, SourceCard} from './SourceCard';
 import type {SourceCardProps} from './useConfigPage';
 import type {DiagnosticRow} from './view';
 
 const state = vi.hoisted(() => ({diagnostics: {} as Record<string, unknown>, restart: [] as unknown[]}));
 vi.mock('../../ui/code/CodeEditor', () => ({CodeEditor: ({banner}: {banner: ReactNode}) => banner}));
+// The editor loads lazily; once loaded it renders without suspending, so static markup includes it.
+beforeAll(() => preloadEditor());
 vi.mock('./useConfigPage', () => ({
   useSourceCard: () => ({
     links: [],
