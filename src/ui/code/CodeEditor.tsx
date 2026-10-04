@@ -254,7 +254,7 @@ export function CodeEditor({
   banner?: ReactNode;
 }) {
   const toolbar = useRef<HTMLDivElement>(null);
-  const collapsed = useOverflow(toolbar, actions.map(action => action.label).join('\n') + readOnly + label);
+  const collapsed = useOverflow(toolbar, `${readOnly} ${!!onChange} ${label}`);
   const overflow = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (collapsed && toolbar.current?.contains(document.activeElement)) overflow.current?.querySelector('button')?.focus();
@@ -392,16 +392,18 @@ export function CodeEditor({
     <>
       {!compact && (
         <div className="rp-editor-head" ref={head}>
-          <div className="rp-toolbar rp-editor-toolbar">
-            {/* The caller's actions commit or check the source, as a form's do; the editing tools stay action buttons. */}
-            <PrimaryActions>
-              <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
-            </PrimaryActions>
+          <div className="rp-editor-toolbar">
+            {/* The caller's actions commit or check the source, as a form's do: Buttons in their own row. The editing
+                tools take the row above the text, as action buttons, and fold into a menu where they do not fit. */}
+            {actions.length > 0 && (
+              <div className="rp-toolbar">
+                <PrimaryActions>
+                  <ActionGroup actions={actions} overflowMode="wrap" />
+                </PrimaryActions>
+              </div>
+            )}
             <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
               <div className="rp-toolbar" ref={toolbar}>
-                <PrimaryActions>
-                  <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
-                </PrimaryActions>
                 <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
                 <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
                 {onChange && (
@@ -432,7 +434,6 @@ export function CodeEditor({
                 <div className="rp-editor-overflow" ref={overflow}>
                   <MoreMenu
                     actions={[
-                      ...actions.slice(1),
                       {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
                       {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
                       ...(onChange

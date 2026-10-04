@@ -51,16 +51,18 @@
     top: env(safe-area-inset-top, 0px);
   }
 }
-.rp-editor-toolbar,
+/* Two rows: the commit actions, then the editing tools over the text, which stay on one line or fold into a menu. */
+.rp-editor-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+  min-width: 0;
+}
 .rp-editor-actions > .rp-toolbar {
   flex-wrap: nowrap;
 }
-.rp-editor-toolbar > :not(.rp-editor-actions) {
-  flex: none;
-}
 .rp-editor-actions {
   position: relative;
-  flex: 1;
   min-width: 0;
 }
 .rp-editor-actions > .rp-toolbar > * {

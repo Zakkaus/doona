@@ -101,8 +101,13 @@ export function ModalDialog({
       </Modal>
     </ModalOverlay>
   );
-  // Its controls are M even when the trigger sits in an L page toolbar.
-  const modal = <ControlSizeContext value={null}>{overlay}</ControlSizeContext>;
+  // Its controls are M even when the trigger sits in an L page toolbar, and everyday buttons even when it sits in a row
+  // of primary actions.
+  const modal = (
+    <ControlSizeContext value={null}>
+      <PrimaryActions active={false}>{overlay}</PrimaryActions>
+    </ControlSizeContext>
+  );
   return trigger ? (
     <DialogTrigger>
       {trigger}
@@ -223,7 +228,11 @@ export function PopoverDialog({
       )}
     </Popover>
   );
-  const popover = <ControlSizeContext value={null}>{surface}</ControlSizeContext>;
+  const popover = (
+    <ControlSizeContext value={null}>
+      <PrimaryActions active={false}>{surface}</PrimaryActions>
+    </ControlSizeContext>
+  );
   return trigger ? (
     <DialogTrigger>
       {trigger}
