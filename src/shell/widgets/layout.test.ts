@@ -31,7 +31,7 @@ it('migrates v1, drops version and malformed items before deduplication', () => 
     {id: 'group', group: 'backend-specific', form: 'kv', size: 'medium'},
     {id: 'ranking', by: 'domain', form: 'ranked', size: 'medium'}
   ]);
-  expect(layout).toMatchObject({version: 4, collapsed: true, pinned: true});
+  expect(layout).toMatchObject({version: 4, collapsed: true, pinned: false});
   for (const key of ['position', 'corner', 'floating', 'placement']) expect(layout).not.toHaveProperty(key);
   expect(parseLayout({...defaults(), pinned: true}).pinned).toBe(true);
 });
@@ -127,12 +127,14 @@ it('offers the divider in the panel, several times, and never on the dashboard',
   const saved = {version: 4, items: [{id: 'speed', form: 'sparkline', size: 'medium'}], collapsed: false, pinned: false, visible: true};
   expect(parseLayout(saved)).toEqual(saved);
 });
-it('defaults to a floating, pinned, open panel and pins a panel saved before version 4', () => {
-  expect(defaults()).toMatchObject({version: 4, pinned: true, collapsed: false});
+it('defaults to a floating, unpinned, open panel and keeps the pin a panel was saved with', () => {
+  expect(defaults()).toMatchObject({version: 4, pinned: false, collapsed: false});
   expect(defaults()).not.toHaveProperty('docked');
   const placed = {docked: true, dockHeight: 300, size: {width: 400, height: 300}, offset: {x: 120, y: 48}};
-  const migrated = parseLayout({...defaults(), ...placed, version: 3, pinned: false});
-  expect(migrated).toMatchObject({version: 4, pinned: true, ...placed});
+  const migrated = parseLayout({...defaults(), ...placed, version: 3});
+  expect(migrated).toMatchObject({version: 4, pinned: false, ...placed});
+  expect(parseLayout({...defaults(), version: 3, pinned: true}).pinned).toBe(true);
+  expect(parseLayout({...defaults(), pinned: true}).pinned).toBe(true);
   expect(parseLayout({...defaults(), pinned: false}).pinned).toBe(false);
 });
 it('starts with the rates, memory and mode, and keeps a stored divider', () => {

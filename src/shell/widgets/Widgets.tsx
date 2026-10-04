@@ -101,6 +101,7 @@ export function PanelHost({
       onMove={offset => patchLayout({offset})}
       header={header}
       collapsed={collapsed}
+      locked={layout.pinned}
       dockTarget={() => document.querySelector('.rp-dock-slot')}
       onDock={() => dock(true)}
       edge={
