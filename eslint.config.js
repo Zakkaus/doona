@@ -14,7 +14,7 @@ const kit = 'belongs to src/ui; use or extend the kit component.';
 // The shell modules a page may use: links and URL state, the unsaved-draft guard, stored preferences, the install
 // offer, and the About and keyboard shortcuts dialogs that Settings opens too. Everything else in the shell is the
 // shell's own.
-const shellForFeatures = ['./route.ts', './routes.ts', './draft.ts', './preferences.ts', './install.ts', './About.tsx', './shortcuts.ts'];
+const shellForFeatures = ['./route.ts', './routes.ts', './draft.ts', './preferences.ts', './install.ts', './About.tsx', './shortcuts.ts', './wallpaper.ts'];
 // G4, G7 and G5 share no-restricted-syntax, so their selectors live in one list; the kit keeps the last two.
 const outsideUi = [
   {selector: 'JSXOpeningElement[name.name=/^(button|select|input|textarea)$/]', message: `A native control ${kit}`},
@@ -103,7 +103,7 @@ export default [
               target: './src/features',
               from: './src/shell',
               except: shellForFeatures,
-              message: 'From src/shell, features use only route, routes, draft, preferences, install, About and shortcuts.'
+              message: 'From src/shell, features use only route, routes, draft, preferences, install, About, shortcuts and wallpaper.'
             },
             {
               target: './src/shell',

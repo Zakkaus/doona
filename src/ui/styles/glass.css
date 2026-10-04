@@ -20,7 +20,33 @@
   pointer-events: none;
   background:
     var(--rp-noise-wall, var(--rp-noise)) 0 0 / 180px,
-    var(--rp-wall);
+    var(--rp-wall-custom, var(--rp-wall));
+}
+/* A custom wallpaper (src/shell/wallpaper.ts) replaces the shapes under the grain and covers the viewport. The veil,
+   on by default, lays the scheme's white or black over it at the chosen strength. Reduce Transparency, Increase
+   Contrast and forced colours unset --rp-wall-custom in palettes/glass.css, so the solid recipe stays. */
+:root[data-family='glass'] {
+  --rp-veil: rgb(255 255 255 / var(--rp-veil-alpha, 0));
+}
+:root[data-family='glass'][data-scheme='dark'] {
+  --rp-veil: rgb(0 0 0 / var(--rp-veil-alpha, 0));
+}
+:root[data-family='glass'][data-wallpaper] {
+  --rp-wall-custom: var(--rp-wall-image) center / cover no-repeat;
+}
+:root[data-family='glass'][data-wallpaper='veil'] {
+  --rp-wall-custom: linear-gradient(var(--rp-veil), var(--rp-veil)), var(--rp-wall-image) center / cover no-repeat;
+}
+/* Settings shows the current wallpaper in small, with the same layers. */
+:root[data-family='glass'] .rp-wallpaper-thumb {
+  display: inline-block;
+  inline-size: 64px;
+  block-size: 40px;
+  border-radius: var(--rp-r-md);
+  box-shadow: inset 0 0 0 1px var(--rp-hl-high);
+  background:
+    var(--rp-noise-wall, var(--rp-noise)) 0 0 / 180px,
+    var(--rp-wall-custom, var(--rp-wall));
 }
 
 /* In Frosted and Tinted the top bar and the sidebar share one fixed sheet, so their blur has no seam. The sheet covers the viewport and a

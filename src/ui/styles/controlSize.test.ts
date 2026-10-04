@@ -10,6 +10,7 @@ const owners: Record<string, string> = {
   'rp-btn': 'buttons-menus.css',
   'rp-select': 'dialogs-search.css',
   'rp-input': 'dialogs-search.css',
+  'rp-range': 'fields.css',
   'rp-selectbtn': 'fields.css',
   'rp-switch': 'fields.css',
   'rp-seg': 'segmented.css',

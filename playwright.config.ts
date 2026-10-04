@@ -41,7 +41,8 @@ export default defineConfig({
               'charts.spec.ts',
               'segmented.spec.ts',
               'dashboard.spec.ts',
-              'glass.spec.ts'
+              'glass.spec.ts',
+              'wallpaper.spec.ts'
             ],
             use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
           },

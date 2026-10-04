@@ -46,6 +46,7 @@ type SettingsFieldId =
   | 'countryFlags'
   | 'sparklines'
   | 'mirrored'
+  | 'wallpaper'
   | 'probeMethod'
   | 'probeFamily'
   | 'probeWarmth'
@@ -78,6 +79,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'countryFlags', card: 'appearance', labelKey: 'settings.countryFlags', aliases: ['flags']},
   {id: 'sparklines', card: 'appearance', labelKey: 'settings.sparklines', aliases: ['sparklines']},
   {id: 'mirrored', card: 'appearance', labelKey: 'settings.mirror', aliases: ['rtl']},
+  {id: 'wallpaper', card: 'appearance', labelKey: 'settings.wallpaper', aliases: ['background', 'image']},
   {id: 'probeMethod', card: 'probes', labelKey: 'settings.probeMethod'},
   {id: 'probeFamily', card: 'probes', labelKey: 'settings.probeFamily', aliases: ['ipv4', 'ipv6']},
   {id: 'probeWarmth', card: 'probes', labelKey: 'settings.probeWarmth'},

@@ -13,8 +13,10 @@ import {activated, announceBuild} from './shell/newBuild';
 import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
 import startupText from 'virtual:startup-text';
 import {loadFaces} from './fonts';
+import {loadWallpaper} from './shell/wallpaper';
 
 stampAppearance();
+void loadWallpaper();
 // The font archive check starts now, so it overlaps the catalogue fetch the language load waits on.
 void loadFaces(null);
 // The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
