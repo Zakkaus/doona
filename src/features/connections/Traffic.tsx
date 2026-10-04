@@ -21,6 +21,7 @@ export const Traffic = memo(function Traffic({
   latencyError,
   retryLatency,
   truncated,
+  uncounted,
   onSelect
 }: {
   records: Connection[];
@@ -31,6 +32,8 @@ export const Traffic = memo(function Traffic({
   latencyError: Error | null;
   retryLatency: () => void;
   truncated: boolean;
+  // The backend leaves out the direct connections the kernel forwards on its own.
+  uncounted: boolean;
   onSelect: (id: string) => void;
 }) {
   const t = useT();
@@ -73,7 +76,7 @@ export const Traffic = memo(function Traffic({
   return (
     <div className="rp-chart-page">
       <FactStrip facts={facts} lead />
-      <Card title={t('conn.chart.title')} note={sample}>
+      <Card title={t('conn.chart.title')} help={uncounted ? {title: t('conn.chart.title'), text: t('ui.trafficUncounted')} : undefined} note={sample}>
         {truncated && <p className="rp-note">{t('conn.truncated')}</p>}
         {view.placed > 0 && (
           <>

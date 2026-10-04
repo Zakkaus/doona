@@ -173,6 +173,7 @@ export function Connections(props: PageProps) {
         latencyError={vm.latencyError}
         retryLatency={vm.retryLatency}
         truncated={vm.truncated}
+        uncounted={vm.trafficUncounted}
         onSelect={vm.openInList}
       />
     )

@@ -176,6 +176,22 @@ test('activating a checked source or rule removes that filter', async ({page}) =
   await expect(grid).toHaveAttribute('aria-rowcount', '1001');
 });
 
+test('the traffic chart says kernel-forwarded direct traffic is not counted, only while it is left out', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/connections?tab=traffic');
+  const card = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'Traffic per connection', exact: true})});
+  await card.getByRole('button', {name: 'About Traffic per connection'}).click();
+  await expect(page.getByRole('dialog')).toContainText('Direct connections that the kernel forwards on its own are not counted.');
+  await page.keyboard.press('Escape');
+  await page.route(/\/api\/v1\/runtime$/, async route => {
+    const runtime = await api.runtime();
+    await route.fulfill({json: {...runtime, traffic: {...runtime.traffic, observed_by: 'mixed'}}});
+  });
+  await page.reload();
+  await expect(card.getByRole('heading', {name: 'Traffic per connection', exact: true})).toBeVisible();
+  await expect(card.getByRole('button', {name: 'About Traffic per connection'})).toHaveCount(0);
+});
+
 test('connection selection survives a runtime poll', async ({page}) => {
   await page.clock.install();
   await page.goto('/#/connections?tab=list');

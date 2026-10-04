@@ -4,7 +4,7 @@ import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatBytes, formatCpu, formatRate} from '../../i18n/format';
 import {usePalette} from '../../ui/charts';
 import {useMemorySeries, useTrafficSeries} from '../shared/useSeries';
-import {isTrafficRange, trafficRanges, trafficWindow, type TrafficRange} from '../shared/traffic';
+import {isTrafficRange, kernelTrafficUncounted, trafficRanges, trafficWindow, type TrafficRange} from '../shared/traffic';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
 import {backendLimits} from '../shared/limits';
@@ -100,6 +100,7 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     trafficBounds,
     memoryBounds,
     trafficTimestamps: series.timestamps,
+    trafficUncounted: kernelTrafficUncounted(runtime.data),
     memoryTimestamps: memoryHistory.timestamps,
     ready: !!capabilities.data,
     // The shell reports a failed discovery above every page; this page reports only its own reads.

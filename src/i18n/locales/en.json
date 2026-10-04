@@ -2172,6 +2172,7 @@
   "ui.tcp": "TCP",
   "ui.theme": "Theme",
   "ui.time": "Time",
+  "ui.trafficUncounted": "Only traffic that passes through honk is counted. Direct connections that the kernel forwards on its own are not counted.",
   "ui.type": "Type",
   "ui.udp": "UDP",
   "ui.unavailable": "Unavailable",

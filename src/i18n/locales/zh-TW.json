@@ -1965,6 +1965,7 @@
   "ui.tcp": "TCP",
   "ui.theme": "主題",
   "ui.time": "時間",
+  "ui.trafficUncounted": "只計入經過 honk 轉發的流量；由核心直接轉發的直連連線不計入。",
   "ui.type": "類型",
   "ui.udp": "UDP",
   "ui.unavailable": "無法使用",
