@@ -131,11 +131,14 @@
   align-items: center;
   gap: var(--rp-space-4) var(--rp-space-6);
 }
+/* Stacked above its legend the grid is centred in the card, as a donut would be, so it does not leave the space beside
+   it empty on one side; beside the legend it starts the row. */
 .rp-waffle .grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 3px;
   width: min(100%, 267px);
+  justify-self: center;
 }
 .rp-waffle .grid > span {
   aspect-ratio: 1;
@@ -147,6 +150,7 @@
   }
   .rp-waffle .grid {
     width: min(100%, 347px);
+    justify-self: start;
   }
 }
 .rp-waffle .legend,
