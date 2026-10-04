@@ -1,7 +1,8 @@
 import {useT} from '../../i18n';
-import {Button, InlineAlert, LabeledSelect, ModalDialog, ProblemAlert, TextField} from '../../ui/ui';
+import {Button, Form, InlineAlert, LabeledSelect, ModalDialog, ProblemAlert, TextField} from '../../ui/ui';
 import AddCircle from '../../ui/icons/AddCircle';
 import {useNewSource, type NewSourceProps} from './useNewSource';
+const form = 'config-new-source-form';
 export function NewSource(props: NewSourceProps) {
   const t = useT();
   const vm = useNewSource(props);
@@ -21,14 +22,21 @@ export function NewSource(props: NewSourceProps) {
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent isDisabled={!vm.canSubmit} isPending={vm.busy} onPress={() => void vm.submit(close)}>
+            <Button accent type="submit" form={form} isDisabled={!vm.canSubmit} isPending={vm.busy}>
               {t('config.newSourceCreate')}
             </Button>
           </>
         )}
       >
         {vm.problem && <ProblemAlert key={vm.problem.id} problem={vm.problem} />}
-        <div className="rp-list">
+        <Form
+          id={form}
+          className="rp-list"
+          onSubmit={event => {
+            event.preventDefault();
+            void vm.submit(vm.hide);
+          }}
+        >
           <span className="rp-label">{t(vm.choice ? 'config.newSourceNameHelp' : 'config.newSourceHelp')}</span>
           {vm.choices.length > 1 && (
             <LabeledSelect
@@ -63,7 +71,7 @@ export function NewSource(props: NewSourceProps) {
             />
           )}
           {vm.unmatched && <InlineAlert tone="informative">{t('config.newSourceUnmatched')}</InlineAlert>}
-        </div>
+        </Form>
       </ModalDialog>
     </>
   );

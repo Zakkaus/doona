@@ -13,7 +13,7 @@ import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
-import {toast} from '../../ui/ui';
+import {numberFromText, toast} from '../../ui/ui';
 
 // The widest integer a field takes; a hint naming it would only say the value is a whole number.
 const u64 = '18446744073709551615';
@@ -92,7 +92,7 @@ export function useGlobalSettings({query, go}: PageProps) {
         !definition.hexMax &&
         BigInt(definition.max!) <= BigInt(Number.MAX_SAFE_INTEGER) &&
         /^\d*$/.test(value)
-          ? {max: Number(definition.max), value: value === '' ? NaN : Number(value)}
+          ? {max: Number(definition.max), value: numberFromText(value)}
           : null,
       duplicate: matches.length > 1,
       invalid: serializeSetting(definition, value) === null,

@@ -3,7 +3,7 @@ import {useT} from '../../i18n';
 import type {Group, JsonPatch} from '../../api/model';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
 import {toast, useLinked} from '../../ui/ui';
-import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, type CheckEditDraft, type CheckField} from './view';
+import {checkDraft, checkFields, checkInvalid, checkPatch, checkRebase, checkUnset, countMinimum, type CheckEditDraft, type CheckField} from './view';
 import {groupConfigLabels} from '../shared/groupText';
 export type CheckEditView = {
   title: string;
@@ -11,7 +11,8 @@ export type CheckEditView = {
   available: boolean;
   busy: boolean;
   changed: boolean;
-  fields: Array<{id: CheckField; label: string; value: string; description: string; error?: string; change: (value: string) => void}>;
+  // `minValue`: the floor of a field that takes a count; the URL has none.
+  fields: Array<{id: CheckField; label: string; value: string; minValue?: number; description: string; error?: string; change: (value: string) => void}>;
   show: () => void;
   close: () => void;
   save: (close: () => void) => void;
@@ -83,6 +84,7 @@ export function useCheckEdit(
               id,
               label: t(groupConfigLabels[id]),
               value: draft.value[id],
+              minValue: id === 'check_url' ? undefined : countMinimum[id],
               // A value the group took meanwhile replaces the help while the field still differs from it.
               description:
                 theirs !== undefined && theirs !== draft.value[id]

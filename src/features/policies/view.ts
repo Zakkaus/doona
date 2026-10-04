@@ -63,7 +63,7 @@ export function checkRebase(draft: CheckEditDraft, current: CheckDraft): CheckEd
   return {base: current, value, theirs};
 }
 // The contract's floor: a check interval of at least one second, a tolerance or idle timeout of zero or more.
-const countMinimum: Record<CountField, number> = {check_interval: 1, tolerance: 0, idle_timeout: 0};
+export const countMinimum: Record<CountField, number> = {check_interval: 1, tolerance: 0, idle_timeout: 0};
 // An empty field is valid: it clears the group's own value, so the global or default one applies.
 export function checkInvalid(field: CheckField, value: string): boolean {
   const text = value.trim();

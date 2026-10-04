@@ -618,7 +618,7 @@ test('the route trace says what it lacks until a destination and port are given'
   await page.getByLabel('Domain', {exact: true}).fill('example.com');
   await expect(line).toHaveCount(0);
   await expect(run).toHaveAccessibleDescription('Ports must be integers from 1 to 65535.');
-  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await expect(run).toBeEnabled();
   await expect(page.getByText('Ports must be integers from 1 to 65535.', {exact: true})).toHaveCount(0);
 });

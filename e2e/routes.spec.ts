@@ -17,7 +17,7 @@ for (const width of [1024, 1280, 1440]) {
         await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
         // A name the demo DNS cache answers, so the evaluation table renders.
         await page.getByLabel('Domain', {exact: true}).fill('api.telegram.org');
-        await page.getByLabel('Destination port', {exact: true}).fill('443');
+        await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
         await page.getByRole('button', {name: 'Run trace', exact: true}).click();
         await expect(page.getByRole('grid', {name: 'Rule evaluation 1'})).toBeVisible();
       }

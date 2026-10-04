@@ -1,7 +1,7 @@
 import {lazy, Suspense} from 'react';
 import {useT, type Lang} from '../i18n';
 import {useLogin} from './useLogin';
-import {Button, ErrorMessage, InlineAlert, Link, Loading, TextField} from '../ui/ui';
+import {Button, ErrorMessage, Form, InlineAlert, Link, Loading, TextField} from '../ui/ui';
 import {sidebarQuery, useMediaQuery} from '../ui/hooks';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import LinkOut from '../ui/icons/LinkOut';
@@ -95,7 +95,7 @@ export function Login({
             )
           ) : (
             <>
-              <form
+              <Form
                 className="rp-login"
                 onSubmit={event => {
                   event.preventDefault();
@@ -162,7 +162,7 @@ export function Login({
                     {view.submitText}
                   </Button>
                 )}
-              </form>
+              </Form>
               {view.demoNote && <p className="rp-login-note rp-login-account">{view.demoNote}</p>}
               {links}
             </>

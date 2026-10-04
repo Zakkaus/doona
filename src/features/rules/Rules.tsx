@@ -16,6 +16,9 @@ import {
   Link,
   Light,
   RuleRef,
+  NumberField,
+  numberFromText,
+  textFromNumber,
   Tabs,
   TextField,
   type TableColumn,
@@ -109,11 +112,13 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
               error={trace.errors.domain}
             />
             <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
-            <TextField
+            <NumberField
               label={t('rule.kind.dport')}
-              value={form.dst_port}
+              value={numberFromText(form.dst_port)}
+              minValue={1}
+              maxValue={65535}
               placeholder="443"
-              onChange={dst_port => setForm({...form, dst_port})}
+              onChange={value => setForm({...form, dst_port: textFromNumber(value)})}
               error={trace.errors.dst_port}
             />
             <LabeledSelect
@@ -130,9 +135,23 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
           <Toolbar>
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
-            <TextField label={t('rule.kind.sport')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
+            <NumberField
+              label={t('rule.kind.sport')}
+              value={numberFromText(form.src_port)}
+              minValue={1}
+              maxValue={65535}
+              onChange={value => setForm({...form, src_port: textFromNumber(value)})}
+              error={trace.errors.src_port}
+            />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
-            <TextField label={t('rule.dscp')} value={form.dscp} onChange={dscp => setForm({...form, dscp})} error={trace.errors.dscp} />
+            <NumberField
+              label={t('rule.dscp')}
+              value={numberFromText(form.dscp)}
+              minValue={0}
+              maxValue={63}
+              onChange={value => setForm({...form, dscp: textFromNumber(value)})}
+              error={trace.errors.dscp}
+            />
           </Toolbar>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}

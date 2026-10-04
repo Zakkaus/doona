@@ -57,7 +57,7 @@ test('query simulation traces the first IPv4 and IPv6 answer and lists every ans
   handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
-  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await expect(page.getByText('Simulated address').first()).toBeVisible();
   await expect(page.getByText(/192\.0\.2\.12/)).toBeVisible();

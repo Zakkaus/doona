@@ -10,9 +10,12 @@ import {
   Light,
   Link,
   Loading,
-  TextField,
+  NumberField,
+  numberFromText,
+  textFromNumber,
   Toolbar,
-  ChartWait
+  ChartWait,
+  Form
 } from '../../ui/ui';
 import {useRuntimeSettingsForm} from './useRuntimeSettingsForm';
 import {recordingLimitsHref} from '../shared/link';
@@ -59,7 +62,14 @@ export function RuntimeSettingsCard() {
             </ChartWait>
           )}
           {m.hasBaseline && (
-            <>
+            // Enter in a field applies, as the button does.
+            <Form
+              className="rp-contents"
+              onSubmit={event => {
+                event.preventDefault();
+                if (!m.blocked && !m.busy) m.apply();
+              }}
+            >
               <Toolbar className="top rp-fieldgrid">
                 {m.hasLevel && (
                   <div className="rp-contents" data-setting="log.level">
@@ -68,14 +78,15 @@ export function RuntimeSettingsCard() {
                 )}
                 {m.numeric.map(field => (
                   <div key={field.id} className="rp-contents" data-setting={field.id}>
-                    <TextField
-                      width={180}
-                      type="text"
+                    <NumberField
                       label={field.label}
-                      value={field.value}
+                      value={numberFromText(field.value)}
+                      minValue={field.floor}
+                      maxValue={field.ceiling}
+                      step={1}
                       isDisabled={m.busy}
                       isInvalid={field.invalid}
-                      onChange={field.change}
+                      onChange={value => field.change(textFromNumber(value))}
                       description={field.description}
                     />
                   </div>
@@ -109,7 +120,7 @@ export function RuntimeSettingsCard() {
               <ActionHelp reason={m.reason}>
                 <Toolbar>
                   <PrimaryActions>
-                    <Button accent isPending={m.busy} isDisabled={m.blocked} onPress={m.apply}>
+                    <Button accent type="submit" isPending={m.busy} isDisabled={m.blocked}>
                       {t('settings.apply')}
                     </Button>
                     {m.dirty && (
@@ -120,7 +131,7 @@ export function RuntimeSettingsCard() {
                   </PrimaryActions>
                 </Toolbar>
               </ActionHelp>
-            </>
+            </Form>
           )}
         </>
       )}

@@ -47,7 +47,7 @@ test('a trace result adds a rule for the traced target', async ({page}) => {
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('api.telegram.org');
   await page.getByLabel('Destination IP', {exact: true}).fill('149.154.167.220');
-  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   const card = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: '149.154.167.220', exact: true})});
   await card.getByRole('button', {name: 'Add rule', exact: true}).click();

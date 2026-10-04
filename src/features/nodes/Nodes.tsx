@@ -1,3 +1,4 @@
+import type {FormEvent} from 'react';
 import {useT} from '../../i18n';
 import {
   Button,
@@ -6,6 +7,7 @@ import {
   ConfirmDialog,
   Empty,
   ErrorMessage,
+  Form,
   Link,
   ProblemAlert,
   ModalDialog,
@@ -20,6 +22,7 @@ import {ProviderCards} from './ProviderCards';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
 import {SubscriptionFields} from './SubscriptionFields';
+const dialogForm = 'nodes-dialog-form';
 export function Nodes(props: PageProps) {
   const t = useT();
   const {
@@ -93,6 +96,11 @@ export function Nodes(props: PageProps) {
     </>
   );
   const content = {list, latency: <NodeLatency />};
+  // Enter in a field submits as the footer's button does; closing the dialog clears it, as Cancel does.
+  const send = (event: FormEvent) => {
+    event.preventDefault();
+    if (formValid && !submitting) void submit(() => setDialog(null));
+  };
   const blocked = referenced && (
     <span className="rp-label">
       {t('nodes.referenced', {groups: referenced.groups, name: referenced.name})}{' '}
@@ -120,7 +128,7 @@ export function Nodes(props: PageProps) {
         footer={close => (
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
-            <Button accent isDisabled={!formValid || submitting} isPending={pending} onPress={() => void submit(close)}>
+            <Button accent type="submit" form={dialogForm} isDisabled={!formValid || submitting} isPending={pending}>
               {submitLabel}
             </Button>
           </>
@@ -128,7 +136,7 @@ export function Nodes(props: PageProps) {
       >
         {problem && <ProblemAlert key={problem.id} problem={problem} />}
         {(dialog?.kind === 'provider' || dialog?.kind === 'editProvider') && (
-          <div className="rp-list">
+          <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>
             <SubscriptionFields
               focusInterval={dialog.kind === 'editProvider' && dialog.focus === 'interval'}
@@ -157,10 +165,10 @@ export function Nodes(props: PageProps) {
                 ))}
               </>
             )}
-          </div>
+          </Form>
         )}
         {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
-          <div className="rp-list">
+          <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'editNode' ? 'nodes.editNodeHelp' : 'nodes.addNodeHelp')}</span>
             <TextField
               error={nodeNameError ?? undefined}
@@ -171,7 +179,7 @@ export function Nodes(props: PageProps) {
               onChange={name => setForm({...form, name})}
             />
             <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
-          </div>
+          </Form>
         )}
       </ModalDialog>
       <ConfirmDialog

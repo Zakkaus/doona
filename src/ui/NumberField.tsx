@@ -1,4 +1,15 @@
-import {Button as RButton, FieldError, Group, Input, Label, NumberField as RNumberField, Text, type NumberFieldProps} from 'react-aria-components';
+import {useContext, useEffect, useRef} from 'react';
+import {
+  Button as RButton,
+  FieldError,
+  Group,
+  Input,
+  Label,
+  NumberField as RNumberField,
+  NumberFieldStateContext,
+  Text,
+  type NumberFieldProps
+} from 'react-aria-components';
 import Add from './icons/Add';
 import Dash from './icons/Dash';
 import AlertTriangle from './icons/AlertTriangle';
@@ -13,7 +24,7 @@ import {Necessity, useFormProps, type FormFieldProps} from './Form';
 export function NumberField(
   fieldProps: Pick<
     NumberFieldProps,
-    'value' | 'onChange' | 'minValue' | 'maxValue' | 'step' | 'formatOptions' | 'name' | 'isDisabled' | 'isRequired' | 'aria-describedby'
+    'value' | 'onChange' | 'minValue' | 'maxValue' | 'step' | 'formatOptions' | 'name' | 'isDisabled' | 'isRequired' | 'isInvalid' | 'aria-describedby'
   > &
     Pick<FormFieldProps, 'necessityIndicator'> & {
       label: string;
@@ -22,6 +33,7 @@ export function NumberField(
       error?: string;
       hideStepper?: boolean;
       size?: ControlSize;
+      width?: number;
     }
 ) {
   const {
@@ -31,6 +43,7 @@ export function NumberField(
     error,
     hideStepper,
     size,
+    width,
     necessityIndicator,
     formatOptions = {useGrouping: false},
     ...props
@@ -38,15 +51,16 @@ export function NumberField(
   const t = useT();
   const controlSize = useControlSize(size);
   // An error text marks the field invalid for assistive technology too, as TextField does.
-  const validity = error ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
+  const validity = error || props.isInvalid ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   return (
-    <RNumberField {...validity} {...props} formatOptions={formatOptions} className="rp-field">
+    <RNumberField {...props} {...validity} formatOptions={formatOptions} className="rp-field" style={width ? {width} : undefined}>
       <Label className="rp-label">
         {label}
         <Necessity isRequired={props.isRequired} necessityIndicator={necessityIndicator} />
       </Label>
       <Group className={cx('rp-input', !hideStepper && 'stepped')} data-size={controlSize}>
         <Input placeholder={placeholder} />
+        <Typed value={props.value} onChange={props.onChange} />
         {!hideStepper && (
           <span className="steppers">
             <RButton slot="decrement" className="step" aria-label={t('ui.decrease')}>
@@ -72,3 +86,24 @@ export function NumberField(
     </RNumberField>
   );
 }
+
+// The draft follows the typing, as a TextField's does, so an action that waits for a change is ready before the field
+// loses focus; leaving the field still snaps the value into range. A partial entry such as a lone minus waits.
+function Typed({value, onChange}: Pick<NumberFieldProps, 'value' | 'onChange'>) {
+  const state = useContext(NumberFieldStateContext);
+  const typed = state?.numberValue;
+  const partial = !!state?.inputValue && Number.isNaN(typed);
+  // Each entry is passed on once, so a draft that cannot hold it does not loop.
+  const sent = useRef(typed);
+  useEffect(() => {
+    if (typed === undefined || partial || Object.is(typed, sent.current)) return;
+    sent.current = typed;
+    if (!Object.is(typed, value)) onChange?.(typed);
+  }, [typed, partial, value, onChange]);
+  return null;
+}
+
+// A draft that keeps a number as text, read for the field: anything else shows as an empty field.
+export const numberFromText = (text: string) => (/^-?\d+(\.\d+)?$/.test(text.trim()) ? Number(text) : NaN);
+// The text a draft keeps for the field's number; an empty field is ''.
+export const textFromNumber = (value: number) => (Number.isNaN(value) ? '' : String(value));
