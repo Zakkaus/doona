@@ -285,9 +285,10 @@
   inline-size: calc(var(--rp-space-2h) + var(--rp-space-2) * 2);
   color: inherit;
 }
+/* The header's icons match the sidebar's section chevrons: S2's small icon size, in the buttons' former width. */
 .rp-side-dock .rp-widget-actions svg {
-  inline-size: var(--rp-space-2h);
-  block-size: var(--rp-space-2h);
+  inline-size: var(--rp-space-4);
+  block-size: var(--rp-space-4);
 }
 .rp-side-dock .rp-widget-collapse[aria-expanded='false'] > svg {
   rotate: calc(-90deg * var(--rp-dir));

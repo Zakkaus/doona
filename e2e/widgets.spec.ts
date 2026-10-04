@@ -663,12 +663,26 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   expect(Math.abs((await box(dock.getByRole('heading', {name: 'Activity widgets', exact: true}))).x - groupStart)).toBeLessThanOrEqual(1);
   expect(Math.abs((await box(dock.locator('.rp-widget').first())).x - groupStart)).toBeLessThanOrEqual(1);
   await expect.poll(() => dock.locator('.rp-widget-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  // The section chevron is drawn at S2's small icon size, its stroke thickened to the UI chevron's weight, in the
+  // section's secondary text colour; the header's icons share its size and colour, its chevron the same weight.
   const chevron = await box(groupHeader.locator('svg'));
+  expect(chevron.width).toBe(16);
+  const subtle = await groupHeader.evaluate(el => getComputedStyle(el).color);
+  const paint = (icon: Locator) =>
+    icon.evaluate(el => {
+      const path = getComputedStyle(el.querySelector('path')!);
+      return {color: getComputedStyle(el).color, fill: path.fill, stroke: path.stroke, width: path.strokeWidth};
+    });
+  expect(await paint(groupHeader.locator('svg'))).toEqual({color: subtle, fill: subtle, stroke: subtle, width: '0.7px'});
   for (const icon of await dockHeader.locator('svg').all()) {
     const bounds = await box(icon);
     expect(Math.abs(bounds.width - chevron.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(bounds.height - chevron.height)).toBeLessThanOrEqual(1);
+    expect((await paint(icon)).color).toBe(subtle);
   }
+  expect(await paint(dock.locator('.rp-widget-collapse > svg'))).toEqual({color: subtle, fill: subtle, stroke: subtle, width: '0.7px'});
+  const centre = (el: Locator) => box(el).then(b => b.x + b.width / 2);
+  expect(Math.abs((await centre(groupHeader.locator('svg'))) - (await centre(dock.locator('.rp-widget-collapse > svg'))))).toBeLessThanOrEqual(1);
   // The group boundary resizes by keyboard and pointer, keeping the height after a reload.
   const resize = dock.getByRole('button', {name: 'Resize widgets panel', exact: true});
   await expect(resize).toHaveCSS('cursor', 'ns-resize');
@@ -1121,7 +1135,8 @@ for (const width of [1280, 390]) {
       const title = await box(group.locator('.rp-disclosure-title'));
       const chevron = await box(group.locator('svg'));
       const left = title.x;
-      const right = chevron.x + chevron.width;
+      // The chevron grew about its centre to S2's 16px; content still ends where its former 10px box ended.
+      const right = chevron.x + chevron.width / 2 + 5;
       expect(Math.abs((await box(dock.locator('.rp-dock-title'))).x - left)).toBeLessThanOrEqual(1);
       // The rates widget draws both directions in one chart.
       await expect(dock.locator('.rp-compact-chart svg.rp-activity-surface')).toHaveCount(1);
@@ -1151,7 +1166,7 @@ for (const width of [1280, 390]) {
         expect(Math.abs(textRight - right), (await value.textContent()) ?? undefined).toBeLessThanOrEqual(1);
       }
       const collapse = await box(dock.locator('.rp-widget-collapse svg'));
-      expect(Math.abs(collapse.x + collapse.width - right)).toBeLessThanOrEqual(1);
+      expect(Math.abs(collapse.x + collapse.width / 2 - (chevron.x + chevron.width / 2))).toBeLessThanOrEqual(1);
       const navIcon = await box(side.locator('.rp-nav > svg').first());
       expect(Math.abs((await box(dock.locator('.rp-version .rp-light'))).x - navIcon.x)).toBeLessThanOrEqual(1);
       for (const plot of await dock.locator('.rp-compact-chart svg.rp-activity-surface').all()) {
