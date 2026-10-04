@@ -83,7 +83,9 @@ export function createFeed<T extends {id: string}, S extends object>(
         pending++;
         statusDirty = true;
       }
-      schedule(every);
+      // The first records of an empty list publish at once, with whatever else arrives in the same task, so a page
+      // opening on the stream shows them without waiting a cadence; later records keep it.
+      schedule(held || snapshot.records.length ? every : 0);
     },
     update(change: Partial<S>) {
       if (Object.entries(change).every(([key, value]) => status[key as keyof S] === value)) return;

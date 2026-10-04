@@ -15,7 +15,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('publishes a bounded batch once and ignores replayed log ids', () => {
+it('publishes the first records at once and batches what follows, bounded and without replayed log ids', () => {
   const feed = createFeed<{id: string}, {connected: boolean}>(2, {connected: false}, 'ignore');
   const notify = vi.fn();
   const stop = feed.subscribe(notify);
@@ -24,17 +24,24 @@ it('publishes a bounded batch once and ignores replayed log ids', () => {
   feed.append({id: 'first'});
   feed.append({id: 'third'});
   feed.update({connected: true});
-  vi.advanceTimersByTime(99);
   expect(notify).not.toHaveBeenCalled();
-  vi.advanceTimersByTime(1);
+  // An empty list publishes its first records after the task that delivered them, not after a cadence.
+  vi.advanceTimersByTime(0);
   expect(feed.getSnapshot()).toEqual({connected: true, records: [{id: 'third'}, {id: 'second'}], gaps: new Set(), pending: 0});
   expect(notify).toHaveBeenCalledOnce();
+  feed.append({id: 'fourth'});
+  vi.advanceTimersByTime(99);
+  expect(notify).toHaveBeenCalledOnce();
+  vi.advanceTimersByTime(1);
+  expect(feed.getSnapshot().records).toEqual([{id: 'fourth'}, {id: 'third'}]);
+  expect(notify).toHaveBeenCalledTimes(2);
   stop();
 });
 
 it.each([
   {name: 'the default cadence', every: undefined, published: 10},
-  {name: 'a slower record cadence', every: 250, published: 3}
+  // The first record publishes at once, then one snapshot per 250 ms.
+  {name: 'a slower record cadence', every: 250, published: 4}
 ])('publishes a busy stream at $name without losing records', ({every, published}) => {
   const feed = createFeed<{id: string}, {connected: boolean}>(1000, {connected: false}, 'ignore', {every});
   const notify = vi.fn();
@@ -55,19 +62,22 @@ it('publishes a status change within the default cadence while records wait for 
   const notify = vi.fn();
   const stop = feed.subscribe(notify);
   feed.append({id: 'first'});
+  vi.advanceTimersByTime(0);
+  expect(notify).toHaveBeenCalledOnce();
+  feed.append({id: 'second'});
   vi.advanceTimersByTime(50);
   feed.update({error: 'closed'});
   vi.advanceTimersByTime(99);
-  expect(notify).not.toHaveBeenCalled();
+  expect(notify).toHaveBeenCalledOnce();
   vi.advanceTimersByTime(1);
-  expect(feed.getSnapshot()).toMatchObject({error: 'closed', records: [{id: 'first'}]});
+  expect(feed.getSnapshot()).toMatchObject({error: 'closed', records: [{id: 'second'}, {id: 'first'}]});
   // A record after a prompt publication does not pull the next one earlier than its own cadence.
-  feed.append({id: 'second'});
-  feed.update({error: null});
   feed.append({id: 'third'});
+  feed.update({error: null});
+  feed.append({id: 'fourth'});
   vi.advanceTimersByTime(100);
-  expect(notify).toHaveBeenCalledTimes(2);
-  expect(feed.getSnapshot().records.map(record => record.id)).toEqual(['third', 'second', 'first']);
+  expect(notify).toHaveBeenCalledTimes(3);
+  expect(feed.getSnapshot().records.map(record => record.id)).toEqual(['fourth', 'third', 'second', 'first']);
   stop();
   expect(vi.getTimerCount()).toBe(0);
 });
