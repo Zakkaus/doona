@@ -2,7 +2,7 @@ import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField, Toolbar} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
-import type {PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
+import type {DateFormat, PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
@@ -182,6 +182,19 @@ export function Settings({query}: PageProps) {
         <Toolbar>
           <div className="rp-contents" data-setting="lang">
             <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
+          </div>
+          <div className="rp-contents" data-setting="dateFormat">
+            <LabeledSelect
+              label={t('settings.dateFormat')}
+              value={ap.dateFormat}
+              onChange={value => ap.pickDateFormat(value as DateFormat)}
+              items={[
+                {id: 'automatic', label: t('settings.dateAutomatic')},
+                {id: 'dmy', label: t('settings.dateDmy')},
+                {id: 'mdy', label: t('settings.dateMdy')},
+                {id: 'ymd', label: t('settings.dateYmd')}
+              ]}
+            />
           </div>
           <div className="rp-contents" data-setting="palette">
             <SearchSelect

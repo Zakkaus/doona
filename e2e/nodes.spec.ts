@@ -766,6 +766,44 @@ test('a source card meters its quota under its usage, and the facts of every car
   }
 });
 
+test('the date format setting reorders a source expiry and the overview times at once, and is kept', async ({page}) => {
+  const backend = await mockBackend(page);
+  // Midday UTC, so the day is the 13th or the 14th in any zone the browser runs in.
+  backend.handlers['GET providers'] = async () => {
+    const list = await backend.api.providers();
+    return {...list, providers: list.providers.map(provider => (provider.id === 'harbor' ? {...provider, expires_at: '2026-02-13T12:00:00Z'} : provider))};
+  };
+  const expires = () => sourceCards(page).first().locator('.rp-kv > div').filter({hasText: 'Expires'}).locator('.v');
+  const pick = async (name: string) => {
+    await page.goto('/#/settings');
+    await page.getByRole('button', {name: /Date format$/}).click();
+    await page.getByRole('option', {name, exact: true}).click();
+    await expect(page.getByRole('button', {name: /Date format$/})).toContainText(name);
+  };
+  // Automatic follows the browser, which Playwright's Desktop Chrome sets to en-US.
+  await page.goto('/#/nodes?tab=list');
+  await expect(expires()).toHaveText(/^2\/1[34]\/26, \d{2}:\d{2}$/);
+  await pick('Day/Month/Year');
+  expect(await page.evaluate(() => localStorage.getItem('doona-date-format'))).toBe('dmy');
+  // A hash change keeps the page loaded, so the new order applies without a reload.
+  await page.goto('/#/nodes?tab=list');
+  await expect(expires()).toHaveText(/^1[34]\/2\/26, \d{2}:\d{2}$/);
+  await page.reload();
+  await expect(expires()).toHaveText(/^1[34]\/2\/26, \d{2}:\d{2}$/);
+  await pick('Year-Month-Day');
+  await page.goto('/#/nodes?tab=list');
+  await expect(expires()).toHaveText(/^2026-02-1[34] \d{2}:\d{2}$/);
+  await page.goto('/#/overview');
+  const started = page
+    .locator('.rp-kv > div')
+    .filter({has: page.locator('.k', {hasText: /^Started$/})})
+    .locator('.v');
+  await expect(started).toHaveText(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  await pick('Automatic (browser region)');
+  await page.goto('/#/overview');
+  await expect(started).toHaveText(/^\d{1,2}\/\d{1,2}\/\d{2}, \d{2}:\d{2}:\d{2}$/);
+});
+
 test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 900});
   const backend = await mockBackend(page);

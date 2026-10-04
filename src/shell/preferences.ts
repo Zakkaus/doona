@@ -3,12 +3,13 @@ import {readLang, type Lang} from '../i18n';
 import {readProfiles, type Profile, type StoragePort} from '../api/profiles';
 import {FLAG_OVERRIDE_LIMIT, flagKey, validFlagChoice, validFlagName, type FlagOverrides} from '../dae/flags';
 import {storageKeys} from '../api/storage';
+import {readDateFormat, type DateFormat} from '../i18n/format';
 import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 import type {ToastPlacement} from '../ui/ui';
 import {defaultRoute, hasRoute, isRoutePath, type RoutePath} from './routes';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
-export type {PaletteId, ToastPlacement};
+export type {DateFormat, PaletteId, ToastPlacement};
 const TOAST_PLACEMENTS: ToastPlacement[] = ['top', 'top end', 'bottom', 'bottom end'];
 
 export type Settings = {
@@ -17,6 +18,7 @@ export type Settings = {
   profiles: Profile[];
   activeId: string;
   lang: Lang;
+  dateFormat: DateFormat;
   scheme: Scheme;
   palette: PaletteId;
   wordmark: Wordmark;
@@ -30,7 +32,7 @@ export type Settings = {
 
 // A storage that throws (private mode, quota) costs the persistence, not the change.
 export function writeSetting(
-  key: 'lang' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'sparklines' | 'flagOverrides' | 'toastPlacement' | 'startPage',
+  key: 'lang' | 'dateFormat' | 'scheme' | 'palette' | 'wordmark' | 'mirror' | 'countryFlags' | 'sparklines' | 'flagOverrides' | 'toastPlacement' | 'startPage',
   value: string,
   storage?: StoragePort
 ) {
@@ -58,6 +60,7 @@ export function readSettings(storage?: StoragePort): Settings {
     api: active?.api ?? null,
     token: active?.token ?? '',
     lang: readLang(storage),
+    dateFormat: readDateFormat(storage),
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
     palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
     wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient',
@@ -95,6 +98,8 @@ type Appearance = {
   pickToastPlacement: (value: ToastPlacement) => void;
   startPage: RoutePath;
   pickStartPage: (value: RoutePath) => void;
+  dateFormat: DateFormat;
+  pickDateFormat: (value: DateFormat) => void;
 };
 export const SettingsContext = createContext<{
   lang: Lang;

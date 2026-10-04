@@ -14,6 +14,7 @@ export const storageKeys = {
   flagOverrides: 'doona-flag-overrides',
   toastPlacement: 'doona-toast-placement',
   startPage: 'doona-start-page',
+  dateFormat: 'doona-date-format',
   latencyProbe: 'doona-latency-probe',
   profiles: 'doona-profiles',
   profile: 'doona-profile',
