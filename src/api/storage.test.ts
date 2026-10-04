@@ -17,6 +17,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-toast-placement',
     'doona-start-page',
     'doona-date-format',
+    'doona-time-format',
     'doona-latency-probe',
     'doona-profiles',
     'doona-profile',

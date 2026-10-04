@@ -15,7 +15,7 @@ export function Events() {
       {
         id: 't',
         label: t('ui.time'),
-        minWidth: 200,
+        minWidth: 212,
         grow: 0,
         drop: 1,
         render: event => (

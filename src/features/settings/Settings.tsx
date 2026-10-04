@@ -2,7 +2,7 @@ import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField, Toolbar} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
-import type {DateFormat, PaletteId, Scheme, ToastPlacement, Wordmark} from '../../shell/preferences';
+import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
 import {RuntimeSettingsCard} from './RuntimeSettings';
@@ -193,6 +193,18 @@ export function Settings({query}: PageProps) {
                 {id: 'dmy', label: t('settings.dateDmy')},
                 {id: 'mdy', label: t('settings.dateMdy')},
                 {id: 'ymd', label: t('settings.dateYmd')}
+              ]}
+            />
+          </div>
+          <div className="rp-contents" data-setting="timeFormat">
+            <LabeledSelect
+              label={t('settings.timeFormat')}
+              value={ap.timeFormat}
+              onChange={value => ap.pickTimeFormat(value as TimeFormat)}
+              items={[
+                {id: '24h', label: t('settings.timeH24')},
+                {id: '12h', label: t('settings.timeH12')},
+                {id: 'automatic', label: t('settings.timeAutomatic')}
               ]}
             />
           </div>

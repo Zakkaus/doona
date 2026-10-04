@@ -7,10 +7,15 @@ import {
   localMinute,
   localMonthDayFormat,
   localTime,
+  localClockFormat,
   readDateFormat,
+  readTimeFormat,
   setDateFormat,
+  setTimeFormat,
   DATE_FORMATS,
-  type DateFormat
+  TIME_FORMATS,
+  type DateFormat,
+  type TimeFormat
 } from './format';
 import {LANGS, LOCALE} from './index';
 
@@ -81,6 +86,7 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'languages');
   Reflect.deleteProperty(navigator, 'language');
   setDateFormat('automatic');
+  setTimeFormat('24h');
 });
 
 it('writes times on a 24-hour clock with the date in the chosen or the browser order', () => {
@@ -137,4 +143,77 @@ it('reads a stored date format and falls back to automatic', () => {
       }
     })
   ).toBe('automatic');
+});
+
+it("writes the clock the reader chose in every date order, with the interface language's day-period words", () => {
+  const afternoon = new Date(2026, 9, 27, 15, 4, 5).toISOString();
+  const morning = new Date(2026, 0, 5, 0, 4, 5).toISOString();
+  const spaced = (text: string) => text.replace(/\s/g, ' ');
+  // [time format, date format, browser tags, interface locale, afternoon, minute, midnight]
+  const cases: Array<[TimeFormat, DateFormat, string[], string, string, string, string]> = [
+    ['24h', 'mdy', ['en-US'], 'en-US', '10/27/26, 15:04:05', '10/27/26, 15:04', '1/5/26, 00:04:05'],
+    ['12h', 'mdy', ['en-US'], 'en-US', '10/27/26, 3:04:05 PM', '10/27/26, 3:04 PM', '1/5/26, 12:04:05 AM'],
+    ['12h', 'dmy', ['en-US'], 'en-US', '27/10/26, 3:04:05 pm', '27/10/26, 3:04 pm', '5/1/26, 12:04:05 am'],
+    ['12h', 'automatic', ['zh-TW'], 'en-US', '2026/10/27 下午3:04:05', '2026/10/27 下午3:04', '2026/1/5 凌晨12:04:05'],
+    ['12h', 'automatic', ['zh-CN'], 'zh-CN', '2026/10/27 下午03:04:05', '2026/10/27 下午03:04', '2026/1/5 上午12:04:05'],
+    // Year-Month-Day has no locale of its own, so the clock is written in the interface language.
+    ['12h', 'ymd', ['en-US'], 'en-US', '2026-10-27 3:04:05 PM', '2026-10-27 3:04 PM', '2026-01-05 12:04:05 AM'],
+    ['12h', 'ymd', ['en-US'], 'zh-TW', '2026-10-27 下午3:04:05', '2026-10-27 下午3:04', '2026-01-05 凌晨12:04:05'],
+    ['24h', 'ymd', ['en-US'], 'zh-TW', '2026-10-27 15:04:05', '2026-10-27 15:04', '2026-01-05 00:04:05'],
+    // Automatic takes the clock of the browser's region, whatever the date order or the interface language.
+    ['automatic', 'automatic', ['en-US'], 'zh-CN', '10/27/26, 3:04:05 PM', '10/27/26, 3:04 PM', '1/5/26, 12:04:05 AM'],
+    ['automatic', 'automatic', ['en-AU'], 'en-US', '27/10/26, 3:04:05 pm', '27/10/26, 3:04 pm', '5/1/26, 12:04:05 am'],
+    ['automatic', 'automatic', ['en-GB'], 'en-US', '27/10/2026, 15:04:05', '27/10/2026, 15:04', '05/01/2026, 00:04:05'],
+    ['automatic', 'automatic', ['zh-TW'], 'en-US', '2026/10/27 下午3:04:05', '2026/10/27 下午3:04', '2026/1/5 凌晨12:04:05'],
+    ['automatic', 'automatic', ['zh-CN'], 'en-US', '2026/10/27 15:04:05', '2026/10/27 15:04', '2026/1/5 00:04:05'],
+    ['automatic', 'dmy', ['en-US'], 'zh-TW', '27/10/26, 3:04:05 pm', '27/10/26, 3:04 pm', '5/1/26, 12:04:05 am'],
+    ['automatic', 'ymd', ['zh-CN'], 'zh-TW', '2026-10-27 15:04:05', '2026-10-27 15:04', '2026-01-05 00:04:05'],
+    ['automatic', 'ymd', ['en-US'], 'zh-TW', '2026-10-27 下午3:04:05', '2026-10-27 下午3:04', '2026-01-05 凌晨12:04:05'],
+    // Without a valid browser tag the interface language's own clock applies.
+    ['automatic', 'automatic', ['not a tag'], 'zh-TW', '2026/10/27 下午3:04:05', '2026/10/27 下午3:04', '2026/1/5 凌晨12:04:05']
+  ];
+  for (const [clock, date, tags, locale, expectedTime, expectedMinute, expectedMidnight] of cases) {
+    browserTags(tags);
+    setDateFormat(date);
+    setTimeFormat(clock);
+    const row = [clock, date, tags, locale];
+    expect([...row, spaced(localTime(afternoon, locale))]).toEqual([...row, expectedTime]);
+    expect([...row, spaced(localMinute(afternoon, locale))]).toEqual([...row, expectedMinute]);
+    expect([...row, spaced(localTime(morning, locale))]).toEqual([...row, expectedMidnight]);
+  }
+});
+
+it('writes the clock alone for chart axes and the log heatmap in the chosen clock', () => {
+  const at = new Date(2026, 9, 27, 15, 4, 5).getTime();
+  const spaced = (text: string) => text.replace(/\s/g, ' ');
+  // [time format, browser tags, locale, to the minute, to the second]
+  const cases: Array<[TimeFormat, string[], string, string, string]> = [
+    ['24h', ['en-US'], 'en-US', '15:04', '15:04:05'],
+    ['24h', ['en-US'], 'zh-TW', '15:04', '15:04:05'],
+    ['12h', ['en-US'], 'en-US', '3:04 PM', '3:04:05 PM'],
+    ['12h', ['en-US'], 'zh-TW', '下午3:04', '下午3:04:05'],
+    ['automatic', ['en-US'], 'zh-TW', '下午3:04', '下午3:04:05'],
+    ['automatic', ['zh-CN'], 'en-US', '15:04', '15:04:05']
+  ];
+  for (const [clock, tags, locale, minute, second] of cases) {
+    browserTags(tags);
+    setTimeFormat(clock);
+    const row = [clock, tags, locale];
+    expect([...row, spaced(localClockFormat(locale).format(at))]).toEqual([...row, minute]);
+    expect([...row, spaced(localClockFormat(locale, true).format(at))]).toEqual([...row, second]);
+  }
+});
+
+it('reads a stored time format and falls back to 24-hour', () => {
+  const stored = (value: string | null) => ({getItem: () => value});
+  expect(TIME_FORMATS.map(value => readTimeFormat(stored(value)))).toEqual(TIME_FORMATS);
+  expect(readTimeFormat(stored('13h'))).toBe('24h');
+  expect(readTimeFormat(stored(null))).toBe('24h');
+  expect(
+    readTimeFormat({
+      getItem: () => {
+        throw new Error('blocked');
+      }
+    })
+  ).toBe('24h');
 });
