@@ -1,4 +1,4 @@
-import {useLayoutEffect, useRef, type ReactNode, type Ref, type RefObject} from 'react';
+import {createContext, useCallback, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject} from 'react';
 import {packSection} from './packing';
 
 // A section packs as it mounts, before its first paint, and keeps packing until it unmounts.
@@ -24,10 +24,57 @@ export const tileAttributes = ({id, module, size, foot, width, height}: TileProp
 // A section with a chosen width lays every card on the fraction grid from tablet width up (see dashboard.css).
 export const sectionGrid = (tiles: readonly TileProps[]) => (tiles.some(tile => tile.width) ? 'fraction' : undefined);
 
+// Whether a card is two thirds of its row or wider by the box packing last measured (data-wide, see packSection), so an
+// Auto card's renderer draws the statistics its footprint has room for, and only then.
+export const WideCell = createContext(false);
+// A ref for the cell, or for an element inside it (`cellOf`), and whether that cell is marked wide.
+function useWideMark(cellOf: (node: HTMLElement) => Element | null = node => node) {
+  const [wide, setWide] = useState(false);
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      const cell = node && cellOf(node);
+      if (!cell) return;
+      const read = () => setWide(cell.hasAttribute('data-wide'));
+      read();
+      const watch = new MutationObserver(read);
+      watch.observe(cell, {attributes: true, attributeFilter: ['data-wide']});
+      return () => watch.disconnect();
+    },
+    [cellOf]
+  );
+  return [ref, wide] as const;
+}
+
 export function DashboardTile({tile, visible, targetRef, children}: {tile: TileProps; visible: boolean; targetRef: Ref<HTMLDivElement>; children: ReactNode}) {
+  const [mark, wide] = useWideMark();
+  const ref = useCallback(
+    (node: HTMLDivElement | null) => {
+      const unmark = mark(node);
+      if (typeof targetRef !== 'function') {
+        if (targetRef) targetRef.current = node;
+        return unmark;
+      }
+      const release = targetRef(node);
+      return () => {
+        unmark?.();
+        if (typeof release === 'function') release();
+      };
+    },
+    [mark, targetRef]
+  );
   return (
-    <div ref={targetRef} className="rp-dashboard-cell" data-visible={visible} {...tileAttributes(tile)}>
-      {children}
+    <div ref={ref} className="rp-dashboard-cell" data-visible={visible} {...tileAttributes(tile)}>
+      <WideCell value={wide}>{children}</WideCell>
+    </div>
+  );
+}
+const parentCell = (node: HTMLElement) => node.closest('.rp-dashboard-cell');
+// The editor's card body, inert, with its cell's wide mark.
+export function DashboardBody({children}: {children: ReactNode}) {
+  const [ref, wide] = useWideMark(parentCell);
+  return (
+    <div ref={ref} className="rp-dashboard-body" inert>
+      <WideCell value={wide}>{children}</WideCell>
     </div>
   );
 }

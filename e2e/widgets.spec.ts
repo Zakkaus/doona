@@ -1465,6 +1465,33 @@ test.describe('small and narrow panel widgets', () => {
       const overflow = await body.locator('.rp-legend, .rp-compact-chart').evaluateAll(list => list.filter(el => el.scrollWidth > el.clientWidth + 1).length);
       expect(overflow).toBe(0);
     });
+  test('the panel keeps memory to its readings at medium, charts it from large and never meters a limit it lacks', async ({page}) => {
+    const backend = await mockBackend(page);
+    let memory = await backend.api.runtimeMemory();
+    backend.handlers['GET runtime/memory'] = async () => memory;
+    const items = (
+      [
+        ['sparkline', 'medium'],
+        ['sparkline', 'large'],
+        ['kv', 'medium']
+      ] as const
+    ).map(([form, size]) => ({...defaultWidget('memory'), form, size, instance: `memory-${form}-${size}`}));
+    await save(page, {...defaults(), items, size: {width: 280, height: 900}} as Layout);
+    await page.goto('/#/settings');
+    const body = floating(page).locator('.rp-widget-body');
+    const card = (form: string, size: string) => body.locator(`[data-widget-id="memory-${form}-${size}"]`);
+    // Medium names resident memory and the cgroup's use against its limit; large adds the chart and keeps the limit.
+    for (const size of ['medium', 'large']) await expect(card('sparkline', size).locator('.rp-kv')).toContainText(/cgroup used\s*\S+ MB \/ \S+ MB/);
+    await expect(card('sparkline', 'large').locator('.rp-compact-chart')).toBeVisible();
+    await expect(card('sparkline', 'medium').locator('.rp-compact-chart')).toHaveCount(0);
+    await expect(card('kv', 'medium').getByRole('meter')).toHaveCount(1);
+    // A zero limit is none to measure against: no meter, and the limit reads as not reported.
+    memory = {...memory, cgroup: {...memory.cgroup!, limit_bytes: '0'}};
+    await page.reload();
+    await expect(card('kv', 'medium').locator('.rp-kv')).toContainText(/cgroup limit\s*Not reported/);
+    await expect(card('kv', 'medium').getByRole('meter')).toHaveCount(0);
+    await expect(card('sparkline', 'medium').locator('.rp-kv')).not.toContainText('/');
+  });
   test('the speed legend keeps one height whatever the live rates read', async ({page}) => {
     // Each rate waits for a runtime poll, one every five seconds.
     test.slow();

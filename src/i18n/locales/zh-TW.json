@@ -2038,6 +2038,7 @@
   "widgets.noManualGroup": "沒有手動選擇的策略組",
   "widgets.noNotices": "沒有通知",
   "widgets.nodeAvailability": "節點可用性",
+  "widgets.notReported": "未回報",
   "widgets.noticeCount": "保留了 {n} 筆通知記錄",
   "widgets.notices": "最近通知",
   "widgets.order": "小工具順序",
