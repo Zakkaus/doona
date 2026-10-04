@@ -992,6 +992,31 @@ test.describe('header and edge at 1440', () => {
       }, edge);
       expect(Math.abs(tab.width - geometry.contentWidth)).toBeLessThanOrEqual(2);
       expect(tab.width).toBeLessThan(208 * 0.75);
+      // The light and the rates keep the control's padding from the handle's sides, the light the header's gap from the
+      // rates, and no rate is cut off.
+      const room = await handle(page).evaluate(el => {
+        const outer = el.getBoundingClientRect();
+        const dot = el.querySelector('.rp-light')!.getBoundingClientRect();
+        const icon = el.querySelector('.rp-widget-speed-icon')!.getBoundingClientRect();
+        const values = [...el.querySelectorAll<HTMLElement>('.rp-widget-speed-value')];
+        const end = Math.max(...values.map(value => value.getBoundingClientRect().right));
+        const rates = el.querySelector('.rp-widget-speed')!.getBoundingClientRect();
+        return {
+          start: dot.left - outer.left,
+          end: outer.right - end,
+          top: rates.top - outer.top,
+          bottom: outer.bottom - rates.bottom,
+          gap: icon.left - dot.right,
+          whole: values.every(value => value.scrollWidth <= value.clientWidth)
+        };
+      });
+      expect(room.start).toBeGreaterThanOrEqual(12);
+      expect(room.end).toBeGreaterThanOrEqual(12);
+      // The two rate lines keep the control's block padding above and below them.
+      expect(room.top).toBeGreaterThanOrEqual(6);
+      expect(room.bottom).toBeGreaterThanOrEqual(6);
+      expect(room.gap).toBeCloseTo(20, 0);
+      expect(room.whole).toBe(true);
       expect(geometry.corners).toEqual(['0px', '0px']);
       expect(geometry.border).toBe('0px');
     });
@@ -1002,8 +1027,10 @@ test.describe('header and edge at 1440', () => {
     await page.locator('.rp-side-dock').getByRole('button', {name: 'Undock', exact: true}).click();
     await expect(floating(page)).toBeHidden();
     const summary = await box(handle(page));
-    expect(summary.width).toBeLessThan(row.width * 0.75);
-    expect(Math.abs(summary.height - row.height)).toBeLessThanOrEqual(1);
+    // With the header's spacing and the control's padding, the summary still takes less than the row's width.
+    expect(summary.width).toBeLessThan(row.width * 0.8);
+    // Its two rate lines take their block padding, so it is never shorter than the row.
+    expect(summary.height).toBeGreaterThanOrEqual(row.height - 1);
   });
   test('hover and keyboard focus show the hidden panel; leaving or Escape hides it again', async ({page}) => {
     await save(page, {...defaults(), pinned: false, edge: true});

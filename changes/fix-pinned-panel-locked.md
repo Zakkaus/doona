@@ -5,3 +5,4 @@ Fixed
 - The docked panel drops its title and has an Undock button where the floating panel has its pin; the menu no longer offers Undock.
 - A byte fraction writes a unit both sides share once, as in 70／268 MB, so the docked memory meter, now labelled cgroup used, fits on one row.
 - A narrow collapsed panel shows both rates whole beside its buttons.
+- The handle of a panel hidden at an edge keeps the header's spacing and the control's padding around its rates.
