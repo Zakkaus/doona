@@ -25,5 +25,5 @@ it('offers draft members from name, subscription and nested group filters', () =
   const members = draftMembers(["subtag(asia) && name(keyword: 'hk')", 'group(relay)'], input, t);
   expect(memberSections(members, [], t)[1].items.map(member => member.nodeName)).toEqual([false, true]);
   expect(draftMembers(['name(sg-01)'], input, t).map(member => member.name)).toEqual(['sg-01']);
-  expect(draftMembers(['group(relay)'], input, t)).toEqual([{name: 'relay', nodeName: false, status: {text: t('ui.group'), badge: true}}]);
+  expect(draftMembers(['group(relay)'], input, t)).toEqual([{name: 'relay', nodeName: false, status: {text: '', badge: t('ui.group')}}]);
 });

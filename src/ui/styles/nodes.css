@@ -15,7 +15,9 @@ button.rp-node {
   gap: var(--rp-space-2);
   min-width: 0;
 }
+/* The name takes the free space, so a badge sits beside the latency at the end. */
 .rp-node .n {
+  flex: 1;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;

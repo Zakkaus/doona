@@ -6,7 +6,7 @@ import {useCompleteness, useConfig} from '../../store/config';
 import {editedCard, groupKind, kindFilter, kindQuery, kindView} from './view';
 import {groupOwners, outboundLinks, type OutboundCatalogue} from '../shared/groupText';
 import type {HealthObservation} from '../../api/model';
-import {sameHealth} from './health';
+import {sameHealth, selectionHealth} from './health';
 import type {PageProps} from '../../shell/routes';
 import {within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
@@ -32,10 +32,14 @@ export function usePolicies({go, query}: PageProps) {
   useEffect(() => {
     if (new URLSearchParams(query).has('tab')) go('policies', within(query, {tab: null}), {replace: true});
   }, [query, go]);
-  const [health, setHealth] = useState<{from: typeof nodes.data; map: Map<string, HealthObservation | undefined>}>({from: undefined, map: new Map()});
-  if (health.from !== nodes.data) {
-    const map = new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)]));
-    setHealth({from: nodes.data, map: sameHealth(health.map, map) ? health.map : map});
+  const [health, setHealth] = useState<{from: typeof nodes.data; groups: typeof groups.data; map: Map<string, HealthObservation | undefined>}>({
+    from: undefined,
+    groups: undefined,
+    map: new Map()
+  });
+  if (health.from !== nodes.data || health.groups !== groups.data) {
+    const map = selectionHealth(new Map((nodes.data ?? []).map(node => [node.id, preferredHealth(node)])), groups.data ?? []);
+    setHealth({from: nodes.data, groups: groups.data, map: sameHealth(health.map, map) ? health.map : map});
   }
   const sourceState = useMainSourceEdit();
   const {main, writable, busy, apply, error, retry} = sourceState;

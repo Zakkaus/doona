@@ -50,9 +50,10 @@ export function RuleRef({expression, href, tooltip, className}: {expression: str
   );
 }
 
-// A node's tile body: the name, one prepared status (a latency, a state or a badge) and a description line.
+// A node's tile body: the name, one prepared status (a latency or a state, after an optional badge) and a description
+// line. An empty status text shows the badge alone.
 // The caller owns the container (a toggle button, a grid item or a plain card) and marks the current one.
-export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: boolean};
+export type NodeStatus = {text: string; tone?: 'ok' | 'warn' | 'err'; badge?: string};
 // `mark` tags a member in place that is not the one selection, such as the member one network uses.
 type NodeTileProps = {name: string; nodeName: boolean; status: NodeStatus; description: string; current?: boolean; mark?: string};
 // A measured latency is green below 100 ms, yellow below 300 ms and red from there; a node that did not answer is red too.
@@ -63,7 +64,8 @@ export function NodeTile({name, nodeName, status, description, current, mark}: N
     <>
       <span className="top">
         <span className="n">{nodeName ? <NodeName name={name} /> : <TextTooltip>{name}</TextTooltip>}</span>
-        {status.badge ? <Badge>{status.text}</Badge> : <span className={cx('ms', status.tone)}>{status.text}</span>}
+        {status.badge && <Badge>{status.badge}</Badge>}
+        {status.text && <span className={cx('ms', status.tone)}>{status.text}</span>}
       </span>
       <span className="s">
         {description}
