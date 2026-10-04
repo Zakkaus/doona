@@ -9,7 +9,7 @@ test('a trace link fills in the form without running it', async ({page}) => {
   });
   await page.goto('/#/rules?tab=trace&domain=example.com&dst_port=443&src_ip=10.0.0.2');
   await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('example.com');
-  await expect(page.getByLabel('Destination port', {exact: true})).toHaveValue('443');
+  await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).toHaveValue('443');
   // The source sits under the advanced fields, which open to show it.
   await expect(page.getByLabel('Source IP', {exact: true})).toHaveValue('10.0.0.2');
   await expect(page.getByRole('button', {name: 'Run trace', exact: true})).toBeEnabled();
@@ -33,12 +33,15 @@ test('optional DSCP validates the contract bounds and reaches the trace evaluato
   await page.getByRole('textbox', {name: 'Process name', exact: true}).fill('curl');
   const dscp = page.getByRole('textbox', {name: 'DSCP', exact: true});
   const run = page.getByRole('button', {name: 'Run trace', exact: true});
-  for (const value of ['-1', '64', '1.5', 'invalid']) {
+  await dscp.fill('1.5');
+  await expect(dscp).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('group', {name: 'Advanced', exact: true}).getByText('DSCP must be an integer from 0 to 63.', {exact: true})).toBeVisible();
+  await expect(dscp).toHaveAccessibleDescription('DSCP must be an integer from 0 to 63.');
+  await expect(run).toBeDisabled();
+  // The number field takes no minus sign below its minimum, no value above its maximum and no letters.
+  for (const value of ['-1', '64', 'invalid']) {
     await dscp.fill(value);
-    await expect(dscp).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.getByRole('group', {name: 'Advanced', exact: true}).getByText('DSCP must be an integer from 0 to 63.', {exact: true})).toBeVisible();
-    await expect(dscp).toHaveAccessibleDescription('DSCP must be an integer from 0 to 63.');
-    await expect(run).toBeDisabled();
+    await expect(dscp).not.toHaveValue(value);
   }
   expect(requests.filter(request => request.url().endsWith('/routing/trace'))).toHaveLength(0);
   for (const value of ['0', '46', '63', '']) {
@@ -82,7 +85,7 @@ test('a connection traces with its source port and process, so process rules are
   await page.goto('/#/connections?tab=list&id=1');
   await moreAction(detail(page), 'Trace this connection');
   await expect(page).toHaveURL(/&src_ip=10\.0\.0\.12&src_port=51234&pname=Telegram$/);
-  await expect(page.getByLabel('Source port', {exact: true})).toHaveValue('51234');
+  await expect(page.getByRole('textbox', {name: 'Source port', exact: true})).toHaveValue('51234');
   await expect(page.getByLabel('Process name', {exact: true})).toHaveValue('Telegram');
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await expect.poll(() => requests.filter(request => request.method() === 'POST' && request.url().endsWith('/routing/trace')).length).toBe(1);

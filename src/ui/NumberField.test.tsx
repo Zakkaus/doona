@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {I18nProvider} from 'react-aria-components';
-import {NumberField} from './NumberField';
+import {NumberField, numberFromText, textFromNumber} from './NumberField';
 import {Form} from './Form';
 
 const field = (props: Partial<Parameters<typeof NumberField>[0]> = {}) =>
@@ -65,5 +65,16 @@ describe('NumberField', () => {
     const labels = [...markup.matchAll(/<button[^>]*aria-label="([^"]+)"/g)].map(match => match[1]);
     expect(labels).toHaveLength(2);
     for (const label of labels) expect(label).toMatch(/\p{Script=Han}/u);
+  });
+
+  it.each([
+    {text: '', value: NaN},
+    {text: '443', value: 443},
+    {text: ' 1.5 ', value: 1.5},
+    {text: '0x10', value: NaN},
+    {text: '30s', value: NaN}
+  ])('reads a draft $text for the field and writes it back', ({text, value}) => {
+    expect(numberFromText(text)).toBe(value);
+    expect(textFromNumber(value)).toBe(Number.isNaN(value) ? '' : String(value));
   });
 });

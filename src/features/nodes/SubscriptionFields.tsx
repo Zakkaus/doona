@@ -1,5 +1,5 @@
 import {useT, useLang, LOCALE} from '../../i18n';
-import {LabeledSelect, Switch, TextField, Toolbar} from '../../ui/ui';
+import {LabeledSelect, NumberField, Switch, TextField, Toolbar, numberFromText, textFromNumber} from '../../ui/ui';
 import {changeTypedInterval, intervalItems, intervalTyped, startTyping} from './subscription';
 
 // A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
@@ -74,13 +74,16 @@ export function SubscriptionFields({
           />
           {typed && (
             <Toolbar className="top">
-              <TextField
+              <NumberField
                 isDisabled={isDisabled}
                 label={t('nodes.intervalCount')}
                 width={120}
-                value={typed.count}
+                value={numberFromText(typed.count)}
+                minValue={0}
+                maxValue={Number.MAX_SAFE_INTEGER}
+                step={1}
                 error={intervalError ?? undefined}
-                onChange={count => set({interval: changeTypedInterval(count, typed.unit)})}
+                onChange={count => set({interval: changeTypedInterval(textFromNumber(count), typed.unit)})}
               />
               <LabeledSelect
                 label={t('nodes.intervalUnit')}

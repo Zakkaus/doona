@@ -83,6 +83,8 @@ export function numericFieldView(id: Numeric, value: string, floor: number, ceil
     id,
     value,
     label: t(runtimeFieldLabels[id]),
+    floor,
+    ceiling,
     invalid: !/^\d+$/.test(value) || Number(value) < floor || (ceiling !== undefined && Number(value) > ceiling),
     description:
       ceiling === undefined

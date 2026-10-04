@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, NumberField, TextField, Toolbar, Form} from '../../ui/ui';
+import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, NumberField, TextField, Toolbar, Form, textFromNumber} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
@@ -47,7 +47,7 @@ export function GlobalSettings(props: PageProps) {
                     label={field.label}
                     name={field.key}
                     value={field.number.value}
-                    onChange={value => field.change(Number.isNaN(value) ? '' : String(value))}
+                    onChange={value => field.change(textFromNumber(value))}
                     minValue={0}
                     maxValue={field.number.max}
                     step={1}

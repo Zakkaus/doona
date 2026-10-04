@@ -241,6 +241,17 @@ Set control sizes only with the kit component's `size` prop (`M` or `L`), never 
 | InlineAlert, IllustratedMessage   | `InlineAlert`, `Empty`, `ErrorMessage`                                                     |
 | TagGroup                          | `Tags`, `Tag`                                                                              |
 
+Every form is a kit `Form`, or `DialogForm` in a dialog's sections; no feature or shell file writes a bare `<form>`. A dialog whose submit sits in its footer gives the `Form` an `id` and the footer's button `type="submit"` and `form`, so Enter in a field does what the button does. Every field where a whole number is typed is a `NumberField`, with `minValue`, `maxValue` and `step` taken from the existing check; the draft keeps its text and converts with `numberFromText` and `textFromNumber`. These stay a `TextField`:
+
+- A value written in hex, such as `so_mark_from_dae` (a setting with `hexMax`).
+- A number or a keyword, such as `preconnect_node_count` with `auto` (a setting with `choices`).
+- A whole number that can exceed `Number.MAX_SAFE_INTEGER`, such as `max_concurrent_dials` (a setting whose `max` is above it).
+- A duration or size typed with its unit, such as `sniffing_timeout` (`30s`) or `bandwidth_max_rx`.
+- A list, such as the values of a rule or group condition.
+- A stored global setting the number field cannot show, such as one written as `0x10`, until it is cleared.
+
+`src/ui/formRules.test.ts` checks the first two rules.
+
 Searchable pickers keep the search field fixed; only the option list scrolls. The popover and dialog shrink to the available height rather than adding another scrollbar.
 
 What this leaves out, on purpose:

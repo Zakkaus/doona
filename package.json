@@ -46,7 +46,7 @@
     "startupCss": 34000,
     "locale": 38000,
     "fontCss": 36000,
-    "route": 75000,
+    "route": 79000,
     "routeConfig": 195000,
     "mock": 38000
   },

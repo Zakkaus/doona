@@ -134,14 +134,15 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   });
   await page.goto('/#/rules?tab=trace');
   await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('');
-  await expect(page.getByLabel('Destination port', {exact: true})).toHaveValue('');
+  await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).toHaveValue('');
   await expect(page.getByRole('button', {name: 'Run trace', exact: true})).toBeDisabled();
   expect(requested).toEqual([]);
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
   const run = page.getByRole('button', {name: 'Run trace', exact: true});
-  await page.getByLabel('Destination port', {exact: true}).fill('65536');
-  await expect(run).toBeDisabled();
-  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  // The number field refuses a port above its maximum.
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('65536');
+  await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).not.toHaveValue('65536');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await run.click();
   await expect(page.getByRole('heading', {name: '192.0.2.14', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: '2001:db8::14', exact: true})).toBeVisible();

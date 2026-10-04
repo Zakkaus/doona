@@ -297,7 +297,7 @@ test('trace headings and selected leaves retain the submitted domain and network
   });
   await page.goto('/#/rules?tab=trace');
   await page.getByLabel('Domain', {exact: true}).fill('submitted.example');
-  await page.getByLabel('Destination port', {exact: true}).fill('443');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await page.getByRole('button', {name: / Resolution mode$/}).click();
   await page.getByRole('option', {name: /No resolution/}).click();
   const tracing = page.waitForRequest('**/routing/trace');
