@@ -162,7 +162,8 @@ it.each([
   ['ranking', 'large', false, 5],
   ['ranking', 'medium', true, 5],
   ['notices', 'medium', true, undefined],
-  ['sourceHealth', 'medium', false, undefined]
+  ['sourceHealth', 'medium', false, undefined],
+  ['providerBudget', 'medium', false, undefined]
 ] as const)('%s at %s (main %s) keeps its earlier %s rows', (id, size, main, rows) => {
   expect(legacyRows({...defaultWidget(id), size}, main)).toBe(rows);
 });
@@ -190,6 +191,7 @@ it.each([
   ['history', third, chart],
   ['nodeLatency', ['1/2', '2/3', 'full'], ['3', '5', 'auto', '8']],
   ['sourceHealth', third, [...steps, 'auto']],
+  ['providerBudget', third, [...steps, 'auto']],
   ['connectionOutbounds', third, []],
   ['connectionNetworks', ['1/3', '1/2'], []],
   ['dnsAnswers', ['1/3', '1/2'], []],

@@ -67,6 +67,7 @@ export function Contents({item, onChange}: {item: Widget; onChange?: (item: Widg
     case 'nodeAvailability':
       return <NodeAvailability item={item} />;
     case 'sourceHealth':
+    case 'providerBudget':
       return <Sources item={item} />;
     case 'policyGroups':
       return <Groups item={item} />;

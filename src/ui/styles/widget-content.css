@@ -27,6 +27,19 @@
   white-space: normal;
   text-overflow: clip;
 }
+/* A meter's label reads as the key-value labels beside it. */
+.rp-module-content .rp-meter .l {
+  font-size: var(--rp-text-xs);
+  line-height: 16px;
+  color: var(--rp-subtle);
+}
+/* One list entry of several lines, such as a source's status and its quota meter. */
+.rp-module-content .rp-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-1);
+  min-inline-size: 0;
+}
 /* A wide card's list of four rows or more takes two columns, the first filled before the second; fewer rows keep one
    column as wide as one of those. */
 @container (width >= 640px) {

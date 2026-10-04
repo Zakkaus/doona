@@ -17,11 +17,11 @@ export function heightKind(item: Widget, main: boolean): 'chart' | 'rows' | unde
     return 'chart';
   return registry[item.id].rows && item.form !== 'donut' && item.form !== 'waffle' ? 'rows' : undefined;
 }
-// The rows a list shows until its height is set: the limit it had before lists had a height. The source list had none
-// and shows every row.
+// The rows a list shows until its height is set: the limit it had before lists had a height. The source lists have none
+// and show every row.
 export function legacyRows(item: Widget, main: boolean): number | undefined {
   if (main) return item.id === 'ranking' ? 5 : undefined;
-  if (item.id === 'sourceHealth') return undefined;
+  if (item.id === 'sourceHealth' || item.id === 'providerBudget') return undefined;
   if (item.id === 'nodeLatency') return contentLimit(item.size, [3, 6, 12]);
   return item.id === 'ranking' ? Math.min(5, contentLimit(item.size)) : contentLimit(item.size);
 }

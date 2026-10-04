@@ -6,7 +6,7 @@ import {ResourceSamples} from '../../store/preview';
 import {activityGroupView, nodeView, useActivityNode, GroupMenu} from '../../features/activity/widgets';
 import {latencyAverages, latencyGroups, latencyMax, latencyPlotRow, latencySummary, providerRowView} from '../../features/nodes/widgets';
 import {MarkerPlot} from '../../ui/charts';
-import {columns, ContextualHelp, Empty, ErrorMessage, Kv, Light} from '../../ui/ui';
+import {columns, ContextualHelp, Empty, ErrorMessage, Kv, Light, Meter} from '../../ui/ui';
 import {contentLimit, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
@@ -122,20 +122,39 @@ export function NodeAvailability({item}: {item: Widget}) {
     </Reading>
   );
 }
+// Source health lists every source with its status, and its quota under it when the provider reports one; the quota
+// widget lists the subscriptions, each as its quota's meter or, without an allowance, its usage, and its expiry.
 export function Sources({item}: {item: Widget}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const resource = useProviders();
-  const providers = resource.data?.providers.slice(0, item.rows) ?? [];
+  const quota = item.id === 'providerBudget';
+  const providers = (resource.data?.providers ?? []).filter(provider => !quota || provider.kind === 'subscription').slice(0, item.rows);
   return (
     <Reading state={resource}>
       {!providers.length ? (
-        <Empty>{t('dashboard.noSources')}</Empty>
+        <Empty>{t(quota ? 'act.noSubscriptions' : 'dashboard.noSources')}</Empty>
       ) : (
         <div className="rp-list rp-columns" style={columns(providers.length)}>
           {providers.map(provider => {
             const row = providerRowView(provider, undefined, locale, t);
-            return <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, row.status ?? '—']]} />;
+            const meter = row.quota && <Meter label={quota ? row.name : t('nodes.usage')} value={row.quota.pct} valueLabel={row.usage} tone={row.quota.tone} />;
+            const kv = (value: string) => <Kv compact row={item.size !== 'small'} items={[[row.name, value]]} />;
+            return (
+              <div key={row.id} className="rp-entry">
+                {quota ? (
+                  <>
+                    {meter ?? kv(row.usage)}
+                    {provider.expires_at && <span className="rp-note">{t('ui.valuePair', {label: t('nodes.expires'), value: row.expires})}</span>}
+                  </>
+                ) : (
+                  <>
+                    {kv(row.status ?? '—')}
+                    {meter}
+                  </>
+                )}
+              </div>
+            );
           })}
         </div>
       )}

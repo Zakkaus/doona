@@ -486,6 +486,7 @@
   "dashboard.other": "Other",
   "dashboard.policyGroups": "Current policy nodes",
   "dashboard.preset": "{width}, {height}",
+  "dashboard.providerBudget": "Subscription quota",
   "dashboard.remaining": "{space} remaining",
   "dashboard.resizeHeight": "Resize height",
   "dashboard.resizeWidth": "Resize width",
