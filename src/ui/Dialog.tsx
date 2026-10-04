@@ -5,7 +5,7 @@ import Close from './icons/Close';
 import {useT} from '../i18n';
 import {errorText} from '../api/error';
 import {cx} from './cx';
-import {ActionHelp, Button} from './Button';
+import {ActionHelp, Button, PrimaryActions} from './Button';
 import {ProblemAlert, type Problem} from './Feedback';
 import {useMediaQuery, panelQuery, escapeLayers} from './hooks';
 import {ControlSizeContext} from './controlSize';
@@ -90,7 +90,11 @@ export function ModalDialog({
               ) : (
                 children
               )}
-              {footer && <div className="foot">{footer(close)}</div>}
+              {footer && (
+                <div className="foot">
+                  <PrimaryActions>{footer(close)}</PrimaryActions>
+                </div>
+              )}
             </ActionHelp>
           )}
         </Dialog>
