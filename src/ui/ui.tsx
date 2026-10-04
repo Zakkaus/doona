@@ -36,6 +36,7 @@ export {useTabShown} from './useTabShown';
 export {DataTable, type TableSort, type TableColumn} from './Table';
 export {cachedRows, fitColumns} from './tableHooks';
 export {TimeCell} from './TimeCell';
+export {CardView, CardViewItem} from './CardView';
 export {
   Empty,
   Loading,

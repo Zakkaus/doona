@@ -183,6 +183,9 @@
 .rp-kv > div {
   min-width: 0;
 }
+.rp-kv > .wide {
+  grid-column: 1 / -1;
+}
 .rp-kv .k,
 .rp-kv-label {
   display: block;

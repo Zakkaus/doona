@@ -14,12 +14,29 @@ const columnNames = (grid: Locator) =>
     }
   });
 
+// The node sources are cards: on a phone each takes the width, with its actions and facts inside it.
+for (const width of [320, 360]) {
+  test(`${width}px: the node source cards fit the page with their actions in view`, async ({page}) => {
+    await page.setViewportSize({width, height: 800});
+    await page.goto('/#/nodes?tab=list');
+    const cards = page.getByRole('grid', {name: 'Node sources', exact: true}).getByRole('row');
+    await expect(cards).toHaveCount(2);
+    for (const card of await cards.all()) {
+      const box = (await card.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(await card.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
+    const harbor = cards.filter({hasText: 'harbor'});
+    await harbor.scrollIntoViewIfNeeded();
+    await expect(harbor.getByRole('button', {name: 'Update harbor', exact: true})).toBeInViewport({ratio: 1});
+    await expect(harbor.getByRole('button', {name: 'More actions for harbor', exact: true})).toBeInViewport({ratio: 1});
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
 // A phone keeps every column at its minimum width and scrolls the table sideways (src/ui/Table.tsx).
-// ProviderTable prioritises the source, count and actions before optional columns. It sits inside the Nodes page's
-// "Nodes" tab, above the node list, so its own `.rp-table` is the first one there.
 for (const [width, url, heading, columns] of [
-  [320, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-update', 'Expires', 'State', 'Actions']],
-  [360, '/#/nodes?tab=list', 'Nodes', ['Node source', 'Kind', 'Nodes', 'Usage', 'Updated', 'Auto-update', 'Expires', 'State', 'Actions']],
   [320, '/#/rules?tab=list&view=advanced', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']],
   [360, '/#/rules?by=client&tab=list&view=advanced', 'Routing rules', ['#', 'Expression', 'Outbound', 'Where', 'Hits', 'Actions']]
 ] as const) {
@@ -78,10 +95,10 @@ test.describe('column resizer touch target', () => {
 });
 
 for (const width of [320, 360, 390]) {
-  for (const [lang, configFiles, nodeSource] of [
-    ['en', 'Config files', 'Node source'],
-    ['zh-CN', '配置文件', '节点来源'],
-    ['zh-TW', '設定檔', '節點來源']
+  for (const [lang, configFiles] of [
+    ['en', 'Config files'],
+    ['zh-CN', '配置文件'],
+    ['zh-TW', '設定檔']
   ]) {
     for (const scheme of ['light', 'dark']) {
       test.describe(`${width}px ${lang} ${scheme} terminology`, () => {
@@ -96,7 +113,7 @@ for (const width of [320, 360, 390]) {
           signedIn: 'demo'
         });
 
-        test('config-file tabs and node-source headers fit their labels', async ({page}) => {
+        test('config-file tabs and node-source cards fit their labels', async ({page}) => {
           const fits = async (label: Locator) => {
             await expect(label).toBeVisible();
             await page.evaluate(() => document.fonts.ready);
@@ -123,12 +140,10 @@ for (const width of [320, 360, 390]) {
           await fits(page.locator('.rp-source-pick label'));
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
           await page.goto('/#/nodes?tab=list');
-          await expect(page.locator('.rp-table [role=row][data-key]').first()).toBeVisible();
-          const header = page
-            .locator('.rp-table')
-            .first()
-            .getByRole('columnheader', {name: new RegExp(`^${nodeSource}`)});
-          await fits(header.locator('.rp-th'));
+          // Each fact label of a source card keeps one line.
+          const card = page.locator('.rp-cardview [role=row]').first();
+          await expect(card).toBeVisible();
+          for (const label of await card.locator('.rp-kv .k').all()) await fits(label);
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         });
       });

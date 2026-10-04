@@ -586,7 +586,7 @@ test('provider host labels cannot enable interval writes without node tag metada
   await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: nodes}));
   await page.goto('/#/nodes?tab=list');
-  await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(2);
+  await expect(page.getByRole('grid', {name: 'Node sources', exact: true}).getByRole('row')).toHaveCount(2);
   for (const id of ['main-provider', 'include-provider']) {
     await page
       .locator(`[role=row][data-key=${id}]`)
@@ -700,7 +700,7 @@ test('node creation freezes its submitted draft until the response arrives', asy
   await expect(
     page
       .locator('.rp-table')
-      .nth(1)
+      .first()
       .getByRole('row', {name: /submitted-node/})
   ).toBeVisible();
 });

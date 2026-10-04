@@ -177,7 +177,7 @@ test('editor completion preserves policy keys and quoted-brace context', async (
 });
 
 // A relative time cell names the local time on hover; a cell that already shows the local time gives the exact timestamp.
-const localTime = /\d{1,2}\/\d{1,2}\/\d{2}, \d{1,2}:\d{2}:\d{2}\s?[AP]M$/;
+const localTime = /\d{1,2}\/\d{1,2}\/\d{2}, \d{2}:\d{2}:\d{2}$/;
 const isoTime = /^\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 for (const [route, column, tip] of [
   ['connections?tab=list', 'Started', localTime],

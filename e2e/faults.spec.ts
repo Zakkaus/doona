@@ -18,7 +18,7 @@ test('a file saved on disk after the last reload refuses writes until honk reloa
 
 test('a subscription whose host fails keeps its cached nodes and says why the refresh failed', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const source = page.locator('.rp-table').first().locator('[role=row]', {hasText: 'harbor'});
+  const source = page.getByRole('grid', {name: 'Node sources', exact: true}).getByRole('row', {name: 'harbor'});
   await expect(source).toContainText('Stale');
   await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
   await expect(page.locator('.rp-toast.negative', {hasText: 'Could not update harbor'})).toContainText(

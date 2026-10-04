@@ -78,14 +78,14 @@ test.describe('mirrored layout at 1280px', () => {
     test('labels with punctuation, times and parentheses keep their order', async ({page}) => {
       await page.goto('/#/overview');
       await expectMirrored(page);
-      // "daeuniverse/native v1 (draft)" and a time such as "9/26/26, 12:14:27 PM" start with a letter or digit and end
-      // with punctuation or a Latin word, which a right-to-left line would move to the other end.
+      // "daeuniverse/native v1 (draft)" ends with punctuation, and a time such as "9/26/26, 14:14:27" runs digits through
+      // slashes, a comma and colons; a right-to-left line would move or reorder those.
       const api = page.locator('.rp-kv .v').filter({hasText: /\(draft\)$/});
       await expect(api).toBeVisible();
       expect(await drawnInOrder(api)).toBe(true);
       const time = page
         .locator('.rp-kv .v')
-        .filter({hasText: /^\d+\/\d+\/\d+, \d+:\d+:\d+ [AP]M$/})
+        .filter({hasText: /^\d+\/\d+\/\d+, \d{2}:\d{2}:\d{2}$/})
         .first();
       await expect(time).toBeVisible();
       expect(await drawnInOrder(time)).toBe(true);

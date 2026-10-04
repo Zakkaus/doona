@@ -1048,7 +1048,6 @@
   "nodes.kind.inline": "In configuration",
   "nodes.kind.subscription": "Subscription",
   "nodes.kind.unattributed": "Unattributed",
-  "nodes.kindLabel": "Kind",
   "nodes.latency": "Latency",
   "nodes.latency.andMore": "{names} and {more}",
   "nodes.latency.average": "Average",

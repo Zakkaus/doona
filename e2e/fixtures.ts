@@ -390,7 +390,7 @@ export async function expectTextInside(cell: Locator) {
 // The Nodes table's group tags: whole tags on one line inside each cell, nothing that scrolls, every row's line one
 // height, and a "+N" tag whose tip names all of a node's groups without pressing the row.
 export async function expectFittedGroupTags(page: Page) {
-  const table = page.locator('.rp-table').nth(1);
+  const table = page.locator('.rp-table').first();
   const lines = table.locator('.rp-tags[data-fit]');
   await expect(lines.first()).toBeVisible();
   const cells = await lines.evaluateAll(els =>

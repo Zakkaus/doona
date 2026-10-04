@@ -27,12 +27,6 @@
   white-space: normal;
   text-overflow: clip;
 }
-/* A meter's label reads as the key-value labels beside it. */
-.rp-module-content .rp-meter .l {
-  font-size: var(--rp-text-xs);
-  line-height: 16px;
-  color: var(--rp-subtle);
-}
 /* One list entry of several lines, such as a source's status and its quota meter. */
 .rp-module-content .rp-entry {
   display: flex;
