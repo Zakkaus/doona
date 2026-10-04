@@ -180,15 +180,19 @@
     translate var(--rp-duration-panel) var(--rp-ease),
     visibility 0s linear var(--rp-duration-panel);
 }
-/* The hidden panel's summary hugs its light and reserved rate width, flush with the screen edge. */
+/* The hidden panel's summary hugs its light and reserved rate width, flush with the screen edge. The light sits in a
+   control-wide square as in the panel's header, so it keeps the header's spacing and its outer side the control's
+   inline padding, which the handle adds after the rates. */
 .rp-edge-handle {
   position: fixed;
   display: flex;
   align-items: center;
   box-sizing: border-box;
   inline-size: max-content;
-  block-size: var(--rp-control);
-  padding: 0 var(--rp-space-2);
+  /* The two-line summary sets the height, with the control's block padding around it; never below a control. */
+  min-block-size: var(--rp-control);
+  padding: var(--rp-space-1h) 0;
+  padding-inline-end: var(--rp-space-3);
   border: 1px solid var(--rp-popover-border);
   font: inherit;
   color: var(--rp-text);
@@ -196,6 +200,11 @@
   background: var(--rp-surface);
   box-shadow: var(--rp-elevated);
   pointer-events: auto;
+}
+.rp-edge-handle .rp-widget-backend {
+  display: flex;
+  justify-content: center;
+  inline-size: var(--rp-control);
 }
 /* The widest rate after its icon, so a summary with a reserved width keeps it as the rates change. */
 .rp-widget-speed[data-reserve]::before {
