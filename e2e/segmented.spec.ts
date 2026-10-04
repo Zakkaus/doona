@@ -154,7 +154,7 @@ test.describe('1440px', () => {
 });
 
 for (const width of [1440, 768, 390]) {
-  test(`kit tabs and the Policies kind switch are the segmented control at L at ${width}px`, async ({page}) => {
+  test(`kit tabs and the Policies kind switch are the segmented control at M at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
     await page.goto('/#/connections?tab=list');
     await expect(page.getByRole('tab').first()).toBeVisible();
@@ -162,11 +162,11 @@ for (const width of [1440, 768, 390]) {
       const tabs = el.querySelector('.rp-tabbar')!;
       return {
         tabs: tabs.getBoundingClientRect().height,
-        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')),
-        large: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control-lg'))
+        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control'))
       };
     });
-    expect(geometry.tabs).toBe(geometry.large);
+    expect(geometry.control).toBe(width === 390 ? 36 : 32);
+    expect(geometry.tabs).toBe(geometry.control);
     const tab = page.getByRole('tab').first();
     await tab.focus();
     await page.keyboard.press('ArrowRight');
@@ -182,7 +182,7 @@ for (const width of [1440, 768, 390]) {
     await page.goto('/#/policies');
     const segments = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
     await expect(segments).toBeVisible();
-    // The Policies kind filter is that page's top-level switch, drawn at L like the tabs.
-    expect((await box(segments)).height).toBe(geometry.large);
+    // The Policies kind filter is that page's top-level switch, drawn at M like the tabs.
+    expect((await box(segments)).height).toBe(geometry.control);
   });
 }

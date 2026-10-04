@@ -43,11 +43,11 @@ export function Tabs({
   if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
   const visible = kept.has(value) ? value : shown;
   const bar = (
-    <div className="rp-tabbar" ref={ref} data-size="L" data-page-tabrow={page || undefined}>
+    <div className="rp-tabbar" ref={ref} data-page-tabrow={page || undefined}>
       {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       <TabList aria-label={label} className="rp-tablist">
         {items.map(item => (
-          <Tab key={item.id} id={item.id} className="rp-tab" data-size="L">
+          <Tab key={item.id} id={item.id} className="rp-tab">
             {item.label}
           </Tab>
         ))}
