@@ -92,6 +92,7 @@ test.describe('the demo', () => {
       const card = page.locator('.rp-login-card');
       const controls = card.locator('.rp-input, .rp-login-submit');
       await expect(controls).toHaveCount(3);
+      await expect(card.locator('.rp-login-brand .rp-brand-text')).toBeVisible();
       const view = await page.evaluate(() => ({
         width: document.documentElement.clientWidth,
         height: innerHeight,

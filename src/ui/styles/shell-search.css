@@ -301,9 +301,10 @@
   }
 }
 /* Narrower still: the wordmark leaves the view, leaving the duck and the actions; it still names the button. With it,
-   the widget toggle adds one control and gap to the bar's minimum width; below 1024px reload is in the overflow menu. */
+   the widget toggle adds one control and gap to the bar's minimum width; below 1024px reload is in the overflow menu.
+   The sign-in card has the room and keeps its name. */
 @media (max-width: 420px) {
-  .rp-brand-text {
+  .rp-brand-text:not(.rp-login-brand > *) {
     position: absolute;
     width: 1px;
     height: 1px;
