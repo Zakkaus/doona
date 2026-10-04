@@ -202,7 +202,7 @@ it.each([
   [
     'lists',
     idsWith(definition => definition.rows),
-    ['nodeLatency', 'ranking', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds', 'outboundErrors']
+    ['nodeLatency', 'ranking', 'policyGroups', 'sourceHealth', 'providerBudget', 'outbounds', 'connectionOutbounds', 'outboundErrors']
   ],
   ['rates', idsWith(definition => definition.rate), ['speed', 'history', 'download', 'upload']],
   ['untitled in the panel', idsWith(definition => definition.untitled), ['connections', 'cpu', 'global']],

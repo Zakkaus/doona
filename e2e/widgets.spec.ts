@@ -90,7 +90,9 @@ const expectPanelPreview = async (page: Page) => {
 test('edits a draft, cancels changes, saves sizes and order, and restores defaults', async ({page}) => {
   await freezeRates(page);
   await page.goto('/#/settings');
+  await expect(floating(page).locator('[data-widget-id="providerBudget"]')).toHaveCount(0);
   await openEditor(page);
+  await expect(editor(page).locator('.rp-widget-gallery-tile[data-module="providerBudget"]').getByRole('heading', {name: 'Subscription quota'})).toBeVisible();
   await expectPanelPreview(page);
   await pickWidget(page);
   await editor(page).getByRole('radio', {name: 'Key-value list', exact: true}).click();
@@ -1305,6 +1307,8 @@ test.describe('small and narrow panel widgets', () => {
           ['ranking', 'kv', 'medium'],
           ['ranking', 'ranked', 'large'],
           ['sourceHealth', 'kv', 'medium'],
+          ['providerBudget', 'kv', 'medium'],
+          ['memory', 'kv', 'medium'],
           ['policyGroups', 'kv', 'small'],
           ['policyGroups', 'kv', 'large'],
           ['notices', 'kv', 'medium'],
@@ -1317,9 +1321,10 @@ test.describe('small and narrow panel widgets', () => {
       const body = floating(page).locator('.rp-widget-body');
       await expect(body.locator('[data-module="sourceHealth"] .rp-kv').first()).toBeVisible();
       await expect(body.locator('[data-module="ranking"] .rp-bar').first()).toBeVisible();
+      for (const id of ['sourceHealth', 'providerBudget', 'memory']) await expect(body.locator(`[data-module="${id}"]`).getByRole('meter')).toHaveCount(1);
       expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       const names = await body
-        .locator('.rp-kv .k, .rp-kv .k *, .rp-bar .l > *')
+        .locator('.rp-kv .k, .rp-kv .k *, .rp-bar .l > *, .rp-meter .l, .rp-meter .v')
         .evaluateAll(list =>
           list
             .filter(el => el.clientWidth > 0 && (el.scrollWidth > el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis'))

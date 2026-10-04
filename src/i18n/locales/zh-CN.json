@@ -429,6 +429,7 @@
   "dashboard.other": "其他",
   "dashboard.policyGroups": "策略组当前节点",
   "dashboard.preset": "{width}，{height}",
+  "dashboard.providerBudget": "订阅额度",
   "dashboard.remaining": "此行尚余 {space}",
   "dashboard.resizeHeight": "调整高度",
   "dashboard.resizeWidth": "调整宽度",

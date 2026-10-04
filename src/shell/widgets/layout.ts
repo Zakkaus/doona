@@ -87,6 +87,7 @@ const definitions = {
     groupChoice: 'dashboard.allGroups'
   },
   sourceHealth: {...list('dashboard.sourceHealth', 'providers'), sizes: ['medium'], rows: true},
+  providerBudget: {...list('dashboard.providerBudget', 'providers'), sizes: ['medium'], rows: true},
   connectionOutbounds: share('dashboard.connectionOutbounds', 'connections'),
   connectionNetworks: {...split('dashboard.connectionNetworks', 'connections'), sizes: ['medium'], widest: '1/2'},
   dnsAnswers: {...split('dashboard.dnsAnswers', 'dns_log'), widest: '1/2'},

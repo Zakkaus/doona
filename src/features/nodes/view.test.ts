@@ -277,6 +277,16 @@ it.each([
   expect(nodeRowView(node('a', {health: [...health]}), new Map(), 'en', t).showProbeKinds).toBe(visible);
 });
 
+it.each([
+  ['an allowance', {upload_bytes: '100', download_bytes: '700', total_bytes: '1000'}, {pct: 80, tone: 'warn'}],
+  ['no allowance', {upload_bytes: '1', download_bytes: '1', total_bytes: null}, null],
+  ['a zero allowance', {upload_bytes: '1', download_bytes: '1', total_bytes: '0'}, null],
+  ['unknown usage', {upload_bytes: null, download_bytes: '1', total_bytes: '1000'}, null],
+  ['no traffic', null, null]
+] as const)('gives a meter share for %s', (_, traffic, quota) => {
+  expect(providerRowView(provider('a', {traffic}), undefined, 'en-US', t).quota).toEqual(quota);
+});
+
 it('projects traffic without truncating counters and retains custom refresh intervals', () => {
   const row = providerRowView(provider('a', {traffic: {upload_bytes: '1', download_bytes: '1023', total_bytes: null}}), 90, 'en-US', t);
   expect(row.usage).toBe(formatBytes(1024n, 'en'));

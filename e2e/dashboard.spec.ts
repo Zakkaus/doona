@@ -1,4 +1,4 @@
-import {test, expect, box, fulfillStream, loadCatalogues, mockBackend} from './fixtures';
+import {test, expect, box, expectTextInside, fulfillStream, loadCatalogues, mockBackend} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 const open = (page: Page) => page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
@@ -107,6 +107,8 @@ test('the gallery adds a card to the extensions section and counts placed instan
   const gallery = page.getByRole('dialog', {name: 'Widget gallery'});
   const item = gallery.locator(".rp-widget-gallery-tile[data-module='sourceHealth']");
   await expect(item.getByRole('heading', {name: 'Source health', exact: true})).toBeVisible();
+  await expect(gallery.locator(".rp-widget-gallery-tile[data-module='providerBudget']").getByRole('heading', {name: 'Subscription quota'})).toBeVisible();
+  await expect(page.locator(".rp-dashboard-cell[data-module='providerBudget']")).toHaveCount(0);
   await expect(item).toContainText('0/3 placed');
   await item.getByRole('button', {name: 'Add Source health', exact: true}).click();
   await expect(item).toContainText('1/3 placed');
@@ -651,6 +653,47 @@ test('a chart two thirds of a row or wider lists its peak and average beside it'
       .toEqual([]);
   }
   await expect(tile(page, 'history').locator('.rp-facts')).toBeHidden();
+});
+
+test('source lists meter each reported quota and memory meters its cgroup limit, at their narrowest width', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  const backend = await mockBackend(page);
+  const long = `subscription-${'n'.repeat(51)}`;
+  backend.handlers['GET providers'] = async () => {
+    const list = await backend.api.providers();
+    const harbor = list.providers.find(provider => provider.id === 'harbor')!;
+    const unlimited = {...harbor, id: 'open', name: 'open', traffic: {...harbor.traffic!, total_bytes: null}};
+    return {...list, providers: [{...harbor, id: 'long', name: long}, unlimited, ...list.providers]};
+  };
+  let memory = await backend.api.runtimeMemory();
+  backend.handlers['GET runtime/memory'] = async () => memory;
+  const items = ['sourceHealth', 'providerBudget', 'memory'].map(id => ({id, form: 'kv', size: 'medium', width: '1/3'}));
+  await seed(page, {version: 3, sections: [{id: 'extensions', items}]});
+  await page.goto('/#/activity');
+  const sources = tile(page, 'sourceHealth');
+  const quota = tile(page, 'providerBudget');
+  // An allowance gets a meter; none (unlimited) or no traffic at all gets none, and the quota widget lists subscriptions.
+  await expect(sources.locator('.rp-entry')).toHaveCount(4);
+  await expect(sources.getByRole('meter')).toHaveCount(2);
+  await expect(quota.locator('.rp-entry')).toHaveCount(3);
+  await expect(quota.getByRole('meter')).toHaveCount(2);
+  await expect(quota.locator('.rp-entry').nth(1).getByRole('meter')).toHaveCount(0);
+  await expect(quota.getByRole('meter', {name: long, exact: true})).toHaveAttribute('aria-valuetext', /\S \/ \S/);
+  for (const card of [sources, quota]) {
+    expect(long).toHaveLength(64);
+    const name = card.getByText(long, {exact: true});
+    await expect(name).toBeVisible();
+    expect(await name.evaluate(el => el.scrollWidth <= el.clientWidth && getComputedStyle(el).textOverflow !== 'ellipsis')).toBe(true);
+  }
+  const card = tile(page, 'memory');
+  await expect(card.getByRole('meter')).toHaveAttribute('aria-valuetext', /\S \/ \S/);
+  await expect(card.locator('.rp-badge')).toHaveCount(0);
+  for (const id of ['sourceHealth', 'providerBudget', 'memory']) await expectTextInside(tile(page, id).locator('section').first());
+  // Without a limit there is nothing to meter against; OOM kills are named once there were some.
+  memory = {...memory, cgroup: {...memory.cgroup!, limit_bytes: null, events: {...memory.cgroup!.events!, oom_kill: '2'}}};
+  await page.reload();
+  await expect(card.locator('.rp-badge')).toHaveText('OOM kills: 2');
+  await expect(card.getByRole('meter')).toHaveCount(0);
 });
 
 test('a tall CPU tile keeps its height while its first samples arrive', async ({page}) => {

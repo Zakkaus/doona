@@ -4,12 +4,14 @@ import {formatBytes, formatRate, formatCpu, localTime} from '../../i18n/format';
 import {useCapabilities, useRuntime, useRuntimeMemory} from '../../store';
 import {ResourceSamples} from '../../store/preview';
 import type {Runtime, RuntimeMemory} from '../../api/model';
+import {memoryTone} from '../../api/selectors';
+import {parseU64, pctU64} from '../../api/u64';
 import {window as ringWindow} from '../../api/rings';
 import {useMemorySeries, useTrafficSeries} from '../../features/shared/useSeries';
 import {foldCpu, seriesFacts, useCpuRing} from '../../features/shared/widgetSeries';
 import {FactStrip, usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
-import {ErrorMessage, Kv} from '../../ui/ui';
+import {Badge, ErrorMessage, Kv, Meter} from '../../ui/ui';
 import {sampleCpu} from './samples';
 import {registry, type ModuleForm, type Widget} from './layout';
 import {Reading} from './Reading';
@@ -164,6 +166,8 @@ function CpuChart({runtime, ...props}: ChartProps & {runtime: Runtime | undefine
     />
   );
 }
+// Past the narrowest size, the key-value form draws the cgroup's use against its limit as a meter when a limit is set,
+// and any form names the OOM kills when there were some.
 export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -171,6 +175,10 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const metrics = useCapabilities().data?.resources.runtime_memory?.metrics ?? [];
   const rss = metrics.includes('process.rss_bytes');
   const cgroup = metrics.includes('cgroup.current_bytes');
+  const used = memory.data?.cgroup?.current_bytes ?? null;
+  const limit = memory.data?.cgroup?.limit_bytes ?? null;
+  const share = form === 'kv' && item.size !== 'small' ? pctU64(used, limit) : null;
+  const kills = item.size === 'small' ? null : parseU64(memory.data?.cgroup?.events?.oom_kill ?? null);
   return (
     <Reading state={memory}>
       <Kv
@@ -178,11 +186,18 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
         row={item.size !== 'small'}
         items={[
           ...(rss ? [[t('act.rss'), formatBytes(memory.data?.process?.rss_bytes ?? null, locale)] as [string, string]] : []),
-          ...(cgroup && (item.size !== 'small' || !rss)
-            ? [[t('act.cgroup'), formatBytes(memory.data?.cgroup?.current_bytes ?? null, locale)] as [string, string]]
-            : [])
+          ...(cgroup && share === null && (item.size !== 'small' || !rss) ? [[t('act.cgroup'), formatBytes(used, locale)] as [string, string]] : [])
         ]}
       />
+      {share !== null && (
+        <Meter
+          label={t('ov.f.cgroupPercent')}
+          value={share}
+          valueLabel={t('ui.fraction', {part: formatBytes(used, locale), whole: formatBytes(limit, locale)})}
+          tone={memoryTone(share)}
+        />
+      )}
+      {!!kills && <Badge tone="negative">{t('ui.valuePair', {label: t('ov.f.oomKill'), value: formatNumber(kills, locale)})}</Badge>}
       {!rss && !cgroup && <span className="rp-label">{t('widgets.unavailable')}</span>}
       {form !== 'kv' && item.size !== 'small' && (
         <MemoryChart

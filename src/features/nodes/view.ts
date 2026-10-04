@@ -2,13 +2,23 @@ import {isNodeLink} from '../../dae/nodes';
 export {isNodeLink} from '../../dae/nodes';
 import type {Capabilities, ConfigSource, HealthObservation, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
-import {compareLatency, healthMillis, nodeOwner, preferredHealth, probeKinds, pseudoOwner, pseudoOwnerId, type PseudoOwner} from '../../api/selectors';
+import {
+  compareLatency,
+  healthMillis,
+  memoryTone,
+  nodeOwner,
+  preferredHealth,
+  probeKinds,
+  pseudoOwner,
+  pseudoOwnerId,
+  type PseudoOwner
+} from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
 import {isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
-import {addU64} from '../../api/u64';
+import {addU64, pctU64} from '../../api/u64';
 import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
@@ -283,6 +293,8 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
   // stale also covers a subscription that holds nothing yet: never loaded, and no failure to say why.
   const never = item.kind === 'subscription' && item.status === 'stale' && item.updated_at === null && item.last_error === null;
   const used = item.traffic ? addU64(item.traffic.upload_bytes, item.traffic.download_bytes) : null;
+  // The share of the allowance used, for a meter; none without a reported, non-zero allowance.
+  const share = used !== null && item.traffic?.total_bytes && item.traffic.total_bytes !== '0' ? pctU64(used, item.traffic.total_bytes) : null;
   // undefined: no configuration entry to write; null: an entry without an interval, which can still get one.
   const interval = item.kind === 'subscription' ? seconds : undefined;
   const name = item.displayName ?? item.name;
@@ -300,6 +312,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
           : formatBytes(used, locale),
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
+    quota: share === null ? null : {pct: share, tone: memoryTone(share)},
     interval: interval == null ? '—' : intervalText(interval, locale, t),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],
