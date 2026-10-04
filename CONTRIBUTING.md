@@ -250,7 +250,7 @@ Every form is a kit `Form`, or `DialogForm` in a dialog's sections; no feature o
 - A list, such as the values of a rule or group condition.
 - A stored global setting the number field cannot show, such as one written as `0x10`, until it is cleared.
 
-`src/ui/formRules.test.ts` checks the first two rules.
+`src/features/config/formRules.test.ts` checks the first two rules.
 
 Searchable pickers keep the search field fixed; only the option list scrolls. The popover and dialog shrink to the available height rather than adding another scrollbar.
 

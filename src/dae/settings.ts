@@ -23,6 +23,11 @@ export type SettingField = {
   units?: readonly string[];
 };
 export type SettingsSection = {name: string; fields: readonly SettingField[]};
+// A setting edits in a number field when it takes only a whole number within a safe integer; one written in hex, one that
+// also takes a keyword, and a u64 that can exceed a safe integer stay text.
+export function numberSetting(field: SettingField): boolean {
+  return field.type === 'integer' && !field.choices && !field.hexMax && field.max !== undefined && BigInt(field.max) <= BigInt(Number.MAX_SAFE_INTEGER);
+}
 
 function settingItems(value: string): string[] {
   const commas = scanConfig(value).tokens.filter(token => value.slice(token.from, token.to) === ',');
