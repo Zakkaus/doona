@@ -322,6 +322,21 @@
 }
 
 /* ---- Heatmap ---- */
+/* The Logs chart's space while its stream opens (Activity.tsx): each part laid out as loaded but hidden, with the
+   kit's skeleton block over it. */
+.rp-chart-hold {
+  position: relative;
+}
+.rp-chart-hold > :not(.rp-skeleton-text) {
+  visibility: hidden;
+}
+.rp-chart-hold > .rp-skeleton-text {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: var(--rp-lg-radius);
+}
 .rp-heatmap {
   display: flex;
   flex-direction: column;

@@ -194,3 +194,26 @@ test('a log row copies its record as the export writes it without opening the de
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${runtime.observed_at} WARN  honk::dns DNS slow {"attempts":2}`);
   await expect(page.locator('.rp-table-detail')).toBeEmpty();
 });
+
+test('the log list stays in place when the first records arrive', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  let release!: () => void;
+  const opened = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/logs?*', async route => {
+    await opened;
+    await fulfillStream(route, [
+      {id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}},
+      {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'warn', target: 'honk::dns', message: 'DNS slow', fields: null}}
+    ]);
+  });
+  await page.goto('/#/logs');
+  const header = page.getByRole('grid', {name: 'Logs'}).getByRole('columnheader').first();
+  const top = () => header.evaluate(element => element.getBoundingClientRect().top + window.scrollY);
+  await expect(header).toBeVisible();
+  const before = await top();
+  release();
+  await expect(page.getByRole('grid', {name: 'Logs'}).getByRole('rowheader')).toHaveText(['DNS slow']);
+  await expect(page.getByRole('group', {name: 'Log activity over time'})).toBeVisible();
+  expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(1);
+});
