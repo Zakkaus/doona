@@ -18,6 +18,7 @@ import {
 } from 'react-aria-components';
 import {useT} from '../i18n';
 import ChevronDown from './icons/ChevronDown';
+import Close from './icons/Close';
 import {phoneQuery, useContentWidth, useMediaQuery} from './hooks';
 import {TextTooltip} from './Tooltip';
 import {buttonClass} from './Button';
@@ -459,11 +460,12 @@ export function DataTable<T extends {id: string}>({
       {scrolling}
       {/* Always mounted, so the text it takes is announced; empty, it takes no room. */}
       <div ref={detailRef} className="rp-table-detail" data-flow={flow || undefined} aria-live="polite">
-        {open && (
-          <>
-            {flow && (
+        {open &&
+          (flow ? (
+            <div className="rp-table-detail-body">
+              <div className="rp-col rp-grow">{detail(open as T)}</div>
               <RButton
-                className={buttonClass({quiet: true, small: true})}
+                className="rp-btn quiet icon close"
                 aria-label={t('ui.close')}
                 onPress={() => {
                   grid.current?.focus({preventScroll: true});
@@ -471,12 +473,12 @@ export function DataTable<T extends {id: string}>({
                   onSelect?.(null);
                 }}
               >
-                {t('ui.close')}
+                <Close />
               </RButton>
-            )}
-            {detail(open as T)}
-          </>
-        )}
+            </div>
+          ) : (
+            detail(open as T)
+          ))}
       </div>
     </>
   );

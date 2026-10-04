@@ -324,6 +324,15 @@
 .rp-table-detail:empty {
   display: contents;
 }
+/* A flow table's detail: the fields and actions fill the row; the close button keeps the top right. */
+.rp-table-detail-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-3);
+}
+.rp-table-detail-body > .rp-btn {
+  flex: none;
+}
 .rp-table [role='gridcell']:has(.rp-btn) {
   overflow: visible;
 }
