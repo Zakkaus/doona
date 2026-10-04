@@ -1,22 +1,16 @@
-import {createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {useApplyHeld} from '../features/shared/usePendingApply';
-import {useLifecycle} from '../features/shared/useLifecycle';
+import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {refetchAll, useCapabilities, useCredentialRefusal, useVersion} from '../store';
 import type {Settings} from './preferences';
 import {useLang, useT} from '../i18n';
 import {toast, toastErrorDetail} from '../ui/ui';
-import {accessError, duckView, shellView, topBarCommands, wordmark, type AboutView, type ShellView, type TopBarCommands} from './view';
+import {accessError, duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
 import {docsHref} from '../features/shared/docs';
 import {warmAllPages} from './registry';
 
 export const AboutContext = createContext<AboutView | null>(null);
-const rereadAll = () => void refetchAll();
 export type ShellModel = ShellView & {
   spinning: boolean;
   refresh: () => Promise<void>;
-  commands: TopBarCommands;
-  apply: () => void;
-  reload: () => void;
   wordmark: string;
   honk: () => void;
 };
@@ -54,24 +48,7 @@ export function useShell(settings: Settings, route: string): ShellModel {
     }
   }, [t]);
   const honk = useCallback(() => setHonked(true), []);
-  // Applying held rules and reloading honk are separate commands. The latest state is read through a ref so the
-  // memoised top bar keeps one callback for each.
-  const held = useApplyHeld();
-  // A reload can change any resource, so every one is read again once it settles.
-  const lifecycle = useLifecycle(undefined, capabilities.data, rereadAll);
-  const latest = useRef({held, lifecycle});
-  useLayoutEffect(() => {
-    latest.current = {held, lifecycle};
-  });
-  const apply = useCallback(() => void latest.current.held.apply(), []);
-  const reload = useCallback(() => void latest.current.lifecycle.run('reload'), []);
-  const canReload = lifecycle.canRun('reload');
-  const reloading = lifecycle.busy === 'reload';
-  const commands = useMemo(
-    () => topBarCommands({count: held.count, label: held.label, busy: held.busy}, canReload, reloading, t),
-    [held.count, held.label, held.busy, canReload, reloading, t]
-  );
-  return {...view, spinning, refresh, commands, apply, reload, wordmark: wordmark(honked), honk};
+  return {...view, spinning, refresh, wordmark: wordmark(honked), honk};
 }
 export function useAbout(onHonk?: () => void) {
   const view = useContext(AboutContext)!;

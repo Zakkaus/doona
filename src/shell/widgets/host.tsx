@@ -4,8 +4,6 @@ import {useCapabilities} from '../../store';
 import {Button, VisuallyHidden, phoneQuery, sidebarQuery, useMediaQuery} from '../../ui/ui';
 import {LoadBoundary} from '../../ui/LoadBoundary';
 import WidgetsIcon from '../../ui/icons/Widgets';
-import {useModeDraft} from '../../features/shared/useModeDraft';
-import {useDraftGuard} from '../draft';
 import {BackendIndicator} from '../Backend';
 import type {BackendView} from '../view';
 import {patchLayout, useWidgetLayout} from './settings';
@@ -21,11 +19,6 @@ const later = (node: ReactNode) => (
   </LoadBoundary>
 );
 
-export function WidgetDraftGuard() {
-  const [draft, setDraft] = useModeDraft();
-  useDraftGuard(draft !== null, () => setDraft(null));
-  return null;
-}
 // The sidebar keeps main's backend indicator at its foot; above phone width the panel opens over the content, and
 // where the sidebar shows it docks in the indicator's place as the sidebar's last section, which stays at the foot
 // while the links scroll above it. The sidebar renders, hidden, below its width too, so it hosts the panel there.
