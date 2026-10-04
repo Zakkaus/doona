@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {I18nProvider} from 'react-aria-components';
-import {NumberField, numberFromText, textFromNumber} from './NumberField';
+import {keepsAsTyped, NumberField, numberFromText, refusesPaste, textFromNumber} from './NumberField';
 import {Form} from './Form';
 
 const field = (props: Partial<Parameters<typeof NumberField>[0]> = {}) =>
@@ -76,5 +76,32 @@ describe('NumberField', () => {
   ])('reads a draft $text for the field and writes it back', ({text, value}) => {
     expect(numberFromText(text)).toBe(value);
     expect(textFromNumber(value)).toBe(Number.isNaN(value) ? '' : String(value));
+  });
+
+  it('passes on only the finished entry when 1, 2, 8 are typed into a field from 64', () => {
+    const typed = ['1', '12', '128'].map(Number);
+    expect(typed.filter(value => keepsAsTyped(value, {minValue: 64, maxValue: 4096, step: 1}))).toEqual([128]);
+  });
+
+  it.each([
+    {name: 'inside the range', value: 128, range: {minValue: 64, maxValue: 4096, step: 1}, kept: true},
+    {name: 'below the minimum', value: 12, range: {minValue: 64, step: 1}, kept: false},
+    {name: 'above the maximum', value: 5000, range: {maxValue: 4096}, kept: false},
+    {name: 'off a whole step', value: 123.5, range: {minValue: 0, step: 1}, kept: false},
+    {name: 'on a step counted from the minimum', value: 7, range: {minValue: 2, step: 5}, kept: true},
+    {name: 'without a range', value: -3.25, range: {}, kept: true}
+  ])('keeps a typed number as it is only where React Aria would: $name', ({value, range, kept}) => {
+    expect(keepsAsTyped(value, range)).toBe(kept);
+  });
+
+  // The check typing runs: a whole-number field takes no decimal separator.
+  const wholeNumber = (text: string) => /^-?\d*$/.test(text);
+  it.each([
+    {name: 'a decimal over all the text', text: '123.5', whole: true, refused: true},
+    {name: 'a whole number over all the text', text: ' 124 ', whole: true, refused: false},
+    {name: 'a decimal into part of the text', text: '123.5', whole: false, refused: false}
+  ])('refuses a paste the typing check would refuse: $name', ({text, whole, refused}) => {
+    const selected = {value: '64', selectionStart: 0, selectionEnd: whole ? 2 : 1};
+    expect(refusesPaste(selected, text, wholeNumber)).toBe(refused);
   });
 });

@@ -454,6 +454,18 @@ test('runtime drafts survive a changed poll and explicit discard loads the curre
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Temporary runtime overrides'});
   const records = card.getByRole('textbox', {name: 'Log records kept', exact: true});
+  // The minimum is 64: typing 128 passes 1 and 12 on the way, which must not snap to it.
+  await records.clear();
+  await records.pressSequentially('128');
+  await expect(records).toHaveValue('128');
+  // A whole-number field refuses a pasted 123.5 as it does a typed point, rather than rounding it to 124.
+  await records.selectText();
+  await records.evaluate(input => {
+    const data = new DataTransfer();
+    data.setData('text/plain', '123.5');
+    input.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
+  });
+  await expect(records).toHaveValue('128');
   await records.fill('512');
   settings.log!.buffered_records = 2048;
   const refresh = page.waitForResponse('**/api/v1/runtime/settings');

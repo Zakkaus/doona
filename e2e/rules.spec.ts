@@ -139,9 +139,10 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   expect(requested).toEqual([]);
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
   const run = page.getByRole('button', {name: 'Run trace', exact: true});
-  // The number field refuses a port above its maximum.
+  // The number field keeps a port above its maximum while it is typed and snaps it into range on leaving.
   await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('65536');
-  await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).not.toHaveValue('65536');
+  await page.getByRole('textbox', {name: 'Destination port', exact: true}).blur();
+  await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).toHaveValue('65535');
   await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
   await run.click();
   await expect(page.getByRole('heading', {name: '192.0.2.14', exact: true})).toBeVisible();

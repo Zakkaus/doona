@@ -38,11 +38,15 @@ test('optional DSCP validates the contract bounds and reaches the trace evaluato
   await expect(page.getByRole('group', {name: 'Advanced', exact: true}).getByText('DSCP must be an integer from 0 to 63.', {exact: true})).toBeVisible();
   await expect(dscp).toHaveAccessibleDescription('DSCP must be an integer from 0 to 63.');
   await expect(run).toBeDisabled();
-  // The number field takes no minus sign below its minimum, no value above its maximum and no letters.
-  for (const value of ['-1', '64', 'invalid']) {
+  // The number field takes no minus sign below its minimum and no letters, and snaps a value above its maximum into
+  // range on leaving.
+  for (const value of ['-1', 'invalid']) {
     await dscp.fill(value);
     await expect(dscp).not.toHaveValue(value);
   }
+  await dscp.fill('64');
+  await dscp.blur();
+  await expect(dscp).toHaveValue('63');
   expect(requests.filter(request => request.url().endsWith('/routing/trace'))).toHaveLength(0);
   for (const value of ['0', '46', '63', '']) {
     await dscp.fill(value);
