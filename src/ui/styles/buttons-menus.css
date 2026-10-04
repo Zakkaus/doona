@@ -37,7 +37,9 @@
 .rp-btn.secondary[data-pressed] {
   background: var(--rp-hl-med);
 }
-.rp-btn:not(.icon) > .rp-icon {
+.rp-btn:not(.icon) > .rp-icon,
+.rp-btn.rp-help > .rp-icon,
+.rp-subitem > .ic > :is(svg, img) {
   width: 16px;
   height: 16px;
 }
@@ -45,7 +47,7 @@
   --rp-icon-size: 1lh;
   padding: 0 var(--rp-space-2);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 .rp-btn.icon {
   width: var(--rp-control);
@@ -94,7 +96,7 @@
 .rp-sec-h {
   font-size: var(--rp-text-xs);
   font-weight: 700;
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-text);
   padding-block: var(--rp-space-2) var(--rp-space-half);
   padding-inline: var(--rp-space-8) var(--rp-space-2);
@@ -232,10 +234,6 @@ section:not(:first-child) > .rp-sec-h {
   vertical-align: middle;
   color: var(--rp-subtle);
 }
-.rp-btn.rp-help > .rp-icon {
-  width: 16px;
-  height: 16px;
-}
 /* A control or a title with its help button beside it. */
 .rp-help-row {
   display: inline-flex;
@@ -333,10 +331,6 @@ section:not(:first-child) > .rp-sec-h {
 .rp-subitem > .ic {
   display: flex;
   color: var(--rp-subtle);
-}
-.rp-subitem > .ic > :is(svg, img) {
-  width: 16px;
-  height: 16px;
 }
 .rp-subitem > .desc {
   display: inline-flex;

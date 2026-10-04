@@ -26,15 +26,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--rp-space-2) var(--rp-space-3);
-  align-items: center;
+  flex-direction: column;
+  align-items: start;
 }
 .rp-module-option > :last-child {
   flex: 0 1 auto;
   max-inline-size: 100%;
-}
-.rp-module-option {
-  flex-direction: column;
-  align-items: start;
 }
 /* The card settings popover: the popover's own symmetric padding, options in one column. */
 .rp-module-inspector {
@@ -489,7 +486,9 @@
 .rp-dashboard[data-editing] .rp-dashboard-cell {
   outline: none;
 }
-.rp-dashboard[data-editing] .rp-dashboard-cell[data-focus-visible] > .rp-dashboard-body > .rp-card {
+.rp-dashboard[data-editing] .rp-dashboard-cell[data-focus-visible] > .rp-dashboard-body > .rp-card,
+.rp-dashboard-cell[data-resizing] .rp-dashboard-body > .rp-card,
+.rp-dashboard-gap[data-drop-target] {
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
 }
@@ -572,10 +571,6 @@
     opacity: 1;
   }
 }
-.rp-dashboard-cell[data-resizing] .rp-dashboard-body > .rp-card {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
-}
 @media (max-width: 767.98px) {
   .rp-dashboard-cell .rp-dashboard-resize[data-edge='width'] {
     display: none;
@@ -592,10 +587,6 @@
   place-items: center;
   border: 1px dashed var(--rp-line);
   border-radius: var(--rp-r-lg);
-}
-.rp-dashboard-gap[data-drop-target] {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: 2px;
 }
 .rp-dashboard-gap[data-refused] {
   outline: 2px solid var(--rp-negative);
