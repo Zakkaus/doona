@@ -1,73 +1,16 @@
-/* Glass's tokens: Apple's published fills, separators and system colours. Its materials are in ../glass.css. */
-:root[data-family='glass'][data-scheme='dark'] {
-  --rp-base: rgba(255, 255, 255, 0.05);
-  --rp-surface: rgba(24, 24, 32, 0.45);
-  --rp-overlay: rgba(255, 255, 255, 0.1);
-  --rp-muted: #8e8e93;
-  --rp-subtle: #d0d0d6;
-  --rp-text: #f2f2f7;
-  --rp-love: #ff453a;
-  --rp-gold: #ff9f0a;
-  --rp-rose: #ffb340;
-  --rp-pine: #0a84ff;
-  --rp-foam: #30d158;
-  --rp-iris: #bf5af2;
-  --rp-c1: #0a84ff;
-  --rp-c2: #30d158;
-  --rp-c3: #bf5af2;
-  --rp-c4: #ff9f0a;
-  --rp-c5: #64d2ff;
-  --rp-c6: #ff375f;
-  --rp-c7: #ffd60a;
-  --rp-c8: #ff453a;
-  /* Apple's fill ladder: quaternary, tertiary, secondary and primary system fill. */
-  --rp-hl-low: rgba(118, 118, 128, 0.18);
-  --rp-ctl: rgba(118, 118, 128, 0.24);
-  --rp-hl-med: rgba(120, 120, 128, 0.32);
-  --rp-hl-high: rgba(120, 120, 128, 0.36);
-  --rp-on-accent: #ffffff;
-  --rp-on-text: #1c1c1e;
-  /* Apple's increased-contrast system blue carries dark text above 4.5:1. */
-  --rp-accent-fill: #409cff;
-  --rp-on-accent-fill: #1c1c1e;
-  /* Apple's increased-contrast system red, with dark text as on the blue. */
-  --rp-negative-fill: #ff6961;
-  --rp-on-negative-fill: #1c1c1e;
-  /* Apple's label colour on system orange, as on the increased-contrast blue and red: white is under 2.5:1 on it. */
-  --rp-on-notice: #1c1c1e;
-  --rp-negative-text: var(--rp-negative-fill);
-  --rp-line: rgba(84, 84, 88, 0.6);
-  --rp-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
-  --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
-  --rp-glass: rgba(28, 28, 30, 0.62);
-  --rp-glass-strong: rgba(44, 44, 46, 0.82);
-  --rp-glass-fallback: #2c2c2e;
-  --rp-edge: rgba(255, 255, 255, 0.08);
-  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.06) 40%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.14) 100%);
-  --rp-track: rgba(118, 118, 128, 0.24);
-  --rp-knob: #636366;
-  --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  /* The switch knob stays white in both schemes, unlike the slider's. */
-  --rp-switch-knob: #ffffff;
-  --rp-switch-knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --rp-underlay: rgba(0, 0, 0, 0.45);
-  --rp-scrim: linear-gradient(160deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 50%);
-  --rp-sheet: rgba(0, 0, 0, 0.18);
-  --rp-bg:
-    radial-gradient(circle 320px at 24% 26%, rgba(46, 84, 230, 0.7) 0 22%, rgba(46, 84, 230, 0) 70%),
-    radial-gradient(circle 280px at 74% 18%, rgba(150, 50, 140, 0.6) 0 20%, rgba(150, 50, 140, 0) 70%),
-    radial-gradient(circle 360px at 82% 80%, rgba(190, 96, 40, 0.42) 0 22%, rgba(190, 96, 40, 0) 70%),
-    radial-gradient(circle 300px at 16% 86%, rgba(16, 140, 120, 0.6) 0 20%, rgba(16, 140, 120, 0) 70%),
-    radial-gradient(circle 220px at 52% 58%, rgba(100, 70, 220, 0.55) 0 20%, rgba(100, 70, 220, 0) 70%),
-    linear-gradient(135deg, #090d24 0%, #1c0f38 32%, #1b1230 64%, #05201c 100%);
-}
+/* The Glass family's tokens: Apple's published label, fill and system colours, shared by three materials. Glass is
+   Apple's Liquid Glass, Frosted is Microsoft's Acrylic, Float is an evenly blurred layer after blowfish.page and Tinted
+   is Microsoft's Mica; ../glass.css draws them from
+   the material tokens set here. Each material tunes its own wallpaper, fills and blur; the blur and opacity values are
+   doona's. */
 :root[data-family='glass'] {
-  --rp-base: rgba(255, 255, 255, 0.3);
-  --rp-surface: rgba(255, 255, 255, 0.4);
-  --rp-overlay: rgba(255, 255, 255, 0.42);
+  /* Apple's label is black and placeholderText is tertiaryLabel. Its secondaryLabel, rgba(60, 60, 67, 0.6), falls
+     under 4.5:1 on a translucent card over the wallpaper, so secondary text keeps the stronger systemGray3 of dark
+     (R-72,G-72,B-74), and muted text keeps systemGray (R-142,G-142,B-147), both from the HIG's colour page. */
   --rp-muted: #8e8e93;
   --rp-subtle: #48484a;
-  --rp-text: #1c1c1e;
+  --rp-text: #000000;
+  --rp-placeholder: rgba(60, 60, 67, 0.3);
   --rp-love: #ff3b30;
   --rp-gold: #ff9500;
   --rp-rose: #ff9f0a;
@@ -82,42 +25,356 @@
   --rp-c6: #ff2d55;
   --rp-c7: #ffcc00;
   --rp-c8: #ff3b30;
+  /* Apple's fill ladder: quaternary, tertiary, secondary and primary system fill. */
   --rp-hl-low: rgba(116, 116, 128, 0.08);
   --rp-ctl: rgba(118, 118, 128, 0.12);
   --rp-hl-med: rgba(120, 120, 128, 0.16);
   --rp-hl-high: rgba(120, 120, 128, 0.2);
   --rp-on-accent: #ffffff;
   --rp-on-text: #ffffff;
+  /* Body text on glass is never the accent colour: the accent and info take label. Apple's increased-contrast green
+     and orange are under 4.5:1 on a tile over the wallpaper, so they take label too and their dots carry the tone;
+     the increased-contrast red passes. */
+  --rp-accent-text: var(--rp-text);
+  --rp-info-text: var(--rp-text);
+  --rp-positive-text: var(--rp-text);
+  --rp-notice-text: var(--rp-text);
   /* Apple's increased-contrast system blue: white on the plain one is 4.0:1. */
   --rp-accent-fill: #0040dd;
   --rp-on-accent-fill: #ffffff;
   /* Apple's increased-contrast system red, with white text as on the blue. */
   --rp-negative-fill: #d70015;
   --rp-on-negative-fill: #ffffff;
-  /* Red text, such as field errors, takes the same red: the plain one is under 4.5:1 on glass. */
   --rp-negative-text: var(--rp-negative-fill);
   --rp-line: rgba(60, 60, 67, 0.29);
-  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --rp-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.18);
-  --rp-glass: rgba(255, 255, 255, 0.72);
-  --rp-glass-strong: rgba(255, 255, 255, 0.82);
-  /* The opaque layer where backdrop-filter is unsupported. */
-  --rp-glass-fallback: #fff;
-  --rp-edge: rgba(255, 255, 255, 0.6);
-  --rp-rim: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0.55) 100%);
   --rp-track: rgba(118, 118, 128, 0.12);
   --rp-knob: #ffffff;
   --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
   --rp-switch-knob: #ffffff;
   --rp-switch-knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --rp-underlay: rgba(20, 20, 30, 0.3);
-  --rp-scrim: linear-gradient(160deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
-  --rp-sheet: rgba(255, 255, 255, 0.14);
-  --rp-bg:
-    radial-gradient(circle 320px at 24% 26%, rgba(120, 170, 255, 0.85) 0 22%, rgba(120, 170, 255, 0) 70%),
-    radial-gradient(circle 280px at 74% 18%, rgba(255, 140, 195, 0.8) 0 20%, rgba(255, 140, 195, 0) 70%),
-    radial-gradient(circle 360px at 82% 80%, rgba(255, 196, 110, 0.8) 0 22%, rgba(255, 196, 110, 0) 70%),
-    radial-gradient(circle 300px at 16% 86%, rgba(110, 220, 190, 0.8) 0 20%, rgba(110, 220, 190, 0) 70%),
-    radial-gradient(circle 220px at 52% 58%, rgba(180, 150, 255, 0.7) 0 20%, rgba(180, 150, 255, 0) 70%),
-    linear-gradient(135deg, #dfeeff 0%, #f3ddff 32%, #ffe6d6 64%, #dcf6ec 100%);
+  --rp-underlay: rgba(20, 20, 30, 0.24);
+  --rp-shadow-lg: 0 2px 6px rgba(15, 20, 40, 0.06), 0 18px 48px rgba(15, 20, 40, 0.16);
+  /* The solid recipe for Reduce Transparency and Increase Contrast: Apple's grouped backgrounds, white cells on
+     systemGray6 (R-242,G-242,B-247), and an opaque separator (R-198,G-198,B-200) as the edge. */
+  --rp-solid-wall: #f2f2f7;
+  --rp-solid-chrome: #f2f2f7;
+  --rp-solid-card: #ffffff;
+  --rp-solid-float: #ffffff;
+  --rp-solid-edge: #c6c6c8;
+
+  /* Glass: clear cards and chrome over a bright wallpaper with hard shapes for the lens to bend. */
+  --rp-base: rgba(255, 255, 255, 0.4);
+  --rp-surface: rgba(255, 255, 255, 0.4);
+  --rp-overlay: rgba(255, 255, 255, 0.45);
+  --rp-shadow: 0 1px 2px rgba(15, 20, 40, 0.05), 0 8px 28px rgba(15, 20, 40, 0.09);
+  --rp-wall:
+    radial-gradient(circle at 63% 36%, rgba(255, 204, 0, 0.7) 0 120px, rgba(255, 204, 0, 0) 121px),
+    radial-gradient(circle at 30% 66%, rgba(0, 122, 255, 0) 0 190px, rgba(0, 122, 255, 0.5) 191px 199px, rgba(0, 122, 255, 0) 200px),
+    linear-gradient(118deg, rgba(255, 255, 255, 0) 0 60%, rgba(255, 255, 255, 0.6) 60% 64%, rgba(255, 255, 255, 0) 64%),
+    linear-gradient(28deg, rgba(255, 45, 85, 0) 0 74%, rgba(255, 45, 85, 0.45) 74% 77%, rgba(255, 45, 85, 0) 77%),
+    radial-gradient(34% 46% at 28% 30%, rgba(0, 122, 255, 0.5), rgba(0, 122, 255, 0) 72%),
+    radial-gradient(32% 44% at 84% 22%, rgba(255, 45, 85, 0.5), rgba(255, 45, 85, 0) 72%),
+    radial-gradient(40% 50% at 74% 84%, rgba(255, 149, 0, 0.55), rgba(255, 149, 0, 0) 72%),
+    radial-gradient(36% 46% at 26% 88%, rgba(52, 199, 89, 0.5), rgba(52, 199, 89, 0) 72%),
+    radial-gradient(28% 36% at 52% 56%, rgba(175, 82, 222, 0.45), rgba(175, 82, 222, 0) 72%), linear-gradient(160deg, #e3eaf8 0%, #f1e8f4 50%, #f8eee2 100%);
+  --rp-chrome: rgba(255, 255, 255, 0.3);
+  --rp-chrome-filter: blur(16px) saturate(1.8);
+  --rp-column: rgba(255, 255, 255, 0.16);
+  --rp-card-fill: rgba(255, 255, 255, 0.4);
+  --rp-card-filter: blur(12px) saturate(1.7);
+  --rp-panel-fill: rgba(255, 255, 255, 0.4);
+  --rp-panel-filter: blur(14px) saturate(1.8) brightness(1.04);
+  --rp-float-fill: rgba(255, 255, 255, 0.74);
+  --rp-float-filter: blur(14px) saturate(1.8) brightness(1.04);
+  --rp-table-head: rgba(255, 255, 255, 0.5);
+  --rp-grain: none;
+  --rp-rim-lit: rgba(255, 255, 255, 0.9);
+  --rp-rim-far: rgba(255, 255, 255, 0.45);
+  --rp-rim-mid: rgba(255, 255, 255, 0.12);
+}
+:root[data-family='glass'][data-scheme='dark'],
+:root[data-flavour='frosted'][data-scheme='dark'],
+:root[data-flavour='float'][data-scheme='dark'],
+:root[data-flavour='tinted'][data-scheme='dark'] {
+  /* Apple's dark labels: label and placeholderText, and systemGray for muted text. secondaryLabel, rgba(235, 235, 245,
+     0.6), falls under 4.5:1 on a control's fill over the glass, so secondary text takes systemGray's increased-contrast
+     dark value (R-174,G-174,B-178). */
+  --rp-muted: #8e8e93;
+  --rp-subtle: #aeaeb2;
+  --rp-text: #ffffff;
+  --rp-placeholder: rgba(235, 235, 245, 0.3);
+  --rp-love: #ff453a;
+  --rp-gold: #ff9f0a;
+  --rp-rose: #ffb340;
+  --rp-pine: #0a84ff;
+  --rp-foam: #30d158;
+  --rp-iris: #bf5af2;
+  --rp-c1: #0a84ff;
+  --rp-c2: #30d158;
+  --rp-c3: #bf5af2;
+  --rp-c4: #ff9f0a;
+  --rp-c5: #64d2ff;
+  --rp-c6: #ff375f;
+  --rp-c7: #ffd60a;
+  --rp-c8: #ff453a;
+  --rp-hl-low: rgba(118, 118, 128, 0.18);
+  --rp-ctl: rgba(118, 118, 128, 0.24);
+  --rp-hl-med: rgba(120, 120, 128, 0.32);
+  --rp-hl-high: rgba(120, 120, 128, 0.36);
+  --rp-on-accent: #ffffff;
+  --rp-on-text: #1c1c1e;
+  --rp-positive-text: #30db5b;
+  --rp-notice-text: #ffb340;
+  /* Apple's increased-contrast system blue and red carry dark text above 4.5:1, as system orange does. */
+  --rp-accent-fill: #409cff;
+  --rp-on-accent-fill: #1c1c1e;
+  --rp-negative-fill: #ff6961;
+  --rp-on-negative-fill: #1c1c1e;
+  --rp-on-notice: #1c1c1e;
+  --rp-line: rgba(84, 84, 88, 0.6);
+  --rp-track: rgba(118, 118, 128, 0.24);
+  --rp-knob: #636366;
+  --rp-knob-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --rp-underlay: rgba(0, 0, 0, 0.4);
+  --rp-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.2), 0 20px 56px rgba(0, 0, 0, 0.45);
+  /* Dark grouped backgrounds: systemGray6 (R-28,G-28,B-30) cells on black, systemGray5 (R-44,G-44,B-46) floating, and
+     the dark opaque separator (R-56,G-56,B-58). */
+  --rp-solid-wall: #000000;
+  --rp-solid-chrome: #1c1c1e;
+  --rp-solid-card: #1c1c1e;
+  --rp-solid-float: #2c2c2e;
+  --rp-solid-edge: #38383a;
+}
+:root[data-family='glass'][data-scheme='dark'] {
+  --rp-base: rgba(30, 30, 34, 0.5);
+  --rp-surface: rgba(30, 30, 34, 0.5);
+  --rp-overlay: rgba(255, 255, 255, 0.1);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 10px 30px rgba(0, 0, 0, 0.3);
+  --rp-wall:
+    radial-gradient(circle at 63% 36%, rgba(255, 214, 10, 0.32) 0 120px, rgba(255, 214, 10, 0) 121px),
+    radial-gradient(circle at 30% 66%, rgba(100, 210, 255, 0) 0 190px, rgba(100, 210, 255, 0.36) 191px 199px, rgba(100, 210, 255, 0) 200px),
+    linear-gradient(118deg, rgba(255, 255, 255, 0) 0 60%, rgba(255, 255, 255, 0.08) 60% 64%, rgba(255, 255, 255, 0) 64%),
+    linear-gradient(28deg, rgba(255, 55, 95, 0) 0 74%, rgba(255, 55, 95, 0.3) 74% 77%, rgba(255, 55, 95, 0) 77%),
+    radial-gradient(34% 46% at 28% 30%, rgba(10, 132, 255, 0.42), rgba(10, 132, 255, 0) 72%),
+    radial-gradient(32% 44% at 84% 22%, rgba(255, 55, 95, 0.36), rgba(255, 55, 95, 0) 72%),
+    radial-gradient(40% 50% at 74% 84%, rgba(255, 159, 10, 0.32), rgba(255, 159, 10, 0) 72%),
+    radial-gradient(36% 46% at 26% 88%, rgba(48, 209, 88, 0.28), rgba(48, 209, 88, 0) 72%),
+    radial-gradient(28% 36% at 52% 56%, rgba(191, 90, 242, 0.4), rgba(191, 90, 242, 0) 72%), linear-gradient(160deg, #070a17 0%, #110c1e 50%, #05131a 100%);
+  --rp-chrome: rgba(22, 22, 26, 0.46);
+  --rp-column: rgba(0, 0, 0, 0.14);
+  --rp-card-fill: rgba(30, 30, 34, 0.5);
+  --rp-panel-fill: rgba(30, 30, 34, 0.52);
+  --rp-float-fill: rgba(36, 36, 40, 0.78);
+  --rp-table-head: rgba(30, 30, 34, 0.5);
+  --rp-rim-lit: rgba(255, 255, 255, 0.26);
+  --rp-rim-far: rgba(255, 255, 255, 0.14);
+  --rp-rim-mid: rgba(255, 255, 255, 0.04);
+}
+
+/* Frosted, after Acrylic: blur, a luminosity step that narrows the backdrop's range, a tint at about 0.6 and a fine
+   noise, on every surface, so only colour comes through. Acrylic's tints are R-252,G-252,B-252 in light and
+   R-44,G-44,B-44 in dark; the dark chrome takes Fluent's darker base, R-32,G-32,B-32, so secondary text on a control's
+   fill there stays above 4.5:1. */
+:root[data-family='glass'][data-flavour='frosted'] {
+  --rp-base: rgba(252, 252, 252, 0.6);
+  --rp-surface: rgba(252, 252, 252, 0.6);
+  --rp-overlay: rgba(255, 255, 255, 0.5);
+  --rp-shadow: 0 1px 2px rgba(15, 20, 40, 0.05), 0 6px 20px rgba(15, 20, 40, 0.08);
+  --rp-wall:
+    radial-gradient(circle at 76% 62%, rgba(255, 255, 255, 0.5) 0 120px, rgba(255, 255, 255, 0) 121px),
+    linear-gradient(64deg, rgba(0, 122, 255, 0) 0 30%, rgba(0, 122, 255, 0.26) 30% 34%, rgba(0, 122, 255, 0) 34%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0) 0 70%, rgba(255, 255, 255, 0.4) 70% 73%, rgba(255, 255, 255, 0) 73%),
+    radial-gradient(42% 52% at 16% 10%, rgba(0, 122, 255, 0.45), rgba(0, 122, 255, 0) 70%),
+    radial-gradient(38% 46% at 86% 18%, rgba(175, 82, 222, 0.45), rgba(175, 82, 222, 0) 70%),
+    radial-gradient(46% 52% at 76% 92%, rgba(255, 45, 85, 0.4), rgba(255, 45, 85, 0) 70%),
+    radial-gradient(42% 50% at 14% 86%, rgba(90, 200, 250, 0.5), rgba(90, 200, 250, 0) 70%), linear-gradient(160deg, #eaf0fa 0%, #f3edf7 50%, #f8eef0 100%);
+  --rp-chrome: rgba(252, 252, 252, 0.62);
+  --rp-chrome-filter: blur(28px) saturate(1.6) contrast(0.84) brightness(1.08);
+  --rp-column: rgba(255, 255, 255, 0.16);
+  --rp-card-fill: rgba(252, 252, 252, 0.6);
+  --rp-card-filter: blur(24px) saturate(1.6) contrast(0.84) brightness(1.08);
+  --rp-panel-fill: rgba(252, 252, 252, 0.62);
+  --rp-panel-filter: blur(28px) saturate(1.6) contrast(0.84) brightness(1.08);
+  --rp-float-fill: rgba(252, 252, 252, 0.65);
+  --rp-float-filter: blur(30px) saturate(1.6) contrast(0.84) brightness(1.08);
+  --rp-table-head: rgba(252, 252, 252, 0.6);
+  --rp-grain: var(--rp-noise);
+  --rp-rim-lit: rgba(255, 255, 255, 0.8);
+  --rp-rim-far: rgba(255, 255, 255, 0.4);
+  --rp-rim-mid: rgba(255, 255, 255, 0.2);
+}
+:root[data-flavour='frosted'][data-scheme='dark'] {
+  --rp-base: rgba(44, 44, 44, 0.6);
+  --rp-surface: rgba(44, 44, 44, 0.6);
+  --rp-overlay: rgba(255, 255, 255, 0.08);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --rp-wall:
+    radial-gradient(circle at 76% 62%, rgba(255, 255, 255, 0.06) 0 120px, rgba(255, 255, 255, 0) 121px),
+    linear-gradient(64deg, rgba(10, 132, 255, 0) 0 30%, rgba(10, 132, 255, 0.2) 30% 34%, rgba(10, 132, 255, 0) 34%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0) 0 70%, rgba(255, 255, 255, 0.06) 70% 73%, rgba(255, 255, 255, 0) 73%),
+    radial-gradient(42% 52% at 16% 10%, rgba(10, 132, 255, 0.5), rgba(10, 132, 255, 0) 70%),
+    radial-gradient(38% 46% at 86% 18%, rgba(191, 90, 242, 0.42), rgba(191, 90, 242, 0) 70%),
+    radial-gradient(46% 52% at 76% 92%, rgba(255, 55, 95, 0.32), rgba(255, 55, 95, 0) 70%),
+    radial-gradient(42% 50% at 14% 86%, rgba(100, 210, 255, 0.34), rgba(100, 210, 255, 0) 70%), linear-gradient(160deg, #080b16 0%, #100c1c 50%, #0a0f1a 100%);
+  --rp-chrome: rgba(32, 32, 32, 0.72);
+  --rp-chrome-filter: blur(28px) saturate(1.6) contrast(0.84) brightness(0.72);
+  --rp-column: rgba(0, 0, 0, 0.14);
+  --rp-card-fill: rgba(44, 44, 44, 0.6);
+  --rp-card-filter: blur(24px) saturate(1.6) contrast(0.84) brightness(0.72);
+  --rp-panel-fill: rgba(44, 44, 44, 0.62);
+  --rp-panel-filter: blur(28px) saturate(1.6) contrast(0.84) brightness(0.72);
+  --rp-float-fill: rgba(44, 44, 44, 0.66);
+  --rp-float-filter: blur(30px) saturate(1.6) contrast(0.84) brightness(0.72);
+  --rp-table-head: rgba(44, 44, 44, 0.6);
+  --rp-grain: var(--rp-noise);
+  --rp-rim-lit: rgba(255, 255, 255, 0.24);
+  --rp-rim-far: rgba(255, 255, 255, 0.1);
+  --rp-rim-mid: rgba(255, 255, 255, 0.05);
+}
+
+/* Float, after blowfish.page: one smooth 24px blur under a 60% fill, a soft one-pixel border and a small shadow, with
+   no grain, lens or luminosity step, so shapes behind stay softly recognisable. Its fills and borders are Tailwind's
+   white and neutral scale as that site uses them: white at 0.6 and neutral-200 at 0.8 in light, neutral-900 at 0.5,
+   neutral-800 at 0.6 and a neutral-800 border in dark. */
+:root[data-family='glass'][data-flavour='float'] {
+  --rp-base: rgba(255, 255, 255, 0.6);
+  --rp-surface: rgba(255, 255, 255, 0.6);
+  --rp-overlay: rgba(255, 255, 255, 0.55);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --rp-wall:
+    radial-gradient(circle at 64% 24%, rgba(255, 204, 0, 0.55) 0 110px, rgba(255, 204, 0, 0) 111px),
+    radial-gradient(circle at 22% 74%, rgba(0, 122, 255, 0.4) 0 170px, rgba(0, 122, 255, 0) 171px),
+    linear-gradient(135deg, rgba(255, 45, 85, 0) 0 48%, rgba(255, 45, 85, 0.32) 48% 56%, rgba(255, 45, 85, 0) 56%),
+    radial-gradient(40% 50% at 12% 14%, rgba(90, 200, 250, 0.5), rgba(90, 200, 250, 0) 70%),
+    radial-gradient(36% 46% at 90% 16%, rgba(175, 82, 222, 0.36), rgba(175, 82, 222, 0) 70%),
+    radial-gradient(44% 52% at 84% 90%, rgba(52, 199, 89, 0.36), rgba(52, 199, 89, 0) 70%), linear-gradient(160deg, #f5f5f5 0%, #f2f0f5 50%, #f5f2ee 100%);
+  --rp-chrome: rgba(255, 255, 255, 0.6);
+  --rp-chrome-filter: blur(24px);
+  --rp-column: transparent;
+  --rp-card-fill: rgba(255, 255, 255, 0.6);
+  --rp-card-filter: blur(24px);
+  --rp-panel-fill: rgba(255, 255, 255, 0.6);
+  --rp-panel-filter: blur(24px);
+  --rp-float-fill: rgba(255, 255, 255, 0.6);
+  --rp-float-filter: blur(24px);
+  --rp-table-head: rgba(255, 255, 255, 0.6);
+  --rp-grain: none;
+  --rp-rim-lit: rgba(229, 229, 229, 0.8);
+  --rp-rim-far: rgba(229, 229, 229, 0.8);
+  --rp-rim-mid: rgba(229, 229, 229, 0.8);
+}
+:root[data-flavour='float'][data-scheme='dark'] {
+  --rp-base: rgba(23, 23, 23, 0.5);
+  --rp-surface: rgba(23, 23, 23, 0.5);
+  --rp-overlay: rgba(255, 255, 255, 0.08);
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --rp-wall:
+    radial-gradient(circle at 64% 24%, rgba(255, 214, 10, 0.3) 0 110px, rgba(255, 214, 10, 0) 111px),
+    radial-gradient(circle at 22% 74%, rgba(10, 132, 255, 0.32) 0 170px, rgba(10, 132, 255, 0) 171px),
+    linear-gradient(135deg, rgba(255, 55, 95, 0) 0 48%, rgba(255, 55, 95, 0.22) 48% 56%, rgba(255, 55, 95, 0) 56%),
+    radial-gradient(40% 50% at 12% 14%, rgba(100, 210, 255, 0.3), rgba(100, 210, 255, 0) 70%),
+    radial-gradient(36% 46% at 90% 16%, rgba(191, 90, 242, 0.3), rgba(191, 90, 242, 0) 70%),
+    radial-gradient(44% 52% at 84% 90%, rgba(48, 209, 88, 0.24), rgba(48, 209, 88, 0) 70%), linear-gradient(160deg, #0a0a0a 0%, #100e14 50%, #0c0d0a 100%);
+  --rp-chrome: rgba(38, 38, 38, 0.6);
+  --rp-chrome-filter: blur(24px);
+  --rp-column: transparent;
+  --rp-card-fill: rgba(23, 23, 23, 0.5);
+  --rp-card-filter: blur(24px);
+  --rp-panel-fill: rgba(38, 38, 38, 0.6);
+  --rp-panel-filter: blur(24px);
+  --rp-float-fill: rgba(38, 38, 38, 0.6);
+  --rp-float-filter: blur(24px);
+  --rp-table-head: rgba(23, 23, 23, 0.5);
+  --rp-grain: none;
+  --rp-rim-lit: #262626;
+  --rp-rim-far: #262626;
+  --rp-rim-mid: #262626;
+}
+
+/* Tinted, after Mica: no blur. A calm wallpaper is the base, the chrome takes it at 0.94 and cards at 0.85, with soft
+   shadows only. It is also the recipe the other two fall back to. */
+:root[data-family='glass'][data-flavour='tinted'] {
+  --rp-base: rgba(255, 255, 255, 0.85);
+  --rp-surface: rgba(255, 255, 255, 0.85);
+  --rp-overlay: #f2f2f7;
+  --rp-shadow: 0 1px 2px rgba(15, 20, 40, 0.06), 0 2px 8px rgba(15, 20, 40, 0.04);
+  --rp-wall:
+    radial-gradient(circle at 72% 34%, rgba(255, 255, 255, 0.4) 0 160px, rgba(255, 255, 255, 0) 161px),
+    linear-gradient(118deg, rgba(255, 255, 255, 0) 0 62%, rgba(255, 255, 255, 0.3) 62% 66%, rgba(255, 255, 255, 0) 66%),
+    radial-gradient(50% 60% at 8% 12%, rgba(0, 122, 255, 0.22), rgba(0, 122, 255, 0) 70%),
+    radial-gradient(46% 56% at 92% 14%, rgba(175, 82, 222, 0.16), rgba(175, 82, 222, 0) 70%),
+    radial-gradient(50% 56% at 80% 92%, rgba(255, 149, 0, 0.16), rgba(255, 149, 0, 0) 70%), linear-gradient(160deg, #e9edf5 0%, #efedf3 50%, #f3efea 100%);
+  --rp-chrome: rgba(240, 242, 248, 0.94);
+  --rp-chrome-filter: none;
+  --rp-column: rgba(255, 255, 255, 0.3);
+  --rp-card-fill: rgba(255, 255, 255, 0.85);
+  --rp-card-filter: none;
+  --rp-panel-fill: rgba(250, 250, 252, 0.96);
+  --rp-panel-filter: none;
+  --rp-float-fill: rgba(255, 255, 255, 0.97);
+  --rp-float-filter: none;
+  --rp-table-head: #f7f7fa;
+  --rp-grain: none;
+  --rp-rim-lit: rgba(255, 255, 255, 0.9);
+  --rp-rim-far: rgba(60, 60, 67, 0.12);
+  --rp-rim-mid: rgba(60, 60, 67, 0.06);
+}
+:root[data-flavour='tinted'][data-scheme='dark'] {
+  --rp-base: rgba(36, 36, 40, 0.85);
+  --rp-surface: rgba(36, 36, 40, 0.85);
+  --rp-overlay: #2c2c2e;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.2);
+  --rp-wall:
+    radial-gradient(circle at 72% 34%, rgba(255, 255, 255, 0.04) 0 160px, rgba(255, 255, 255, 0) 161px),
+    linear-gradient(118deg, rgba(255, 255, 255, 0) 0 62%, rgba(255, 255, 255, 0.03) 62% 66%, rgba(255, 255, 255, 0) 66%),
+    radial-gradient(50% 60% at 8% 12%, rgba(10, 132, 255, 0.2), rgba(10, 132, 255, 0) 70%),
+    radial-gradient(46% 56% at 92% 14%, rgba(191, 90, 242, 0.14), rgba(191, 90, 242, 0) 70%),
+    radial-gradient(50% 56% at 80% 92%, rgba(255, 159, 10, 0.1), rgba(255, 159, 10, 0) 70%), linear-gradient(160deg, #0d0f15 0%, #111016 50%, #12100e 100%);
+  --rp-chrome: rgba(26, 27, 32, 0.95);
+  --rp-chrome-filter: none;
+  --rp-column: rgba(0, 0, 0, 0.2);
+  --rp-card-fill: rgba(36, 36, 40, 0.85);
+  --rp-card-filter: none;
+  --rp-panel-fill: rgba(44, 44, 46, 0.96);
+  --rp-panel-filter: none;
+  --rp-float-fill: rgba(44, 44, 46, 0.97);
+  --rp-float-filter: none;
+  --rp-table-head: #2c2c2e;
+  --rp-grain: none;
+  --rp-rim-lit: rgba(255, 255, 255, 0.16);
+  --rp-rim-far: rgba(255, 255, 255, 0.06);
+  --rp-rim-mid: rgba(255, 255, 255, 0.03);
+}
+
+/* Liquid Glass's lens, where src/ui/lens.ts installed its filters: a light blur, then the refraction and specular rim
+   of #doona-lens (20px corners) or #doona-lens-sm (10px corners). */
+:root[data-flavour='glass'][data-lens] {
+  --rp-panel-filter: blur(4px) url(#doona-lens) saturate(1.8) brightness(1.04);
+  --rp-lens-sm: blur(6px) url(#doona-lens-sm) saturate(1.8) brightness(1.04);
+}
+
+/* Reduce Transparency, Increase Contrast and forced colours turn every material into the solid recipe with a clear
+   edge. The selector matches the flavour blocks above in specificity and follows them. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  :root[data-family='glass'][data-flavour][data-scheme] {
+    --rp-base: var(--rp-solid-card);
+    --rp-surface: var(--rp-solid-card);
+    --rp-wall: var(--rp-solid-wall);
+    --rp-chrome: var(--rp-solid-chrome);
+    --rp-chrome-filter: none;
+    --rp-column: var(--rp-solid-wall);
+    --rp-card-fill: var(--rp-solid-card);
+    --rp-card-filter: none;
+    --rp-panel-fill: var(--rp-solid-float);
+    --rp-panel-filter: none;
+    --rp-float-fill: var(--rp-solid-float);
+    --rp-float-filter: none;
+    --rp-lens-sm: none;
+    --rp-table-head: var(--rp-solid-card);
+    --rp-grain: none;
+    --rp-noise-wall: none;
+    --rp-rim-lit: var(--rp-solid-edge);
+    --rp-rim-far: var(--rp-solid-edge);
+    --rp-rim-mid: var(--rp-solid-edge);
+  }
 }

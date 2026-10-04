@@ -10,6 +10,17 @@
   };
   var scheme = read('doona-scheme');
   var palette = read('doona-palette');
+  // Before each Glass material was a palette of its own, Glass kept its material in doona-glass. Read it once into the
+  // palette, then drop it.
+  var material = read('doona-glass');
+  if (material !== null)
+    try {
+      if (palette === 'glass/glass' && (material === 'frosted' || material === 'tinted'))
+        localStorage.setItem('doona-palette', (palette = 'glass/' + material));
+      localStorage.removeItem('doona-glass');
+    } catch {
+      // Storage is unavailable; the palette stays as saved.
+    }
   var lang = read('doona-lang');
   var d = document.documentElement;
   var dark = scheme === 'dark' || (scheme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
