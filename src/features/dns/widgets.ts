@@ -1,1 +1,1 @@
-export {dnsAnalysis, dnsOutcomes} from './stats';
+export {dnsAnalysis, dnsOutcomes, type LatencySample} from './stats';

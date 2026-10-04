@@ -61,7 +61,8 @@ export const runtimeOutbounds: RuntimeOutbounds = {
       total_connections: String(total),
       upload_bytes: String(up),
       download_bytes: String(down),
-      errors: '0'
+      // Two outbounds have failed since the counters started.
+      errors: ({proxy: '37', gaming: '4'} as Record<string, string>)[row.name] ?? '0'
     };
   })
 };

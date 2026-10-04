@@ -1,13 +1,13 @@
 import {useContext, useMemo} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {formatBytes, localTime} from '../../i18n/format';
+import {formatBytes, formatLatency, localTime} from '../../i18n/format';
 import {useCapabilities, useConnections, useRuntimeOutbounds, useDnsLog, poll} from '../../store';
 import {connectionRows, outboundLabel, outboundUsage} from '../../api/selectors';
 import {connectionRanking} from '../../features/shared/ranking';
 import {outboundColor} from '../../features/activity/widgets';
-import {dnsAnalysis, dnsOutcomes} from '../../features/dns/widgets';
+import {dnsAnalysis, dnsOutcomes, type LatencySample} from '../../features/dns/widgets';
 import {ranked} from '../../features/shared/ranked';
-import {Donut, Waffle, usePalette} from '../../ui/charts';
+import {Beeswarm, Donut, Waffle, usePalette} from '../../ui/charts';
 import {Bar, columns, Empty, Kv} from '../../ui/ui';
 import {contentLimit, registry, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
@@ -71,10 +71,13 @@ export function OutboundWidget({item}: {item: Widget}) {
   const resource = useRuntimeOutbounds(true);
   const p = usePalette();
   const usage = useMemo(() => outboundUsage(resource.data), [resource.data]);
-  const rows = usage.rows.map((row, i) => ({name: row.name, count: Number(row.bytes ?? 0n), color: outboundColor(row, i, p)}));
+  // Failures keep each outbound's colour from the usage widget, most failures first.
+  const errors = item.id === 'outboundErrors';
+  const rows = usage.rows.map((row, i) => ({name: row.name, count: Number((errors ? row.errors : row.bytes) ?? 0n), color: outboundColor(row, i, p)}));
+  if (errors) rows.sort((a, b) => b.count - a.count);
   return (
     <Reading state={resource}>
-      <Shares item={item} rows={rows} bytes empty={t('ui.empty')} />
+      <Shares item={item} rows={rows} bytes={!errors} empty={t(errors ? 'widgets.noFailures' : 'ui.empty')} />
       {item.size !== 'small' && (
         <span className="rp-label rp-counter-since">{t('act.since', {time: localTime(resource.data?.counter_since ?? null, locale)})}</span>
       )}
@@ -107,6 +110,51 @@ export function Connections({item}: {item: Widget}) {
     <Reading state={resource}>
       <Shares item={item} rows={rows} empty={t('dashboard.noConnections')} />
       {resource.data?.truncated && <span className="rp-label">{t('widgets.sampled')}</span>}
+    </Reading>
+  );
+}
+// Lookups that reached an upstream: their median and p95, a swarm of them and, tall, one strip per upstream.
+export function DnsLatency({item}: {item: Widget}) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const p = usePalette();
+  const surface = useContext(WidgetSurface);
+  const resource = useDnsLog({});
+  const analysis = useMemo(() => dnsAnalysis(resource.data?.records ?? [], locale), [resource.data, locale]);
+  const facts: Array<[string, string]> = [
+    [t('dns.chart.median'), formatLatency(analysis.typical, t)],
+    [t('dns.chart.p95'), formatLatency(analysis.slowest, t)]
+  ];
+  const point = (sample: LatencySample) => ({id: sample.id, value: sample.value, color: p.cat[2], lines: [sample.name, formatLatency(sample.value, t)]});
+  const tall = surface === 'panel' ? item.size === 'large' : item.height === 'tall';
+  if (analysis.samples.length < 5)
+    return (
+      <Reading state={resource}>
+        <span className="rp-label">{t('dashboard.dnsSample', {n: analysis.total})}</span>
+      </Reading>
+    );
+  return (
+    <Reading state={resource}>
+      <Kv compact row={item.size !== 'small'} items={facts.slice(0, item.size === 'small' ? 1 : 2)} />
+      {item.form === 'dots' && item.size !== 'small' && (
+        <Beeswarm
+          label={t('widgets.dnsLatency')}
+          points={analysis.samples.map(point)}
+          rows={
+            tall
+              ? analysis.upstreams.map(row => ({
+                  id: row.upstream,
+                  label: row.upstream,
+                  detail: t('dns.chart.upstream', {n: row.samples.length, median: formatLatency(row.median, t)}),
+                  points: row.samples.map(point),
+                  mark: row.median
+                }))
+              : []
+          }
+          fmt={value => formatLatency(value, t)}
+          maxHeight={surface === 'panel' ? 96 : item.height === 'short' ? 120 : undefined}
+        />
+      )}
     </Reading>
   );
 }

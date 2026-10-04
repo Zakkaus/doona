@@ -14,9 +14,9 @@ import ArrowUp from '../../ui/icons/ArrowUp';
 import {href} from '../route';
 import {contentLimit, canonicalForm, WidgetSurface, type Widget} from './layout';
 import {RuntimeWidget, MemoryWidget} from './ContentRuntime';
-import {RankingWidget, OutboundWidget, Connections, Dns} from './ContentShares';
+import {RankingWidget, OutboundWidget, Connections, Dns, DnsLatency} from './ContentShares';
 import {ModeWidget, GroupWidget} from './ContentPolicies';
-import {CurrentLatency, Latency, Sources, Groups} from './ContentNodes';
+import {CurrentLatency, Latency, NodeAvailability, Sources, Groups} from './ContentNodes';
 import {Reading} from './Reading';
 
 // The rates widget's reading for a collapsed header: upload above download, each in its chart colour.
@@ -55,6 +55,7 @@ export function Contents({item, onChange}: {item: Widget; onChange?: (item: Widg
     case 'ranking':
       return <RankingWidget item={item} />;
     case 'outbounds':
+    case 'outboundErrors':
       return <OutboundWidget item={item} />;
     case 'global':
     case 'mode':
@@ -63,6 +64,8 @@ export function Contents({item, onChange}: {item: Widget; onChange?: (item: Widg
       return <CurrentLatency item={item} onChange={onChange} />;
     case 'nodeLatency':
       return <Latency item={item} />;
+    case 'nodeAvailability':
+      return <NodeAvailability item={item} />;
     case 'sourceHealth':
       return <Sources item={item} />;
     case 'policyGroups':
@@ -72,6 +75,8 @@ export function Contents({item, onChange}: {item: Widget; onChange?: (item: Widg
       return <Connections item={item} />;
     case 'dnsAnswers':
       return <Dns item={item} />;
+    case 'dnsLatency':
+      return <DnsLatency item={item} />;
     case 'group':
       return <GroupWidget item={item} onChange={onChange} />;
     case 'status':
