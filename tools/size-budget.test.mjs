@@ -16,7 +16,8 @@ const manifest = {
   'src/ui/charts/Sparkline.tsx': chunk('spark.js', {isDynamicEntry: true, imports: ['_chartMath.js']}),
   'src/features/rules/Rules.tsx': chunk('rules.js', {isDynamicEntry: true, imports: ['_vendor.js', '_shared.js', '_table.js'], css: ['assets/rules.css']}),
   '_table.js': chunk('table.js'),
-  'src/features/config/Config.tsx': chunk('config.js', {isDynamicEntry: true, imports: ['_vendor.js', '_editor.js']}),
+  'src/features/config/Config.tsx': chunk('config.js', {isDynamicEntry: true, imports: ['_vendor.js'], dynamicImports: ['src/ui/code/CodeEditor.tsx']}),
+  'src/ui/code/CodeEditor.tsx': chunk('codeEditor.js', {isDynamicEntry: true, imports: ['_vendor.js', '_editor.js']}),
   '_editor.js': chunk('editor.js'),
   'src/i18n/locales/en.json': chunk('locale-en.js', {src: 'src/i18n/locales/en.json', isDynamicEntry: true}),
   'src/i18n/locales/zh-TW.json': chunk('locale-zh-TW.js', {src: 'src/i18n/locales/zh-TW.json', isDynamicEntry: true}),
@@ -30,6 +31,7 @@ const bytes = {
   'shared.js': 10,
   'activity.js': 200,
   'login.js': 20,
+  'codeEditor.js': 5,
   'loginOnly.js': 30,
   'donut.js': 50,
   'area.js': 60,
@@ -73,7 +75,8 @@ it.each([
   ['startupCss', 'activity', 3 + 4],
   ['mock', 'mock/index.ts', 1100 + 1200],
   ['route', 'src/features/rules/Rules.tsx', 300 + 400],
-  ['routeConfig', 'src/features/config/Config.tsx', 500 + 600],
+  // Config's editor loads on the source tab, so its chunk counts too.
+  ['routeConfig', 'src/features/config/Config.tsx', 500 + 5 + 600],
   ['fontCss', 'src/fonts-sc.css', 6],
   ['locale', 'src/i18n/locales/zh-TW.json', 9]
 ])('measures %s as the bytes a user downloads', (budget, label, expected) => {

@@ -315,3 +315,19 @@ test('Escape while the search dialog loads keeps it from opening late', async ({
   await page.keyboard.press('Control+K');
   await expect(page.getByRole('dialog')).toBeVisible();
 });
+
+test('Config loads CodeMirror only for the source editor', async ({page}) => {
+  const editor = /\/assets\/(vendor-editor|CodeEditor)-[\w-]{8}\.js$/;
+  const scripts: string[] = [];
+  page.on('request', request => {
+    if (editor.test(new URL(request.url()).pathname)) scripts.push(request.url());
+  });
+  await page.goto('/#/config?tab=modules');
+  await expect(page.getByRole('tab', {name: 'Modules', selected: true})).toBeVisible();
+  await expect(page.locator('.rp-content .rp-card').first()).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(scripts).toEqual([]);
+  await page.getByRole('tab', {name: /^Config files/}).click();
+  await expect(page.locator('.rp-source-card .cm-editor')).toBeVisible();
+  expect(scripts.length).toBeGreaterThan(0);
+});

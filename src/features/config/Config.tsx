@@ -1,3 +1,4 @@
+import {useEffect} from 'react';
 import {useT} from '../../i18n';
 import {Badge, Button, ErrorMessage, HelpRow, Kv, LabeledSelect, Light, PageSkeleton, Tabs, TextTooltip, Toolbar, type PageShape} from '../../ui/ui';
 import Download from '../../ui/icons/Download';
@@ -7,13 +8,12 @@ import {ConfigHistory} from './ConfigHistory';
 import {Modules} from './Modules';
 import {GlobalSettings} from './GlobalSettings';
 import {NewSource} from './NewSource';
-import {SourceCard} from './SourceCard';
+import {editorBlock, preloadEditor, SourceCard} from './SourceCard';
 // The first read's Skeletons: the summary row, each tab's body (the module cards, the source editor under its
 // toolbar), and the tab row over the editor, the usual first tab, while the tabs are not known yet.
 const summaryRow: PageShape = [{toolbar: 3, height: 24}];
 const moduleCards: PageShape = [{cards: [94, 94, 94, 94, 94, 94, 94], gap: 'page'}];
-// The editor's height follows the file, so its block is a typical file's.
-const sourceEditor: PageShape = [{toolbar: 1, height: 16}, {block: 560}];
+const sourceEditor: PageShape = [{toolbar: 1, height: 16}, ...editorBlock];
 const tabsAndEditor: PageShape = [{tabs: 3}, {toolbar: 1}, ...sourceEditor];
 export function Config(props: PageProps) {
   const t = useT();
@@ -39,6 +39,9 @@ export function Config(props: PageProps) {
     summaryTone,
     summaryText
   } = useConfigPage(props);
+  useEffect(() => {
+    if (tab === 'source') void preloadEditor();
+  }, [tab]);
   const content = {
     history: <ConfigHistory />,
     modules: modulesProps ? <Modules {...modulesProps} /> : loading && <PageSkeleton panel shape={moduleCards} />,
