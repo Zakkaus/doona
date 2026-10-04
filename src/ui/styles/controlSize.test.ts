@@ -95,8 +95,8 @@ it('rejects page, one-off and literal control sizing, including logical sizes an
   expect(violations('.rp-btn > svg {height: 16px}', 'buttons-menus.css')).toEqual([]);
 });
 
-// Every segmented control is S2's default M (32px), as S2's SegmentedControl has no size, so a time range in a card
-// matches a page filter.
+// A segmented control is S2's default M (32px), as S2's SegmentedControl has no size, so a time range in a card matches a
+// page filter; only a page's top-level switch asks for L, which a card's size never gives it.
 function segmentedHeights(css: string): string[] {
   const values: string[] = [];
   transform({
@@ -118,7 +118,7 @@ function segmentedHeights(css: string): string[] {
   return values;
 }
 
-it('sizes every segmented control at M only', () => {
+it('sizes a segmented control at M unless it asks for L', () => {
   const heights = segmentedHeights(segmentedCss);
   expect(heights.length).toBeGreaterThan(0);
   expect(heights.filter(value => !value.includes('"--rp-control"'))).toEqual([]);
@@ -131,6 +131,8 @@ it('sizes every segmented control at M only', () => {
     const markup = renderToStaticMarkup(createElement(ControlSizeContext, {value}, segmented));
     expect(markup.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="M"'));
   }
+  const large = renderToStaticMarkup(createElement(Segmented, {items, value: 'a', onChange: () => {}, label: 'Range', size: 'L'}));
+  expect(large.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="L"'));
 });
 
 // A control is M unless it asks for L; its own size wins over the size a card provides.

@@ -55,6 +55,31 @@ for (const width of [1280, 390]) {
       expect(geometry.segmentFont).toBe('14px');
     });
 
+    // A page without tabs draws its top-level switch at L in their place, and the button on its row with it.
+    test('the Policies kind switch and the new group button are L, centred on one line', async ({page}) => {
+      await page.goto('/#/policies');
+      const row = page.locator('.rp-content [data-page-toolbar]').first();
+      await expect(row.locator('.rp-seg')).toBeVisible();
+      await settleFrames(page);
+      const geometry = await row.evaluate(el => {
+        const measure = (node: HTMLElement) => {
+          const box = node.getBoundingClientRect();
+          return {height: box.height, top: box.top, bottom: box.bottom, centre: box.top + box.height / 2, font: getComputedStyle(node).fontSize};
+        };
+        const seg = el.querySelector<HTMLElement>('.rp-seg')!;
+        return {
+          seg: measure(seg),
+          items: [...seg.querySelectorAll<HTMLElement>('[role=radio]')].map(measure),
+          button: measure([...el.querySelectorAll<HTMLElement>(':scope > .rp-btn')].at(-1)!)
+        };
+      });
+      for (const control of [geometry.seg, geometry.button, ...geometry.items]) expect(control.height, JSON.stringify(geometry)).toBe(40);
+      for (const control of [geometry.button, ...geometry.items]) expect(control.font, JSON.stringify(geometry)).toBe('16px');
+      // On a phone the L row is wider than the page and the button wraps under the switch; on a line they share a centre.
+      if (width === 1280 || geometry.button.top < geometry.seg.bottom) expect(Math.abs(geometry.seg.centre - geometry.button.centre)).toBeLessThanOrEqual(1);
+      else expect(geometry.button.top).toBeGreaterThanOrEqual(geometry.seg.bottom);
+    });
+
     test('switching tabs keeps the heading, the tab row and the panel top in place', async ({page}) => {
       await page.goto('/#/dns?tab=stats');
       const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]');

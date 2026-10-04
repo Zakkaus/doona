@@ -1,5 +1,5 @@
 /* Segmented control: the selection slides between items (200ms, ease-out). A page's tab bar (tabs-panels.css) is drawn
-   as the same control at L, so the track, the slider and the item rules here name both. */
+   as the same control at L, so the track, the slider, the item and the L rules here name both. */
 .rp-seg,
 .rp-tabbar {
   display: inline-flex;
@@ -76,10 +76,24 @@
 .rp-slider[data-still] {
   transition: none;
 }
-/* M's inset; the button keeps M's height from the kit Button. A tab's L size is in tabs-panels.css. */
+/* M's inset; the button keeps M's height from the kit Button. A tab's L height is in tabs-panels.css. */
 .rp-seg .rp-btn {
   padding: 0 var(--rp-inset-compact);
   min-height: 0;
+}
+/* S2's L control (style-utils controlFont, controlBorderRadius), for a page's tab bar and a page's top-level switch: the
+   ui-lg font (16px), the edge-to-text inset (3/8 of the height, counted from the box edge, so less the item's 2px border)
+   and the L corner (9px), which the track and the slider share since the slider fills the track flush. A segment takes
+   L's 40px from the kit Button; a tab takes it in tabs-panels.css. */
+:is(.rp-seg, .rp-tabbar)[data-size='L'],
+:is(.rp-seg, .rp-tabbar)[data-size='L'] > .rp-slider {
+  border-radius: var(--rp-lg-radius);
+}
+.rp-seg .rp-btn[data-size='L'],
+.rp-tab[data-size='L'] {
+  padding-inline: calc(var(--rp-lg-inset-field) - 2px);
+  font-size: var(--rp-lg-text);
+  border-radius: var(--rp-lg-radius);
 }
 .rp-seg .rp-btn,
 .rp-tab {

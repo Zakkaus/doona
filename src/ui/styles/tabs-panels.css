@@ -1,5 +1,5 @@
-/* A page's tab bar is the segmented control at S2's L size: segmented.css draws its track, slider and items, and this
-   file sizes it to L and lets it scroll. */
+/* A page's tab bar is the segmented control at S2's L size: segmented.css draws its track, slider and items at L, and
+   this file gives the tabs L's height and lets the bar scroll. */
 /* The panels share one grid row, so a kept panel hidden behind the shown one keeps its width and its top. */
 .rp-tabs {
   display: grid;
@@ -57,13 +57,7 @@
   cursor: pointer;
   outline: none;
 }
-/* S2's L control (style-utils controlSize, controlFont, controlBorderRadius): 40px tall, the ui-lg font (16px), the
-   edge-to-text inset (3/8 of the height, counted from the box edge, so less the item's 2px border) and the L corner
-   (9px), which the bar and the slider share since the slider fills the bar flush. */
-.rp-tabbar[data-size='L'],
-.rp-tabbar[data-size='L'] > .rp-slider {
-  border-radius: var(--rp-lg-radius);
-}
+/* S2's L height (style-utils controlSize): 40px. segmented.css gives the bar and its tabs L's font, inset and corner. */
 .rp-tabbar[data-size='L'] .rp-tablist {
   /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
      panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
@@ -71,9 +65,6 @@
 }
 .rp-tab[data-size='L'] {
   min-height: var(--rp-control-lg);
-  padding-inline: calc(var(--rp-lg-inset-field) - 2px);
-  font-size: var(--rp-lg-text);
-  border-radius: var(--rp-lg-radius);
 }
 /* Laid out, not display: none: a table or chart in a hidden panel keeps measuring the width it shows again, so the
    first frame back is already at it, even after a resize while hidden. React Aria marks the panel inert, which keeps
