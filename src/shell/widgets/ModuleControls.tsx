@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useT, type Key} from '../../i18n';
 import {useCapabilities, useGroups} from '../../store';
-import {Button, ChoiceMenu, Segmented} from '../../ui/ui';
+import {Button, ChoiceMenu, Segmented, Switch} from '../../ui/ui';
 import {WidgetGalleryTile, type GalleryRow} from '../../ui/WidgetGalleryTile';
 import {tileAttributes} from '../../ui/DashboardTile';
 import {EditorOption} from '../../ui/EditorOption';
@@ -186,6 +186,11 @@ export function ModuleInspector({
             ]}
           />
         </EditorOption>
+      )}
+      {active.id === 'speed' && active.size !== 'small' && canonicalForm(active, surface) === 'sparkline' && (
+        <Switch isSelected={!active.split} onChange={combine => update({...active, split: combine ? undefined : true})}>
+          {t('widgets.combineRates')}
+        </Switch>
       )}
       {groupChoice && <GroupOption item={active} automatic={groupChoice} update={update} />}
       <div className="rp-cluster rp-module-actions">

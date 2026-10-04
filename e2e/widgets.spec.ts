@@ -732,7 +732,7 @@ test('the panel starts pinned and open; unpinned, it collapses on another page a
   await expect(floating(page).getByRole('button', {name: 'Expand widgets', exact: true})).toBeVisible();
 });
 
-test('the default panel draws both rates in one chart without scrolling, or two once the menu splits them', async ({page}) => {
+test('the default panel draws both rates in one chart without scrolling', async ({page}) => {
   await page.goto('/#/settings');
   const chart = floating(page).locator('.rp-compact-chart');
   await expect(chart.locator('svg .rp-area-curve')).toHaveCount(2);
@@ -741,12 +741,37 @@ test('the default panel draws both rates in one chart without scrolling, or two 
     [el, ...el.querySelectorAll('*')].some(node => /auto|scroll/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 1)
   );
   expect(scrolls).toBe(false);
+});
+
+test('a rates widget splits its own chart in its settings, and the panel menu no longer offers it', async ({page}) => {
+  await save(page, {...defaults(), items: [defaultWidget('speed'), {...defaultWidget('speed'), instance: 'speed-2'}]});
+  await page.goto('/#/settings');
+  const charts = (id: string) => floating(page).locator(`[data-widget-id="${id}"] .rp-compact-chart svg`);
+  await expect(charts('speed')).toHaveCount(1);
+  await expect(charts('speed-2')).toHaveCount(1);
   await floating(page).getByRole('button', {name: 'Panel options', exact: true}).click();
-  const combine = page.getByRole('menuitemcheckbox', {name: 'Combine upload and download charts', exact: true});
-  await expect(combine).toHaveAttribute('aria-checked', 'true');
-  await combine.click();
-  await expect(combine).toHaveAttribute('aria-checked', 'false');
-  await expect(chart.locator('svg')).toHaveCount(2);
+  await expect(page.getByRole('menuitemcheckbox', {name: 'Show widget titles', exact: true})).toBeVisible();
+  await expect(page.getByRole('menuitemcheckbox', {name: 'Combine upload and download charts', exact: true})).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await openEditor(page);
+  await pickWidget(page, 1);
+  const combine = editor(page).getByRole('switch', {name: 'Combine upload and download charts', exact: true});
+  await expect(combine).toBeChecked();
+  await combine.press('Space');
+  await expect(combine).not.toBeChecked();
+  await editor(page).getByRole('button', {name: 'Save', exact: true}).click();
+  await expect(charts('speed-2')).toHaveCount(2);
+  await expect(charts('speed')).toHaveCount(1);
+  await settle(page);
+  await page.reload();
+  await expect(charts('speed-2')).toHaveCount(2);
+  await expect(charts('speed')).toHaveCount(1);
+});
+
+test('a panel saved with the former split opens with its rates widget split', async ({page}) => {
+  await save(page, {...defaults(), splitRates: true} as Layout);
+  await page.goto('/#/settings');
+  await expect(floating(page).locator('[data-widget-id="speed"] .rp-compact-chart svg')).toHaveCount(2);
 });
 
 test.describe('three-column editor at 1440', () => {

@@ -106,6 +106,8 @@ export type Widget = {
   size: ModuleSize;
   group?: string;
   by?: 'dev' | 'domain';
+  // The rates widget draws download and upload as two sparklines instead of one chart; absent while combined.
+  split?: true;
   // Dashboard only, see dashboardSizing.ts; absent means Auto width, standard height and the list's own row count.
   width?: DashboardWidth;
   height?: DashboardHeight;
@@ -156,8 +158,6 @@ export type Layout = {
   collapsed: boolean;
   // A pinned panel stays as the reader left it on every page; otherwise it collapses when the page changes.
   pinned: boolean;
-  // The rates widget draws download and upload as two sparklines instead of one chart; absent while combined.
-  splitRates?: true;
   // The panel shows each widget's title above it; absent while hidden, when the title stays the widget's accessible name.
   titles?: true;
   // Docked as the sidebar's last section instead of floating over the content; absent while floating.
@@ -213,6 +213,7 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
     if (surface === 'panel' && item.size === 'large' && !sizesFor(id, item.form as ModuleForm, surface).includes('large')) item.size = 'medium';
     if (value.group !== undefined) item.group = value.group as string;
     if (id === 'ranking') item.by = value.by === 'domain' ? 'domain' : 'dev';
+    if (id === 'speed' && value.split === true) item.split = true;
     if (surface === 'dashboard') {
       if (widths.includes(value.width as DashboardWidth)) item.width = nearestWidth(id, value.width as DashboardWidth);
       if (heights.includes(value.height as DashboardHeight)) item.height = value.height as DashboardHeight;
@@ -228,8 +229,9 @@ export function parseItems(values: unknown[], surface: Surface, legacy = false):
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 export function parseLayout(value: unknown): Layout {
   if (!object(value) || ![1, 2, 3, 4].includes(value.version as number) || !Array.isArray(value.items)) return defaults();
+  // The panel's former split of the rates, one choice for all of them, reads as every rates widget's own.
   const items = parseItems(
-    value.version === 1 ? value.items.map(item => (object(item) ? {...item, size: 'medium'} : item)) : value.items,
+    value.items.map(item => (object(item) ? {...item, ...(value.version === 1 && {size: 'medium'}), ...(value.splitRates === true && {split: true})} : item)),
     'panel',
     (value.version as number) < 3
   );
@@ -247,7 +249,6 @@ export function parseLayout(value: unknown): Layout {
     // Before version 4 a panel was unpinned by default, which a stored false cannot tell from a choice: it reads as
     // pinned, the default since.
     pinned: value.version !== 4 || value.pinned === true,
-    ...(value.splitRates === true ? {splitRates: true} : {}),
     ...(value.titles === true ? {titles: true} : {}),
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),
