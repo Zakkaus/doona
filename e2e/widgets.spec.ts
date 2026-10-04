@@ -1348,6 +1348,54 @@ test.describe('small and narrow panel widgets', () => {
       expect(split).toEqual([]);
       expect(await body.locator('.rp-donut .lst').evaluateAll(lists => lists.filter(list => list.scrollHeight > list.clientHeight + 1).length)).toBe(0);
     });
+  for (const width of [200, 280])
+    test(`outbound failures, node availability and DNS latency fill every panel size at width ${width}`, async ({page}) => {
+      const items = (
+        [
+          ['outboundErrors', 'ranked', 'medium'],
+          ['outboundErrors', 'kv', 'large'],
+          ['nodeAvailability', 'kv', 'small'],
+          ['nodeAvailability', 'kv', 'medium'],
+          ['dnsLatency', 'kv', 'small'],
+          ['dnsLatency', 'dots', 'medium'],
+          ['dnsLatency', 'dots', 'large']
+        ] as const
+      ).map(([id, form, size], i) => ({...defaultWidget(id), form, size, instance: `${id}-${i}`}));
+      await save(page, {...defaults(), items, size: {width, height: 960}} as Layout);
+      await page.goto('/#/settings');
+      const body = floating(page).locator('.rp-widget-body');
+      const widget = (id: WidgetId, n: number) => body.locator(`[data-module="${id}"]`).nth(n);
+      // Only the outbounds with failures, the mock's two; three node counts from medium; upstream strips only when large.
+      await expect(widget('outboundErrors', 0).locator('.rp-bar .l')).toHaveText(['proxy', 'gaming']);
+      await expect(widget('outboundErrors', 1).locator('.rp-kv .k')).toHaveText(['proxy', 'gaming']);
+      await expect(widget('nodeAvailability', 0).locator('.rp-kv > div')).toHaveCount(1);
+      await expect(widget('nodeAvailability', 1).locator('.rp-kv > div')).toHaveCount(3);
+      await expect(widget('dnsLatency', 0).locator('.rp-kv > div')).toHaveCount(1);
+      await expect(widget('dnsLatency', 1).locator('.rp-swarm svg').first()).toBeVisible();
+      await expect(widget('dnsLatency', 1).locator('.rp-strip-row')).toHaveCount(0);
+      await expect(widget('dnsLatency', 2).locator('.rp-strip-row')).toHaveCount(3);
+      expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      const overflowing = await body.locator('.rp-module-content').evaluateAll(list => list.filter(el => el.scrollWidth > el.clientWidth).length);
+      expect(overflowing).toBe(0);
+      const cut = await body
+        .locator('.rp-kv .k, .rp-kv .k *, .rp-kv .v, .rp-bar .l > *, .rp-strip-row .name')
+        .evaluateAll(list =>
+          list
+            .filter(el => el.clientWidth > 0 && (el.scrollWidth > el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis'))
+            .map(el => el.textContent)
+        );
+      expect(cut).toEqual([]);
+    });
+  test('the panel gallery offers outbound failures, node availability and DNS latency', async ({page}) => {
+    await page.goto('/#/settings');
+    await openEditor(page);
+    for (const [id, name] of [
+      ['outboundErrors', 'Outbound failures'],
+      ['nodeAvailability', 'Node availability'],
+      ['dnsLatency', 'DNS latency']
+    ])
+      await expect(editor(page).locator(`.rp-widget-gallery-tile[data-module="${id}"]`).getByRole('heading', {name, exact: true})).toBeVisible();
+  });
   test('a small notices widget takes the whole row of the panel', async ({page}) => {
     await save(page, only('notices', 'kv', 'small'));
     await page.goto('/#/settings');

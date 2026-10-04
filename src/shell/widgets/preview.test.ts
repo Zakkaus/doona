@@ -9,3 +9,13 @@ it('samples absent, empty, and zero-byte gallery sources', () => {
   connections.tcp[0].download_bytes = '1';
   expect(hasModulePreviewData('connections', connections, 'ranking')).toBe(true);
 });
+it('samples outbound failures without one and DNS latency with fewer than five upstream lookups', () => {
+  const outbounds = {outbounds: [{download_bytes: '9', errors: '0'}]};
+  expect(hasModulePreviewData('runtimeOutbounds', outbounds, 'outbounds')).toBe(true);
+  expect(hasModulePreviewData('runtimeOutbounds', outbounds, 'outboundErrors')).toBe(false);
+  const lookup = (cached: boolean) => ({cached, upstream: 'tls://1.1.1.1'});
+  const four = {records: [...Array.from({length: 4}, () => lookup(false)), lookup(true)]};
+  expect(hasModulePreviewData('dnsLog', four, 'dnsLatency')).toBe(false);
+  expect(hasModulePreviewData('dnsLog', four, 'dnsAnswers')).toBe(true);
+  expect(hasModulePreviewData('dnsLog', {records: [...four.records, lookup(false)]}, 'dnsLatency')).toBe(true);
+});

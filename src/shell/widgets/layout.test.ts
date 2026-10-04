@@ -69,6 +69,17 @@ it.each([
 ] as const)('keeps the sizes of the panel %s as a %s', (id, form) => {
   expect(sizesFor(id, form, 'panel')).toEqual(registry[id].sizes);
 });
+// Only the sizes each new widget's panel form fills: no single failure, no third row of node counts, no upstream rows
+// in the key-value form.
+it.each([
+  ['outboundErrors', 'ranked', ['medium', 'large']],
+  ['nodeAvailability', 'kv', ['small', 'medium']],
+  ['dnsLatency', 'dots', ['small', 'medium', 'large']],
+  ['dnsLatency', 'kv', ['small', 'medium']]
+] as const)('offers the panel %s as a %s the sizes %j', (id, form, sizes) => {
+  expect(sizesFor(id, form, 'panel')).toEqual(sizes);
+  expect(defaults().items.map(item => item.id)).not.toContain(id);
+});
 it.each([
   ['speed', 'kv', 'medium'],
   ['memory', 'kv', 'medium'],
@@ -176,7 +187,11 @@ it.each([
     idsWith(definition => definition.forms.some(form => form === 'area' || form === 'sparkline')),
     ['speed', 'history', 'download', 'upload', 'connections', 'cpu', 'memory']
   ],
-  ['lists', idsWith(definition => definition.rows), ['nodeLatency', 'ranking', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds']],
+  [
+    'lists',
+    idsWith(definition => definition.rows),
+    ['nodeLatency', 'ranking', 'policyGroups', 'sourceHealth', 'outbounds', 'connectionOutbounds', 'outboundErrors']
+  ],
   ['rates', idsWith(definition => definition.rate), ['speed', 'history', 'download', 'upload']],
   ['untitled in the panel', idsWith(definition => definition.untitled), ['connections', 'cpu', 'global']],
   ['group choices', idsWith(definition => definition.groupChoice), ['nodeLatency', 'policyGroups', 'latency']]

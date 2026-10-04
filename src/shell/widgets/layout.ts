@@ -23,7 +23,7 @@ type Definition = {
   // A value tile: a fifth of a row wide at the narrowest, as five share main's metrics row, and a sparkline in every
   // form of main's card.
   tile?: true;
-  // The narrowest dashboard width other than a value tile's, when a third is too narrow, as for a table of nodes.
+  // The narrowest dashboard width other than a value tile's, when it is not a third, as half for a table of nodes.
   narrowest?: DashboardWidth;
   // The widest dashboard width its content fills, when full width would leave it blank on the right.
   widest?: DashboardWidth;
@@ -91,6 +91,10 @@ const definitions = {
   connectionNetworks: {...split('dashboard.connectionNetworks', 'connections'), sizes: ['medium'], widest: '1/2'},
   dnsAnswers: {...split('dashboard.dnsAnswers', 'dns_log'), widest: '1/2'},
   policyGroups: {...list('dashboard.policyGroups', 'groups'), rows: true, groupChoice: 'dashboard.allGroups'},
+  outboundErrors: {...share('widgets.outboundErrors', 'runtime_outbounds'), forms: ['ranked', 'kv'], compact: ['ranked', 'kv'], sizes: ['medium', 'large']},
+  nodeAvailability: {...list('widgets.nodeAvailability', 'nodes'), sizes: ['small', 'medium'], narrowest: '1/5', widest: '1/3'},
+  // Upstream rows from the panel's large size or the dashboard's tall height; key-value is the median and p95 alone.
+  dnsLatency: {...list('widgets.dnsLatency', 'dns_log'), forms: ['dots', 'kv'], compact: ['dots', 'kv'], kvSizes: ['small', 'medium'], widest: '2/3'},
   divider: {...list('widgets.divider', null), sizes: ['medium'], panelOnly: true}
 } satisfies Record<string, Definition>;
 export type WidgetId = keyof typeof definitions;

@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {loadSamples} from './samples';
-import {hasPreviewData} from './preview';
+import {hasModulePreviewData, hasPreviewData} from './preview';
 it('derives reusable preview snapshots without browser storage, network calls or timers', async () => {
   const storage = {getItem: vi.fn(() => '100000'), setItem: vi.fn(), removeItem: vi.fn()};
   vi.stubGlobal('localStorage', storage);
@@ -12,6 +12,11 @@ it('derives reusable preview snapshots without browser storage, network calls or
     const samples = await pending;
     for (const [name, value] of Object.entries(samples)) expect(hasPreviewData(value), name).toBe(true);
     expect(samples.nodes).toHaveLength(8);
+    for (const id of ['outboundErrors', 'dnsLatency'] as const)
+      expect(
+        hasModulePreviewData(id === 'dnsLatency' ? 'dnsLog' : 'runtimeOutbounds', id === 'dnsLatency' ? samples.dnsLog : samples.runtimeOutbounds, id),
+        id
+      ).toBe(true);
     expect(storage.getItem).not.toHaveBeenCalled();
     expect(storage.setItem).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();

@@ -12,7 +12,9 @@ export const fraction = (width: DashboardWidth) => (width === 'full' ? 1 : Numbe
 // What a card's height adjusts: a chart's height, or a list's row count. `main` is whether the card renders main's
 // Activity content (see `mainCard`), whose value tiles carry a sparkline in every form.
 export function heightKind(item: Widget, main: boolean): 'chart' | 'rows' | undefined {
-  if ((main && registry[item.id].tile) || item.form === 'area' || item.form === 'sparkline') return 'chart';
+  // A dot chart without a row count, as DNS latency's, scales like an area chart.
+  if ((main && registry[item.id].tile) || item.form === 'area' || item.form === 'sparkline' || (item.form === 'dots' && !registry[item.id].rows))
+    return 'chart';
   return registry[item.id].rows && item.form !== 'donut' && item.form !== 'waffle' ? 'rows' : undefined;
 }
 // The rows a list shows until its height is set: the limit it had before lists had a height. The source list had none

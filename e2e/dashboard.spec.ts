@@ -490,6 +490,58 @@ test('a stored width or row count a card no longer offers reads as the nearest o
   await close(page);
 });
 
+// Off the default layout, offered by the gallery, and whole at their narrowest widths on a desktop and a phone.
+test('outbound failures, node availability and DNS latency are off the default layout and in the gallery', async ({page}) => {
+  const added = ['outboundErrors', 'nodeAvailability', 'dnsLatency'];
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-dashboard-cell').first()).toBeVisible();
+  for (const id of added) await expect(page.locator(`.rp-dashboard-cell[data-module="${id}"]`)).toHaveCount(0);
+  await open(page);
+  await page.getByRole('button', {name: 'Widget gallery', exact: true}).click();
+  const gallery = page.getByRole('dialog', {name: 'Widget gallery'});
+  for (const [id, name] of [
+    ['outboundErrors', 'Outbound failures'],
+    ['nodeAvailability', 'Node availability'],
+    ['dnsLatency', 'DNS latency']
+  ])
+    await expect(gallery.locator(`.rp-widget-gallery-tile[data-module='${id}']`).getByRole('heading', {name, exact: true})).toBeVisible();
+});
+test('outbound failures, node availability and DNS latency stay whole at their narrowest widths', async ({page}) => {
+  const added = ['outboundErrors', 'nodeAvailability', 'dnsLatency'];
+  await seed(page, {
+    version: 3,
+    sections: [
+      {
+        id: 'extensions',
+        items: [
+          {id: 'outboundErrors', form: 'ranked', size: 'medium', width: '1/3', rows: 3},
+          {id: 'nodeAvailability', form: 'kv', size: 'medium', width: '1/5'},
+          {id: 'dnsLatency', form: 'dots', size: 'medium', width: '1/3', height: 'tall'}
+        ]
+      }
+    ]
+  });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({width, height: 1000});
+    await page.goto('/#/activity');
+    // Only the two outbounds whose failures the mock counts; one strip per upstream the mock's lookups reach
+    // (mock/network.ts), and three node counts.
+    await expect(tile(page, 'outboundErrors').locator('.rp-bar .l')).toHaveText(['proxy', 'gaming']);
+    await expect(tile(page, 'dnsLatency').locator('.rp-strip-row')).toHaveCount(3);
+    await expect(tile(page, 'nodeAvailability').locator('.rp-kv > div')).toHaveCount(3);
+    for (const id of added) {
+      const card = tile(page, id).locator('.rp-module-content');
+      expect(await card.evaluate(el => el.scrollWidth <= el.clientWidth), `${id} at ${width}`).toBe(true);
+      const cut = await card
+        .locator('.rp-kv .k, .rp-kv .v, .rp-bar .l > *, .rp-strip-row .name')
+        .evaluateAll(list =>
+          list.filter(el => el.scrollWidth > el.clientWidth + 1 || getComputedStyle(el).textOverflow === 'ellipsis').map(el => el.textContent)
+        );
+      expect(cut, `${id} at ${width}`).toEqual([]);
+    }
+  }
+});
+
 test('a full-width list of four rows or more takes two columns, the first filled first, and no name is cut', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await seed(page, {

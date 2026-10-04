@@ -55,6 +55,7 @@ describe('chart layout', () => {
     expect(same.ys.filter(y => y !== null)).toHaveLength(5);
     expect(same.hidden).toEqual([{x: 100, count: 15}]);
     expect(swarm([10, 50, 90], 3, 20)).toEqual({ys: [0, 0, 0], hidden: []});
+    expect(swarm([...Array(10).fill(100), ...Array(10).fill(110), ...Array(10).fill(140)], 4, 12).hidden.map(group => group.x)).toEqual([100, 140]);
   });
 
   it('fills a waffle with cells that add up and never hides a non-zero share', () => {

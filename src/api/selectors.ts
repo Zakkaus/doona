@@ -98,6 +98,7 @@ export function outboundUsage(snapshot: RuntimeOutbounds | undefined) {
     name: row.name,
     kind: row.kind,
     bytes: parseU64(row.download_bytes),
+    errors: parseU64(row.errors),
     percent: pctU64(row.download_bytes, total)
   }));
   rows.sort((a, b) => (a.bytes === b.bytes ? 0 : a.bytes === null ? 1 : b.bytes === null ? -1 : a.bytes > b.bytes ? -1 : 1));
