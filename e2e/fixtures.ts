@@ -207,6 +207,15 @@ export const settleFrames = (page: Page, count = 2) =>
     count
   );
 export const box = async (locator: Locator) => (await locator.boundingBox())!;
+// The two elements' boxes share no area, measured once their arrival animations have finished.
+export async function expectApart(a: Locator, b: Locator) {
+  for (const locator of [a, b]) await locator.evaluate(el => Promise.all(el.getAnimations({subtree: true}).map(animation => animation.finished)));
+  const [p, q] = [await box(a), await box(b)];
+  expect(
+    p.x + p.width <= q.x || q.x + q.width <= p.x || p.y + p.height <= q.y || q.y + q.height <= p.y,
+    `${JSON.stringify(p)} overlaps ${JSON.stringify(q)}`
+  ).toBe(true);
+}
 // The sine of an element's turn. The down chevron turned to the right has -1, turned to the left 1.
 export const turn = (locator: Locator) =>
   locator.evaluate(el => {

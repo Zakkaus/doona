@@ -28,7 +28,7 @@
   background: var(--rp-surface);
   border-radius: var(--rp-r-xl);
   width: min(720px, 90vw);
-  max-height: calc(100dvh - 12dvh - 24px - env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - var(--rp-modal-top) - 24px - env(safe-area-inset-bottom, 0px));
   display: flex;
   overflow: hidden;
 }
@@ -60,13 +60,16 @@
   min-width: 0;
 }
 .rp-underlay {
+  /* Where a modal starts: 12dvh down, or below the toasts that are showing (their height, published as --rp-toast-band,
+     plus their 16px edge gap and a 12px gap) so they never cover it. */
+  --rp-modal-top: max(12dvh, var(--rp-toast-band, 0px) + 28px);
   position: fixed;
   inset: 0;
   background: var(--rp-underlay);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 12dvh;
+  padding-top: var(--rp-modal-top);
   z-index: var(--rp-z-modal);
 }
 .rp-input {

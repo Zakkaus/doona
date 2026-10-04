@@ -423,6 +423,24 @@ export const toastErrorDetail = (error: unknown, t: Translator) => ({
 const TOAST_ICON = {positive: CheckmarkCircle, negative: AlertTriangle, warning: AlertTriangle, info: InfoCircle, neutral: null};
 // S2's ToastContainer placements: the edge the toasts stack from, then an optional end alignment.
 export type ToastPlacement = 'top' | 'top end' | 'bottom' | 'bottom end';
+// The stack's height, published while toasts show so a modal dialog starts below it (--rp-modal-top). The region is
+// not rendered without toasts, which clears the property, and an expanded list fills the window, so it publishes none.
+function useToastBand(expanded: boolean) {
+  const [region, setRegion] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!region || expanded) return;
+    const root = document.documentElement.style;
+    const publish = () => root.setProperty('--rp-toast-band', `${region.offsetHeight}px`);
+    const observer = new ResizeObserver(publish);
+    observer.observe(region);
+    publish();
+    return () => {
+      observer.disconnect();
+      root.removeProperty('--rp-toast-band');
+    };
+  }, [region, expanded]);
+  return setRegion;
+}
 // `page` names the current page: the expanded list and its underlay belong to the page they were opened on, so moving
 // to another page collapses them.
 export function Toasts({
@@ -440,6 +458,7 @@ export function Toasts({
   // Leaving the page drops the expansion, so coming back to it opens with the stack collapsed.
   if (expandedOn !== null && expandedOn !== page) setExpandedOn(null);
   const expanded = expandedOn === page;
+  const regionRef = useToastBand(expanded);
   const setExpanded = useCallback((open: boolean) => setExpandedOn(open ? page : null), [page]);
   useEffect(() => {
     if (expanded) toasts.pauseAll();
@@ -465,7 +484,7 @@ export function Toasts({
     return () => removeEventListener('keydown', on);
   }, [expanded]);
   return (
-    <ToastRegion queue={toasts} className={cx('rp-toasts', expanded && 'expanded')} data-placement={edge} data-align={align}>
+    <ToastRegion ref={regionRef} queue={toasts} className={cx('rp-toasts', expanded && 'expanded')} data-placement={edge} data-align={align}>
       {expanded && <RButton className="rp-toast-underlay" aria-label={t('toast.collapse')} onPress={() => setExpanded(false)} />}
       {expanded && (
         <div className="rp-toast-controls">
