@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   HelpRow,
-  Bar,
   DataTable,
   Kv,
   Light,
@@ -144,10 +143,7 @@ export function Overview({query}: PageProps) {
         <Card title={t('ov.memory')}>
           <ErrorMessage error={vm.errors.memory} onRetry={vm.retry.memory} />
           {vm.memory.state === 'ready' ? (
-            <>
-              {vm.memory.bar && <Bar label={vm.memory.bar.label} value={vm.memory.bar.value} pct={vm.memory.bar.pct} color={vm.memory.bar.color} />}
-              <Kv items={vm.memory.fields} />
-            </>
+            <Kv items={vm.memory.fields} />
           ) : vm.memory.state === 'loading' ? (
             <BodyWait cells={8} />
           ) : vm.errors.memory ? null : (

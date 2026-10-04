@@ -2,7 +2,7 @@ import {formatLatency} from '../../i18n/format';
 import {useMemo, useState, type ReactNode} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
-import {Card, Bar, Empty, ErrorMessage, Link, Loading, Segmented, TextTooltip} from '../../ui/ui';
+import {Card, Bar, Empty, ErrorMessage, Link, Loading, Meter, Segmented, TextTooltip} from '../../ui/ui';
 import type {DnsLogRecord} from '../../api/model';
 import {usePalette, Beeswarm, FactStrip, LegendItem, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
 import {dnsAnalysis, dnsOutcomes, shortPage, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
@@ -154,7 +154,6 @@ function DnsAnalysis({
 // How full the cache is, from the usage the backend reports, and what kinds of answer it keeps.
 function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
   const t = useT();
-  const p = usePalette();
   const {ref, ...vm} = useDnsCacheCard(listed);
   return (
     <Card
@@ -182,7 +181,7 @@ function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
         <>
           {vm.card.usage && (
             <div className="rp-form">
-              <Bar label={t('dns.chart.usage')} value={vm.card.usage.value} pct={vm.card.usage.pct} color={p.accent} />
+              {vm.card.usage.meter && <Meter label={t('dns.chart.usage')} {...vm.card.usage.meter} />}
               <FactStrip facts={vm.card.usage.facts} />
             </div>
           )}

@@ -61,7 +61,7 @@ it('distinguishes loading and unavailable sections and deduplicates datapath err
       localized('ui.backendMessage', {message: 'backend detail'})
     );
   }
-  expect(view.memory.bar?.pct).toBe(25);
+  expect(view.memory.fields[0]).toMatchObject({label: t('ov.f.cgroupPercent'), meter: {value: 25, tone: 'ok'}});
   const absent = overviewView({}, {...loading, memory: true}, 'en-US', t);
   expect(absent.engine.state).toBe('unavailable');
   expect(absent.memory.state).toBe('loading');
@@ -80,7 +80,7 @@ it('shows the version without the runtime and formats counts for the locale', ()
   // A fraction follows the locale: a full-width slash in Chinese.
   const zh: Translator = (key, params) => translate('zh-TW', key, params);
   expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', zh, 'zh-TW')).toContainEqual([zh('ov.f.connState'), '1,234／65,536']);
-  expect(overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.bar?.value).toMatch(/^\S+ \S+／\S+ \S+$/);
+  expect((overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.fields[0] as {value: string}).value).toMatch(/^\S+ \S+／\S+ \S+$/);
 });
 
 it('exports raw diagnostic snapshots rather than formatted fields', () => {
@@ -98,7 +98,7 @@ it('retains each known cgroup measurement when the other is unknown', () => {
     'en-US',
     t
   ).memory;
-  expect(current.bar).toBeNull();
+  expect(current.fields.some(field => 'meter' in field)).toBe(false);
   expect(current.fields).toContainEqual([t('ov.f.cgroupCurrent'), formatBytes('83886080', 'en')]);
   expect(current.fields).toContainEqual([t('ov.f.cgroupLimit'), '—']);
   const limit = overviewView(
@@ -107,9 +107,18 @@ it('retains each known cgroup measurement when the other is unknown', () => {
     'en-US',
     t
   ).memory;
-  expect(limit.bar).toBeNull();
+  expect(limit.fields.some(field => 'meter' in field)).toBe(false);
   expect(limit.fields).toContainEqual([t('ov.f.cgroupCurrent'), '—']);
   expect(limit.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('83886080', 'en')]);
+  // A zero limit gets no meter; the current and limit stay among the facts.
+  const zero = overviewView(
+    {memory: {...runtimeMemory, cgroup: {...runtimeMemory.cgroup!, current_bytes: '83886080', limit_bytes: '0'}}},
+    loading,
+    'en-US',
+    t
+  ).memory;
+  expect(zero.fields.some(field => 'meter' in field)).toBe(false);
+  expect(zero.fields).toContainEqual([t('ov.f.cgroupLimit'), formatBytes('0', 'en')]);
 });
 
 it('shows process CPU as a percent of one core, and a dash when unmeasured', () => {

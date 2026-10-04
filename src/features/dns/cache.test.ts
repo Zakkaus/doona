@@ -15,21 +15,30 @@ const list = (usage?: DnsCacheList['usage']) =>
     usage
   }) as DnsCacheList;
 
-it('fills the bar by the entry count, its only limit, and states entries and capacity apart', async () => {
+it('meters the entry count, its only limit, and states entries and capacity apart', async () => {
   const card = cacheCard(list({entries: '4096', entry_capacity: '100000'}), 'en-US', t)!;
-  expect(card.usage?.pct).toBe(4.1);
+  expect(card.usage?.meter).toEqual({value: 4.1, valueLabel: '4%'});
   expect(card.usage?.facts).toEqual([
     {label: 'Entries', value: '4,096'},
     {label: 'Capacity', value: '100,000'}
   ]);
   expect(card.note).toBeUndefined();
-  expect(cacheCard(list({entries: '5', entry_capacity: '100000'}), 'en-US', t)!.usage?.value).toBe('<1%');
+  expect(cacheCard(list({entries: '5', entry_capacity: '100000'}), 'en-US', t)!.usage?.meter?.valueLabel).toBe('<1%');
   // A capacity past Number's exact range keeps every digit.
   expect(cacheCard(list({entries: '1', entry_capacity: '18446744073709551615'}), 'en-US', t)!.usage?.facts[1].value).toBe('18,446,744,073,709,551,615');
   await loadLanguage('zh-TW');
   expect(cacheCard(list({entries: '322', entry_capacity: '100000'}), 'zh-TW', (key, params) => translate('zh-TW', key, params))!.usage?.facts).toEqual([
     {label: '條目', value: '322'},
     {label: '容量', value: '100,000'}
+  ]);
+});
+
+it('keeps the facts without a meter when the capacity is zero', () => {
+  const card = cacheCard(list({entries: '0', entry_capacity: '0'}), 'en-US', t)!;
+  expect(card.usage?.meter).toBeNull();
+  expect(card.usage?.facts).toEqual([
+    {label: 'Entries', value: '0'},
+    {label: 'Capacity', value: '0'}
   ]);
 });
 
