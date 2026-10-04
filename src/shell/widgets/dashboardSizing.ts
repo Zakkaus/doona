@@ -77,9 +77,10 @@ export function sizeAxes(item: Widget, main: boolean, t: Translator): {width: Si
 }
 
 // A size the gallery offers a new card: a width, and for a card with a height its tall step.
-export type Preset = {width: DashboardWidth; height?: DashboardHeight; rows?: number};
+export type Preset = {width: DashboardWidth; height?: DashboardHeight; rows?: number; form?: Widget['form']};
 export const withPreset = (item: Widget, preset: Preset): Widget => ({
   ...withWidth(item, preset.width),
+  ...(preset.form ? {form: preset.form} : {}),
   ...(preset.height ? {height: preset.height} : {}),
   ...(preset.rows ? {rows: preset.rows} : {})
 });
@@ -88,7 +89,11 @@ export const withPreset = (item: Widget, preset: Preset): Widget => ({
 export function presetsFor(item: Widget, main: boolean): Preset[] {
   const allowed = widthsFor(item.id);
   const narrowest = allowed.find(width => width !== '1/5')!;
-  const presets: Preset[] = [...new Set([narrowest, '1/2' as const, 'full' as const])].filter(width => allowed.includes(width)).map(width => ({width}));
+  // A value tile whose card is a chart, as memory's, offers its narrow sizes as the tile.
+  const tiled = registry[item.id].tile && item.form !== 'sparkline';
+  const presets: Preset[] = [...new Set([narrowest, '1/2' as const, 'full' as const])]
+    .filter(width => allowed.includes(width))
+    .map(width => (tiled && fraction(width) < 1 / 3 ? {width, form: 'sparkline'} : {width}));
   const kind = heightKind(item, main);
   if (kind === 'chart') presets.push({width: '1/2', height: 'tall'});
   if (kind === 'rows') presets.push({width: '1/2', rows: rowChoices.at(-1)});

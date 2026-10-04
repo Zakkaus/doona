@@ -1,5 +1,5 @@
 import type {TileProps} from '../../ui/DashboardTile';
-import {defaultWidget, instanceId, object, parseItems, type Widget, type WidgetId} from './layout';
+import {defaultWidget, instanceId, object, parseItems, registry, type Widget, type WidgetId} from './layout';
 // Each section keeps one layout profile for good: adding, moving or resizing a card never switches another card's rules.
 const profiles = ['quick', 'metrics', 'traffic', 'details', 'extensions'] as const;
 export type Profile = (typeof profiles)[number];
@@ -28,8 +28,11 @@ export const tileOf = (item: Widget): TileProps => ({
   height: item.height
 });
 const mainWidget = (id: WidgetId): Widget => ({...defaultWidget(id), ...(mainForms[id] ? {form: mainForms[id]} : {})});
-// Main's own content renders a card while it keeps main's display; another display needs the general renderer.
-export const mainCard = (item: Widget) => Object.values(mainSections).some(ids => ids.includes(item.id)) && item.form === mainWidget(item.id).form;
+// Main's own content renders a card while it keeps main's display, or a value tile's sparkline, which memory offers
+// beside its chart; another display needs the general renderer.
+export const mainCard = (item: Widget) =>
+  Object.values(mainSections).some(ids => ids.includes(item.id)) &&
+  (item.form === mainWidget(item.id).form || (registry[item.id].tile === true && item.form === 'sparkline'));
 // Parsed like a stored layout, so a reset draft equals the same layout saved and read back.
 export const dashboardDefaults = (): DashboardLayout =>
   sectioned([

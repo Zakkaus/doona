@@ -52,6 +52,9 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     ],
     [t, p, memoryHistory.rss, memoryHistory.cgroup]
   );
+  // The memory tile follows resident memory, or the cgroup's use where the backend reports no resident figure.
+  const memoryMetrics = resources?.runtime_memory?.metrics ?? [];
+  const resident = memoryMetrics.includes('process.rss_bytes') || !memoryMetrics.includes('cgroup.current_bytes');
   const ranges = useMemo(() => (Object.keys(trafficRanges) as TrafficRange[]).map((id): [string, string] => [id, t(trafficRanges[id].label)]), [t]);
   const pickRange = useCallback((value: string) => {
     if (isTrafficRange(value)) setRange(value);
@@ -93,6 +96,8 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
     cpuSpark,
     traffic,
     memorySeries,
+    memoryLine: memorySeries[resident ? 0 : 1],
+    memoryValue: formatBytes((resident ? memory.data?.process?.rss_bytes : memory.data?.cgroup?.current_bytes) ?? null, locale),
     chartRate,
     count,
     cpuText,

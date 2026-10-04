@@ -125,7 +125,8 @@ it('keeps chosen widths, heights and rows when moved and read back', () => {
   expect(dashboardItems(moved).find(item => item.id === 'nodeLatency')).toMatchObject({width: 'full', rows: 8});
 });
 it.each([
-  [{width: '1/4'}, 'memory', {width: '1/3'}],
+  [{width: '1/4'}, 'history', {width: '1/3'}],
+  [{width: '1/5'}, 'memory', {width: '1/5'}],
   [{width: '1/3'}, 'nodeLatency', {width: '1/2'}],
   [{width: '1/4'}, 'cpu', {width: '1/4'}],
   [{width: '3/5'}, 'cpu', {width: undefined}],
@@ -176,7 +177,7 @@ it.each([
   ['speed', third, chart],
   ['traffic', ['1/3', '1/2'], []],
   ['connections', every, chart],
-  ['memory', third, chart],
+  ['memory', every, chart],
   ['cpu', every, chart],
   ['ranking', third, steps],
   ['outbounds', third, []],
@@ -259,6 +260,12 @@ it('offers gallery presets from the narrowest width of a quarter or more, with a
   const t = defaultWidget;
   expect(presetsFor(t('cpu'), true)).toEqual([{width: '1/4'}, {width: '1/2'}, {width: 'full'}, {width: '1/2', height: 'tall'}]);
   expect(presetsFor({...t('history'), form: 'area'}, true)).toEqual([{width: '1/3'}, {width: '1/2'}, {width: 'full'}, {width: '1/2', height: 'tall'}]);
+  expect(presetsFor({...t('memory'), form: 'area'}, true)).toEqual([
+    {width: '1/4', form: 'sparkline'},
+    {width: '1/2'},
+    {width: 'full'},
+    {width: '1/2', height: 'tall'}
+  ]);
   expect(presetsFor({...t('nodeLatency'), form: 'ranked'}, false)).toEqual([{width: '1/2'}, {width: 'full'}, {width: '1/2', rows: 8}]);
   expect(withPreset({...t('cpu'), size: 'small'}, {width: '1/2', height: 'tall'})).toMatchObject({width: '1/2', height: 'tall', size: 'medium'});
 });

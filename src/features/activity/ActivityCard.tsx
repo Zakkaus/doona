@@ -4,6 +4,7 @@ import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Cpu from '../../ui/icons/Cpu';
+import Memory from '../../ui/icons/Memory';
 import {useT} from '../../i18n';
 import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, ValueTile} from '../../ui/ui';
 import {WideCell} from '../../ui/DashboardTile';
@@ -26,7 +27,7 @@ export function ActivityCard({
   selection,
   ranking
 }: {
-  item: {id: string; rows?: number; width?: string};
+  item: {id: string; form?: string; rows?: number; width?: string};
   // A chart's height as a multiple of its standard height.
   scale?: number;
   ranking?: {by: string; setBy: (by: string) => void};
@@ -54,9 +55,11 @@ export function ActivityCard({
     case 'connections':
     case 'cpu':
     case 'history':
-    case 'memory':
     case 'status':
       return <MetricModule kind={item.id} scale={scale} stats={stats} />;
+    // Memory's sparkline form is a value tile like download's; its area form is the chart card.
+    case 'memory':
+      return <MetricModule kind={item.form === 'sparkline' ? 'memoryTile' : 'memory'} scale={scale} stats={stats} />;
     default:
       return null;
   }
@@ -77,9 +80,9 @@ export function RuntimeAlert() {
   const vm = useActivity('status');
   return vm.error ? <ErrorMessage error={vm.error} onRetry={vm.retry} /> : null;
 }
-function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useActivity>[0]; scale: number; stats: boolean}) {
+function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useActivity>[0] | 'memoryTile'; scale: number; stats: boolean}) {
   const t = useT();
-  const vm = useActivity(kind);
+  const vm = useActivity(kind === 'memoryTile' ? 'memory' : kind);
   const {p, locale, range, ranges, setRange, traffic, spark, sparklines, cpuSpark, chartRate, count, cpuText, memorySeries, memoryBytes} = vm;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   const alert = kind === 'status' && vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
@@ -188,6 +191,30 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               />
               {wide && <FactStrip facts={seriesFacts(traffic, chartRate, t)} />}
             </div>
+          )}
+        </Card>
+      );
+      break;
+    case 'memoryTile':
+      content = (
+        <Card title={t('act.memory')} tile={{icon: <Memory />, tint: 5, kind: 'metric'}}>
+          {vm.memoryState.error ? (
+            <ErrorMessage error={vm.memoryState.error} onRetry={vm.memoryState.retry} />
+          ) : (
+            <ValueTile
+              // The value opens the overview, where the cgroup's limit and events sit.
+              value={
+                <Link appearance="link" href={href('overview')} label={t('ui.valuePair', {label: t('act.memory'), value: vm.memoryValue})}>
+                  <span className={big}>{vm.memoryValue}</span>
+                </Link>
+              }
+              spark={
+                sparklines && (
+                  <Spark values={vm.memoryLine.values} timestamps={vm.memoryTimestamps} color={vm.memoryLine.color} fmt={memoryBytes} locale={locale} />
+                )
+              }
+              facts={stats(vm.memoryLine.label, vm.memoryLine.values, memoryBytes)}
+            />
           )}
         </Card>
       );

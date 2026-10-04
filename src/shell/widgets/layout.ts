@@ -65,7 +65,7 @@ const definitions = {
   speed: {...metric('widgets.speed', 'runtime'), rate: true},
   traffic: {...list('widgets.traffic', 'runtime'), sizes: ['medium'], widest: '1/2'},
   connections: {...metric('act.active', 'runtime'), tile: true, untitled: true},
-  memory: metric('act.memory', 'runtime_memory'),
+  memory: {...metric('act.memory', 'runtime_memory'), tile: true},
   cpu: {...metric('act.cpu', 'runtime'), tile: true, untitled: true},
   ranking: {...share('widgets.ranking', 'connections'), forms: ['ranked', 'kv'], compact: ['ranked', 'kv']},
   outbounds: share('widgets.outbounds', 'runtime_outbounds'),
