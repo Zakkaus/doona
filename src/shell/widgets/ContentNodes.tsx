@@ -1,12 +1,12 @@
 import {useContext, useMemo} from 'react';
-import {useT, useLang, LOCALE} from '../../i18n';
+import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import {formatLatency} from '../../i18n/format';
 import {useCapabilities, useNodes, useProviders, useGroups} from '../../store';
 import {ResourceSamples} from '../../store/preview';
 import {activityGroupView, nodeView, useActivityNode, GroupMenu} from '../../features/activity/widgets';
 import {latencyAverages, latencyGroups, latencyMax, latencyPlotRow, latencySummary, providerRowView} from '../../features/nodes/widgets';
 import {MarkerPlot} from '../../ui/charts';
-import {columns, ContextualHelp, Empty, ErrorMessage, Kv} from '../../ui/ui';
+import {columns, ContextualHelp, Empty, ErrorMessage, Kv, Light} from '../../ui/ui';
 import {contentLimit, WidgetSurface, type Widget} from './layout';
 import {Reading} from './Reading';
 
@@ -90,6 +90,34 @@ export function Latency({item}: {item: Widget}) {
             <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')]]} />
           ))}
         </div>
+      )}
+    </Reading>
+  );
+}
+// Every node once, by its preferred health: available, unavailable or not yet measured.
+export function NodeAvailability({item}: {item: Widget}) {
+  const t = useT();
+  const locale = LOCALE[useLang()];
+  const nodes = useNodes(useCapabilities().data?.resources.nodes.available === true);
+  const {measured, missing, down} = latencySummary(latencyGroups(nodes.data ?? [], undefined, 'protocol', locale));
+  const available = t('ui.fraction', {part: measured.length, whole: measured.length + missing.length});
+  const count = (n: number, tone: 'err' | 'neutral') => <Light tone={n ? tone : 'muted'}>{formatNumber(n, locale)}</Light>;
+  return (
+    <Reading state={nodes}>
+      {!nodes.data?.length ? (
+        <Empty>{t('dashboard.noNodes')}</Empty>
+      ) : item.size === 'small' ? (
+        <Kv compact items={[[t('ov.available'), available]]} />
+      ) : (
+        <Kv
+          compact
+          row
+          items={[
+            [t('ov.available'), <Light tone={measured.length ? 'ok' : 'muted'}>{available}</Light>],
+            [t('act.unavailable'), count(down, 'err')],
+            [t('act.unknown'), count(missing.length - down, 'neutral')]
+          ]}
+        />
       )}
     </Reading>
   );

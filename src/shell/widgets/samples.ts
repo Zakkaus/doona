@@ -31,7 +31,7 @@ async function createSamples() {
     api.groups(),
     api.providers(),
     api.connections({detail: 'full', limit: 1000}),
-    api.dnsLog({limit: 4}),
+    api.dnsLog({limit: 24}),
     api.config(),
     api.trafficHistory({window_seconds: 120}),
     api.memoryHistory({window_seconds: 120})

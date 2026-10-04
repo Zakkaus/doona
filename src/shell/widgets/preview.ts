@@ -1,5 +1,5 @@
 import {available, type WidgetId} from './layout';
-import type {Capabilities, ConnectionList, RuntimeOutbounds} from '../../api/model';
+import type {Capabilities, ConnectionList, DnsLogList, RuntimeOutbounds} from '../../api/model';
 import {parseU64} from '../../api/u64';
 
 export function hasPreviewData(value: unknown): boolean {
@@ -16,6 +16,9 @@ export function hasModulePreviewData(name: string, data: unknown, id: WidgetId) 
   if (name === 'capabilities') return available(id, data as Capabilities);
   if (name === 'connections' && id === 'ranking')
     return [...(data as ConnectionList).tcp, ...(data as ConnectionList).udp].some(row => row.src && (parseU64(row.download_bytes) ?? 0n) > 0n);
-  if (name === 'runtimeOutbounds') return (data as RuntimeOutbounds).outbounds.some(row => (parseU64(row.download_bytes) ?? 0n) > 0n);
+  if (name === 'runtimeOutbounds')
+    return (data as RuntimeOutbounds).outbounds.some(row => (parseU64(id === 'outboundErrors' ? row.errors : row.download_bytes) ?? 0n) > 0n);
+  // The latency swarm needs five lookups that reached an upstream.
+  if (name === 'dnsLog' && id === 'dnsLatency') return (data as DnsLogList).records.filter(row => !row.cached && row.upstream !== null).length >= 5;
   return true;
 }

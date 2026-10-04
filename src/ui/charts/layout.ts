@@ -52,7 +52,8 @@ export function swarm(xs: number[], radius: number, halfHeight: number): {ys: Ar
     ys[index] = y;
     if (y === null) {
       const last = hidden[hidden.length - 1];
-      if (last && x - last.x < gap) last.count++;
+      // A count's label is about 24px wide: counts nearer than that share one label rather than overprint.
+      if (last && x - last.x < Math.max(gap, 24)) last.count++;
       else hidden.push({x, count: 1});
     } else placed.push({x, y});
   }

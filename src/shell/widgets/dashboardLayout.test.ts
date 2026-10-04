@@ -148,7 +148,9 @@ it.each([
   ['dnsAnswers', 'donut', false, undefined],
   ['dnsAnswers', 'ranked', false, undefined],
   ['outbounds', 'ranked', false, 'rows'],
-  ['nodeLatency', 'dots', false, 'rows']
+  ['nodeLatency', 'dots', false, 'rows'],
+  ['dnsLatency', 'dots', false, 'chart'],
+  ['dnsLatency', 'kv', false, undefined]
 ] as const)('%s as %s (main %s) adjusts its %s', (id, form, main, kind) => {
   expect(heightKind({...defaultWidget(id), form}, main)).toBe(kind);
 });
@@ -191,7 +193,10 @@ it.each([
   ['connectionOutbounds', third, []],
   ['connectionNetworks', ['1/3', '1/2'], []],
   ['dnsAnswers', ['1/3', '1/2'], []],
-  ['policyGroups', third, steps]
+  ['policyGroups', third, steps],
+  ['outboundErrors', third, steps],
+  ['nodeAvailability', ['1/5', '1/4', '1/3'], []],
+  ['dnsLatency', ['1/3', '1/2', '2/3'], chart]
 ] as const)('offers %s the widths %j and the heights %j', (id, widths, heights) => {
   const axes = sizeAxes({id, form: formsFor(id, 'dashboard')[0], size: 'medium'}, registry[id].tile === true, (key: string) => key);
   expect(axes.width.options.map(option => option.value)).toEqual(['auto', ...widths]);
