@@ -1,6 +1,6 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useProviderRefresh, useProviders, useVersion} from '../../store';
+import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useSteadyNodes, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
@@ -97,6 +97,7 @@ export function useNodesPage({go, query}: PageProps) {
   const lang = useLang();
   const providers = useProviders(offered(resources, 'providers', {whileLoading: true}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
+  const nodeList = useSteadyNodes(nodes.data);
   const names = useOutboundNames();
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
@@ -166,7 +167,7 @@ export function useNodesPage({go, query}: PageProps) {
   const nodeInInclude = useCallback((node: Node) => declaredInInclude(authored.filter(item => item.entry.name === node.name)), [authored]);
   const providerInInclude = useCallback((item: ProviderRow) => declaredInInclude(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : []), [declared]);
   const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
-  const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodes.data ?? [], entries, t), [providers.data, nodes.data, entries, t]);
+  const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodeList ?? [], entries, t), [providers.data, nodeList, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const canAddProvider = resources?.providers.can_manage === true;
   useLayoutEffect(() => {
@@ -196,9 +197,17 @@ export function useNodesPage({go, query}: PageProps) {
   const provider = list.find(item => item.id === selectedId) ?? null;
   const owned = useMemo(() => {
     const owner = list.find(item => item.id === selectedId);
-    return ownedNodes(nodes.data ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
-  }, [nodes.data, list, selectedId]);
-  const sourceOf = useMemo(() => nodeSource(list, providers.data?.providers ?? []), [list, providers.data]);
+    return ownedNodes(nodeList ?? [], owner?.kind === 'builtin' || owner?.kind === 'unattributed' ? null : owner?.id, owner?.kind);
+  }, [nodeList, list, selectedId]);
+  // Keyed on the owners' names, so the rows survive a poll that moves only what the sources table counts.
+  const owners = JSON.stringify([list.map(item => [item.id, item.displayName ?? item.name]), (providers.data?.providers ?? []).map(item => item.id)]);
+  const sourceOf = useMemo(() => {
+    const [names, ids] = JSON.parse(owners) as [Array<[string, string]>, string[]];
+    return nodeSource(
+      new Map(names),
+      ids.map(id => ({id}))
+    );
+  }, [owners]);
   const {apply} = source;
   // A written group and an added subscription each offer the next place to look.
   const viewNodes = (id: string) => ({label: t('nodes.viewNodes'), onAction: () => go('nodes', within('', {provider: id})), closeOnAction: true});
@@ -353,7 +362,7 @@ export function useNodesPage({go, query}: PageProps) {
       ? [...new Set(sources.flatMap(item => groupsNamingTag(item.content, blockedTag)))]
       : removal.blockers;
   const checkingRemoval = removal.checking;
-  const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodes.data ?? [], form, t) : null;
+  const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
   const nodeNameError = nodeState?.nameError ?? null;
   const nodeEditError = nodeState?.error ?? null;
   const formValid =
@@ -404,7 +413,7 @@ export function useNodesPage({go, query}: PageProps) {
   });
   const nodeTable = useNodeTable({
     nodes: owned,
-    all: nodes.data ?? [],
+    all: nodeList ?? [],
     sourceOf,
     providers: providers.data?.providers ?? [],
     names,

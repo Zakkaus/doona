@@ -8,8 +8,7 @@ export function useOutboundNames(): OutboundNames {
   const resources = useCapabilities().data?.resources;
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: false}));
-  return useMemo(
-    () => new Map([...(groups.data ?? []).map(g => [g.id, g.name] as const), ...(nodes.data ?? []).map(n => [n.id, n.name] as const)]),
-    [groups.data, nodes.data]
-  );
+  // Keyed on the names alone, so a poll that moves only health or selection keeps the map and what is built from it.
+  const key = JSON.stringify([...(groups.data ?? []).map(g => [g.id, g.name]), ...(nodes.data ?? []).map(n => [n.id, n.name])]);
+  return useMemo(() => new Map(JSON.parse(key) as Array<[string, string]>), [key]);
 }

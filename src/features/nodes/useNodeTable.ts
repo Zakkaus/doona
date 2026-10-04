@@ -100,7 +100,6 @@ export function useNodeTable(input: NodeTableInput) {
   const entries = useMemo(() => input.joinable.map(entry => ({...entry, names: new Set(namedIn(entry))})), [input.joinable]);
   // A new group is written to the main source.
   const canCreate = source.writable && !source.busy && !!source.main;
-  const membership = useMemo(() => new Map(nodes.map(node => [node.id, new Set(node.group_ids.map(id => names.get(id) ?? id))])), [nodes, names]);
   const inlineProviders = useMemo(() => new Set(providers.filter(provider => provider.kind === 'inline').map(provider => provider.id)), [providers]);
   const {probe: runProbe, choices, busy: probeBusy} = probe;
   // A row per node object, rebuilt only when the node or what every row reads changes. The running probe is not part
@@ -122,15 +121,17 @@ export function useNodeTable(input: NodeTableInput) {
           },
           error => toastFailure(error, t, t('nodes.probeError', {name: node.name}))
         ),
-      menu: () =>
-        entries.filter(entry => !entry.names.has(node.name) && !membership.get(node.id)?.has(entry.name)).map(entry => ({id: entry.name, label: entry.name})),
+      menu: () => {
+        const joined = new Set(node.group_ids.map(id => names.get(id) ?? id));
+        return entries.filter(entry => !entry.names.has(node.name) && !joined.has(entry.name)).map(entry => ({id: entry.name, label: entry.name}));
+      },
       join: (key: string) => (key === '/new' ? onNewGroup(node) : joinGroup(node, key)),
       removable: canManage && typeof node.provider_id === 'string' && inlineProviders.has(node.provider_id),
       removeReason: inInclude(node) ? t('nodes.removeInclude') : null,
       remove: () => onRemove(node),
       edit: edit(node)
     }),
-    [names, lang, sourceOf, choices, runProbe, t, entries, membership, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
+    [names, lang, sourceOf, choices, runProbe, t, entries, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);

@@ -224,8 +224,8 @@ export function ownedNodes(nodes: Node[], ownerId: string | null | undefined, ki
 }
 
 // The name of the source row a node is listed under, for results that span every source.
-export function nodeSource(list: ProviderRow[], providers: Provider[]): (node: Node) => string {
-  const names = new Map(list.map(item => [item.id, item.displayName ?? item.name]));
+// `names` maps each owner's id to the name its row shows.
+export function nodeSource(names: Map<string, string>, providers: Array<Pick<Provider, 'id'>>): (node: Node) => string {
   return node => names.get(nodeOwner(node, providers)) ?? '—';
 }
 

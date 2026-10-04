@@ -19,6 +19,7 @@ vi.mock('../../store', async () => ({
   useCapabilities: () => ({data: capabilities}),
   useNodeManage: () => ({addNode: (input: unknown) => store.addNode(input), busy: false}),
   useNodes: () => ({data: [], refetch: () => undefined, loading: false, error: null}),
+  useSteadyNodes: (data: unknown) => data,
   useProviders: () => ({data: {providers: []}, refetch: () => undefined, loading: false, error: null}),
   useOutboundNames: () => [],
   useProviderRefresh: () => ({refresh: vi.fn()}),
