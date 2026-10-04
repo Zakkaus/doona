@@ -3,8 +3,7 @@ import {expect, loadCatalogues, mockBackend, routes, settle, settleFrames, test}
 import {translate} from '../src/i18n';
 import {defaultWidget, defaults, type Layout} from '../src/shell/widgets/layout';
 
-// Every segmented control is S2's default M (32px, the touch height on a phone), or L (40px) as a page's top-level switch,
-// its selected item fills it, and every control on its row is as tall and centred on the same line, on every page, in
+// Every segmented control is S2's default M (32px, the touch height on a phone), its selected item fills it, and every control on its row is as tall and centred on the same line, on every page, in
 // the widget panel and while editing the dashboard.
 test.beforeAll(loadCatalogues);
 const t = (key: Parameters<typeof translate>[1]) => translate('zh-TW', key);
@@ -19,7 +18,7 @@ const save = (page: Page, layout: Layout) =>
 async function segmentedGeometry(scope: Locator) {
   return scope.evaluate(root => {
     const sizes = getComputedStyle(document.documentElement);
-    const heights: Record<string, number> = {M: parseFloat(sizes.getPropertyValue('--rp-control')), L: parseFloat(sizes.getPropertyValue('--rp-control-lg'))};
+    const control = parseFloat(sizes.getPropertyValue('--rp-control'));
     const rows = '.rp-toolbar, .rp-tabhead, .rp-page-actions, .rp-row, .rp-cluster, .rp-field-row';
     const controls = '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-switch, .rp-tab, .rp-segfit';
     const failures: string[] = [];
@@ -29,7 +28,7 @@ async function segmentedGeometry(scope: Locator) {
       if (!fit.checkVisibility()) continue;
       const seg = fit.querySelector<HTMLElement>(':scope > .rp-seg')!;
       const name = seg.getAttribute('aria-label');
-      const control = heights[seg.dataset.size!];
+      if (seg.dataset.size !== 'M') failures.push(`${name}: size ${seg.dataset.size}`);
       const collapsed = fit.hasAttribute('data-collapsed');
       // A collapsed control shows its picker over the hidden track at the same height.
       const shown = collapsed ? fit.querySelector<HTMLElement>('.rp-segpick .rp-selectbtn')! : seg;

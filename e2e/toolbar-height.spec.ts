@@ -4,9 +4,8 @@ import type {Page} from '@playwright/test';
 for (const width of [1280, 390]) {
   test.describe(`uniform page controls ${width}`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
-    // Page rows are M; a page's tab row is the segmented control at L (40px), and so is the Policies kind switch, the top
-    // switch of a page without tabs, with the button on its row. No other page-row control is L.
-    test('every route and tab keeps M page rows, L tab rows and uniform geometry', async ({page}) => {
+    // Page rows are M, the tab row and the Policies kind switch with them: no page-row control is L.
+    test('every route and tab keeps M page rows and uniform geometry', async ({page}) => {
       test.setTimeout(120000);
       for (const route of routes) {
         await page.goto(`/#/${route}`);
@@ -25,8 +24,8 @@ for (const width of [1280, 390]) {
                 const {controls} = row;
                 if (row.pageRow && controls.some(control => Math.abs(control.height - control.expected) > 0.5))
                   failures.push(`${route}/${index}: ${row.row}: not the expected size ${JSON.stringify(controls)}`);
-                if (row.pageRow && route !== 'policies' && controls.some(control => control.size === 'L' && !control.tab))
-                  failures.push(`${route}/${index}: ${row.row}: L outside the tabs ${JSON.stringify(controls)}`);
+                if (row.pageRow && controls.some(control => control.size === 'L'))
+                  failures.push(`${route}/${index}: ${row.row}: L in a page row ${JSON.stringify(controls)}`);
                 if (row.pageRow && Math.max(...controls.map(control => control.height)) - Math.min(...controls.map(control => control.height)) > 0.5)
                   failures.push(`${route}/${index}: unequal heights`);
                 if (row.pageRow && Math.max(...controls.map(control => control.centre)) - Math.min(...controls.map(control => control.centre)) > 1)
@@ -129,7 +128,7 @@ async function lineCount(page: Page, scope: string, items: string) {
 }
 
 // Each visible control row's lines of controls, and whether the row is a page row (toolbar, tab row, page actions). A
-// control's expected page-row height is M, or L for a tab or a control that asks for L.
+// control's expected page-row height is M, or L for a control that asks for L.
 async function toolbarGeometry(page: Page) {
   return page.locator('body').evaluate(root => {
     const rows = '.rp-toolbar, .rp-tabhead, .rp-tabbar, .rp-page-actions, .rp-page-links';
@@ -152,10 +151,8 @@ async function toolbarGeometry(page: Page) {
           })
           .map(control => {
             const box = control.getBoundingClientRect();
-            const tab = control.matches('.rp-tab, .rp-tabbar');
             return {
-              expected: tab || control.dataset.size === 'L' ? lHeight : mHeight,
-              tab,
+              expected: control.dataset.size === 'L' ? lHeight : mHeight,
               name: control.getAttribute('aria-label') ?? control.textContent?.trim() ?? control.className,
               height: box.height,
               top: box.top,

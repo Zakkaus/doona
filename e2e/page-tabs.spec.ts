@@ -1,12 +1,12 @@
 import {expect, test, settleFrames} from './fixtures';
 
-// Page navigation keeps the tab roles and is drawn as S2's SegmentedControl at L: 40px tabs in a filled track, the
-// selected one under the sliding slider. A segmented control inside the page stays M.
+// Page navigation keeps the tab roles and is drawn as S2's SegmentedControl at M, like every segmented control: M tabs
+// with 14px labels in a filled track, the selected one under the sliding slider.
 for (const width of [1280, 390]) {
   test.describe(`${width}px`, () => {
     test.use({viewport: {width, height: 900}});
 
-    test('page tabs are 40px with the filled slider, and segmented controls stay M', async ({page}) => {
+    test('page tabs are M with the filled slider, as segmented controls are', async ({page}) => {
       await page.goto('/#/rules?tab=list');
       const bar = page.locator('.rp-content [data-page-tabrow]');
       await expect(bar.getByRole('tab').first()).toBeVisible();
@@ -33,20 +33,20 @@ for (const width of [1280, 390]) {
           },
           segment: seg.getBoundingClientRect().height,
           segmentFont: getComputedStyle(seg.querySelector('[role=radio]')!).fontSize,
-          large: parseFloat(sizes.getPropertyValue('--rp-control-lg')),
           control: parseFloat(sizes.getPropertyValue('--rp-control'))
         };
       });
-      expect(geometry.large).toBe(40);
+      // M is 32px, the touch height (36px) on a phone.
+      expect(geometry.control).toBe(width === 390 ? 36 : 32);
       expect(
-        geometry.heights.every(height => height === 40),
+        geometry.heights.every(height => height === geometry.control),
         JSON.stringify(geometry.heights)
       ).toBe(true);
       expect(
-        geometry.fonts.every(font => font === '16px'),
+        geometry.fonts.every(font => font === '14px'),
         JSON.stringify(geometry.fonts)
       ).toBe(true);
-      expect(geometry.bar).toBe(40);
+      expect(geometry.bar).toBe(geometry.control);
       expect(geometry.barFill).not.toBe('rgba(0, 0, 0, 0)');
       expect(geometry.sliderFill).not.toBe('rgba(0, 0, 0, 0)');
       // The slider covers the selected tab exactly.
@@ -55,8 +55,8 @@ for (const width of [1280, 390]) {
       expect(geometry.segmentFont).toBe('14px');
     });
 
-    // A page without tabs draws its top-level switch at L in their place, and the button on its row with it.
-    test('the Policies kind switch and the new group button are L, centred on one line', async ({page}) => {
+    // A page without tabs draws its top-level switch at M, as the tabs are, and the button on its row with it.
+    test('the Policies kind switch and the new group button are M, centred on one line', async ({page}) => {
       await page.goto('/#/policies');
       const row = page.locator('.rp-content [data-page-toolbar]').first();
       await expect(row.locator('.rp-seg')).toBeVisible();
@@ -66,16 +66,19 @@ for (const width of [1280, 390]) {
           const box = node.getBoundingClientRect();
           return {height: box.height, top: box.top, bottom: box.bottom, centre: box.top + box.height / 2, font: getComputedStyle(node).fontSize};
         };
+        const control = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control'));
         const seg = el.querySelector<HTMLElement>('.rp-seg')!;
         return {
           seg: measure(seg),
           items: [...seg.querySelectorAll<HTMLElement>('[role=radio]')].map(measure),
-          button: measure([...el.querySelectorAll<HTMLElement>(':scope > .rp-btn')].at(-1)!)
+          button: measure([...el.querySelectorAll<HTMLElement>(':scope > .rp-btn')].at(-1)!),
+          control
         };
       });
-      for (const control of [geometry.seg, geometry.button, ...geometry.items]) expect(control.height, JSON.stringify(geometry)).toBe(40);
-      for (const control of [geometry.button, ...geometry.items]) expect(control.font, JSON.stringify(geometry)).toBe('16px');
-      // On a phone the L row is wider than the page and the button wraps under the switch; on a line they share a centre.
+      expect(geometry.control).toBe(width === 390 ? 36 : 32);
+      for (const control of [geometry.seg, geometry.button, ...geometry.items]) expect(control.height, JSON.stringify(geometry)).toBe(geometry.control);
+      for (const control of [geometry.button, ...geometry.items]) expect(control.font, JSON.stringify(geometry)).toBe('14px');
+      // Where the row is wider than the page the button wraps under the switch; on a line they share a centre.
       if (width === 1280 || geometry.button.top < geometry.seg.bottom) expect(Math.abs(geometry.seg.centre - geometry.button.centre)).toBeLessThanOrEqual(1);
       else expect(geometry.button.top).toBeGreaterThanOrEqual(geometry.seg.bottom);
     });

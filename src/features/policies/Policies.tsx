@@ -368,11 +368,10 @@ export function Policies(props: PageProps) {
   return (
     <div className="rp-page">
       <ActionHelp reason={m.createDisabled ? m.create.tip : null}>
-        {/* The page's top-level switch, where a tabbed page has its tabs: L like them, as is the button on its row. */}
         <Toolbar page>
-          {m.showKinds && <Segmented size="L" label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
+          {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
           <span className="rp-grow" />
-          <Button secondary size="L" isDisabled={m.createDisabled} onPress={() => m.create.show()}>
+          <Button secondary isDisabled={m.createDisabled} onPress={() => m.create.show()}>
             <AddCircle />
             {t('group.newGroup')}
           </Button>

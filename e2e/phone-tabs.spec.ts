@@ -16,8 +16,7 @@ const bar = (page: Page) =>
 
 for (const [width, url, last] of [
   [320, '/#/rules?tab=trace', 'trace'],
-  [320, '/#/dns?tab=cache', 'cache'],
-  [360, '/#/dns?tab=cache', 'cache']
+  [320, '/#/dns?tab=cache', 'cache']
 ] as const) {
   test.describe(`${width}px`, () => {
     test.use({viewport: {width, height: 640}});

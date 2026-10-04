@@ -57,14 +57,14 @@
   cursor: pointer;
   outline: none;
 }
-/* S2's L height (style-utils controlSize): 40px. segmented.css gives the bar and its tabs L's font, inset and corner. */
-.rp-tabbar[data-size='L'] .rp-tablist {
+/* M's height, as every segmented control's; segmented.css gives the bar and its tabs the track, inset and corner. */
+.rp-tabbar .rp-tablist {
   /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
      panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
-  min-height: var(--rp-control-lg);
+  min-height: var(--rp-control);
 }
-.rp-tab[data-size='L'] {
-  min-height: var(--rp-control-lg);
+.rp-tab {
+  min-height: var(--rp-control);
 }
 /* Laid out, not display: none: a table or chart in a hidden panel keeps measuring the width it shows again, so the
    first frame back is already at it, even after a resize while hidden. React Aria marks the panel inert, which keeps
