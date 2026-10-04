@@ -1,29 +1,26 @@
 import './install';
-import {lazy, Suspense, useCallback, useState, type ContextType} from 'react';
-import {WidgetDraftGuard} from './widgets/host';
+import {lazy, Suspense, useCallback, useState, type ComponentProps, type ReactNode} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
-import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty, PageSkeleton, PageShapeContext} from '../ui/ui';
-import {PageActionsTarget} from '../ui/PageActions';
-import {DraftContext} from './draft';
+import {ConfirmDialog, Toasts, ErrorMessage, Loading, PageSkeleton} from '../ui/ui';
+import {DraftContext, useDraftGuard} from './draft';
+import {useModeDraft} from '../features/shared/useModeDraft';
 import {searchDialog} from './search/load';
 import {CountryFlagsContext, FlagEditingContext} from '../ui/NodeName';
 import {flagKey} from '../dae/flags';
 import {resolvedFlag} from '../features/shared/countryFlags';
 import {useCopyDiagnostics} from '../features/shared/useCopyDiagnostics';
-import {readSettings, SettingsContext} from './preferences';
-import type {Settings, ToastPlacement} from './preferences';
-import {Shortcuts} from './Shortcuts';
-import {SideNav} from './SideNav';
-import {HubBar, HubPages} from './HubBar';
-import {TopBar} from './TopBar';
-import {AboutContext, useShell, type ShellModel} from './useShell';
+import {readSettings} from './preferences';
+import type {ToastPlacement} from './preferences';
+import {useShell, type ShellModel} from './useShell';
 import {applyAppearance} from './useAppearance';
 import {paletteWords} from './palettes';
 import {useShellController, useShellFrame, useStartupToasts} from './useShellController';
 import {LoadBoundary} from '../ui/LoadBoundary';
-import type {PageProps} from './routes';
-import {RefusalWait} from './RefusalWait';
+import {preloadable} from '../ui/preloadable';
+import {expectsAccess} from '../api';
+import logo from '../logo.svg';
+import type {Frame, FrameProps} from './Frame';
 const FlagPicker = lazy(() => import('../ui/FlagPicker').then(module => ({default: module.FlagPicker})));
 
 // Only a backend that refuses the request needs the sign-in forms, so they load on demand.
@@ -51,6 +48,7 @@ export function Shell({lang: initial}: {lang: Lang}) {
             <I18nProvider locale={LOCALE[lang]} direction={ap.mirrored ? 'rtl' : undefined}>
               <RouterProvider navigate={navigate}>
                 <DraftContext.Provider value={draft}>
+                  <ModeDraftGuard />
                   <ShellFrame
                     settings={settings}
                     lang={lang}
@@ -94,6 +92,14 @@ export function Shell({lang: initial}: {lang: Lang}) {
   );
 }
 
+// The outbound mode staged in a widget or on Activity outlives the frame: a refused read that turns the tab to the
+// sign-in page still warns before the reload that signing in again starts.
+function ModeDraftGuard() {
+  const [draft, setDraft] = useModeDraft();
+  useDraftGuard(draft !== null, () => setDraft(null));
+  return null;
+}
+
 function DiscardDialog({isOpen, discard, cancel}: {isOpen: boolean; discard: () => void; cancel: () => void}) {
   const t = useT();
   return (
@@ -109,114 +115,70 @@ function ToastHost({placement, route}: {placement: ToastPlacement; route: string
   return <Toasts placement={placement} page={route} onCopyError={entry => void copy([entry])} />;
 }
 
-type FrameProps = {
-  settings: Settings;
-  lang: Lang;
-  pickLang: (l: Lang) => void;
-  ap: NonNullable<ContextType<typeof SettingsContext>>['ap'];
-  route: string;
-  query: string;
-  go: PageProps['go'];
-  openSearch: () => void;
-  mac: boolean;
-};
-function ShellFrame(props: FrameProps) {
-  const view = useShell(props.settings, props.route);
-  return (
-    <AboutContext.Provider value={view.about}>
-      <WidgetDraftGuard />
-      <Frame {...props} view={view} />
-      <Shortcuts go={props.go} openSearch={props.openSearch} refresh={view.refresh} mac={props.mac} entries={view.shortcuts} paths={view.shortcutPaths} />
-    </AboutContext.Provider>
-  );
-}
-function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
-  const t = useT();
-  const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
-  const [actions, setActions] = useState<HTMLElement | null>(null);
-  const Page = view.current.Page;
-  const hub = view.groups.find(group => group.items.some(item => item.current));
-  // Signing in takes the whole page: the shell around it would offer nothing that works yet.
-  if (view.content.kind === 'login')
-    return (
-      <Suspense fallback={<Loading />}>
-        <Login
-          profileId={view.content.profileId}
-          api={view.content.api}
-          backend={view.content.backend}
-          rejected={view.content.rejected}
-          missingApi={view.content.missingApi}
-          lang={lang}
-          pickLang={pickLang}
-          dark={ap.dark}
-          themeLabel={menu.themeLabel}
-          toggleScheme={ap.toggle}
-          palette={{ap, paletteSections}}
-          wordmark={view.wordmark}
-          error={view.error}
-          onRetry={view.refresh}
-        />
-      </Suspense>
-    );
+// The signed-in frame shares the Activity page's chunk. A tab that expects to be let in requests it at startup beside
+// the capabilities read; any other tab requests it once the backend accepts it, so the sign-in page does not load it.
+const frame = preloadable<ComponentProps<typeof Frame>>(() => import('./Frame').then(module => ({default: module.Frame})));
+export const preloadFrame = () => void frame.preload().catch(() => undefined);
+
+// What startup shows before the shell: the brand over the given content. The shell shows the same while the frame loads.
+export function StartupFrame({children}: {children: ReactNode}) {
   return (
     <div className="rp-shell">
-      <TopBar
-        route={route}
+      <header className="rp-top">
+        <div className="rp-brand">
+          <img src={logo} alt="" />
+          <span>doona</span>
+        </div>
+      </header>
+      <main className="rp-main">
+        <div className="rp-content">{children}</div>
+      </main>
+    </div>
+  );
+}
+
+function ShellFrame(props: FrameProps) {
+  const view = useShell(props.settings, props.route);
+  // Signing in takes the whole page: the shell around it would offer nothing that works yet.
+  if (view.content.kind === 'login') return <SignIn {...props} view={view} content={view.content} />;
+  // A failed read shows with its retry while the rest of startup still waits.
+  const waiting = (
+    <StartupFrame>
+      <ErrorMessage error={view.error} onRetry={view.refresh} />
+      <PageSkeleton />
+    </StartupFrame>
+  );
+  // A tab that may still have to sign in keeps the startup screen until the backend answers.
+  if (view.content.kind === 'loading' && !expectsAccess()) return waiting;
+  return (
+    <LoadBoundary>
+      <Suspense fallback={waiting}>
+        <frame.Component {...props} view={view} />
+      </Suspense>
+    </LoadBoundary>
+  );
+}
+
+function SignIn({lang, pickLang, ap, route, view, content}: FrameProps & {view: ShellModel; content: Extract<ShellModel['content'], {kind: 'login'}>}) {
+  const {menu, paletteSections} = useShellFrame(lang, pickLang, ap, route);
+  return (
+    <Suspense fallback={<Loading />}>
+      <Login
+        profileId={content.profileId}
+        api={content.api}
+        backend={content.backend}
+        rejected={content.rejected}
+        missingApi={content.missingApi}
         lang={lang}
         pickLang={pickLang}
-        ap={ap}
-        mac={mac}
-        openSearch={openSearch}
-        refresh={view.refresh}
-        spinning={view.spinning}
-        commands={view.commands}
-        apply={view.apply}
-        reload={view.reload}
-        honk={view.honk}
-        backend={view.backend}
+        dark={ap.dark}
+        themeLabel={menu.themeLabel}
+        toggleScheme={ap.toggle}
+        palette={{ap, paletteSections}}
         wordmark={view.wordmark}
-        versionText={view.about.versionText}
-        paletteSections={paletteSections}
-        menu={menu}
+        error={view.error}
+        onRetry={view.refresh}
       />
-      <SideNav route={route} groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
-      <main className="rp-main">
-        <div className="rp-content">
-          <div className="rp-head">
-            <div className="rp-page-heading">
-              <div className="rp-title">
-                <h1 className="rp-h1">{view.current.title}</h1>
-                {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
-              </div>
-              <div ref={setActions} className="rp-page-actions" />
-            </div>
-            {hub && <HubPages key={hub.id} hub={hub} />}
-          </div>
-          <ErrorMessage error={view.error} onRetry={view.refresh} />
-          <RefusalWait />
-          <PageActionsTarget value={actions}>
-            <PageShapeContext value={view.current.skeleton}>
-              <SettingsContext.Provider value={settingsValue}>
-                {view.content.kind === 'loading' ? (
-                  <PageSkeleton />
-                ) : view.content.kind === 'unavailable' ? (
-                  <Empty>
-                    {t('shell.notOffered')}
-                    <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-                  </Empty>
-                ) : (
-                  <LoadBoundary key={view.current.id}>
-                    <Suspense fallback={<PageSkeleton />}>
-                      <Page go={go} query={query} />
-                    </Suspense>
-                  </LoadBoundary>
-                )}
-              </SettingsContext.Provider>
-            </PageShapeContext>
-          </PageActionsTarget>
-        </div>
-      </main>
-      <HubBar groups={view.groups} />
-    </div>
+    </Suspense>
   );
 }

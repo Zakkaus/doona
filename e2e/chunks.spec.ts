@@ -142,9 +142,9 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
   });
 }
 
-// The page chunks the shell warms once signed in. On the demo the Activity chunk also carries code the mock backend
-// imports, so only a hosted backend leaves it out too.
-const pageChunks = ['SearchDialog', ...routes.filter(route => route !== 'activity').map(route => route[0].toUpperCase() + route.slice(1))];
+// The chunks a signed-in shell loads: the Activity chunk, which also carries the frame around the pages, and the page
+// chunks it warms. A request for none of them means the sign-in page has not evaluated the frame either.
+const signedInChunks = ['activity', 'SearchDialog', ...routes.filter(route => route !== 'activity').map(route => route[0].toUpperCase() + route.slice(1))];
 const challenge = {
   status: 401,
   headers: {'www-authenticate': 'Bearer'},
@@ -153,7 +153,7 @@ const challenge = {
 const signInPages = [
   {
     name: 'a saved demo profile',
-    pages: pageChunks,
+    pages: signedInChunks,
     viewport: {width: 1280, height: 800},
     ready: (page: Page) => page.locator('.rp-login-page').getByRole('button', {name: 'Sign in', exact: true}),
     async setup(page: Page) {
@@ -170,7 +170,7 @@ const signInPages = [
     {width: 390, height: 844}
   ].map(viewport => ({
     name: `a hosted backend on first visit at ${viewport.width}`,
-    pages: ['activity', ...pageChunks],
+    pages: signedInChunks,
     viewport,
     ready: (page: Page) => page.getByRole('heading', {name: 'Token required'}),
     async setup(page: Page) {
@@ -181,7 +181,7 @@ const signInPages = [
 ];
 
 for (const {name, pages, viewport, ready, setup} of signInPages) {
-  test(`the sign-in page for ${name} requests no page chunks before sign-in`, async ({browser}) => {
+  test(`the sign-in page for ${name} requests neither the frame nor page chunks before sign-in`, async ({browser}) => {
     const context = await browser.newContext({serviceWorkers: 'block', viewport});
     const page = await context.newPage();
     await page.addInitScript(() => localStorage.setItem('doona-lang', 'en'));
@@ -204,6 +204,36 @@ for (const {name, pages, viewport, ready, setup} of signInPages) {
     }
   });
 }
+
+test('a signed-in start requests the frame before the shell can render', async ({page}) => {
+  // The shell renders only once a catalogue has loaded, so a request made while it is held comes from startup.
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/assets/locale-*.js', async route => {
+    await gate;
+    await route.continue();
+  });
+  const requested = page.waitForRequest(/\/assets\/activity-[\w-]{8}\.js$/);
+  await page.goto('/#/activity');
+  await requested;
+  release();
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
+});
+
+test('a frame chunk that fails to load says so with Reload, and the reload recovers once it loads', async ({page}) => {
+  expectLoadFailures(page, /\/assets\/activity-[\w-]{8}\.js$/);
+  const frame = '**/assets/activity-*.js';
+  await page.route(frame, route => route.abort());
+  await page.goto('/#/activity');
+  // The first failure reloads the page once by itself; the second stays up with its Reload control.
+  const reload = page.getByRole('button', {name: 'Reload', exact: true});
+  await expect(reload).toBeVisible();
+  await expect(page.locator("[data-profile='metrics']")).toHaveCount(0);
+  await page.unroute(frame);
+  await Promise.all([page.waitForEvent('load'), reload.click()]);
+  await expect(page.locator("[data-profile='metrics']")).toBeVisible();
+  await expect(reload).toHaveCount(0);
+});
 
 test('a stale chunk whose reload is cancelled says doona was updated, and so does the next one', async ({browser}) => {
   const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1440, height: 1100}});

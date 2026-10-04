@@ -2,13 +2,12 @@ import {createRoot} from 'react-dom/client';
 import {StrictMode, useEffect, useLayoutEffect, useState} from 'react';
 import './ui/flags.css';
 import './ui/theme.css';
-import {Shell, stampAppearance} from './shell/Shell';
+import {preloadFrame, Shell, StartupFrame, stampAppearance} from './shell/Shell';
 import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './store/rings';
 import {expectsAccess, initializeApi, startedOnMock} from './api';
 import {preloadActivity} from './shell/registry';
 import {Button, Empty, ErrorMessage, PageSkeleton} from './ui/ui';
-import logo from './logo.svg';
 import {toast} from './ui/ui';
 import {activated, announceBuild} from './shell/newBuild';
 import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
@@ -30,7 +29,10 @@ let startup: Promise<unknown> | undefined;
 const start = () =>
   (startup ??= detectHostedBackend().then(() => {
     pruneRings();
-    if (expectsAccess()) preloadActivity();
+    if (expectsAccess()) {
+      preloadActivity();
+      preloadFrame();
+    }
     return initializeApi();
   }));
 let language: Promise<Lang> | undefined;
@@ -75,28 +77,18 @@ function Startup() {
   const [problem, retry] = startupText[shown];
   return (
     <LangContext.Provider value={shown}>
-      <div className="rp-shell">
-        <header className="rp-top">
-          <div className="rp-brand">
-            <img src={logo} alt="" />
-            <span>doona</span>
-          </div>
-        </header>
-        <main className="rp-main">
-          <div className="rp-content">
-            {unreadable ? (
-              <Empty role="alert">
-                <p>{problem}</p>
-                <Button onPress={() => location.reload()}>{retry}</Button>
-              </Empty>
-            ) : lang && error ? (
-              <ErrorMessage error={error} onRetry={() => location.reload()} />
-            ) : lang ? (
-              <PageSkeleton />
-            ) : null}
-          </div>
-        </main>
-      </div>
+      <StartupFrame>
+        {unreadable ? (
+          <Empty role="alert">
+            <p>{problem}</p>
+            <Button onPress={() => location.reload()}>{retry}</Button>
+          </Empty>
+        ) : lang && error ? (
+          <ErrorMessage error={error} onRetry={() => location.reload()} />
+        ) : lang ? (
+          <PageSkeleton />
+        ) : null}
+      </StartupFrame>
     </LangContext.Provider>
   );
 }

@@ -27,7 +27,7 @@ const cssMinify = (() => {
 // The mock backend, loaded only by the demo and development profiles.
 const mockEntry = /\/mock\/index\.ts$/;
 
-// The modules a module reaches by static imports; the Activity chunk takes those the shell entry does not reach.
+// The modules a module reaches by static imports; the Activity chunk takes those the sign-in path does not reach.
 const statics = (start: string, getModuleInfo: (id: string) => {importedIds: readonly string[]} | null) => {
   const seen = new Set<string>();
   const queue = [start];
@@ -42,10 +42,18 @@ const statics = (start: string, getModuleInfo: (id: string) => {importedIds: rea
 let reach: {activity: Set<string>; shell: Set<string>} | undefined;
 function activityOnly(id: string, getModuleInfo: (id: string) => {importedIds: readonly string[]} | null) {
   if (!reach) {
-    // The desktop panel and the dashboard's cards load with the page, so their code shares its chunk.
-    const starts = ['Dashboard', 'WidgetContent', 'Widgets'].map(name => fileURLToPath(new URL(`src/shell/widgets/${name}.tsx`, import.meta.url)));
-    const entry = fileURLToPath(new URL('src/main.tsx', import.meta.url));
-    reach = {activity: new Set(starts.flatMap(start => [...statics(start, getModuleInfo)])), shell: statics(entry, getModuleInfo)};
+    // The desktop panel and the dashboard's cards load with the page, and so does the signed-in frame around it, so
+    // their code shares its chunk.
+    const starts = ['widgets/Dashboard', 'widgets/WidgetContent', 'widgets/Widgets', 'Frame'].map(name =>
+      fileURLToPath(new URL(`src/shell/${name}.tsx`, import.meta.url))
+    );
+    // The sign-in path loads the entry, the sign-in forms and, on the demo, the mock backend, so what they reach stays
+    // out of the chunk.
+    const login = ['src/main.tsx', 'src/shell/Login.tsx', 'mock/index.ts'].map(name => fileURLToPath(new URL(name, import.meta.url)));
+    reach = {
+      activity: new Set(starts.flatMap(start => [...statics(start, getModuleInfo)])),
+      shell: new Set(login.flatMap(start => [...statics(start, getModuleInfo)]))
+    };
   }
   return reach.activity.has(id) && !reach.shell.has(id);
 }
@@ -176,8 +184,8 @@ export default defineConfig({
           // react-aria is left to Rollup so the components only lazy pages use (drag and drop, grids) stay out of the
           // startup chunk.
           if (/\/node_modules\/(@codemirror|@lezer|style-mod|w3c-keyname|crelt)\//.test(id)) return 'vendor-editor';
-          // The Activity page is its own chunk, requested as the shell starts. Code it shares with later pages stays in
-          // it rather than in many small shared chunks, since it is always loaded by then.
+          // The Activity page and the signed-in frame are one chunk, requested as the shell starts. Code it shares with
+          // later pages stays in it rather than in many small shared chunks, since it is always loaded by then.
           if (activityOnly(id, getModuleInfo)) return 'activity';
         }
       }

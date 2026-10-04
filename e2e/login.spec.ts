@@ -194,6 +194,32 @@ test('signing out with a saved token forgets it and returns to the sign-in page'
   ]);
 });
 
+// The outbound mode staged on Activity is a draft of the shell, so a refused read that turns the tab to the sign-in
+// page keeps its warning before the page is left.
+test('a mode draft still warns before leaving once a refused read shows the sign-in page', async ({page}) => {
+  await mockBackend(page);
+  expectLoadFailures(page, /\/api(\/|$)/);
+  await page.addInitScript(() => {
+    if (localStorage.getItem('doona-profiles')) return;
+    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: 'saved-token'}]));
+    localStorage.setItem('doona-profile', 'home');
+  });
+  await page.goto('/#/activity');
+  await page.getByRole('radio', {name: 'Global', exact: true}).click();
+  await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
+  await page.route('**/api/v1/**', route =>
+    route.fulfill({status: 401, json: {error: {code: 'authentication_required', message: 'Token required', details: null}, request_id: 'r'}})
+  );
+  await page.getByRole('button', {name: 'Refresh', exact: true}).click();
+  await expect(page.locator('.rp-login-page').getByLabel('Token', {exact: true})).toBeVisible();
+  await expect(page.locator('.rp-nav')).toHaveCount(0);
+  const prompt = page.waitForEvent('dialog');
+  await page.close({runBeforeUnload: true});
+  const dialog = await prompt;
+  expect(dialog.type()).toBe('beforeunload');
+  await dialog.dismiss();
+});
+
 // A honk build before the native API keeps its Clash API: with a secret it refuses the sign-in probes, which carry no
 // credential, with a codeless 401, and answers the saved secret with a 404 for capabilities.
 test('a Clash API with a saved secret explains that the native API is missing', async ({page}) => {
